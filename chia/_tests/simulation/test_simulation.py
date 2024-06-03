@@ -436,7 +436,7 @@ class TestSimulation:
         # repeating just to try to expose any flakiness
         for repeat in range(repeats):
             coins = [next(coins_iter) for _ in range(tx_per_repeat)]
-            async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            async with wallet.wallet_state_manager.new_action_scope(push=True, merge_spends=False) as action_scope:
                 for coin in coins:
                     await wallet.generate_signed_transaction(
                         amount=uint64(tx_amount),
@@ -449,9 +449,7 @@ class TestSimulation:
             for tx in action_scope.side_effects.transactions:
                 assert tx.spend_bundle is not None, "the above created transaction is missing the expected spend bundle"
 
-            transactions = await wallet.wallet_state_manager.add_pending_transactions(
-                action_scope.side_effects.transactions
-            )
+            transactions = action_scope.side_effects.transactions
 
             if records_or_bundles_or_coins == "records":
                 await full_node_api.process_transaction_records(records=transactions)

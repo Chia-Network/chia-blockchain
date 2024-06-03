@@ -103,7 +103,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     fee = uint64(2_000_000_000_000)
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        success, offer_maker, _, error = await trade_manager_maker.create_offer_for_ids(
+        success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
             {launcher_id_maker: -1, launcher_id_taker: 1},
             DEFAULT_TX_CONFIG,
             action_scope,
@@ -276,7 +276,7 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     root, proofs = build_merkle_tree(ROWS)
 
     async with trade_manager.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        success, offer, _, error = await trade_manager.create_offer_for_ids(
+        success, offer, error = await trade_manager.create_offer_for_ids(
             {launcher_id: -1, launcher_id_2: 1},
             DEFAULT_TX_CONFIG,
             action_scope,
@@ -398,7 +398,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     fee = uint64(2_000_000_000_000)
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        success, offer_maker, _, error = await trade_manager_maker.create_offer_for_ids(
+        success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
             {launcher_id_maker_1: -1, launcher_id_taker_1: 1, launcher_id_maker_2: -1, launcher_id_taker_2: 1},
             DEFAULT_TX_CONFIG,
             action_scope,

@@ -1420,7 +1420,7 @@ class TestWalletSimulator:
         )
 
         tx_amount = 5
-        async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
             await wallet_1.generate_signed_transaction(
                 uint64(tx_amount), await wallet_0.get_puzzle_hash(False), DEFAULT_TX_CONFIG, action_scope, uint64(0)
             )

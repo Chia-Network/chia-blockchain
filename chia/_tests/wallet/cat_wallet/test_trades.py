@@ -1834,13 +1834,12 @@ async def test_trade_cancellation_balance_check(wallets_prefarm):
     assert error is None
     assert success is True
     assert trade_make is not None
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await trade_manager_maker.cancel_pending_offers(
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id], DEFAULT_TX_CONFIG, action_scope, fee=uint64(0), secure=True
         )
-    txs = await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node.process_transaction_records(records=txs)
+    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 

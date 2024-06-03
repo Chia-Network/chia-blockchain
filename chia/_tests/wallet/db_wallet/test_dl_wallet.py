@@ -293,7 +293,13 @@ class TestDLWallet:
                     [previous_record.inner_puzzle_hash],
                     DEFAULT_TX_CONFIG,
                     failed_action_scope,
-                    coins={action_scope.side_effects.transactions[0].spend_bundle.removals()[0]},
+                    coins={
+                        next(
+                            rem
+                            for rem in action_scope.side_effects.transactions[0].spend_bundle.removals()
+                            if rem.amount == 1
+                        )
+                    },
                     fee=uint64(1999999999999),
                 )
 

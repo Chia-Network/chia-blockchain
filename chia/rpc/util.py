@@ -200,9 +200,13 @@ def tx_endpoint(
                     response["transaction"] = response["transactions"][0]
             if "tx_record" in response:
                 response["tx_record"] = response["transactions"][0]
-            if "fee_transaction" in response and response["fee_transaction"] is not None:
+            if "fee_transaction" in response:
                 # Theses RPCs return not "convenience" for some reason
-                response["fee_transaction"] = next(tx for tx in new_txs if tx.wallet_id == 1).to_json_dict()
+                fee_transactions = [tx for tx in new_txs if tx.wallet_id == 1]
+                if len(fee_transactions) == 0:
+                    response["fee_transaction"] = None
+                else:
+                    response["fee_transaction"] = fee_transactions[0].to_json_dict()
             if "transaction_id" in response:
                 response["transaction_id"] = new_txs[0].name
             if "transaction_ids" in response:
