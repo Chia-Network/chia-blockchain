@@ -1594,6 +1594,11 @@ async def test_benchmark_batch_insert_speed(
     paired = list(zip(coefficients, coefficient_maximums))
     assert len(paired) == len(coefficients)
     for index, [actual, maximum] in enumerate(paired):
+        benchmark_runner.record_value(
+            value=actual,
+            limit=maximum,
+            label=f"{type(best_class).__name__} coefficient {index}",
+        )
         assert actual <= maximum, f"(coefficient {index}) {actual} > {maximum}: {paired}"
 
     # TODO: how do we get this into present reporting since that's just for time
