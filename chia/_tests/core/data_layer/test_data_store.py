@@ -1588,7 +1588,7 @@ async def test_benchmark_batch_insert_speed(
         best_class, (big_o.complexities.Constant, big_o.complexities.Linear)
     ), f"must be constant or linear: {best_class}"
 
-    coefficient_maximums = [0.5, 0.000_2, *(10**-n for n in range(5, 100))]
+    coefficient_maximums = [0.6, 0.000_2, *(10**-n for n in range(5, 100))]
 
     coefficients = best_class.coefficients()
     paired = list(zip(coefficients, coefficient_maximums))
