@@ -2763,6 +2763,18 @@ class WalletStateManager:
         return [bundle.name() for bundle in bundles]
 
     @contextlib.asynccontextmanager
-    async def new_action_scope(self, push: bool = False, merge_spends: bool = True) -> AsyncIterator[WalletActionScope]:
-        async with WalletActionScope.new(self, push=push, merge_spends=merge_spends) as action_scope:
+    async def new_action_scope(
+        self,
+        push: bool = False,
+        merge_spends: bool = True,
+        sign: Optional[bool] = None,
+        additional_signing_responses: List[SigningResponse] = [],
+    ) -> AsyncIterator[WalletActionScope]:
+        async with WalletActionScope.new(
+            self,
+            push=push,
+            merge_spends=merge_spends,
+            sign=sign,
+            additional_signing_responses=additional_signing_responses,
+        ) as action_scope:
             yield action_scope

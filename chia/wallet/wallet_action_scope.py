@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, AsyncIterator, List, cast
+from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast
 
 from chia.util.action_scope import ActionScope
+from chia.util.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 
 if TYPE_CHECKING:  # avoid circular import
@@ -43,11 +44,17 @@ class WalletActionScope(ActionScope[WalletSideEffects]):
         wallet_state_manager: WalletStateManager,
         push: bool = False,
         merge_spends: bool = True,
+        sign: Optional[bool] = None,
+        additional_signing_responses: List[SigningResponse] = [],
     ) -> AsyncIterator[WalletActionScope]:
         async with cls.new_scope(WalletSideEffects) as self:
             self = cast(WalletActionScope, self)
             yield self
 
         self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
-            self.side_effects.transactions, push=push, merge_spends=merge_spends
+            self.side_effects.transactions,
+            push=push,
+            merge_spends=merge_spends,
+            sign=sign,
+            additional_signing_responses=additional_signing_responses,
         )
