@@ -63,7 +63,9 @@ def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[D
         yield config
 
 
-def get_capabilities(disable_capabilities_values: Optional[List[Capability]]) -> List[Tuple[uint16, str]]:
+def get_capabilities(
+    node_type: NodeType, disable_capabilities_values: Optional[List[Capability]]
+) -> List[Tuple[uint16, str]]:
     if disable_capabilities_values is not None:
         try:
             if Capability.BASE in disable_capabilities_values:
@@ -71,7 +73,7 @@ def get_capabilities(disable_capabilities_values: Optional[List[Capability]]) ->
                 disable_capabilities_values.remove(Capability.BASE)
 
             updated_capabilities = []
-            for capability in default_capabilities[NodeType.FULL_NODE]:
+            for capability in default_capabilities[node_type]:
                 if Capability(int(capability[0])) in disable_capabilities_values:
                     # "0" means capability is disabled
                     updated_capabilities.append((capability[0], "0"))
@@ -80,7 +82,7 @@ def get_capabilities(disable_capabilities_values: Optional[List[Capability]]) ->
             return updated_capabilities
         except Exception:
             logging.getLogger(__name__).exception("Error disabling capabilities, defaulting to all capabilities")
-    return default_capabilities[NodeType.FULL_NODE].copy()
+    return default_capabilities[node_type].copy()
 
 
 @asynccontextmanager
@@ -150,7 +152,9 @@ async def setup_full_node(
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
     local_bt.change_config(config)
-    override_capabilities = None if disable_capabilities is None else get_capabilities(disable_capabilities)
+    override_capabilities = (
+        None if disable_capabilities is None else get_capabilities(NodeType.FULL_NODE, disable_capabilities)
+    )
     service: Union[FullNodeService, SimulatorFullNodeService]
     if simulator:
         service = await create_full_node_simulator_service(
