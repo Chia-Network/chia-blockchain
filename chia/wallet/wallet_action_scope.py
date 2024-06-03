@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast
 
 from chia.util.action_scope import ActionScope
-from chia.util.signer_protocol import SigningResponse
+from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 
 if TYPE_CHECKING:  # avoid circular import
