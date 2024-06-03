@@ -293,6 +293,9 @@ class GenesisByIdOrSingleton(LimitationsProgram):
                 coins=set(coins),
                 origin_id=origin_id,
             )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
         tx_record: TransactionRecord = inner_action_scope.side_effects.transactions[0]
         assert tx_record.spend_bundle is not None
         payment = Payment(cat_inner.get_tree_hash(), amount)
