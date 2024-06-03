@@ -527,6 +527,8 @@ class DataStore:
                     expected_hash = internal_hash(left_hash=node.left_hash, right_hash=node.right_hash)
                 elif isinstance(node, TerminalNode):
                     expected_hash = Program.to((node.key, node.value)).get_tree_hash()
+                else:
+                    raise Exception(f"Internal error, unknown node type: {node!r}")
 
                 if node.hash != expected_hash:
                     bad_node_hashes.append(node.hash)
@@ -1172,6 +1174,8 @@ class DataStore:
                 elif side == Side.RIGHT:
                     left = reference_node_hash
                     right = new_terminal_node_hash
+                else:
+                    raise Exception(f"Internal error, unknown side: {side!r}")
 
                 ancestors = await self.get_ancestors_common(
                     node_hash=reference_node_hash,

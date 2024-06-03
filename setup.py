@@ -51,7 +51,7 @@ dev_dependencies = [
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.7.1; python_version >= '3.9'",
     "py3createtorrent==1.2.0",
-    "pylint==3.1.0",
+    "pylint==3.2.2",
     "pytest==8.1.1",
     "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",

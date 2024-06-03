@@ -1436,6 +1436,9 @@ class DAOWallet:
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
                 delegated_solution = Program.to([])
 
+            else:
+                raise Exception(f"Unknown proposal type: {proposal_type!r}")
+
             treasury_solution = Program.to(
                 [
                     [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH.as_atom(), 0],
@@ -1467,6 +1470,8 @@ class DAOWallet:
         if self_destruct:
             spend_bundle = SpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         else:
+            # TODO: maybe we can refactor this to provide clarity around timer_cs having been defined
+            # pylint: disable-next=E0606
             spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config)
