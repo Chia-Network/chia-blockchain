@@ -63,9 +63,7 @@ def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[D
         yield config
 
 
-def get_capabilities(
-    node_type: NodeType, disable_capabilities_values: Optional[List[Capability]]
-) -> List[Tuple[uint16, str]]:
+def get_capabilities(node_type: NodeType, disable_capabilities_values: List[Capability]) -> List[Tuple[uint16, str]]:
     if disable_capabilities_values is not None:
         try:
             if Capability.BASE in disable_capabilities_values:
