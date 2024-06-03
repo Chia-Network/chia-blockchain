@@ -14,7 +14,6 @@ import random
 import sysconfig
 import tempfile
 from contextlib import AsyncExitStack
-from enum import IntEnum
 from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
 
 import aiohttp
@@ -29,7 +28,15 @@ from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.simulation.test_simulation import test_constants_modified
-from chia._tests.util.misc import BenchmarkRunner, GcMode, RecordingWebServer, TestId, _AssertRuntime, measure_overhead
+from chia._tests.util.misc import (
+    BenchmarkRunner,
+    ComparableEnum,
+    GcMode,
+    RecordingWebServer,
+    TestId,
+    _AssertRuntime,
+    measure_overhead,
+)
 from chia._tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
     SimulatorsAndWallets,
@@ -187,7 +194,7 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
-class ConsensusMode(IntEnum):
+class ConsensusMode(ComparableEnum):
     PLAIN = 0
     SOFT_FORK_4 = 1
     HARD_FORK_2_0 = 2

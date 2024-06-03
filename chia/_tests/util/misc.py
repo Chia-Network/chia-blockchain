@@ -14,6 +14,7 @@ import subprocess
 import sys
 from concurrent.futures import Future
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from statistics import mean
 from textwrap import dedent
@@ -637,3 +638,44 @@ class DataTypeProtocol(Protocol):
     def unmarshal(cls: Type[T], marshalled: Dict[str, Any]) -> T: ...
 
     def marshal(self) -> Dict[str, Any]: ...
+
+
+T_ComparableEnum = TypeVar("T_ComparableEnum", bound="ComparableEnum")
+
+
+class ComparableEnum(Enum):
+    def __lt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+        if self.__class__ is not other.__class__:
+            return NotImplemented
+
+        return self.value.__lt__(other.value)
+
+    def __le__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+        if self.__class__ is not other.__class__:
+            return NotImplemented
+
+        return self.value.__le__(other.value)
+
+    def __eq__(self: T_ComparableEnum, other: object) -> bool:
+        if self.__class__ is not other.__class__:
+            return False
+
+        return cast(bool, self.value.__eq__(cast(T_ComparableEnum, other).value))
+
+    def __ne__(self: T_ComparableEnum, other: object) -> bool:
+        if self.__class__ is not other.__class__:
+            return True
+
+        return cast(bool, self.value.__ne__(cast(T_ComparableEnum, other).value))
+
+    def __gt__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+        if self.__class__ is not other.__class__:
+            return NotImplemented
+
+        return self.value.__gt__(other.value)
+
+    def __ge__(self: T_ComparableEnum, other: T_ComparableEnum) -> object:
+        if self.__class__ is not other.__class__:
+            return NotImplemented
+
+        return self.value.__ge__(other.value)
