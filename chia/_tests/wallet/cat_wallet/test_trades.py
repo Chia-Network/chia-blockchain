@@ -1673,17 +1673,16 @@ async def test_trade_cancellation(wallets_prefarm):
 
     fee = uint64(2_000_000_000_000)
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await trade_manager_maker.cancel_pending_offers(
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id], DEFAULT_TX_CONFIG, action_scope, fee=fee, secure=True
         )
-    txs = await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node.process_transaction_records(records=txs)
+    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
 
     sum_of_outgoing = uint64(0)
     sum_of_incoming = uint64(0)
-    for tx in txs:
+    for tx in action_scope.side_effects.transactions:
         if tx.type == TransactionType.OUTGOING_TX.value:
             sum_of_outgoing = uint64(sum_of_outgoing + tx.amount)
         elif tx.type == TransactionType.INCOMING_TX.value:
@@ -1724,13 +1723,12 @@ async def test_trade_cancellation(wallets_prefarm):
                 Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, action_scope
             )
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await trade_manager_maker.cancel_pending_offers(
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id], DEFAULT_TX_CONFIG, action_scope, fee=uint64(0), secure=True
         )
-    txs = await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node.process_transaction_records(records=txs)
+    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
@@ -1742,21 +1740,26 @@ async def test_trade_cancellation(wallets_prefarm):
     }
 
     # Now we're going to create the other way around for test coverage sake
-    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
-        chia_and_cat_for_something,
-        DEFAULT_TX_CONFIG,
-        driver_dict={bytes32([0] * 32): PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
-    )
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+            chia_and_cat_for_something,
+            DEFAULT_TX_CONFIG,
+            action_scope,
+            driver_dict={bytes32([0] * 32): PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
+        )
     assert error is None
     assert success is True
     assert trade_make is not None
 
-    txs = await trade_manager_maker.cancel_pending_offers(
-        [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
-    )
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await trade_manager_maker.cancel_pending_offers(
+            [trade_make.trade_id], DEFAULT_TX_CONFIG, action_scope, fee=uint64(0), secure=True
+        )
 
     # Check an announcement ring has been created
-    total_spend = SpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None])
+    total_spend = SpendBundle.aggregate(
+        [tx.spend_bundle for tx in action_scope.side_effects.transactions if tx.spend_bundle is not None]
+    )
     all_conditions: List[Program] = []
     creations: List[CreateCoinAnnouncement] = []
     announcement_nonce = std_hash(trade_make.trade_id)
@@ -1773,9 +1776,8 @@ async def test_trade_cancellation(wallets_prefarm):
     for creation in creations:
         assert creation.corresponding_assertion().to_program() in all_conditions
 
-    txs = await wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node.process_transaction_records(records=txs)
+    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
@@ -1954,11 +1956,8 @@ async def test_trade_bad_spend(wallets_prefarm):
     offer = Offer.from_bytes(trade_make.offer)
     bundle = dataclasses.replace(offer._bundle, aggregated_signature=G2Element())
     offer = dataclasses.replace(offer, _bundle=bundle)
-    async with trade_manager_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with trade_manager_taker.wallet_state_manager.new_action_scope(push=True, sign=False) as action_scope:
         tr1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, action_scope, fee=uint64(10))
-    await trade_manager_taker.wallet_state_manager.add_pending_transactions(
-        action_scope.side_effects.transactions, sign=False
-    )
     wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
 
     def check_wallet_cache_empty() -> bool:

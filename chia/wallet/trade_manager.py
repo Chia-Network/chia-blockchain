@@ -353,8 +353,8 @@ class TradeManager:
                     [
                         add
                         for tx in inner_action_scope.side_effects.transactions
-                        for add in tx.spend_bundle.additions()
                         if tx.spend_bundle is not None
+                        for add in tx.spend_bundle.additions()
                     ]
                 )
                 all_txs.extend(inner_action_scope.side_effects.transactions)
