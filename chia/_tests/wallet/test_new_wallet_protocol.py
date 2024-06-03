@@ -22,6 +22,7 @@ from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
+from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
@@ -30,6 +31,8 @@ IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 OneNode = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
+
+ALL_FILTER = wallet_protocol.CoinStateFilters(True, True, True, uint64(0))
 
 
 async def connect_to_simulator(
@@ -774,39 +777,181 @@ async def test_sync_puzzle_state(
                     await run_test(include_spent, include_unspent, include_hinted, uint64(min_amount))
 
 
+async def assert_mempool_added(queue: Queue[Message], consume: int, transaction_ids: Set[bytes32]) -> None:
+    added = []
+    for _ in range(consume):
+        message = await queue.get()
+
+        if message.type != ProtocolMessageTypes.mempool_items_added.value:
+            continue
+
+        update = wallet_protocol.MempoolItemsAdded.from_bytes(message.data)
+        added.extend(update.transaction_ids)
+
+    assert set(added) == transaction_ids
+
+
 @pytest.mark.anyio
-async def test_subscribed_mempool_items(
-    one_node: OneNode, self_hostname: str, default_400_blocks: List[FullBlock]
-) -> None:
+async def test_spent_coin_id_mempool_update(one_node: OneNode, self_hostname: str) -> None:
     simulator, queue, peer = await connect_to_simulator(one_node, self_hostname, mempool_updates=True)
-    subs = simulator.full_node.subscriptions
-    coin_store = simulator.full_node.coin_store
+    full_node = simulator.full_node
+    genesis = full_node.blockchain.constants.GENESIS_CHALLENGE
+    assert genesis is not None
 
-    await simulator.full_node.add_block(default_400_blocks[0])
+    await simulator.farm_blocks_to_puzzlehash(1)
 
-    ph1 = IDENTITY_PUZZLE_HASH
-    coin1 = Coin(bytes32(b"\0" * 32), ph1, uint64(1000))
+    ph = IDENTITY_PUZZLE_HASH
+    coin = Coin(bytes32(b"\0" * 32), ph, uint64(1000))
 
-    # Add coin and subscription
-    await coin_store._add_coin_records([CoinRecord(coin1, uint32(1), uint32(0), False, uint64(10000))])
-    subs.add_coin_subscriptions(peer.peer_node_id, [coin1.name()], 1)
+    # Add the coin record
+    await full_node.coin_store._add_coin_records([CoinRecord(coin, uint32(1), uint32(0), False, uint64(10000))])
+
+    # Request coin state and subscribe
+    cs_resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState([coin.name()], None, genesis, True), peer
+    )
+    assert cs_resp is not None
+
+    response = wallet_protocol.RespondCoinState.from_bytes(cs_resp.data)
+    assert response.coin_ids == [coin.name()]
+    assert len(response.coin_states) == 1
 
     # Add mempool item
     solution = Program.to([])
-    bundle = SpendBundle([CoinSpend(coin1, IDENTITY_PUZZLE, solution)], AugSchemeMPL.aggregate([]))
-    await simulator.full_node.add_transaction(bundle, bundle.name())
+    bundle = SpendBundle([CoinSpend(coin, IDENTITY_PUZZLE, solution)], AugSchemeMPL.aggregate([]))
+    tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle))
+    assert tx_resp is not None
 
-    msg1 = await queue.get()
-    msg2 = await queue.get()
+    ack = wallet_protocol.TransactionAck.from_bytes(tx_resp.data)
+    assert ack.error is None
+    assert ack.status == int(MempoolInclusionStatus.SUCCESS)
 
-    found: Optional[Message] = None
+    await assert_mempool_added(queue, 2, {bundle.name()})
 
-    for msg in [msg1, msg2]:
-        if msg.type == ProtocolMessageTypes.mempool_item_added.value:
-            found = msg
-            break
+    # Check mempool
+    await simulator.wait_bundle_ids_in_mempool([bundle.name()])
+    assert full_node.mempool_manager.mempool.get_item_by_id(bundle.name()) is not None
 
-    assert found is not None
+    # The mempool item should now be in the initial update
+    cs_resp = await simulator.request_coin_state(
+        wallet_protocol.RequestCoinState([coin.name()], None, genesis, True), peer
+    )
+    assert cs_resp is not None
 
-    update = wallet_protocol.MempoolItemAdded.from_bytes(found.data)
-    assert update.transaction_id == bundle.name()
+    response = wallet_protocol.RespondCoinState.from_bytes(cs_resp.data)
+    assert response.coin_ids == [coin.name()]
+    assert len(response.coin_states) == 1
+
+    await assert_mempool_added(queue, 1, {bundle.name()})
+
+
+@pytest.mark.anyio
+async def test_spent_puzzle_hash_mempool_update(one_node: OneNode, self_hostname: str) -> None:
+    simulator, queue, peer = await connect_to_simulator(one_node, self_hostname, mempool_updates=True)
+    full_node = simulator.full_node
+    genesis = full_node.blockchain.constants.GENESIS_CHALLENGE
+    assert genesis is not None
+
+    await simulator.farm_blocks_to_puzzlehash(1)
+
+    ph = IDENTITY_PUZZLE_HASH
+    coin = Coin(bytes32(b"\0" * 32), ph, uint64(1000))
+
+    # Add the coin record
+    await full_node.coin_store._add_coin_records([CoinRecord(coin, uint32(1), uint32(0), False, uint64(10000))])
+
+    # Request coin state and subscribe
+    cs_resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState([ph], None, genesis, ALL_FILTER, True),
+        peer,
+    )
+    assert cs_resp is not None
+
+    response = wallet_protocol.RespondPuzzleState.from_bytes(cs_resp.data)
+    assert response.puzzle_hashes == [ph]
+    assert len(response.coin_states) == 1
+
+    # Add mempool item
+    solution = Program.to([])
+    bundle = SpendBundle([CoinSpend(coin, IDENTITY_PUZZLE, solution)], AugSchemeMPL.aggregate([]))
+    tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle))
+    assert tx_resp is not None
+
+    ack = wallet_protocol.TransactionAck.from_bytes(tx_resp.data)
+    assert ack.error is None
+    assert ack.status == int(MempoolInclusionStatus.SUCCESS)
+
+    await assert_mempool_added(queue, 2, {bundle.name()})
+
+    # Check mempool
+    await simulator.wait_bundle_ids_in_mempool([bundle.name()])
+    assert full_node.mempool_manager.mempool.get_item_by_id(bundle.name()) is not None
+
+    # The mempool item should now be in the initial update
+    cs_resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState([ph], None, genesis, ALL_FILTER, True), peer
+    )
+    assert cs_resp is not None
+
+    response = wallet_protocol.RespondPuzzleState.from_bytes(cs_resp.data)
+    assert response.puzzle_hashes == [ph]
+    assert len(response.coin_states) == 1
+
+    await assert_mempool_added(queue, 1, {bundle.name()})
+
+
+@pytest.mark.anyio
+async def test_spent_hint_mempool_update(one_node: OneNode, self_hostname: str) -> None:
+    simulator, queue, peer = await connect_to_simulator(one_node, self_hostname, mempool_updates=True)
+    full_node = simulator.full_node
+    genesis = full_node.blockchain.constants.GENESIS_CHALLENGE
+    assert genesis is not None
+
+    await simulator.farm_blocks_to_puzzlehash(1)
+
+    ph = IDENTITY_PUZZLE_HASH
+    coin = Coin(bytes32(b"\0" * 32), ph, uint64(1000))
+    hint = bytes32(b"\0" * 32)
+
+    # Add the coin record
+    await full_node.coin_store._add_coin_records([CoinRecord(coin, uint32(1), uint32(0), False, uint64(10000))])
+    await full_node.hint_store.add_hints([(coin.name(), hint)])
+
+    # Request coin state and subscribe
+    cs_resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState([hint], None, genesis, ALL_FILTER, True),
+        peer,
+    )
+    assert cs_resp is not None
+
+    response = wallet_protocol.RespondPuzzleState.from_bytes(cs_resp.data)
+    assert response.puzzle_hashes == [hint]
+    assert len(response.coin_states) == 1
+
+    # Add mempool item
+    solution = Program.to([])
+    bundle = SpendBundle([CoinSpend(coin, IDENTITY_PUZZLE, solution)], AugSchemeMPL.aggregate([]))
+    tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle))
+    assert tx_resp is not None
+
+    ack = wallet_protocol.TransactionAck.from_bytes(tx_resp.data)
+    assert ack.error is None
+    assert ack.status == int(MempoolInclusionStatus.SUCCESS)
+
+    await assert_mempool_added(queue, 2, {bundle.name()})
+
+    # Check mempool
+    await simulator.wait_bundle_ids_in_mempool([bundle.name()])
+    assert full_node.mempool_manager.mempool.get_item_by_id(bundle.name()) is not None
+
+    # The mempool item should now be in the initial update
+    cs_resp = await simulator.request_puzzle_state(
+        wallet_protocol.RequestPuzzleState([hint], None, genesis, ALL_FILTER, True), peer
+    )
+    assert cs_resp is not None
+
+    response = wallet_protocol.RespondPuzzleState.from_bytes(cs_resp.data)
+    assert response.puzzle_hashes == [hint]
+    assert len(response.coin_states) == 1
+
+    await assert_mempool_added(queue, 1, {bundle.name()})

@@ -131,8 +131,7 @@ class ProtocolMessageTypes(Enum):
     reject_coin_state = 103
 
     # Wallet protocol mempool updates
-    subscribed_mempool_items = 104
-    mempool_item_added = 105
-    mempool_items_removed = 106
+    mempool_items_added = 104
+    mempool_items_removed = 105
 
     error = 255

@@ -2419,7 +2419,9 @@ class FullNode:
         ]
 
         for peer in peers:
-            msg = make_msg(ProtocolMessageTypes.mempool_item_added, wallet_protocol.MempoolItemAdded(mempool_item.name))
+            msg = make_msg(
+                ProtocolMessageTypes.mempool_items_added, wallet_protocol.MempoolItemsAdded([mempool_item.name])
+            )
             await peer.send_message(msg)
 
         total_time = time.monotonic() - start_time

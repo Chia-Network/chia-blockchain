@@ -1927,8 +1927,8 @@ class FullNodeAPI:
             )
 
         if len(transaction_ids) > 0:
-            message = wallet_protocol.SubscribedMempoolItems(list(transaction_ids))
-            await peer.send_message(make_msg(ProtocolMessageTypes.subscribed_mempool_items, message))
+            message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))
+            await peer.send_message(make_msg(ProtocolMessageTypes.mempool_items_added, message))
 
         total_time = time.monotonic() - start_time
 
@@ -1946,8 +1946,8 @@ class FullNodeAPI:
         transaction_ids = self.full_node.mempool_manager.mempool.transaction_ids_matching_coin_ids(coin_ids)
 
         if len(transaction_ids) > 0:
-            message = wallet_protocol.SubscribedMempoolItems(list(transaction_ids))
-            await peer.send_message(make_msg(ProtocolMessageTypes.subscribed_mempool_items, message))
+            message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))
+            await peer.send_message(make_msg(ProtocolMessageTypes.mempool_items_added, message))
 
         total_time = time.monotonic() - start_time
 

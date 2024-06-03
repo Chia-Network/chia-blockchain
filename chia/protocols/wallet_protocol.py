@@ -367,14 +367,8 @@ class RejectStateReason(IntEnum):
 
 @streamable
 @dataclass(frozen=True)
-class SubscribedMempoolItems(Streamable):
+class MempoolItemsAdded(Streamable):
     transaction_ids: List[bytes32]
-
-
-@streamable
-@dataclass(frozen=True)
-class MempoolItemAdded(Streamable):
-    transaction_id: bytes32
 
 
 @streamable
