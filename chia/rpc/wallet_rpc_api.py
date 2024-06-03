@@ -23,6 +23,8 @@ from chia.rpc.util import marshal, tx_endpoint
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
+    ExecuteSigningInstructions,
+    ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GetNotifications,
@@ -298,6 +300,8 @@ class WalletRpcApi:
             "/gather_signing_info": self.gather_signing_info,
             "/apply_signatures": self.apply_signatures,
             "/submit_transactions": self.submit_transactions,
+            # Not technically Signer Protocol but related
+            "/execute_signing_instructions": self.execute_signing_instructions,
             # VAULT
             "/vault_create": self.vault_create,
         }
@@ -4588,6 +4592,17 @@ class WalletRpcApi:
     ) -> SubmitTransactionsResponse:
         return SubmitTransactionsResponse(
             await self.service.wallet_state_manager.submit_transactions(request.signed_transactions)
+        )
+
+    @marshal
+    async def execute_signing_instructions(
+        self,
+        request: ExecuteSigningInstructions,
+    ) -> ExecuteSigningInstructionsResponse:
+        return ExecuteSigningInstructionsResponse(
+            await self.service.wallet_state_manager.execute_signing_instructions(
+                request.signing_instructions, request.partial_allowed
+            )
         )
 
     ##########################################################################################
