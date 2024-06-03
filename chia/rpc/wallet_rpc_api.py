@@ -796,6 +796,7 @@ class WalletRpcApi:
                     "type": did_wallet.type(),
                     "my_did": my_did_id,
                     "wallet_id": did_wallet.id(),
+                    "transactions": None,  # tx_endpoint wrapper will take care of this
                 }
 
             elif request["did_type"] == "recovery":

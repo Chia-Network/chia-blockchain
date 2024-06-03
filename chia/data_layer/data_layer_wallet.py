@@ -1216,7 +1216,7 @@ class DataLayerWallet:
                         interface.side_effects.transactions[i], spend_bundle=new_bundle, name=new_bundle.name()
                     )
 
-                all_transactions.extend(inner_action_scope.side_effects.transactions)
+            all_transactions.extend(inner_action_scope.side_effects.transactions)
 
         # create some dummy requested payments
         requested_payments = {

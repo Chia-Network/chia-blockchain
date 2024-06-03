@@ -114,6 +114,9 @@ class GenesisById(LimitationsProgram):
                 amount, minted_cat_puzzle_hash, tx_config, inner_action_scope, fee, coins, origin_id=origin_id
             )
 
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions = inner_action_scope.side_effects.transactions
+
         inner_tree_hash = cat_inner.get_tree_hash()
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
@@ -282,7 +285,13 @@ class GenesisByIdOrSingleton(LimitationsProgram):
 
         async with wallet.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
             await wallet.standard_wallet.generate_signed_transaction(
-                amount, minted_cat_puzzle_hash, tx_config, action_scope, fee, coins=set(coins), origin_id=origin_id
+                amount,
+                minted_cat_puzzle_hash,
+                tx_config,
+                inner_action_scope,
+                fee,
+                coins=set(coins),
+                origin_id=origin_id,
             )
         tx_record: TransactionRecord = inner_action_scope.side_effects.transactions[0]
         assert tx_record.spend_bundle is not None

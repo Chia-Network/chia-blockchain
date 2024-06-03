@@ -603,19 +603,19 @@ class CATWallet:
                     extra_conditions=extra_conditions,
                 )
 
-            message = None
-            for tx in inner_action_scope.side_effects.transactions:
-                if tx.spend_bundle is None:
-                    continue
-                for spend in tx.spend_bundle.coin_spends:
-                    if spend.coin.name() == origin_id:
-                        conditions = spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_python()
-                        for condition in conditions:
-                            if condition[0] == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
-                                message = condition[1]
+        message = None
+        for tx in inner_action_scope.side_effects.transactions:
+            if tx.spend_bundle is None:
+                continue
+            for spend in tx.spend_bundle.coin_spends:
+                if spend.coin.name() == origin_id:
+                    conditions = spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_python()
+                    for condition in conditions:
+                        if condition[0] == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
+                            message = condition[1]
 
-            assert message is not None
-            announcement = AssertCoinAnnouncement(asserted_id=origin_id, asserted_msg=message)
+        assert message is not None
+        announcement = AssertCoinAnnouncement(asserted_id=origin_id, asserted_msg=message)
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
