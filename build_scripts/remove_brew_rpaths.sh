@@ -25,12 +25,13 @@ set +e
 nt_output=
 r=0
 while [[ $r -eq 0 ]]; do
-  install_name_tool -delete_rpath $rpath_name "$so_path" 2>&1 | read nt_output
+  install_name_tool -delete_rpath $rpath_name "$so_path" 2>&1 | read -r nt_output
   r=$?
 done
 
 if [[ -n "$nt_output" ]]; then
   echo "$nt_output" | grep "no LC_RPATH load command with path:" >/dev/null
+  # shellcheck disable=SC2181
   if [[ $? -ne 0 ]]; then
     >&2 echo "An unexpected error occured when running install_name_tool:"
     >&2 echo "$nt_output"
