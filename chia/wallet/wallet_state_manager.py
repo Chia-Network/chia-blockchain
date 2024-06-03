@@ -2275,6 +2275,7 @@ class WalletStateManager:
     async def add_pending_transactions(
         self,
         tx_records: List[TransactionRecord],
+        push: bool = True,
         merge_spends: bool = True,
         sign: Optional[bool] = None,
         additional_signing_responses: List[SigningResponse] = [],
@@ -2285,40 +2286,42 @@ class WalletStateManager:
         """
         if sign is None:
             sign = self.config.get("auto_sign_txs", True)
-        agg_spend: SpendBundle = SpendBundle.aggregate(
-            [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
-        )
-        actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
-        if merge_spends and actual_spend_involved:
-            tx_records = [
-                dataclasses.replace(
-                    tx,
-                    spend_bundle=agg_spend if i == 0 else None,
-                    name=agg_spend.name() if i == 0 else bytes32.secret(),
-                )
-                for i, tx in enumerate(tx_records)
-            ]
+        if merge_spends:
+            agg_spend: SpendBundle = SpendBundle.aggregate(
+                [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
+            )
+            actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
+            if actual_spend_involved:
+                tx_records = [
+                    dataclasses.replace(
+                        tx,
+                        spend_bundle=agg_spend if i == 0 else None,
+                        name=agg_spend.name() if i == 0 else bytes32.secret(),
+                    )
+                    for i, tx in enumerate(tx_records)
+                ]
         if sign:
             tx_records, _ = await self.sign_transactions(
                 tx_records,
                 additional_signing_responses,
                 additional_signing_responses != [],
             )
-        all_coins_names = []
-        async with self.db_wrapper.writer_maybe_transaction():
-            for tx_record in tx_records:
-                # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-                await self.tx_store.add_transaction_record(tx_record)
-                all_coins_names.extend([coin.name() for coin in tx_record.additions])
-                all_coins_names.extend([coin.name() for coin in tx_record.removals])
+        if push:
+            all_coins_names = []
+            async with self.db_wrapper.writer_maybe_transaction():
+                for tx_record in tx_records:
+                    # Wallet node will use this queue to retry sending this transaction until full nodes receives it
+                    await self.tx_store.add_transaction_record(tx_record)
+                    all_coins_names.extend([coin.name() for coin in tx_record.additions])
+                    all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        await self.add_interested_coin_ids(all_coins_names)
+            await self.add_interested_coin_ids(all_coins_names)
 
-        if actual_spend_involved:
-            self.tx_pending_changed()
-        for wallet_id in {tx.wallet_id for tx in tx_records}:
-            self.state_changed("pending_transaction", wallet_id)
-        await self.wallet_node.update_ui()
+            if merge_spends and actual_spend_involved:
+                self.tx_pending_changed()
+            for wallet_id in {tx.wallet_id for tx in tx_records}:
+                self.state_changed("pending_transaction", wallet_id)
+            await self.wallet_node.update_ui()
 
         return tx_records
 

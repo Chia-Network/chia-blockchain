@@ -48,7 +48,6 @@ class WalletActionScope(ActionScope[WalletSideEffects]):
             self = cast(WalletActionScope, self)
             yield self
 
-        if push:
-            self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
-                self.side_effects.transactions, merge_spends=merge_spends
-            )
+        self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
+            self.side_effects.transactions, push=push, merge_spends=merge_spends
+        )
