@@ -64,8 +64,7 @@ dev_dependencies = [
     "black==24.4.2",
     "lxml==5.2.2",
     "aiohttp_cors==0.7.0",  # For blackd
-    "pyinstaller==6.6.0",
-    "setuptools<70",  # TODO: remove - https://github.com/pypa/setuptools/issues/4374
+    "pyinstaller==6.7.0",
     "types-aiofiles==23.2.0.20240311",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.20240311",
