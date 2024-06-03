@@ -2286,20 +2286,19 @@ class WalletStateManager:
         """
         if sign is None:
             sign = self.config.get("auto_sign_txs", True)
-        if merge_spends:
-            agg_spend: SpendBundle = SpendBundle.aggregate(
-                [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
-            )
-            actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
-            if actual_spend_involved:
-                tx_records = [
-                    dataclasses.replace(
-                        tx,
-                        spend_bundle=agg_spend if i == 0 else None,
-                        name=agg_spend.name() if i == 0 else bytes32.secret(),
-                    )
-                    for i, tx in enumerate(tx_records)
-                ]
+        agg_spend: SpendBundle = SpendBundle.aggregate(
+            [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
+        )
+        actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
+        if merge_spends and actual_spend_involved:
+            tx_records = [
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=agg_spend if i == 0 else None,
+                    name=agg_spend.name() if i == 0 else bytes32.secret(),
+                )
+                for i, tx in enumerate(tx_records)
+            ]
         if sign:
             tx_records, _ = await self.sign_transactions(
                 tx_records,
@@ -2317,7 +2316,7 @@ class WalletStateManager:
 
             await self.add_interested_coin_ids(all_coins_names)
 
-            if merge_spends and actual_spend_involved:
+            if actual_spend_involved:
                 self.tx_pending_changed()
             for wallet_id in {tx.wallet_id for tx in tx_records}:
                 self.state_changed("pending_transaction", wallet_id)
