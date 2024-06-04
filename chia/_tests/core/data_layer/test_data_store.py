@@ -2068,6 +2068,7 @@ async def _check_ancestors(
             queue.append(left_node)
             queue.append(right_node)
 
+    ancestors[root_hash] = None
     for node_hash, ancestor_hash in ancestors.items():
         ancestor_node = await data_store._get_one_ancestor(node_hash, store_id)
         if ancestor_hash is None:
