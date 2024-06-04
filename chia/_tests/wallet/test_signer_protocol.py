@@ -514,7 +514,7 @@ def test_blind_signer_translation_layer() -> None:
         BSTLSigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
     ]
 
-    BSTLSigningInstructions(
+    bstl_instructions: BSTLSigningInstructions = BSTLSigningInstructions(
         bstl_sum_hints,
         bstl_path_hints,
         bstl_signing_targets,
@@ -528,8 +528,12 @@ def test_blind_signer_translation_layer() -> None:
         b"signature",
         bytes32([1] * 32),
     )
+    bstl_instructions_json = json_serialize_with_clvm_streamable(bstl_instructions)
     bstl_transaction_json = json_serialize_with_clvm_streamable(bstl_transaction)
     bstl_signing_response_json = json_serialize_with_clvm_streamable(bstl_signing_response)
+    assert bstl_instructions_json == json_serialize_with_clvm_streamable(
+        instructions, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
     assert bstl_transaction_json == json_serialize_with_clvm_streamable(
         transaction, translation_layer=BLIND_SIGNER_TRANSLATION
     )
@@ -537,6 +541,12 @@ def test_blind_signer_translation_layer() -> None:
         signing_response, translation_layer=BLIND_SIGNER_TRANSLATION
     )
 
+    assert (
+        json_deserialize_with_clvm_streamable(
+            bstl_instructions_json, SigningInstructions, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
+        == instructions
+    )
     assert (
         json_deserialize_with_clvm_streamable(
             bstl_transaction_json, UnsignedTransaction, translation_layer=BLIND_SIGNER_TRANSLATION
