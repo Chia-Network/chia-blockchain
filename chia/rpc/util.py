@@ -137,7 +137,11 @@ def tx_endpoint(
             ):
                 raise ValueError("Relative timelocks are not currently supported in the RPC")
 
-            async with self.service.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            async with self.service.wallet_state_manager.new_action_scope(
+                push=push,
+                merge_spends=merge_spends,
+                sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
+            ) as action_scope:
                 response: Dict[str, Any] = await func(
                     self,
                     request,
@@ -159,33 +163,23 @@ def tx_endpoint(
 
             if not request.get("CHIP-0029", False):
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
+                response["signing_responses"] = [r.to_json_dict() for r in action_scope.side_effects.signing_responses]
             else:
                 response["unsigned_transactions"] = [byte_serialize_clvm_streamable(tx).hex() for tx in unsigned_txs]
-
-            new_txs: List[TransactionRecord] = []
-            if request.get("sign", self.service.config.get("auto_sign_txs", True)):
-                new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
-                    action_scope.side_effects.transactions,
-                    response.get("signing_responses", []),
-                    "signing_responses" in response,
-                )
-                response["signing_responses"] = [byte_serialize_clvm_streamable(r).hex() for r in signing_responses]
-            else:
-                new_txs = action_scope.side_effects.transactions  # pragma: no cover
-
-            if request.get("push", push):
-                new_txs = await self.service.wallet_state_manager.add_pending_transactions(
-                    new_txs, merge_spends=merge_spends, sign=False
-                )
+                response["signing_responses"] = [
+                    byte_serialize_clvm_streamable(r).hex() for r in action_scope.side_effects.signing_responses
+                ]
 
             response["transactions"] = [
-                TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
+                TransactionRecord.to_json_dict_convenience(tx, self.service.config)
+                for tx in action_scope.side_effects.transactions
             ]
 
             # Some backwards compatibility code here because transaction information being returned was not uniform
             # until the "transactions" key was applied to all of them. Unfortunately, since .add_pending_transactions
             # now applies transformations to the transactions, we have to special case edit all of the previous
             # spots where the information was being surfaced outside of the knowledge of this wrapper.
+            new_txs = action_scope.side_effects.transactions
             if "transaction" in response:
                 if (
                     func.__name__ == "create_new_wallet"

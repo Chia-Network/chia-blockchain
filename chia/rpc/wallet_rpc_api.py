@@ -2040,11 +2040,16 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
 
+        async with action_scope.use() as interface:
+            interface.side_effects.signing_responses.append(
+                SigningResponse(bytes(offer._bundle.aggregated_signature), trade_record.trade_id)
+            )
+
         return {
             "trade_record": trade_record.to_json_dict_convenience(),
             "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
             "transactions": None,  # tx_endpoint wrapper will take care of this
-            "signing_responses": [SigningResponse(bytes(offer._bundle.aggregated_signature), trade_record.trade_id)],
+            "signing_responses": None,  # tx_endpoint wrapper will take care of this
         }
 
     async def get_offer(self, request: Dict[str, Any]) -> EndpointResult:
