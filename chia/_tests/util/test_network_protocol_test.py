@@ -92,6 +92,7 @@ def test_missing_messages() -> None:
         "RejectPuzzleState",
         "RejectRemovalsRequest",
         "RejectStateReason",
+        "RemovedMempoolItem",
         "RequestAdditions",
         "RequestBlockHeader",
         "RequestBlockHeaders",
