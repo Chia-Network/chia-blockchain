@@ -12,7 +12,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope, WalletSideEffects
 
 
 def test_back_and_forth_serialization() -> None:
-    assert bytes(WalletSideEffects()) == b""
+    assert bytes(WalletSideEffects()) == b"\x00\x00\x00\x00\x00\x00\x00\x00"
     assert WalletSideEffects.from_bytes(bytes(WalletSideEffects())) == WalletSideEffects()
     assert WalletSideEffects.from_bytes(bytes(WalletSideEffects([STD_TX]))) == WalletSideEffects([STD_TX])
     assert WalletSideEffects.from_bytes(bytes(WalletSideEffects([STD_TX, STD_TX]))) == WalletSideEffects(
