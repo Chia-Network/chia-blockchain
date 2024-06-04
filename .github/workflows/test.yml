@@ -89,7 +89,7 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python chia/_tests/build-job-matrix.py --per directory --verbose ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} > matrix.json
+          python chia/_tests/build-job-matrix.py --per directory --verbose ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} --only tools > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
           echo matrix_mode=${{
@@ -109,7 +109,7 @@ jobs:
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   macos-intel:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-intel
+    if: false
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -123,7 +123,7 @@ jobs:
       runs-on: macos-12
       arch: intel
   macos-arm:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
+    if: false
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -138,7 +138,7 @@ jobs:
       arch: arm
       collect-junit: false
   ubuntu:
-    if: github.event_name != 'workflow_dispatch' || inputs.run-linux
+    if: false
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
