@@ -251,6 +251,16 @@ class KeyringWrapper:
 
     def get_master_passphrase_from_credential_store(self) -> Optional[str]:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
+        try:
+            from win32ctypes.pywin32 import pywintypes, win32cred
+
+            win32cred.__name__
+        except ImportError:
+            import pywintypes
+            import win32cred
+
+            win32cred.__name__
+        pywintypes
         if passphrase_store is not None:
             try:
                 return passphrase_store.get_password(  # type: ignore[no-any-return]
