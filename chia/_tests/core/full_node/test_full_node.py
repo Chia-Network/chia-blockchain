@@ -34,7 +34,7 @@ from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, capabilities
+from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
@@ -185,7 +185,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -210,7 +210,7 @@ class TestFullNodeBlockCompression:
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         template = detect_potential_template_generator(uint32(5), program)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert template is None
@@ -224,7 +224,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -246,7 +246,7 @@ class TestFullNodeBlockCompression:
         assert program is not None
         assert detect_potential_template_generator(uint32(6), program) is None
         num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert num_blocks == 0
@@ -267,7 +267,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -279,7 +279,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -292,7 +292,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -305,7 +305,7 @@ class TestFullNodeBlockCompression:
             ph,
             DEFAULT_TX_CONFIG,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -327,7 +327,7 @@ class TestFullNodeBlockCompression:
         assert program is not None
         assert detect_potential_template_generator(uint32(9), program) is None
         num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert num_blocks == 0
@@ -403,7 +403,7 @@ class TestFullNodeBlockCompression:
             additions=new_spend_bundle.additions(),
             removals=new_spend_bundle.removals(),
         )
-        await wallet.wallet_state_manager.add_pending_transactions([new_tr])
+        [new_tr] = await wallet.wallet_state_manager.add_pending_transactions([new_tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -422,7 +422,7 @@ class TestFullNodeBlockCompression:
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
         template = detect_potential_template_generator(uint32(11), program)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert template is None
@@ -437,7 +437,7 @@ class TestFullNodeBlockCompression:
         assert height == len(all_blocks) - 1
 
         template = full_node_1.full_node.full_node_store.previous_generator
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
             # after the hard fork we don't use this compression mechanism
             # anymore, we use CLVM backrefs in the encoding instead
             assert template is None
@@ -2178,9 +2178,9 @@ class TestFullNodeProtocol:
         argnames=["custom_capabilities", "expect_success"],
         argvalues=[
             # standard
-            [capabilities, True],
+            [default_capabilities[NodeType.FULL_NODE], True],
             # an additional enabled but unknown capability
-            [[*capabilities, (uint16(max(Capability) + 1), "1")], True],
+            [[*default_capabilities[NodeType.FULL_NODE], (uint16(max(Capability) + 1), "1")], True],
             # no capability, not even Chia mainnet
             # TODO: shouldn't we fail without Capability.BASE?
             [[], True],

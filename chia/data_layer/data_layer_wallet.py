@@ -91,6 +91,7 @@ class Mirror:
     amount: uint64
     urls: List[bytes]
     ours: bool
+    confirmed_at_height: Optional[uint32]
 
     def to_json_dict(self) -> Dict[str, Any]:
         return {
@@ -99,6 +100,7 @@ class Mirror:
             "amount": self.amount,
             "urls": [url.decode("utf8") for url in self.urls],
             "ours": self.ours,
+            "confirmed_at_height": self.confirmed_at_height,
         }
 
     @classmethod
@@ -109,6 +111,7 @@ class Mirror:
             json_dict["amount"],
             [bytes(url, "utf8") for url in json_dict["urls"]],
             json_dict["ours"],
+            json_dict["confirmed_at_height"],
         )
 
 
@@ -271,7 +274,7 @@ class DataLayerWallet:
                 )
             )
 
-        await self.wallet_state_manager.dl_store.add_launcher(spend.coin)
+        await self.wallet_state_manager.dl_store.add_launcher(spend.coin, height)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
         await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
 
@@ -301,7 +304,7 @@ class DataLayerWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[TransactionRecord, TransactionRecord, bytes32]:
+    ) -> Tuple[TransactionRecord, bytes32]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
@@ -342,26 +345,7 @@ class DataLayerWallet:
         full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
 
         # Delete from standard transaction so we don't push duplicate spends
-        std_record: TransactionRecord = dataclasses.replace(create_launcher_tx_record, spend_bundle=None)
-        dl_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=bytes32([2] * 32),
-            amount=uint64(1),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=full_spend,
-            additions=full_spend.additions(),
-            removals=full_spend.removals(),
-            memos=list(compute_memos(full_spend).items()),
-            wallet_id=uint32(0),  # This is being called before the wallet is created so we're using a temp ID of 0
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=full_spend.name(),
-            valid_times=parse_timelock_info(extra_conditions),
-        )
+        std_record: TransactionRecord = dataclasses.replace(create_launcher_tx_record, spend_bundle=full_spend)
         singleton_record = SingletonRecord(
             coin_id=Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1)).name(),
             launcher_id=launcher_coin.name(),
@@ -381,7 +365,7 @@ class DataLayerWallet:
         await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record)
         await self.wallet_state_manager.add_interested_puzzle_hashes([singleton_record.launcher_id], [self.id()])
 
-        return dl_record, std_record, launcher_coin.name()
+        return std_record, launcher_coin.name()
 
     async def create_tandem_xch_tx(
         self,
@@ -408,7 +392,6 @@ class DataLayerWallet:
         new_puz_hash: Optional[bytes32] = None,
         new_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
-        sign: bool = True,
         add_pending_singleton: bool = True,
         announce_new_state: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -576,10 +559,7 @@ class DataLayerWallet:
             SerializedProgram.from_program(full_sol),
         )
 
-        if sign:
-            spend_bundle = await self.sign(coin_spend)
-        else:
-            spend_bundle = SpendBundle([coin_spend], G2Element())
+        spend_bundle = SpendBundle([coin_spend], G2Element())
 
         if announce_new_state:
             spend_bundle = dataclasses.replace(spend_bundle, coin_spends=[coin_spend, second_coin_spend])
@@ -610,7 +590,7 @@ class DataLayerWallet:
             )
             assert chia_tx.spend_bundle is not None
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
-            dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
+            dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle, name=aggregate_bundle.name())
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
             txs: List[TransactionRecord] = [dl_tx, chia_tx]
         else:
@@ -640,9 +620,6 @@ class DataLayerWallet:
     ) -> List[TransactionRecord]:
         launcher_id: Optional[bytes32] = kwargs.get("launcher_id", None)
         new_root_hash: Optional[bytes32] = kwargs.get("new_root_hash", None)
-        sign: bool = kwargs.get(
-            "sign", True
-        )  # This only prevent signing of THIS wallet's part of the tx (fee will still be signed)
         add_pending_singleton: bool = kwargs.get("add_pending_singleton", True)
         announce_new_state: bool = kwargs.get("announce_new_state", False)
         # Figure out the launcher ID
@@ -669,7 +646,6 @@ class DataLayerWallet:
             puzzle_hashes[0],
             amounts[0],
             fee,
-            sign,
             add_pending_singleton,
             announce_new_state,
             extra_conditions,
@@ -790,7 +766,7 @@ class DataLayerWallet:
                 ]
             ),
         )
-        mirror_bundle: SpendBundle = await self.sign(mirror_spend)
+        mirror_bundle: SpendBundle = SpendBundle([mirror_spend], G2Element())
         txs = [
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -858,6 +834,7 @@ class DataLayerWallet:
                         uint64(coin.amount),
                         urls,
                         ours,
+                        height,
                     )
                 )
                 await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
@@ -1112,9 +1089,6 @@ class DataLayerWallet:
     async def get_max_send_amount(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
 
-    async def sign(self, coin_spend: CoinSpend) -> SpendBundle:
-        return await self.wallet_state_manager.sign_transaction([coin_spend])
-
     def get_name(self) -> str:
         return self.wallet_info.name
 
@@ -1186,7 +1160,6 @@ class DataLayerWallet:
                 fee=fee_left_to_pay,
                 launcher_id=launcher,
                 new_root_hash=new_root,
-                sign=False,
                 add_pending_singleton=False,
                 announce_new_state=True,
                 extra_conditions=extra_conditions,
@@ -1209,18 +1182,16 @@ class DataLayerWallet:
 
             new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None] * 5))
             new_spend: CoinSpend = dl_spend.replace(solution=SerializedProgram.from_program(new_solution))
-            signed_bundle = await dl_wallet.sign(new_spend)
             new_bundle: SpendBundle = dataclasses.replace(
                 txs[0].spend_bundle,
-                coin_spends=all_other_spends,
+                coin_spends=[*all_other_spends, new_spend],
             )
-            agg_bundle: SpendBundle = SpendBundle.aggregate([signed_bundle, new_bundle])
-            all_bundles.append(agg_bundle)
+            all_bundles.append(new_bundle)
             all_transactions.append(
                 dataclasses.replace(
                     txs[0],
-                    spend_bundle=agg_bundle,
-                    name=agg_bundle.name(),
+                    spend_bundle=new_bundle,
+                    name=new_bundle.name(),
                 )
             )
             all_transactions.extend(txs[1:])

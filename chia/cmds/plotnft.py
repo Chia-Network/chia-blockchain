@@ -94,7 +94,11 @@ def create_cmd(
         print("  pool_url argument (-u) is required for pool starting state")
         return
     valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
-    asyncio.run(create(wallet_rpc_port, fingerprint, pool_url, valid_initial_states[state], Decimal(fee), dont_prompt))
+    asyncio.run(
+        create(
+            wallet_rpc_port, fingerprint, pool_url, valid_initial_states[state], Decimal(fee), prompt=not dont_prompt
+        )
+    )
 
 
 @plotnft_cmd.command("join", help="Join a plot NFT to a Pool")
@@ -133,7 +137,7 @@ def join_cmd(
             pool_url=pool_url,
             fee=Decimal(fee),
             wallet_id=id,
-            prompt=dont_prompt,
+            prompt=not dont_prompt,
         )
     )
 
@@ -170,7 +174,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
             fingerprint=fingerprint,
             fee=Decimal(fee),
             wallet_id=id,
-            prompt=dont_prompt,
+            prompt=not dont_prompt,
         )
     )
 

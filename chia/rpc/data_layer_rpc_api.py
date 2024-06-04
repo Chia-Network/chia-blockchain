@@ -401,7 +401,7 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         subscriptions: List[Subscription] = await self.service.get_subscriptions()
-        return {"store_ids": [sub.tree_id.hex() for sub in subscriptions]}
+        return {"store_ids": [sub.store_id.hex() for sub in subscriptions]}
 
     async def remove_subscriptions(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
@@ -423,13 +423,13 @@ class DataLayerRpcApi:
             ids_bytes = [bytes32.from_hexstr(id) for id in store_ids]
         else:
             subscriptions: List[Subscription] = await self.service.get_subscriptions()
-            ids_bytes = [subscription.tree_id for subscription in subscriptions]
+            ids_bytes = [subscription.store_id for subscription in subscriptions]
         overwrite = request.get("overwrite", False)
         foldername: Optional[Path] = None
         if "foldername" in request:
             foldername = Path(request["foldername"])
-        for tree_id in ids_bytes:
-            await self.service.add_missing_files(tree_id, overwrite, foldername)
+        for store_id in ids_bytes:
+            await self.service.add_missing_files(store_id, overwrite, foldername)
         return {}
 
     async def get_root_history(self, request: Dict[str, Any]) -> EndpointResult:
@@ -575,7 +575,7 @@ class DataLayerRpcApi:
 
     @marshal()  # type: ignore[arg-type]
     async def clear_pending_roots(self, request: ClearPendingRootsRequest) -> ClearPendingRootsResponse:
-        root = await self.service.data_store.clear_pending_roots(tree_id=request.store_id)
+        root = await self.service.data_store.clear_pending_roots(store_id=request.store_id)
 
         return ClearPendingRootsResponse(success=root is not None, root=root)
 
@@ -587,9 +587,9 @@ class DataLayerRpcApi:
 
         all_proofs: List[HashOnlyProof] = []
         for key in request.keys:
-            node = await self.service.data_store.get_node_by_key(tree_id=request.store_id, key=key)
+            node = await self.service.data_store.get_node_by_key(store_id=request.store_id, key=key)
             pi = await self.service.data_store.get_proof_of_inclusion_by_hash(
-                tree_id=request.store_id, node_hash=node.hash, use_optimized=True
+                store_id=request.store_id, node_hash=node.hash, use_optimized=True
             )
 
             proof = HashOnlyProof.from_key_value(

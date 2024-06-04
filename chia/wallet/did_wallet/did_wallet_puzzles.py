@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Optional, Tuple, Union, cast
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 from chia_rs import G1Element
 
@@ -13,16 +13,26 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,
+    SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH,
     SINGLETON_TOP_LAYER_MOD,
     SINGLETON_TOP_LAYER_MOD_HASH,
+    SINGLETON_TOP_LAYER_MOD_HASH_TREE_HASH,
     is_singleton,
 )
-from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
+from chia.wallet.util.curry_and_treehash import (
+    calculate_hash_of_quoted_mod_hash,
+    curry_and_treehash,
+    shatree_atom,
+    shatree_atom_list,
+    shatree_int,
+    shatree_pair,
+)
 
 DID_INNERPUZ_MOD = load_clvm_maybe_recompile(
     "did_innerpuz.clsp", package_or_requirement="chia.wallet.did_wallet.puzzles"
 )
 DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
+DID_INNERPUZ_MOD_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
 INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile(
     "nft_intermediate_launcher.clsp", package_or_requirement="chia.wallet.nft_wallet.puzzles"
 )
@@ -34,7 +44,7 @@ def create_innerpuz(
     num_of_backup_ids_needed: uint64,
     launcher_id: bytes32,
     metadata: Program = Program.to([]),
-    recovery_list_hash: Optional[bytes32] = None,
+    recovery_list_hash: Optional[Program] = None,
 ) -> Program:
     """
     Create DID inner puzzle
@@ -48,7 +58,7 @@ def create_innerpuz(
     Note: Receiving a standard P2 puzzle hash wouldn't calculate a valid puzzle, but
     that can be useful if calling `.get_tree_hash_precalc()` on it.
     """
-    backup_ids_hash = Program.to(recovery_list).get_tree_hash()
+    backup_ids_hash: Union[Program, bytes32] = Program.to(recovery_list).get_tree_hash()
     if recovery_list_hash is not None:
         backup_ids_hash = recovery_list_hash
     singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
@@ -74,17 +84,20 @@ def get_inner_puzhash_by_p2(
     :return: DID inner puzzle hash
     """
 
-    backup_ids_hash = Program(Program.to(recovery_list)).get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, SINGLETON_LAUNCHER_PUZZLE_HASH)))
+    backup_ids_hash = shatree_atom_list(recovery_list)
 
-    quoted_mod_hash = calculate_hash_of_quoted_mod_hash(DID_INNERPUZ_MOD_HASH)
+    # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
+    singleton_struct = shatree_pair(
+        SINGLETON_TOP_LAYER_MOD_HASH_TREE_HASH,
+        shatree_pair(shatree_atom(launcher_id), SINGLETON_LAUNCHER_PUZZLE_HASH_TREE_HASH),
+    )
 
     return curry_and_treehash(
-        quoted_mod_hash,
+        DID_INNERPUZ_MOD_HASH_QUOTED,
         p2_puzhash,
-        Program.to(backup_ids_hash).get_tree_hash(),
-        Program.to(num_of_backup_ids_needed).get_tree_hash(),
-        Program.to(singleton_struct).get_tree_hash(),
+        shatree_atom(backup_ids_hash),
+        shatree_int(num_of_backup_ids_needed),
+        singleton_struct,
         metadata.get_tree_hash(),
     )
 
@@ -132,8 +145,7 @@ def create_recovery_message_puzzle(recovering_coin_id: bytes32, newpuz: bytes32,
             ],
         )
     )
-    # TODO: Remove cast when we have proper hinting for this
-    return cast(Program, puzzle)
+    return puzzle
 
 
 def create_spend_for_message(
@@ -163,8 +175,7 @@ def match_did_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[P
         if mod == SINGLETON_TOP_LAYER_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DID_INNERPUZ_MOD:
-                # TODO: Remove cast when we have clvm type hinting for this
-                return cast(Iterator[Program], curried_args.as_iter())
+                return curried_args.as_iter()
     except Exception:
         import traceback
 
@@ -194,8 +205,7 @@ def metadata_to_program(metadata: Dict[str, str]) -> Program:
     kv_list = []
     for key, value in metadata.items():
         kv_list.append((key, value))
-    # TODO: Remove cast when we have proper hinting for this
-    return cast(Program, Program.to(kv_list))
+    return Program.to(kv_list)
 
 
 def did_program_to_metadata(program: Program) -> Dict[str, str]:

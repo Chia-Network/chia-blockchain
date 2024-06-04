@@ -85,7 +85,7 @@ class TestDIDWallet:
         # Wallet1 sets up DIDWallet1 without any backup set
         async with wallet_node_0.wallet_state_manager.lock:
             did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, uint64(101)
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), DEFAULT_TX_CONFIG
             )
 
         with pytest.raises(RuntimeError):
@@ -157,7 +157,7 @@ class TestDIDWallet:
         # Wallet1 sets up DIDWallet1 without any backup set
         async with wallet_node_0.wallet_state_manager.lock:
             did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, uint64(101)
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), DEFAULT_TX_CONFIG
             )
 
         spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
@@ -177,7 +177,7 @@ class TestDIDWallet:
 
         async with wallet_node_1.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_1.wallet_state_manager, wallet_1, uint64(201), backup_ids
+                wallet_node_1.wallet_state_manager, wallet_1, uint64(201), DEFAULT_TX_CONFIG, backup_ids
             )
 
         spend_bundle_list = await wallet_node_1.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
@@ -209,7 +209,7 @@ class TestDIDWallet:
         message_tx, message_spend_bundle, attest_data = await did_wallet_0.create_attestment(
             did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, DEFAULT_TX_CONFIG
         )
-        await did_wallet_0.wallet_state_manager.add_pending_transactions([message_tx])
+        [message_tx] = await did_wallet_0.wallet_state_manager.add_pending_transactions([message_tx])
         assert message_spend_bundle is not None
         spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_0.id()
@@ -234,7 +234,7 @@ class TestDIDWallet:
             test_message_spend_bundle,
         )
         assert txs[0].spend_bundle is not None
-        await did_wallet_2.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet_2.wallet_state_manager.add_pending_transactions(txs)
 
         await time_out_assert_not_none(
             5, full_node_api.full_node.mempool_manager.get_spendbundle, txs[0].spend_bundle.name()
@@ -250,7 +250,7 @@ class TestDIDWallet:
 
         some_ph = 32 * b"\2"
         txs = await did_wallet_2.create_exit_spend(some_ph, DEFAULT_TX_CONFIG)
-        await did_wallet_2.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet_2.wallet_state_manager.add_pending_transactions(txs)
 
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_2.id()
@@ -303,7 +303,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101)
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG
             )
         assert did_wallet.get_name() == "Profile 1"
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
@@ -320,7 +320,7 @@ class TestDIDWallet:
 
         async with wallet_node_2.wallet_state_manager.lock:
             did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_2.wallet_state_manager, wallet2, uint64(101), recovery_list
+                wallet_node_2.wallet_state_manager, wallet2, uint64(101), DEFAULT_TX_CONFIG, recovery_list
             )
 
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
@@ -341,7 +341,7 @@ class TestDIDWallet:
 
         async with wallet_node_2.wallet_state_manager.lock:
             did_wallet_3: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_2.wallet_state_manager, wallet2, uint64(201), recovery_list
+                wallet_node_2.wallet_state_manager, wallet2, uint64(201), DEFAULT_TX_CONFIG, recovery_list
             )
 
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
@@ -375,7 +375,7 @@ class TestDIDWallet:
         message_tx, message_spend_bundle, attest1 = await did_wallet.create_attestment(
             coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
         )
-        await did_wallet.wallet_state_manager.add_pending_transactions([message_tx])
+        [message_tx] = await did_wallet.wallet_state_manager.add_pending_transactions([message_tx])
         assert message_spend_bundle is not None
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
@@ -384,7 +384,7 @@ class TestDIDWallet:
         message_tx2, message_spend_bundle2, attest2 = await did_wallet_2.create_attestment(
             coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
         )
-        await did_wallet_2.wallet_state_manager.add_pending_transactions([message_tx2])
+        [message_tx2] = await did_wallet_2.wallet_state_manager.add_pending_transactions([message_tx2])
         assert message_spend_bundle2 is not None
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_2.id()
@@ -404,7 +404,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_4.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 0)
         txs = await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, message_spend_bundle)
-        await did_wallet_4.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet_4.wallet_state_manager.add_pending_transactions(txs)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_4.id()
         )
@@ -453,7 +453,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101)
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG
             )
 
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
@@ -501,7 +501,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101)
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG
             )
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
@@ -535,7 +535,7 @@ class TestDIDWallet:
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
         txs = await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
-        await did_wallet.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet.wallet_state_manager.add_pending_transactions(txs)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -585,7 +585,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101)
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG
             )
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
@@ -599,7 +599,7 @@ class TestDIDWallet:
 
         async with wallet_node_2.wallet_state_manager.lock:
             did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_2.wallet_state_manager, wallet2, uint64(101), recovery_list
+                wallet_node_2.wallet_state_manager, wallet2, uint64(101), DEFAULT_TX_CONFIG, recovery_list
             )
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_2.id()
@@ -617,7 +617,7 @@ class TestDIDWallet:
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
         txs = await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
-        await did_wallet.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet.wallet_state_manager.add_pending_transactions(txs)
 
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
@@ -647,7 +647,7 @@ class TestDIDWallet:
         message_tx, message_spend_bundle, attest_data = await did_wallet.create_attestment(
             coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
         )
-        await did_wallet.wallet_state_manager.add_pending_transactions([message_tx])
+        [message_tx] = await did_wallet.wallet_state_manager.add_pending_transactions([message_tx])
         assert message_spend_bundle is not None
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
@@ -660,7 +660,7 @@ class TestDIDWallet:
             message_spend_bundle,
         ) = await did_wallet_3.load_attest_files_for_recovery_spend([attest_data])
         txs = await did_wallet_3.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle)
-        await did_wallet_3.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet_3.wallet_state_manager.add_pending_transactions(txs)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_3.id()
         )
@@ -690,7 +690,7 @@ class TestDIDWallet:
         message_tx, message_spend_bundle, attest1 = await did_wallet_3.create_attestment(
             coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
         )
-        await did_wallet_3.wallet_state_manager.add_pending_transactions([message_tx])
+        [message_tx] = await did_wallet_3.wallet_state_manager.add_pending_transactions([message_tx])
         assert message_spend_bundle is not None
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_3.id()
@@ -705,7 +705,7 @@ class TestDIDWallet:
             test_message_spend_bundle,
         ) = await did_wallet_4.load_attest_files_for_recovery_spend([attest1])
         txs = await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, test_message_spend_bundle)
-        await did_wallet_2.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet_2.wallet_state_manager.add_pending_transactions(txs)
 
         spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_4.id()
@@ -764,6 +764,7 @@ class TestDIDWallet:
                 wallet_node.wallet_state_manager,
                 wallet,
                 uint64(101),
+                DEFAULT_TX_CONFIG,
                 [bytes(ph)],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
@@ -781,7 +782,7 @@ class TestDIDWallet:
         # Transfer DID
         new_puzhash = await wallet2.get_new_puzzlehash()
         txs = await did_wallet_1.transfer_did(new_puzhash, fee, with_recovery, DEFAULT_TX_CONFIG)
-        await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )
@@ -846,7 +847,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), []
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, []
             )
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
@@ -858,7 +859,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         await did_wallet_1.update_recovery_list([bytes(ph)], 1)
         txs = await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG)
-        await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
@@ -899,7 +900,13 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, did_amount, [], metadata={"twitter": "twitter"}, fee=fee
+                wallet_node.wallet_state_manager,
+                wallet,
+                did_amount,
+                DEFAULT_TX_CONFIG,
+                [],
+                metadata={"twitter": "twitter"},
+                fee=fee,
             )
         transaction_records = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
@@ -937,7 +944,7 @@ class TestDIDWallet:
         [tx] = await wallet.generate_signed_transaction(
             odd_amount, ph1, DEFAULT_TX_CONFIG.override(excluded_coin_ids=[coin_id]), fee
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
         await full_node_api.process_transaction_records(records=[tx])
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=15)
 
@@ -978,7 +985,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), [], fee=fee
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, [], fee=fee
             )
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
@@ -1033,7 +1040,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, did_amount, [], fee=fee
+                wallet_node.wallet_state_manager, wallet, did_amount, DEFAULT_TX_CONFIG, [], fee=fee
             )
         transaction_records = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
@@ -1058,7 +1065,7 @@ class TestDIDWallet:
         metadata["Twitter"] = "http://www.twitter.com"
         await did_wallet_1.update_metadata(metadata)
         txs = await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG, fee)
-        await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
         transaction_records = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )
@@ -1115,6 +1122,7 @@ class TestDIDWallet:
                 wallet_node.wallet_state_manager,
                 wallet,
                 uint64(101),
+                DEFAULT_TX_CONFIG,
                 [bytes(ph)],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
@@ -1247,6 +1255,7 @@ class TestDIDWallet:
                 wallet_node_0.wallet_state_manager,
                 wallet_0,
                 uint64(101),
+                DEFAULT_TX_CONFIG,
                 backups_ids=recovery_list,
                 num_of_backup_ids_needed=0,
             )
@@ -1313,7 +1322,8 @@ class TestDIDWallet:
                 wallet_node_1.wallet_state_manager,
                 wallet,
                 uint64(101),
-                [bytes(ph)],
+                DEFAULT_TX_CONFIG,
+                [bytes32(ph)],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
                 fee=fee,
@@ -1330,7 +1340,7 @@ class TestDIDWallet:
         # Transfer DID
         new_puzhash = await wallet2.get_new_puzzlehash()
         txs = await did_wallet_1.transfer_did(new_puzhash, fee, True, tx_config=DEFAULT_TX_CONFIG)
-        await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
+        txs = await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
         spend_bundle_list = await wallet_node_1.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )
@@ -1389,7 +1399,9 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, monkey
     client = wallet_environments.environments[0].rpc_client
 
     # Generate DID wallet
-    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(wallet_node.wallet_state_manager, wallet, uint64(1))
+    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+        wallet_node.wallet_state_manager, wallet, uint64(1), DEFAULT_TX_CONFIG
+    )
 
     await wallet_environments.process_pending_states(
         [

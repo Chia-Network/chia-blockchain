@@ -221,7 +221,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
         block: FullBlock = (await full_node_api_1.get_all_full_blocks())[-1]
 
-        if consensus_mode != ConsensusMode.HARD_FORK_2_0:
+        if consensus_mode < ConsensusMode.HARD_FORK_2_0:
             # after the hard fork, we don't compress blocks using
             # block references anymore
             assert len(block.transactions_generator_ref_list) > 0  # compression has occurred
@@ -570,7 +570,12 @@ async def test_get_network_info(one_wallet_and_one_simulator_services, self_host
     ) as client:
         await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
         network_info = await client.fetch("get_network_info", {})
-        assert network_info == {"network_name": "testnet0", "network_prefix": "txch", "success": True}
+        assert network_info == {
+            "network_name": "testnet0",
+            "network_prefix": "txch",
+            "genesis_challenge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "success": True,
+        }
 
 
 @pytest.mark.anyio

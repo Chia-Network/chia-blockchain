@@ -16,8 +16,11 @@ from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.conditions import CreateCoinAnnouncement, parse_conditions_non_consensus
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -134,10 +137,10 @@ async def test_cat_trades(
 
         # Mint some DIDs
         did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
+            wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1), wallet_environments.tx_config
         )
         did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1)
+            wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1), wallet_environments.tx_config
         )
         did_id_maker = bytes32.from_hexstr(did_wallet_maker.get_my_DID())
         did_id_taker = bytes32.from_hexstr(did_wallet_taker.get_my_DID())
@@ -460,13 +463,18 @@ async def test_cat_trades(
     assert trade_make is not None
 
     peer = wallet_node_taker.get_full_node_peer()
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         wallet_environments.tx_config,
         fee=uint64(1),
     )
-    await wallet_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     assert trade_take is not None
     assert tx_records is not None
 
@@ -669,13 +677,18 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
 
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         wallet_environments.tx_config,
         fee=uint64(1),
     )
-    await wallet_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     assert trade_take is not None
     assert tx_records is not None
 
@@ -794,12 +807,17 @@ async def test_cat_trades(
     assert error is None
     assert success is True
     assert trade_make is not None
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         wallet_environments.tx_config,
     )
-    await wallet_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
     assert tx_records is not None
@@ -987,12 +1005,17 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
 
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         wallet_environments.tx_config,
     )
-    await wallet_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
     assert tx_records is not None
@@ -1233,12 +1256,17 @@ async def test_cat_trades(
     assert error is None
     assert success is True
     assert trade_make is not None
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         wallet_environments.tx_config,
     )
-    await wallet_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
     assert tx_records is not None
@@ -1361,12 +1389,17 @@ async def test_cat_trades(
     assert success is True
     assert trade_make is not None
 
+    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer),
+        maker_offer,
         peer,
         wallet_environments.tx_config,
     )
-    await wallet_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_taker.wallet_state_manager.add_pending_transactions(
+        tx_records, additional_signing_responses=signing_response
+    )
     await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     assert trade_take is not None
     assert tx_records is not None
@@ -1601,10 +1634,16 @@ async def test_trade_cancellation(wallets_prefarm):
     # Due to current mempool rules, trying to force a take out of the mempool with a cancel will not work.
     # Uncomment this when/if it does
 
-    # trade_take, tx_records = await trade_manager_taker.respond_to_offer(
-    #     Offer.from_bytes(trade_make.offer),
+    # [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    #   [Offer.from_bytes(trade_make.offer)]
     # )
-    # await wallet_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    # trade_take, tx_records = await trade_manager_taker.respond_to_offer(
+    #     maker_offer,
+    # )
+    # tx_records = await wallet_taker.wallet_state_manager.add_pending_transactions(
+    #   tx_records,
+    #   additional_signing_responses=signing_response,
+    # )
     # await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
     # assert trade_take is not None
     # assert tx_records is not None
@@ -1621,7 +1660,7 @@ async def test_trade_cancellation(wallets_prefarm):
     txs = await trade_manager_maker.cancel_pending_offers(
         [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=fee, secure=True
     )
-    await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
+    txs = await wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     await full_node.process_transaction_records(records=txs)
 
@@ -1662,7 +1701,52 @@ async def test_trade_cancellation(wallets_prefarm):
     txs = await trade_manager_maker.cancel_pending_offers(
         [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
     )
-    await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
+    txs = await wallet_maker.wallet_state_manager.add_pending_transactions(txs)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
+    await full_node.process_transaction_records(records=txs)
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
+
+    # Now let's test the case where two coins need to be spent in order to cancel
+    chia_and_cat_for_something = {
+        wallet_maker.id(): -5,
+        cat_wallet_maker.id(): -6,
+        bytes32([0] * 32): 1,  # Doesn't matter
+    }
+
+    # Now we're going to create the other way around for test coverage sake
+    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
+        chia_and_cat_for_something,
+        DEFAULT_TX_CONFIG,
+        driver_dict={bytes32([0] * 32): PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
+    )
+    assert error is None
+    assert success is True
+    assert trade_make is not None
+
+    txs = await trade_manager_maker.cancel_pending_offers(
+        [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
+    )
+
+    # Check an announcement ring has been created
+    total_spend = SpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None])
+    all_conditions: List[Program] = []
+    creations: List[CreateCoinAnnouncement] = []
+    announcement_nonce = std_hash(trade_make.trade_id)
+    for spend in total_spend.coin_spends:
+        all_conditions.extend(
+            [
+                c.to_program()
+                for c in parse_conditions_non_consensus(
+                    spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_iter(), abstractions=False
+                )
+            ]
+        )
+        creations.append(CreateCoinAnnouncement(msg=announcement_nonce, coin_id=spend.coin.name()))
+    for creation in creations:
+        assert creation.corresponding_assertion().to_program() in all_conditions
+
+    txs = await wallet_maker.wallet_state_manager.add_pending_transactions(txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     await full_node.process_transaction_records(records=txs)
 
@@ -1712,7 +1796,7 @@ async def test_trade_cancellation_balance_check(wallets_prefarm):
     txs = await trade_manager_maker.cancel_pending_offers(
         [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
     )
-    await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
+    txs = await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     await full_node.process_transaction_records(records=txs)
 
@@ -1763,16 +1847,22 @@ async def test_trade_conflict(three_wallets_prefarm):
     assert trade_make is not None
     peer = wallet_node_taker.get_full_node_peer()
     offer = Offer.from_bytes(trade_make.offer)
+    [offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers([offer])
     tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
-    await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs1)
+    txs1 = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        txs1, additional_signing_responses=signing_response
+    )
     await full_node.wait_transaction_records_entered_mempool(records=txs1)
     # we shouldn't be able to respond to a duplicate offer
     with pytest.raises(ValueError):
         await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CONFIRM, trade_manager_taker, tr1)
     # pushing into mempool while already in it should fail
+    [offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers([offer])
     tr2, txs2 = await trade_manager_trader.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
-    await trade_manager_trader.wallet_state_manager.add_pending_transactions(txs2)
+    txs2 = await trade_manager_trader.wallet_state_manager.add_pending_transactions(
+        txs2, additional_signing_responses=signing_response
+    )
     assert await trade_manager_trader.get_coins_of_interest()
     offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
     await full_node.process_transaction_records(records=offer_tx_records)
@@ -1825,7 +1915,7 @@ async def test_trade_bad_spend(wallets_prefarm):
     bundle = dataclasses.replace(offer._bundle, aggregated_signature=G2Element())
     offer = dataclasses.replace(offer, _bundle=bundle)
     tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
-    await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs1)
+    txs1 = await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs1, sign=False)
     wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
 
     def check_wallet_cache_empty() -> bool:
@@ -1881,8 +1971,13 @@ async def test_trade_high_fee(wallets_prefarm):
     assert trade_make is not None
     peer = wallet_node_taker.get_full_node_peer()
     offer = Offer.from_bytes(trade_make.offer)
+    [offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make.offer)]
+    )
     tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(1000000000000))
-    await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs1)
+    txs1 = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        txs1, additional_signing_responses=signing_response
+    )
     await full_node.process_transaction_records(records=txs1)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, tr1)
 
@@ -1937,7 +2032,13 @@ async def test_aggregated_trade_state(wallets_prefarm):
     assert success is True
     assert trade_make_2 is not None
 
-    agg_offer = Offer.aggregate([Offer.from_bytes(trade_make_1.offer), Offer.from_bytes(trade_make_2.offer)])
+    [offer_1], signing_response_1 = await wallet_node_maker.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make_1.offer)]
+    )
+    [offer_2], signing_response_2 = await wallet_node_maker.wallet_state_manager.sign_offers(
+        [Offer.from_bytes(trade_make_2.offer)]
+    )
+    agg_offer = Offer.aggregate([offer_1, offer_2])
 
     peer = wallet_node_taker.get_full_node_peer()
     trade_take, tx_records = await trade_manager_taker.respond_to_offer(
@@ -1948,7 +2049,10 @@ async def test_aggregated_trade_state(wallets_prefarm):
     assert trade_take is not None
     assert tx_records is not None
 
-    await trade_manager_taker.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
+        tx_records,
+        additional_signing_responses=[*signing_response_1, *signing_response_2],
+    )
     await full_node.process_transaction_records(records=tx_records)
     await full_node.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=60)
 

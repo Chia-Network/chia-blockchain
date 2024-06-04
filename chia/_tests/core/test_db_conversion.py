@@ -72,7 +72,7 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
             for block in blocks:
                 # await _validate_and_add_block(bc, block)
                 results = PreValidationResult(None, uint64(1), None, False, uint32(0))
-                result, err, _ = await bc.add_block(block, results)
+                result, err, _ = await bc.add_block(block, results, None)
                 assert err is None
 
         # now, convert v1 in_file to v2 out_file

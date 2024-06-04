@@ -231,6 +231,8 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
             ptype = "spend"
         elif ptype_val == "u":
             ptype = "update"
+        else:
+            raise Exception(f"Unknown proposal type: {ptype_val!r}")
 
         print("")
         print(f"Details of Proposal: {proposal_id}")
