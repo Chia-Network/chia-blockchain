@@ -239,7 +239,7 @@ class DataStore:
 
             new_root = Root(
                 store_id=store_id,
-                node_hash=None if node_hash is None else node_hash,
+                node_hash=node_hash,
                 generation=generation,
                 status=status,
             )
