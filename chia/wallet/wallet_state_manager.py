@@ -2278,7 +2278,7 @@ class WalletStateManager:
         push: bool = True,
         merge_spends: bool = True,
         sign: Optional[bool] = None,
-        additional_signing_responses: List[SigningResponse] = [],
+        additional_signing_responses: Optional[List[SigningResponse]] = None,
     ) -> List[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2300,9 +2300,9 @@ class WalletStateManager:
                 for i, tx in enumerate(tx_records)
             ]
         if sign:
-            tx_records, _ = await self.sign_transactions(
+            tx_records, signing_responses = await self.sign_transactions(
                 tx_records,
-                additional_signing_responses,
+                [] if additional_signing_responses is None else additional_signing_responses,
                 additional_signing_responses != [],
             )
         if push:
