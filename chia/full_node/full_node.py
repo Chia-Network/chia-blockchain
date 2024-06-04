@@ -50,7 +50,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
-from chia.full_node.mempool import MempoolRemoveInfo
+from chia.full_node.mempool import MempoolRemoveInfo, MempoolRemoveReason
 from chia.full_node.mempool_manager import MempoolManager, NewPeakItem
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
@@ -2440,7 +2440,7 @@ class FullNode:
 
         self.log.debug(f"Broadcasting {total_removals} removed transactions to peers")
 
-        removals_to_send: Dict[bytes32, List[bytes32]] = dict()
+        removals_to_send: Dict[bytes32, Dict[MempoolRemoveReason, List[bytes32]]] = dict()
 
         for removal_info in mempool_removals:
             for internal_mempool_item in removal_info.items:
@@ -2473,15 +2473,25 @@ class FullNode:
                         continue
 
                     assert transaction_id is not None
-                    removals_to_send.setdefault(peer.peer_node_id, []).append(transaction_id)
+                    removal_dict = removals_to_send.setdefault(peer.peer_node_id, dict())
+                    removal_dict.setdefault(removal_info.reason, []).append(transaction_id)
 
-        for peer_id, removals in removals_to_send.items():
+        for peer_id, removal_dict in removals_to_send.items():
             peer = self.server.all_connections.get(peer_id)
 
             if peer is None:
                 continue
 
-            msg = make_msg(ProtocolMessageTypes.mempool_items_removed, wallet_protocol.MempoolItemsRemoved(removals))
+            items = [
+                wallet_protocol.RemovedMempoolItem(removal, uint8(reason.value))
+                for reason, removals in removal_dict.items()
+                for removal in removals
+            ]
+
+            msg = make_msg(
+                ProtocolMessageTypes.mempool_items_removed,
+                wallet_protocol.MempoolItemsRemoved(items),
+            )
             await peer.send_message(msg)
 
         total_time = time.monotonic() - start_time

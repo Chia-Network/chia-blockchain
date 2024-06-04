@@ -367,6 +367,13 @@ class RejectStateReason(IntEnum):
 
 @streamable
 @dataclass(frozen=True)
+class RemovedMempoolItem(Streamable):
+    transaction_id: bytes32
+    reason: uint8  # MempoolRemoveReason
+
+
+@streamable
+@dataclass(frozen=True)
 class MempoolItemsAdded(Streamable):
     transaction_ids: List[bytes32]
 
@@ -374,7 +381,7 @@ class MempoolItemsAdded(Streamable):
 @streamable
 @dataclass(frozen=True)
 class MempoolItemsRemoved(Streamable):
-    transaction_ids: List[bytes32]
+    removed_items: List[RemovedMempoolItem]
 
 
 @streamable

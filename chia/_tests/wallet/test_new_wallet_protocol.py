@@ -6,11 +6,12 @@ from random import Random
 from typing import AsyncGenerator, Dict, List, Optional, OrderedDict, Set, Tuple
 
 import pytest
-from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, FullBlock, Program
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, Program
 
 from chia._tests.connection_utils import add_dummy_connection
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import FullNode
+from chia.full_node.mempool import MempoolRemoveReason
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
@@ -792,6 +793,24 @@ async def assert_mempool_added(queue: Queue[Message], consume: int, transaction_
     assert set(added) == transaction_ids
 
 
+async def assert_mempool_removed(
+    queue: Queue[Message],
+    consume: int,
+    removed_items: Set[wallet_protocol.RemovedMempoolItem],
+) -> None:
+    added = []
+    for _ in range(consume):
+        message = await queue.get()
+
+        if message.type != ProtocolMessageTypes.mempool_items_removed.value:
+            continue
+
+        update = wallet_protocol.MempoolItemsRemoved.from_bytes(message.data)
+        added.extend(update.removed_items)
+
+    assert set(added) == removed_items
+
+
 Mpu = Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]
 
 
@@ -903,6 +922,12 @@ async def test_spent_coin_id_mempool_update(mpu_setup: Mpu) -> None:
     await subscribe_coin(simulator, coin.name(), peer)
     await assert_mempool_added(queue, 1, {transaction_id})
 
+    # Farm a block and listen for the mempool removal event
+    await simulator.farm_blocks_to_puzzlehash(1)
+    await assert_mempool_removed(
+        queue, 1, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+    )
+
 
 @pytest.mark.anyio
 async def test_spent_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
@@ -924,6 +949,12 @@ async def test_spent_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
     await subscribe_puzzle(simulator, coin.puzzle_hash, peer)
     await assert_mempool_added(queue, 1, {transaction_id})
 
+    # Farm a block and listen for the mempool removal event
+    await simulator.farm_blocks_to_puzzlehash(1)
+    await assert_mempool_removed(
+        queue, 1, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+    )
+
 
 @pytest.mark.anyio
 async def test_spent_hint_mempool_update(mpu_setup: Mpu) -> None:
@@ -944,6 +975,12 @@ async def test_spent_hint_mempool_update(mpu_setup: Mpu) -> None:
     # The mempool item should now be in the initial update
     await subscribe_puzzle(simulator, hint, peer)
     await assert_mempool_added(queue, 1, {transaction_id})
+
+    # Farm a block and listen for the mempool removal event
+    await simulator.farm_blocks_to_puzzlehash(1)
+    await assert_mempool_removed(
+        queue, 1, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+    )
 
 
 @pytest.mark.anyio
@@ -969,6 +1006,12 @@ async def test_created_coin_id_mempool_update(mpu_setup: Mpu) -> None:
     await subscribe_coin(simulator, child_coin.name(), peer, existing_coin_states=0)
     await assert_mempool_added(queue, 1, {transaction_id})
 
+    # Farm a block and listen for the mempool removal event
+    await simulator.farm_blocks_to_puzzlehash(1)
+    await assert_mempool_removed(
+        queue, 1, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+    )
+
 
 @pytest.mark.anyio
 async def test_created_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
@@ -992,6 +1035,12 @@ async def test_created_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
     # The mempool item should now be in the initial update
     await subscribe_puzzle(simulator, child_coin.puzzle_hash, peer, existing_coin_states=0)
     await assert_mempool_added(queue, 1, {transaction_id})
+
+    # Farm a block and listen for the mempool removal event
+    await simulator.farm_blocks_to_puzzlehash(1)
+    await assert_mempool_removed(
+        queue, 1, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+    )
 
 
 @pytest.mark.anyio
@@ -1017,6 +1066,12 @@ async def test_created_hint_mempool_update(mpu_setup: Mpu) -> None:
     # The mempool item should now be in the initial update
     await subscribe_puzzle(simulator, hint, peer, existing_coin_states=0)
     await assert_mempool_added(queue, 1, {transaction_id})
+
+    # Farm a block and listen for the mempool removal event
+    await simulator.farm_blocks_to_puzzlehash(1)
+    await assert_mempool_removed(
+        queue, 1, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
+    )
 
 
 @pytest.mark.anyio
