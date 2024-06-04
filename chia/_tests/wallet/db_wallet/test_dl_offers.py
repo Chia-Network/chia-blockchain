@@ -144,8 +144,10 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(offer_maker.offer)]
     )
-    async with trade_manager_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        offer_taker, tx_records = await trade_manager_taker.respond_to_offer(
+    async with trade_manager_taker.wallet_state_manager.new_action_scope(
+        push=True, additional_signing_responses=signing_response
+    ) as action_scope:
+        offer_taker = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(offer_maker.offer),
             peer,
             DEFAULT_TX_CONFIG,
@@ -177,11 +179,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
             ),
             fee=fee,
         )
-    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
-        tx_records, additional_signing_responses=signing_response
-    )
     assert offer_taker is not None
-    assert tx_records is not None
 
     assert await trade_manager_maker.get_offer_summary(Offer.from_bytes(offer_taker.offer)) == {
         "offered": [
@@ -214,7 +212,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
 
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     maker_funds -= fee
     taker_funds -= fee
 
@@ -299,14 +297,14 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     assert success is True
     assert offer is not None
 
-    async with trade_manager.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        cancellation_txs = await trade_manager.cancel_pending_offers(
+    async with trade_manager.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await trade_manager.cancel_pending_offers(
             [offer.trade_id], DEFAULT_TX_CONFIG, action_scope, fee=uint64(2_000_000_000_000), secure=True
         )
-    cancellation_txs = await trade_manager.wallet_state_manager.add_pending_transactions(cancellation_txs)
-    assert len(cancellation_txs) == 3  # One outgoing for cancel, one outgoing for fee, one incoming from cancel
+    # One outgoing for cancel, one outgoing for fee, one incoming from cancel
+    assert len(action_scope.side_effects.transactions) == 3
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager, offer)
-    await full_node_api.process_transaction_records(records=cancellation_txs)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager, offer)
 
 
@@ -437,8 +435,10 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(offer_maker.offer)]
     )
-    async with trade_manager_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        offer_taker, tx_records = await trade_manager_taker.respond_to_offer(
+    async with trade_manager_taker.wallet_state_manager.new_action_scope(
+        push=True, additional_signing_responses=signing_response
+    ) as action_scope:
+        offer_taker = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(offer_maker.offer),
             peer,
             DEFAULT_TX_CONFIG,
@@ -483,11 +483,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
             ),
             fee=fee,
         )
-    tx_records = await trade_manager_taker.wallet_state_manager.add_pending_transactions(
-        tx_records, additional_signing_responses=signing_response
-    )
     assert offer_taker is not None
-    assert tx_records is not None
 
     wallet_maker = wsm_maker.main_wallet
     wallet_taker = wsm_taker.main_wallet
@@ -495,7 +491,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
 
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     maker_funds -= fee
     taker_funds -= fee

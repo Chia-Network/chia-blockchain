@@ -2969,13 +2969,16 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         async with action_scope.use() as interface:
+            found: bool = False
             for tx in interface.side_effects.transactions:
                 for coin in tx.removals:
                     if coin.puzzle_hash == SINGLETON_LAUNCHER_PUZZLE_HASH:
                         proposal_id = coin.name()
-                        break
-                else:  # pragma: no cover
-                    raise ValueError("Could not find proposal ID in transaction")
+                        found = True
+                if found:
+                    break
+            else:  # pragma: no cover
+                raise ValueError("Could not find proposal ID in transaction")
         return {
             "success": True,
             "proposal_id": proposal_id,

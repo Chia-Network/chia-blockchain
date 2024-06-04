@@ -951,27 +951,28 @@ class DAOWallet:
 
         full_spend = SpendBundle.aggregate([eve_spend, launcher_sb])
 
-        record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=full_proposal_puzzle.get_tree_hash(),
-            amount=uint64(dao_rules.proposal_minimum_amount),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=full_spend,
-            additions=full_spend.additions(),
-            removals=full_spend.removals(),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.INCOMING_TX.value),
-            name=full_spend.name(),
-            memos=[],
-            valid_times=parse_timelock_info(extra_conditions),
-        )
         async with action_scope.use() as interface:
-            interface.side_effects.transactions.append(record)
+            interface.side_effects.transactions.append(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=full_proposal_puzzle.get_tree_hash(),
+                    amount=uint64(dao_rules.proposal_minimum_amount),
+                    fee_amount=fee,
+                    confirmed=False,
+                    sent=uint32(10),
+                    spend_bundle=full_spend,
+                    additions=full_spend.additions(),
+                    removals=full_spend.removals(),
+                    wallet_id=self.id(),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
+                    name=full_spend.name(),
+                    memos=[],
+                    valid_times=parse_timelock_info(extra_conditions),
+                )
+            )
 
     async def generate_proposal_eve_spend(
         self,

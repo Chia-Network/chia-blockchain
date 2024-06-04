@@ -572,7 +572,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: OldSimulato
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
 
     dao_cat_1_bal = await dao_cat_wallet_1.get_votable_balance()
-    async with dao_cat_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with dao_cat_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
         await dao_cat_wallet_1.enter_dao_cat_voting_mode(dao_cat_1_bal, DEFAULT_TX_CONFIG, action_scope)
     await full_node_api.wait_transaction_records_entered_mempool(
         records=action_scope.side_effects.transactions, timeout=60
@@ -581,7 +581,7 @@ async def test_dao_proposals(self_hostname: str, three_wallet_nodes: OldSimulato
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1, wallet_node_2], timeout=30)
 
     dao_cat_2_bal = await dao_cat_wallet_2.get_votable_balance()
-    async with dao_cat_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with dao_cat_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope:
         await dao_cat_wallet_2.enter_dao_cat_voting_mode(dao_cat_2_bal, DEFAULT_TX_CONFIG, action_scope)
     await full_node_api.wait_transaction_records_entered_mempool(
         records=action_scope.side_effects.transactions, timeout=60
