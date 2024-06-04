@@ -27,8 +27,8 @@ def test_ownership_outer_puzzle() -> None:
         """
     )
     transfer_program_default: Program = puzzle_for_transfer_program(bytes32([1] * 32), bytes32([2] * 32), uint16(5000))
-    ownership_puzzle: Program = puzzle_for_ownership_layer(owner, transfer_program, ACS)
-    ownership_puzzle_empty: Program = puzzle_for_ownership_layer(NIL, transfer_program, ACS)
+    ownership_puzzle: Program = puzzle_for_ownership_layer(owner, Program.to(transfer_program), ACS)
+    ownership_puzzle_empty: Program = puzzle_for_ownership_layer(NIL, Program.to(transfer_program), ACS)
     ownership_puzzle_default: Program = puzzle_for_ownership_layer(owner, transfer_program_default, ACS)
     ownership_driver: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle))
     ownership_driver_empty: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(ownership_puzzle_empty))

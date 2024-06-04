@@ -7,12 +7,13 @@ from hashlib import pbkdf2_hmac
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
 
-import pkg_resources
+import importlib_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import bech32_decode, convertbits
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import (
     KeychainException,
@@ -54,7 +55,9 @@ def set_keys_root_path(keys_root_path: Path) -> None:
 
 
 def bip39_word_list() -> str:
-    return pkg_resources.resource_string(__name__, "english.txt").decode()
+    word_list_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath("english.txt")
+    contents: str = word_list_path.read_text(encoding="utf-8")
+    return contents
 
 
 def generate_mnemonic() -> str:
@@ -371,7 +374,12 @@ class Keychain:
             fingerprint = pk.get_fingerprint()
         else:
             index = self._get_free_private_key_index()
-            pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
+            if mnemonic_or_pk.startswith("bls1238"):
+                _, data = bech32_decode(mnemonic_or_pk, max_length=94)
+                assert data is not None
+                pk_bytes = bytes(convertbits(data, 5, 8, False))
+            else:
+                pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
             key = G1Element.from_bytes(pk_bytes)
             assert isinstance(key, G1Element)
             key_data = pk_bytes.hex()

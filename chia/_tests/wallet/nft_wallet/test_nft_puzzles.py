@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import Tuple
+from typing import Optional, Tuple
 
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program
@@ -85,10 +85,13 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
 
     conds = nft_puz.run(nft_sol)
 
+    expected_ph: Optional[bytes32] = None
     # get the new NFT puzhash
     for cond in conds.as_iter():
         if cond.first().as_int() == 51:
             expected_ph = bytes32(cond.at("rf").as_atom())
+
+    assert expected_ph is not None
 
     # recreate the puzzle for new_puzhash
     new_ownership_puz = NFT_OWNERSHIP_LAYER.curry(NFT_OWNERSHIP_LAYER.get_tree_hash(), None, transfer_puz, taker_p2_puz)
