@@ -453,7 +453,7 @@ jobs:
       - name: Test for homebrew rpath
         if: matrix.arch.name == 'ARM64'
         run: |
-          otool -l "/Volumes/Chia "*/Chia.app/Contents/Resources/app.asar.unpacked/daemon/_internal/lib-dynload/_ssl.*darwin.so | grep -zv /opt/homebrew/lib
+          otool -l "/Volumes/Chia "*/Chia.app/Contents/Resources/app.asar.unpacked/daemon/_internal/lib-dynload/_ssl.*darwin.so | tr "\n" "0" | grep -v /opt/homebrew/lib
 
       - name: Run chia dev installers test
         run: |
