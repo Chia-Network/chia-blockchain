@@ -2115,10 +2115,9 @@ async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -
         )
         root = await data_store.get_tree_root(store_id=store_id)
         assert root.node_hash is not None
-        await _check_ancestors(data_store, store_id, root.node_hash)
+        ancestors = await _check_ancestors(data_store, store_id, root.node_hash)
 
     # Check the ancestor table is sparse
-    ancestors = await _check_ancestors(data_store, store_id, root.node_hash)
     root_generation = root.generation
     current_generation_count = 0
     previous_generation_count = 0
