@@ -53,7 +53,7 @@ jobs:
       - setup
     container:
       image: chianetwork/ubuntu-22.04-builder:latest
-    timeout-minutes: 120
+    timeout-minutes: ${{ fromJSON(needs.setup.outputs.timeout) }}
     strategy:
       fail-fast: false
       matrix:
@@ -94,7 +94,7 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m only_this -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ needs.setup.outputs.repeats }} chia/_tests/
+          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ needs.setup.outputs.repeats }} chia/_tests/
 
       - name: Format JUnit data and prepare results
         if: always()

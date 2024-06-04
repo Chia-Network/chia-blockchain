@@ -1,0 +1,32 @@
+# Starts a release for the given ref on the Glue API
+name: Start Release
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  start_release:
+    name: Starts release process in Glue API
+    runs-on: [glue-notify]
+    steps:
+      - name: Set Env
+        uses: Chia-Network/actions/setjobenv@main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: Chia-Network/actions/github/jwt@main
+
+      - name: Start pre-release
+        if: "github.event.release.prerelease"
+        run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/start
+
+      - name: Start release
+        if: "!github.event.release.prerelease"
+        run: |
+          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/start
