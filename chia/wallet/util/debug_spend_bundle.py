@@ -121,9 +121,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
                 for c in condition_programs:
                     if len(c.vars) == 0:
                         as_prog = Program.to([c.opcode])
-                    if len(c.vars) == 1:
+                    elif len(c.vars) == 1:
                         as_prog = Program.to([c.opcode, c.vars[0]])
-                    if len(c.vars) == 2:
+                    elif len(c.vars) == 2:
                         if c.opcode == ConditionOpcode.CREATE_COIN:
                             cc = next(
                                 cc
@@ -136,6 +136,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
                                 as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
                         else:
                             as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
+                    else:
+                        raise Exception(f"Unexpected number of vars: {len(c.vars)}")
+
                     print(f"  {disassemble(as_prog)}")
             created_coin_announcements.extend(
                 [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])

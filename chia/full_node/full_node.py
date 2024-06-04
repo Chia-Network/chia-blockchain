@@ -82,8 +82,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import WeightProof
-from chia.util import cached_bls
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.cached_bls import BLSCache
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
@@ -166,6 +166,7 @@ class FullNode:
     # hashes of peaks that failed long sync on chip13 Validation
     bad_peak_cache: Dict[bytes32, uint32] = dataclasses.field(default_factory=dict)
     wallet_sync_task: Optional[asyncio.Task[None]] = None
+    _bls_cache: BLSCache = dataclasses.field(default_factory=lambda: BLSCache(50000))
 
     @property
     def server(self) -> ChiaServer:
@@ -667,6 +668,8 @@ class FullNode:
                 curr_height -= 1
             if found_fork_point:
                 for block in reversed(blocks):
+                    # when syncing, we won't share any signatures with the
+                    # mempool, so there's no need to pass in the BLS cache.
                     await self.add_block(block, peer)
         except (asyncio.CancelledError, Exception):
             self.sync_store.decrement_backtrack_syncing(node_id=peer.peer_node_id)
@@ -1293,8 +1296,11 @@ class FullNode:
         for i, block in enumerate(blocks_to_validate):
             assert pre_validation_results[i].required_iters is not None
             state_change_summary: Optional[StateChangeSummary]
+            # when adding blocks in batches, we won't have any overlapping
+            # signatures with the mempool. There won't be any cache hits, so
+            # there's no need to pass the BLS cache in
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], fork_info
+                block, pre_validation_results[i], None, fork_info
             )
 
             if result == AddBlockResult.NEW_PEAK:
@@ -1639,6 +1645,7 @@ class FullNode:
         self,
         block: FullBlock,
         peer: Optional[WSChiaConnection] = None,
+        bls_cache: Optional[BLSCache] = None,
         raise_on_disconnected: bool = False,
         fork_info: Optional[ForkInfo] = None,
     ) -> Optional[Message]:
@@ -1713,7 +1720,7 @@ class FullNode:
                     f"same farmer with the same pospace."
                 )
                 # This recursion ends here, we cannot recurse again because transactions_generator is not None
-                return await self.add_block(new_block, peer)
+                return await self.add_block(new_block, peer, bls_cache)
         state_change_summary: Optional[StateChangeSummary] = None
         ppp_result: Optional[PeakPostProcessingResult] = None
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high), enable_profiler(
@@ -1755,7 +1762,7 @@ class FullNode:
                     )
                     assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
-                        block, result_to_validate, fork_info
+                        block, result_to_validate, bls_cache, fork_info
                     )
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
                     return None
@@ -1971,7 +1978,7 @@ class FullNode:
             # guaranteed to represent a successful run
             assert npc_result.conds is not None
             pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
-            if not cached_bls.aggregate_verify(
+            if not self._bls_cache.aggregate_verify(
                 pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
             ):
                 raise ConsensusError(Err.BAD_AGGREGATE_SIGNATURE)
@@ -2201,7 +2208,7 @@ class FullNode:
             self.log.warning("Trying to make a pre-farm block but height is not 0")
             return None
         try:
-            await self.add_block(block, raise_on_disconnected=True)
+            await self.add_block(block, None, self._bls_cache, raise_on_disconnected=True)
         except Exception as e:
             self.log.warning(f"Consensus error validating block: {e}")
             if timelord_peer is not None:
@@ -2334,7 +2341,9 @@ class FullNode:
             self.mempool_manager.remove_seen(spend_name)
         else:
             try:
-                cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, tx_bytes, spend_name)
+                cost_result = await self.mempool_manager.pre_validate_spendbundle(
+                    transaction, tx_bytes, spend_name, self._bls_cache
+                )
             except ValidationError as e:
                 self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, e.code

@@ -1125,6 +1125,7 @@ async def test_kv_diff(data_store: DataStore, store_id: bytes32) -> None:
     random.seed(100, version=2)
     insertions = 0
     expected_diff: Set[DiffData] = set()
+    root_start = None
     for i in range(500):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
@@ -1158,6 +1159,7 @@ async def test_kv_diff(data_store: DataStore, store_id: bytes32) -> None:
             root_start = await data_store.get_tree_root(store_id)
 
     root_end = await data_store.get_tree_root(store_id)
+    assert root_start is not None
     assert root_start.node_hash is not None
     assert root_end.node_hash is not None
     diffs = await data_store.get_kv_diff(store_id, root_start.node_hash, root_end.node_hash)

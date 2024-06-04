@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 def initial_config_file(filename: Union[str, Path]) -> str:
-    initial_config_path = importlib_resources.files(__name__).joinpath(f"initial-{filename}")
+    initial_config_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath(f"initial-{filename}")
     contents: str = initial_config_path.read_text(encoding="utf-8")
     return contents
 

@@ -38,7 +38,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
 
-test_offer_file_path = importlib_resources.files(__name__).joinpath("test_offer.toffer")
+test_offer_file_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath("test_offer.toffer")
 test_offer_file_bech32 = test_offer_file_path.read_text(encoding="utf-8")
 test_offer_id: str = "0xdfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839"
 test_offer_id_bytes: bytes32 = bytes32.from_hexstr(test_offer_id)
