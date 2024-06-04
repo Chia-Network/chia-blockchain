@@ -2051,8 +2051,11 @@ async def test_migration_unknown_version(data_store: DataStore) -> None:
         await data_store.migrate_db()
 
 
-async def _check_ancestors(data_store: DataStore, store_id: bytes32, root_node: bytes32) -> Dict[bytes32, Optional[bytes32]]:
+async def _check_ancestors(
+    data_store: DataStore, store_id: bytes32, root_hash: bytes32
+) -> Dict[bytes32, Optional[bytes32]]:
     ancestors: Dict[bytes32, Optional[bytes32]] = {}
+    root_node: Node = await data_store.get_node(root_hash)
     queue: List[Node] = [root_node]
 
     while queue:
@@ -2095,8 +2098,7 @@ async def test_build_ancestor_table(data_store: DataStore, store_id: bytes32) ->
     await data_store.change_root_status(pending_root, Status.COMMITTED)
     await data_store.build_ancestor_table_for_latest_root(store_id=store_id)
 
-    root_node = await data_store.get_node(pending_root.node_hash)
-    await _check_ancestors(data_store, store_id, root_node)
+    await _check_ancestors(data_store, store_id, pending_root.node_hash)
 
 
 @pytest.mark.anyio
@@ -2111,11 +2113,10 @@ async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -
             status=Status.COMMITTED,
         )
         root = await data_store.get_tree_root(store_id=store_id)
-        root_node = await data_store.get_node(root.node_hash)
-        await _check_ancestors(data_store, store_id, root_node)
+        await _check_ancestors(data_store, store_id, root.node_hash)
 
     # Check the ancestor table is sparse
-    ancestors = await _check_ancestors(data_store, store_id, root_node)
+    ancestors = await _check_ancestors(data_store, store_id, root.node_hash)
     root_generation = root.generation
     current_generation_count = 0
     previous_generation_count = 0
