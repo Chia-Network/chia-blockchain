@@ -474,7 +474,7 @@ class CATWallet:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
         addition_amount = 0
         for record in unconfirmed_tx:
-            if not record.is_in_mempool():
+            if not record.is_in_mempool() and record.spend_bundle is not None:
                 continue
             our_spend = False
             for coin in record.removals:

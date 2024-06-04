@@ -138,7 +138,7 @@ async def test_cat_creation_unique_lineage_store(self_hostname: str, two_wallet_
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
         cat_wallet_1 = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
@@ -147,6 +147,7 @@ async def test_cat_creation_unique_lineage_store(self_hostname: str, two_wallet_
             DEFAULT_TX_CONFIG,
             action_scope,
         )
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
         cat_wallet_2 = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
@@ -223,7 +224,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "confirmed_wallet_balance": 0,
                         "unconfirmed_wallet_balance": 100,
                         "spendable_balance": 0,
-                        "pending_change": 0,
+                        "pending_change": 100,
                         "max_send_amount": 0,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,  # The ephemeral eve spend
@@ -241,7 +242,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                     "cat": {
                         "confirmed_wallet_balance": 100,
                         "spendable_balance": 100,
-                        "pending_change": 0,
+                        "pending_change": -100,
                         "max_send_amount": 100,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": -1,
@@ -266,9 +267,10 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
         )
     tx_id = None
     for tx_record in action_scope.side_effects.transactions:
-        if tx_record.wallet_id is cat_wallet.id():
-            tx_id = tx_record.name.hex()
+        if tx_record.wallet_id == cat_wallet.id():
             assert tx_record.to_puzzle_hash == cat_2_hash
+        if tx_record.spend_bundle is not None:
+            tx_id = tx_record.name.hex()
     assert tx_id is not None
     memos = await api_0.get_transaction_memo({"transaction_id": tx_id})
     assert len(memos[tx_id]) == 2  # One for tx, one for change
@@ -550,7 +552,7 @@ async def test_get_wallet_for_asset_id(
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
-    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
@@ -827,7 +829,7 @@ async def test_cat_max_amount_send(
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
-    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
@@ -876,14 +878,14 @@ async def test_cat_max_amount_send(
     max_sent_amount = await cat_wallet.get_max_send_amount()
 
     # 1) Generate transaction that is under the limit
-    async with cat_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with cat_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
         await cat_wallet.generate_signed_transaction(
             [uint64(max_sent_amount - 1)], [ph], DEFAULT_TX_CONFIG, action_scope
         )
     assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount - 1)
 
     # 2) Generate transaction that is equal to limit
-    async with cat_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with cat_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
         await cat_wallet.generate_signed_transaction([uint64(max_sent_amount)], [ph], DEFAULT_TX_CONFIG, action_scope)
     assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount)
 
