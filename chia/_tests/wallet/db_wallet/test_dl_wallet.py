@@ -716,7 +716,7 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
     )
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([0] * 32))
 
-    async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with dl_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
         await dl_wallet.create_update_state_spend(launcher_id, bytes32([2] * 32), DEFAULT_TX_CONFIG, action_scope)
 
     await wallet_environments.process_pending_states(

@@ -1014,7 +1014,7 @@ class WalletStateManager:
                 await self.main_wallet.create_tandem_xch_tx(
                     fee,
                     tx_config,
-                    action_scope,
+                    inner_action_scope,
                     extra_conditions=(
                         AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
                     ),

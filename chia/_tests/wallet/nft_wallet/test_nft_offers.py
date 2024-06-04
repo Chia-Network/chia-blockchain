@@ -598,7 +598,7 @@ async def test_nft_offer_nft_for_cat(
     assert await nft_wallet_taker.get_nft_count() == 0
     # Create two new CATs and wallets for maker and taker
     cats_to_mint = 10000
-    async with wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with wallet_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
         cat_wallet_maker = await CATWallet.create_new_cat_wallet(
             wallet_node_0.wallet_state_manager,
             wallet_maker,
@@ -607,11 +607,11 @@ async def test_nft_offer_nft_for_cat(
             tx_config,
             action_scope,
         )
-        await time_out_assert(20, mempool_not_empty, True, full_node_api)
+    await time_out_assert(20, mempool_not_empty, True, full_node_api)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
-    async with wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with wallet_taker.wallet_state_manager.new_action_scope(push=True) as action_scope:
         cat_wallet_taker = await CATWallet.create_new_cat_wallet(
             wallet_node_1.wallet_state_manager,
             wallet_taker,
@@ -620,7 +620,7 @@ async def test_nft_offer_nft_for_cat(
             tx_config,
             action_scope,
         )
-        await time_out_assert(20, mempool_not_empty, True, full_node_api)
+    await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
@@ -1031,7 +1031,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
             tx_config,
             action_scope,
         )
-        await time_out_assert(20, mempool_not_empty, True, full_node_api)
+    await time_out_assert(20, mempool_not_empty, True, full_node_api)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
 
@@ -1044,7 +1044,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
             tx_config,
             action_scope,
         )
-        await time_out_assert(20, mempool_not_empty, True, full_node_api)
+    await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=20)
