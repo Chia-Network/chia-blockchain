@@ -351,7 +351,7 @@ class Store:
     def from_row(cls, row: aiosqlite.Row) -> Store:
         return cls(
             db_id=row["db_id"],
-            chain_id = bytes32(row["chain_id"]),
+            chain_id=bytes32(row["chain_id"]),
         )
 
     def to_row(self) -> Dict[str, Any]:

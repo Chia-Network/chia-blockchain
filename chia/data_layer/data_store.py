@@ -12,7 +12,6 @@ import aiosqlite
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
-Store,
     DiffData,
     InsertResult,
     InternalNode,
@@ -30,6 +29,7 @@ Store,
     ServerInfo,
     Side,
     Status,
+    Store,
     Subscription,
     TerminalNode,
     _debug_dump,
