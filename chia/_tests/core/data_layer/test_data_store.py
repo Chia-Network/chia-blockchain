@@ -2124,10 +2124,16 @@ async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -
     previous_generation_count = 0
     for node_hash, ancestor_hash in ancestors.items():
         async with data_store.db_wrapper.reader() as reader:
-            cursor = await reader.execute(
-                "SELECT MAX(generation) AS generation FROM ancestors WHERE hash == :hash AND ancestor == :ancestor",
-                {"hash": node_hash, "ancestor": ancestor_hash},
-            )
+            if ancestor_hash is not None:
+                cursor = await reader.execute(
+                    "SELECT MAX(generation) AS generation FROM ancestors WHERE hash == :hash AND ancestor == :ancestor",
+                    {"hash": node_hash, "ancestor": ancestor_hash},
+                )
+            else:
+                cursor = await reader.execute(
+                    "SELECT MAX(generation) AS generation FROM ancestors WHERE hash == :hash AND ancestor IS NULL",
+                    {"hash": node_hash},
+                )
             row = await cursor.fetchone()
             assert row is not None
             generation = row["generation"]
@@ -2137,5 +2143,5 @@ async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -
             else:
                 previous_generation_count += 1
 
-    assert current_generation_count == 14
+    assert current_generation_count == 15
     assert previous_generation_count == 184
