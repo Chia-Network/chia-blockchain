@@ -375,3 +375,20 @@ class MempoolItemsAdded(Streamable):
 @dataclass(frozen=True)
 class MempoolItemsRemoved(Streamable):
     transaction_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestCostInfo(Streamable):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondCostInfo(Streamable):
+    max_transaction_cost: uint64
+    max_block_cost: uint64
+    max_mempool_cost: uint64
+    mempool_cost: uint64
+    mempool_fee: uint64
+    bump_fee_per_cost: uint8

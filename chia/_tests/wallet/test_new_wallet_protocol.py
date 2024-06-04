@@ -836,7 +836,9 @@ async def make_coin(full_node: FullNode) -> Tuple[Coin, bytes32]:
     return coin, hint
 
 
-async def subscribe_coin(simulator: FullNodeSimulator, coin_id: bytes32, peer: WSChiaConnection) -> CoinState:
+async def subscribe_coin(
+    simulator: FullNodeSimulator, coin_id: bytes32, peer: WSChiaConnection, *, existing_coin_states: int = 1
+) -> None:
     genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
     assert genesis is not None
 
@@ -845,12 +847,12 @@ async def subscribe_coin(simulator: FullNodeSimulator, coin_id: bytes32, peer: W
 
     response = wallet_protocol.RespondCoinState.from_bytes(msg.data)
     assert response.coin_ids == [coin_id]
-    assert len(response.coin_states) == 1
-
-    return response.coin_states[0]
+    assert len(response.coin_states) == existing_coin_states
 
 
-async def subscribe_puzzle(simulator: FullNodeSimulator, puzzle_hash: bytes32, peer: WSChiaConnection) -> CoinState:
+async def subscribe_puzzle(
+    simulator: FullNodeSimulator, puzzle_hash: bytes32, peer: WSChiaConnection, *, existing_coin_states: int = 1
+) -> None:
     genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
     assert genesis is not None
 
@@ -861,14 +863,13 @@ async def subscribe_puzzle(simulator: FullNodeSimulator, puzzle_hash: bytes32, p
 
     response = wallet_protocol.RespondPuzzleState.from_bytes(msg.data)
     assert response.puzzle_hashes == [puzzle_hash]
-    assert len(response.coin_states) == 1
-
-    return response.coin_states[0]
+    assert len(response.coin_states) == existing_coin_states
 
 
-async def spend_coin(simulator: FullNodeSimulator, queue: Queue[Message], coin: Coin) -> bytes32:
-    solution = Program.to([])
-    bundle = SpendBundle([CoinSpend(coin, IDENTITY_PUZZLE, solution)], AugSchemeMPL.aggregate([]))
+async def spend_coin(simulator: FullNodeSimulator, coin: Coin, solution: Optional[Program] = None) -> bytes32:
+    bundle = SpendBundle(
+        [CoinSpend(coin, IDENTITY_PUZZLE, Program.to([]) if solution is None else solution)], AugSchemeMPL.aggregate([])
+    )
     tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle))
     assert tx_resp is not None
 
@@ -889,7 +890,7 @@ async def test_spent_coin_id_mempool_update(mpu_setup: Mpu) -> None:
     # Make a coin and spend it
     coin, _ = await make_coin(simulator.full_node)
     await subscribe_coin(simulator, coin.name(), peer)
-    transaction_id = await spend_coin(simulator, queue, coin)
+    transaction_id = await spend_coin(simulator, coin)
 
     # We should have gotten a mempool update for this transaction
     await assert_mempool_added(queue, 1, {transaction_id})
@@ -910,7 +911,7 @@ async def test_spent_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
     # Make a coin and spend it
     coin, _ = await make_coin(simulator.full_node)
     await subscribe_puzzle(simulator, coin.puzzle_hash, peer)
-    transaction_id = await spend_coin(simulator, queue, coin)
+    transaction_id = await spend_coin(simulator, coin)
 
     # We should have gotten a mempool update for this transaction
     await assert_mempool_added(queue, 1, {transaction_id})
@@ -931,7 +932,7 @@ async def test_spent_hint_mempool_update(mpu_setup: Mpu) -> None:
     # Make a coin and spend it
     coin, hint = await make_coin(simulator.full_node)
     await subscribe_puzzle(simulator, hint, peer)
-    transaction_id = await spend_coin(simulator, queue, coin)
+    transaction_id = await spend_coin(simulator, coin)
 
     # We should have gotten a mempool update for this transaction
     await assert_mempool_added(queue, 1, {transaction_id})
@@ -943,3 +944,95 @@ async def test_spent_hint_mempool_update(mpu_setup: Mpu) -> None:
     # The mempool item should now be in the initial update
     await subscribe_puzzle(simulator, hint, peer)
     await assert_mempool_added(queue, 1, {transaction_id})
+
+
+@pytest.mark.anyio
+async def test_created_coin_id_mempool_update(mpu_setup: Mpu) -> None:
+    simulator, queue, peer = mpu_setup
+
+    # Make a coin and spend it to create a child coin
+    coin, _ = await make_coin(simulator.full_node)
+    child_coin = Coin(coin.name(), std_hash(b"new puzzle hash"), coin.amount)
+    await subscribe_coin(simulator, child_coin.name(), peer, existing_coin_states=0)
+    transaction_id = await spend_coin(
+        simulator, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]])
+    )
+
+    # We should have gotten a mempool update for this transaction
+    await assert_mempool_added(queue, 1, {transaction_id})
+
+    # Check the mempool to make sure the transaction is there
+    await simulator.wait_bundle_ids_in_mempool([transaction_id])
+    assert simulator.full_node.mempool_manager.mempool.get_item_by_id(transaction_id) is not None
+
+    # The mempool item should now be in the initial update
+    await subscribe_coin(simulator, child_coin.name(), peer, existing_coin_states=0)
+    await assert_mempool_added(queue, 1, {transaction_id})
+
+
+@pytest.mark.anyio
+async def test_created_puzzle_hash_mempool_update(mpu_setup: Mpu) -> None:
+    simulator, queue, peer = mpu_setup
+
+    # Make a coin and spend it to create a child coin
+    coin, _ = await make_coin(simulator.full_node)
+    child_coin = Coin(coin.name(), std_hash(b"new puzzle hash"), coin.amount)
+    await subscribe_puzzle(simulator, child_coin.puzzle_hash, peer, existing_coin_states=0)
+    transaction_id = await spend_coin(
+        simulator, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount]])
+    )
+
+    # We should have gotten a mempool update for this transaction
+    await assert_mempool_added(queue, 1, {transaction_id})
+
+    # Check the mempool to make sure the transaction is there
+    await simulator.wait_bundle_ids_in_mempool([transaction_id])
+    assert simulator.full_node.mempool_manager.mempool.get_item_by_id(transaction_id) is not None
+
+    # The mempool item should now be in the initial update
+    await subscribe_puzzle(simulator, child_coin.puzzle_hash, peer, existing_coin_states=0)
+    await assert_mempool_added(queue, 1, {transaction_id})
+
+
+@pytest.mark.anyio
+async def test_created_hint_mempool_update(mpu_setup: Mpu) -> None:
+    simulator, queue, peer = mpu_setup
+
+    # Make a coin and spend it to create a child coin
+    coin, _ = await make_coin(simulator.full_node)
+    child_coin = Coin(coin.name(), std_hash(b"new puzzle hash"), coin.amount)
+    hint = std_hash(b"new hint")
+    await subscribe_puzzle(simulator, hint, peer, existing_coin_states=0)
+    transaction_id = await spend_coin(
+        simulator, coin, solution=Program.to([[51, child_coin.puzzle_hash, child_coin.amount, [hint]]])
+    )
+
+    # We should have gotten a mempool update for this transaction
+    await assert_mempool_added(queue, 1, {transaction_id})
+
+    # Check the mempool to make sure the transaction is there
+    await simulator.wait_bundle_ids_in_mempool([transaction_id])
+    assert simulator.full_node.mempool_manager.mempool.get_item_by_id(transaction_id) is not None
+
+    # The mempool item should now be in the initial update
+    await subscribe_puzzle(simulator, hint, peer, existing_coin_states=0)
+    await assert_mempool_added(queue, 1, {transaction_id})
+
+
+@pytest.mark.anyio
+async def test_cost_info(one_node: OneNode, self_hostname: str) -> None:
+    simulator, _, _ = await connect_to_simulator(one_node, self_hostname)
+
+    msg = await simulator.request_cost_info(wallet_protocol.RequestCostInfo())
+    assert msg is not None
+
+    response = wallet_protocol.RespondCostInfo.from_bytes(msg.data)
+    mempool_manager = simulator.full_node.mempool_manager
+    assert response == wallet_protocol.RespondCostInfo(
+        max_transaction_cost=mempool_manager.max_tx_clvm_cost,
+        max_block_cost=mempool_manager.max_block_clvm_cost,
+        max_mempool_cost=uint64(mempool_manager.mempool_max_total_cost),
+        mempool_cost=uint64(mempool_manager.mempool._total_cost),
+        mempool_fee=uint64(mempool_manager.mempool._total_fee),
+        bump_fee_per_cost=uint8(mempool_manager.nonzero_fee_minimum_fpc),
+    )

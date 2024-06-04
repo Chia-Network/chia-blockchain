@@ -53,6 +53,7 @@ VALID_REPLY_MESSAGE_MAP = {
     pmt.request_remove_coin_subscriptions: [pmt.respond_remove_coin_subscriptions],
     pmt.request_puzzle_state: [pmt.respond_puzzle_state, pmt.reject_puzzle_state],
     pmt.request_coin_state: [pmt.respond_coin_state, pmt.reject_coin_state],
+    pmt.request_cost_info: [pmt.respond_cost_info],
 }
 
 

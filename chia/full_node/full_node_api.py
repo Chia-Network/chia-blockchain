@@ -1894,6 +1894,20 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_coin_state, response)
         return msg
 
+    @api_request(reply_types=[ProtocolMessageTypes.respond_cost_info])
+    async def request_cost_info(self, _request: wallet_protocol.RequestCostInfo) -> Optional[Message]:
+        mempool_manager = self.full_node.mempool_manager
+        response = wallet_protocol.RespondCostInfo(
+            max_transaction_cost=mempool_manager.max_tx_clvm_cost,
+            max_block_cost=mempool_manager.max_block_clvm_cost,
+            max_mempool_cost=uint64(mempool_manager.mempool_max_total_cost),
+            mempool_cost=uint64(mempool_manager.mempool._total_cost),
+            mempool_fee=uint64(mempool_manager.mempool._total_fee),
+            bump_fee_per_cost=uint8(mempool_manager.nonzero_fee_minimum_fpc),
+        )
+        msg = make_msg(ProtocolMessageTypes.respond_cost_info, response)
+        return msg
+
     async def mempool_updates_for_puzzle_hashes(
         self, peer: WSChiaConnection, puzzle_hashes: Set[bytes32], include_hints: bool
     ) -> None:
