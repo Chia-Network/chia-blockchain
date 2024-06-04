@@ -52,9 +52,12 @@ _capabilities: List[Tuple[uint16, str]] = [
     (uint16(Capability.BLOCK_HEADERS.value), "1"),
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
 ]
+_mempool_updates = [
+    (uint16(Capability.MEMPOOL_UPDATES.value), "1"),
+]
 
 default_capabilities = {
-    NodeType.FULL_NODE: _capabilities,
+    NodeType.FULL_NODE: _capabilities + _mempool_updates,
     NodeType.HARVESTER: _capabilities,
     NodeType.FARMER: _capabilities,
     NodeType.TIMELORD: _capabilities,
