@@ -28,17 +28,14 @@ async def load_plugin_configurations(root_path: Path, config_type: str, log: log
 
     valid_configs = []
     for conf_file in config_path.glob("*.conf"):
-        try:
-            with log_exceptions(
-                log=log,
-                consume=True,
-                message=f"Skipping config file due to failure loading or parsing: {conf_file}",
-            ):
-                with open(conf_file) as file:
-                    data = yaml.safe_load(file)
+        with log_exceptions(
+            log=log,
+            consume=True,
+            message=f"Skipping config file due to failure loading or parsing: {conf_file}",
+        ):
+            with open(conf_file) as file:
+                data = yaml.safe_load(file)
 
-                valid_configs.extend([PluginRemote.unmarshal(marshalled=item) for item in data])
-                log.info(f"loaded plugin configuration: {conf_file}")
-        except (OSError, yaml.YAMLError, Exception) as e:
-            log.warn(f"Error loading or parsing {conf_file}: {e}, skipping this file.")
+            valid_configs.extend([PluginRemote.unmarshal(marshalled=item) for item in data])
+            log.info(f"loaded plugin configuration: {conf_file}")
     return valid_configs
