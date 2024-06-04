@@ -2098,6 +2098,7 @@ async def test_build_ancestor_table(data_store: DataStore, store_id: bytes32) ->
     await data_store.change_root_status(pending_root, Status.COMMITTED)
     await data_store.build_ancestor_table_for_latest_root(store_id=store_id)
 
+    assert pending_root.node_hash is not None
     await _check_ancestors(data_store, store_id, pending_root.node_hash)
 
 
@@ -2113,6 +2114,7 @@ async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -
             status=Status.COMMITTED,
         )
         root = await data_store.get_tree_root(store_id=store_id)
+        assert root.node_hash is not None
         await _check_ancestors(data_store, store_id, root.node_hash)
 
     # Check the ancestor table is sparse
@@ -2127,6 +2129,7 @@ async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -
                 {"hash": node_hash, "ancestor": ancestor_hash},
             )
             row = await cursor.fetchone()
+            assert row is not None
             generation = row["generation"]
             assert generation <= root_generation
             if generation == root_generation:
