@@ -6,6 +6,7 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
+from chia.util.cached_bls import BLSCache
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 
@@ -42,10 +43,12 @@ async def check_block_store_invariant(bc: Blockchain):
 async def _validate_and_add_block(
     blockchain: Blockchain,
     block: FullBlock,
+    *,
     expected_result: Optional[AddBlockResult] = None,
     expected_error: Optional[Err] = None,
     skip_prevalidation: bool = False,
     fork_info: Optional[ForkInfo] = None,
+    use_bls_cache: bool = False,
 ) -> None:
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
@@ -58,7 +61,8 @@ async def _validate_and_add_block(
     if skip_prevalidation:
         results = PreValidationResult(None, uint64(1), None, False, uint32(0))
     else:
-        # Do not change this, validate_signatures must be False
+        # validate_signatures must be False in order to trigger add_block() to
+        # validate the signature.
         pre_validation_results: List[PreValidationResult] = await blockchain.pre_validate_blocks_multiprocessing(
             [block], {}, validate_signatures=False
         )
@@ -78,11 +82,16 @@ async def _validate_and_add_block(
         await check_block_store_invariant(blockchain)
         return None
 
+    if use_bls_cache:
+        bls_cache = BLSCache(100)
+    else:
+        bls_cache = None
+
     (
         result,
         err,
         _,
-    ) = await blockchain.add_block(block, results, fork_info=fork_info)
+    ) = await blockchain.add_block(block, results, bls_cache, fork_info=fork_info)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:

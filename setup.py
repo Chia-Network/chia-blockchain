@@ -8,7 +8,7 @@ from setuptools import find_packages, setup
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
     "anyio==4.3.0",
-    "boto3==1.34.100",  # AWS S3 for DL s3 plugin
+    "boto3==1.34.114",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.4",  # timelord and vdf verification
     "chiabip158==1.5.1",  # bip158-style wallet filters
     "chiapos==2.0.4",  # proof of space
@@ -51,21 +51,20 @@ dev_dependencies = [
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.7.1; python_version >= '3.9'",
     "py3createtorrent==1.2.0",
-    "pylint==3.1.0",
+    "pylint==3.2.2",
     "pytest==8.1.1",
     "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",
     "pytest-xdist==3.6.1",
     "pyupgrade==3.15.2",
-    "twine==5.0.0",
+    "twine==5.1.0",
     "isort==5.13.2",
     "flake8==7.0.0",
     "mypy==1.10.0",
     "black==24.4.2",
     "lxml==5.2.2",
     "aiohttp_cors==0.7.0",  # For blackd
-    "pyinstaller==6.6.0",
-    "setuptools<70",  # TODO: remove - https://github.com/pypa/setuptools/issues/4374
+    "pyinstaller==6.7.0",
     "types-aiofiles==23.2.0.20240311",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.20240311",

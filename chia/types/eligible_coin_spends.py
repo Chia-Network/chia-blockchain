@@ -3,8 +3,6 @@ from __future__ import annotations
 import dataclasses
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 
-from chia_rs import CoinSpend as RustCoinSpend
-from chia_rs import Program as RustProgram
 from chia_rs import fast_forward_singleton
 
 from chia.consensus.condition_costs import ConditionCost
@@ -117,13 +115,8 @@ def perform_the_fast_forward(
     # These hold because puzzle hash is not expected to change
     assert new_coin.name() == unspent_lineage_info.coin_id
     assert new_parent.name() == unspent_lineage_info.parent_id
-    rust_coin_spend = RustCoinSpend(
-        coin=spend_data.coin_spend.coin,
-        puzzle_reveal=RustProgram.from_bytes(bytes(spend_data.coin_spend.puzzle_reveal)),
-        solution=RustProgram.from_bytes(bytes(spend_data.coin_spend.solution)),
-    )
     new_solution = SerializedProgram.from_bytes(
-        fast_forward_singleton(spend=rust_coin_spend, new_coin=new_coin, new_parent=new_parent)
+        fast_forward_singleton(spend=spend_data.coin_spend, new_coin=new_coin, new_parent=new_parent)
     )
     singleton_child = None
     patched_additions = []

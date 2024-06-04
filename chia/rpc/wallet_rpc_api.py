@@ -852,6 +852,9 @@ class WalletRpcApi:
                     uint64(request.get("filter_amount", 1)),
                     name,
                 )
+            else:
+                raise Exception(f"Invalid DAO wallet mode: {mode!r}")
+
             return {
                 "success": True,
                 "type": dao_wallet.type(),

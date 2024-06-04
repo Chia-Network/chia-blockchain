@@ -463,3 +463,35 @@ class TestConditions:
             expected = None
 
         await check_conditions(bt, conditions, expected_err=expected)
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+            ConditionOpcode.AGG_SIG_UNSAFE,
+            ConditionOpcode.AGG_SIG_ME,
+        ],
+    )
+    async def test_agg_sig_infinity(
+        self, opcode: ConditionOpcode, bt: BlockTools, consensus_mode: ConsensusMode
+    ) -> None:
+        conditions = Program.to(
+            assemble(
+                f"(({opcode.value[0]} "
+                "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                ' "foobar"))'
+            )
+        )
+
+        # infinity is disallowed after soft-fork-5 activates
+        if consensus_mode >= ConsensusMode.SOFT_FORK_5:
+            expected_error = Err.INVALID_CONDITION
+        else:
+            expected_error = None
+        await check_conditions(bt, conditions, expected_error)

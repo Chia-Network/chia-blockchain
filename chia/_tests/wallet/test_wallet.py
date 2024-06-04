@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -15,7 +15,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import compute_additions
+from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.types.spend_bundle import estimate_fees
@@ -1691,10 +1691,14 @@ class TestWalletSimulator:
         )
         assert tx.spend_bundle is not None
 
+        stolen_cs: Optional[CoinSpend] = None
         # extract coin_spend from generated spend_bundle
         for cs in tx.spend_bundle.coin_spends:
             if compute_additions(cs) == []:
                 stolen_cs = cs
+
+        assert stolen_cs is not None
+
         # get a legit signature
         stolen_sb, _ = await wallet.wallet_state_manager.sign_bundle([stolen_cs])
         name = stolen_sb.name()
