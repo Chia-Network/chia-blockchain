@@ -58,6 +58,7 @@ async def add_dummy_connection_wsc(
     self_hostname: str,
     dummy_port: int,
     type: NodeType = NodeType.FULL_NODE,
+    additional_capabilities: List[Tuple[uint16, str]] = [],
 ) -> Tuple[WSChiaConnection, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
@@ -96,7 +97,7 @@ async def add_dummy_connection_wsc(
         peer_id,
         100,
         30,
-        local_capabilities_for_handshake=default_capabilities[type],
+        local_capabilities_for_handshake=default_capabilities[type] + additional_capabilities,
     )
     await wsc.perform_handshake(server._network_id, dummy_port, type)
     if wsc.incoming_message_task is not None:
