@@ -89,7 +89,7 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python chia/_tests/build-job-matrix.py --per directory --verbose ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} --only tools > matrix.json
+          python chia/_tests/build-job-matrix.py --per directory --verbose ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} --only util > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
           echo matrix_mode=${{
