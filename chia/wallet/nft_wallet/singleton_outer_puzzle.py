@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Any, Callable, Dict, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -31,10 +31,15 @@ class SingletonOuterPuzzle:
         matched, curried_args = match_singleton_puzzle(puzzle)
         if matched:
             singleton_struct, inner_puzzle = curried_args
-            launcher_struct = singleton_struct.pair[1].pair
+            pair = singleton_struct.pair
+            assert pair is not None
+            launcher_struct = pair[1].pair
+            assert launcher_struct is not None
             launcher_id = launcher_struct[0].atom
+            assert launcher_id is not None
             launcher_ph = launcher_struct[1].atom
-            constructor_dict = {
+            assert launcher_ph is not None
+            constructor_dict: Dict[str, Any] = {
                 "type": "singleton",
                 "launcher_id": "0x" + launcher_id.hex(),
                 "launcher_ph": "0x" + launcher_ph.hex(),

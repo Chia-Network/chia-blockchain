@@ -11,7 +11,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.protocols.shared_protocol import capabilities
+from chia.protocols.shared_protocol import default_capabilities
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
@@ -86,7 +86,7 @@ async def add_dummy_connection_wsc(
         peer_id,
         100,
         30,
-        local_capabilities_for_handshake=capabilities,
+        local_capabilities_for_handshake=default_capabilities[type],
     )
     await wsc.perform_handshake(server._network_id, dummy_port, type)
     if wsc.incoming_message_task is not None:

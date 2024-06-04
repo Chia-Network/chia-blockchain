@@ -14,7 +14,7 @@ from typing import Any, AsyncGenerator, AsyncIterator, Dict, Iterator, List, Opt
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
-from chia.protocols.shared_protocol import Capability, capabilities
+from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
 from chia.server.outbound_message import NodeType
@@ -63,24 +63,16 @@ def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[D
         yield config
 
 
-def get_capabilities(disable_capabilities_values: Optional[List[Capability]]) -> List[Tuple[uint16, str]]:
-    if disable_capabilities_values is not None:
-        try:
-            if Capability.BASE in disable_capabilities_values:
-                # BASE capability cannot be removed
-                disable_capabilities_values.remove(Capability.BASE)
-
-            updated_capabilities = []
-            for capability in capabilities:
-                if Capability(int(capability[0])) in disable_capabilities_values:
-                    # "0" means capability is disabled
-                    updated_capabilities.append((capability[0], "0"))
-                else:
-                    updated_capabilities.append(capability)
-            return updated_capabilities
-        except Exception:
-            logging.getLogger(__name__).exception("Error disabling capabilities, defaulting to all capabilities")
-    return capabilities.copy()
+def get_capability_overrides(node_type: NodeType, disabled_capabilities: List[Capability]) -> List[Tuple[uint16, str]]:
+    return [
+        (
+            capability
+            if Capability(int(capability[0])) not in disabled_capabilities
+            or Capability(int(capability[0])) == Capability.BASE
+            else (capability[0], "0")
+        )
+        for capability in default_capabilities[node_type]
+    ]
 
 
 @asynccontextmanager
@@ -150,7 +142,9 @@ async def setup_full_node(
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
     local_bt.change_config(config)
-    override_capabilities = None if disable_capabilities is None else get_capabilities(disable_capabilities)
+    override_capabilities = (
+        None if disable_capabilities is None else get_capability_overrides(NodeType.FULL_NODE, disable_capabilities)
+    )
     service: Union[FullNodeService, SimulatorFullNodeService]
     if simulator:
         service = await create_full_node_simulator_service(

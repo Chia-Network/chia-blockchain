@@ -3,12 +3,13 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Callable, Dict, List, Tuple, Union
 
+from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
@@ -97,13 +98,13 @@ def make_aggsig_final_message(
     return msg + addendum + agg_sig_additional_data[opcode]
 
 
-def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tuple[List[bytes48], List[bytes]]:
-    ret: Tuple[List[bytes48], List[bytes]] = ([], [])
+def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tuple[List[G1Element], List[bytes]]:
+    ret: Tuple[List[G1Element], List[bytes]] = ([], [])
 
     data = agg_sig_additional_data(additional_data)
 
     for pk, msg in conditions.agg_sig_unsafe:
-        ret[0].append(bytes48(pk))
+        ret[0].append(pk)
         ret[1].append(msg)
         for disallowed in data.values():
             if msg.endswith(disallowed):
@@ -121,7 +122,7 @@ def pkm_pairs(conditions: SpendBundleConditions, additional_data: bytes) -> Tupl
         ]
         for condition, items in condition_items_pairs:
             for pk, msg in items:
-                ret[0].append(bytes48(pk))
+                ret[0].append(pk)
                 ret[1].append(make_aggsig_final_message(condition, msg, spend, data))
 
     return ret
@@ -142,8 +143,8 @@ def pkm_pairs_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionWithArgs]],
     coin: Coin,
     additional_data: bytes,
-) -> List[Tuple[bytes48, bytes]]:
-    ret: List[Tuple[bytes48, bytes]] = []
+) -> List[Tuple[G1Element, bytes]]:
+    ret: List[Tuple[G1Element, bytes]] = []
 
     data = agg_sig_additional_data(additional_data)
 
@@ -152,7 +153,7 @@ def pkm_pairs_for_conditions_dict(
         for disallowed in data.values():
             if cwa.vars[1].endswith(disallowed):
                 raise ConsensusError(Err.INVALID_CONDITION)
-        ret.append((bytes48(cwa.vars[0]), cwa.vars[1]))
+        ret.append((G1Element.from_bytes(cwa.vars[0]), cwa.vars[1]))
 
     for opcode in [
         ConditionOpcode.AGG_SIG_PARENT,
@@ -165,7 +166,7 @@ def pkm_pairs_for_conditions_dict(
     ]:
         for cwa in conditions_dict.get(opcode, []):
             validate_cwa(cwa)
-            ret.append((bytes48(cwa.vars[0]), make_aggsig_final_message(opcode, cwa.vars[1], coin, data)))
+            ret.append((G1Element.from_bytes(cwa.vars[0]), make_aggsig_final_message(opcode, cwa.vars[1], coin, data)))
 
     return ret
 

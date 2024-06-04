@@ -144,7 +144,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
 
     # Now test that we can partially sign a transaction
     ACS: Program = Program.to(1)
-    ACS_PH: Program = Program.to(1).get_tree_hash()
+    ACS_PH = Program.to(1).get_tree_hash()
     not_our_private_key: PrivateKey = PrivateKey.from_bytes(bytes([1] * 32))
     not_our_pubkey: G1Element = not_our_private_key.get_g1()
     not_our_message: bytes = b"not our message"

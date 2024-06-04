@@ -316,11 +316,11 @@ def test_proposal() -> None:
         treasury_inner,
     )
     treasury_puzhash = treasury.get_tree_hash()
-    apa_msg = singleton_id
+    apa_msg_bytes = singleton_id
 
     timer_apa = std_hash(timer_puzhash + singleton_id)
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == timer_apa
-    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][1].vars[0] == std_hash(treasury_puzhash + apa_msg)
+    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][1].vars[0] == std_hash(treasury_puzhash + apa_msg_bytes)
 
     # close a failed proposal
     full_proposal = proposal_curry_one.curry(
@@ -347,8 +347,8 @@ def test_proposal() -> None:
         ]
     )
     conds = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)
-    apa_msg = int_to_bytes(0)
-    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][1].vars[0] == std_hash(treasury_puzhash + apa_msg)
+    apa_msg_int = int_to_bytes(0)
+    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][1].vars[0] == std_hash(treasury_puzhash + apa_msg_int)
     assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == timer_apa
 
     finished_puz = DAO_FINISHED_STATE.curry(singleton_struct, DAO_FINISHED_STATE_HASH)
@@ -373,7 +373,7 @@ def test_proposal() -> None:
         ]
     )
     conds = conditions_dict_for_solution(full_proposal, solution, INFINITE_COST)
-    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == std_hash(treasury_puzhash + apa_msg)
+    assert conds[ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT][0].vars[0] == std_hash(treasury_puzhash + apa_msg_int)
     assert conds[ConditionOpcode.CREATE_COIN][0].vars[0] == finished_puz.get_tree_hash()
 
 

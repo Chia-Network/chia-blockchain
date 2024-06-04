@@ -756,6 +756,8 @@ def derive_child_key(
         derivation_root_pk, derivation_root_sk, hd_path_root = derive_pk_and_sk_from_hd_path(
             current_pk, derive_from_hd_path, master_sk=current_sk
         )
+    else:
+        raise Exception("Neither key type nor HD path was specified")
 
     # Derive child keys from derivation_root_sk
     for i in range(index, index + count):

@@ -615,6 +615,8 @@ class DataStore:
                     expected_hash = internal_hash(left_hash=node.left_hash, right_hash=node.right_hash)
                 elif isinstance(node, TerminalNode):
                     expected_hash = Program.to((node.key, node.value)).get_tree_hash()
+                else:
+                    raise Exception(f"Internal error, unknown node type: {node!r}")
 
                 if node.hash != expected_hash:
                     bad_node_hashes.append(node.hash)
@@ -840,10 +842,14 @@ class DataStore:
         self,
         reader: aiosqlite.Connection,
         root: Root,
+        only_keys: bool = False,
     ) -> aiosqlite.Cursor:
         # TODO: still have the 62 or whatever limit here at this point
+        select_clause = "SELECT hash, key" if only_keys else "SELECT *"
+        maybe_value = "" if only_keys else "value, "
+        select_node_clause = "node.hash, node.node_type, node.left, node.right, node.key" if only_keys else "node.*"
         return await reader.execute(
-            """
+            f"""
             WITH RECURSIVE
                 tree_from_root_hash(
                     tree_id,
@@ -854,16 +860,16 @@ class DataStore:
                     left,
                     right,
                     key,
-                    value,
+                    {maybe_value}
                     depth,
                     rights
                 ) AS (
-                    SELECT node.*, 0 AS depth, 0 AS rights
+                    SELECT {select_node_clause}, 0 AS depth, 0 AS rights
                     FROM node
                     WHERE tree_id = :tree_id AND generation = :generation AND node.hash == :root_hash
                     UNION ALL
                     SELECT
-                        node.*,
+                        {select_node_clause},
                         tree_from_root_hash.depth + 1 AS depth,
                         CASE
                             WHEN node.hash == tree_from_root_hash.right
@@ -880,7 +886,7 @@ class DataStore:
                         )
                     )
                 )
-            SELECT * FROM tree_from_root_hash
+            {select_clause} FROM tree_from_root_hash
             WHERE node_type == :node_type
             ORDER BY depth ASC, rights ASC
             """,
@@ -935,6 +941,21 @@ class DataStore:
 
             return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, root.node_hash)
 
+    async def get_leaf_hashes_by_hashed_key(
+        self, store_id: bytes32, root_hash: Optional[bytes32] = None
+    ) -> Dict[bytes32, bytes32]:
+        result: Dict[bytes32, bytes32] = {}
+        async with self.db_wrapper.reader() as reader:
+            if root_hash is None:
+                root = await self.get_tree_root(store_id=store_id)
+                root_hash = root.node_hash
+
+            cursor = await self.get_keys_values_cursor(reader, root_hash, True)
+            async for row in cursor:
+                result[key_hash(row["key"])] = bytes32(row["hash"])
+
+        return result
+
     async def get_keys_paginated(self, root: Root, page: int, max_page_size: int) -> KeysPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(root=root)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
@@ -974,11 +995,12 @@ class DataStore:
         self, root1: Root, root2: Root, page: int, max_page_size: int
     ) -> KVDiffPaginationData:
         old_pairs = await self.get_keys_values_compressed(root=root1)
-        new_pairs = await self.get_keys_values_compressed(root=root2)
         if len(old_pairs.keys_values_hashed) == 0 and root1.node_hash != bytes32([0] * 32):
-            return KVDiffPaginationData(1, 0, [])
+            raise Exception(f"Unable to diff: Can't find keys and values for {root1.node_hash}")
+
+        new_pairs = await self.get_keys_values_compressed(root=root2)
         if len(new_pairs.keys_values_hashed) == 0 and root2.node_hash != bytes32([0] * 32):
-            return KVDiffPaginationData(1, 0, [])
+            raise Exception(f"Unable to diff: Can't find keys and values for {root2.node_hash}")
 
         old_pairs_leaf_hashes = {v for v in old_pairs.keys_values_hashed.values()}
         new_pairs_leaf_hashes = {v for v in new_pairs.keys_values_hashed.values()}
@@ -1373,6 +1395,8 @@ class DataStore:
                 elif side == Side.RIGHT:
                     left = reference_node_hash
                     right = new_terminal_node_hash
+                else:
+                    raise Exception(f"Internal error, unknown side: {side!r}")
 
                 new_internal_node_hash = await self._insert_internal_node(
                     store_id=store_id,
@@ -1593,7 +1617,7 @@ class DataStore:
         else:
             await writer.execute(query, params)
 
-    async def get_leaf_at_minimum_height(self, root: Root) -> TerminalNode:
+    async def get_leaf_at_minimum_height(self, root: Root, hash_to_parent: Dict[bytes32, InternalNode]) -> TerminalNode:
         root_node = await self.get_node(root=root, node_hash=root.node_hash)
         queue: List[bytes32] = [root_node.hash]
         while True:
@@ -1604,8 +1628,27 @@ class DataStore:
                 if isinstance(node, TerminalNode):
                     return node
 
+                hash_to_parent[node.left_hash] = node
+                hash_to_parent[node.right_hash] = node
+
                 queue.append(node.left_hash)
                 queue.append(node.right_hash)
+
+    async def batch_upsert(
+        self,
+        tree_id: bytes32,
+        hash: bytes32,
+        to_update_hashes: Set[bytes32],
+        pending_upsert_new_hashes: Dict[bytes32, bytes32],
+    ) -> bytes32:
+        if hash not in to_update_hashes:
+            return hash
+        node = await self.get_node(hash)
+        if isinstance(node, TerminalNode):
+            return pending_upsert_new_hashes[hash]
+        new_left_hash = await self.batch_upsert(tree_id, node.left_hash, to_update_hashes, pending_upsert_new_hashes)
+        new_right_hash = await self.batch_upsert(tree_id, node.right_hash, to_update_hashes, pending_upsert_new_hashes)
+        return await self._insert_internal_node(new_left_hash, new_right_hash)
 
     async def insert_batch(
         self,
@@ -1636,14 +1679,20 @@ class DataStore:
 
             key_hash_frequency: Dict[bytes32, int] = {}
             first_action: Dict[bytes32, str] = {}
+            last_action: Dict[bytes32, str] = {}
+
             for change in changelist:
                 key = change["key"]
                 hash = key_hash(key)
                 key_hash_frequency[hash] = key_hash_frequency.get(hash, 0) + 1
                 if hash not in first_action:
                     first_action[hash] = change["action"]
+                last_action[hash] = change["action"]
 
             pending_autoinsert_hashes: List[bytes32] = []
+            pending_upsert_new_hashes: Dict[bytes32, bytes32] = {}
+            leaf_hashes = await self.get_leaf_hashes_by_hashed_key(store_id)
+
             for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
@@ -1661,6 +1710,7 @@ class DataStore:
                             if key_hash_frequency[hash] == 1 or (
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
+                                old_node = await self.maybe_get_node_from_key_hash(leaf_hashes, hash)
                                 terminal_node_hash = await self._insert_terminal_node(
                                     store_id=store_id,
                                     generation=new_generation,
@@ -1668,7 +1718,14 @@ class DataStore:
                                     key=key,
                                     value=value,
                                 )
-                                pending_autoinsert_hashes.append(terminal_node_hash)
+
+                                if old_node is None:
+                                    pending_autoinsert_hashes.append(terminal_node_hash)
+                                else:
+                                    if key_hash_frequency[hash] == 1:
+                                        raise Exception(f"Key already present: {key.hex()}")
+                                    else:
+                                        pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                                 continue
                         insert_result = await self.autoinsert(
                             key=key,
@@ -1696,6 +1753,9 @@ class DataStore:
                         latest_local_root = insert_result.root
                 elif change["action"] == "delete":
                     key = change["key"]
+                    hash = key_hash(key)
+                    if key_hash_frequency[hash] == 2 and last_action[hash] == "insert" and enable_batch_autoinsert:
+                        continue
                     latest_local_root = await self.delete(
                         key=key,
                         store_id=store_id,
@@ -1706,6 +1766,15 @@ class DataStore:
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
+                    hash = key_hash(key)
+                    if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
+                        terminal_node_hash = await self._insert_terminal_node(key, new_value)
+                        old_node = await self.maybe_get_node_from_key_hash(leaf_hashes, hash)
+                        if old_node is not None:
+                            pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
+                        else:
+                            pending_autoinsert_hashes.append(terminal_node_hash)
+                        continue
                     insert_result = await self.upsert(
                         key=key,
                         new_value=new_value,
@@ -1717,6 +1786,27 @@ class DataStore:
                     latest_local_root = insert_result.root
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
+
+            if len(pending_upsert_new_hashes) > 0:
+                to_update_hashes: Set[bytes32] = set()
+                for hash in pending_upsert_new_hashes.keys():
+                    while True:
+                        if hash in to_update_hashes:
+                            break
+                        to_update_hashes.add(hash)
+                        node = await self._get_one_ancestor(hash, store_id)
+                        if node is None:
+                            break
+                        hash = node.hash
+                assert latest_local_root is not None
+                assert latest_local_root.node_hash is not None
+                new_root_hash = await self.batch_upsert(
+                    store_id,
+                    latest_local_root.node_hash,
+                    to_update_hashes,
+                    pending_upsert_new_hashes,
+                )
+                latest_local_root = await self._insert_root(store_id, new_root_hash, Status.COMMITTED)
 
             # Start with the leaf nodes and pair them to form new nodes at the next level up, repeating this process
             # in a bottom-up fashion until a single root node remains. This constructs a balanced tree from the leaves.
@@ -1898,7 +1988,36 @@ class DataStore:
             if row is None:
                 raise KeyNotFoundError(key=key)
 
-        return TerminalNode.from_row(row=row)
+            node = await self.get_node(row["hash"])
+            node_hash = node.hash
+            while True:
+                internal_node = await self._get_one_ancestor(node_hash, store_id)
+                if internal_node is None:
+                    break
+                node_hash = internal_node.hash
+
+            if node_hash != root.node_hash:
+                raise KeyNotFoundError(key=key)
+            assert isinstance(node, TerminalNode)
+            return node
+
+    async def maybe_get_node_from_key_hash(
+        self, leaf_hashes: Dict[bytes32, bytes32], hash: bytes32
+    ) -> Optional[TerminalNode]:
+        if hash in leaf_hashes:
+            leaf_hash = leaf_hashes[hash]
+            node = await self.get_node(leaf_hash)
+            assert isinstance(node, TerminalNode)
+            return node
+
+        return None
+
+    async def maybe_get_node_by_key(self, key: bytes, tree_id: bytes32) -> Optional[TerminalNode]:
+        try:
+            node = await self.get_node_by_key_latest_generation(key, tree_id)
+            return node
+        except KeyNotFoundError:
+            return None
 
     async def get_node(self, root: Root, node_hash: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
@@ -1939,7 +2058,7 @@ class DataStore:
 
         return [row_to_node(row=row) for row in rows]
 
-    async def get_tree_as_program(self, root: Root) -> Program:
+    async def get_tree_as_nodes(self, store_id: bytes32) -> Node:
         async with self.db_wrapper.reader() as reader:
             # TODO: consider actual proper behavior
             assert root.node_hash is not None
@@ -1962,16 +2081,12 @@ class DataStore:
             hash_to_node: Dict[bytes32, Node] = {}
             for node in reversed(nodes):
                 if isinstance(node, InternalNode):
-                    node = replace(node, pair=(hash_to_node[node.left_hash], hash_to_node[node.right_hash]))
+                    node = replace(node, left=hash_to_node[node.left_hash], right=hash_to_node[node.right_hash])
                 hash_to_node[node.hash] = node
 
             root_node = hash_to_node[root_node.hash]
-            # TODO: Remove ignore when done.
-            #       https://github.com/Chia-Network/clvm/pull/102
-            #       https://github.com/Chia-Network/clvm/pull/106
-            program: Program = Program.to(root_node)
 
-        return program
+        return root_node
 
     async def get_proof_of_inclusion_by_hash(
         self,
@@ -2322,11 +2437,13 @@ class DataStore:
     ) -> Set[DiffData]:
         async with self.db_wrapper.reader():
             old_pairs = set(await self.get_keys_values(store_id, hash_1))
-            new_pairs = set(await self.get_keys_values(store_id, hash_2))
             if len(old_pairs) == 0 and hash_1 != bytes32([0] * 32):
-                return set()
+                raise Exception(f"Unable to diff: Can't find keys and values for {hash_1}")
+
+            new_pairs = set(await self.get_keys_values(store_id, hash_2))
             if len(new_pairs) == 0 and hash_2 != bytes32([0] * 32):
-                return set()
+                raise Exception(f"Unable to diff: Can't find keys and values for {hash_2}")
+
             insertions = {
                 DiffData(type=OperationType.INSERT, key=node.key, value=node.value)
                 for node in new_pairs

@@ -32,7 +32,7 @@ from chia.wallet.conditions import (
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import Solver
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -184,23 +184,23 @@ class VCWallet:
         if not found_did:
             raise ValueError(f"You don't own the DID {provider_did.hex()}")  # pragma: no cover
         # Mint VC
-        coins = await self.standard_wallet.select_coins(uint64(1 + fee), tx_config.coin_selection_config)
+        coins = list(await self.standard_wallet.select_coins(uint64(1 + fee), tx_config.coin_selection_config))
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
         if inner_puzzle_hash is None:  # pragma: no cover
             inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
-        original_coin = coins.pop()
-        dpuz, coin_spends, vc = VerifiedCredential.launch(
-            original_coin,
+        dpuzs, coin_spends, vc = VerifiedCredential.launch(
+            coins,
             provider_did,
             inner_puzzle_hash,
             [inner_puzzle_hash],
             fee=fee,
             extra_conditions=extra_conditions,
         )
-        solution = solution_for_conditions(dpuz.rest())
-        original_puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(original_coin.puzzle_hash)
-        coin_spends.append(make_spend(original_coin, original_puzzle, solution))
+        for dpuz, coin in zip(dpuzs, coins):
+            solution = solution_for_delegated_puzzle(dpuz, Program.to(None))
+            puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
+            coin_spends.append(make_spend(coin, puzzle, solution))
         spend_bundle = SpendBundle(coin_spends, G2Element())
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
@@ -392,7 +392,7 @@ class VCWallet:
             coins.update(await self.standard_wallet.select_coins(fee, tx_config.coin_selection_config))
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
         sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
-        nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
+        nonce: bytes32 = SerializedProgram.to(sorted_coin_list).get_tree_hash()
         vc_announcement: AssertCoinAnnouncement = AssertCoinAnnouncement(asserted_id=vc.coin.name(), asserted_msg=nonce)
 
         # Assemble final bundle
