@@ -733,6 +733,17 @@ reject_coin_state = wallet_protocol.RejectCoinState(
     uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
 )
 
+request_cost_info = wallet_protocol.RequestCostInfo()
+
+respond_cost_info = wallet_protocol.RespondCostInfo(
+    max_transaction_cost=uint64(100000),
+    max_block_cost=uint64(1000000),
+    max_mempool_cost=uint64(10000000),
+    mempool_cost=uint64(50000),
+    mempool_fee=uint64(500000),
+    bump_fee_per_cost=uint8(10),
+)
+
 
 ### HARVESTER PROTOCOL
 pool_difficulty = harvester_protocol.PoolDifficulty(

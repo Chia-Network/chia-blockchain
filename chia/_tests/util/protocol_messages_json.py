@@ -2119,6 +2119,17 @@ respond_coin_state_json: Dict[str, Any] = {
 
 reject_coin_state_json: Dict[str, Any] = {"reason": 1}
 
+request_cost_info_json: Dict[str, Any] = {}
+
+respond_cost_info_json: Dict[str, Any] = {
+    "max_transaction_cost": 100000,
+    "max_block_cost": 1000000,
+    "max_mempool_cost": 10000000,
+    "mempool_cost": 50000,
+    "mempool_fee": 500000,
+    "bump_fee_per_cost": 10,
+}
+
 pool_difficulty_json: Dict[str, Any] = {
     "difficulty": 14819251421858580996,
     "sub_slot_iters": 12852879676624401630,
