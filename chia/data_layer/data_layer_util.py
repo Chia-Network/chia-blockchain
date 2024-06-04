@@ -325,7 +325,7 @@ class InternalNode:
         raise Exception("provided hash not present")
 
 
-T_OptionalBytes32 = TypeVar("T_OptionalBytes32", bound=Optional[bytes32])
+T_OptionalBytes32 = TypeVar("T_OptionalBytes32", bound=Optional[bytes32], covariant=True)
 
 
 @final

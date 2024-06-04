@@ -6,7 +6,21 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    AsyncIterator,
+    Awaitable,
+    BinaryIO,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import aiosqlite
 
@@ -1160,7 +1174,7 @@ class DataStore:
         root: Root[Optional[bytes32]],
         use_optimized: bool = True,
         status: Status = Status.PENDING,
-    ) -> Optional[Root]:
+    ) -> Root[Optional[bytes32]]:
         async with self.db_wrapper.writer():
             try:
                 node = await self.get_node_by_key(key=key, root=root)
@@ -1250,23 +1264,25 @@ class DataStore:
                     status=status,
                     root=root,
                 )
+            assert root.node_hash is not None
+            non_empty_root = cast(Root[bytes32], root)
             if old_node.value == new_value:
                 log.debug(f"New value matches old value in upsert operation: {key.hex()}. Ignoring upsert")
-                return InsertResult(leaf_hash(key, new_value), root)
+                return InsertResult(leaf_hash(key, new_value), non_empty_root)
 
             # create new terminal node
             new_terminal_node_hash = await self._insert_terminal_node(key=key, value=new_value)
 
             ancestors = await self.get_ancestors_common(
                 node_hash=old_node.hash,
-                root=root,
+                root=non_empty_root,
                 use_optimized=use_optimized,
             )
 
             # Store contains only the old root, replace it with a new root having the terminal node.
             if len(ancestors) == 0:
                 new_root = await self._insert_root(
-                    store_id=root.store_id,
+                    store_id=non_empty_root.store_id,
                     node_hash=new_terminal_node_hash,
                     status=status,
                 )
@@ -1282,7 +1298,7 @@ class DataStore:
                     raise Exception("Internal error.")
 
                 new_root = await self.update_ancestor_hashes_on_insert(
-                    root=root,
+                    root=non_empty_root,
                     left=left,
                     right=right,
                     traversal_node_hash=parent.hash,
@@ -1367,7 +1383,7 @@ class DataStore:
         async with self.transaction():
             old_root = await self.get_tree_root(store_id)
             pending_root = await self.get_pending_root(store_id=store_id)
-            latest_local_root: Optional[Root]
+            latest_local_root: Root[Optional[bytes32]]
             if pending_root is None:
                 latest_local_root = old_root
             else:
@@ -1376,12 +1392,10 @@ class DataStore:
                     if pending_root.generation != old_root.generation + 1:
                         raise Exception("Internal error")
                     await self.change_root_status(pending_root, Status.COMMITTED)
-                    await self.build_ancestor_table_for_latest_root(store_id=store_id)
+                    await self.build_ancestor_table_for_root(root=pending_root)
                     latest_local_root = pending_root
                 else:
                     raise Exception("Internal error")
-
-            assert latest_local_root is not None
 
             key_hash_frequency: Dict[bytes32, int] = {}
             first_action: Dict[bytes32, str] = {}
@@ -1415,7 +1429,7 @@ class DataStore:
                             if key_hash_frequency[hash] == 1 or (
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
-                                old_node = await self.maybe_get_node_by_key(key, store_id)
+                                old_node = await self.maybe_get_node_by_key(key=key, root=latest_local_root)
                                 terminal_node_hash = await self._insert_terminal_node(key, value)
 
                                 if old_node is None:
@@ -1434,7 +1448,6 @@ class DataStore:
                             Status.COMMITTED,
                         )
                         latest_local_root = insert_result.root
-                        assert latest_local_root is not None
                     else:
                         if reference_node_hash is None or side is None:
                             raise Exception("Provide both reference_node_hash and side or neither.")
@@ -1453,21 +1466,27 @@ class DataStore:
                     hash = key_hash(key)
                     if key_hash_frequency[hash] == 2 and last_action[hash] == "insert" and enable_batch_autoinsert:
                         continue
-                    latest_local_root = await self.delete(key, store_id, True, Status.COMMITTED, root=latest_local_root)
+                    latest_local_root = await self.delete(
+                        key=key, root=latest_local_root, use_optimized=True, status=Status.COMMITTED
+                    )
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
                     hash = key_hash(key)
                     if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
                         terminal_node_hash = await self._insert_terminal_node(key, new_value)
-                        old_node = await self.maybe_get_node_by_key(key, store_id)
+                        old_node = await self.maybe_get_node_by_key(key=key, root=latest_local_root)
                         if old_node is not None:
                             pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                         else:
                             pending_autoinsert_hashes.append(terminal_node_hash)
                         continue
                     insert_result = await self.upsert(
-                        key, new_value, store_id, True, Status.COMMITTED, root=latest_local_root
+                        key=key,
+                        new_value=new_value,
+                        root=latest_local_root,
+                        use_optimized=True,
+                        status=Status.COMMITTED,
                     )
                     latest_local_root = insert_result.root
                 else:
@@ -1480,7 +1499,7 @@ class DataStore:
                         if hash in to_update_hashes:
                             break
                         to_update_hashes.add(hash)
-                        node = await self._get_one_ancestor(hash, store_id)
+                        node = await self._get_one_ancestor(hash, root=latest_local_root)
                         if node is None:
                             break
                         hash = node.hash
@@ -1514,7 +1533,9 @@ class DataStore:
                     await self._insert_root(store_id=store_id, node_hash=subtree_hash, status=Status.COMMITTED)
                 else:
                     hash_to_parent: Dict[bytes32, InternalNode] = {}
-                    min_height_leaf = await self.get_leaf_at_minimum_height(latest_local_root.node_hash, hash_to_parent)
+                    min_height_leaf = await self.get_leaf_at_minimum_height(
+                        root=latest_local_root, hash_to_parent=hash_to_parent
+                    )
                     ancestors: List[InternalNode] = []
                     hash = min_height_leaf.hash
                     while hash in hash_to_parent:
@@ -1523,13 +1544,12 @@ class DataStore:
                         hash = node.hash
 
                     await self.update_ancestor_hashes_on_insert(
-                        store_id=store_id,
+                        root=latest_local_root,
                         left=min_height_leaf.hash,
                         right=subtree_hash,
                         traversal_node_hash=min_height_leaf.hash,
                         ancestors=ancestors,
                         status=Status.COMMITTED,
-                        root=latest_local_root,
                     )
 
             root = await self.get_tree_root(store_id=store_id)
@@ -1564,8 +1584,6 @@ class DataStore:
         root: Root[Optional[bytes32]],
     ) -> Optional[InternalNode]:
         async with self.db_wrapper.reader() as reader:
-            if generation is None:
-                generation = await self.get_tree_generation(store_id=store_id)
             cursor = await reader.execute(
                 """
                 SELECT * from node INNER JOIN (
@@ -1577,53 +1595,46 @@ class DataStore:
                     GROUP BY hash
                 ) asc on asc.hash == node.hash
                 """,
-                {"hash": node_hash, "tree_id": store_id, "generation": generation},
+                {"hash": node_hash, "tree_id": root.store_id, "generation": root.generation},
             )
             row = await cursor.fetchone()
             if row is None:
                 return None
             return InternalNode.from_row(row=row)
 
-    async def build_ancestor_table_for_latest_root(self, store_id: bytes32) -> None:
+    async def build_ancestor_table_for_root(self, root: Root[Optional[bytes32]]) -> None:
         async with self.db_wrapper.writer():
-            root = await self.get_tree_root(store_id=store_id)
             if root.node_hash is None:
                 return
             previous_root = await self.get_tree_root(
-                store_id=store_id,
+                store_id=root.store_id,
                 generation=max(root.generation - 1, 0),
             )
 
             if previous_root.node_hash is not None:
-                previous_internal_nodes: List[InternalNode] = await self.get_internal_nodes(
-                    store_id=store_id,
-                    root_hash=previous_root.node_hash,
-                )
+                previous_internal_nodes: List[InternalNode] = await self.get_internal_nodes(root=previous_root)
                 known_hashes: Set[bytes32] = {node.hash for node in previous_internal_nodes}
             else:
                 known_hashes = set()
-            internal_nodes: List[InternalNode] = await self.get_internal_nodes(
-                store_id=store_id,
-                root_hash=root.node_hash,
-            )
+            internal_nodes: List[InternalNode] = await self.get_internal_nodes(root=root)
             for node in internal_nodes:
                 # We already have the same values in ancestor tables, if we have the same internal node.
                 # Don't reinsert it so we can save DB space.
                 if node.hash not in known_hashes:
-                    await self._insert_ancestor_table(node.left_hash, node.right_hash, store_id, root.generation)
+                    await self._insert_ancestor_table(node.left_hash, node.right_hash, root.store_id, root.generation)
 
     async def insert_root_with_ancestor_table(
         self, store_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING
     ) -> None:
         async with self.db_wrapper.writer():
-            await self._insert_root(store_id=store_id, node_hash=node_hash, status=status)
+            root = await self._insert_root(store_id=store_id, node_hash=node_hash, status=status)
             # Don't update the ancestor table for non-committed status.
             if status == Status.COMMITTED:
-                await self.build_ancestor_table_for_latest_root(store_id=store_id)
+                await self.build_ancestor_table_for_root(root=root)
 
-    async def get_node_by_key_latest_generation(self, key: bytes, store_id: bytes32) -> TerminalNode:
+    async def get_node_by_key_latest_generation(self, key: bytes, root: Root[Optional[bytes32]]) -> TerminalNode:
+        # TODO: making this take a root doesn't really fit with the latest generation part of the name, review
         async with self.db_wrapper.reader() as reader:
-            root = await self.get_tree_root(store_id=store_id)
             if root.node_hash is None:
                 raise KeyNotFoundError(key=key)
 
@@ -1636,7 +1647,7 @@ class DataStore:
                 ORDER BY a.generation DESC
                 LIMIT 1
                 """,
-                {"key": key, "tree_id": store_id},
+                {"key": key, "tree_id": root.store_id},
             )
 
             row = await cursor.fetchone()
@@ -1646,7 +1657,7 @@ class DataStore:
             node = await self.get_node(row["hash"])
             node_hash = node.hash
             while True:
-                internal_node = await self._get_one_ancestor(node_hash, store_id)
+                internal_node = await self._get_one_ancestor(node_hash=node_hash, root=root)
                 if internal_node is None:
                     break
                 node_hash = internal_node.hash
@@ -1656,9 +1667,9 @@ class DataStore:
             assert isinstance(node, TerminalNode)
             return node
 
-    async def maybe_get_node_by_key(self, key: bytes, tree_id: bytes32) -> Optional[TerminalNode]:
+    async def maybe_get_node_by_key(self, key: bytes, root: Root[Optional[bytes32]]) -> Optional[TerminalNode]:
         try:
-            node = await self.get_node_by_key_latest_generation(key, tree_id)
+            node = await self.get_node_by_key_latest_generation(key=key, root=root)
             return node
         except KeyNotFoundError:
             return None
@@ -1736,9 +1747,9 @@ class DataStore:
         # when used with use_optimized=False - it will compare both methods in this case and raise an exception.
         # this is undesirable in the DL Offers flow where PENDING roots can cause the optimized code to fail.
         if use_optimized:
-            ancestors = await self.get_ancestors_optimized(node_hash=node_hash, store_id=store_id, root_hash=root_hash)
+            ancestors = await self.get_ancestors_optimized(node_hash=node_hash, root=root)
         else:
-            ancestors = await self.get_ancestors(node_hash=node_hash, store_id=store_id, root_hash=root_hash)
+            ancestors = await self.get_ancestors(node_hash=node_hash, root=root)
 
         layers: List[ProofOfInclusionLayer] = []
         child_hash = node_hash
@@ -2076,18 +2087,17 @@ class DataStore:
 
     async def get_kv_diff(
         self,
-        store_id: bytes32,
-        hash_1: bytes32,
-        hash_2: bytes32,
+        root_1: Root[Optional[bytes32]],
+        root_2: Root[Optional[bytes32]],
     ) -> Set[DiffData]:
         async with self.db_wrapper.reader():
-            old_pairs = set(await self.get_keys_values(store_id, hash_1))
-            if len(old_pairs) == 0 and hash_1 != bytes32([0] * 32):
-                raise Exception(f"Unable to diff: Can't find keys and values for {hash_1}")
+            old_pairs = set(await self.get_keys_values(root=root_1))
+            if len(old_pairs) == 0 and root_1.node_hash != bytes32([0] * 32):
+                raise Exception(f"Unable to diff: Can't find keys and values for {root_1.node_hash}")
 
-            new_pairs = set(await self.get_keys_values(store_id, hash_2))
-            if len(new_pairs) == 0 and hash_2 != bytes32([0] * 32):
-                raise Exception(f"Unable to diff: Can't find keys and values for {hash_2}")
+            new_pairs = set(await self.get_keys_values(root=root_2))
+            if len(new_pairs) == 0 and root_2.node_hash != bytes32([0] * 32):
+                raise Exception(f"Unable to diff: Can't find keys and values for {root_2.node_hash}")
 
             insertions = {
                 DiffData(type=OperationType.INSERT, key=node.key, value=node.value)
