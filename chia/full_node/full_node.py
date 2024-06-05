@@ -2406,19 +2406,26 @@ class FullNode:
         if conds is None:
             return
 
+        all_peers = {
+            peer_id
+            for peer_id, peer in self.server.all_connections.items()
+            if peer.has_capability(Capability.MEMPOOL_UPDATES)
+        }
+
+        if len(all_peers) == 0:
+            return
+
         start_time = time.monotonic()
 
         hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
-        peer_ids = peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals))
+        peer_ids = all_peers.intersection(peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals)))
 
-        peers = [
-            peer
-            for peer_id in peer_ids
-            if (peer := self.server.all_connections.get(peer_id)) is not None
-            and peer.has_capability(Capability.MEMPOOL_UPDATES)
-        ]
+        for peer_id in peer_ids:
+            peer = self.server.all_connections.get(peer_id)
 
-        for peer in peers:
+            if peer is None:
+                continue
+
             msg = make_msg(
                 ProtocolMessageTypes.mempool_items_added, wallet_protocol.MempoolItemsAdded([mempool_item.name])
             )
@@ -2428,7 +2435,7 @@ class FullNode:
 
         self.log.log(
             logging.DEBUG if total_time < 0.5 else logging.WARNING,
-            f"Broadcasting added transaction {mempool_item.name} to {len(peers)} peers took {total_time:.4f}s",
+            f"Broadcasting added transaction {mempool_item.name} to {len(peer_ids)} peers took {total_time:.4f}s",
         )
 
     async def broadcast_removed_tx(self, mempool_removals: List[MempoolRemoveInfo]) -> None:
@@ -2440,6 +2447,15 @@ class FullNode:
 
         self.log.debug(f"Broadcasting {total_removals} removed transactions to peers")
 
+        all_peers = {
+            peer_id
+            for peer_id, peer in self.server.all_connections.items()
+            if peer.has_capability(Capability.MEMPOOL_UPDATES)
+        }
+
+        if len(all_peers) == 0:
+            return
+
         removals_to_send: Dict[bytes32, List[RemovedMempoolItem]] = dict()
 
         for removal_info in mempool_removals:
@@ -2449,27 +2465,23 @@ class FullNode:
                     continue
 
                 hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
-                peer_ids = peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals))
+                peer_ids = all_peers.intersection(
+                    peers_for_spend_bundle(self.subscriptions, conds, set(hints_for_removals))
+                )
 
-                peers = [
-                    peer
-                    for peer_id in peer_ids
-                    if (peer := self.server.all_connections.get(peer_id)) is not None
-                    and peer.has_capability(Capability.MEMPOOL_UPDATES)
-                ]
-
-                if len(peers) == 0:
+                if len(peer_ids) == 0:
                     continue
 
                 transaction_id = internal_mempool_item.spend_bundle.name()
 
-                self.log.debug(
-                    f"Broadcasting removed transaction {transaction_id} to "
-                    f"wallet peers {[peer.peer_node_id for peer in peers]}"
-                )
+                self.log.debug(f"Broadcasting removed transaction {transaction_id} to " f"wallet peers {peer_ids}")
 
-                for peer in peers:
-                    assert transaction_id is not None
+                for peer_id in peer_ids:
+                    peer = self.server.all_connections.get(peer_id)
+
+                    if peer is None:
+                        continue
+
                     removal = wallet_protocol.RemovedMempoolItem(transaction_id, uint8(removal_info.reason.value))
                     removals_to_send.setdefault(peer.peer_node_id, []).append(removal)
 
@@ -2489,7 +2501,8 @@ class FullNode:
 
         self.log.log(
             logging.DEBUG if total_time < 0.5 else logging.WARNING,
-            f"Broadcasting {total_removals} removed transactions to {len(peers)} peers took {total_time:.4f}s",
+            f"Broadcasting {total_removals} removed transactions "
+            f"to {len(removals_to_send)} peers took {total_time:.4f}s",
         )
 
     async def _needs_compact_proof(
