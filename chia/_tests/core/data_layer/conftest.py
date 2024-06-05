@@ -82,10 +82,11 @@ def node_type_fixture(request: SubRequest) -> NodeType:
 @pytest.fixture(name="valid_node_values")
 async def valid_node_values_fixture(
     data_store: DataStore,
-    root: Root[Optional[bytes32]],
+    store_id: bytes32,
     node_type: NodeType,
 ) -> Dict[str, Any]:
     await add_01234567_example(data_store=data_store, store_id=store_id)
+    root = await data_store.get_tree_root(store_id=store_id)
 
     if node_type == NodeType.INTERNAL:
         node_a = await data_store.get_node_by_key(key=b"\x02", root=root)

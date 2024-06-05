@@ -34,10 +34,11 @@ async def general_insert(
     reference_node_hash: bytes32,
     side: Optional[Side],
 ) -> bytes32:
+    root = await data_store.get_tree_root(store_id=store_id)
     insert_result = await data_store.insert(
         key=key,
         value=value,
-        store_id=store_id,
+        root=root,
         reference_node_hash=reference_node_hash,
         side=side,
         status=Status.COMMITTED,

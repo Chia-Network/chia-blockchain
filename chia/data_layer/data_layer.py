@@ -388,6 +388,7 @@ class DataLayer:
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
         root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
+        assert root is not None
 
         async with self.data_store.transaction():
             node = await self.data_store.get_node_by_key(key=key, root=root)
@@ -396,6 +397,7 @@ class DataLayer:
     async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> bytes:
         await self._update_confirmation_status(store_id=store_id)
         root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
+        assert root is not None
 
         async with self.data_store.transaction():
             # this either returns the node or raises an exception
@@ -405,6 +407,7 @@ class DataLayer:
     async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
         root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
+        assert root is not None
 
         res = await self.data_store.get_keys_values(root=root)
         if res is None:
@@ -420,6 +423,7 @@ class DataLayer:
     ) -> KeysValuesPaginationData:
         await self._update_confirmation_status(store_id=store_id)
         root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
+        assert root is not None
 
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024
@@ -441,6 +445,7 @@ class DataLayer:
     ) -> KeysPaginationData:
         await self._update_confirmation_status(store_id=store_id)
         root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
+        assert root is not None
 
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024
@@ -449,7 +454,8 @@ class DataLayer:
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
         await self._update_confirmation_status(store_id=store_id)
-        root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
+        root = await self.data_store.get_tree_root(store_id=store_id)
+        assert root is not None
 
         res = await self.data_store.get_ancestors(node_hash=node_hash, root=root)
         if res is None:
@@ -976,6 +982,8 @@ class DataLayer:
 
                 proofs: List[Proof] = []
                 for entry in offer_store.inclusions:
+                    # TODO: maybe get it by the new root hash?
+                    root = await self.data_store.get_tree_root(store_id=offer_store.store_id)
                     node_hash = await self.get_key_value_hash(
                         store_id=offer_store.store_id,
                         key=entry.key,
@@ -983,8 +991,7 @@ class DataLayer:
                     )
                     proof_of_inclusion = await self.data_store.get_proof_of_inclusion_by_hash(
                         node_hash=node_hash,
-                        store_id=offer_store.store_id,
-                        root_hash=new_root_hash,
+                        root=root,
                     )
                     proof = Proof(
                         key=entry.key,
