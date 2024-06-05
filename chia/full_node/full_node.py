@@ -105,8 +105,8 @@ from chia.util.safe_cancel_task import cancel_task_safe
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
 @dataclasses.dataclass
 class PeakPostProcessingResult:
-    mempool_peak_result: List[NewPeakItem]  # The result of calling MempoolManager.new_peak
-    mempool_removals: List[MempoolRemoveInfo]  # Removals from the mempool
+    mempool_peak_result: List[NewPeakItem]  # The new items from calling MempoolManager.new_peak
+    mempool_removals: List[MempoolRemoveInfo]  # The removed mempool items from calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: List[Tuple[bytes32, bytes]]  # The hints added to the DB
     lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
