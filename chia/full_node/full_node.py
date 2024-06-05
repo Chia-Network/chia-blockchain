@@ -2402,9 +2402,7 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE, current_peer.peer_node_id)
 
         conds = mempool_item.npc_result.conds
-
-        if conds is None:
-            return
+        assert conds is not None
 
         all_peers = {
             peer_id
@@ -2461,8 +2459,7 @@ class FullNode:
         for removal_info in mempool_removals:
             for internal_mempool_item in removal_info.items:
                 conds = internal_mempool_item.npc_result.conds
-                if conds is None:
-                    continue
+                assert conds is not None
 
                 hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
                 peer_ids = all_peers.intersection(

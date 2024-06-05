@@ -178,8 +178,7 @@ class Mempool:
 
         for transaction_id, item in self._items.items():
             conds = item.npc_result.conds
-            if conds is None:
-                continue
+            assert conds is not None
 
             for spend in conds.spends:
                 if spend.coin_id in coin_ids:
@@ -208,8 +207,7 @@ class Mempool:
 
         for transaction_id, item in self._items.items():
             conds = item.npc_result.conds
-            if conds is None:
-                continue
+            assert conds is not None
 
             for spend in conds.spends:
                 if spend.puzzle_hash in puzzle_hashes:

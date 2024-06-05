@@ -38,7 +38,7 @@ ALL_FILTER = wallet_protocol.CoinStateFilters(True, True, True, uint64(0))
 
 
 async def connect_to_simulator(
-    one_node: OneNode, self_hostname: str
+    one_node: OneNode, self_hostname: str, mempool_updates: bool = True
 ) -> Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]:
     [full_node_service], _, _ = one_node
 
@@ -50,7 +50,7 @@ async def connect_to_simulator(
         self_hostname,
         41723,
         NodeType.WALLET,
-        additional_capabilities=[(uint16(Capability.MEMPOOL_UPDATES), "1")],
+        additional_capabilities=[(uint16(Capability.MEMPOOL_UPDATES), "1")] if mempool_updates else [],
     )
     peer = fn_server.all_connections[peer_id]
 
@@ -803,7 +803,16 @@ Mpu = Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]
 
 @pytest.fixture
 async def mpu_setup(one_node: OneNode, self_hostname: str) -> Mpu:
-    simulator, queue, peer = await connect_to_simulator(one_node, self_hostname)
+    return await raw_mpu_setup(one_node, self_hostname)
+
+
+@pytest.fixture
+async def mpu_setup_no_capability(one_node: OneNode, self_hostname: str) -> Mpu:
+    return await raw_mpu_setup(one_node, self_hostname, no_capability=True)
+
+
+async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bool = False) -> Mpu:
+    simulator, queue, peer = await connect_to_simulator(one_node, self_hostname, mempool_updates=not no_capability)
     await simulator.farm_blocks_to_puzzlehash(1)
     await queue.get()
 
@@ -1069,6 +1078,81 @@ async def test_created_hint_mempool_update(mpu_setup: Mpu) -> None:
     await assert_mempool_removed(
         queue, {wallet_protocol.RemovedMempoolItem(transaction_id, uint8(MempoolRemoveReason.BLOCK_INCLUSION.value))}
     )
+
+
+@pytest.mark.anyio
+async def test_missing_capability_coin_id(mpu_setup_no_capability: Mpu) -> None:
+    simulator, queue, peer = mpu_setup_no_capability
+
+    # Make a coin and spend it
+    coin, _ = await make_coin(simulator.full_node)
+    await subscribe_coin(simulator, coin.name(), peer)
+    transaction_id = await spend_coin(simulator, coin)
+
+    # There is no mempool update for this transaction since the peer doesn't have the capability
+    assert queue.empty()
+
+    # Check the mempool to make sure the transaction is there
+    await simulator.wait_bundle_ids_in_mempool([transaction_id])
+    assert simulator.full_node.mempool_manager.mempool.get_item_by_id(transaction_id) is not None
+
+    # There is no initial mempool update since the peer doesn't have the capability
+    await subscribe_coin(simulator, coin.name(), peer)
+    assert queue.empty()
+
+    # Farm a block and there's still no mempool update
+    await simulator.farm_blocks_to_puzzlehash(1)
+    assert queue.empty()
+
+
+@pytest.mark.anyio
+async def test_missing_capability_puzzle_hash(mpu_setup_no_capability: Mpu) -> None:
+    simulator, queue, peer = mpu_setup_no_capability
+
+    # Make a coin and spend it
+    coin, _ = await make_coin(simulator.full_node)
+    await subscribe_puzzle(simulator, coin.puzzle_hash, peer)
+    transaction_id = await spend_coin(simulator, coin)
+
+    # There is no mempool update for this transaction since the peer doesn't have the capability
+    assert queue.empty()
+
+    # Check the mempool to make sure the transaction is there
+    await simulator.wait_bundle_ids_in_mempool([transaction_id])
+    assert simulator.full_node.mempool_manager.mempool.get_item_by_id(transaction_id) is not None
+
+    # There is no initial mempool update since the peer doesn't have the capability
+    await subscribe_puzzle(simulator, coin.puzzle_hash, peer)
+    assert queue.empty()
+
+    # Farm a block and there's still no mempool update
+    await simulator.farm_blocks_to_puzzlehash(1)
+    assert queue.empty()
+
+
+@pytest.mark.anyio
+async def test_missing_capability_hint(mpu_setup_no_capability: Mpu) -> None:
+    simulator, queue, peer = mpu_setup_no_capability
+
+    # Make a coin and spend it
+    coin, hint = await make_coin(simulator.full_node)
+    await subscribe_puzzle(simulator, hint, peer)
+    transaction_id = await spend_coin(simulator, coin)
+
+    # There is no mempool update for this transaction since the peer doesn't have the capability
+    assert queue.empty()
+
+    # Check the mempool to make sure the transaction is there
+    await simulator.wait_bundle_ids_in_mempool([transaction_id])
+    assert simulator.full_node.mempool_manager.mempool.get_item_by_id(transaction_id) is not None
+
+    # There is no initial mempool update since the peer doesn't have the capability
+    await subscribe_puzzle(simulator, hint, peer)
+    assert queue.empty()
+
+    # Farm a block and there's still no mempool update
+    await simulator.farm_blocks_to_puzzlehash(1)
+    assert queue.empty()
 
 
 @pytest.mark.anyio
