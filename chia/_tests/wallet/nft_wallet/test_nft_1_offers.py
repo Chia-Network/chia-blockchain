@@ -845,7 +845,7 @@ async def test_nft_offer_request_nft_for_cat(
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         push=True, additional_signing_responses=signing_response
     ) as action_scope:
-        trade_take, tx_records = await trade_manager_taker.respond_to_offer(
+        trade_take = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer, DEFAULT_TX_CONFIG, action_scope, fee=uint64(taker_fee)
         )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)

@@ -258,6 +258,7 @@ class TestDIDWallet:
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
         await full_node_api.farm_blocks_to_wallet(1, wallet)
+        await full_node_api.farm_blocks_to_wallet(1, wallet2)
 
         async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
@@ -318,7 +319,7 @@ class TestDIDWallet:
 
         async with did_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope_2:
             message_spend_bundle2, attest2 = await did_wallet_2.create_attestment(
-                coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG, action_scope
+                coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG, action_scope_2
             )
 
         message_spend_bundle = message_spend_bundle.aggregate([message_spend_bundle, message_spend_bundle2])

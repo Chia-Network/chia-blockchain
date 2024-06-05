@@ -83,7 +83,7 @@ class TestTransactions:
         await time_out_assert(20, peak_height, num_blocks, full_node_api_1)
         await time_out_assert(20, peak_height, num_blocks, full_node_api_2)
 
-        async with wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
             await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
                 10, ph1, DEFAULT_TX_CONFIG, action_scope, 0
             )

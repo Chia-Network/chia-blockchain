@@ -1471,8 +1471,6 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"}, DEFAULT_TX_CONFIG)
     assert res["success"]
 
-    await farm_transaction_block(full_node_api, wallet_1_node)
-
     res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
     assert res["metadata"]["Twitter"] == "Https://test"
 

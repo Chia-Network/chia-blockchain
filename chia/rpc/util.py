@@ -138,8 +138,8 @@ def tx_endpoint(
                 raise ValueError("Relative timelocks are not currently supported in the RPC")
 
             async with self.service.wallet_state_manager.new_action_scope(
-                push=push,
-                merge_spends=merge_spends,
+                push=request.get("push", push),
+                merge_spends=request.get("merge_spends", merge_spends),
                 sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
             ) as action_scope:
                 response: Dict[str, Any] = await func(
