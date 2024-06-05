@@ -35,6 +35,7 @@ def run_gen(
             block_program_args,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
             flags,
+            DEFAULT_CONSTANTS,
         )
         run_time = time() - start_time
         return err, result, run_time
