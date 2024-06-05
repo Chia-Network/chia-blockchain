@@ -168,7 +168,12 @@ class Mempool:
             cursor = self._db_conn.execute("SELECT name FROM tx")
             return [bytes32(row[0]) for row in cursor]
 
-    def transaction_ids_matching_coin_ids(self, coin_ids: Set[bytes32]) -> List[bytes32]:
+    def items_with_coin_ids(self, coin_ids: Set[bytes32]) -> List[bytes32]:
+        """
+        Returns a list of transaction ids that spend or create any coins with the provided coin ids.
+        This iterates over the internal items instead of using a query.
+        """
+
         transaction_ids: List[bytes32] = []
 
         for transaction_id, item in self._items.items():
@@ -181,20 +186,24 @@ class Mempool:
                     transaction_ids.append(transaction_id)
                     break
 
-                found_addition = False
-
                 for puzzle_hash, amount, _memo in spend.create_coin:
                     if Coin(spend.coin_id, puzzle_hash, uint64(amount)).name() in coin_ids:
                         transaction_ids.append(transaction_id)
-                        found_addition = True
                         break
+                else:
+                    continue
 
-                if found_addition:
-                    break
+                break
 
         return transaction_ids
 
-    def transaction_ids_matching_puzzle_hashes(self, puzzle_hashes: Set[bytes32], include_hints: bool) -> List[bytes32]:
+    def items_with_puzzle_hashes(self, puzzle_hashes: Set[bytes32], include_hints: bool) -> List[bytes32]:
+        """
+        Returns a list of transaction ids that spend or create any coins
+        with the provided puzzle hashes (or hints, if enabled).
+        This iterates over the internal items instead of using a query.
+        """
+
         transaction_ids: List[bytes32] = []
 
         for transaction_id, item in self._items.items():
@@ -207,16 +216,14 @@ class Mempool:
                     transaction_ids.append(transaction_id)
                     break
 
-                found_addition = False
-
                 for puzzle_hash, _amount, memo in spend.create_coin:
                     if puzzle_hash in puzzle_hashes or (include_hints and memo is not None and memo in puzzle_hashes):
                         transaction_ids.append(transaction_id)
-                        found_addition = True
                         break
+                else:
+                    continue
 
-                if found_addition:
-                    break
+                break
 
         return transaction_ids
 

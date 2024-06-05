@@ -217,6 +217,12 @@ class PeerSubscriptions:
 def peers_for_spend_bundle(
     peer_subscriptions: PeerSubscriptions, conds: SpendBundleConditions, hints_for_removals: Set[bytes32]
 ) -> Set[bytes32]:
+    """
+    Returns a list of peer ids that are subscribed to any of the created or
+    spent coins, puzzle hashes, or hints in the spend bundle. To avoid repeated
+    lookups, `hints_for_removals` should be a set of all puzzle hashes that are being removed.
+    """
+
     coin_ids: Set[bytes32] = set()
     puzzle_hashes: Set[bytes32] = hints_for_removals.copy()
 

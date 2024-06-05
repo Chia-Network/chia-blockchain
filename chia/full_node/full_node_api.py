@@ -1918,9 +1918,7 @@ class FullNodeAPI:
 
         async with self.full_node.db_wrapper.reader() as conn:
             transaction_ids = set(
-                self.full_node.mempool_manager.mempool.transaction_ids_matching_puzzle_hashes(
-                    puzzle_hashes, include_hints
-                )
+                self.full_node.mempool_manager.mempool.items_with_puzzle_hashes(puzzle_hashes, include_hints)
             )
 
             hinted_coin_ids: Set[bytes32] = set()
@@ -1936,9 +1934,7 @@ class FullNodeAPI:
                     hinted_coin_ids.add(bytes32(row[0]))
                 await cursor.close()
 
-            transaction_ids |= set(
-                self.full_node.mempool_manager.mempool.transaction_ids_matching_coin_ids(hinted_coin_ids)
-            )
+            transaction_ids |= set(self.full_node.mempool_manager.mempool.items_with_coin_ids(hinted_coin_ids))
 
         if len(transaction_ids) > 0:
             message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))
@@ -1957,7 +1953,7 @@ class FullNodeAPI:
 
         start_time = time.monotonic()
 
-        transaction_ids = self.full_node.mempool_manager.mempool.transaction_ids_matching_coin_ids(coin_ids)
+        transaction_ids = self.full_node.mempool_manager.mempool.items_with_coin_ids(coin_ids)
 
         if len(transaction_ids) > 0:
             message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))
