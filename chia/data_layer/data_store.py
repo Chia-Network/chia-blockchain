@@ -1803,14 +1803,14 @@ class DataStore:
     async def get_proof_of_inclusion_by_key(
         self,
         key: bytes,
-        store_id: bytes32,
+        root: Root[Optional[bytes32]],
     ) -> ProofOfInclusion:
         """Collect the information for a proof of inclusion of a key and its value in
         the Merkle tree.
         """
         async with self.db_wrapper.reader():
-            node = await self.get_node_by_key(key=key, store_id=store_id)
-            return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, store_id=store_id)
+            node = await self.get_node_by_key(key=key, root=root)
+            return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, root=root)
 
     async def get_first_generation(self, node_hash: bytes32, store_id: bytes32) -> int:
         async with self.db_wrapper.reader() as reader:

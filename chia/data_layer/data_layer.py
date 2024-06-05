@@ -266,7 +266,7 @@ class DataLayer:
             return None
 
     async def _get_publishable_root_hash(self, store_id: bytes32) -> bytes32:
-        pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=store_id)
+        pending_root = await self.data_store.get_pending_root(store_id=store_id)
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
         if pending_root.status == Status.PENDING_BATCH:
@@ -312,7 +312,7 @@ class DataLayer:
     ) -> TransactionRecord:
         await self._update_confirmation_status(store_id=store_id)
 
-        pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=store_id)
+        pending_root = await self.data_store.get_pending_root(store_id=store_id)
         if pending_root is None:
             raise Exception("Latest root is already confirmed.")
         if pending_root.status == Status.PENDING:
@@ -343,7 +343,7 @@ class DataLayer:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
-            pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=store_id)
+            pending_root = await self.data_store.get_pending_root(store_id=store_id)
             if pending_root is not None and pending_root.status == Status.PENDING:
                 raise Exception("Already have a pending root waiting for confirmation.")
 
@@ -384,26 +384,26 @@ class DataLayer:
         self,
         store_id: bytes32,
         key: bytes,
-        root_hash: Optional[bytes32] = None,
+        root: Root[Optional[bytes32]],
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
-            node = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
+            node = await self.data_store.get_node_by_key(key=key, root=root)
             return node.hash
 
-    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> bytes:
+    async def get_value(self, store_id: bytes32, key: bytes, root: Root[Optional[bytes32]]) -> bytes:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
             # this either returns the node or raises an exception
-            res = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
+            res = await self.data_store.get_node_by_key(key=key, root=root)
             return res.value
 
-    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
+    async def get_keys_values(self, store_id: bytes32, root: Root[Optional[bytes32]]) -> List[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
-        res = await self.data_store.get_keys_values(store_id, root_hash)
+        res = await self.data_store.get_keys_values(root=root)
         if res is None:
             self.log.error("Failed to fetch keys values")
         return res
@@ -411,7 +411,7 @@ class DataLayer:
     async def get_keys_values_paginated(
         self,
         store_id: bytes32,
-        root_hash: Optional[bytes32],
+        root: Root[Optional[bytes32]],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysValuesPaginationData:
@@ -419,33 +419,32 @@ class DataLayer:
 
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024
-        res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
+        res = await self.data_store.get_keys_values_paginated(page, max_page_size, root=root)
         return res
 
-    async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
+    async def get_keys(self, store_id: bytes32, root: Root[Optional[bytes32]]) -> List[bytes]:
         await self._update_confirmation_status(store_id=store_id)
 
-        res = await self.data_store.get_keys(store_id, root_hash)
+        res = await self.data_store.get_keys(root=root)
         return res
 
     async def get_keys_paginated(
         self,
-        store_id: bytes32,
-        root_hash: Optional[bytes32],
+        root: Root[Optional[bytes32]],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysPaginationData:
-        await self._update_confirmation_status(store_id=store_id)
+        await self._update_confirmation_status(root.store_id)
 
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024
-        res = await self.data_store.get_keys_paginated(store_id, page, max_page_size, root_hash)
+        res = await self.data_store.get_keys_paginated(page, max_page_size, root=root)
         return res
 
-    async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
-        await self._update_confirmation_status(store_id=store_id)
+    async def get_ancestors(self, node_hash: bytes32, root: Root[Optional[bytes32]]) -> List[InternalNode]:
+        await self._update_confirmation_status(store_id=root.store_id)
 
-        res = await self.data_store.get_ancestors(node_hash=node_hash, store_id=store_id)
+        res = await self.data_store.get_ancestors(node_hash=node_hash, root=root)
         if res is None:
             self.log.error("Failed to get ancestors")
         return res
@@ -530,7 +529,7 @@ class DataLayer:
                     and pending_root.status == Status.PENDING
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
-                    await self.data_store.build_ancestor_table_for_root(store_id=store_id)
+                    await self.data_store.build_ancestor_table_for_root(root=root)
             await self.data_store.clear_pending_roots(store_id=store_id)
 
     async def fetch_and_validate(self, store_id: bytes32) -> None:
@@ -817,7 +816,11 @@ class DataLayer:
         return await self.wallet_rpc.dl_owned_singletons()
 
     async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
-        return await self.data_store.get_kv_diff(store_id, hash_1, hash_2)
+        root_1 = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=hash_1)
+        assert root_1 is not None
+        root_2 = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=hash_2)
+        assert root_2 is not None
+        return await self.data_store.get_kv_diff(root_1=root_1, root_2=root_2)
 
     async def get_kv_diff_paginated(
         self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: Optional[int] = None
