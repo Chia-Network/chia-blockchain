@@ -1225,6 +1225,9 @@ class DataLayerWallet:
             if v > 0
         }
 
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.extend(all_transactions)
+
         return Offer(
             requested_payments,
             SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None]),
