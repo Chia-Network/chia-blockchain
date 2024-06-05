@@ -2469,9 +2469,6 @@ class FullNode:
                 )
 
                 for peer in peers:
-                    if peer is None or not peer.has_capability(Capability.MEMPOOL_UPDATES):
-                        continue
-
                     assert transaction_id is not None
                     removal = wallet_protocol.RemovedMempoolItem(transaction_id, uint8(removal_info.reason.value))
                     removals_to_send.setdefault(peer.peer_node_id, []).append(removal)
