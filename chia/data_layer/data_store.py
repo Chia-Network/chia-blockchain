@@ -831,16 +831,10 @@ class DataStore:
 
             return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, root.node_hash)
 
-    async def get_leaf_hashes_by_hashed_key(
-        self, store_id: bytes32, root_hash: Optional[bytes32] = None
-    ) -> Dict[bytes32, bytes32]:
+    async def get_leaf_hashes_by_hashed_key(self, root: Root[Optional[bytes32]]) -> Dict[bytes32, bytes32]:
         result: Dict[bytes32, bytes32] = {}
         async with self.db_wrapper.reader() as reader:
-            if root_hash is None:
-                root = await self.get_tree_root(store_id=store_id)
-                root_hash = root.node_hash
-
-            cursor = await self.get_keys_values_cursor(reader, root_hash, True)
+            cursor = await self.get_keys_values_cursor(reader=reader, root=root, only_keys=True)
             async for row in cursor:
                 result[key_hash(row["key"])] = bytes32(row["hash"])
 
@@ -1432,7 +1426,7 @@ class DataStore:
 
             pending_autoinsert_hashes: List[bytes32] = []
             pending_upsert_new_hashes: Dict[bytes32, bytes32] = {}
-            leaf_hashes = await self.get_leaf_hashes_by_hashed_key(store_id)
+            leaf_hashes = await self.get_leaf_hashes_by_hashed_key(root=latest_local_root)
 
             for change in changelist:
                 if change["action"] == "insert":
