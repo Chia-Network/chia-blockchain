@@ -14,7 +14,7 @@ protocol_version = {
     NodeType.FARMER: "0.0.36",
     NodeType.TIMELORD: "0.0.36",
     NodeType.INTRODUCER: "0.0.36",
-    NodeType.WALLET: "0.0.37",
+    NodeType.WALLET: "0.0.38",
     NodeType.DATA_LAYER: "0.0.36",
 }
 
