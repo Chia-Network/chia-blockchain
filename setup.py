@@ -46,7 +46,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build==1.2.1",
-    "coverage==7.4.3",
+    "coverage==7.5.3",
     "diff-cover==9.0.0",
     "pre-commit==3.5.0; python_version < '3.9'",
     "pre-commit==3.7.1; python_version >= '3.9'",
@@ -68,7 +68,7 @@ dev_dependencies = [
     "types-aiofiles==23.2.0.20240311",
     "types-cryptography==3.3.23.2",
     "types-pyyaml==6.0.12.20240311",
-    "types-setuptools==69.1.0.20240310",
+    "types-setuptools==70.0.0.20240524",
 ]
 
 legacy_keyring_dependencies = [

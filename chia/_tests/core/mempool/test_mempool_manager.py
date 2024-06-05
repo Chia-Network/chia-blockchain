@@ -377,7 +377,7 @@ def test_compute_assert_height(conds: SpendBundleConditions, expected: TimelockC
 def spend_bundle_from_conditions(
     conditions: List[List[Any]], coin: Coin = TEST_COIN, aggsig: G2Element = G2Element()
 ) -> SpendBundle:
-    solution = Program.to(conditions)
+    solution = SerializedProgram.to(conditions)
     coin_spend = make_spend(coin, IDENTITY_PUZZLE, solution)
     return SpendBundle([coin_spend], aggsig)
 
