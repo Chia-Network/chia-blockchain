@@ -384,24 +384,27 @@ class DataLayer:
         self,
         store_id: bytes32,
         key: bytes,
-        root: Root[Optional[bytes32]],
+        root_hash: Optional[bytes32] = None,
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
+        root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
 
         async with self.data_store.transaction():
             node = await self.data_store.get_node_by_key(key=key, root=root)
             return node.hash
 
-    async def get_value(self, store_id: bytes32, key: bytes, root: Root[Optional[bytes32]]) -> bytes:
+    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> bytes:
         await self._update_confirmation_status(store_id=store_id)
+        root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
 
         async with self.data_store.transaction():
             # this either returns the node or raises an exception
             res = await self.data_store.get_node_by_key(key=key, root=root)
             return res.value
 
-    async def get_keys_values(self, store_id: bytes32, root: Root[Optional[bytes32]]) -> List[TerminalNode]:
+    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
+        root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
 
         res = await self.data_store.get_keys_values(root=root)
         if res is None:
@@ -411,11 +414,12 @@ class DataLayer:
     async def get_keys_values_paginated(
         self,
         store_id: bytes32,
-        root: Root[Optional[bytes32]],
+        root_hash: Optional[bytes32],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysValuesPaginationData:
         await self._update_confirmation_status(store_id=store_id)
+        root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
 
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024
@@ -430,19 +434,22 @@ class DataLayer:
 
     async def get_keys_paginated(
         self,
-        root: Root[Optional[bytes32]],
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysPaginationData:
-        await self._update_confirmation_status(root.store_id)
+        await self._update_confirmation_status(store_id=store_id)
+        root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
 
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024
         res = await self.data_store.get_keys_paginated(page, max_page_size, root=root)
         return res
 
-    async def get_ancestors(self, node_hash: bytes32, root: Root[Optional[bytes32]]) -> List[InternalNode]:
-        await self._update_confirmation_status(store_id=root.store_id)
+    async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
+        await self._update_confirmation_status(store_id=store_id)
+        root = await self.data_store.get_last_tree_root_by_hash(store_id=store_id, hash=root_hash)
 
         res = await self.data_store.get_ancestors(node_hash=node_hash, root=root)
         if res is None:
