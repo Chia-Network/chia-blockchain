@@ -968,18 +968,17 @@ async def test_nft_offer_sell_cancel(
         )
 
     FEE = uint64(2000000000000)
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await trade_manager_maker.cancel_pending_offers(
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id], DEFAULT_TX_CONFIG, action_scope, fee=FEE, secure=True
         )
-    txs = await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
 
     async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
         return TradeStatus(trade_rec.status)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker], timeout=20)
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
@@ -1085,18 +1084,17 @@ async def test_nft_offer_sell_cancel_in_batch(
         )
 
     FEE = uint64(2000000000000)
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await trade_manager_maker.cancel_pending_offers(
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id], DEFAULT_TX_CONFIG, action_scope, fee=FEE, secure=True
         )
-    txs = await trade_manager_maker.wallet_state_manager.add_pending_transactions(txs)
 
     async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
         return TradeStatus(trade_rec.status)
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
