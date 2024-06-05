@@ -520,7 +520,7 @@ async def test_cat_trades(
                             "unconfirmed_wallet_balance": 0,
                             "spendable_balance": 0,
                             "max_send_amount": 0,
-                            "pending_approval_balance": 0,
+                            "pending_change": 0,
                             "unspent_coin_count": 0,
                         }
                         if credential_restricted
@@ -615,6 +615,7 @@ async def test_cat_trades(
                         "new cat": {
                             "unconfirmed_wallet_balance": 2,
                             "pending_coin_removal_count": 1,
+                            "pending_change": 2,  # This is a little weird but fits the current definition
                         },
                         "vc": {
                             "pending_coin_removal_count": 1,
@@ -630,6 +631,7 @@ async def test_cat_trades(
                             "confirmed_wallet_balance": 2,
                             "spendable_balance": 2,
                             "max_send_amount": 2,
+                            "pending_change": -2,
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
@@ -955,6 +957,7 @@ async def test_cat_trades(
                         "new cat": {
                             "unconfirmed_wallet_balance": 6,
                             "pending_coin_removal_count": 1,
+                            "pending_change": 6,  # This is a little weird but fits the current definition
                         },
                         "vc": {
                             "pending_coin_removal_count": 1,
@@ -970,6 +973,7 @@ async def test_cat_trades(
                             "confirmed_wallet_balance": 6,
                             "spendable_balance": 6,
                             "max_send_amount": 6,
+                            "pending_change": -6,
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
@@ -1191,6 +1195,7 @@ async def test_cat_trades(
                         "cat": {
                             "unconfirmed_wallet_balance": 8,
                             "pending_coin_removal_count": 1,
+                            "pending_change": 8,  # This is a little weird but fits the current definition
                         },
                         "vc": {
                             "pending_coin_removal_count": 1,
@@ -1206,6 +1211,7 @@ async def test_cat_trades(
                             "confirmed_wallet_balance": 8,
                             "spendable_balance": 8,
                             "max_send_amount": 8,
+                            "pending_change": -8,
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
@@ -1236,6 +1242,7 @@ async def test_cat_trades(
                         "new cat": {
                             "unconfirmed_wallet_balance": 9,
                             "pending_coin_removal_count": 1,
+                            "pending_change": 9,  # This is a little weird but fits the current definition
                         },
                         "vc": {
                             "pending_coin_removal_count": 1,
@@ -1251,6 +1258,7 @@ async def test_cat_trades(
                             "confirmed_wallet_balance": 9,
                             "spendable_balance": 9,
                             "max_send_amount": 9,
+                            "pending_change": -9,
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },
@@ -1557,6 +1565,7 @@ async def test_cat_trades(
                         "new cat": {
                             "unconfirmed_wallet_balance": 15,
                             "pending_coin_removal_count": 1,
+                            "pending_change": 15,  # This is a little weird but fits the current definition
                         },
                         "vc": {
                             "pending_coin_removal_count": 1,
@@ -1572,6 +1581,7 @@ async def test_cat_trades(
                             "confirmed_wallet_balance": 15,
                             "spendable_balance": 15,
                             "max_send_amount": 15,
+                            "pending_change": -15,
                             "unspent_coin_count": 1,
                             "pending_coin_removal_count": -1,
                         },

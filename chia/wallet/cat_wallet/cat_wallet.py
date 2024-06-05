@@ -486,7 +486,8 @@ class CATWallet:
                 continue
 
             for coin in record.additions:
-                if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
+                hint_dict = {coin_id: bytes32(memos[0]) for coin_id, memos in record.memos if len(memos) > 0}
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id(), hint_dict=hint_dict):
                     addition_amount += coin.amount
 
         return uint64(addition_amount)
