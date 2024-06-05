@@ -2574,7 +2574,6 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=DIDWallet)
         if len(request["attest_data"]) < wallet.did_info.num_of_backup_ids_needed:
             return {"success": False, "reason": "insufficient messages"}
-        spend_bundle = None
         async with self.service.wallet_state_manager.lock:
             (
                 info_list,
@@ -2594,25 +2593,23 @@ class WalletRpcApi:
                 puzhash = wallet.did_info.temp_puzhash
 
             assert wallet.did_info.temp_coin is not None
-            tx = (
+            async with self.service.wallet_state_manager.new_action_scope(
+                push=request.get("push", True)
+            ) as action_scope:
                 await wallet.recovery_spend(
                     wallet.did_info.temp_coin,
                     puzhash,
                     info_list,
                     pubkey,
                     message_spend_bundle,
+                    action_scope,
                 )
-            )[0]
-            if request.get("push", True):
-                await self.service.wallet_state_manager.add_pending_transactions([tx])
-        if spend_bundle:
-            return {
-                "success": True,
-                "spend_bundle": tx.spend_bundle,
-                "transactions": [tx.to_json_dict_convenience(self.service.config)],
-            }
-        else:
-            return {"success": False}
+            [tx] = action_scope.side_effects.transactions
+        return {
+            "success": True,
+            "spend_bundle": tx.spend_bundle,
+            "transactions": [tx.to_json_dict_convenience(self.service.config)],
+        }
 
     async def did_get_pubkey(self, request: Dict[str, Any]) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

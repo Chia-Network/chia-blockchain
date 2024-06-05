@@ -834,9 +834,7 @@ class DIDWallet:
             interface.side_effects.transactions.append(tx)
 
     # This is used to cash out, or update the id_list
-    async def create_exit_spend(
-        self, puzhash: bytes32, tx_config: TXConfig, action_scope: WalletActionScope
-    ) -> List[TransactionRecord]:
+    async def create_exit_spend(self, puzhash: bytes32, tx_config: TXConfig, action_scope: WalletActionScope) -> None:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
@@ -867,26 +865,28 @@ class DIDWallet:
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         spend_bundle = SpendBundle(list_of_coinspends, G2Element())
 
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
-            amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32.secret(),
-            memos=list(compute_memos(spend_bundle).items()),
-            valid_times=ConditionValidTimes(),
-        )
-        return [did_record]
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
+                    amount=uint64(coin.amount),
+                    fee_amount=uint64(0),
+                    confirmed=False,
+                    sent=uint32(0),
+                    spend_bundle=spend_bundle,
+                    additions=spend_bundle.additions(),
+                    removals=spend_bundle.removals(),
+                    wallet_id=self.wallet_info.id,
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.OUTGOING_TX.value),
+                    name=bytes32.secret(),
+                    memos=list(compute_memos(spend_bundle).items()),
+                    valid_times=ConditionValidTimes(),
+                )
+            )
 
     # Pushes a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
@@ -1026,7 +1026,8 @@ class DIDWallet:
         parent_innerpuzhash_amounts_for_recovery_ids: List[Tuple[bytes, bytes, int]],
         pubkey: G1Element,
         spend_bundle: SpendBundle,
-    ) -> List[TransactionRecord]:
+        action_scope: WalletActionScope,
+    ) -> None:
         assert self.did_info.origin_coin is not None
 
         # innersol is mode new_amount_or_p2_solution new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal my_id)  # noqa
@@ -1065,25 +1066,28 @@ class DIDWallet:
 
         spend_bundle = spend_bundle.aggregate([spend_bundle, SpendBundle(list_of_coinspends, G2Element())])
 
-        did_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
-            amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32.secret(),
-            memos=list(compute_memos(spend_bundle).items()),
-            valid_times=ConditionValidTimes(),
-        )
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
+                    amount=uint64(coin.amount),
+                    fee_amount=uint64(0),
+                    confirmed=False,
+                    sent=uint32(0),
+                    spend_bundle=spend_bundle,
+                    additions=spend_bundle.additions(),
+                    removals=spend_bundle.removals(),
+                    wallet_id=self.wallet_info.id,
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.OUTGOING_TX.value),
+                    name=bytes32.secret(),
+                    memos=list(compute_memos(spend_bundle).items()),
+                    valid_times=ConditionValidTimes(),
+                )
+            )
         new_did_info = DIDInfo(
             origin_coin=self.did_info.origin_coin,
             backup_ids=self.did_info.backup_ids,
@@ -1097,7 +1101,6 @@ class DIDWallet:
             metadata=self.did_info.metadata,
         )
         await self.save_info(new_did_info)
-        return [did_record]
 
     async def get_new_p2_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_p2_inner_puzzle()
