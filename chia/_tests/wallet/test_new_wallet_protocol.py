@@ -804,21 +804,26 @@ Mpu = Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]
 @pytest.fixture
 async def mpu_setup(one_node: OneNode, self_hostname: str) -> Mpu:
     simulator, queue, peer = await connect_to_simulator(one_node, self_hostname)
-
     await simulator.farm_blocks_to_puzzlehash(1)
     await queue.get()
+
+    new_coins: List[Tuple[Coin, bytes32]] = []
 
     for i in range(10):
         puzzle = Program.to(2)
         ph = puzzle.get_tree_hash()
         coin = Coin(std_hash(b"unrelated coin id" + i.to_bytes(4, "big")), ph, uint64(1))
         hint = std_hash(b"unrelated hint" + i.to_bytes(4, "big"))
+        new_coins.append((coin, hint))
 
-        await simulator.full_node.coin_store._add_coin_records(
-            [CoinRecord(coin, uint32(1), uint32(0), False, uint64(i * 10000))]
-        )
-        await simulator.full_node.hint_store.add_hints([(coin.name(), hint)])
+    reward_1 = Coin(std_hash(b"reward 1"), IDENTITY_PUZZLE_HASH, uint64(1000))
+    reward_2 = Coin(std_hash(b"reward 2"), IDENTITY_PUZZLE_HASH, uint64(2000))
+    await simulator.full_node.coin_store.new_block(
+        uint32(2), uint64(10000), [reward_1, reward_2], [coin for coin, _ in new_coins], []
+    )
+    await simulator.full_node.hint_store.add_hints([(coin.name(), hint) for coin, hint in new_coins])
 
+    for coin, hint in new_coins:
         solution = Program.to([[]])
         bundle = SpendBundle([CoinSpend(coin, puzzle, solution)], AugSchemeMPL.aggregate([]))
         tx_resp = await simulator.send_transaction(wallet_protocol.SendTransaction(bundle))
@@ -836,7 +841,12 @@ async def make_coin(full_node: FullNode) -> Tuple[Coin, bytes32]:
     coin = Coin(bytes32(b"\0" * 32), ph, uint64(1000))
     hint = bytes32(b"\0" * 32)
 
-    await full_node.coin_store._add_coin_records([CoinRecord(coin, uint32(1), uint32(0), False, uint64(10000))])
+    height = full_node.blockchain.get_peak_height()
+    assert height is not None
+
+    reward_1 = Coin(std_hash(b"reward 1"), IDENTITY_PUZZLE_HASH, uint64(3000))
+    reward_2 = Coin(std_hash(b"reward 2"), IDENTITY_PUZZLE_HASH, uint64(4000))
+    await full_node.coin_store.new_block(uint32(height + 1), uint64(200000), [reward_1, reward_2], [coin], [])
     await full_node.hint_store.add_hints([(coin.name(), hint)])
 
     return coin, hint
