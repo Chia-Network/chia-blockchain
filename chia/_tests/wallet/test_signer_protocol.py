@@ -11,6 +11,7 @@ from chia.rpc.wallet_request_types import (
     ApplySignatures,
     ExecuteSigningInstructions,
     GatherSigningInfo,
+    GatherSigningInfoResponse,
     SubmitTransactions,
 )
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -39,6 +40,15 @@ from chia.wallet.signer_protocol import (
     SumHint,
     TransactionInfo,
     UnsignedTransaction,
+)
+from chia.wallet.util.blind_signer_tl import (
+    BLIND_SIGNER_TRANSLATION,
+    BSTLPathHint,
+    BSTLSigningInstructions,
+    BSTLSigningResponse,
+    BSTLSigningTarget,
+    BSTLSumHint,
+    BSTLUnsignedTransaction,
 )
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable, json_serialize_with_clvm_streamable
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
@@ -249,6 +259,16 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         ]
     )
 
+    # And test that we can get compressed versions if we want
+    request = GatherSigningInfo(
+        [Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]
+    ).to_json_dict()
+    response_dict = await wallet_rpc.fetch("gather_signing_info", {"translation": "chip-0029", **request})
+    response: GatherSigningInfoResponse = json_deserialize_with_clvm_streamable(
+        response_dict, GatherSigningInfoResponse, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+    assert response.signing_instructions == not_our_utx.signing_instructions
+
 
 @pytest.mark.parametrize(
     "wallet_environments",
@@ -452,3 +472,90 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
         partial_allowed=True,
     )
     assert signing_responses == [SigningResponse(bytes(AugSchemeMPL.sign(other_sk, test_name, sum_pk)), test_name)]
+
+
+def test_blind_signer_translation_layer() -> None:
+    sum_hints: List[SumHint] = [
+        SumHint([b"a", b"b", b"c"], b"offset", b"final"),
+        SumHint([b"c", b"b", b"a"], b"offset2", b"final"),
+    ]
+    path_hints: List[PathHint] = [
+        PathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
+        PathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
+    ]
+    signing_targets: List[SigningTarget] = [
+        SigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
+        SigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
+    ]
+
+    instructions: SigningInstructions = SigningInstructions(
+        KeyHints(sum_hints, path_hints),
+        signing_targets,
+    )
+    transaction: UnsignedTransaction = UnsignedTransaction(
+        TransactionInfo([]),
+        instructions,
+    )
+    signing_response: SigningResponse = SigningResponse(
+        b"signature",
+        bytes32([1] * 32),
+    )
+
+    bstl_sum_hints: List[BSTLSumHint] = [
+        BSTLSumHint([b"a", b"b", b"c"], b"offset", b"final"),
+        BSTLSumHint([b"c", b"b", b"a"], b"offset2", b"final"),
+    ]
+    bstl_path_hints: List[BSTLPathHint] = [
+        BSTLPathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
+        BSTLPathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
+    ]
+    bstl_signing_targets: List[BSTLSigningTarget] = [
+        BSTLSigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
+        BSTLSigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
+    ]
+
+    bstl_instructions: BSTLSigningInstructions = BSTLSigningInstructions(
+        bstl_sum_hints,
+        bstl_path_hints,
+        bstl_signing_targets,
+    )
+    bstl_transaction: BSTLUnsignedTransaction = BSTLUnsignedTransaction(
+        bstl_sum_hints,
+        bstl_path_hints,
+        bstl_signing_targets,
+    )
+    bstl_signing_response: BSTLSigningResponse = BSTLSigningResponse(
+        b"signature",
+        bytes32([1] * 32),
+    )
+    bstl_instructions_json = json_serialize_with_clvm_streamable(bstl_instructions)
+    bstl_transaction_json = json_serialize_with_clvm_streamable(bstl_transaction)
+    bstl_signing_response_json = json_serialize_with_clvm_streamable(bstl_signing_response)
+    assert bstl_instructions_json == json_serialize_with_clvm_streamable(
+        instructions, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+    assert bstl_transaction_json == json_serialize_with_clvm_streamable(
+        transaction, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+    assert bstl_signing_response_json == json_serialize_with_clvm_streamable(
+        signing_response, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+
+    assert (
+        json_deserialize_with_clvm_streamable(
+            bstl_instructions_json, SigningInstructions, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
+        == instructions
+    )
+    assert (
+        json_deserialize_with_clvm_streamable(
+            bstl_transaction_json, UnsignedTransaction, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
+        == transaction
+    )
+    assert (
+        json_deserialize_with_clvm_streamable(
+            bstl_signing_response_json, SigningResponse, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
+        == signing_response
+    )
