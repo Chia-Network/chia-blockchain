@@ -26,6 +26,7 @@ dependencies = [
     "filelock==3.14.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "importlib-resources==6.4.0",
     "keyring==25.1.0",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "pywin32-ctypes @ git+https://github.com/altendky/pywin32-ctypes@patch-1",
     "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
