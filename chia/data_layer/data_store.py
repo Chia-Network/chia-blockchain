@@ -1406,13 +1406,11 @@ class DataStore:
             rows = await cursor.fetchall()
 
         hash_to_node = {row["hash"]: row_to_node(row=row) for row in rows}
-        result = [hash_to_node.get(node_hash) for node_hash in node_hashes]
-        if any(node is None for node in result):
-            missing_hashes = [node_hash.hex() for node_hash, node in zip(node_hashes, result) if node is None]
-            raise Exception(f"Node not found for requested hashes: {', '.join(missing_hashes)}")
+        for node_hash in node_hashes:
+            if node_hash not in hash_to_node:
+                raise Exception(f"Node not found for hash: {node_hash.hex()}")
 
-        assert all(node is not None for node in result)
-        return result
+        return [hash_to_node[node_hash] for node_hash in node_hashes]
 
     async def get_leaf_at_minimum_height(
         self, root_hash: bytes32, hash_to_parent: Dict[bytes32, InternalNode]
