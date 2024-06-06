@@ -13,6 +13,7 @@ from typing_extensions import Literal
 from chia.data_layer.data_layer_util import NodeType, PluginRemote, Root, SerializedNode, ServerInfo, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.data_layer.data_layer_util import TreeId
 
 
 def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int) -> str:
@@ -202,7 +203,7 @@ async def insert_from_delta_file(
                 f"Generation: {existing_generation}. Store id: {store_id}."
             )
 
-            root = await data_store.get_tree_root(store_id=store_id)
+            root = await data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
             with open(filename_full_tree, "wb") as writer:
                 await data_store.write_tree_to_file(root, root_hash, store_id, False, writer)
             log.info(f"Successfully written full tree filename {filename_full_tree}.")

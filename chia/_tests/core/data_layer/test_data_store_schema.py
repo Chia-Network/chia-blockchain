@@ -6,7 +6,7 @@ from typing import Any, Dict
 import pytest
 
 from chia._tests.core.data_layer.util import add_01234567_example, create_valid_node_values
-from chia.data_layer.data_layer_util import NodeType, Side, Status
+from chia.data_layer.data_layer_util import NodeType, Side, Status, TreeId
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -16,7 +16,7 @@ pytestmark = pytest.mark.data_layer
 @pytest.mark.anyio
 async def test_node_update_fails(data_store: DataStore, store_id: bytes32) -> None:
     await add_01234567_example(data_store=data_store, store_id=store_id)
-    node = await data_store.get_node_by_key(key=b"\x04", store_id=store_id)
+    node = await data_store.get_node_by_key(key=b"\x04", tree_id=TreeId.by_nothing(store_id=store_id))
 
     async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^updates not allowed to the node table$"):
@@ -93,8 +93,9 @@ async def test_node_type_must_be_valid(
 @pytest.mark.anyio
 async def test_node_internal_child_not_null(data_store: DataStore, store_id: bytes32, side: Side) -> None:
     await add_01234567_example(data_store=data_store, store_id=store_id)
-    node_a = await data_store.get_node_by_key(key=b"\x02", store_id=store_id)
-    node_b = await data_store.get_node_by_key(key=b"\x04", store_id=store_id)
+    tree_id = TreeId.by_nothing(store_id=store_id)
+    node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
+    node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
     values = create_valid_node_values(node_type=NodeType.INTERNAL, left_hash=node_a.hash, right_hash=node_b.hash)
 
@@ -124,8 +125,9 @@ async def test_node_internal_must_be_valid_reference(
     side: Side,
 ) -> None:
     await add_01234567_example(data_store=data_store, store_id=store_id)
-    node_a = await data_store.get_node_by_key(key=b"\x02", store_id=store_id)
-    node_b = await data_store.get_node_by_key(key=b"\x04", store_id=store_id)
+    tree_id = TreeId.by_nothing(store_id=store_id)
+    node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
+    node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
     values = create_valid_node_values(node_type=NodeType.INTERNAL, left_hash=node_a.hash, right_hash=node_b.hash)
 

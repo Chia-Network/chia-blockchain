@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
@@ -86,9 +86,12 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
                 print(f"        {dict(row)}")
 
 
-async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
-    terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
+async def _dot_dump(
+    data_store: DataStore, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
+) -> str:
+    resolved_tree_id = await data_store._resolve_tree_id(tree_id=tree_id)
+    terminal_nodes = await data_store.get_keys_values(tree_id=resolved_tree_id)
+    internal_nodes = await data_store.get_internal_nodes(tree_id=resolved_tree_id)
 
     n = 8
 
@@ -323,6 +326,50 @@ class InternalNode:
 
         # TODO: real exception considerations
         raise Exception("provided hash not present")
+
+
+T_MaybeGeneration = TypeVar("T_MaybeGeneration", bound=Union[int, "TreeId.Unspecified"], covariant=True)
+T_MaybeBytes32 = TypeVar("T_MaybeBytes32", bound=Union[Optional[bytes32], "TreeId.Unspecified"], covariant=True)
+
+
+@final
+@dataclass(frozen=True)
+class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
+    class Unspecified:
+        pass
+
+    unspecified: ClassVar[Unspecified] = Unspecified()
+
+    store_id: bytes32
+    generation: T_MaybeGeneration
+    # TODO: not entirely sure this is a good idea, but maybe
+    # TODO: ack!  None would both mean not resolved and empty tree...
+    #       add a not specified class of some sort i guess.  use for generation as well?
+    # TODO: does this make this class more than an id class?
+    root_hash: T_MaybeBytes32
+
+    # TODO: what if there were an @resolved_tree_id decorator or such that would
+    #       resolve the tree id parameter.  it would also have a reader added...?  or
+    #       writer if requested and...  that would avoid extra transactions?  some
+    #       good feelings, some pretty yucky about this
+
+    @classmethod
+    def by_nothing(cls, store_id: bytes32) -> TreeId[Unspecified, Unspecified]:
+        # TODO: using TreeId instead of cls because it makes mypy happy, i don't know
+        #       why yet though
+        return TreeId(store_id=store_id, generation=cls.unspecified, root_hash=cls.unspecified)
+
+    @classmethod
+    def by_generation(cls, store_id: bytes32, generation: int) -> TreeId[int, Unspecified]:
+        # TODO: using TreeId instead of cls because it makes mypy happy, i don't know
+        #       why yet though
+        return TreeId(store_id=store_id, generation=generation, root_hash=cls.unspecified)
+
+    @classmethod
+    def by_root_hash(cls, store_id: bytes32, root_hash: bytes32) -> TreeId[Unspecified, bytes32]:
+        # TODO: using TreeId instead of cls because it makes mypy happy, i don't know
+        #       why yet though
+        return TreeId(store_id=store_id, generation=TreeId.unspecified, root_hash=root_hash)
 
 
 @dataclass(frozen=True)
@@ -772,7 +819,7 @@ class PluginStatus:
 @dataclasses.dataclass(frozen=True)
 class InsertResult:
     node_hash: bytes32
-    root: Root
+    tree_id: TreeId[int, Optional[bytes32]]
 
 
 @dataclasses.dataclass(frozen=True)
