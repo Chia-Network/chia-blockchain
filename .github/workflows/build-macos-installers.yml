@@ -450,6 +450,11 @@ jobs:
         run: |
           find "/Volumes/Chia "*
 
+      - name: Test for homebrew rpath
+        if: matrix.arch.name == 'ARM64'
+        run: |
+          ! otool -l "/Volumes/Chia "*/Chia.app/Contents/Resources/app.asar.unpacked/daemon/_internal/lib-dynload/_ssl.*darwin.so | grep /opt/homebrew/lib
+
       - name: Run chia dev installers test
         run: |
           "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
