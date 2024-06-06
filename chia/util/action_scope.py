@@ -12,12 +12,12 @@ from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 class ResourceManager(Protocol):
     @classmethod
     @contextlib.asynccontextmanager
-    async def managed(cls, initial_resource: SideEffects) -> AsyncIterator[ResourceManager]:
+    async def managed(cls, initial_resource: SideEffects) -> AsyncIterator[ResourceManager]:  # pragma: no cover
         # We have to put this yield here for mypy to recognize the function as a generator
         yield  # type: ignore[misc]
 
     @contextlib.asynccontextmanager
-    async def use(self) -> AsyncIterator[None]:
+    async def use(self) -> AsyncIterator[None]:  # pragma: no cover
         # We have to put this yield here for mypy to recognize the function as a generator
         yield
 
@@ -149,10 +149,14 @@ class ActionScope(Generic[_T_SideEffects]):
             memos = await self._resource_manager.get_memos()
             side_effects = await self._resource_manager.get_resource(self._side_effects_format)
             interface = StateInterface(memos, side_effects, _callbacks_allowed)
-            yield interface
-            await self._resource_manager.save_memos(interface.memos)
-            await self._resource_manager.save_resource(interface.side_effects)
-            self._callbacks.extend(interface._new_callbacks)
+            try:
+                yield interface
+            except Exception:
+                raise
+            else:
+                await self._resource_manager.save_memos(interface.memos)
+                await self._resource_manager.save_resource(interface.side_effects)
+                self._callbacks.extend(interface._new_callbacks)
 
 
 @dataclass
