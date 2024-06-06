@@ -1411,6 +1411,7 @@ class DataStore:
             missing_hashes = [node_hash.hex() for node_hash, node in zip(node_hashes, result) if node is None]
             raise Exception(f"Node not found for requested hashes: {', '.join(missing_hashes)}")
 
+        assert all(node is not None for node in result)
         return result
 
     async def get_leaf_at_minimum_height(
@@ -1426,8 +1427,8 @@ class DataStore:
 
         while True:
             assert len(queue) > 0
-            current_batch = queue[: batch_size]
-            queue = queue[batch_size: ]
+            current_batch = queue[:batch_size]
+            queue = queue[batch_size:]
             hashes_to_fetch: List[bytes32] = []
 
             for node in current_batch:
