@@ -19,7 +19,7 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveReason
+from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
@@ -144,6 +144,27 @@ def compute_assert_height(
                 ret.assert_before_seconds = s
 
     return ret
+
+
+@dataclass
+class SpendBundleAddInfo:
+    cost: Optional[uint64]
+    status: MempoolInclusionStatus
+    removals: List[MempoolRemoveInfo]
+    error: Optional[Err]
+
+
+@dataclass
+class NewPeakInfo:
+    items: List[NewPeakItem]
+    removals: List[MempoolRemoveInfo]
+
+
+@dataclass
+class NewPeakItem:
+    transaction_id: bytes32
+    spend_bundle: SpendBundle
+    npc_result: NPCResult
 
 
 class MempoolManager:
@@ -335,7 +356,7 @@ class MempoolManager:
         spend_name: bytes32,
         first_added_height: uint32,
         get_coin_records: Optional[Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]]] = None,
-    ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
+    ) -> SpendBundleAddInfo:
         """
         Validates and adds to mempool a new_spend with the given NPCResult, and spend_name, and the current mempool.
         The mempool should be locked during this call (blockchain lock). If there are mempool conflicts, the conflicting
@@ -350,13 +371,14 @@ class MempoolManager:
         Returns:
             Optional[uint64]: cost of the entire transaction, None iff status is FAILED
             MempoolInclusionStatus:  SUCCESS (should add to pool), FAILED (cannot add), and PENDING (can add later)
+            List[MempoolRemoveInfo]: conflicting mempool items which were removed, if no Err
             Optional[Err]: Err is set iff status is FAILED
         """
 
         # Skip if already added
         existing_item = self.mempool.get_item_by_id(spend_name)
         if existing_item is not None:
-            return existing_item.cost, MempoolInclusionStatus.SUCCESS, None
+            return SpendBundleAddInfo(existing_item.cost, MempoolInclusionStatus.SUCCESS, [], None)
 
         if get_coin_records is None:
             get_coin_records = self.get_coin_records
@@ -370,24 +392,24 @@ class MempoolManager:
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
-            self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
-            err = self.mempool.add_to_pool(item)
-            if err is not None:
-                return item.cost, MempoolInclusionStatus.FAILED, err
-            return item.cost, MempoolInclusionStatus.SUCCESS, None
+            conflict = self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
+            info = self.mempool.add_to_pool(item)
+            if info.error is not None:
+                return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.FAILED, [], info.error)
+            return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.SUCCESS, info.removals + [conflict], None)
         elif err is Err.MEMPOOL_CONFLICT and item is not None:
             # The transaction has a conflict with another item in the
             # mempool, put it aside and re-try it later
             self._conflict_cache.add(item)
-            return item.cost, MempoolInclusionStatus.PENDING, err
+            return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.PENDING, [], err)
         elif item is not None:
             # The transasction has a height assertion and is not yet valid.
             # remember it to try it again later
             self._pending_cache.add(item)
-            return item.cost, MempoolInclusionStatus.PENDING, err
+            return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.PENDING, [], err)
         else:
             # Cannot add to the mempool or pending pool.
-            return None, MempoolInclusionStatus.FAILED, err
+            return SpendBundleAddInfo(None, MempoolInclusionStatus.FAILED, [], err)
 
     async def validate_spend_bundle(
         self,
@@ -655,7 +677,7 @@ class MempoolManager:
 
     async def new_peak(
         self, new_peak: Optional[BlockRecordProtocol], spent_coins: Optional[List[bytes32]]
-    ) -> List[Tuple[SpendBundle, NPCResult, bytes32]]:
+    ) -> NewPeakInfo:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         new_peak should always be the most recent *transaction* block of the chain. Since
@@ -665,17 +687,18 @@ class MempoolManager:
         block.
         """
         if new_peak is None:
-            return []
+            return NewPeakInfo([], [])
         # we're only interested in transaction blocks
         if new_peak.is_transaction_block is False:
-            return []
+            return NewPeakInfo([], [])
         if self.peak == new_peak:
-            return []
+            return NewPeakInfo([], [])
         assert new_peak.timestamp is not None
         self.fee_estimator.new_block_height(new_peak.height)
         included_items: List[MempoolItemInfo] = []
 
-        self.mempool.new_tx_block(new_peak.height, new_peak.timestamp)
+        expired = self.mempool.new_tx_block(new_peak.height, new_peak.timestamp)
+        mempool_item_removals: List[MempoolRemoveInfo] = [expired]
 
         use_optimization: bool = self.peak is not None and new_peak.prev_transaction_block_hash == self.peak.header_hash
         self.peak = new_peak
@@ -693,7 +716,9 @@ class MempoolManager:
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
                     self.remove_seen(item.name)
                     spendbundle_ids_to_remove.add(item.name)
-            self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
+            mempool_item_removals.append(
+                self.mempool.remove_from_pool(list(spendbundle_ids_to_remove), MempoolRemoveReason.BLOCK_INCLUSION)
+            )
         else:
             log.warning(
                 "updating the mempool using the slow-path. "
@@ -727,7 +752,7 @@ class MempoolManager:
                 return ret
 
             for item in old_pool.all_items():
-                _, result, err = await self.add_spend_bundle(
+                info = await self.add_spend_bundle(
                     item.spend_bundle,
                     item.npc_result,
                     item.spend_bundle_name,
@@ -735,11 +760,11 @@ class MempoolManager:
                     local_get_coin_records,
                 )
                 # Only add to `seen` if inclusion worked, so it can be resubmitted in case of a reorg
-                if result == MempoolInclusionStatus.SUCCESS:
+                if info.status == MempoolInclusionStatus.SUCCESS:
                     self.add_and_maybe_pop_seen(item.spend_bundle_name)
                 # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
                 # successfully added to the new mempool.
-                if result == MempoolInclusionStatus.FAILED and err == Err.DOUBLE_SPEND:
+                if info.status == MempoolInclusionStatus.FAILED and info.error == Err.DOUBLE_SPEND:
                     # Item was in mempool, but after the new block it's a double spend.
                     # Item is most likely included in the block.
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
@@ -748,22 +773,23 @@ class MempoolManager:
         potential_txs.update(self._conflict_cache.drain())
         txs_added = []
         for item in potential_txs.values():
-            cost, status, error = await self.add_spend_bundle(
+            info = await self.add_spend_bundle(
                 item.spend_bundle,
                 item.npc_result,
                 item.spend_bundle_name,
                 item.height_added_to_mempool,
                 self.get_coin_records,
             )
-            if status == MempoolInclusionStatus.SUCCESS:
-                txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
+            if info.status == MempoolInclusionStatus.SUCCESS:
+                txs_added.append(NewPeakItem(item.spend_bundle_name, item.spend_bundle, item.npc_result))
+            mempool_item_removals.extend(info.removals)
         log.info(
             f"Size of mempool: {self.mempool.size()} spends, "
             f"cost: {self.mempool.total_mempool_cost()} "
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
         self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
-        return txs_added
+        return NewPeakInfo(txs_added, mempool_item_removals)
 
     def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[SpendBundle]:
         items: List[SpendBundle] = []
