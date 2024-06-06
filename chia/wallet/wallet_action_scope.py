@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from typing import AsyncIterator, List, Optional, cast
+from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast
 
 from chia.util.action_scope import ActionScope
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.wallet_state_manager import WalletStateManager
+
+if TYPE_CHECKING:
+    # Avoid a circular import here
+    from chia.wallet.wallet_state_manager import WalletStateManager
 
 
 @dataclass
@@ -65,7 +68,10 @@ class WalletActionScope(ActionScope[WalletSideEffects]):
             self = cast(WalletActionScope, self)
             async with self.use() as interface:
                 interface.side_effects.signing_responses = additional_signing_responses.copy()
-            yield self
+            try:
+                yield self
+            except Exception:
+                raise
 
         self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
             self.side_effects.transactions,
