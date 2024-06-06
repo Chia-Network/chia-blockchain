@@ -544,6 +544,7 @@ async def test_cat_trades(
                     "new cat": {
                         "unconfirmed_wallet_balance": -2,
                         "pending_coin_removal_count": 1,
+                        "pending_change": 98,
                         "<=#spendable_balance": -2,
                         "<=#max_send_amount": -2,
                     },
@@ -570,6 +571,7 @@ async def test_cat_trades(
                     "new cat": {
                         "confirmed_wallet_balance": -2,
                         "pending_coin_removal_count": -1,
+                        "pending_change": -98,
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
                     },
@@ -885,6 +887,7 @@ async def test_cat_trades(
                     "new cat": {
                         "unconfirmed_wallet_balance": -6,
                         "<=#spendable_balance": -6,
+                        "pending_change": 92,
                         "<=#max_send_amount": -6,
                         "pending_coin_removal_count": 1,
                     },
@@ -907,6 +910,7 @@ async def test_cat_trades(
                     },
                     "new cat": {
                         "confirmed_wallet_balance": -6,
+                        "pending_change": -92,
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
                         "pending_coin_removal_count": -1,
@@ -1107,12 +1111,14 @@ async def test_cat_trades(
                         "unconfirmed_wallet_balance": -8,
                         "<=#spendable_balance": -8,
                         "<=#max_send_amount": -8,
+                        "pending_change": 1,
                         "pending_coin_removal_count": 2,  # For the first time, we're using two coins in an offer
                     },
                     "new cat": {
                         "unconfirmed_wallet_balance": -9,
                         "<=#spendable_balance": -9,
                         "<=#max_send_amount": -9,
+                        "pending_change": 83,
                         "pending_coin_removal_count": 1,
                     },
                     **(
@@ -1136,6 +1142,7 @@ async def test_cat_trades(
                         "confirmed_wallet_balance": -8,
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
+                        "pending_change": -1,
                         "pending_coin_removal_count": -2,
                         "unspent_coin_count": -1,
                     },
@@ -1143,6 +1150,7 @@ async def test_cat_trades(
                         "confirmed_wallet_balance": -9,
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
+                        "pending_change": -83,
                         "pending_coin_removal_count": -1,
                     },
                     **(
@@ -1482,6 +1490,7 @@ async def test_cat_trades(
                         "unconfirmed_wallet_balance": -15,
                         "<=#spendable_balance": -15,
                         "<=#max_send_amount": -15,
+                        "pending_change": 68,
                         "pending_coin_removal_count": 1,
                     },
                     **(
@@ -1511,6 +1520,7 @@ async def test_cat_trades(
                         "confirmed_wallet_balance": -15,
                         ">#spendable_balance": 0,
                         ">#max_send_amount": 0,
+                        "pending_change": -68,
                         "pending_coin_removal_count": -1,
                     },
                     **(
