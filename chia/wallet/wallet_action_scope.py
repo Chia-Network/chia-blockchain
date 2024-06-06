@@ -68,7 +68,10 @@ class WalletActionScope(ActionScope[WalletSideEffects]):
             self = cast(WalletActionScope, self)
             async with self.use() as interface:
                 interface.side_effects.signing_responses = additional_signing_responses.copy()
-            yield self
+            try:
+                yield self
+            except Exception:
+                raise
 
         self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
             self.side_effects.transactions,
