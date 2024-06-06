@@ -60,8 +60,10 @@ class SQLiteResourceManager:
     async def use(self) -> AsyncIterator[None]:
         async with self._db.writer() as conn:
             self._active_writer = conn
-            yield
-            self._active_writer = None
+            try:
+                yield
+            finally:
+                self._active_writer = None
 
     async def get_resource(self, resource_type: Type[_T_SideEffects]) -> _T_SideEffects:
         row = await execute_fetchone(self.get_active_writer(), "SELECT total FROM side_effects")
