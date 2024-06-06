@@ -6,18 +6,23 @@ from typing import List, Optional, Tuple
 import pytest
 
 from chia._tests.cmds.wallet.test_consts import STD_TX
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_action_scope import WalletActionScope, WalletSideEffects
+
+MOCK_SR = SigningResponse(b"hey", bytes32([0] * 32))
 
 
 def test_back_and_forth_serialization() -> None:
     assert bytes(WalletSideEffects()) == b"\x00\x00\x00\x00\x00\x00\x00\x00"
     assert WalletSideEffects.from_bytes(bytes(WalletSideEffects())) == WalletSideEffects()
-    assert WalletSideEffects.from_bytes(bytes(WalletSideEffects([STD_TX]))) == WalletSideEffects([STD_TX])
-    assert WalletSideEffects.from_bytes(bytes(WalletSideEffects([STD_TX, STD_TX]))) == WalletSideEffects(
-        [STD_TX, STD_TX]
+    assert WalletSideEffects.from_bytes(bytes(WalletSideEffects([STD_TX], [MOCK_SR]))) == WalletSideEffects(
+        [STD_TX], [MOCK_SR]
     )
+    assert WalletSideEffects.from_bytes(
+        bytes(WalletSideEffects([STD_TX, STD_TX], [MOCK_SR, MOCK_SR]))
+    ) == WalletSideEffects([STD_TX, STD_TX], [MOCK_SR, MOCK_SR])
 
 
 @dataclass
