@@ -1395,23 +1395,59 @@ class DataStore:
         else:
             await writer.execute(query, params)
 
+    async def get_nodes(self, node_hashes: List[bytes32]) -> List[Node]:
+        hashes = ",".join("?" for _ in node_hashes)
+        async with self.db_wrapper.reader() as reader:
+            # TODO: handle SQLITE_MAX_VARIABLE_NUMBER
+            cursor = await reader.execute(
+                f"SELECT * FROM node WHERE hash IN ({hashes})",
+                [*node_hashes],
+            )
+            rows = await cursor.fetchall()
+
+        hash_to_node = {row["hash"]: row_to_node(row=row) for row in rows}
+        result = [hash_to_node.get(node_hash) for node_hash in node_hashes]
+        if any(node is None for node in result):
+            missing_hashes = [node_hash.hex() for node_hash, node in zip(node_hashes, result) if node is None]
+            raise Exception(f"Node not found for requested hashes: {', '.join(missing_hashes)}")
+
+        return result
+
     async def get_leaf_at_minimum_height(
         self, root_hash: bytes32, hash_to_parent: Dict[bytes32, InternalNode]
     ) -> TerminalNode:
         root_node = await self.get_node(root_hash)
-        queue: List[Node] = [root_node]
+        if isinstance(root_node, TerminalNode):
+            return root_node
+
+        queue: List[InternalNode] = [root_node]
+        # Pick a safe number so we don't exceed SQLITE_MAX_VARIABLE_NUMBER
+        batch_size = 250
+
         while True:
             assert len(queue) > 0
-            node = queue.pop(0)
-            if isinstance(node, InternalNode):
-                left_node = await self.get_node(node.left_hash)
-                right_node = await self.get_node(node.right_hash)
+            current_batch = queue[: batch_size]
+            queue = queue[batch_size: ]
+            hashes_to_fetch: List[bytes32] = []
+
+            for node in current_batch:
+                hashes_to_fetch.append(node.left_hash)
+                hashes_to_fetch.append(node.right_hash)
+
+            child_nodes = await self.get_nodes(hashes_to_fetch)
+            assert len(child_nodes) == len(current_batch) * 2
+
+            for node in current_batch:
+                left_node = child_nodes.pop(0)
+                right_node = child_nodes.pop(0)
                 hash_to_parent[left_node.hash] = node
                 hash_to_parent[right_node.hash] = node
+                if isinstance(left_node, TerminalNode):
+                    return left_node
+                if isinstance(right_node, TerminalNode):
+                    return right_node
                 queue.append(left_node)
                 queue.append(right_node)
-            elif isinstance(node, TerminalNode):
-                return node
 
     async def batch_upsert(
         self,
