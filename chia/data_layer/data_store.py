@@ -39,7 +39,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, SQLITE_MAX_VARIABLE_NUMBER
 
 log = logging.getLogger(__name__)
 
@@ -1400,7 +1400,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             # TODO: handle SQLITE_MAX_VARIABLE_NUMBER
             cursor = await reader.execute(
-                f"SELECT * FROM node WHERE hash IN ({hashes})",
+                f"SELECT * FROM node WHERE hash IN ({query_parameter_place_holders})",
                 [*node_hashes],
             )
             rows = await cursor.fetchall()
@@ -1415,38 +1415,21 @@ class DataStore:
     async def get_leaf_at_minimum_height(
         self, root_hash: bytes32, hash_to_parent: Dict[bytes32, InternalNode]
     ) -> TerminalNode:
-        root_node = await self.get_node(root_hash)
-        if isinstance(root_node, TerminalNode):
-            return root_node
-
-        queue: List[InternalNode] = [root_node]
-        # Pick a safe number so we don't exceed SQLITE_MAX_VARIABLE_NUMBER
-        batch_size = 250
+        queue: List[bytes32] = [root_hash]
+        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
 
         while True:
             assert len(queue) > 0
-            current_batch = queue[:batch_size]
+            nodes = await self.get_nodes(queue[:batch_size])
             queue = queue[batch_size:]
-            hashes_to_fetch: List[bytes32] = []
 
-            for node in current_batch:
-                hashes_to_fetch.append(node.left_hash)
-                hashes_to_fetch.append(node.right_hash)
-
-            child_nodes = await self.get_nodes(hashes_to_fetch)
-            assert len(child_nodes) == len(current_batch) * 2
-
-            for node in current_batch:
-                left_node = child_nodes.pop(0)
-                right_node = child_nodes.pop(0)
-                hash_to_parent[left_node.hash] = node
-                hash_to_parent[right_node.hash] = node
-                if isinstance(left_node, TerminalNode):
-                    return left_node
-                if isinstance(right_node, TerminalNode):
-                    return right_node
-                queue.append(left_node)
-                queue.append(right_node)
+            for node in nodes:
+                if isinstance(node, TerminalNode):
+                    return node
+                hash_to_parent[node.left_hash] = node
+                hash_to_parent[node.right_hash] = node
+                queue.append(node.left_hash)
+                queue.append(node.right_hash)
 
     async def batch_upsert(
         self,
