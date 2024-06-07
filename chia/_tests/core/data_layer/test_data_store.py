@@ -22,6 +22,7 @@ from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, T
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
+    Node,
     NodeType,
     OperationType,
     ProofOfInclusion,
