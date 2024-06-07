@@ -3265,11 +3265,11 @@ files = [
 ]
 
 [extras]
-dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pyupgrade", "twine", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "185b2807a66588bb82012f5e6645e039487103450bb67bc5c664a6fb3b25be26"
+content-hash = "00c21c748dcfa07c7465635b010b5a512c66aed954a81eb1d8b1e8eb6c87a13f"
