@@ -15,12 +15,18 @@ usage() {
 
 PYTHON_COMMAND=python
 
-while getopts c:h flag
-do
+while getopts c:h flag; do
   case "${flag}" in
-    c) PYTHON_COMMAND=${OPTARG};;
-    h) usage; exit 0;;
-    *) echo; usage; exit 1;;
+  c) PYTHON_COMMAND=${OPTARG} ;;
+  h)
+    usage
+    exit 0
+    ;;
+  *)
+    echo
+    usage
+    exit 1
+    ;;
   esac
 done
 

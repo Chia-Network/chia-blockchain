@@ -30,7 +30,10 @@ while getopts adilpsh flag; do
   # development
   d) EXTRAS="${EXTRAS} --extras dev" ;;
   # non-editable
-  i) EDITABLE_CLI='' ;EDITABLE=;;
+  i)
+    EDITABLE_CLI=''
+    EDITABLE=
+    ;;
   # legacy keyring
   l) EXTRAS="${EXTRAS} --extras legacy-keyring" ;;
   p) PLOTTER_INSTALL=1 ;;
