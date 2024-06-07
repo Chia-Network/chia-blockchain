@@ -117,7 +117,14 @@ enable = true
 vcs = "git"
 dirty = true
 pattern = "default-unprefixed"
-format-jinja = "{% if distance == 0 %}{{ base }}{% else %}{{ base }}.dev{{ distance }}{% endif %}{% if dirty %}+dirty{% endif %}"
+# format-jinja = "{% if distance == 0 %}{{ base }}{% else %}{{ base }}.dev{{ distance }}{% endif %}{% if dirty %}+dirty{% endif %}"
+format-jinja = """
+    {%- if distance == 0 -%}
+        {{ serialize_pep440(base, stage, revision) }}
+    {%- else -%}
+        {{ serialize_pep440(base, stage, revision, dev=distance) }}
+    {%- endif -%}
+"""
 style = "pep440"
 bump = true
 
