@@ -185,10 +185,6 @@ if [ -z "$EDITABLE" ]; then
   .venv/bin/python -m pip install --no-deps .
 fi
 
-# TODO: integrate with poetry?
-if [ -n "$BLSPY_STUBS" ]; then
-  .venv/bin/python -m pip install ${EDITABLE_CLI} ./blspy-stubs
-fi
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
