@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from typing import AsyncIterator, Awaitable, Callable, Dict, Generic, List, Optional, Protocol, Type, TypeVar
+from typing import AsyncIterator, Awaitable, Callable, Dict, Generic, List, Optional, Protocol, Type, TypeVar, final
 
 import aiosqlite
 
@@ -13,12 +13,12 @@ class ResourceManager(Protocol):
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(cls, initial_resource: SideEffects) -> AsyncIterator[ResourceManager]:  # pragma: no cover
-        # We have to put this yield here for mypy to recognize the function as a generator
+        # yield included to make this a generator as expected by @contextlib.asynccontextmanager
         yield  # type: ignore[misc]
 
     @contextlib.asynccontextmanager
     async def use(self) -> AsyncIterator[None]:  # pragma: no cover
-        # We have to put this yield here for mypy to recognize the function as a generator
+        # yield included to make this a generator as expected by @contextlib.asynccontextmanager
         yield
 
     async def get_resource(self, resource_type: Type[_T_SideEffects]) -> _T_SideEffects: ...
@@ -48,8 +48,8 @@ class SQLiteResourceManager:
         async with DBWrapper2.managed(":memory:", reader_count=0) as db:
             self = cls(db)
             async with self._db.writer() as conn:
-                await conn.execute("CREATE TABLE memos(" " key blob," " value blob" ")")
-                await conn.execute("CREATE TABLE side_effects(" " total blob" ")")
+                await conn.execute("CREATE TABLE memos(key blob, value blob)")
+                await conn.execute("CREATE TABLE side_effects(total blob)")
                 await conn.execute(
                     "INSERT INTO side_effects VALUES(?)",
                     (bytes(initial_resource),),
@@ -101,6 +101,7 @@ class SideEffects(Protocol):
 _T_SideEffects = TypeVar("_T_SideEffects", bound=SideEffects)
 
 
+@final
 @dataclass
 class ActionScope(Generic[_T_SideEffects]):
     """
@@ -135,15 +136,13 @@ class ActionScope(Generic[_T_SideEffects]):
     ) -> AsyncIterator[ActionScope[_T_SideEffects]]:
         async with resource_manager_backend.managed(side_effects_format()) as resource_manager:
             self = cls(_resource_manager=resource_manager, _side_effects_format=side_effects_format)
-            try:
-                yield self
-            except Exception:
-                raise
-            else:
-                async with self.use(_callbacks_allowed=False) as interface:
-                    for callback in self._callbacks:
-                        await callback(interface)
-                    self._final_side_effects = interface.side_effects
+
+            yield self
+
+            async with self.use(_callbacks_allowed=False) as interface:
+                for callback in self._callbacks:
+                    await callback(interface)
+                self._final_side_effects = interface.side_effects
 
     @contextlib.asynccontextmanager
     async def use(self, _callbacks_allowed: bool = True) -> AsyncIterator[StateInterface[_T_SideEffects]]:
