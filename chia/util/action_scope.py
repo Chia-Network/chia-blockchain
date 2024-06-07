@@ -120,12 +120,15 @@ class ActionScope(Generic[_T_SideEffects]):
         async with resource_manager_backend.managed(side_effects_format()) as resource_manager:
             self = cls(_resource_manager=resource_manager, _side_effects_format=side_effects_format)
 
-            yield self
-
-            async with self.use(_callbacks_allowed=False) as interface:
-                if self._callback is not None:
-                    await self._callback(interface)
-                self._final_side_effects = interface.side_effects
+            try:
+                yield self
+            except Exception:
+                raise
+            else:
+                async with self.use(_callbacks_allowed=False) as interface:
+                    if self._callback is not None:
+                        await self._callback(interface)
+                    self._final_side_effects = interface.side_effects
 
     @contextlib.asynccontextmanager
     async def use(self, _callbacks_allowed: bool = True) -> AsyncIterator[StateInterface[_T_SideEffects]]:

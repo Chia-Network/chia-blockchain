@@ -52,7 +52,6 @@ async def test_new_action_scope(action_scope: ActionScope[TestSideEffects]) -> N
 
 @pytest.mark.anyio
 async def test_scope_persistence(action_scope: ActionScope[TestSideEffects]) -> None:
-    """ """
     async with action_scope.use() as interface:
         interface.side_effects.buf = b"baz"
 
@@ -117,9 +116,9 @@ async def test_no_callbacks_if_error() -> None:
         async with ActionScope.new_scope(TestSideEffects) as action_scope:
             async with action_scope.use() as interface:
 
-                async def callback(interface: StateInterface[TestSideEffects]) -> None:
+                async def callback2(interface: StateInterface[TestSideEffects]) -> None:
                     raise NotImplementedError("Should not get here")  # pragma: no cover
 
-                interface.set_callback(callback)
+                interface.set_callback(callback2)
 
             raise RuntimeError("This should prevent the callbacks from being called")
