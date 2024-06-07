@@ -2096,11 +2096,30 @@ async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("batch_size", [10, 25, 50, 250, 500])
-async def test_get_leaf_at_minimum_height(data_store: DataStore, store_id: bytes32, batch_size: int) -> None:
+@pytest.mark.parametrize("pre", [0, 2048])
+@pytest.mark.parametrize("batch_size", [25, 100, 500])
+async def test_get_leaf_at_minimum_height(
+    data_store: DataStore,
+    store_id: bytes32,
+    pre: int,
+    batch_size: int,
+) -> None:
     num_values = 1000
     value_offset = 1000000
     all_min_leafs: Set[TerminalNode] = set()
+
+    if pre > 0:
+        # This builds a complete binary tree, in order to test more than one batch in the queue before finding the leaf
+        changelist: List[Dict[str, Any]] = []
+
+        for value in range(pre):
+            value_bytes = (value * value).to_bytes(8, byteorder="big")
+            changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
+        await data_store.insert_batch(
+            store_id=store_id,
+            changelist=changelist,
+            status=Status.COMMITTED,
+        )
 
     for value in range(num_values):
         value_bytes = value.to_bytes(4, byteorder="big")
@@ -2132,6 +2151,8 @@ async def test_get_leaf_at_minimum_height(data_store: DataStore, store_id: bytes
                     else:
                         min_leaf_height = heights[node.hash]
 
+            if pre > 0:
+                assert min_leaf_height >= 11
             for node in all_nodes:
                 if isinstance(node, TerminalNode):
                     assert node == min_leaf
