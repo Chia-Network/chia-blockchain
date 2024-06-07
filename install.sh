@@ -21,7 +21,6 @@ usage() {
 EXTRAS='--extras upnp'
 PLOTTER_INSTALL=
 EDITABLE=1
-EDITABLE_CLI='-e'
 
 while getopts adilpsh flag; do
   case "${flag}" in
@@ -30,10 +29,7 @@ while getopts adilpsh flag; do
   # development
   d) EXTRAS="${EXTRAS} --extras dev" ;;
   # non-editable
-  i)
-    EDITABLE_CLI=''
-    EDITABLE=
-    ;;
+  i) EDITABLE= ;;
   # legacy keyring
   l) EXTRAS="${EXTRAS} --extras legacy-keyring" ;;
   p) PLOTTER_INSTALL=1 ;;
@@ -184,7 +180,6 @@ fi
 if [ -z "$EDITABLE" ]; then
   .venv/bin/python -m pip install --no-deps .
 fi
-
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
