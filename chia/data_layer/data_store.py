@@ -39,7 +39,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2, SQLITE_MAX_VARIABLE_NUMBER
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 
 log = logging.getLogger(__name__)
 
@@ -1406,9 +1406,10 @@ class DataStore:
             rows = await cursor.fetchall()
 
         hash_to_node = {row["hash"]: row_to_node(row=row) for row in rows}
-        for node_hash in node_hashes:
-            if node_hash not in hash_to_node:
-                raise Exception(f"Node not found for hash: {node_hash.hex()}")
+
+        missing_hashes = [node_hash.hex() for node_hash in node_hashes if node_hash not in hash_to_node]
+        if missing_hashes:
+            raise Exception(f"Nodes not found for hashes: {', '.join(missing_hashes)}")
 
         return [hash_to_node[node_hash] for node_hash in node_hashes]
 

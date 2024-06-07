@@ -2091,8 +2091,9 @@ async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
     assert nodes == expected_nodes
 
     node_hash = bytes32([0] * 32)
-    with pytest.raises(Exception, match=f"^Node not found for hash: {node_hash.hex()}"):
-        await data_store.get_nodes([node_hash])
+    node_hash_2 = bytes32([0] * 31 + [1])
+    with pytest.raises(Exception, match=f"^Nodes not found for hashes: {node_hash.hex()}, {node_hash_2.hex()}"):
+        await data_store.get_nodes([node_hash, node_hash_2] + [node.hash for node in expected_nodes])
 
 
 @pytest.mark.anyio
