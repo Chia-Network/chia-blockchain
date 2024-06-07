@@ -20,6 +20,7 @@
 
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
+  (include utility_macros.clib)
   (include *standard-cl-21*)
 
   (defun-inline calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
@@ -104,6 +105,19 @@
     )
   )
 
+  (defun dedupe ((@ lst ((@ first (parent amount)) . rest)) ids)
+    (if lst
+        (let ((id (sha256 parent amount)))
+          (if (in id ids)
+              (dedupe rest ids)
+              (c first (dedupe rest (c id ids)))
+          )
+        )
+        ()
+    )
+  )
+
+
   ; for a given asset type, loop through the cat coins and generate the announcements required for each
   (defun for_each_asset (
       TREASURY_SINGLETON_STRUCT
@@ -178,7 +192,7 @@
             )
             P2_SINGLETON_PUZHASH
             (wrap_in_cat_layer CAT_MOD_HASH (f (f p2_singleton_tailhash_parent_amount_list)) P2_SINGLETON_PUZHASH)  ; p2_singleton_puzzle_hash
-            (f (r (f p2_singleton_tailhash_parent_amount_list)))  ; list of ((parent amount) (parent amount)...)
+            (dedupe (f (r (f p2_singleton_tailhash_parent_amount_list))) 0 0)  ; list of ((parent amount) (parent amount)...)
             0  ; current total - initialise as 0
             (sum_create_coins (f (r (f LIST_OF_TAILHASH_CONDITIONS))))
             output  ; add new conditions to previous calculated output conditions

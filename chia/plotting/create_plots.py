@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
@@ -202,7 +202,7 @@ async def create_plots(
         # The plot id is based on the harvester, farmer, and pool keys
         if keys.pool_public_key is not None:
             plot_id: bytes32 = calculate_plot_id_pk(keys.pool_public_key, plot_public_key)
-            plot_memo: bytes32 = stream_plot_info_pk(keys.pool_public_key, keys.farmer_public_key, sk)
+            plot_memo: bytes = stream_plot_info_pk(keys.pool_public_key, keys.farmer_public_key, sk)
         else:
             assert keys.pool_contract_puzzle_hash is not None
             plot_id = calculate_plot_id_ph(keys.pool_contract_puzzle_hash, plot_public_key)
@@ -210,11 +210,21 @@ async def create_plots(
 
         if args.plotid is not None:
             log.info(f"Debug plot ID: {args.plotid}")
-            plot_id = bytes32(bytes.fromhex(args.plotid))
+            # Check if args.memo is of type bytes and convert it to a string if so
+            if isinstance(args.plotid, bytes):
+                plot_str = args.plotid.hex()  # Convert bytes to hex string
+            else:
+                plot_str = args.plotid
+            plot_id = bytes32.fromhex(plot_str)
 
         if args.memo is not None:
             log.info(f"Debug memo: {args.memo}")
-            plot_memo = bytes32.fromhex(args.memo)
+            # Check if args.memo is of type bytes and convert it to a string if so
+            if isinstance(args.memo, bytes):
+                memo_str = args.memo.hex()  # Convert bytes to hex string
+            else:
+                memo_str = args.memo
+            plot_memo = bytes.fromhex(memo_str)
 
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 

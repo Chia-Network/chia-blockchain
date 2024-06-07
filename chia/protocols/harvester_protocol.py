@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import List, Optional, Tuple
 
-from blspy import G1Element, G2Element
+from chia_rs import G1Element, G2Element
 
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
@@ -45,14 +47,43 @@ class NewSignagePointHarvester(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class ProofOfSpaceFeeInfo(Streamable):
+    applied_fee_threshold: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class NewProofOfSpace(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     plot_identifier: str
     proof: ProofOfSpace
     signage_point_index: uint8
+    include_source_signature_data: bool
+    farmer_reward_address_override: Optional[bytes32]
+    fee_info: Optional[ProofOfSpaceFeeInfo]
 
 
+# Source data corresponding to the hash that is sent to the Harvester for signing
+class SigningDataKind(IntEnum):
+    FOLIAGE_BLOCK_DATA = 1
+    FOLIAGE_TRANSACTION_BLOCK = 2
+    CHALLENGE_CHAIN_VDF = 3
+    REWARD_CHAIN_VDF = 4
+    CHALLENGE_CHAIN_SUB_SLOT = 5
+    REWARD_CHAIN_SUB_SLOT = 6
+    PARTIAL = 7
+
+
+@streamable
+@dataclass(frozen=True)
+class SignatureRequestSourceData(Streamable):
+    kind: uint8
+    data: bytes
+
+
+# message_data elements are optional as FoliageTransactionBlock may not always be present in
+# the case of the UnfinishedBlock not being a transaction block.
 @streamable
 @dataclass(frozen=True)
 class RequestSignatures(Streamable):
@@ -60,6 +91,9 @@ class RequestSignatures(Streamable):
     challenge_hash: bytes32
     sp_hash: bytes32
     messages: List[bytes32]
+    # This, and rc_block_unfinished are only set when using a third-party harvester (see CHIP-22)
+    message_data: Optional[List[Optional[SignatureRequestSourceData]]]
+    rc_block_unfinished: Optional[RewardChainBlockUnfinished]
 
 
 @streamable
@@ -71,6 +105,8 @@ class RespondSignatures(Streamable):
     local_pk: G1Element
     farmer_pk: G1Element
     message_signatures: List[Tuple[bytes32, G2Element]]
+    include_source_signature_data: bool
+    farmer_reward_address_override: Optional[bytes32]
 
 
 @streamable

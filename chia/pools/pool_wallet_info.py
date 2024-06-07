@@ -4,11 +4,10 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Dict, Optional
 
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint8, uint32
@@ -94,7 +93,7 @@ def create_pool_state(
     pool_url: Optional[str],
     relative_lock_height: uint32,
 ) -> PoolState:
-    if state not in set(s.value for s in PoolSingletonState):
+    if state not in {s.value for s in PoolSingletonState}:
         raise AssertionError("state {state} is not a valid PoolSingletonState,")
     ps = PoolState(
         POOL_PROTOCOL_VERSION, uint8(state), target_puzzle_hash, owner_pubkey, pool_url, relative_lock_height
@@ -116,6 +115,5 @@ class PoolWalletInfo(Streamable):
     launcher_coin: Coin
     launcher_id: bytes32
     p2_singleton_puzzle_hash: bytes32
-    current_inner: Program  # Inner puzzle in current singleton, not revealed yet
     tip_singleton_coin_id: bytes32
     singleton_block_height: uint32  # Block height that current PoolState is from

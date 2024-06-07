@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 import os
@@ -18,11 +19,11 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
-from blspy import G1Element
+from chia_rs import G1Element
 from typing_extensions import Protocol
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_full_version_str, chia_init
+from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
@@ -31,24 +32,25 @@ from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_server
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.beta_metrics import BetaMetricsLogger
 from chia.util.chia_logging import initialize_service_logging
+from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.log_exceptions import log_exceptions
 from chia.util.misc import SignalHandlers
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 from chia.wallet.derive_keys import (
+    master_pk_to_wallet_pk_unhardened,
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
-    master_sk_to_wallet_sk_unhardened,
 )
 
 io_pool_exc = ThreadPoolExecutor()
@@ -119,8 +121,7 @@ async def ping() -> Dict[str, Any]:
 
 
 class Command(Protocol):
-    async def __call__(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
-        ...
+    async def __call__(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]: ...
 
 
 def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[List[KeyData], Set[uint32]]:
@@ -142,6 +143,18 @@ def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[Lis
             else:
                 keys.append(keys_by_fingerprint[f])
     return keys, missing_fingerprints
+
+
+@dataclasses.dataclass(frozen=True)
+class StatusMessage:
+    service: str
+    command: str
+    destination: str
+    origin: str
+    data: Dict[str, Any]
+
+    def create_payload(self) -> str:
+        return create_payload(command=self.command, data=self.data, origin=self.origin, destination=self.destination)
 
 
 class WebSocketServer:
@@ -170,6 +183,8 @@ class WebSocketServer:
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
         self.shutdown_event = asyncio.Event()
+        self.state_changed_msg_queue: asyncio.Queue[StatusMessage] = asyncio.Queue()
+        self.state_changed_task: Optional[asyncio.Task] = None
 
     @asynccontextmanager
     async def run(self) -> AsyncIterator[None]:
@@ -177,8 +192,8 @@ class WebSocketServer:
 
         # Note: the minimum_version has been already set to TLSv1_2
         # in ssl_context_for_server()
-        # Daemon is internal connections, so override to TLSv1_3 only
-        if ssl.HAS_TLSv1_3:
+        # Daemon is internal connections, so override to TLSv1_3 only unless specified in the config
+        if ssl.HAS_TLSv1_3 and not self.net_config.get("daemon_allow_tls_1_2", False):
             try:
                 self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
             except ValueError:
@@ -194,6 +209,7 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
+        self.state_changed_task = asyncio.create_task(self._process_state_changed_queue())
         self.webserver = await WebServer.create(
             hostname=self.self_hostname,
             port=self.daemon_port,
@@ -234,6 +250,7 @@ class WebSocketServer:
 
     async def stop(self) -> Dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
+        self.cancel_task_safe(self.state_changed_task)
         service_names = list(self.services.keys())
         stop_service_jobs = [
             asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
@@ -341,26 +358,39 @@ class WebSocketServer:
         return service_names
 
     async def ping_task(self) -> None:
-        restart = True
-        await asyncio.sleep(30)
-        for service_name, connections in self.connections.items():
-            if service_name == service_plotter:
-                continue
-            for connection in connections.copy():
-                try:
-                    self.log.debug(f"About to ping: {service_name}")
-                    await connection.ping()
-                except asyncio.CancelledError:
-                    self.log.warning("Ping task received Cancel")
-                    restart = False
-                    break
-                except Exception:
-                    self.log.exception(f"Ping error to {service_name}")
-                    self.log.error(f"Ping failed, connection closed to {service_name}.")
-                    self.remove_connection(connection)
-                    await connection.close()
-        if restart is True:
-            self.ping_job = asyncio.create_task(self.ping_task())
+        with log_exceptions(
+            log=self.log,
+            consume=True,
+            message="Ping task received Cancel",
+            level=logging.DEBUG,
+            show_traceback=False,
+            exceptions_to_process=asyncio.CancelledError,
+        ):
+            while True:
+                with log_exceptions(
+                    log=self.log,
+                    consume=True,
+                    message="Unexpected exception, continuing:",
+                ):
+                    await asyncio.sleep(30)
+
+                    for service_name, connections in self.connections.items():
+                        if service_name == service_plotter:
+                            continue
+
+                        for connection in connections.copy():
+                            self.log.debug(f"About to ping: {service_name}")
+                            try:
+                                with log_exceptions(
+                                    log=self.log,
+                                    message=f"Ping error to {service_name}, closing connection.",
+                                    level=logging.WARNING,
+                                    show_traceback=False,
+                                ):
+                                    await connection.ping()
+                            except:  # noqa E722
+                                self.remove_connection(connection)
+                                await connection.close()
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
@@ -430,7 +460,20 @@ class WebSocketServer:
             "get_routes": self.get_routes,
             "get_wallet_addresses": self.get_wallet_addresses,
             "get_keys_for_plotting": self.get_keys_for_plotting,
+            "get_network_info": self.get_network_info,
         }
+
+    async def get_network_info(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+        network_name = self.net_config["selected_network"]
+        address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
+        genesis_challenge = self.net_config["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
+        response: Dict[str, Any] = {
+            "success": True,
+            "network_name": network_name,
+            "network_prefix": address_prefix,
+            "genesis_challenge": genesis_challenge,
+        }
+        return response
 
     async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         locked: bool = Keychain.is_keyring_locked()
@@ -619,16 +662,17 @@ class WebSocketServer:
         for key in keys:
             address_entries = []
 
-            # we require access to the private key to generate wallet addresses
-            if key.secrets is None:
+            # we require access to the private key to generate wallet addresses for non observer
+            if key.secrets is None and non_observer_derivation:
                 return {"success": False, "error": f"missing private key for key with fingerprint {key.fingerprint}"}
 
             for i in range(index, index + count):
                 if non_observer_derivation:
-                    sk = master_sk_to_wallet_sk(key.secrets.private_key, uint32(i))
+                    sk = master_sk_to_wallet_sk(key.private_key, uint32(i))
+                    pk = sk.get_g1()
                 else:
-                    sk = master_sk_to_wallet_sk_unhardened(key.secrets.private_key, uint32(i))
-                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(sk.get_g1()), prefix)
+                    pk = master_pk_to_wallet_pk_unhardened(key.public_key, uint32(i))
+                wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(pk), prefix)
                 if non_observer_derivation:
                     hd_path = f"m/12381n/8444n/2n/{i}n"
                 else:
@@ -649,6 +693,8 @@ class WebSocketServer:
 
         keys_for_plot: Dict[uint32, Any] = {}
         for key in keys:
+            if key.secrets is None:
+                continue
             sk = key.private_key
             farmer_public_key: G1Element = master_sk_to_farmer_sk(sk).get_g1()
             pool_public_key: G1Element = master_sk_to_pool_sk(sk).get_g1()
@@ -661,33 +707,6 @@ class WebSocketServer:
             "keys": keys_for_plot,
         }
         return response
-
-    async def _keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
-        """
-        Attempt to communicate with the GUI to inform it of any keyring status changes
-        (e.g. keyring becomes unlocked)
-        """
-        websockets = self.connections.get("wallet_ui", None)
-
-        if websockets is None:
-            return None
-
-        if keyring_status is None:
-            return None
-
-        response = create_payload("keyring_status_changed", keyring_status, "daemon", destination)
-
-        for websocket in websockets.copy():
-            try:
-                await websocket.send_str(response)
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
-                websockets.remove(websocket)
-                await websocket.close()
-
-    def keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str):
-        asyncio.create_task(self._keyring_status_changed(keyring_status, destination))
 
     def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> Dict[str, Any]:
         error = plot_queue_item.get("error")
@@ -724,29 +743,56 @@ class WebSocketServer:
                 data.append(self.plot_queue_to_payload(item, send_full_log))
         return data
 
-    async def _state_changed(self, service: str, message: Dict[str, Any]):
+    async def _process_state_changed_queue(self) -> None:
+        with log_exceptions(
+            log=self.log,
+            consume=True,
+            message="State changed task received Cancel",
+            level=logging.DEBUG,
+            show_traceback=False,
+            exceptions_to_process=asyncio.CancelledError,
+        ):
+            while True:
+                with log_exceptions(
+                    log=self.log,
+                    consume=True,
+                    message="Unexpected exception, continuing:",
+                ):
+                    message = await self.state_changed_msg_queue.get()
+                    await self._state_changed(message)
+
+    async def _state_changed(self, message: StatusMessage) -> None:
         """If id is None, send the whole state queue"""
-        if service not in self.connections:
+        if message.service not in self.connections:
             return None
 
-        websockets = self.connections[service]
-
-        if message is None:
-            return None
-
-        response = create_payload("state_changed", message, service, "wallet_ui")
-
+        websockets = self.connections[message.service]
         for websocket in websockets.copy():
             try:
-                await websocket.send_str(response)
+                await websocket.send_str(message.create_payload())
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
                 websockets.remove(websocket)
                 await websocket.close()
 
-    def state_changed(self, service: str, message: Dict[str, Any]):
-        asyncio.create_task(self._state_changed(service, message))
+    def state_changed(self, service: str, message: Dict[str, Any]) -> None:
+        self.state_changed_msg_queue.put_nowait(
+            StatusMessage(
+                service=service, command="state_changed", destination="wallet_ui", origin=service, data=message
+            )
+        )
+
+    def keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str) -> None:
+        self.state_changed_msg_queue.put_nowait(
+            StatusMessage(
+                service="wallet_ui",
+                command="keyring_status_changed",
+                destination=destination,
+                origin="daemon",
+                data=keyring_status,
+            )
+        )
 
     async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
         id: str = config["id"]
@@ -790,7 +836,7 @@ class WebSocketServer:
 
     async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
         file_path = config["out_file"]
-        with open(file_path, "r") as fp:
+        with open(file_path) as fp:
             await self._watch_file_changes(config, fp, loop)
 
     def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
@@ -1079,7 +1125,7 @@ class WebSocketServer:
 
             self._post_process_plotting_job(config)
 
-        except (subprocess.SubprocessError, IOError):
+        except (subprocess.SubprocessError, OSError):
             log.exception(f"problem starting {service_name}")  # lgtm [py/clear-text-logging-sensitive-data]
             error = Exception("Start plotting failed")
             config["state"] = PlotState.FINISHED
@@ -1240,7 +1286,7 @@ class WebSocketServer:
                 process, pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = [process]
                 success = True
-            except (subprocess.SubprocessError, IOError):
+            except (subprocess.SubprocessError, OSError):
                 log.exception(f"problem starting {service_command}")
                 error = "start failed"
 
@@ -1518,10 +1564,12 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     sys.stdout.flush()
     try:
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
-            log.info(f"chia-blockchain version: {chia_full_version_str()}")
+            log.info(f"chia-blockchain version: {chia_short_version()}")
 
-            beta_metrics: Optional[BetaMetricsLogger] = None
+            beta_metrics = None
             if config.get("beta", {}).get("enabled", False):
+                from chia.util.beta_metrics import BetaMetricsLogger
+
                 beta_metrics = BetaMetricsLogger(root_path)
                 beta_metrics.start_logging()
 

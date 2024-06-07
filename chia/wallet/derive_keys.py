@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -30,6 +30,12 @@ def _derive_path_unhardened(sk: PrivateKey, path: List[int]) -> PrivateKey:
     return sk
 
 
+def _derive_pk_unhardened(pk: G1Element, path: List[int]) -> G1Element:
+    for index in path:
+        pk = AugSchemeMPL.derive_child_pk_unhardened(pk, index)
+    return pk
+
+
 def master_sk_to_farmer_sk(master: PrivateKey) -> PrivateKey:
     return _derive_path(master, [12381, 8444, 0, 0])
 
@@ -51,9 +57,18 @@ def master_sk_to_wallet_sk_unhardened_intermediate(master: PrivateKey) -> Privat
     return _derive_path_unhardened(master, [12381, 8444, 2])
 
 
+def master_pk_to_wallet_pk_unhardened_intermediate(master: G1Element) -> G1Element:
+    return _derive_pk_unhardened(master, [12381, 8444, 2])
+
+
 def master_sk_to_wallet_sk_unhardened(master: PrivateKey, index: uint32) -> PrivateKey:
     intermediate = master_sk_to_wallet_sk_unhardened_intermediate(master)
     return _derive_path_unhardened(intermediate, [index])
+
+
+def master_pk_to_wallet_pk_unhardened(master: G1Element, index: uint32) -> G1Element:
+    intermediate = master_pk_to_wallet_pk_unhardened_intermediate(master)
+    return _derive_pk_unhardened(intermediate, [index])
 
 
 def master_sk_to_local_sk(master: PrivateKey) -> PrivateKey:

@@ -59,6 +59,9 @@ class BlockCache(BlockchainInterface):
     def contains_block(self, header_hash: bytes32) -> bool:
         return header_hash in self._block_records
 
+    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
+        return header_hash in self._block_records
+
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
 
@@ -73,6 +76,12 @@ class BlockCache(BlockchainInterface):
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records[header_hash]
+
+    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+        ret = []
+        for h in header_hashes:
+            ret.append(self._block_records[h].prev_hash)
+        return ret
 
     def remove_block_record(self, header_hash: bytes32) -> None:
         del self._block_records[header_hash]

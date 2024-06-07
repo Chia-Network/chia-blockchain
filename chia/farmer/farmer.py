@@ -1,22 +1,25 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
+import sys
 import time
 import traceback
+from dataclasses import dataclass
 from math import floor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiohttp
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
 from chia.plot_sync.receiver import Receiver
-from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_url
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
     AuthenticationPayload,
@@ -37,7 +40,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import decode_puzzle_hash
+from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.errors import KeychainProxyConnectionFailure
@@ -45,6 +48,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.logging import TimedDuplicateFilter
+from chia.util.profiler import profile_task
 from chia.wallet.derive_keys import (
     find_authentication_sk,
     find_owner_sk,
@@ -61,6 +65,12 @@ log = logging.getLogger(__name__)
 UPDATE_POOL_INFO_INTERVAL: int = 3600
 UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL: int = 120
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
+
+
+@dataclass(frozen=True)
+class GetPoolInfoResult:
+    pool_info: Dict[str, Any]
+    new_pool_url: Optional[str]
 
 
 def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tuple[float, Any]]:
@@ -106,6 +116,11 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 
 class Farmer:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("Farmer", None)
+
     def __init__(
         self,
         root_path: Path,
@@ -163,6 +178,43 @@ class Farmer:
 
         # Use to find missing signage points. (new_signage_point, time)
         self.prev_signage_point: Optional[Tuple[uint64, farmer_protocol.NewSignagePoint]] = None
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        async def start_task() -> None:
+            # `Farmer.setup_keys` returns `False` if there are no keys setup yet. In this case we just try until it
+            # succeeds or until we need to shut down.
+            while not self._shut_down:
+                if await self.setup_keys():
+                    self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
+                    self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
+                    log.debug("start_task: initialized")
+                    self.started = True
+                    return
+                await asyncio.sleep(1)
+
+        if self.config.get("enable_profiler", False):
+            if sys.getprofile() is not None:
+                self.log.warning("not enabling profiler, getprofile() is already set")
+            else:
+                asyncio.create_task(profile_task(self._root_path, "farmer", self.log))
+
+        asyncio.create_task(start_task())
+        try:
+            yield
+        finally:
+            self._shut_down = True
+
+            if self.cache_clear_task is not None:
+                await self.cache_clear_task
+            if self.update_pool_state_task is not None:
+                await self.update_pool_state_task
+            if self.keychain_proxy is not None:
+                proxy = self.keychain_proxy
+                self.keychain_proxy = None
+                await proxy.close()
+                await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
+            self.started = False
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -224,36 +276,6 @@ class Farmer:
 
         return True
 
-    async def _start(self) -> None:
-        async def start_task() -> None:
-            # `Farmer.setup_keys` returns `False` if there are no keys setup yet. In this case we just try until it
-            # succeeds or until we need to shut down.
-            while not self._shut_down:
-                if await self.setup_keys():
-                    self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
-                    self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
-                    log.debug("start_task: initialized")
-                    self.started = True
-                    return
-                await asyncio.sleep(1)
-
-        asyncio.create_task(start_task())
-
-    def _close(self) -> None:
-        self._shut_down = True
-
-    async def _await_closed(self, shutting_down: bool = True) -> None:
-        if self.cache_clear_task is not None:
-            await self.cache_clear_task
-        if self.update_pool_state_task is not None:
-            await self.update_pool_state_task
-        if shutting_down and self.keychain_proxy is not None:
-            proxy = self.keychain_proxy
-            self.keychain_proxy = None
-            await proxy.close()
-            await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-        self.started = False
-
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
@@ -306,7 +328,7 @@ class Farmer:
             value=ErrorResponse(uint16(PoolErrorCode.REQUEST_FAILED.value), error_message).to_json_dict(),
         )
 
-    def on_disconnect(self, connection: WSChiaConnection) -> None:
+    async def on_disconnect(self, connection: WSChiaConnection) -> None:
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection", {})
         if connection.connection_type is NodeType.HARVESTER:
@@ -320,16 +342,19 @@ class Farmer:
         if receiver.initial_sync() or harvester_updated:
             self.state_changed("harvester_update", receiver.to_dict(True))
 
-    async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict[str, Any]]:
+    async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[GetPoolInfoResult]:
         try:
             async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.get(
-                    f"{pool_config.pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)
-                ) as resp:
+                url = f"{pool_config.pool_url}/pool_info"
+                async with session.get(url, ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)) as resp:
                     if resp.ok:
                         response: Dict[str, Any] = json.loads(await resp.text())
                         self.log.info(f"GET /pool_info response: {response}")
-                        return response
+                        new_pool_url: Optional[str] = None
+                        if resp.url != url and all(r.status in {301, 308} for r in resp.history):
+                            new_pool_url = f"{resp.url}".replace("/pool_info", "")
+
+                        return GetPoolInfoResult(pool_info=response, new_pool_url=new_pool_url)
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
@@ -506,8 +531,6 @@ class Farmer:
                     self.log.error(f"Could not find authentication sk for {p2_singleton_puzzle_hash}")
                     continue
 
-                add_auth_key(self._root_path, pool_config, authentication_sk.get_g1())
-
                 if p2_singleton_puzzle_hash not in self.pool_state:
                     self.pool_state[p2_singleton_puzzle_hash] = {
                         "p2_singleton_puzzle_hash": p2_singleton_puzzle_hash.hex(),
@@ -524,6 +547,8 @@ class Farmer:
                         "valid_partials_24h": [],
                         "invalid_partials_since_start": 0,
                         "invalid_partials_24h": [],
+                        "insufficient_partials_since_start": 0,
+                        "insufficient_partials_24h": [],
                         "stale_partials_since_start": 0,
                         "stale_partials_24h": [],
                         "missing_partials_since_start": 0,
@@ -551,14 +576,18 @@ class Farmer:
                 if time.time() >= pool_state["next_pool_info_update"]:
                     pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                     # Makes a GET request to the pool to get the updated information
-                    pool_info = await self._pool_get_pool_info(pool_config)
-                    if pool_info is not None and "error_code" not in pool_info:
+                    pool_info_result = await self._pool_get_pool_info(pool_config)
+                    if pool_info_result is not None and "error_code" not in pool_info_result.pool_info:
+                        pool_info = pool_info_result.pool_info
                         pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
                             pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
                     else:
                         pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
+
+                    if pool_info_result is not None and pool_info_result.new_pool_url is not None:
+                        update_pool_url(self._root_path, pool_config, pool_info_result.new_pool_url)
 
                 if time.time() >= pool_state["next_farmer_update"]:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
@@ -699,31 +728,33 @@ class Farmer:
     async def generate_login_link(self, launcher_id: bytes32) -> Optional[str]:
         for pool_state in self.pool_state.values():
             pool_config: PoolWalletConfig = pool_state["pool_config"]
-            if pool_config.launcher_id == launcher_id:
-                authentication_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
-                if authentication_sk is None:
-                    self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
-                    continue
-                authentication_token_timeout = pool_state["authentication_token_timeout"]
-                if authentication_token_timeout is None:
-                    self.log.error(
-                        f"No pool specific authentication_token_timeout has been set for"
-                        f"{pool_config.p2_singleton_puzzle_hash}, check communication with the pool."
-                    )
-                    return None
+            if pool_config.launcher_id != launcher_id:
+                continue
 
-                authentication_token = get_current_authentication_token(authentication_token_timeout)
-                message: bytes32 = std_hash(
-                    AuthenticationPayload(
-                        "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
-                    )
+            authentication_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
+            if authentication_sk is None:
+                self.log.error(f"Could not find authentication sk for {pool_config.p2_singleton_puzzle_hash}")
+                continue
+            authentication_token_timeout = pool_state["authentication_token_timeout"]
+            if authentication_token_timeout is None:
+                self.log.error(
+                    f"No pool specific authentication_token_timeout has been set for"
+                    f"{pool_config.p2_singleton_puzzle_hash}, check communication with the pool."
                 )
-                signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
-                return (
-                    pool_config.pool_url
-                    + f"/login?launcher_id={launcher_id.hex()}&authentication_token={authentication_token}"
-                    f"&signature={bytes(signature).hex()}"
+                return None
+
+            authentication_token = get_current_authentication_token(authentication_token_timeout)
+            message: bytes32 = std_hash(
+                AuthenticationPayload(
+                    "get_login", pool_config.launcher_id, pool_config.target_puzzle_hash, authentication_token
                 )
+            )
+            signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
+            return (
+                pool_config.pool_url
+                + f"/login?launcher_id={launcher_id.hex()}&authentication_token={authentication_token}"
+                f"&signature={bytes(signature).hex()}"
+            )
 
         return None
 
@@ -826,3 +857,59 @@ class Farmer:
                 log.error(f"_periodically_clear_cache_and_refresh_task failed: {traceback.format_exc()}")
 
             await asyncio.sleep(1)
+
+    def notify_farmer_reward_taken_by_harvester_as_fee(
+        self, sp: farmer_protocol.NewSignagePoint, proof_of_space: harvester_protocol.NewProofOfSpace
+    ) -> None:
+        """
+        Apply a fee quality convention (see CHIP-22: https://github.com/Chia-Network/chips/pull/88)
+        given the proof and signage point. This will be tested against the fee threshold reported
+        by the harvester (if any), and logged.
+        """
+        assert proof_of_space.farmer_reward_address_override is not None
+
+        challenge_str = str(sp.challenge_hash)
+
+        ph_prefix = self.config["network_overrides"]["config"][self.config["selected_network"]]["address_prefix"]
+        farmer_reward_puzzle_hash = encode_puzzle_hash(proof_of_space.farmer_reward_address_override, ph_prefix)
+
+        self.log.info(
+            f"Farmer reward for challenge '{challenge_str}' "
+            + f"taken by harvester for reward address '{farmer_reward_puzzle_hash}'"
+        )
+
+        fee_quality = calculate_harvester_fee_quality(proof_of_space.proof.proof, sp.challenge_hash)
+        fee_quality_rate = float(fee_quality) / float(0xFFFFFFFF) * 100.0
+
+        if proof_of_space.fee_info is not None:
+            fee_threshold = proof_of_space.fee_info.applied_fee_threshold
+            fee_threshold_rate = float(fee_threshold) / float(0xFFFFFFFF) * 100.0
+
+            if fee_quality <= fee_threshold:
+                self.log.info(
+                    f"Fee threshold passed for challenge '{challenge_str}': "
+                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})"
+                )
+            else:
+                self.log.warning(
+                    f"Invalid fee threshold for challenge '{challenge_str}': "
+                    + f"{fee_quality_rate:.3f}%/{fee_threshold_rate:.3f}% ({fee_quality}/{fee_threshold})"
+                )
+                self.log.warning(
+                    "Harvester illegitimately took a fee reward that "
+                    + "did not belong to it or it incorrectly applied the fee convention."
+                )
+        else:
+            self.log.warning(
+                "Harvester illegitimately took reward by failing to provide its fee rate "
+                + f"for challenge '{challenge_str}'. "
+                + f"Fee quality was {fee_quality_rate:.3f}% ({fee_quality} or 0x{fee_quality:08x})"
+            )
+
+
+def calculate_harvester_fee_quality(proof: bytes, challenge: bytes32) -> uint32:
+    """
+    This calculates the 'fee quality' given a convention between farmers and third party harvesters.
+    See CHIP-22: https://github.com/Chia-Network/chips/pull/88
+    """
+    return uint32(int.from_bytes(std_hash(proof + challenge)[32 - 4 :], byteorder="big", signed=False))

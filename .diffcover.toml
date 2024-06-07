@@ -1,0 +1,4 @@
+[tool.diff_cover]
+exclude = [
+    "*/chia/_tests/*/config.py",
+]

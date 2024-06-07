@@ -27,22 +27,63 @@ class DataLayerRpcClient(RpcClient):
         return response
 
     async def update_data_store(
-        self, store_id: bytes32, changelist: List[Dict[str, str]], fee: Optional[uint64]
+        self, store_id: bytes32, changelist: List[Dict[str, str]], fee: Optional[uint64], submit_on_chain: bool = True
     ) -> Dict[str, Any]:
-        response = await self.fetch("batch_update", {"id": store_id.hex(), "changelist": changelist, "fee": fee})
+        response = await self.fetch(
+            "batch_update",
+            {
+                "id": store_id.hex(),
+                "changelist": changelist,
+                "fee": fee,
+                "submit_on_chain": submit_on_chain,
+            },
+        )
         return response
 
-    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Dict[str, Any]:
+    async def update_multiple_stores(
+        self, store_updates: List[Dict[str, Any]], fee: Optional[uint64], submit_on_chain: bool = True
+    ) -> Dict[str, Any]:
+        response = await self.fetch(
+            "multistore_batch_update",
+            {
+                "store_updates": store_updates,
+                "fee": fee,
+                "submit_on_chain": submit_on_chain,
+            },
+        )
+        return response
+
+    async def submit_pending_root(self, store_id: bytes32, fee: Optional[uint64]) -> Dict[str, Any]:
+        response = await self.fetch("submit_pending_root", {"id": store_id.hex(), "fee": fee})
+        return response
+
+    async def submit_all_pending_roots(self, fee: Optional[uint64]) -> Dict[str, Any]:
+        response = await self.fetch("submit_all_pending_roots", {"fee": fee})
+        return response
+
+    async def get_keys_values(
+        self, store_id: bytes32, root_hash: Optional[bytes32], page: Optional[int], max_page_size: Optional[int]
+    ) -> Dict[str, Any]:
         request: Dict[str, Any] = {"id": store_id.hex()}
         if root_hash is not None:
             request["root_hash"] = root_hash.hex()
+        if page is not None:
+            request["page"] = page
+        if max_page_size is not None:
+            request["max_page_size"] = max_page_size
         response = await self.fetch("get_keys_values", request)
         return response
 
-    async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Dict[str, Any]:
+    async def get_keys(
+        self, store_id: bytes32, root_hash: Optional[bytes32], page: Optional[int], max_page_size: Optional[int]
+    ) -> Dict[str, Any]:
         request: Dict[str, Any] = {"id": store_id.hex()}
         if root_hash is not None:
             request["root_hash"] = root_hash.hex()
+        if page is not None:
+            request["page"] = page
+        if max_page_size is not None:
+            request["max_page_size"] = max_page_size
         response = await self.fetch("get_keys", request)
         return response
 
@@ -87,10 +128,15 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("add_missing_files", request)
         return response
 
-    async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Dict[str, Any]:
-        response = await self.fetch(
-            "get_kv_diff", {"id": store_id.hex(), "hash_1": hash_1.hex(), "hash_2": hash_2.hex()}
-        )
+    async def get_kv_diff(
+        self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: Optional[int], max_page_size: Optional[int]
+    ) -> Dict[str, Any]:
+        request: Dict[str, Any] = {"id": store_id.hex(), "hash_1": hash_1.hex(), "hash_2": hash_2.hex()}
+        if page is not None:
+            request["page"] = page
+        if max_page_size is not None:
+            request["max_page_size"] = max_page_size
+        response = await self.fetch("get_kv_diff", request)
         return response
 
     async def get_root_history(self, store_id: bytes32) -> Dict[str, Any]:
@@ -130,4 +176,13 @@ class DataLayerRpcClient(RpcClient):
     async def clear_pending_roots(self, store_id: bytes32) -> Dict[str, Any]:
         request = ClearPendingRootsRequest(store_id=store_id)
         response = await self.fetch("clear_pending_roots", request.marshal())
+        return response
+
+    async def get_proof(self, store_id: bytes32, keys: List[bytes]) -> Dict[str, Any]:
+        request: Dict[str, Any] = {"store_id": store_id.hex(), "keys": [key.hex() for key in keys]}
+        response = await self.fetch("get_proof", request)
+        return response
+
+    async def verify_proof(self, proof: Dict[str, Any]) -> Dict[str, Any]:
+        response = await self.fetch("verify_proof", proof)
         return response

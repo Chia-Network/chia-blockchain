@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import socket
 import ssl
@@ -58,7 +59,6 @@ class WebServer:
     hostname: str
     listen_port: uint16
     scheme: Literal["http", "https"]
-    _shutdown_timeout: int
     _ssl_context: Optional[ssl.SSLContext] = None
     _close_task: Optional[asyncio.Task[None]] = None
     _prefer_ipv6: bool = False
@@ -72,20 +72,24 @@ class WebServer:
         max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
         ssl_context: Optional[ssl.SSLContext] = None,
         keepalive_timeout: int = 75,  # Default from aiohttp.web
-        shutdown_timeout: int = 60,  # Default `shutdown_timeout` from web.TCPSite
+        shutdown_timeout: int = 60,  # Default `shutdown_timeout` from aiohttp.web_runner.BaseRunner
         prefer_ipv6: bool = False,
         logger: logging.Logger = web_logger,
         start: bool = True,
     ) -> WebServer:
         app = web.Application(client_max_size=max_request_body_size, logger=logger)
-        runner = web.AppRunner(app, access_log=None, keepalive_timeout=keepalive_timeout)
+        runner = web.AppRunner(
+            app,
+            access_log=None,
+            keepalive_timeout=keepalive_timeout,
+            shutdown_timeout=shutdown_timeout,
+        )
 
         self = cls(
             runner=runner,
             hostname=hostname,
             listen_port=uint16(port),
             scheme="https" if ssl_context is not None else "http",
-            _shutdown_timeout=shutdown_timeout,
             _ssl_context=ssl_context,
             _prefer_ipv6=prefer_ipv6,
         )
@@ -104,7 +108,6 @@ class WebServer:
             self.hostname,
             int(self.listen_port),
             ssl_context=self._ssl_context,
-            shutdown_timeout=self._shutdown_timeout,
         )
         await site.start()
 
@@ -143,12 +146,28 @@ def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Netw
         return False
 
 
+def is_trusted_cidr(peer_host: str, trusted_cidrs: List[str]) -> bool:
+    try:
+        ip_obj = ipaddress.ip_address(peer_host)
+    except ValueError:
+        return False
+
+    for cidr in trusted_cidrs:
+        network = ipaddress.ip_network(cidr)
+        if ip_obj in network:
+            return True
+
+    return False
+
+
 def is_localhost(peer_host: str) -> bool:
     return peer_host in ["127.0.0.1", "localhost", "::1", "0:0:0:0:0:0:0:1"]
 
 
-def is_trusted_peer(host: str, node_id: bytes32, trusted_peers: Dict[str, Any], testing: bool = False) -> bool:
-    return not testing and is_localhost(host) or node_id.hex() in trusted_peers
+def is_trusted_peer(
+    host: str, node_id: bytes32, trusted_peers: Dict[str, Any], trusted_cidrs: List[str], testing: bool = False
+) -> bool:
+    return not testing and is_localhost(host) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
 
 
 def class_for_type(type: NodeType) -> Any:
@@ -185,7 +204,7 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     except ValueError:
         pass
     addrset: List[
-        Tuple["socket.AddressFamily", "socket.SocketKind", int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
+        Tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
     ] = await asyncio.get_event_loop().getaddrinfo(host, None)
     # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
     ips_v4 = []

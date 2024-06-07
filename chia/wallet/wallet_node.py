@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import multiprocessing
@@ -9,10 +10,24 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    ClassVar,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
 import aiosqlite
-from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from packaging.version import Version
 
 from chia.consensus.blockchain import AddBlockResult
@@ -36,7 +51,6 @@ from chia.protocols.wallet_protocol import (
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
-from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -45,12 +59,7 @@ from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.weight_proof import WeightProof
-from chia.util.config import (
-    WALLET_PEERS_PATH_KEY_DEPRECATED,
-    lock_and_load_config,
-    process_config_start_method,
-    save_config,
-)
+from chia.util.config import lock_and_load_config, process_config_start_method, save_config
 from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
@@ -110,6 +119,11 @@ class Balance(Streamable):
 
 @dataclasses.dataclass
 class WalletNode:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcServiceProtocol
+
+        _protocol_check: ClassVar[RpcServiceProtocol] = cast("WalletNode", None)
+
     config: Dict[str, Any]
     root_path: Path
     constants: ConsensusConstants
@@ -145,6 +159,15 @@ class WalletNode:
     _retry_failed_states_task: Optional[asyncio.Task[None]] = None
     _secondary_peer_sync_task: Optional[asyncio.Task[None]] = None
     _tx_messages_in_progress: Dict[bytes32, List[bytes32]] = dataclasses.field(default_factory=dict)
+
+    @contextlib.asynccontextmanager
+    async def manage(self) -> AsyncIterator[None]:
+        await self._start()
+        try:
+            yield
+        finally:
+            self._close()
+            await self._await_closed()
 
     @property
     def keychain_proxy(self) -> KeychainProxy:
@@ -205,11 +228,33 @@ class WalletNode:
         for cache in self.peer_caches.values():
             cache.clear_after_height(reorg_height)
 
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+    @overload
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[G1Element]: ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: Literal[True]
+    ) -> Optional[PrivateKey]: ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: Literal[False]
+    ) -> Optional[G1Element]: ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool
+    ) -> Optional[Union[PrivateKey, G1Element]]: ...
+
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool = False
+    ) -> Optional[Union[PrivateKey, G1Element]]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
-            # Returns first private key if fingerprint is None
-            key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+            # Returns first key if fingerprint is None
+            key: Optional[Union[PrivateKey, G1Element]] = await keychain_proxy.get_key_for_fingerprint(
+                fingerprint, private=private
+            )
         except KeychainIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
@@ -226,18 +271,22 @@ class WalletNode:
 
         return key
 
-    async def get_private_key(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+    async def get_key(self, fingerprint: Optional[int], private: bool = True) -> Optional[Union[PrivateKey, G1Element]]:
         """
         Attempt to get the private key for the given fingerprint. If the fingerprint is None,
         get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
         returned for the provided fingerprint, the first key will be returned.
         """
-        key: Optional[PrivateKey] = await self.get_key_for_fingerprint(fingerprint)
+        key: Optional[Union[PrivateKey, G1Element]] = await self.get_key_for_fingerprint(fingerprint, private=private)
 
         if key is None and fingerprint is not None:
-            key = await self.get_key_for_fingerprint(None)
+            key = await self.get_key_for_fingerprint(None, private=private)
             if key is not None:
-                self.log.info(f"Using first key found (fingerprint: {key.get_g1().get_fingerprint()})")
+                if isinstance(key, PrivateKey):
+                    fp = key.get_g1().get_fingerprint()
+                else:
+                    fp = key.get_fingerprint()
+                self.log.info(f"Using first key found (fingerprint: {fp})")
 
         return key
 
@@ -285,10 +334,11 @@ class WalletNode:
             "trade_record_times",
             "tx_times",
             "pool_state_transitions",
-            "singletons",
             "singleton_records",
             "mirrors",
+            "mirror_confirmations",
             "launchers",
+            "launcher_confirmations",
             "interested_coins",
             "interested_puzzle_hashes",
             "unacknowledged_asset_tokens",
@@ -303,7 +353,7 @@ class WalletNode:
         async with manage_connection(db_path) as conn:
             self.log.info("Resetting wallet sync data...")
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
-            names = set([x[0] for x in rows])
+            names = {x[0] for x in rows}
             names = names - set(required_tables)
             for name in names:
                 for ignore_name in ignore_tables:
@@ -364,13 +414,19 @@ class WalletNode:
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
         self.synced_peers = set()
-        private_key = await self.get_private_key(fingerprint)
+        private_key = await self.get_key(fingerprint, private=True)
         if private_key is None:
+            public_key = await self.get_key(fingerprint, private=False)
+        else:
+            assert isinstance(private_key, PrivateKey)
+            public_key = private_key.get_g1()
+        if public_key is None:
             self.log_out()
             return False
+        assert isinstance(public_key, G1Element)
         # override with private key fetched in case it's different from what was passed
         if fingerprint is None:
-            fingerprint = private_key.get_g1().get_fingerprint()
+            fingerprint = public_key.get_fingerprint()
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
@@ -385,6 +441,7 @@ class WalletNode:
         if self.config.get("reset_sync_for_fingerprint") == fingerprint:
             await self.reset_sync_db(path, fingerprint)
 
+        assert private_key is None or isinstance(private_key, PrivateKey)
         self._wallet_state_manager = await WalletStateManager.create(
             private_key,
             self.config,
@@ -393,6 +450,7 @@ class WalletNode:
             self.server,
             self.root_path,
             self,
+            public_key,
         )
 
         if self.state_changed_callback is not None:
@@ -406,7 +464,7 @@ class WalletNode:
         self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
-        self.log_in(private_key)
+        self.log_in(fingerprint)
         self.wallet_state_manager.state_changed("sync_changed")
 
         # Populate the balance caches for all wallets
@@ -562,7 +620,7 @@ class WalletNode:
                     # we might not be able to process some state.
                     coin_ids: List[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
-                        coin_states: List[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, uint32(0))
+                        coin_states: List[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, 0)
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
                                 await self.add_states_from_peer(coin_states, peer)
@@ -571,7 +629,7 @@ class WalletNode:
                     puzzle_hashes: List[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         # Puzzle hash subscription
-                        coin_states = await subscribe_to_phs(puzzle_hashes, peer, uint32(0))
+                        coin_states = await subscribe_to_phs(puzzle_hashes, peer, 0)
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
                                 await self.add_states_from_peer(coin_states, peer)
@@ -606,8 +664,8 @@ class WalletNode:
                 if peer is not None:
                     await peer.close(9999)
 
-    def log_in(self, sk: PrivateKey) -> None:
-        self.logged_in_fingerprint = sk.get_g1().get_fingerprint()
+    def log_in(self, fingerprint: int) -> None:
+        self.logged_in_fingerprint = fingerprint
         self.logged_in = True
         self.log.info(f"Wallet is logged in using key with fingerprint: {self.logged_in_fingerprint}")
         try:
@@ -660,14 +718,7 @@ class WalletNode:
             self.wallet_peers = WalletPeers(
                 self.server,
                 self.config["target_peer_count"],
-                PeerStoreResolver(
-                    self.root_path,
-                    self.config,
-                    selected_network=network_name,
-                    peers_file_path_key="wallet_peers_file_path",
-                    legacy_peer_db_path_key=WALLET_PEERS_PATH_KEY_DEPRECATED,
-                    default_peers_file_path="wallet/db/wallet_peers.dat",
-                ),
+                self.root_path / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
                 self.config["introducer_peer"],
                 self.config.get("dns_servers", ["dns-introducer.chia.net"]),
                 self.config["peer_connect_interval"],
@@ -677,7 +728,7 @@ class WalletNode:
             )
             asyncio.create_task(self.wallet_peers.start())
 
-    def on_disconnect(self, peer: WSChiaConnection) -> None:
+    async def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):
             self.local_node_synced = False
             self.initialize_wallet_peers()
@@ -781,6 +832,8 @@ class WalletNode:
 
         # We only process new state updates to avoid slow reprocessing. We set the sync height after adding
         # Things, so we don't have to reprocess these later. There can be many things in ph_update_res.
+        use_delta_sync = self.config.get("use_delta_sync", False)
+        min_height_for_subscriptions = fork_height if use_delta_sync else 0
         already_checked_ph: Set[bytes32] = set()
         while not self._shut_down:
             await self.wallet_state_manager.create_more_puzzle_hashes()
@@ -789,7 +842,9 @@ class WalletNode:
             if not_checked_puzzle_hashes == set():
                 break
             for batch in to_batches(not_checked_puzzle_hashes, 1000):
-                ph_update_res: List[CoinState] = await subscribe_to_phs(batch.entries, full_node, 0)
+                ph_update_res: List[CoinState] = await subscribe_to_phs(
+                    batch.entries, full_node, min_height_for_subscriptions
+                )
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 if not await self.add_states_from_peer(ph_update_res, full_node):
                     # If something goes wrong, abort sync
@@ -807,7 +862,9 @@ class WalletNode:
             if not_checked_coin_ids == set():
                 break
             for batch in to_batches(not_checked_coin_ids, 1000):
-                c_update_res: List[CoinState] = await subscribe_to_coin_updates(batch.entries, full_node, 0)
+                c_update_res: List[CoinState] = await subscribe_to_coin_updates(
+                    batch.entries, full_node, min_height_for_subscriptions
+                )
 
                 if not await self.add_states_from_peer(c_update_res, full_node):
                     # If something goes wrong, abort sync
@@ -1187,7 +1244,10 @@ class WalletNode:
                 backtrack_fork_height: int = await self.wallet_short_sync_backtrack(new_peak_hb, peer)
             else:
                 backtrack_fork_height = new_peak_hb.height - 1
+            fork_height = max(backtrack_fork_height, 0)
 
+            use_delta_sync = self.config.get("use_delta_sync", False)
+            min_height_for_subscriptions = fork_height if use_delta_sync else 0
             cache = self.get_cache_for_peer(peer)
             if peer.peer_node_id not in self.synced_peers:
                 # Edge case, this happens when the peak < WEIGHT_PROOF_RECENT_BLOCKS
@@ -1195,12 +1255,14 @@ class WalletNode:
                 # (Hints are not in filter)
                 all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe()
                 phs: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
-                ph_updates: List[CoinState] = await subscribe_to_phs(phs, peer, uint32(0))
-                coin_updates: List[CoinState] = await subscribe_to_coin_updates(all_coin_ids, peer, uint32(0))
+                ph_updates: List[CoinState] = await subscribe_to_phs(phs, peer, min_height_for_subscriptions)
+                coin_updates: List[CoinState] = await subscribe_to_coin_updates(
+                    all_coin_ids, peer, min_height_for_subscriptions
+                )
                 success = await self.add_states_from_peer(
                     ph_updates + coin_updates,
                     peer,
-                    fork_height=uint32(max(backtrack_fork_height, 0)),
+                    fork_height=uint32(fork_height),
                 )
                 if success:
                     self.synced_peers.add(peer.peer_node_id)
@@ -1622,6 +1684,10 @@ class WalletNode:
         if not self.is_trusted(peer):
             valid_list = []
             for coin in coin_state.coin_states:
+                if coin.coin.name() not in coin_names:
+                    await peer.close(9999)
+                    self.log.warning(f"Peer {peer.peer_node_id} sent us an unrequested coin state. Banning.")
+                    raise PeerRequestException(f"Peer sent us unrequested coin state {coin}")
                 valid = await self.validate_received_state_from_peer(
                     coin, peer, self.get_cache_for_peer(peer), fork_height
                 )

@@ -9,18 +9,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$extras = @("upnp")
-$blspy = $False
+$extras = @()
 if ($d)
 {
     $extras += "dev"
-    $blspy = $True
 }
 
-$editable = $True
-if ($i)
+$pip_parameters = @()
+if (-not $i)
 {
-    $editable = $False
+    $pip_parameters += "--editable"
 }
 
 if ([Environment]::Is64BitOperatingSystem -eq $false)
@@ -55,7 +53,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$supportedPythonVersions = "3.11", "3.10", "3.9", "3.8"
+$supportedPythonVersions = "3.12", "3.11", "3.10", "3.9", "3.8"
 if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION

@@ -4,7 +4,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Set
 
-from blspy import G1Element
+from chia_rs import G1Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
@@ -36,31 +36,30 @@ class WalletPuzzleStore:
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS derivation_paths("
-                    "derivation_index int,"
-                    " pubkey text,"
-                    " puzzle_hash text,"
-                    " wallet_type int,"
-                    " wallet_id int,"
-                    " used tinyint,"
-                    " hardened tinyint,"
-                    " PRIMARY KEY(puzzle_hash, wallet_id))"
-                )
+                "CREATE TABLE IF NOT EXISTS derivation_paths("
+                "derivation_index int,"
+                " pubkey text,"
+                " puzzle_hash text,"
+                " wallet_type int,"
+                " wallet_id int,"
+                " used tinyint,"
+                " hardened tinyint,"
+                " PRIMARY KEY(puzzle_hash, wallet_id))"
             )
             await conn.execute(
                 "CREATE INDEX IF NOT EXISTS derivation_index_index on derivation_paths(derivation_index)"
             )
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS ph on derivation_paths(puzzle_hash)")
-
             await conn.execute("CREATE INDEX IF NOT EXISTS pubkey on derivation_paths(pubkey)")
-
+            await conn.execute("CREATE INDEX IF NOT EXISTS ph on derivation_paths(puzzle_hash)")
             await conn.execute("CREATE INDEX IF NOT EXISTS wallet_type on derivation_paths(wallet_type)")
-
+            # Remove an old, misnamed, redundant index on `wallet_type`
+            # See https://github.com/Chia-Network/chia-blockchain/issues/10276
+            await conn.execute("DROP INDEX IF EXISTS used")
             await conn.execute("CREATE INDEX IF NOT EXISTS derivation_paths_wallet_id on derivation_paths(wallet_id)")
-
-            await conn.execute("CREATE INDEX IF NOT EXISTS used on derivation_paths(wallet_type)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS derivation_paths_used_index on derivation_paths(used)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS derivation_paths_hardened_index on derivation_paths(hardened)"
+            )
 
         # the lock is locked by the users of this class
         self.lock = asyncio.Lock()
@@ -247,26 +246,6 @@ class WalletPuzzleStore:
 
         return None
 
-    async def index_for_puzzle_hash_and_wallet(self, puzzle_hash: bytes32, wallet_id: uint32) -> Optional[uint32]:
-        """
-        Returns the derivation path for the puzzle_hash.
-        Returns None if not present.
-        """
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(
-                conn,
-                "SELECT derivation_index FROM derivation_paths WHERE puzzle_hash=? AND wallet_id=?;",
-                (
-                    puzzle_hash.hex(),
-                    wallet_id,
-                ),
-            )
-
-        if row is not None:
-            return uint32(row[0])
-
-        return None
-
     async def get_wallet_identifier_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[WalletIdentifier]:
         """
         Returns the derivation path for the puzzle_hash.
@@ -300,7 +279,7 @@ class WalletPuzzleStore:
                 rows = await conn.execute_fetchall(
                     "SELECT puzzle_hash FROM derivation_paths WHERE wallet_id=?", (wallet_id,)
                 )
-            return set(bytes32.fromhex(row[0]) for row in rows)
+            return {bytes32.fromhex(row[0]) for row in rows}
 
     async def get_last_derivation_path(self) -> Optional[uint32]:
         """
@@ -373,7 +352,7 @@ class WalletPuzzleStore:
             cursor = await conn.execute("DELETE FROM derivation_paths WHERE wallet_id=?;", (wallet_id,))
             await cursor.close()
         # Clear caches
-        puzzle_hashes = set(bytes32.fromhex(row[0]) for row in rows)
+        puzzle_hashes = {bytes32.fromhex(row[0]) for row in rows}
         for puzzle_hash in puzzle_hashes:
             try:
                 self.wallet_identifier_cache.remove(puzzle_hash)

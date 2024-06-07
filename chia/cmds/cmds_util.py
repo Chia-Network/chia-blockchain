@@ -17,7 +17,7 @@ from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.rpc_client import RpcClient
+from chia.rpc.rpc_client import ResponseFailureError, RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -32,6 +32,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
 
 NODE_TYPES: Dict[str, Type[RpcClient]] = {
+    "base": RpcClient,
     "farmer": FarmerRpcClient,
     "wallet": WalletRpcClient,
     "full_node": FullNodeRpcClient,
@@ -41,6 +42,7 @@ NODE_TYPES: Dict[str, Type[RpcClient]] = {
 }
 
 node_config_section_names: Dict[Type[RpcClient], str] = {
+    RpcClient: "base",
     FarmerRpcClient: "farmer",
     WalletRpcClient: "wallet",
     FullNodeRpcClient: "full_node",
@@ -92,6 +94,7 @@ async def get_any_service_client(
     rpc_port: Optional[int] = None,
     root_path: Optional[Path] = None,
     consume_errors: bool = True,
+    use_ssl: bool = True,
 ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
@@ -112,11 +115,26 @@ async def get_any_service_client(
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
     # select node client type based on string
-    node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path, config)
+    if use_ssl:
+        node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path=root_path, net_config=config)
+    else:
+        node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path=None, net_config=None)
+
     try:
         # check if we can connect to node
         await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
         yield node_client, config
+    except ResponseFailureError as e:
+        if not consume_errors:
+            raise
+
+        response = dict(e.response)
+        tb = response.pop("traceback", None)
+
+        print(f"{ResponseFailureError(response=response)}")
+
+        if tb is not None:
+            print(f"Traceback:\n{tb}")
     except Exception as e:  # this is only here to make the errors more user-friendly.
         if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
             # CliRpcConnectionError will be handled by click.
@@ -321,9 +339,11 @@ class CMDCoinSelectionConfigLoader(Streamable):
         return CoinSelectionConfigLoader(
             uint64(int(Decimal(self.min_coin_amount) * mojo_per_unit)) if self.min_coin_amount is not None else None,
             uint64(int(Decimal(self.max_coin_amount) * mojo_per_unit)) if self.max_coin_amount is not None else None,
-            [uint64(int(Decimal(a) * mojo_per_unit)) for a in self.excluded_coin_amounts]
-            if self.excluded_coin_amounts is not None
-            else None,
+            (
+                [uint64(int(Decimal(a) * mojo_per_unit)) for a in self.excluded_coin_amounts]
+                if self.excluded_coin_amounts is not None
+                else None
+            ),
             [bytes32.from_hexstr(id) for id in self.excluded_coin_ids] if self.excluded_coin_ids is not None else None,
         ).autofill(constants=DEFAULT_CONSTANTS)
 

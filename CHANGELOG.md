@@ -6,6 +6,250 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.3.1 Chia blockchain 2024-04-28
+
+### Added
+* Added `warp.green` CATs (`wUSDC.b`, `wmilliETH.b`, `wUSDC`, `wmilliETH`, `wUSDT`) to the known CAT list
+
+## 2.3.0 Chia blockchain 2024-05-01
+
+### Fixed
+* Fixed `Install.ps1` for PowerShell 7.4
+* Fixed readability of `Could not find parent coin` error log by printing hex and not bytes
+* Fixed some shutdown log spam by ensuring signal objects for signal handlers (fixes #17578)
+* Fixed negative plot sync durations not crashing the harvester (fixes #15027) (thanks @felixbrucker)
+* Fixed log spam by only logging warnings about protocol mismatches for farmer and harvester
+* Fixed log spam by logging rollbacks only if heights are actually deleted
+* Fixed DID update metadata issue (fixes #17412)
+* Fixed error codes and add more test coverage for message conditions
+* Fixed non-development source install
+* Fixed reorg from 0
+* Fixed (again) Datalayer download banning
+* Improved timelord skip peak logic.
+* Used click.Path for make_offer command filename (fixes #10920)
+* Handle when xch_target_address in config doesn't decode correctly (fixes #16995)
+* Delete unconfirmed Clawback TX
+* tighten up the check for duplicate UnfinishedBlocks before requesting that block
+* Optimized Datalayer `get_key_by_node`
+* Added test for observance of melted CAT balance (fixes #17727)
+* increase backwards compatibility by using default values for peer file path
+* Added `--skip-keyring` option to `chia start` and use in GUI (fixes #17848)
+
+### Added
+* Added Python 3.12 support
+* Added new subscription and wallet sync protocol support (will be used by the wallet in future releases)
+* Added Chip-25 Message Conditions support (https://github.com/Chia-Network/chips/pull/98)
+* Added support for HTTP redirect for the pool url (thanks @felixbrucker)
+* Added `use_delta_sync` option for faster wallet sync (thanks @felixbrucker)
+* Added Datalayer RPC pagination.
+* Added Datalayer multiple batch updates with `submit_on_chain` option.
+* Added `get_network_info` RPC to daemon
+* Added `new_unfinished_block2` support in Chia seeder
+* Added Hint support for SpendSim
+
+### Changed
+* Transition `FullBlock`, `BlockRecord`, `CoinSpend`, and `HeaderBlock` to rust
+* Move tests - all tests and infrastructure are now included in the chia-blockchain package under `chia/_tests`
+* Remove `Announcement` class in favor of `Condition` subclasses
+* Remove `ignore_max_send_amount`
+* Use `psutil.cpu_affinity()` instead of `os.cpu_count()`
+* Stop automatic transaction pushing by wallets
+* Unify transaction pushing
+* For testing purposes added support for non-ssl rpc clients
+* Return TXs from CATWallet and Offer creation
+* Remove all install.sh code that installs python and leave it to the user to install separately
+* Remove old `unhashable` special case in `Streamable`
+* Optimize `validate_removals()`
+* Remove support for migrating peers from legacy file format
+* Set unique peer filenames when swapping to/from testnets
+* Cleaner cli output for rpc client fetch errors
+* Optimized Datalayer subscription handling by using a `QueuedAsyncPool` for `DataLayer.periodically_manage_data()`
+* Update README.md links for wiki & faq sunset
+* Update README formatting and links (thanks @bknox83)
+* Turned concatenation of strings to f-strings (thanks @eukub)
+* Remove dead code in `multiprocess_validation`
+* Improve logging of the height-to-hash and sub-epoch-summaries cache
+* Pass full version in `Handshake` (thanks @felixbrucker)
+* Separate protocol versions for full_node, farmer, harvester, wallet
+* Optimized v1 to v2 DB upgrade
+* Datalayer: Avoid manage data loop delay for self subscriptions
+* Datalayer: Don't download DAT files that are already on disk
+* Datalayer: `get_proof` optimizations - use get_ancestors_optimized
+* Datalayer: Optimize insert/upsert/delete by using `get_node_by_key`
+* Datalayer: stop using fee config setting and remove from initial config
+* Datalayer: Optimize clean_node_table's query and speedup by leveraging relaxed foreign_keys
+* Enabled compression for cli rpm
+* Bump `chia_rs` to `0.6.1`
+* Bump `clvm_tools` to `0.4.9`
+* Bump `chiavdf` to `1.1.4`
+* Bump `chiapos` to `2.0.4`
+* Bump `clvm` to `0.9.9`
+* Bump `aiohttp` to `3.9.2`
+* Bump `anyio` to `4.3.0`
+* Bump `boto3` to `1.34.46`
+* Bump `aiosqlite` to `0.20.0`
+* Bump `colorlog` to `6.8.2`
+* Bump `cryptography` to `42.0.5`
+* Bump `keyring` to `24.3.1`
+* Bump `dnspython` to `2.5.0`
+* Bump `watchdog` to `4.0.0`
+* Bump `dnslib` to `0.9.24`
+* Bump `typing-extensions` to `4.10.0`
+
+### Known Issues
+* Please be aware that logging at `DEBUG` log level may log your local keyring passphrase to the log file. Note this is **not** your key mnemonic.
+
+## 2.2.1 Chia blockchain 2024-03-4
+
+### Fixed
+* Fixed issue with finding bladebit and madmax plotters in CLI and GUI (thanks @nanofarmer)
+* Fixed issue with banning peers due to incorrect `INVALID_TRANSACTIONS_FILTER_HASH` and `INVALID_BLOCK_COST` log errors (#17620)
+
+## 2.2.0 Chia blockchain 2024-02-28
+
+* Thanks to @bhorvitz for major help debugging a performance issue during coin DB lookup
+
+### Fixed
+* Fix TX amount calculation in trade manager (fixes #16842)
+* Subscribe to DIDs that come into wallet (fixes #17242)
+* Remove duplicate short option from make_offer command (fixes #17371)
+* add `SerializedProgram.to()` to simplify some code
+* include information for `setuptools_scm` in git archives
+* fix type mismatch with `Optional[bytes]` and `bytes` in `wallet/conditions.py`
+* fixed typo in `get_coin_record_by_name` docstring (thanks @Abakrombie)
+* Fixed readme links (thanks @Abakrombie)
+* DL: Don't allow mirrors with empty urls (fixes #16920)
+* DL: Improve input for CLI `add_missing_files` (fixes #17039)
+* DL: Use unsubscribe queue to relax subscriptions lock
+* DL: Use Datalayer banning logic for HTTP download failures
+* extend the mempool tests for timelocks, and improve error codes
+* extend measured sizes for plot check with value for larger K sizes (thanks @neurosis69)
+* Add a few missing type annotations
+* Log string header_hash on long validation warnings
+* Fix sorted for dictionary keys of both bytes/xch
+* Fixed an issue where `chia wallet did transfer` command mistreats the type of `fee`
+* Fix signage point message for remote harvesters with large numbers of pools
+* undo BlockRecord cache insert, when DB fails
+* Warn if running `install-plotter.sh` as root
+
+### Added
+* Support for third-party, farmer-rewarded, Harvesters (Chip-22)
+* Singleton fast forward
+* Verify p2 delegated conditions signatures and add a new SigningMode for Tangem cards (thanks @MarvinQuevedo)
+* DL: add upsert action
+* DL: Add support for generating and verifying DataLayer Proofs of Inclusions `get_proof` and `verify_proof`
+* Improve transparency of what full nodes are doing and where they spend their time with additional Mempool logging
+* add feature to profile just the block validation
+* Add `--override` flag to `make_offer`
+* Add full node RPC `get_aggsig_additional_data` to get the aggsig additional data
+* Add fork height & rolled_back_records to block event for metrics
+* extend Block validation timing logs to measure just the CLVM and conditions
+* Add support for defining a list of full node peers to connect to (thanks @felixbrucker)
+* Add preliminary support for getting coin states in batches
+* improve mempool reorg logic when the peak is a non-transaction block
+* Add `additions` and `removals` to `get_offer_summary` API response (thanks @mikehw)
+* improve handling of `UnfinishedBlock`s
+* Add testnet11 constants to config if missing when configuring to run on testnet
+* We have added several new translations in this release. Thanks to WNFT, advlive, hezoushe
+
+### Changed
+* reorg optimizations
+* bump `chia_rs` to `0.4.1`
+* initiate phasing out of the `coin_solutions` name in JSON structs
+* slight simplification to `get_min_fee_rate()`
+* Remove `coin_solutions` from `SpendBundle` entirely
+* use rust types for `VDFInfo`, `VDFProof` and `ClassgroupElement`
+* evict entries continuously from `seen_unfinished_blocks`
+* move `tools/legacy_keyring.py` to `chia/legacy/keyring.py`
+* Rust `proof-of-space`, `reward chain` and `foliage` types
+* DL: Compress `get_keys_values` output by hash.
+* replace hardcoded value for `db_readers` (thanks @neurosis69)
+* use rust types for `slots`, `SubEpochSummary` and `SubEpochData`
+* Update default testnet to testnet11
+* remove old work-around for a bug in version `1.1.4` and earlier
+* use rust implementation of `SerializedProgram`
+* Rework block fill logic to fill blocks with more SpendBundles (transactions)
+* fix typo in logging
+* increase farmer block fill rate to 60%
+* Force the use of `coin_puzzle_hash` index to `get_unspent_lineage_info_for_puzzle_hash`
+
+## 2.1.4 Chia blockchain 2024-01-10
+
+### Fixed
+* Update chia_rs to 0.2.15 for AMD K10 architecture (fixes #16386)
+
+### Changed
+* improved CPU usage due to tight loop in `send_transaction()`
+* improve performance of `total_mempool_fees()` and `total_mempool_cost()`
+* reduced the default maximum peer count to 40 from 80 (only applies to new configs)
+* changed to `normal` SQlite db sync option (previously was `full`)
+* reduced the mempool size to 10 blocks from 50 blocks (improves performance)
+* improve performance of the mempool by batch fetching items from the db
+
+
+## 2.1.3 Chia blockchain 2023-12-18
+
+### Fixed
+* Fixed a regression in 2.1.2 that could cause a farmer to fail to be able to create a block in some cases
+
+## 2.1.2 Chia blockchain 2023-12-13
+
+### Fixed
+* Fix deep reorgs and add tests
+* Reduce possible Signage Point bursts by forwarding 4 most recent cached SPs only
+* Fix condition serialization in RPC client
+* Fix DID resync to not create DID wallets that don't belong to the current key
+* Fix `get_block_spends` to work correctly post hard-fork
+* Shutdown on startup failure and log to the log if possible
+* fix issue with syncing testnet10 from 0
+* Chunk SQLite query for old TR/TX conversion (fixes #16589)
+* Allow set_status to overwrite trade in store (fixes #16461)
+* Add cache to wallet node preventing resend of processing TX
+* Correct `FullNodeDiscovery.pending_tasks` typo without `s`
+* Fix `chia wallet coins list` by adding NFT, DID, DAO_CAT to wallets denominated in mojos
+* generalize JSON serializer
+* Fix possible peak height race
+* Fix invalid sync request
+* request blocks in batches of 32 instead of 33 (saves 3% bandwidth)
+* Fix `get_block_generator` fork detection
+* Fix set_status accidental arg (fixes #16817)
+* Fix issues with upgrading Chia via RPM by claiming ownership of `/opt/chia` in the RPM
+* clean out `/opt/chia` before install and after removal of rpm
+
+### Added
+* Allow DApps to use WalletConnect to sign customized puzzles by extending sign APIs
+* Add support for lists of peers in the config (thanks @felixbrucker)
+* Update to support looking up mnemonic by just the first 4 letters of each word
+* Allow the daemon to use TLS v1.2 via config flag (thanks @dkackman)
+* Add systemd init files to CLI-only Linux packages
+* DL: remove data from the DB on unsubscribe
+
+### Changed
+* ban peers for 10 minutes when violating consensus rules
+* Remove `tx_endpoint` from `select_coins`
+* DID wallet coin_added by @ytx1991 in https://github.com/Chia-Network/chia-blockchain/pull/16256
+* Use network overrides for default port for WalletPeers
+* Improve clarity of legacy support policy language
+* Add config option to set rpc timeout and use it for simulator tests
+* rename `ClassgroupElement.from_bytes()`
+* Optimize CRCAT trades
+* harmonize `SerializedProgram` with `Program`
+* Swap some info logs in seeder to warning
+* Distinguish `insufficient_partials` from `invalid_partials`
+* transition away from `__bytes__` conversion for fixed-size integers
+* Use BLS from `chia_rs` and stop using `blspy` wheel in chia-blockchain
+* simplify the interface to `mempool_manager.new_peak()`
+* reduce redundant calls to compute the header hash
+* Change `-h` to `-k` for `--key` flag for datalayer `get_value` cli command
+* Update `chia_rs` to `0.2.13`
+* Update `clvm_tools` to `0.4.7`
+* Update `aiohttp` to `3.9.1` (fixes a WebSocket bug introduced in 3.9.0)
+* Change `chia show keys --show-mnemonic-seed` to also show farmer private key (thanks xchdata1)
+* Adjust ban times when unable to download properly DL DAT files
+* return `List[TransactionRecord]` from nft bulk mint functions
+* DL: delete full files when subscribed to a datastore per config
+
+
 ## 2.1.1 Chia blockchain 2023-10-11
 
 ### Fixed

@@ -124,12 +124,11 @@ class GenesisById(LimitationsProgram):
                 )
             ],
         )
-        signed_eve_spend = await wallet.sign(eve_spend)
 
         if wallet.cat_info.my_tail is None:
             await wallet.save_info(CATInfo(tail.get_tree_hash(), tail))
 
-        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
+        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
 
 
 class GenesisByPuzhash(LimitationsProgram):
@@ -217,7 +216,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
     def match(uncurried_mod: Program, curried_args: Program) -> Tuple[bool, List[Program]]:  # pragma: no cover
         if uncurried_mod == GENESIS_BY_ID_OR_SINGLETON_MOD:
             genesis_id = curried_args.first()
-            return True, [genesis_id.as_atom()]
+            return True, [genesis_id]
         else:
             return False, []
 
@@ -287,12 +286,11 @@ class GenesisByIdOrSingleton(LimitationsProgram):
                 )
             ],
         )
-        signed_eve_spend = await wallet.sign(eve_spend)
 
         if wallet.cat_info.my_tail is None:
             await wallet.save_info(CATInfo(tail.get_tree_hash(), tail))
 
-        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
+        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
 
 
 # This should probably be much more elegant than just a dictionary with strings as identifiers

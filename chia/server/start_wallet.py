@@ -6,14 +6,14 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Dict, Optional
 
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
-from chia.types.peer_info import UnresolvedPeerInfo
+from chia.types.aliases import WalletService
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
 from chia.util.misc import SignalHandlers
@@ -34,11 +34,11 @@ def create_wallet_service(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service[WalletNode, WalletNodeAPI]:
+) -> WalletService:
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
-    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
     if "short_sync_blocks_behind_threshold" not in service_config:
         service_config["short_sync_blocks_behind_threshold"] = 20
 
@@ -49,12 +49,10 @@ def create_wallet_service(
         local_keychain=keychain,
     )
     peer_api = WalletNodeAPI(node)
-    fnp = service_config.get("full_node_peer")
-    connect_peers = set() if fnp is None else {UnresolvedPeerInfo(fnp["host"], fnp["port"])}
 
     network_id = service_config["selected_network"]
     rpc_port = service_config.get("rpc_port")
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[WalletRpcApi]] = None
     if rpc_port is not None:
         rpc_info = (WalletRpcApi, service_config["rpc_port"])
 
@@ -66,7 +64,7 @@ def create_wallet_service(
         node_type=NodeType.WALLET,
         service_name=SERVICE_NAME,
         on_connect_callback=node.on_connect,
-        connect_peers=connect_peers,
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
         network_id=network_id,
         rpc_info=rpc_info,
         advertised_port=None,

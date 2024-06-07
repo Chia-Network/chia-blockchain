@@ -11,13 +11,12 @@ from typing import Callable, List, Optional, Tuple, Union
 
 import click
 import zstd
-from blspy import AugSchemeMPL, G1Element
-from chia_rs import MEMPOOL_MODE, SpendBundleConditions, run_block_generator
+from chia_rs import MEMPOOL_MODE, AugSchemeMPL, G1Element, SpendBundleConditions, run_block_generator
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.condition_tools import pkm_pairs
 from chia.util.full_block_utils import block_info_from_block, generator_from_block
@@ -81,7 +80,7 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
         height: int = r[1]
         block: Union[BlockInfo, FullBlock]
         if verify_signatures:
-            block = FullBlock.from_bytes(zstd.decompress(r[2]))
+            block = FullBlock.from_bytes_unchecked(zstd.decompress(r[2]))
         else:
             block = block_info_from_block(zstd.decompress(r[2]))
 
@@ -138,13 +137,12 @@ def default_call(
     if verify_signatures:
         assert isinstance(block, FullBlock)
         # create hash_key list for aggsig check
-        pairs_pks: List[bytes48] = []
+        pairs_pks: List[G1Element] = []
         pairs_msgs: List[bytes] = []
         pairs_pks, pairs_msgs = pkm_pairs(result, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
-        pairs_g1s = [G1Element.from_bytes(x) for x in pairs_pks]
         assert block.transactions_info is not None
         assert block.transactions_info.aggregated_signature is not None
-        assert AugSchemeMPL.aggregate_verify(pairs_g1s, pairs_msgs, block.transactions_info.aggregated_signature)
+        assert AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature)
 
     print(
         f"{hh.hex()}\t{height:7d}\t{cost:11d}\t{run_time:0.3f}\t{num_refs}\t{ref_lookup_time:0.3f}\t{fees:14}\t"

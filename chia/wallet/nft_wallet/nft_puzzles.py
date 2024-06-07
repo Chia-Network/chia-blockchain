@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
-from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.program import Program
@@ -58,11 +57,7 @@ def create_nft_layer_puzzle_with_curry_params(
 
 def create_full_puzzle_with_nft_puzzle(singleton_id: bytes32, inner_puzzle: Program) -> Program:
     if log.isEnabledFor(logging.DEBUG):
-        log.debug(
-            "Creating full NFT puzzle with inner puzzle: \n%r\n%r",
-            singleton_id,
-            inner_puzzle.get_tree_hash(),
-        )
+        log.debug("Creating full NFT puzzle with inner puzzle: \n%r\n%r", singleton_id, inner_puzzle.get_tree_hash())
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
 
     full_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, inner_puzzle)
@@ -91,9 +86,7 @@ def create_full_puzzle(
     return full_puzzle
 
 
-async def get_nft_info_from_puzzle(
-    nft_coin_info: NFTCoinInfo, config: Dict[str, Any], ignore_size_limit: bool = False
-) -> NFTInfo:
+async def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo, config: Dict[str, Any]) -> NFTInfo:
     """
     Extract NFT info from a full puzzle
     :param nft_coin_info NFTCoinInfo in local database
@@ -175,7 +168,6 @@ def prepend_value(key: bytes, value: Program, metadata: Dict[bytes, Any]) -> Non
     :param metadata: Metadata
     :return:
     """
-
     if value != Program.to(0):
         if metadata[key] == b"":
             metadata[key] = [value.as_python()]
@@ -201,12 +193,7 @@ def construct_ownership_layer(
     transfer_program: Program,
     inner_puzzle: Program,
 ) -> Program:
-    return NFT_OWNERSHIP_LAYER.curry(
-        NFT_OWNERSHIP_LAYER_HASH,
-        current_owner,
-        transfer_program,
-        inner_puzzle,
-    )
+    return NFT_OWNERSHIP_LAYER.curry(NFT_OWNERSHIP_LAYER_HASH, current_owner, transfer_program, inner_puzzle)
 
 
 def create_ownership_layer_puzzle(
@@ -226,11 +213,7 @@ def create_ownership_layer_puzzle(
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
     if not royalty_puzzle_hash:
         royalty_puzzle_hash = p2_puzzle.get_tree_hash()
-    transfer_program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(
-        singleton_struct,
-        royalty_puzzle_hash,
-        percentage,
-    )
+    transfer_program = NFT_TRANSFER_PROGRAM_DEFAULT.curry(singleton_struct, royalty_puzzle_hash, percentage)
     nft_inner_puzzle = p2_puzzle
 
     nft_ownership_layer_puzzle = construct_ownership_layer(
@@ -240,10 +223,7 @@ def create_ownership_layer_puzzle(
 
 
 def create_ownership_layer_transfer_solution(
-    new_did: bytes,
-    new_did_inner_hash: bytes,
-    trade_prices_list: List[List[int]],
-    new_puzhash: bytes32,
+    new_did: bytes, new_did_inner_hash: bytes, trade_prices_list: List[List[int]], new_puzhash: bytes32
 ) -> Program:
     log.debug(
         "Creating a transfer solution with: DID:%s Inner_puzhash:%s trade_price:%s puzhash:%s",
@@ -252,21 +232,9 @@ def create_ownership_layer_transfer_solution(
         str(trade_prices_list),
         new_puzhash.hex(),
     )
-    condition_list = [
-        [
-            51,
-            new_puzhash,
-            1,
-            [new_puzhash],
-        ],
-        [-10, new_did, trade_prices_list, new_did_inner_hash],
-    ]
+    condition_list = [[51, new_puzhash, 1, [new_puzhash]], [-10, new_did, trade_prices_list, new_did_inner_hash]]
     log.debug("Condition list raw: %r", condition_list)
-    solution = Program.to(
-        [
-            [solution_for_conditions(condition_list)],
-        ]
-    )
+    solution = Program.to([[solution_for_conditions(condition_list)]])
     log.debug("Generated transfer solution: %s", solution)
     return solution
 
@@ -285,14 +253,17 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tup
             # metadata update
             metadata = update_metadata(metadata, condition)
             metadata = Program.to(metadata)
-        elif condition_code == 51 and int_from_bytes(condition.rest().rest().first().atom) == 1:
-            # destination puzhash
-            if puzhash_for_derivation is not None:
-                # ignore duplicated create coin conditions
-                continue
-            memo = bytes32(condition.as_python()[-1][0])
-            puzhash_for_derivation = memo
-            log.debug("Got back puzhash from solution: %s", puzhash_for_derivation)
+        elif condition_code == 51:
+            atom = condition.rest().rest().first().as_int()
+
+            if atom == 1:
+                # destination puzhash
+                if puzhash_for_derivation is not None:
+                    # ignore duplicated create coin conditions
+                    continue
+                memo = bytes32(condition.at("rrrff").as_atom())
+                puzhash_for_derivation = memo
+                log.debug("Got back puzhash from solution: %s", puzhash_for_derivation)
     assert puzhash_for_derivation
     return metadata, puzhash_for_derivation
 
@@ -305,22 +276,30 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: 
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
-            new_did_id = condition.at("rf").atom
+            atom = condition.at("rf").atom
+            if atom is None or atom == b"":
+                new_did_id = None
+            else:
+                new_did_id = bytes32(atom)
         elif condition.first().as_int() == 51:
             new_puzhash = condition.at("rf").atom
     # assert new_puzhash and new_did_id
-    log.debug(f"Found NFT puzzle details: {new_did_id} {new_puzhash}")
+    log.debug(f"Found NFT puzzle details: {new_did_id!r} {new_puzhash!r}")
     assert unft.transfer_program
     new_ownership_puzzle = construct_ownership_layer(new_did_id, unft.transfer_program, new_inner_puzzle)
 
     return new_ownership_puzzle
 
 
-def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Optional[bytes32]:
+def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Union[None, Literal[b""], bytes32]:
     conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
-    new_did_id = None
+    new_did_id: Union[None, Literal[b""], bytes32] = None
     for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
-            new_did_id = condition.at("rf").atom
+            atom = condition.at("rf").as_atom()
+            if atom == b"":
+                new_did_id = b""
+            else:
+                new_did_id = bytes32(atom)
     return new_did_id

@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 
-from blspy import PrivateKey
+from chia_rs import PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
@@ -42,7 +42,7 @@ def mnemonic_fingerprint(keychain: Keychain) -> Tuple[str, int]:
     )
     # add key to keychain
     try:
-        sk = keychain.add_private_key(mnemonic)
+        sk = keychain.add_key(mnemonic)
     except KeychainFingerprintExists:
         pass
     fingerprint = sk.get_g1().get_fingerprint()
@@ -110,12 +110,9 @@ async def start_simulator(chia_root: Path, automated_testing: bool = False) -> A
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
     started_simulator = await start_simulator_main(True, automated_testing, root_path=chia_root)
     service = started_simulator.service
-    await service.start()
 
-    yield service._api
-
-    service.stop()
-    await service.wait_closed()
+    async with service.manage():
+        yield service._api
 
 
 async def get_full_chia_simulator(
@@ -139,12 +136,12 @@ async def get_full_chia_simulator(
     with Lockfile.create(daemon_launch_lock_path(chia_root)):
         mnemonic, fingerprint = mnemonic_fingerprint(keychain)
 
-        ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
-            SSLTestCACertAndPrivateKey
-        ] = get_next_private_ca_cert_and_key()
-        ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
-            SSLTestNodeCertsAndKeys
-        ] = get_next_nodes_certs_and_keys()
+        ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[SSLTestCACertAndPrivateKey] = (
+            get_next_private_ca_cert_and_key()
+        )
+        ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[SSLTestNodeCertsAndKeys] = (
+            get_next_nodes_certs_and_keys()
+        )
         if config is None:
             config = create_config(
                 chia_root,

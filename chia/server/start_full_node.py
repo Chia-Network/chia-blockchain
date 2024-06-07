@@ -7,15 +7,16 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Dict, List, Optional, Tuple
 
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
+from chia.types.aliases import FullNodeService
 from chia.util.chia_logging import initialize_service_logging
-from chia.util.config import load_config, load_config_cli
+from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 from chia.util.misc import SignalHandlers
@@ -34,7 +35,7 @@ async def create_full_node_service(
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
     override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
-) -> Service[FullNode, FullNodeAPI]:
+) -> FullNodeService:
     service_config = config[SERVICE_NAME]
 
     full_node = await FullNode.create(
@@ -48,7 +49,7 @@ async def create_full_node_service(
     if service_config["enable_upnp"]:
         upnp_list = [service_config["port"]]
     network_id = service_config["selected_network"]
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[FullNodeRpcApi]] = None
     if service_config["start_rpc_server"]:
         rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
     return Service(
@@ -60,6 +61,7 @@ async def create_full_node_service(
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
+        connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
         on_connect_callback=full_node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
@@ -75,7 +77,7 @@ async def async_main(service_config: Dict[str, Any]) -> int:
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     update_testnet_overrides(network_id, overrides)
-    updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(DEFAULT_CONSTANTS, **overrides)
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = await create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
     async with SignalHandlers.manage() as signal_handlers:
@@ -90,7 +92,7 @@ def main() -> int:
 
     with maybe_manage_task_instrumentation(enable=os.environ.get("CHIA_INSTRUMENT_NODE") is not None):
         service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-        target_peer_count = service_config.get("target_peer_count", 80) - service_config.get(
+        target_peer_count = service_config.get("target_peer_count", 40) - service_config.get(
             "target_outbound_peer_count", 8
         )
         if target_peer_count < 0:
