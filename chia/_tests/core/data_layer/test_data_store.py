@@ -2055,6 +2055,7 @@ async def test_migration_unknown_version(data_store: DataStore) -> None:
 
 async def get_all_nodes(data_store: DataStore, store_id: bytes32) -> List[Node]:
     root = await data_store.get_tree_root(store_id)
+    assert root.node_hash is not None
     root_node = await data_store.get_node(root.node_hash)
     nodes: List[Node] = []
     queue: List[Node] = [root_node]
@@ -2114,6 +2115,7 @@ async def test_get_leaf_at_minimum_height(data_store: DataStore, store_id: bytes
         if (value + 1) % batch_size == 0:
             hash_to_parent: Dict[bytes32, InternalNode] = {}
             root = await data_store.get_tree_root(store_id)
+            assert root.node_hash is not None
             min_leaf = await data_store.get_leaf_at_minimum_height(root.node_hash, hash_to_parent)
             all_nodes = await get_all_nodes(data_store, store_id)
             heights: Dict[bytes32, int] = {}
