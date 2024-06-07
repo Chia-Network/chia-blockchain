@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from typing import AsyncIterator, Awaitable, Callable, Generic, List, Optional, Protocol, Type, TypeVar, final
+from typing import AsyncIterator, Awaitable, Callable, Generic, Optional, Protocol, Type, TypeVar, final
 
 import aiosqlite
 
@@ -97,7 +97,7 @@ class ActionScope(Generic[_T_SideEffects]):
 
     _resource_manager: ResourceManager
     _side_effects_format: Type[_T_SideEffects]
-    _callbacks: List[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = field(default_factory=list)
+    _callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = None
     _final_side_effects: Optional[_T_SideEffects] = field(init=False, default=None)
 
     @property
@@ -123,8 +123,8 @@ class ActionScope(Generic[_T_SideEffects]):
             yield self
 
             async with self.use(_callbacks_allowed=False) as interface:
-                for callback in self._callbacks:
-                    await callback(interface)
+                if self._callback is not None:
+                    await self._callback(interface)
                 self._final_side_effects = interface.side_effects
 
     @contextlib.asynccontextmanager
@@ -138,16 +138,21 @@ class ActionScope(Generic[_T_SideEffects]):
                 raise
             else:
                 await self._resource_manager.save_resource(interface.side_effects)
-                self._callbacks.extend(interface._new_callbacks)
+                self._callback = interface.callback
 
 
 @dataclass
 class StateInterface(Generic[_T_SideEffects]):
     side_effects: _T_SideEffects
     _callbacks_allowed: bool
-    _new_callbacks: List[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = field(default_factory=list)
+    _callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = None
 
-    def add_callback(self, callback: Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]) -> None:
+    @property
+    def callback(self) -> Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]]:
+        return self._callback
+
+    def set_callback(self, new_callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]]) -> None:
         if not self._callbacks_allowed:
-            raise ValueError("Cannot create a new callback from within another callback")
-        self._new_callbacks.append(callback)
+            raise RuntimeError("Callback cannot be edited from inside itself")
+
+        self._callback = new_callback

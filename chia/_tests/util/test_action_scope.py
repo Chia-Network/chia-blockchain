@@ -26,14 +26,13 @@ async def default_async_callback(interface: StateInterface[TestSideEffects]) -> 
 
 
 # Test adding a callback
-def test_add_callback() -> None:
+def test_set_callback() -> None:
     state_interface = StateInterface(TestSideEffects(), True)
-    initial_callbacks = list(state_interface._new_callbacks)
-    state_interface.add_callback(default_async_callback)
-    assert state_interface._new_callbacks == [*initial_callbacks, default_async_callback]
-    initial_callbacks.append(default_async_callback)
-    state_interface.add_callback(default_async_callback)
-    assert state_interface._new_callbacks == [*initial_callbacks, default_async_callback]
+    state_interface.set_callback(default_async_callback)
+    assert state_interface._callback == default_async_callback
+    state_interface_no_callbacks = StateInterface(TestSideEffects(), False)
+    with pytest.raises(RuntimeError, match="Callback cannot be edited from inside itself"):
+        state_interface_no_callbacks.set_callback(None)
 
 
 @pytest.fixture(name="action_scope")
@@ -83,21 +82,21 @@ async def test_callbacks() -> None:
             async def callback(interface: StateInterface[TestSideEffects]) -> None:
                 interface.side_effects.buf = b"bar"
 
-            interface.add_callback(callback)
+            interface.set_callback(callback)
 
     assert action_scope.side_effects.buf == b"bar"
 
 
 @pytest.mark.anyio
 async def test_callback_in_callback_error() -> None:
-    with pytest.raises(ValueError, match="callback"):
+    with pytest.raises(RuntimeError, match="Callback"):
         async with ActionScope.new_scope(TestSideEffects) as action_scope:
             async with action_scope.use() as interface:
 
                 async def callback(interface: StateInterface[TestSideEffects]) -> None:
-                    interface.add_callback(default_async_callback)
+                    interface.set_callback(default_async_callback)
 
-                interface.add_callback(callback)
+                interface.set_callback(callback)
 
 
 @pytest.mark.anyio
@@ -109,7 +108,7 @@ async def test_no_callbacks_if_error() -> None:
                 async def callback(interface: StateInterface[TestSideEffects]) -> None:
                     raise NotImplementedError("Should not get here")  # pragma: no cover
 
-                interface.add_callback(callback)
+                interface.set_callback(callback)
 
             async with action_scope.use() as interface:
                 raise RuntimeError("This should prevent the callbacks from being called")
@@ -121,6 +120,6 @@ async def test_no_callbacks_if_error() -> None:
                 async def callback(interface: StateInterface[TestSideEffects]) -> None:
                     raise NotImplementedError("Should not get here")  # pragma: no cover
 
-                interface.add_callback(callback)
+                interface.set_callback(callback)
 
             raise RuntimeError("This should prevent the callbacks from being called")
