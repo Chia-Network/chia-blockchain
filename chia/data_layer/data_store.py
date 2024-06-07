@@ -1396,7 +1396,7 @@ class DataStore:
             await writer.execute(query, params)
 
     async def get_nodes(self, node_hashes: List[bytes32]) -> List[Node]:
-        hashes = ",".join("?" for _ in node_hashes)
+        query_parameter_place_holders = ",".join("?" for _ in node_hashes)
         async with self.db_wrapper.reader() as reader:
             # TODO: handle SQLITE_MAX_VARIABLE_NUMBER
             cursor = await reader.execute(
