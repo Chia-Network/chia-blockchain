@@ -2050,3 +2050,107 @@ async def test_migration_unknown_version(data_store: DataStore) -> None:
         )
     with pytest.raises(Exception, match="Unknown version"):
         await data_store.migrate_db()
+
+
+async def get_all_nodes(data_store: DataStore, store_id: bytes32) -> List[Node]:
+    root = await data_store.get_tree_root(store_id)
+    root_node = await data_store.get_node(root.node_hash)
+    nodes: List[Node] = []
+    queue: List[Node] = [root_node]
+
+    while len(queue) > 0:
+        node = queue.pop(0)
+        nodes.append(node)
+        if isinstance(node, InternalNode):
+            left_node = await data_store.get_node(node.left_hash)
+            right_node = await data_store.get_node(node.right_hash)
+            queue.append(left_node)
+            queue.append(right_node)
+
+    return nodes
+
+
+@pytest.mark.anyio
+async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
+    num_values = 50
+    changelist: List[Dict[str, Any]] = []
+
+    for value in range(num_values):
+        value_bytes = value.to_bytes(4, byteorder="big")
+        changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
+    await data_store.insert_batch(
+        store_id=store_id,
+        changelist=changelist,
+        status=Status.COMMITTED,
+    )
+
+    expected_nodes = await get_all_nodes(data_store, store_id)
+    nodes = await data_store.get_nodes([node.hash for node in expected_nodes])
+    assert nodes == expected_nodes
+
+    node_hash = bytes32([0] * 32)
+    with pytest.raises(Exception, match=f"^Node not found for hash: {node_hash.hex()}"):
+        await data_store.get_nodes([node_hash])
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("batch_size", [10, 25, 50, 250, 500])
+async def test_get_leaf_at_minimum_height(data_store: DataStore, store_id: bytes32, batch_size: int) -> None:
+    num_values = 1000
+    value_offset = 1000000
+    all_min_leafs: Set[TerminalNode] = set()
+
+    for value in range(num_values):
+        value_bytes = value.to_bytes(4, byteorder="big")
+        # Use autoinsert instead of `insert_batch` to get a more randomly shaped tree
+        await data_store.autoinsert(
+            key=value_bytes,
+            value=value_bytes,
+            store_id=store_id,
+            status=Status.COMMITTED,
+        )
+
+        if (value + 1) % batch_size == 0:
+            hash_to_parent: Dict[bytes32, InternalNode] = {}
+            root = await data_store.get_tree_root(store_id)
+            min_leaf = await data_store.get_leaf_at_minimum_height(root.node_hash, hash_to_parent)
+            all_nodes = await get_all_nodes(data_store, store_id)
+            heights: Dict[bytes32, int] = {}
+            heights[root.node_hash] = 0
+            min_leaf_height = None
+
+            for node in all_nodes:
+                if isinstance(node, InternalNode):
+                    heights[node.left_hash] = heights[node.hash] + 1
+                    heights[node.right_hash] = heights[node.hash] + 1
+                else:
+                    if min_leaf_height is not None:
+                        min_leaf_height = min(min_leaf_height, heights[node.hash])
+                    else:
+                        min_leaf_height = heights[node.hash]
+
+            for node in all_nodes:
+                if isinstance(node, TerminalNode):
+                    assert node == min_leaf
+                    assert min_leaf_height is not None
+                    assert heights[min_leaf.hash] == min_leaf_height
+                    break
+                if node.left_hash in hash_to_parent:
+                    assert hash_to_parent[node.left_hash] == node
+                if node.right_hash in hash_to_parent:
+                    assert hash_to_parent[node.right_hash] == node
+
+            # Push down the min height leaf, so on the next iteration we get a different leaf
+            pushdown_height = 20
+            for repeat in range(pushdown_height):
+                value_bytes = (value + (repeat + 1) * value_offset).to_bytes(4, byteorder="big")
+                await data_store.insert(
+                    key=value_bytes,
+                    value=value_bytes,
+                    store_id=store_id,
+                    reference_node_hash=min_leaf.hash,
+                    side=Side.RIGHT,
+                    status=Status.COMMITTED,
+                )
+            assert min_leaf not in all_min_leafs
+            all_min_leafs.add(min_leaf)
