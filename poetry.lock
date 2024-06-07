@@ -766,6 +766,23 @@ files = [
 ]
 
 [[package]]
+name = "chia-base"
+version = "0.1.7"
+description = "Common types and simple utilities used through chia code base"
+optional = false
+python-versions = "*"
+files = [
+    {file = "chia_base-0.1.7.tar.gz", hash = "sha256:d7bc3ab3c550ea2d0defb488d1e480b12abcf2c8966de616e6dc2e49e33e8456"},
+]
+
+[package.dependencies]
+chia_rs = ">=0.5.2"
+clvm_rs = "0.2.5"
+
+[package.extras]
+dev = ["black (>=23.1.0)", "pytest (>=7.2.1)", "ruff (>=0.0.252)"]
+
+[[package]]
 name = "chia-rs"
 version = "0.9.0"
 description = "Code useful for implementing chia consensus."
@@ -834,6 +851,33 @@ files = [
     {file = "chiabip158-1.5.1-cp39-cp39-win_amd64.whl", hash = "sha256:bfeece41abea633aab2b768ca704f981472dd2878e9c89cbe46a84c3fb4459c9"},
     {file = "chiabip158-1.5.1.tar.gz", hash = "sha256:c883fe663bc7ea6951ad91be40e0ebcddadfe5049f82e531db989b8710bcd8c9"},
 ]
+
+[[package]]
+name = "chialisp-loader"
+version = "0.1.2"
+description = "Provides `load_puzzle` which dynamic rebuilds if `chialisp_builder` is available."
+optional = false
+python-versions = "*"
+files = [
+    {file = "chialisp_loader-0.1.2.tar.gz", hash = "sha256:085080fc7d4a3fab90fe93db3c599391b869047846608da1ae92b54b4100e8a6"},
+]
+
+[package.dependencies]
+clvm_rs = "*"
+importlib_resources = "*"
+
+[[package]]
+name = "chialisp-puzzles"
+version = "0.1.1"
+description = "Some canonical puzzles deployed on chia-blockchain"
+optional = false
+python-versions = "*"
+files = [
+    {file = "chialisp_puzzles-0.1.1.tar.gz", hash = "sha256:d474fa44d070da6a44e236bbabb6baefb38ff6b24049399924d2d9e638fa66a8"},
+]
+
+[package.dependencies]
+chialisp_loader = ">=0.1.2"
 
 [[package]]
 name = "chiapos"
@@ -935,6 +979,21 @@ typing-extensions = ">=4.0,<5.0"
 
 [package.extras]
 dev = ["clvm-tools (>=0.4.4)", "mypy", "pytest", "setuptools", "types-setuptools"]
+
+[[package]]
+name = "clvm-rs"
+version = "0.2.5"
+description = "Implementation of `clvm` for Chia Network's cryptocurrency"
+optional = false
+python-versions = "*"
+files = [
+    {file = "clvm_rs-0.2.5-cp37-abi3-macosx_10_14_x86_64.whl", hash = "sha256:980933a048779a9e587194385bd86b806fa05931b92ec75350bb433344a23ba8"},
+    {file = "clvm_rs-0.2.5-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:38cffe8a97acb6aebef758be8bce18a007e79328c76e732b2cf9e1a4f22c02c7"},
+    {file = "clvm_rs-0.2.5-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e7c48294f4211159fbfc40a62655713f03867104f9892d875f3dae2515bdd6b8"},
+    {file = "clvm_rs-0.2.5-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:403b8c82ee5c0137792fd975649b1d1fc92170669d787e501978242a72ac0361"},
+    {file = "clvm_rs-0.2.5-cp37-abi3-win_amd64.whl", hash = "sha256:77a2f5f626dc0cd5196c97fb689ceac9f853f85b7d622d630840aa597a97e4f0"},
+    {file = "clvm_rs-0.2.5.tar.gz", hash = "sha256:af26493752dc2e5e7ebdb7bdfa10160c5d9e1b39df3f238cd1641ef98e8c446f"},
+]
 
 [[package]]
 name = "clvm-tools"
@@ -1353,6 +1412,25 @@ files = [
 ]
 
 [[package]]
+name = "hsms"
+version = "0.3.1"
+description = "Hardware security module simulator for chia bls12_381 signatures"
+optional = false
+python-versions = "*"
+files = [
+    {file = "hsms-0.3.1-py3-none-any.whl", hash = "sha256:d05a5598751f856b126d2fa6606f70c975304e7ab707dd7092b1ac2eed6267ec"},
+    {file = "hsms-0.3.1.tar.gz", hash = "sha256:22ee883399cba0e153a5194b11e04c93348cafef899ad5b34905a8ea60a167e0"},
+]
+
+[package.dependencies]
+chia-base = ">=0.1.5"
+chialisp-puzzles = ">=0.1.1"
+segno = "1.4.1"
+
+[package.extras]
+dev = ["black (>=22.6)", "flake8 (>=4.0.1)", "pytest"]
+
+[[package]]
 name = "identify"
 version = "2.5.30"
 description = "File identification library for Python"
@@ -1398,13 +1476,13 @@ testing = ["flufl.flake8", "importlib-resources (>=1.3)", "packaging", "pyfakefs
 
 [[package]]
 name = "importlib-resources"
-version = "6.1.0"
+version = "6.4.0"
 description = "Read resources from Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "importlib_resources-6.1.0-py3-none-any.whl", hash = "sha256:aa50258bbfa56d4e33fbd8aa3ef48ded10d1735f11532b8df95388cc6bdb7e83"},
-    {file = "importlib_resources-6.1.0.tar.gz", hash = "sha256:9d48dcccc213325e810fd723e7fbb45ccb39f6cf5c31f00cf2b965f5f10f3cb9"},
+    {file = "importlib_resources-6.4.0-py3-none-any.whl", hash = "sha256:50d10f043df931902d4194ea07ec57960f66a80449ff867bfe782b4c486ba78c"},
+    {file = "importlib_resources-6.4.0.tar.gz", hash = "sha256:cdb2b453b8046ca4e3798eb1d84f3cce1446a0e8e7b5ef4efb600f19fc398145"},
 ]
 
 [package.dependencies]
@@ -1412,7 +1490,7 @@ zipp = {version = ">=3.1.0", markers = "python_version < \"3.10\""}
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (<7.2.5)", "sphinx (>=3.5)", "sphinx-lint"]
-testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy (>=0.9.1)", "pytest-ruff", "zipp (>=3.17)"]
+testing = ["jaraco.test (>=5.4)", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)", "zipp (>=3.17)"]
 
 [[package]]
 name = "iniconfig"
@@ -2700,6 +2778,17 @@ cryptography = ">=2.0"
 jeepney = ">=0.6"
 
 [[package]]
+name = "segno"
+version = "1.4.1"
+description = "QR Code and Micro QR Code generator for Python 2 and Python 3"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
+files = [
+    {file = "segno-1.4.1-py2.py3-none-any.whl", hash = "sha256:79d1d7b9c893243411acd031682e0ece007fbd632885c6c650186871be572111"},
+    {file = "segno-1.4.1.tar.gz", hash = "sha256:b8e90823b7ab5249044d22f022291bb06e112104779d6339baf0997fad656c9a"},
+]
+
+[[package]]
 name = "setproctitle"
 version = "1.3.3"
 description = "A Python module to customize the process title"
@@ -3272,4 +3361,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "949ac35eaf8ef3738c69144519af3d993924720715de677533deb725752d61d7"
+content-hash = "b24a75f781629677d41deb1e612c07031ab60bd2bc5c576da6fad776d66646b0"
