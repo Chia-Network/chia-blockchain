@@ -30,8 +30,7 @@ chia_data_layer_s3_plugin = "chia.data_layer.s3_plugin_service:run_server"
 [[tool.poetry.source]]
 name = "chia"
 url = "https://pypi.chia.net/simple/"
-default = false
-secondary = true
+priority = "supplemental"
 
 [tool.poetry.urls]
 "Source" = "https://github.com/Chia-Network/chia-blockchain/"
