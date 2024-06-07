@@ -2151,12 +2151,12 @@ async def test_get_leaf_at_minimum_height(
                     else:
                         min_leaf_height = heights[node.hash]
 
+            assert min_leaf_height is not None
             if pre > 0:
                 assert min_leaf_height >= 11
             for node in all_nodes:
                 if isinstance(node, TerminalNode):
                     assert node == min_leaf
-                    assert min_leaf_height is not None
                     assert heights[min_leaf.hash] == min_leaf_height
                     break
                 if node.left_hash in hash_to_parent:
