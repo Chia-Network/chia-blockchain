@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from typing import AsyncIterator, Awaitable, Callable, Dict, Generic, List, Optional, Protocol, Type, TypeVar, final
+from typing import AsyncIterator, Awaitable, Callable, Generic, List, Optional, Protocol, Type, TypeVar, final
 
 import aiosqlite
 
@@ -25,10 +25,6 @@ class ResourceManager(Protocol):
 
     async def save_resource(self, resource: SideEffects) -> None: ...
 
-    async def get_memos(self) -> Dict[bytes, bytes]: ...
-
-    async def save_memos(self, memos: Dict[bytes, bytes]) -> None: ...
-
 
 @dataclass
 class SQLiteResourceManager:
@@ -48,7 +44,6 @@ class SQLiteResourceManager:
         async with DBWrapper2.managed(":memory:", reader_count=0) as db:
             self = cls(db)
             async with self._db.writer() as conn:
-                await conn.execute("CREATE TABLE memos(key blob, value blob)")
                 await conn.execute("CREATE TABLE side_effects(total blob)")
                 await conn.execute(
                     "INSERT INTO side_effects VALUES(?)",
@@ -76,18 +71,6 @@ class SQLiteResourceManager:
         await self.get_active_writer().execute(
             "INSERT INTO side_effects VALUES(?)",
             (bytes(resource),),
-        )
-
-    async def get_memos(self) -> Dict[bytes, bytes]:
-        rows = await self.get_active_writer().execute_fetchall("SELECT key, value FROM memos")
-        memos = {row[0]: row[1] for row in rows}
-        return memos
-
-    async def save_memos(self, memos: Dict[bytes, bytes]) -> None:
-        await self.get_active_writer().execute("DELETE FROM memos")
-        await self.get_active_writer().executemany(
-            "INSERT INTO memos VALUES(?, ?)",
-            memos.items(),
         )
 
 
@@ -147,22 +130,19 @@ class ActionScope(Generic[_T_SideEffects]):
     @contextlib.asynccontextmanager
     async def use(self, _callbacks_allowed: bool = True) -> AsyncIterator[StateInterface[_T_SideEffects]]:
         async with self._resource_manager.use():
-            memos = await self._resource_manager.get_memos()
             side_effects = await self._resource_manager.get_resource(self._side_effects_format)
-            interface = StateInterface(memos, side_effects, _callbacks_allowed)
+            interface = StateInterface(side_effects, _callbacks_allowed)
             try:
                 yield interface
             except Exception:
                 raise
             else:
-                await self._resource_manager.save_memos(interface.memos)
                 await self._resource_manager.save_resource(interface.side_effects)
                 self._callbacks.extend(interface._new_callbacks)
 
 
 @dataclass
 class StateInterface(Generic[_T_SideEffects]):
-    memos: Dict[bytes, bytes]
     side_effects: _T_SideEffects
     _callbacks_allowed: bool
     _new_callbacks: List[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = field(default_factory=list)

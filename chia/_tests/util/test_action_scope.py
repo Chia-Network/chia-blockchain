@@ -27,7 +27,7 @@ async def default_async_callback(interface: StateInterface[TestSideEffects]) -> 
 
 # Test adding a callback
 def test_add_callback() -> None:
-    state_interface = StateInterface({}, TestSideEffects(), True)
+    state_interface = StateInterface(TestSideEffects(), True)
     initial_callbacks = list(state_interface._new_callbacks)
     state_interface.add_callback(default_async_callback)
     assert state_interface._new_callbacks == [*initial_callbacks, default_async_callback]
@@ -48,35 +48,30 @@ async def test_new_action_scope(action_scope: ActionScope[TestSideEffects]) -> N
     Assert we can immediately check out some initial state
     """
     async with action_scope.use() as interface:
-        assert interface == StateInterface({}, TestSideEffects(), True)
+        assert interface == StateInterface(TestSideEffects(), True)
 
 
 @pytest.mark.anyio
 async def test_scope_persistence(action_scope: ActionScope[TestSideEffects]) -> None:
     """ """
     async with action_scope.use() as interface:
-        interface.memos[b"foo"] = b"bar"
         interface.side_effects.buf = b"baz"
 
     async with action_scope.use() as interface:
-        assert interface.memos[b"foo"] == b"bar"
         assert interface.side_effects.buf == b"baz"
 
 
 @pytest.mark.anyio
 async def test_transactionality(action_scope: ActionScope[TestSideEffects]) -> None:
     async with action_scope.use() as interface:
-        interface.memos[b"foo"] = b"bar"
         interface.side_effects.buf = b"baz"
 
     with pytest.raises(Exception, match="Going to be caught"):
         async with action_scope.use() as interface:
-            interface.memos[b"foo"] = b"qux"
             interface.side_effects.buf = b"qat"
             raise RuntimeError("Going to be caught")
 
     async with action_scope.use() as interface:
-        assert interface.memos[b"foo"] == b"bar"
         assert interface.side_effects.buf == b"baz"
 
 
