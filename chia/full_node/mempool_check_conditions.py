@@ -41,10 +41,7 @@ log = logging.getLogger(__name__)
 
 
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = 0
-
-    if height >= constants.SOFT_FORK2_HEIGHT:
-        flags = flags | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+    flags = NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
 
     if height >= constants.SOFT_FORK4_HEIGHT:
         flags = flags | ENABLE_MESSAGE_CONDITIONS
@@ -53,7 +50,7 @@ def get_flags_for_height_and_constants(height: int, constants: ConsensusConstant
         flags = flags | DISALLOW_INFINITY_G1
 
     if height >= constants.HARD_FORK_HEIGHT:
-        # the hard-fork initiated with 2.0. To activate June 2024
+        # the hard-fork initiated with 2.1. To activate June 2024
         # * costs are ascribed to some unknown condition codes, to allow for
         #    soft-forking in new conditions with cost
         # * a new condition, SOFTFORK, is added which takes a first parameter to
@@ -93,7 +90,7 @@ def get_name_puzzle_conditions(
     if mempool_mode:
         flags = flags | MEMPOOL_MODE
 
-    if height >= constants.HARD_FORK_FIX_HEIGHT:
+    if height >= constants.HARD_FORK_HEIGHT:
         run_block = run_block_generator2
 
     try:
