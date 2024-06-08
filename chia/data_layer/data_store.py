@@ -239,7 +239,7 @@ class DataStore:
 
             new_root = Root(
                 store_id=store_id,
-                node_hash=None if node_hash is None else node_hash,
+                node_hash=node_hash,
                 generation=generation,
                 status=status,
             )
@@ -643,7 +643,7 @@ class DataStore:
                 f"{max_generation_str}"
                 f"{node_hash_str}"
                 "ORDER BY generation DESC LIMIT 1",
-                {"tree_id": store_id, "node_hash": None if hash is None else hash},
+                {"tree_id": store_id, "node_hash": hash},
             )
             row = await cursor.fetchone()
 
@@ -740,7 +740,7 @@ class DataStore:
                 SELECT * FROM tree_from_root_hash
                 WHERE node_type == :node_type
                 """,
-                {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.INTERNAL},
+                {"root_hash": root_hash, "node_type": NodeType.INTERNAL},
             )
 
             internal_nodes: List[InternalNode] = []
@@ -1053,7 +1053,7 @@ class DataStore:
                     )
                 SELECT key FROM tree_from_root_hash WHERE node_type == :node_type
                 """,
-                {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.TERMINAL},
+                {"root_hash": root_hash, "node_type": NodeType.TERMINAL},
             )
 
             keys: List[bytes] = [row["key"] async for row in cursor]
