@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
-from chia_rs import AugSchemeMPL, G1Element
+from chia_rs import AugSchemeMPL, BLSCache, G1Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -25,7 +25,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.cached_bls import BLSCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
 from chia.util.hash import std_hash
