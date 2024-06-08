@@ -81,7 +81,9 @@ async def insert_into_data_store_from_file(
             serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
             node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
-            await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
+            await data_store.insert_node(
+                store_id, generation, parent_hash, node_type, serialized_node.value1, serialized_node.value2
+            )
 
     await data_store.insert_root_with_ancestor_table(store_id=store_id, node_hash=root_hash, status=Status.COMMITTED)
 

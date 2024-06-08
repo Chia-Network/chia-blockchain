@@ -76,6 +76,7 @@ def get_hashes_for_page(page: int, lengths: Dict[bytes32, int], max_page_size: i
 
 
 async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
+    return
     async with db.reader() as reader:
         cursor = await reader.execute("SELECT name FROM sqlite_master WHERE type='table';")
         print("-" * 50, description, flush=True)
@@ -83,12 +84,13 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
             cursor = await reader.execute(f"SELECT * FROM {name}")
             print(f"\n -- {name} ------", flush=True)
             async for row in cursor:
-                print(f"        {dict(row)}")
+                tweaked = {k: (v if not isinstance(v, bytes) else v.hex()) for k, v in dict(row).items()}
+                print(f"        {tweaked}")
 
 
-async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
-    terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
+async def _dot_dump(data_store: DataStore, root: Root) -> str:
+    terminal_nodes = await data_store.get_keys_values(root=root)
+    internal_nodes = await data_store.get_internal_nodes(root=root)
 
     n = 8
 
@@ -180,6 +182,7 @@ class TerminalNode:
     # generation: int
     key: bytes
     value: bytes
+    parent_hash: bytes32
 
     # left for now for interface back-compat even though it is constant
     atom: None = field(init=False, default=None)
@@ -194,11 +197,17 @@ class TerminalNode:
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
+        assert row["node_type"] == NodeType.TERMINAL
+        parent_hash = row["parent"]
+        if parent_hash is not None:
+            parent_hash = bytes32(parent_hash)
+
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
             key=row["key"],
             value=row["value"],
+            parent_hash=parent_hash,
         )
 
 
@@ -281,6 +290,7 @@ class ProofOfInclusion:
 class InternalNode:
     hash: bytes32
     # generation: int
+    parent_hash: Optional[bytes32]
     left_hash: bytes32
     right_hash: bytes32
 
@@ -299,9 +309,15 @@ class InternalNode:
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> InternalNode:
+        assert row["node_type"] == NodeType.INTERNAL
+        parent_hash = row["parent"]
+        if parent_hash is not None:
+            parent_hash = bytes32(parent_hash)
+
         return cls(
             hash=bytes32(row["hash"]),
             # generation=row["generation"],
+            parent_hash=parent_hash,
             left_hash=bytes32(row["left"]),
             right_hash=bytes32(row["right"]),
         )
@@ -325,26 +341,47 @@ class InternalNode:
         raise Exception("provided hash not present")
 
 
+@final
+@dataclass(frozen=True)
+class Store:
+    db_id: int
+    chain_id: bytes32
+
+    @classmethod
+    def from_row(cls, row: aiosqlite.Row) -> Store:
+        return cls(
+            db_id=row["db_id"],
+            chain_id=bytes32(row["chain_id"]),
+        )
+
+    def to_row(self) -> Dict[str, Any]:
+        return {
+            "db_id": self.db_id,
+            "chain_id": self.chain_id,
+        }
+
+
 @dataclass(frozen=True)
 class Root:
-    store_id: bytes32
+    store: Store
     node_hash: Optional[bytes32]
     generation: int
     status: Status
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> Root:
-        raw_node_hash = row["node_hash"]
-        if raw_node_hash is None:
-            node_hash = None
-        else:
-            node_hash = bytes32(raw_node_hash)
+    async def from_row(cls, row: aiosqlite.Row, data_store: DataStore) -> Root:
+        store_id = bytes32(row["tree_id"])
+        generation = row["generation"]
+        status = Status(row["status"])
+
+        # TODO: should not be handled this way
+        node_hash = await data_store._get_root_hash(store_id=store_id, generation=generation)
 
         return cls(
-            store_id=bytes32(row["tree_id"]),
+            store_id=store_id,
             node_hash=node_hash,
-            generation=row["generation"],
-            status=Status(row["status"]),
+            generation=generation,
+            status=status,
         )
 
     def to_row(self) -> Dict[str, Any]:

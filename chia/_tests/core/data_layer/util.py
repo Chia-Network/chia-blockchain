@@ -8,7 +8,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional, Union, overload
 
-from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode
+from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Root, Side, Status, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -181,6 +181,7 @@ class ChiaRoot:
 
 @overload
 def create_valid_node_values(
+    root: Root,
     node_type: Literal[NodeType.INTERNAL],
     left_hash: bytes32,
     right_hash: bytes32,
@@ -189,11 +190,13 @@ def create_valid_node_values(
 
 @overload
 def create_valid_node_values(
+    root: Root,
     node_type: Literal[NodeType.TERMINAL],
 ) -> Dict[str, Any]: ...
 
 
 def create_valid_node_values(
+    root: Root,
     node_type: NodeType,
     left_hash: Optional[bytes32] = None,
     right_hash: Optional[bytes32] = None,
@@ -202,6 +205,8 @@ def create_valid_node_values(
         assert left_hash is not None
         assert right_hash is not None
         return {
+            "tree_id": store_id,
+            "generation": generation,
             "hash": Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash),
             "node_type": node_type,
             "left": left_hash,
@@ -214,6 +219,8 @@ def create_valid_node_values(
         key = b""
         value = b""
         return {
+            "tree_id": store_id,
+            "generation": generation,
             "hash": Program.to((key, value)).get_tree_hash(),
             "node_type": node_type,
             "left": None,

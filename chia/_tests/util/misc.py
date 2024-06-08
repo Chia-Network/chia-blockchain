@@ -389,6 +389,12 @@ class BenchmarkRunner:
         kwargs.setdefault("overhead", self.overhead)
         return _AssertRuntime(*args, **kwargs)
 
+    def print_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
+        kwargs.setdefault("enable_assertion", False)
+        kwargs.setdefault("seconds", 1)
+        kwargs.setdefault("overhead", self.overhead)
+        return _AssertRuntime(*args, **kwargs)
+
 
 @contextlib.contextmanager
 def assert_rpc_error(error: str) -> Iterator[None]:

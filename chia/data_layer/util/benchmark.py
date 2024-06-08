@@ -61,7 +61,6 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                             store_id=store_id,
                             reference_node_hash=reference_node_hash,
                             side=side,
-                            use_optimized=False,
                         )
                     t2 = time.time()
                     insert_time += t2 - t1
@@ -75,7 +74,6 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                             key=key,
                             value=value,
                             store_id=store_id,
-                            use_optimized=False,
                         )
                     t2 = time.time()
                     autoinsert_time += t2 - t1
@@ -85,10 +83,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                     assert reference_node_hash is not None
                     node = await data_store.get_node(reference_node_hash)
                     assert isinstance(node, TerminalNode)
-                    if not slow_mode:
-                        await data_store.delete(key=node.key, store_id=store_id)
-                    else:
-                        await data_store.delete(key=node.key, store_id=store_id, use_optimized=False)
+                    await data_store.delete(key=node.key, store_id=store_id)
                     t2 = time.time()
                     delete_time += t2 - t1
                     delete_count += 1
