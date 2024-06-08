@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union, cast
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
@@ -86,9 +86,9 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
                 print(f"        {dict(row)}")
 
 
-async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
-    terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
+async def _dot_dump(data_store: DataStore, root: Root[Optional[bytes32]]) -> str:
+    terminal_nodes = await data_store.get_keys_values(root=root)
+    internal_nodes = await data_store.get_internal_nodes(root=root)
 
     n = 8
 
@@ -325,27 +325,33 @@ class InternalNode:
         raise Exception("provided hash not present")
 
 
+T_OptionalBytes32 = TypeVar("T_OptionalBytes32", bound=Optional[bytes32], covariant=True)
+
+
+@final
 @dataclass(frozen=True)
-class Root:
+class Root(Generic[T_OptionalBytes32]):
     store_id: bytes32
-    node_hash: Optional[bytes32]
+    node_hash: T_OptionalBytes32
     generation: int
     status: Status
 
     @classmethod
-    def from_row(cls, row: aiosqlite.Row) -> Root:
+    def from_row(cls, row: aiosqlite.Row) -> Root[Optional[bytes32]]:
         raw_node_hash = row["node_hash"]
-        if raw_node_hash is None:
-            node_hash = None
-        else:
+        node_hash: Optional[bytes32] = None
+        if raw_node_hash is not None:
             node_hash = bytes32(raw_node_hash)
 
-        return cls(
+        self = cls(
             store_id=bytes32(row["tree_id"]),
             node_hash=node_hash,
             generation=row["generation"],
             status=Status(row["status"]),
         )
+
+        # TODO: not sure how to make this all happy
+        return cast(Root[Optional[bytes32]], self)
 
     def to_row(self) -> Dict[str, Any]:
         return {
@@ -356,7 +362,7 @@ class Root:
         }
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> Root:
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Root[Optional[bytes32]]:
         return cls(
             store_id=bytes32.from_hexstr(marshalled["tree_id"]),
             node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
@@ -365,9 +371,12 @@ class Root:
         )
 
     def marshal(self) -> Dict[str, Any]:
+        node_hash = None
+        if self.node_hash is not None:
+            node_hash = self.node_hash.hex()
         return {
             "tree_id": self.store_id.hex(),
-            "node_hash": None if self.node_hash is None else self.node_hash.hex(),
+            "node_hash": node_hash,
             "generation": self.generation,
             "status": self.status.value,
         }
@@ -712,7 +721,7 @@ class ClearPendingRootsRequest:
 class ClearPendingRootsResponse:
     success: bool
 
-    root: Optional[Root]
+    root: Optional[Root[Optional[bytes32]]]
     # store_id: bytes32
     # node_hash: Optional[bytes32]
     # generation: int
@@ -772,7 +781,7 @@ class PluginStatus:
 @dataclasses.dataclass(frozen=True)
 class InsertResult:
     node_hash: bytes32
-    root: Root
+    root: Root[bytes32]
 
 
 @dataclasses.dataclass(frozen=True)

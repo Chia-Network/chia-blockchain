@@ -2061,10 +2061,11 @@ async def test_clear_pending_roots(
         key = b"\x01\x02"
         value = b"abc"
 
+        root = await data_store.get_tree_root(store_id=store_id)
         await data_store.insert(
             key=key,
             value=value,
-            store_id=store_id,
+            root=root,
             reference_node_hash=None,
             side=None,
             status=Status.PENDING,

@@ -96,7 +96,7 @@ class WriteFilesResult:
 async def write_files_for_root(
     data_store: DataStore,
     store_id: bytes32,
-    root: Root,
+    root: Root[Optional[bytes32]],
     foldername: Path,
     full_tree_first_publish_generation: int,
     overwrite: bool = False,
@@ -232,7 +232,7 @@ async def insert_from_delta_file(
     return True
 
 
-def delete_full_file_if_exists(foldername: Path, store_id: bytes32, root: Root) -> bool:
+def delete_full_file_if_exists(foldername: Path, store_id: bytes32, root: Root[Optional[bytes32]]) -> bool:
     if root.node_hash is not None:
         node_hash = root.node_hash
     else:

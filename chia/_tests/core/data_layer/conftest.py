@@ -86,10 +86,11 @@ async def valid_node_values_fixture(
     node_type: NodeType,
 ) -> Dict[str, Any]:
     await add_01234567_example(data_store=data_store, store_id=store_id)
+    root = await data_store.get_tree_root(store_id=store_id)
 
     if node_type == NodeType.INTERNAL:
-        node_a = await data_store.get_node_by_key(key=b"\x02", store_id=store_id)
-        node_b = await data_store.get_node_by_key(key=b"\x04", store_id=store_id)
+        node_a = await data_store.get_node_by_key(key=b"\x02", root=root)
+        node_b = await data_store.get_node_by_key(key=b"\x04", root=root)
         return create_valid_node_values(node_type=node_type, left_hash=node_a.hash, right_hash=node_b.hash)
     elif node_type == NodeType.TERMINAL:
         return create_valid_node_values(node_type=node_type)
