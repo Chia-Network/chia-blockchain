@@ -844,9 +844,7 @@ def resolve_derivation_master_key(fingerprint_or_filename: Optional[Union[int, s
     Given a key fingerprint of file containing a mnemonic seed, return the private key.
     """
 
-    if fingerprint_or_filename is not None and (
-        isinstance(fingerprint_or_filename, str) or isinstance(fingerprint_or_filename, Path)
-    ):
+    if fingerprint_or_filename is not None and (isinstance(fingerprint_or_filename, (str, Path))):
         return private_key_from_mnemonic_seed_file(Path(os.fspath(fingerprint_or_filename)))
     else:
         ret = get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)

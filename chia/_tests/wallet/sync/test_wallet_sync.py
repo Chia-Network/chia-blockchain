@@ -416,7 +416,7 @@ async def test_wallet_reorg_sync(
 
     # Confirm we have the funds
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
 
     for wallet_node, wallet_server in wallets:
@@ -629,7 +629,7 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
     assert response.header_hash == last_block.header_hash
     assert response.proofs is None
     assert len(response.coins) == 12
-    assert sum([len(c_list) for _, c_list in response.coins]) == 24
+    assert sum(len(c_list) for _, c_list in response.coins) == 24
 
     # [] for puzzle hashes returns nothing
     res4 = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, []))
@@ -1480,8 +1480,8 @@ async def test_long_sync_untrusted_break(
         return trusted_full_node_server.node_id in wallet_node.synced_peers
 
     def only_trusted_peer() -> bool:
-        trusted_peers = sum([wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
-        untrusted_peers = sum([not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
+        trusted_peers = sum(wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values())
+        untrusted_peers = sum(not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values())
         return trusted_peers == 1 and untrusted_peers == 0
 
     dummy_peer_info = PeerInfo("0.0.0.0", 0)

@@ -60,7 +60,7 @@ try:
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
-    quit()
+    sys.exit()
 
 
 log = logging.getLogger(__name__)
