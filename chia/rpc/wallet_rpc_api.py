@@ -2986,7 +2986,8 @@ class WalletRpcApi:
                 raise ValueError("Could not find proposal ID in transaction")
         return {
             "success": True,
-            "proposal_id": proposal_id,
+            # Semantics guarantee proposal_id here
+            "proposal_id": proposal_id,  # pylint: disable=possibly-used-before-assignment
             "tx_id": None,  # tx_endpoint wrapper will take care of this
             "tx": None,  # tx_endpoint wrapper will take care of this
             "transactions": None,  # tx_endpoint wrapper will take care of this
