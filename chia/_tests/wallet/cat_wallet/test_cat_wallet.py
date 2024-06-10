@@ -1020,7 +1020,7 @@ async def test_cat_hint(
         tx_records = await cat_wallet_2.generate_signed_transaction(
             [uint64(5)], [cat_hash], DEFAULT_TX_CONFIG, action_scope
         )
-    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await cat_wallet_2.wallet_state_manager.add_pending_transactions(tx_records)
 
     await full_node_api.process_transaction_records(records=tx_records)
 

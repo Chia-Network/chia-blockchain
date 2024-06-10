@@ -271,7 +271,7 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, root)
     async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
         std_record_2, launcher_id_2 = await dl_wallet.generate_new_reporter(root, DEFAULT_TX_CONFIG, action_scope)
-    std_record_2, launcher_id_2 = await wsm.add_pending_transactions([std_record_2])
+    [std_record_2] = await wsm.add_pending_transactions([std_record_2])
     await full_node_api.process_transaction_records(records=[std_record_2])
 
     trade_manager = wsm.trade_manager

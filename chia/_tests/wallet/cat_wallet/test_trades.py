@@ -1775,18 +1775,21 @@ async def test_trade_cancellation(wallets_prefarm):
     }
 
     # Now we're going to create the other way around for test coverage sake
-    success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
-        chia_and_cat_for_something,
-        DEFAULT_TX_CONFIG,
-        driver_dict={bytes32([0] * 32): PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
-    )
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        success, trade_make, _, error = await trade_manager_maker.create_offer_for_ids(
+            chia_and_cat_for_something,
+            DEFAULT_TX_CONFIG,
+            action_scope,
+            driver_dict={bytes32([0] * 32): PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
+        )
     assert error is None
     assert success is True
     assert trade_make is not None
 
-    txs = await trade_manager_maker.cancel_pending_offers(
-        [trade_make.trade_id], DEFAULT_TX_CONFIG, fee=uint64(0), secure=True
-    )
+    async with trade_manager_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        txs = await trade_manager_maker.cancel_pending_offers(
+            [trade_make.trade_id], DEFAULT_TX_CONFIG, action_scope, fee=uint64(0), secure=True
+        )
 
     # Check an announcement ring has been created
     total_spend = SpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None])

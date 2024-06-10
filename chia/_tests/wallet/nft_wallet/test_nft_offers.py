@@ -893,7 +893,7 @@ async def test_nft_offer_nft_for_nft(
 
     async with nft_wallet_taker.wallet_state_manager.new_action_scope(push=False) as action_scope:
         txs = await nft_wallet_taker.generate_new_nft(metadata_2, DEFAULT_TX_CONFIG, action_scope)
-    txs = await nft_wallet_maker.wallet_state_manager.add_pending_transactions(txs)
+    txs = await nft_wallet_taker.wallet_state_manager.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
             await time_out_assert_not_none(
