@@ -514,7 +514,7 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
         tx_records = await cat_wallet_2.generate_signed_transaction(
             [uint64(15)], [cat_hash], DEFAULT_TX_CONFIG, action_scope
         )
-    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await cat_wallet_2.wallet_state_manager.add_pending_transactions(tx_records)
 
     await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records)
 
