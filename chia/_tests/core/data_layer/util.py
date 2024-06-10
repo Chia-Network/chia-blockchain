@@ -140,7 +140,8 @@ class ChiaRoot:
 
         if sys.platform == "win32":
             # TODO: uh...  why not .exe?  maybe editable vs. not?
-            chia_executable = "chia.cmd"
+            # TODO: this is apparently now chia.exe with poetry
+            chia_executable = "chia.exe"
         else:
             chia_executable = "chia"
 

@@ -132,6 +132,8 @@ if ($p)
     $env:VIRTUAL_ENV = "$PREV_VIRTUAL_ENV"
 }
 
+cmd /c mklink /j venv .venv
+
 Write-Output ""
 Write-Output "Chia blockchain .\Install.ps1 complete."
 Write-Output "For assistance join us on Discord in the #support chat channel:"
