@@ -117,12 +117,6 @@ if (-not $editable)
     .venv/Scripts/python -m pip install --no-deps .
 }
 
-
-if ($blspy)
-{
-    venv\scripts\pip install $editable_cli .\blspy-stubs
-}
-
 if ($p)
 {
     $PREV_VIRTUAL_ENV = "$env:VIRTUAL_ENV"
