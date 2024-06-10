@@ -8,7 +8,7 @@ license = "Apache License"
 readme = "README.md"
 keywords= ["chia", "blockchain", "node"]
 homepage = "https://chia.net/"
-packages = [{ include = "chia"}]
+packages = [{ include = "chia"}, { include = "mozilla-ca/cacert.pem" }]
 
 [tool.poetry.scripts]
 chia = "chia.cmds.chia:main"
