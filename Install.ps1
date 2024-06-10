@@ -10,6 +10,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $extras = @()
+$extras += "upnp"
 if ($d)
 {
     $extras += "dev"
