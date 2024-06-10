@@ -107,7 +107,7 @@ importlib-resources = "6.4.0"
 hsms = "0.3.1"
 
 [tool.poetry.extras]
-dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pyyaml", "types-setuptools", "pyupgrade"]
+dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pyyaml", "types-setuptools", "pyupgrade"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]
 
