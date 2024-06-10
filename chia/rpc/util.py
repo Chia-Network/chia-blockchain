@@ -137,15 +137,17 @@ def tx_endpoint(
             ):
                 raise ValueError("Relative timelocks are not currently supported in the RPC")
 
-            response: Dict[str, Any] = await func(
-                self,
-                request,
-                *args,
-                *([push] if requires_default_information else []),
-                tx_config=tx_config,
-                extra_conditions=extra_conditions,
-                **kwargs,
-            )
+            async with self.service.wallet_state_manager.new_action_scope(push=False) as action_scope:
+                response: Dict[str, Any] = await func(
+                    self,
+                    request,
+                    *args,
+                    action_scope,
+                    *([push] if requires_default_information else []),
+                    tx_config=tx_config,
+                    extra_conditions=extra_conditions,
+                    **kwargs,
+                )
 
             if func.__name__ == "create_new_wallet" and "transactions" not in response:
                 # unfortunately, this API isn't solely a tx endpoint

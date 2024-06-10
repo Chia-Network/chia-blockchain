@@ -640,7 +640,8 @@ async def test_transaction_send_cache(
     )
 
     # Generate the transaction
-    [tx] = await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), DEFAULT_TX_CONFIG)
+    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        [tx] = await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope)
     [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
     # Make sure it is sent to the peer

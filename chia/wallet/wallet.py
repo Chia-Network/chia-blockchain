@@ -54,6 +54,7 @@ from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -258,6 +259,7 @@ class Wallet:
         amount: uint64,
         newpuzzlehash: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
         coins: Optional[Set[Coin]] = None,
@@ -394,6 +396,7 @@ class Wallet:
         amount: uint64,
         puzzle_hash: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
@@ -419,6 +422,7 @@ class Wallet:
             amount,
             puzzle_hash,
             tx_config,
+            action_scope,
             fee,
             origin_id,
             coins,
@@ -468,6 +472,7 @@ class Wallet:
         self,
         fee: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
         chia_coins = await self.select_coins(fee, tx_config.coin_selection_config)
@@ -475,6 +480,7 @@ class Wallet:
             uint64(0),
             (await self.get_puzzle_hash(not tx_config.reuse_puzhash)),
             tx_config,
+            action_scope,
             fee=fee,
             coins=chia_coins,
             extra_conditions=extra_conditions,

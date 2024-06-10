@@ -62,6 +62,7 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig, TXConfigLo
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -302,6 +303,7 @@ class DataLayerWallet:
         self,
         initial_root: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[TransactionRecord, bytes32]:
@@ -328,6 +330,7 @@ class DataLayerWallet:
             amount=uint64(1),
             puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
             tx_config=tx_config,
+            action_scope=action_scope,
             fee=fee,
             origin_id=launcher_parent.name(),
             coins=coins,
@@ -372,11 +375,13 @@ class DataLayerWallet:
         fee: uint64,
         announcement_to_assert: AssertAnnouncement,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
     ) -> TransactionRecord:
         [chia_tx] = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(0),
             puzzle_hash=await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash),
             tx_config=tx_config,
+            action_scope=action_scope,
             fee=fee,
             negative_change_allowed=False,
             extra_conditions=(announcement_to_assert,),
@@ -389,6 +394,7 @@ class DataLayerWallet:
         launcher_id: bytes32,
         root_hash: Optional[bytes32],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         new_puz_hash: Optional[bytes32] = None,
         new_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
@@ -586,7 +592,10 @@ class DataLayerWallet:
         assert dl_tx.spend_bundle is not None
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(
-                fee, AssertAnnouncement(True, asserted_origin_id=current_coin.name(), asserted_msg=b"$"), tx_config
+                fee,
+                AssertAnnouncement(True, asserted_origin_id=current_coin.name(), asserted_msg=b"$"),
+                tx_config,
+                action_scope,
             )
             assert chia_tx.spend_bundle is not None
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
@@ -612,6 +621,7 @@ class DataLayerWallet:
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Set[Coin] = set(),
         memos: Optional[List[List[bytes]]] = None,  # ignored
@@ -643,6 +653,7 @@ class DataLayerWallet:
             launcher_id,
             new_root_hash,
             tx_config,
+            action_scope,
             puzzle_hashes[0],
             amounts[0],
             fee,
@@ -711,6 +722,7 @@ class DataLayerWallet:
         amount: uint64,
         urls: List[bytes],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -718,6 +730,7 @@ class DataLayerWallet:
             amount=amount,
             puzzle_hash=create_mirror_puzzle().get_tree_hash(),
             tx_config=tx_config,
+            action_scope=action_scope,
             fee=fee,
             primaries=[],
             memos=[launcher_id, *(url for url in urls)],
@@ -731,6 +744,7 @@ class DataLayerWallet:
         mirror_id: bytes32,
         peer: WSChiaConnection,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
@@ -794,6 +808,7 @@ class DataLayerWallet:
                 uint64(1),
                 new_puzhash,
                 tx_config,
+                action_scope,
                 fee=uint64(excess_fee),
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=mirror_coin.name(), asserted_msg=b"$"),),
             )
@@ -981,20 +996,22 @@ class DataLayerWallet:
 
                             assert self.wallet_state_manager.wallet_node.logged_in_fingerprint is not None
 
-                            all_txs.extend(
-                                await self.create_update_state_spend(
-                                    launcher_id,
-                                    singleton.root,
-                                    TXConfigLoader().autofill(
-                                        constants=self.wallet_state_manager.constants,
-                                        config=self.wallet_state_manager.config,
-                                        logged_in_fingerprint=(
-                                            self.wallet_state_manager.wallet_node.logged_in_fingerprint
+                            async with self.wallet_state_manager.new_action_scope(push=False) as action_scope:
+                                all_txs.extend(
+                                    await self.create_update_state_spend(
+                                        launcher_id,
+                                        singleton.root,
+                                        TXConfigLoader().autofill(
+                                            constants=self.wallet_state_manager.constants,
+                                            config=self.wallet_state_manager.config,
+                                            logged_in_fingerprint=(
+                                                self.wallet_state_manager.wallet_node.logged_in_fingerprint
+                                            ),
                                         ),
-                                    ),
-                                    fee=fee,
+                                        action_scope=action_scope,
+                                        fee=fee,
+                                    )
                                 )
-                            )
                 await self.wallet_state_manager.add_pending_transactions(all_txs)
             except Exception as e:
                 self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
@@ -1131,6 +1148,7 @@ class DataLayerWallet:
         driver_dict: Dict[bytes32, PuzzleInfo],
         solver: Solver,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[Offer, List[TransactionRecord]]:
@@ -1157,6 +1175,7 @@ class DataLayerWallet:
                 [uint64(1)],
                 [new_ph],
                 tx_config,
+                action_scope,
                 fee=fee_left_to_pay,
                 launcher_id=launcher,
                 new_root_hash=new_root,
