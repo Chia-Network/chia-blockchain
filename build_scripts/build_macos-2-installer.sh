@@ -37,6 +37,10 @@ echo "Building pip and NPM license directory"
 pwd
 bash ./build_license_directory.sh
 
+# Remove rpaths on some libraries to homebrew directories that
+# appears sometimes m-series chips (prefer bundled from @loader_path/..)
+bash ./remove_brew_rpaths.sh
+
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 # Change to the gui package
 cd ../chia-blockchain-gui/packages/gui || exit 1

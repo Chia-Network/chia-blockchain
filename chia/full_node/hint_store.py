@@ -56,6 +56,22 @@ class HintStore:
 
         return coin_ids
 
+    async def get_hints(self, coin_ids: List[bytes32]) -> List[bytes32]:
+        hints: List[bytes32] = []
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            for batch in to_batches(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
+                coin_ids_db: Tuple[bytes32, ...] = tuple(batch.entries)
+                cursor = await conn.execute(
+                    f'SELECT hint from hints WHERE coin_id IN ({"?," * (len(batch.entries) - 1)}?)',
+                    coin_ids_db,
+                )
+                rows = await cursor.fetchall()
+                hints.extend([bytes32(row[0]) for row in rows if len(row[0]) == 32])
+                await cursor.close()
+
+        return hints
+
     async def add_hints(self, coin_hint_list: List[Tuple[bytes32, bytes]]) -> None:
         if len(coin_hint_list) == 0:
             return None

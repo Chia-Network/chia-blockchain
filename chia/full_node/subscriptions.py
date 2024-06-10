@@ -4,7 +4,11 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Set
 
+from chia_rs import Coin
+
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle_conditions import SpendBundleConditions
+from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 
@@ -208,3 +212,37 @@ class PeerSubscriptions:
 
     def puzzle_subscription_count(self) -> int:
         return self._puzzle_subscriptions.total_count()
+
+
+def peers_for_spend_bundle(
+    peer_subscriptions: PeerSubscriptions, conds: SpendBundleConditions, hints_for_removals: Set[bytes32]
+) -> Set[bytes32]:
+    """
+    Returns a list of peer ids that are subscribed to any of the created or
+    spent coins, puzzle hashes, or hints in the spend bundle. To avoid repeated
+    lookups, `hints_for_removals` should be a set of all puzzle hashes that are being removed.
+    """
+
+    coin_ids: Set[bytes32] = set()
+    puzzle_hashes: Set[bytes32] = hints_for_removals.copy()
+
+    for spend in conds.spends:
+        coin_ids.add(bytes32(spend.coin_id))
+        puzzle_hashes.add(bytes32(spend.puzzle_hash))
+
+        for puzzle_hash, amount, memo in spend.create_coin:
+            coin_ids.add(Coin(spend.coin_id, puzzle_hash, uint64(amount)).name())
+            puzzle_hashes.add(bytes32(puzzle_hash))
+
+            if memo is not None and len(memo) == 32:
+                puzzle_hashes.add(bytes32(memo))
+
+    peers: Set[bytes32] = set()
+
+    for coin_id in coin_ids:
+        peers |= peer_subscriptions.peers_for_coin_id(coin_id)
+
+    for puzzle_hash in puzzle_hashes:
+        peers |= peer_subscriptions.peers_for_puzzle_hash(puzzle_hash)
+
+    return peers

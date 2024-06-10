@@ -363,3 +363,39 @@ class RejectCoinState(Streamable):
 class RejectStateReason(IntEnum):
     REORG = 0
     EXCEEDED_SUBSCRIPTION_LIMIT = 1
+
+
+@streamable
+@dataclass(frozen=True)
+class RemovedMempoolItem(Streamable):
+    transaction_id: bytes32
+    reason: uint8  # MempoolRemoveReason
+
+
+@streamable
+@dataclass(frozen=True)
+class MempoolItemsAdded(Streamable):
+    transaction_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class MempoolItemsRemoved(Streamable):
+    removed_items: List[RemovedMempoolItem]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestCostInfo(Streamable):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondCostInfo(Streamable):
+    max_transaction_cost: uint64
+    max_block_cost: uint64
+    max_mempool_cost: uint64
+    mempool_cost: uint64
+    mempool_fee: uint64
+    bump_fee_per_cost: uint8
