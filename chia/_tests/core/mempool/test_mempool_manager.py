@@ -1616,11 +1616,11 @@ async def test_identical_spend_aggregation_e2e(
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
         other_recipients = [Payment(puzzle_hash=p, amount=uint64(200), memos=[]) for p in phs[1:]]
-        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(push=False, sign=True) as action_scope:
             await wallet.generate_signed_transaction(
                 uint64(200), phs[0], DEFAULT_TX_CONFIG, action_scope, primaries=other_recipients
             )
-        [tx], _ = await wallet.wallet_state_manager.sign_transactions(action_scope.side_effects.transactions)
+        [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
         await send_to_mempool(full_node_api, tx.spend_bundle)
         await farm_a_block(full_node_api, wallet_node, ph)

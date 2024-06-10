@@ -2300,10 +2300,10 @@ class WalletStateManager:
                 for i, tx in enumerate(tx_records)
             ]
         if sign:
-            tx_records, signing_responses = await self.sign_transactions(
+            tx_records, _ = await self.sign_transactions(
                 tx_records,
                 [] if additional_signing_responses is None else additional_signing_responses,
-                additional_signing_responses != [],
+                additional_signing_responses != [] and additional_signing_responses is not None,
             )
         if push:
             all_coins_names = []

@@ -21,11 +21,7 @@ class TestSideEffects:
 
 
 async def default_async_callback(interface: StateInterface[TestSideEffects]) -> None:
-    return None
-
-
-async def default_async_commit(interface: TestSideEffects) -> None:
-    return None
+    return None  # pragma: no cover
 
 
 # Test adding a callback
