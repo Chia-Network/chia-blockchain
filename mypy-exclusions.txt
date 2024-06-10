@@ -62,7 +62,6 @@ chia._tests.core.full_node.test_full_node
 chia._tests.core.full_node.test_node_load
 chia._tests.core.full_node.test_performance
 chia._tests.core.full_node.test_transactions
-chia._tests.core.mempool.test_mempool
 chia._tests.core.server.test_dos
 chia._tests.core.server.test_rate_limits
 chia._tests.core.ssl.test_ssl
