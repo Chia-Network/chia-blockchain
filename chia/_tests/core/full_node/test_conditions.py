@@ -577,6 +577,7 @@ class TestConditions:
             else:
                 suffix = b""
             sig = AugSchemeMPL.sign(sk, msg + suffix, pubkey)
-            conditions = Program.to(assemble(f"(({opcode.value[0]} 0x{bytes(pubkey).hex()} {message}))"))
-
-            await check_conditions(bt, conditions, expected_error, aggsig=sig)
+            solution = SerializedProgram.to(assemble(f"(({opcode.value[0]} 0x{bytes(pubkey).hex()} {message}))"))
+            coin_spend = make_spend(coin, EASY_PUZZLE, solution)
+            spend_bundle = SpendBundle([coin_spend], sig)
+            await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_error)
