@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from chia_rs import BLSCache
+
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
-from chia.util.cached_bls import BLSCache
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 

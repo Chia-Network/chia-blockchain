@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, BLSCache
 
-from chia.util.cached_bls import BLSCache
 from chia.util.hash import std_hash
 
 LOCAL_CACHE = BLSCache(50000)
@@ -26,9 +25,9 @@ def test_cached_bls():
     assert AugSchemeMPL.aggregate_verify(pks, msgs, agg_sig)
 
     # Verify with empty cache and populate it
-    assert LOCAL_CACHE.aggregate_verify(pks_half, msgs_half, agg_sig_half, True)
+    assert LOCAL_CACHE.aggregate_verify(pks_half, msgs_half, agg_sig_half)
     # Verify with partial cache hit
-    assert LOCAL_CACHE.aggregate_verify(pks, msgs, agg_sig, True)
+    assert LOCAL_CACHE.aggregate_verify(pks, msgs, agg_sig)
     # Verify with full cache hit
     assert LOCAL_CACHE.aggregate_verify(pks, msgs, agg_sig)
 
@@ -36,11 +35,11 @@ def test_cached_bls():
     local_cache = BLSCache(n_keys // 2)
     # Verify signatures and cache pairings one at a time
     for pk, msg, sig in zip(pks_half, msgs_half, sigs_half):
-        assert local_cache.aggregate_verify([pk], [msg], sig, True)
+        assert local_cache.aggregate_verify([pk], [msg], sig)
     # Verify the same messages with aggregated signature (full cache hit)
-    assert local_cache.aggregate_verify(pks_half, msgs_half, agg_sig_half, False)
+    assert local_cache.aggregate_verify(pks_half, msgs_half, agg_sig_half)
     # Verify more messages (partial cache hit)
-    assert local_cache.aggregate_verify(pks, msgs, agg_sig, False)
+    assert local_cache.aggregate_verify(pks, msgs, agg_sig)
 
 
 def test_cached_bls_repeat_pk():
@@ -55,4 +54,4 @@ def test_cached_bls_repeat_pk():
 
     assert AugSchemeMPL.aggregate_verify(pks, msgs, agg_sig)
 
-    assert LOCAL_CACHE.aggregate_verify(pks, msgs, agg_sig, force_cache=True)
+    assert LOCAL_CACHE.aggregate_verify(pks, msgs, agg_sig)

@@ -567,12 +567,11 @@ class TestMempoolManager:
         assert node.full_node.mempool_manager.get_spendbundle(sb.name()) is None
 
     @pytest.mark.anyio
-    async def test_double_spend_with_higher_fee(self, two_nodes_one_block, wallet_a, self_hostname):
-        reward_ph = wallet_a.get_new_puzzlehash()
-
-        full_node_1, full_node_2, server_1, server_2, bt = two_nodes_one_block
+    async def test_double_spend_with_higher_fee(self, one_node_one_block, wallet_a):
+        full_node_1, _, bt = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height if len(blocks) > 0 else -1
+        reward_ph = wallet_a.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
@@ -580,7 +579,6 @@ class TestMempoolManager:
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        await connect_and_get_peer(server_1, server_2, self_hostname)
 
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
         for block in blocks:
@@ -2122,7 +2120,7 @@ class TestGeneratorConditions:
         # CREATE_COIN
         puzzle_hash = "abababababababababababababababab"
 
-        if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
+        if softfork_height >= test_constants.HARD_FORK_HEIGHT:
             generator_base_cost = 40
         else:
             generator_base_cost = 20470
@@ -2163,7 +2161,7 @@ class TestGeneratorConditions:
     def test_agg_sig_cost(self, condition, softfork_height):
         pubkey = "0x" + bytes(G1Element.generator()).hex()
 
-        if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
+        if softfork_height >= test_constants.HARD_FORK_HEIGHT:
             generator_base_cost = 40
         else:
             generator_base_cost = 20512
