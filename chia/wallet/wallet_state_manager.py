@@ -2261,6 +2261,7 @@ class WalletStateManager:
         merge_spends: bool = True,
         sign: Optional[bool] = None,
         additional_signing_responses: Optional[List[SigningResponse]] = None,
+        extra_spends: Optional[List[SpendBundle]] = None,
     ) -> List[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2271,6 +2272,8 @@ class WalletStateManager:
         agg_spend: SpendBundle = SpendBundle.aggregate(
             [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
         )
+        if extra_spends is not None:
+            agg_spend = SpendBundle.aggregate([agg_spend, *extra_spends])
         actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
         if merge_spends and actual_spend_involved:
             tx_records = [
@@ -2278,6 +2281,17 @@ class WalletStateManager:
                     tx,
                     spend_bundle=agg_spend if i == 0 else None,
                     name=agg_spend.name() if i == 0 else bytes32.secret(),
+                )
+                for i, tx in enumerate(tx_records)
+            ]
+        elif extra_spends is not None and extra_spends != []:
+            extra_spends.extend([] if tx_records[0].spend_bundle is None else [tx_records[0].spend_bundle])
+            extra_spend_bundle = SpendBundle.aggregate(extra_spends)
+            tx_records = [
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=extra_spend_bundle if i == 0 else None,
+                    name=extra_spend_bundle.name() if i == 0 else bytes32.secret(),
                 )
                 for i, tx in enumerate(tx_records)
             ]
@@ -2751,6 +2765,7 @@ class WalletStateManager:
         merge_spends: bool = True,
         sign: Optional[bool] = None,
         additional_signing_responses: List[SigningResponse] = [],
+        extra_spends: List[SpendBundle] = [],
     ) -> AsyncIterator[WalletActionScope]:
         async with new_wallet_action_scope(
             self,
@@ -2758,5 +2773,6 @@ class WalletStateManager:
             merge_spends=merge_spends,
             sign=sign,
             additional_signing_responses=additional_signing_responses,
+            extra_spends=extra_spends,
         ) as action_scope:
             yield action_scope
