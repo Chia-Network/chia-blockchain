@@ -497,11 +497,42 @@ def check_config(config: Config) -> None:
             print(f"    edge {edge[1].name} -> {edge[0].name} ignored but no cycles were found")
 
 
+@click.command("print_edges", short_help="Check for all of the ways a package immediately depends on another")
+@click.option(
+    "--dependent-package",
+    "from_package",
+    type=str,
+    help="The package that depends on the other",
+)
+@click.option(
+    "--provider-package",
+    "to_package",
+    type=str,
+    help="The package that the dependent package imports from",
+)
+@config
+def print_edges(config: Config, from_package: str, to_package: str) -> None:
+    graph = build_dependency_graph(config.directory_parameters)
+    for dependent, providers in graph.items():
+        dependent_file = ChiaFile.parse(dependent)
+        assert dependent_file.annotations is not None
+        if dependent_file.annotations.package == from_package:
+            for provider in providers:
+                provider_file = ChiaFile.parse(provider)
+                assert provider_file.annotations is not None
+                if provider_file.annotations.package == to_package:
+                    print(
+                        f"{dependent} ({dependent_file.annotations.package}) -> "
+                        f"{provider} ({provider_file.annotations.package})"
+                    )
+
+
 cli.add_command(find_missing_annotations)
 cli.add_command(print_dependency_graph)
 cli.add_command(print_virtual_dependency_graph)
 cli.add_command(print_cycles)
 cli.add_command(check_config)
+cli.add_command(print_edges)
 
 if __name__ == "__main__":
     cli()
