@@ -33,6 +33,7 @@ IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 OneNode = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
+# python 3.8 workaround follows - can be removed when 3.8 support is removed
 if TYPE_CHECKING:
     Mpu = Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]
 else:
