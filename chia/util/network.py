@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import socket
 import ssl
@@ -145,12 +146,28 @@ def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Netw
         return False
 
 
+def is_trusted_cidr(peer_host: str, trusted_cidrs: List[str]) -> bool:
+    try:
+        ip_obj = ipaddress.ip_address(peer_host)
+    except ValueError:
+        return False
+
+    for cidr in trusted_cidrs:
+        network = ipaddress.ip_network(cidr)
+        if ip_obj in network:
+            return True
+
+    return False
+
+
 def is_localhost(peer_host: str) -> bool:
     return peer_host in ["127.0.0.1", "localhost", "::1", "0:0:0:0:0:0:0:1"]
 
 
-def is_trusted_peer(host: str, node_id: bytes32, trusted_peers: Dict[str, Any], testing: bool = False) -> bool:
-    return not testing and is_localhost(host) or node_id.hex() in trusted_peers
+def is_trusted_peer(
+    host: str, node_id: bytes32, trusted_peers: Dict[str, Any], trusted_cidrs: List[str], testing: bool = False
+) -> bool:
+    return not testing and is_localhost(host) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
 
 
 def class_for_type(type: NodeType) -> Any:

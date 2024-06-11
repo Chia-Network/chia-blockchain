@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
-from chia_rs import G1Element
+from chia_rs import AugSchemeMPL, BLSCache, G1Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -25,7 +25,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util import cached_bls
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -136,6 +135,7 @@ async def validate_block_body(
     npc_result: Optional[NPCResult],
     fork_info: ForkInfo,
     get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
+    bls_cache: Optional[BLSCache],
     *,
     validate_signature: bool = True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
@@ -496,18 +496,11 @@ async def validate_block_body(
     if npc_result is not None:
         assert npc_result.conds is not None
 
-        block_timestamp: uint64
-        if height < constants.SOFT_FORK2_HEIGHT:
-            # this does not happen on mainnet. testnet10 only
-            block_timestamp = block.foliage_transaction_block.timestamp  # pragma: no cover
-        else:
-            block_timestamp = prev_transaction_block_timestamp
-
         error = mempool_check_time_locks(
             removal_coin_records,
             npc_result.conds,
             prev_transaction_block_height,
-            block_timestamp,
+            prev_transaction_block_timestamp,
         )
         if error:
             return error, None
@@ -530,10 +523,11 @@ async def validate_block_body(
     # as the cache is likely to be useful when validating the corresponding
     # finished blocks later.
     if validate_signature:
-        force_cache: bool = isinstance(block, UnfinishedBlock)
-        if not cached_bls.aggregate_verify(
-            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, force_cache
-        ):
-            return Err.BAD_AGGREGATE_SIGNATURE, None
+        if bls_cache is None:
+            if not AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
+                return Err.BAD_AGGREGATE_SIGNATURE, None
+        else:
+            if not bls_cache.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
+                return Err.BAD_AGGREGATE_SIGNATURE, None
 
     return None, npc_result

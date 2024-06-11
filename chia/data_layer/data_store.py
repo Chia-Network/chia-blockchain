@@ -239,7 +239,7 @@ class DataStore:
 
             new_root = Root(
                 store_id=store_id,
-                node_hash=None if node_hash is None else node_hash,
+                node_hash=node_hash,
                 generation=generation,
                 status=status,
             )
@@ -527,6 +527,8 @@ class DataStore:
                     expected_hash = internal_hash(left_hash=node.left_hash, right_hash=node.right_hash)
                 elif isinstance(node, TerminalNode):
                     expected_hash = Program.to((node.key, node.value)).get_tree_hash()
+                else:
+                    raise Exception(f"Internal error, unknown node type: {node!r}")
 
                 if node.hash != expected_hash:
                     bad_node_hashes.append(node.hash)
@@ -641,7 +643,7 @@ class DataStore:
                 f"{max_generation_str}"
                 f"{node_hash_str}"
                 "ORDER BY generation DESC LIMIT 1",
-                {"tree_id": store_id, "node_hash": None if hash is None else hash},
+                {"tree_id": store_id, "node_hash": hash},
             )
             row = await cursor.fetchone()
 
@@ -738,7 +740,7 @@ class DataStore:
                 SELECT * FROM tree_from_root_hash
                 WHERE node_type == :node_type
                 """,
-                {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.INTERNAL},
+                {"root_hash": root_hash, "node_type": NodeType.INTERNAL},
             )
 
             internal_nodes: List[InternalNode] = []
@@ -751,16 +753,22 @@ class DataStore:
         return internal_nodes
 
     async def get_keys_values_cursor(
-        self, reader: aiosqlite.Connection, root_hash: Optional[bytes32]
+        self,
+        reader: aiosqlite.Connection,
+        root_hash: Optional[bytes32],
+        only_keys: bool = False,
     ) -> aiosqlite.Cursor:
+        select_clause = "SELECT hash, key" if only_keys else "SELECT *"
+        maybe_value = "" if only_keys else "value, "
+        select_node_clause = "node.hash, node.node_type, node.left, node.right, node.key" if only_keys else "node.*"
         return await reader.execute(
-            """
+            f"""
             WITH RECURSIVE
-                tree_from_root_hash(hash, node_type, left, right, key, value, depth, rights) AS (
-                    SELECT node.*, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
+                tree_from_root_hash(hash, node_type, left, right, key, {maybe_value}depth, rights) AS (
+                    SELECT {select_node_clause}, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
                     UNION ALL
                     SELECT
-                        node.*,
+                        {select_node_clause},
                         tree_from_root_hash.depth + 1 AS depth,
                         CASE
                             WHEN node.hash == tree_from_root_hash.right
@@ -770,7 +778,7 @@ class DataStore:
                         FROM node, tree_from_root_hash
                     WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
                 )
-            SELECT * FROM tree_from_root_hash
+            {select_clause} FROM tree_from_root_hash
             WHERE node_type == :node_type
             ORDER BY depth ASC, rights ASC
             """,
@@ -828,6 +836,21 @@ class DataStore:
                 leaf_hash_to_length[leaf_hash(node.key, node.value)] = len(node.key) + len(node.value)
 
             return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, root_hash)
+
+    async def get_leaf_hashes_by_hashed_key(
+        self, store_id: bytes32, root_hash: Optional[bytes32] = None
+    ) -> Dict[bytes32, bytes32]:
+        result: Dict[bytes32, bytes32] = {}
+        async with self.db_wrapper.reader() as reader:
+            if root_hash is None:
+                root = await self.get_tree_root(store_id=store_id)
+                root_hash = root.node_hash
+
+            cursor = await self.get_keys_values_cursor(reader, root_hash, True)
+            async for row in cursor:
+                result[key_hash(row["key"])] = bytes32(row["hash"])
+
+        return result
 
     async def get_keys_paginated(
         self, store_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
@@ -1030,7 +1053,7 @@ class DataStore:
                     )
                 SELECT key FROM tree_from_root_hash WHERE node_type == :node_type
                 """,
-                {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.TERMINAL},
+                {"root_hash": root_hash, "node_type": NodeType.TERMINAL},
             )
 
             keys: List[bytes] = [row["key"] async for row in cursor]
@@ -1172,6 +1195,8 @@ class DataStore:
                 elif side == Side.RIGHT:
                     left = reference_node_hash
                     right = new_terminal_node_hash
+                else:
+                    raise Exception(f"Internal error, unknown side: {side!r}")
 
                 ancestors = await self.get_ancestors_common(
                     node_hash=reference_node_hash,
@@ -1443,6 +1468,7 @@ class DataStore:
 
             pending_autoinsert_hashes: List[bytes32] = []
             pending_upsert_new_hashes: Dict[bytes32, bytes32] = {}
+            leaf_hashes = await self.get_leaf_hashes_by_hashed_key(store_id)
 
             for change in changelist:
                 if change["action"] == "insert":
@@ -1461,7 +1487,7 @@ class DataStore:
                             if key_hash_frequency[hash] == 1 or (
                                 key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
                             ):
-                                old_node = await self.maybe_get_node_by_key(key, store_id)
+                                old_node = await self.maybe_get_node_from_key_hash(leaf_hashes, hash)
                                 terminal_node_hash = await self._insert_terminal_node(key, value)
 
                                 if old_node is None:
@@ -1502,7 +1528,7 @@ class DataStore:
                     hash = key_hash(key)
                     if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
                         terminal_node_hash = await self._insert_terminal_node(key, new_value)
-                        old_node = await self.maybe_get_node_by_key(key, store_id)
+                        old_node = await self.maybe_get_node_from_key_hash(leaf_hashes, hash)
                         if old_node is not None:
                             pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
                         else:
@@ -1628,32 +1654,41 @@ class DataStore:
             return InternalNode.from_row(row=row)
 
     async def build_ancestor_table_for_latest_root(self, store_id: bytes32) -> None:
-        async with self.db_wrapper.writer():
+        async with self.db_wrapper.writer() as writer:
             root = await self.get_tree_root(store_id=store_id)
             if root.node_hash is None:
                 return
-            previous_root = await self.get_tree_root(
-                store_id=store_id,
-                generation=max(root.generation - 1, 0),
-            )
 
-            if previous_root.node_hash is not None:
-                previous_internal_nodes: List[InternalNode] = await self.get_internal_nodes(
-                    store_id=store_id,
-                    root_hash=previous_root.node_hash,
+            await writer.execute(
+                """
+                WITH RECURSIVE tree_from_root_hash AS (
+                    SELECT
+                        node.hash,
+                        node.left,
+                        node.right,
+                        NULL AS ancestor
+                    FROM node
+                    WHERE node.hash = :root_hash
+                    UNION ALL
+                    SELECT
+                        node.hash,
+                        node.left,
+                        node.right,
+                        tree_from_root_hash.hash AS ancestor
+                    FROM node
+                    JOIN tree_from_root_hash ON node.hash = tree_from_root_hash.left
+                    OR node.hash = tree_from_root_hash.right
                 )
-                known_hashes: Set[bytes32] = {node.hash for node in previous_internal_nodes}
-            else:
-                known_hashes = set()
-            internal_nodes: List[InternalNode] = await self.get_internal_nodes(
-                store_id=store_id,
-                root_hash=root.node_hash,
+                INSERT OR REPLACE INTO ancestors (hash, ancestor, tree_id, generation)
+                SELECT
+                    tree_from_root_hash.hash,
+                    tree_from_root_hash.ancestor,
+                    :tree_id,
+                    :generation
+                FROM tree_from_root_hash
+                """,
+                {"root_hash": root.node_hash, "tree_id": store_id, "generation": root.generation},
             )
-            for node in internal_nodes:
-                # We already have the same values in ancestor tables, if we have the same internal node.
-                # Don't reinsert it so we can save DB space.
-                if node.hash not in known_hashes:
-                    await self._insert_ancestor_table(node.left_hash, node.right_hash, store_id, root.generation)
 
     async def insert_root_with_ancestor_table(
         self, store_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING
@@ -1698,6 +1733,17 @@ class DataStore:
                 raise KeyNotFoundError(key=key)
             assert isinstance(node, TerminalNode)
             return node
+
+    async def maybe_get_node_from_key_hash(
+        self, leaf_hashes: Dict[bytes32, bytes32], hash: bytes32
+    ) -> Optional[TerminalNode]:
+        if hash in leaf_hashes:
+            leaf_hash = leaf_hashes[hash]
+            node = await self.get_node(leaf_hash)
+            assert isinstance(node, TerminalNode)
+            return node
+
+        return None
 
     async def maybe_get_node_by_key(self, key: bytes, tree_id: bytes32) -> Optional[TerminalNode]:
         try:

@@ -733,6 +733,27 @@ reject_coin_state = wallet_protocol.RejectCoinState(
     uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
 )
 
+removed_mempool_item = wallet_protocol.RemovedMempoolItem(
+    bytes32(bytes.fromhex("59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7")), uint8(1)
+)
+
+mempool_items_added = wallet_protocol.MempoolItemsAdded(
+    [bytes32(bytes.fromhex("59710628755b6d7f7d0b5d84d5c980e7a1c52e55f5a43b531312402bd9045da7"))]
+)
+
+mempool_items_removed = wallet_protocol.MempoolItemsRemoved([removed_mempool_item])
+
+request_cost_info = wallet_protocol.RequestCostInfo()
+
+respond_cost_info = wallet_protocol.RespondCostInfo(
+    max_transaction_cost=uint64(100000),
+    max_block_cost=uint64(1000000),
+    max_mempool_cost=uint64(10000000),
+    mempool_cost=uint64(50000),
+    mempool_fee=uint64(500000),
+    bump_fee_per_cost=uint8(10),
+)
+
 
 ### HARVESTER PROTOCOL
 pool_difficulty = harvester_protocol.PoolDifficulty(

@@ -119,3 +119,11 @@ def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
     #     expected_output=b"\nBladebit Chia Plotter",
     #     specify_tmp_dir=False,
     # )
+
+    args = [executable_for_service("chia"), "init"]
+    print(f"launching: {args}")
+    subprocess.run(
+        args,
+        check=True,
+        timeout=adjusted_timeout(30),
+    )

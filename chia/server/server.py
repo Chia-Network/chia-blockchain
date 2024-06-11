@@ -712,6 +712,7 @@ class ChiaServer:
             host=peer.peer_info.host,
             node_id=peer.peer_node_id,
             trusted_peers=trusted_peers,
+            trusted_cidrs=self.config.get("trusted_cidrs", []),
             testing=self.config.get("testing", False),
         )
 
