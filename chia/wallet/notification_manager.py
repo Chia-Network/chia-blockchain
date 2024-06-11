@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -120,14 +119,4 @@ class NotificationManager:
             ),
         )
         async with action_scope.use() as interface:
-            # This should not be looked to for best practice. Ideally, the method to generate the transaction above
-            # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in rn.
-            if interface.side_effects.transactions[0].spend_bundle is None:
-                new_spend = extra_spend_bundle
-            else:
-                new_spend = SpendBundle.aggregate(
-                    [interface.side_effects.transactions[0].spend_bundle, extra_spend_bundle]
-                )
-            interface.side_effects.transactions[0] = dataclasses.replace(
-                interface.side_effects.transactions[0], spend_bundle=new_spend, name=new_spend.name()
-            )
+            interface.side_effects.extra_spends.append(extra_spend_bundle)

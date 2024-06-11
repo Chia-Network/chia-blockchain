@@ -733,62 +733,49 @@ class DAOWallet:
 
         announcement_message = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)]).get_tree_hash()
 
-        async with self.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
-            await self.standard_wallet.generate_signed_transaction(
-                uint64(1),
-                genesis_launcher_puz.get_tree_hash(),
-                tx_config,
-                inner_action_scope,
-                fee,
-                origin_id=origin.name(),
-                coins=set(coins),
-                memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()],
-                extra_conditions=(
-                    AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
-                ),
-            )
+        await self.standard_wallet.generate_signed_transaction(
+            uint64(1),
+            genesis_launcher_puz.get_tree_hash(),
+            tx_config,
+            action_scope,
+            fee,
+            origin_id=origin.name(),
+            coins=set(coins),
+            memos=[new_cat_wallet.cat_info.limitations_program_hash, cat_origin.name()],
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
+        )
 
-            genesis_launcher_solution = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)])
+        genesis_launcher_solution = Program.to([full_treasury_puzzle_hash, 1, bytes(0x80)])
 
-            launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
-            launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+        launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
 
-            launcher_proof = LineageProof(
-                bytes32(launcher_coin.parent_coin_info),
-                None,
-                uint64(launcher_coin.amount),
-            )
-            await self.add_parent(launcher_coin.name(), launcher_proof)
+        launcher_proof = LineageProof(
+            bytes32(launcher_coin.parent_coin_info),
+            None,
+            uint64(launcher_coin.amount),
+        )
+        await self.add_parent(launcher_coin.name(), launcher_proof)
 
-            eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
-            dao_info = DAOInfo(
-                launcher_coin.name(),
-                cat_wallet_id,
-                self.dao_info.dao_cat_wallet_id,
-                self.dao_info.proposals_list,
-                self.dao_info.parent_info,
-                eve_coin,
-                dao_treasury_puzzle,
-                self.dao_info.singleton_block_height,
-                self.dao_info.filter_below_vote_amount,
-                self.dao_info.assets,
-                self.dao_info.current_height,
-            )
-            await self.save_info(dao_info)
-            eve_spend = await self.generate_treasury_eve_spend(dao_treasury_puzzle, eve_coin)
-
-            async with inner_action_scope.use() as interface:
-                # This should not be looked to for best practice. Ideally, the method to generate the transaction above
-                # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in.
-                if interface.side_effects.transactions[0].spend_bundle is None:
-                    new_spend = SpendBundle.aggregate([launcher_sb, eve_spend])
-                else:
-                    new_spend = SpendBundle.aggregate(
-                        [interface.side_effects.transactions[0].spend_bundle, launcher_sb, eve_spend]
-                    )
-                interface.side_effects.transactions[0] = dataclasses.replace(
-                    interface.side_effects.transactions[0], spend_bundle=new_spend, name=new_spend.name()
-                )
+        eve_coin = Coin(launcher_coin.name(), full_treasury_puzzle_hash, uint64(1))
+        dao_info = DAOInfo(
+            launcher_coin.name(),
+            cat_wallet_id,
+            self.dao_info.dao_cat_wallet_id,
+            self.dao_info.proposals_list,
+            self.dao_info.parent_info,
+            eve_coin,
+            dao_treasury_puzzle,
+            self.dao_info.singleton_block_height,
+            self.dao_info.filter_below_vote_amount,
+            self.dao_info.assets,
+            self.dao_info.current_height,
+        )
+        await self.save_info(dao_info)
+        eve_spend = await self.generate_treasury_eve_spend(dao_treasury_puzzle, eve_coin)
+        new_spend = SpendBundle.aggregate([launcher_sb, eve_spend])
 
         treasury_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -817,7 +804,6 @@ class DAOWallet:
 
         await self.wallet_state_manager.add_interested_coin_ids([eve_coin.name()], [self.wallet_id])
         async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
             interface.side_effects.transactions.append(treasury_record)
 
     async def generate_treasury_eve_spend(

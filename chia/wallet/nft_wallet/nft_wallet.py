@@ -385,48 +385,34 @@ class NFTWallet:
         # launcher announcement
         announcement_message = Program.to([eve_fullpuz_hash, amount, []]).get_tree_hash()
 
-        async with self.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
-            self.log.debug(
-                "Creating transaction for launcher: %s and other coins: %s (%s)", origin, coins, announcement_message
-            )
-            # store the launcher transaction in the wallet state
-            await self.standard_wallet.generate_signed_transaction(
-                uint64(amount),
-                nft_puzzles.LAUNCHER_PUZZLE_HASH,
-                tx_config,
-                inner_action_scope,
-                fee,
-                coins,
-                None,
-                origin_id=origin.name(),
-                extra_conditions=(
-                    *extra_conditions,
-                    AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
-                ),
-            )
-            genesis_launcher_solution = Program.to([eve_fullpuz_hash, amount, []])
+        self.log.debug(
+            "Creating transaction for launcher: %s and other coins: %s (%s)", origin, coins, announcement_message
+        )
+        # store the launcher transaction in the wallet state
+        await self.standard_wallet.generate_signed_transaction(
+            uint64(amount),
+            nft_puzzles.LAUNCHER_PUZZLE_HASH,
+            tx_config,
+            action_scope,
+            fee,
+            coins,
+            None,
+            origin_id=origin.name(),
+            extra_conditions=(
+                *extra_conditions,
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
+        )
+        genesis_launcher_solution = Program.to([eve_fullpuz_hash, amount, []])
 
-            # launcher spend to generate the singleton
-            launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
-            launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+        # launcher spend to generate the singleton
+        launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
+        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
 
-            eve_coin = Coin(launcher_coin.name(), eve_fullpuz_hash, uint64(amount))
-
-            async with inner_action_scope.use() as interface:
-                # This should not be looked to for best practice. Ideally, the method to generate the transaction above
-                # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in.
-                if interface.side_effects.transactions[0].spend_bundle is None:
-                    new_spend = launcher_sb
-                else:
-                    new_spend = SpendBundle.aggregate(
-                        [interface.side_effects.transactions[0].spend_bundle, launcher_sb]
-                    )
-                interface.side_effects.transactions[0] = dataclasses.replace(
-                    interface.side_effects.transactions[0], spend_bundle=new_spend, name=new_spend.name()
-                )
+        eve_coin = Coin(launcher_coin.name(), eve_fullpuz_hash, uint64(amount))
 
         async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
+            interface.side_effects.extra_spends.append(launcher_sb)
 
         # Create inner solution for eve spend
         did_inner_hash = b""

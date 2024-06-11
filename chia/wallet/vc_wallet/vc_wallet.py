@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import time
 import traceback
@@ -410,17 +409,7 @@ class VCWallet:
             extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
         )
         async with action_scope.use() as interface:
-            # This should not be looked to for best practice. Ideally, the method to generate the transaction above
-            # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in rn.
-            if interface.side_effects.transactions[0].spend_bundle is None:
-                new_spend = SpendBundle([vc_spend], G2Element())
-            else:
-                new_spend = SpendBundle.aggregate(
-                    [interface.side_effects.transactions[0].spend_bundle, SpendBundle([vc_spend], G2Element())]
-                )
-            interface.side_effects.transactions[0] = dataclasses.replace(
-                interface.side_effects.transactions[0], spend_bundle=new_spend, name=new_spend.name()
-            )
+            interface.side_effects.extra_spends.append(SpendBundle([vc_spend], G2Element()))
 
     async def add_vc_authorization(
         self, offer: Offer, solver: Solver, tx_config: TXConfig, action_scope: WalletActionScope

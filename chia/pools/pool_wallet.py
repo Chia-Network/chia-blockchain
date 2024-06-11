@@ -633,37 +633,23 @@ class PoolWallet:
         )
         launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
 
-        async with standard_wallet.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
-            await standard_wallet.generate_signed_transaction(
-                amount,
-                genesis_launcher_puz.get_tree_hash(),
-                tx_config,
-                inner_action_scope,
-                fee,
-                coins,
-                None,
-                origin_id=launcher_parent.name(),
-                extra_conditions=(
-                    *extra_conditions,
-                    AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
-                ),
-            )
-            async with inner_action_scope.use() as interface:
-                # This should not be looked to for best practice. Ideally, the method to generate the transaction above
-                # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in.
-                if interface.side_effects.transactions[0].spend_bundle is None:
-                    spend_bundle_to_replace = launcher_sb
-                else:
-                    spend_bundle_to_replace = SpendBundle.aggregate(
-                        [interface.side_effects.transactions[0].spend_bundle, launcher_sb]
-                    )
-                interface.side_effects.transactions[0] = dataclasses.replace(
-                    interface.side_effects.transactions[0],
-                    spend_bundle=spend_bundle_to_replace,
-                )
+        await standard_wallet.generate_signed_transaction(
+            amount,
+            genesis_launcher_puz.get_tree_hash(),
+            tx_config,
+            action_scope,
+            fee,
+            coins,
+            None,
+            origin_id=launcher_parent.name(),
+            extra_conditions=(
+                *extra_conditions,
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
+        )
 
         async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
+            interface.side_effects.extra_spends.append(launcher_sb)
 
         return puzzle_hash, launcher_coin.name()
 

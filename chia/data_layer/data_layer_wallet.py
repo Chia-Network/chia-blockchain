@@ -326,6 +326,19 @@ class DataLayerWallet:
         )
         announcement_message: bytes32 = genesis_launcher_solution.get_tree_hash()
         announcement = AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message)
+
+        await self.standard_wallet.generate_signed_transaction(
+            amount=uint64(1),
+            puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
+            tx_config=tx_config,
+            action_scope=action_scope,
+            fee=fee,
+            origin_id=launcher_parent.name(),
+            coins=coins,
+            primaries=None,
+            extra_conditions=(*extra_conditions, announcement),
+        )
+
         launcher_cs: CoinSpend = CoinSpend(
             launcher_coin,
             SerializedProgram.from_program(SINGLETON_LAUNCHER),
@@ -333,35 +346,8 @@ class DataLayerWallet:
         )
         launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
 
-        async with self.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
-            await self.standard_wallet.generate_signed_transaction(
-                amount=uint64(1),
-                puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
-                tx_config=tx_config,
-                action_scope=inner_action_scope,
-                fee=fee,
-                origin_id=launcher_parent.name(),
-                coins=coins,
-                primaries=None,
-                extra_conditions=(*extra_conditions, announcement),
-            )
-
-            async with inner_action_scope.use() as interface:
-                # This should not be looked to for best practice. Ideally, the method to generate the transaction above
-                # takes a parameter to add in extra spends. That's currently out of scope, so I'm placing this hack in.
-                if interface.side_effects.transactions[0].spend_bundle is None:
-                    spend_bundle_to_replace = launcher_sb
-                else:
-                    spend_bundle_to_replace = SpendBundle.aggregate(
-                        [interface.side_effects.transactions[0].spend_bundle, launcher_sb]
-                    )
-                interface.side_effects.transactions[0] = dataclasses.replace(
-                    interface.side_effects.transactions[0],
-                    spend_bundle=spend_bundle_to_replace,
-                )
-
         async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
+            interface.side_effects.extra_spends.append(launcher_sb)
 
         singleton_record = SingletonRecord(
             coin_id=Coin(launcher_coin.name(), full_puzzle.get_tree_hash(), uint64(1)).name(),
