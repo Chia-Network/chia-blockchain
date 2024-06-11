@@ -48,8 +48,9 @@ from chia.wallet.singleton import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -77,11 +78,13 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         amount: uint64,
-        backups_ids: List = [],
+        tx_config: TXConfig,
+        backups_ids: List[bytes32] = [],
         num_of_backup_ids_needed: uint64 = None,
         metadata: Dict[str, str] = {},
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ):
         """
         Create a brand new DID wallet
@@ -139,7 +142,7 @@ class DIDWallet:
             raise ValueError("Not enough balance")
 
         try:
-            txs = await self.generate_new_decentralised_id(amount, DEFAULT_TX_CONFIG, fee)
+            txs = await self.generate_new_decentralised_id(amount, tx_config, fee, extra_conditions)
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
@@ -229,10 +232,10 @@ class DIDWallet:
         inner_solution: Program = full_solution.rest().rest().first()
         recovery_list: List[bytes32] = []
         backup_required: int = num_verification.as_int()
-        if recovery_list_hash != Program.to([]).get_tree_hash():
+        if recovery_list_hash != NIL_TREEHASH:
             try:
                 for did in inner_solution.rest().rest().rest().rest().rest().as_python():
-                    recovery_list.append(did[0])
+                    recovery_list.append(bytes32(did[0]))
             except Exception:
                 self.log.warning(
                     f"DID {launch_coin.name().hex()} has a recovery list hash but missing a reveal,"
@@ -376,7 +379,7 @@ class DIDWallet:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data = DIDCoinData(
                 p2_puzzle=p2_puzzle,
-                recovery_list_hash=recovery_list_hash.atom,
+                recovery_list_hash=bytes32(recovery_list_hash.as_atom()),
                 num_verification=uint16(num_verification.as_int()),
                 singleton_struct=singleton_struct,
                 metadata=metadata,
@@ -531,7 +534,9 @@ class DIDWallet:
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         if self.did_info.origin_coin is None:
             # TODO: this seem dumb. Why bother with this case? Is it ever used?
-            return puzzle_for_pk(pubkey).get_tree_hash()
+            # inner puzzle: (8 . 0)
+            innerpuz_hash = shatree_pair(shatree_int(8), NIL_TREEHASH)
+            return create_singleton_puzzle_hash(innerpuz_hash, bytes32([0] * 32))
         origin_coin_name = self.did_info.origin_coin.name()
         innerpuz_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
             p2_puzhash=puzzle_hash_for_pk(pubkey),
@@ -1197,7 +1202,11 @@ class DIDWallet:
             raise ValueError("Invalid inner DID puzzle.")
 
     async def generate_new_decentralised_id(
-        self, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
+        self,
+        amount: uint64,
+        tx_config: TXConfig,
+        fee: uint64 = uint64(0),
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> List[TransactionRecord]:
         """
         This must be called under the wallet state manager lock
@@ -1226,6 +1235,7 @@ class DIDWallet:
             origin_id=origin.name(),
             extra_conditions=(
                 AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+                *extra_conditions,
             ),
         )
 

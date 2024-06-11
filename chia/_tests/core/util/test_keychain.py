@@ -5,7 +5,7 @@ import random
 from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
 
-import pkg_resources
+import importlib_resources
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
@@ -42,6 +42,7 @@ fingerprint = uint32(1310648153)
 public_key = G1Element.from_bytes(
     bytes.fromhex("b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4")
 )
+bech32_pubkey = "bls12381kkk0xkvmcha9mgwqpakv84du79tqmmm8w79h759gcde6s0mcwc2std39p2mhdcu29yhzvc5qpxhvgmknyl7"
 
 
 class TestKeychain:
@@ -94,6 +95,12 @@ class TestKeychain:
         kc.delete_all_keys()
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 0
+
+        kc.add_key(bech32_pubkey, label=None, private=False)
+        all_pks = kc.get_all_public_keys()
+        assert len(all_pks) == 1
+        assert all_pks[0] == public_key
+        kc.delete_all_keys()
 
         kc.add_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
         kc.add_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
@@ -156,9 +163,8 @@ class TestKeychain:
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors(self):
-        test_vectors_path = pkg_resources.resource_filename(chia._tests.util.__name__, "bip39_test_vectors.json")
-        with open(test_vectors_path) as f:
-            all_vectors = json.loads(f.read())
+        test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
+        all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
         for vector_list in all_vectors["english"]:
             entropy_bytes = bytes.fromhex(vector_list[0])
@@ -173,9 +179,8 @@ class TestKeychain:
         """
         Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
         """
-        test_vectors_path = pkg_resources.resource_filename(chia._tests.util.__name__, "bip39_test_vectors.json")
-        with open(test_vectors_path) as f:
-            all_vectors = json.load(f)
+        test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
+        all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
         for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
             entropy_bytes = bytes.fromhex(entropy_hex)

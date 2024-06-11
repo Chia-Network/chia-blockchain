@@ -28,10 +28,7 @@ if TYPE_CHECKING:
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)  # type: ignore[no-any-return] # noqa: E501
+    return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)
 
 
 def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> bytes32:
@@ -92,8 +89,8 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
 
 
 async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
-    terminal_nodes = await data_store.get_keys_values(tree_id=store_id, root_hash=root_hash)
-    internal_nodes = await data_store.get_internal_nodes(tree_id=store_id, root_hash=root_hash)
+    terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
+    internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
 
     n = 8
 
@@ -178,6 +175,7 @@ class CommitState(IntEnum):
 Node = Union["TerminalNode", "InternalNode"]
 
 
+@final
 @dataclass(frozen=True)
 class TerminalNode:
     hash: bytes32
@@ -185,11 +183,16 @@ class TerminalNode:
     key: bytes
     value: bytes
 
+    # left for now for interface back-compat even though it is constant
     atom: None = field(init=False, default=None)
 
-    @property
-    def pair(self) -> Tuple[bytes32, bytes32]:
-        return Program.to(self.key), Program.to(self.value)
+    @classmethod
+    def from_key_value(cls, key: bytes, value: bytes) -> TerminalNode:
+        return cls(
+            hash=leaf_hash(key=key, value=value),
+            key=key,
+            value=value,
+        )
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> TerminalNode:
@@ -254,9 +257,7 @@ class ProofOfInclusion:
         return [layer.other_hash for layer in self.layers]
 
     def as_program(self) -> Program:
-        # https://github.com/Chia-Network/clvm/pull/102
-        # https://github.com/Chia-Network/clvm/pull/106
-        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])  # type: ignore[no-any-return]
+        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])
 
     def valid(self) -> bool:
         existing_hash = self.node_hash
@@ -277,6 +278,7 @@ class ProofOfInclusion:
         return True
 
 
+@final
 @dataclass(frozen=True)
 class InternalNode:
     hash: bytes32
@@ -284,8 +286,18 @@ class InternalNode:
     left_hash: bytes32
     right_hash: bytes32
 
-    pair: Optional[Tuple[Node, Node]] = None
-    atom: None = None
+    left: Optional[Node] = None
+    right: Optional[Node] = None
+
+    @classmethod
+    def from_child_nodes(cls, left: Node, right: Node) -> InternalNode:
+        return cls(
+            hash=internal_hash(left_hash=left.hash, right_hash=right.hash),
+            left_hash=left.hash,
+            right_hash=right.hash,
+            left=left,
+            right=right,
+        )
 
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> InternalNode:
@@ -317,7 +329,7 @@ class InternalNode:
 
 @dataclass(frozen=True)
 class Root:
-    tree_id: bytes32
+    store_id: bytes32
     node_hash: Optional[bytes32]
     generation: int
     status: Status
@@ -331,7 +343,7 @@ class Root:
             node_hash = bytes32(raw_node_hash)
 
         return cls(
-            tree_id=bytes32(row["tree_id"]),
+            store_id=bytes32(row["tree_id"]),
             node_hash=node_hash,
             generation=row["generation"],
             status=Status(row["status"]),
@@ -339,7 +351,7 @@ class Root:
 
     def to_row(self) -> Dict[str, Any]:
         return {
-            "tree_id": self.tree_id,
+            "tree_id": self.store_id,
             "node_hash": self.node_hash,
             "generation": self.generation,
             "status": self.status.value,
@@ -348,7 +360,7 @@ class Root:
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> Root:
         return cls(
-            tree_id=bytes32.from_hexstr(marshalled["tree_id"]),
+            store_id=bytes32.from_hexstr(marshalled["tree_id"]),
             node_hash=None if marshalled["node_hash"] is None else bytes32.from_hexstr(marshalled["node_hash"]),
             generation=marshalled["generation"],
             status=Status(marshalled["status"]),
@@ -356,7 +368,7 @@ class Root:
 
     def marshal(self) -> Dict[str, Any]:
         return {
-            "tree_id": self.tree_id.hex(),
+            "tree_id": self.store_id.hex(),
             "node_hash": None if self.node_hash is None else self.node_hash.hex(),
             "generation": self.generation,
             "status": self.status.value,
@@ -378,7 +390,7 @@ class ServerInfo:
 
 @dataclass(frozen=True)
 class Subscription:
-    tree_id: bytes32
+    store_id: bytes32
     servers_info: List[ServerInfo]
 
 
@@ -703,7 +715,7 @@ class ClearPendingRootsResponse:
     success: bool
 
     root: Optional[Root]
-    # tree_id: bytes32
+    # store_id: bytes32
     # node_hash: Optional[bytes32]
     # generation: int
     # status: Status
@@ -767,7 +779,7 @@ class InsertResult:
 
 @dataclasses.dataclass(frozen=True)
 class UnsubscribeData:
-    tree_id: bytes32
+    store_id: bytes32
     retain_data: bool
 
 

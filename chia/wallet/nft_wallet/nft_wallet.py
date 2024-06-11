@@ -221,7 +221,7 @@ class NFTWallet:
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
             singleton_id,
             Program.to(metadata),
-            bytes32(uncurried_nft.metadata_updater_hash.atom),
+            bytes32(uncurried_nft.metadata_updater_hash.as_atom()),
             inner_puzzle,
         )
         self.log.debug(
@@ -1384,7 +1384,6 @@ class NFTWallet:
             assert eve_sb is not None
             eve_spends.append(eve_sb)
             # Extract Puzzle Announcement from eve spend
-            assert isinstance(eve_sb, SpendBundle)  # mypy
             eve_sol = eve_sb.coin_spends[0].solution.to_program()
             conds = eve_fullpuz.run(eve_sol)
             eve_puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]
@@ -1395,40 +1394,39 @@ class NFTWallet:
         # Create the xch spend to fund the minting.
         spend_value = sum([coin.amount for coin in xch_coins])
         change: uint64 = uint64(spend_value - total_amount)
-        xch_spends = []
         if xch_change_ph is None:
             xch_change_ph = await self.standard_wallet.get_new_puzzlehash()
         xch_payment = Payment(xch_change_ph, change, [xch_change_ph])
 
-        first = True
-        for xch_coin in xch_coins:
-            puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(xch_coin.puzzle_hash)
-            if first:
-                message_list: List[bytes32] = [c.name() for c in xch_coins]
-                message_list.append(Coin(xch_coin.name(), xch_payment.puzzle_hash, xch_payment.amount).name())
-                message: bytes32 = std_hash(b"".join(message_list))
+        xch_coins_iter = iter(xch_coins)
+        xch_coin = next(xch_coins_iter)
 
-                xch_extra_conditions: Tuple[Condition, ...] = (
-                    AssertCoinAnnouncement(asserted_id=did_coin.name(), asserted_msg=message),
-                )
-                if len(xch_coins) > 1:
-                    xch_extra_conditions += (CreateCoinAnnouncement(message),)
+        message_list: List[bytes32] = [c.name() for c in xch_coins]
+        message_list.append(Coin(xch_coin.name(), xch_payment.puzzle_hash, xch_payment.amount).name())
+        message: bytes32 = std_hash(b"".join(message_list))
 
-                solution: Program = self.standard_wallet.make_solution(
-                    primaries=[xch_payment],
-                    fee=fee,
-                    conditions=xch_extra_conditions,
-                )
-                primary_announcement_hash = AssertCoinAnnouncement(
-                    asserted_id=xch_coin.name(), asserted_msg=message
-                ).msg_calc
-                # connect this coin assertion to the DID announcement
-                did_coin_announcement = CreateCoinAnnouncement(message)
-                first = False
-            else:
-                solution = self.standard_wallet.make_solution(
-                    primaries=[], conditions=(AssertCoinAnnouncement(primary_announcement_hash),)
-                )
+        xch_extra_conditions: Tuple[Condition, ...] = (
+            AssertCoinAnnouncement(asserted_id=did_coin.name(), asserted_msg=message),
+        )
+        if len(xch_coins) > 1:
+            xch_extra_conditions += (CreateCoinAnnouncement(message),)
+
+        solution: Program = self.standard_wallet.make_solution(
+            primaries=[xch_payment],
+            fee=fee,
+            conditions=xch_extra_conditions,
+        )
+        primary_announcement_hash = AssertCoinAnnouncement(asserted_id=xch_coin.name(), asserted_msg=message).msg_calc
+        # connect this coin assertion to the DID announcement
+        did_coin_announcement = CreateCoinAnnouncement(message)
+        puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(xch_coin.puzzle_hash)
+        xch_spends = [make_spend(xch_coin, puzzle, solution)]
+
+        for xch_coin in xch_coins_iter:
+            puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(xch_coin.puzzle_hash)
+            solution = self.standard_wallet.make_solution(
+                primaries=[], conditions=(AssertCoinAnnouncement(primary_announcement_hash),)
+            )
             xch_spends.append(make_spend(xch_coin, puzzle, solution))
         xch_spend = SpendBundle(xch_spends, G2Element())
 
@@ -1628,7 +1626,6 @@ class NFTWallet:
             assert eve_sb is not None
             eve_spends.append(eve_sb)
             # Extract Puzzle Announcement from eve spend
-            assert isinstance(eve_sb, SpendBundle)  # mypy
             eve_sol = eve_sb.coin_spends[0].solution.to_program()
             conds = eve_fullpuz.run(eve_sol)
             eve_puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]

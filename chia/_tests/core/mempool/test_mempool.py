@@ -6,7 +6,7 @@ import random
 from typing import Callable, Dict, List, Optional, Tuple
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import G1Element, G2Element
 from clvm.casts import int_to_bytes
 from clvm_tools import binutils
 
@@ -367,6 +367,18 @@ co = ConditionOpcode
 mis = MempoolInclusionStatus
 
 
+async def send_sb(node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
+    tx = wallet_protocol.SendTransaction(sb)
+    return await node.send_transaction(tx, test=True)
+
+
+async def gen_and_send_sb(node: FullNodeAPI, wallet: WalletTool, coin: Coin, fee: uint64 = uint64(0)) -> SpendBundle:
+    sb = generate_test_spend_bundle(wallet=wallet, coin=coin, fee=fee)
+    assert sb is not None
+    await send_sb(node, sb)
+    return sb
+
+
 class TestMempoolManager:
     @pytest.mark.anyio
     async def test_basic_mempool_manager(self, two_nodes_one_block, wallet_a, self_hostname):
@@ -548,17 +560,6 @@ class TestMempoolManager:
         assert sb2 is None
         assert status == MempoolInclusionStatus.PENDING
 
-    async def send_sb(self, node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
-        tx = wallet_protocol.SendTransaction(sb)
-        return await node.send_transaction(tx, test=True)
-
-    async def gen_and_send_sb(self, node, peer, *args, **kwargs):
-        sb = generate_test_spend_bundle(*args, **kwargs)
-        assert sb is not None
-
-        await self.send_sb(node, sb)
-        return sb
-
     def assert_sb_in_pool(self, node, sb):
         assert sb == node.full_node.mempool_manager.get_spendbundle(sb.name())
 
@@ -566,12 +567,11 @@ class TestMempoolManager:
         assert node.full_node.mempool_manager.get_spendbundle(sb.name()) is None
 
     @pytest.mark.anyio
-    async def test_double_spend_with_higher_fee(self, two_nodes_one_block, wallet_a, self_hostname):
-        reward_ph = wallet_a.get_new_puzzlehash()
-
-        full_node_1, full_node_2, server_1, server_2, bt = two_nodes_one_block
+    async def test_double_spend_with_higher_fee(self, one_node_one_block, wallet_a):
+        full_node_1, _, bt = one_node_one_block
         blocks = await full_node_1.get_all_full_blocks()
         start_height = blocks[-1].height if len(blocks) > 0 else -1
+        reward_ph = wallet_a.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
             3,
             block_list_input=blocks,
@@ -579,7 +579,6 @@ class TestMempoolManager:
             farmer_reward_puzzle_hash=reward_ph,
             pool_reward_puzzle_hash=reward_ph,
         )
-        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
         for block in blocks:
@@ -591,15 +590,15 @@ class TestMempoolManager:
         coins = iter(blocks[-2].get_included_reward_coins())
         coin3, coin4 = next(coins), next(coins)
 
-        sb1_1 = await self.gen_and_send_sb(full_node_1, peer, wallet_a, coin1)
-        sb1_2 = await self.gen_and_send_sb(full_node_1, peer, wallet_a, coin1, fee=uint64(1))
+        sb1_1 = await gen_and_send_sb(full_node_1, wallet_a, coin1)
+        sb1_2 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=uint64(1))
 
         # Fee increase is insufficient, the old spendbundle must stay
         self.assert_sb_in_pool(full_node_1, sb1_1)
         self.assert_sb_not_in_pool(full_node_1, sb1_2)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
-        sb1_3 = await self.gen_and_send_sb(full_node_1, peer, wallet_a, coin1, fee=MEMPOOL_MIN_FEE_INCREASE)
+        sb1_3 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=MEMPOOL_MIN_FEE_INCREASE)
 
         # Fee increase is sufficiently high, sb1_1 gets replaced with sb1_3
         self.assert_sb_not_in_pool(full_node_1, sb1_1)
@@ -608,7 +607,7 @@ class TestMempoolManager:
 
         sb2 = generate_test_spend_bundle(wallet_a, coin2, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb12 = SpendBundle.aggregate((sb2, sb1_3))
-        await self.send_sb(full_node_1, sb12)
+        await send_sb(full_node_1, sb12)
 
         # Aggregated spendbundle sb12 replaces sb1_3 since it spends a superset
         # of coins spent in sb1_3
@@ -618,7 +617,7 @@ class TestMempoolManager:
 
         sb3 = generate_test_spend_bundle(wallet_a, coin3, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
         sb23 = SpendBundle.aggregate((sb2, sb3))
-        await self.send_sb(full_node_1, sb23)
+        await send_sb(full_node_1, sb23)
 
         # sb23 must not replace existing sb12 as the former does not spend all
         # coins that are spent in the latter (specifically, coin1)
@@ -626,21 +625,21 @@ class TestMempoolManager:
         self.assert_sb_not_in_pool(full_node_1, sb23)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
-        await self.send_sb(full_node_1, sb3)
+        await send_sb(full_node_1, sb3)
         # Adding non-conflicting sb3 should succeed
         self.assert_sb_in_pool(full_node_1, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb1234_1 = SpendBundle.aggregate((sb12, sb3, sb4_1))
-        await self.send_sb(full_node_1, sb1234_1)
+        await send_sb(full_node_1, sb1234_1)
         # sb1234_1 should not be in pool as it decreases total fees per cost
         self.assert_sb_not_in_pool(full_node_1, sb1234_1)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_2 = generate_test_spend_bundle(wallet_a, coin4, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
         sb1234_2 = SpendBundle.aggregate((sb12, sb3, sb4_2))
-        await self.send_sb(full_node_1, sb1234_2)
+        await send_sb(full_node_1, sb1234_2)
         # sb1234_2 has a higher fee per cost than its conflicts and should get
         # into mempool
         self.assert_sb_in_pool(full_node_1, sb1234_2)
@@ -673,7 +672,7 @@ class TestMempoolManager:
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
         sb = dataclasses.replace(sb, aggregated_signature=G2Element.generator())
-        res: Optional[Message] = await self.send_sb(full_node_1, sb)
+        res: Optional[Message] = await send_sb(full_node_1, sb)
         assert res is not None
         ack: TransactionAck = TransactionAck.from_bytes(res.data)
         assert ack.status == MempoolInclusionStatus.FAILED.value
@@ -992,7 +991,6 @@ class TestMempoolManager:
     @pytest.mark.anyio
     async def test_assert_height_pending(self, one_node_one_block, wallet_a):
         full_node_1, server_1, bt = one_node_one_block
-        print(full_node_1.full_node.blockchain.get_peak())
         current_height = full_node_1.full_node.blockchain.get_peak().height
 
         cvp = ConditionWithArgs(ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE, [int_to_bytes(current_height + 4)])
@@ -2122,7 +2120,7 @@ class TestGeneratorConditions:
         # CREATE_COIN
         puzzle_hash = "abababababababababababababababab"
 
-        if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
+        if softfork_height >= test_constants.HARD_FORK_HEIGHT:
             generator_base_cost = 40
         else:
             generator_base_cost = 20470
@@ -2161,9 +2159,9 @@ class TestGeneratorConditions:
         ],
     )
     def test_agg_sig_cost(self, condition, softfork_height):
-        pubkey = "abababababababababababababababababababababababab"
+        pubkey = "0x" + bytes(G1Element.generator()).hex()
 
-        if softfork_height >= test_constants.HARD_FORK_FIX_HEIGHT:
+        if softfork_height >= test_constants.HARD_FORK_HEIGHT:
             generator_base_cost = 40
         else:
             generator_base_cost = 20512
@@ -2182,7 +2180,7 @@ class TestGeneratorConditions:
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
-            f'({condition[0]} "{pubkey}" "foobar") ',
+            f'({condition[0]} {pubkey} "foobar") ',
             max_cost=generator_base_cost + 117 * COST_PER_BYTE + expected_cost,
             height=softfork_height,
         )
@@ -2193,7 +2191,7 @@ class TestGeneratorConditions:
 
         # if we subtract one from max cost, this should fail
         npc_result = generator_condition_tester(
-            f'({condition[0]} "{pubkey}" "foobar") ',
+            f'({condition[0]} {pubkey} "foobar") ',
             max_cost=generator_base_cost + 117 * COST_PER_BYTE + expected_cost - 1,
             height=softfork_height,
         )
@@ -2219,7 +2217,7 @@ class TestGeneratorConditions:
     @pytest.mark.parametrize("extra_arg", [' "baz"', ""])
     @pytest.mark.parametrize("mempool", [True, False])
     def test_agg_sig_extra_arg(self, condition, extra_arg, mempool, softfork_height):
-        pubkey = "abababababababababababababababababababababababab"
+        pubkey = "0x" + bytes(G1Element.generator()).hex()
 
         new_condition = condition in [
             ConditionOpcode.AGG_SIG_PARENT,
@@ -2258,7 +2256,7 @@ class TestGeneratorConditions:
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
-            f'({condition[0]} "{pubkey}" "foobar"{extra_arg}) ',
+            f'({condition[0]} {pubkey} "foobar"{extra_arg}) ',
             max_cost=11000000000,
             height=softfork_height,
             mempool_mode=mempool,
@@ -2863,7 +2861,7 @@ def test_limit_expiring_transactions(height: bool, items: List[int], expected: L
         invariant_check_mempool(mempool)
         if increase_fee:
             fee_rate += 0.1
-            assert ret is None
+            assert ret.error is None
         else:
             fee_rate -= 0.1
 

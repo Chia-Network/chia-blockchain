@@ -112,6 +112,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
@@ -768,11 +769,13 @@ class WalletRpcApi:
                         wallet_state_manager,
                         main_wallet,
                         uint64(request["amount"]),
+                        tx_config,
                         backup_dids,
                         uint64(num_needed),
                         metadata,
                         did_wallet_name,
                         uint64(request.get("fee", 0)),
+                        extra_conditions=extra_conditions,
                     )
 
                     my_did_id = encode_puzzle_hash(
@@ -851,6 +854,9 @@ class WalletRpcApi:
                     uint64(request.get("filter_amount", 1)),
                     name,
                 )
+            else:
+                raise Exception(f"Invalid DAO wallet mode: {mode!r}")
+
             return {
                 "success": True,
                 "type": dao_wallet.type(),
@@ -2143,6 +2149,9 @@ class WalletRpcApi:
                         records[trade.trade_id] = trade
                         continue
 
+            if len(records) == 0:
+                break
+
             async with self.service.wallet_state_manager.lock:
                 all_txs.extend(
                     await trade_mgr.cancel_pending_offers(
@@ -2246,7 +2255,7 @@ class WalletRpcApi:
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
-        launcher_id = singleton_struct.rest().first().as_atom()
+        launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
         memos = compute_memos(SpendBundle([coin_spend], G2Element()))
@@ -2257,7 +2266,7 @@ class WalletRpcApi:
                 hints.append(memo.hex())
         return {
             "success": True,
-            "did_id": encode_puzzle_hash(bytes32(launcher_id), AddressType.DID.hrp(self.service.config)),
+            "did_id": encode_puzzle_hash(launcher_id, AddressType.DID.hrp(self.service.config)),
             "latest_coin": coin_state.coin.name().hex(),
             "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
             "public_key": public_key.as_atom().hex(),
@@ -2334,7 +2343,7 @@ class WalletRpcApi:
             )
             full_puzzle = create_singleton_puzzle(did_puzzle, launcher_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
+                our_inner_puzzle, NIL_TREEHASH, uint64(0), singleton_struct, metadata
             )
             # Check if we have the DID wallet
             did_wallet: Optional[DIDWallet] = None
@@ -2424,7 +2433,7 @@ class WalletRpcApi:
                     inner_solution: Program = full_solution.rest().rest().first()
                     recovery_list: List[bytes32] = []
                     backup_required: int = num_verification.as_int()
-                    if recovery_list_hash != Program.to([]).get_tree_hash():
+                    if recovery_list_hash != NIL_TREEHASH:
                         try:
                             for did in inner_solution.rest().rest().rest().rest().rest().as_python():
                                 recovery_list.append(did[0])
@@ -4082,7 +4091,7 @@ class WalletRpcApi:
 
         try:
             async with self.service.wallet_state_manager.lock:
-                dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
+                std_tx, launcher_id = await dl_wallet.generate_new_reporter(
                     bytes32.from_hexstr(request["root"]),
                     tx_config,
                     fee=request.get("fee", uint64(0)),
@@ -4094,7 +4103,7 @@ class WalletRpcApi:
 
         return {
             "success": True,
-            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in (dl_tx, std_tx)],
+            "transactions": [std_tx.to_json_dict_convenience(self.service.config)],
             "launcher_id": launcher_id,
         }
 
