@@ -9,7 +9,8 @@ from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.wallet_action_scope import WalletActionScope, WalletSideEffects
+from chia.wallet.wallet_action_scope import WalletSideEffects
+from chia.wallet.wallet_state_manager import WalletStateManager
 
 MOCK_SR = SigningResponse(b"hey", bytes32([0] * 32))
 
@@ -41,11 +42,14 @@ class MockWalletStateManager:
         return txs
 
 
+MockWalletStateManager.new_action_scope = WalletStateManager.new_action_scope  # type: ignore[attr-defined]
+
+
 @pytest.mark.anyio
 async def test_wallet_action_scope() -> None:
     wsm = MockWalletStateManager()
-    async with WalletActionScope.new(
-        wsm, push=True, merge_spends=False, sign=True, additional_signing_responses=[]  # type: ignore[arg-type]
+    async with wsm.new_action_scope(  # type: ignore[attr-defined]
+        push=True, merge_spends=False, sign=True, additional_signing_responses=[]
     ) as action_scope:
         async with action_scope.use() as interface:
             interface.side_effects.transactions = [STD_TX]
@@ -56,8 +60,8 @@ async def test_wallet_action_scope() -> None:
     assert action_scope.side_effects.transactions == [STD_TX]
     assert wsm.most_recent_call == ([STD_TX], True, False, True, [])
 
-    async with WalletActionScope.new(
-        wsm, push=False, merge_spends=True, sign=True, additional_signing_responses=[]  # type: ignore[arg-type]
+    async with wsm.new_action_scope(  # type: ignore[attr-defined]
+        push=False, merge_spends=True, sign=True, additional_signing_responses=[]
     ) as action_scope:
         async with action_scope.use() as interface:
             interface.side_effects.transactions = []

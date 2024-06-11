@@ -145,7 +145,7 @@ from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import WalletActionScope, new_wallet_action_scope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -2752,7 +2752,7 @@ class WalletStateManager:
         sign: Optional[bool] = None,
         additional_signing_responses: List[SigningResponse] = [],
     ) -> AsyncIterator[WalletActionScope]:
-        async with WalletActionScope.new(
+        async with new_wallet_action_scope(
             self,
             push=push,
             merge_spends=merge_spends,

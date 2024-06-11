@@ -52,31 +52,28 @@ class WalletSideEffects:
         return instance
 
 
-@dataclass
-class WalletActionScope(ActionScope[WalletSideEffects]):
-    @classmethod
-    @contextlib.asynccontextmanager
-    async def new(
-        cls,
-        wallet_state_manager: WalletStateManager,
-        push: bool = False,
-        merge_spends: bool = True,
-        sign: Optional[bool] = None,
-        additional_signing_responses: List[SigningResponse] = [],
-    ) -> AsyncIterator[WalletActionScope]:
-        async with cls.new_scope(WalletSideEffects) as self:
-            self = cast(WalletActionScope, self)
-            async with self.use() as interface:
-                interface.side_effects.signing_responses = additional_signing_responses.copy()
-            try:
-                yield self
-            except Exception:
-                raise
+WalletActionScope = ActionScope[WalletSideEffects]
 
-        self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
-            self.side_effects.transactions,
-            push=push,
-            merge_spends=merge_spends,
-            sign=sign,
-            additional_signing_responses=self.side_effects.signing_responses,
-        )
+
+@contextlib.asynccontextmanager
+async def new_wallet_action_scope(
+    wallet_state_manager: WalletStateManager,
+    push: bool = False,
+    merge_spends: bool = True,
+    sign: Optional[bool] = None,
+    additional_signing_responses: List[SigningResponse] = [],
+) -> AsyncIterator[WalletActionScope]:
+    async with ActionScope.new_scope(WalletSideEffects) as self:
+        self = cast(WalletActionScope, self)
+        async with self.use() as interface:
+            interface.side_effects.signing_responses = additional_signing_responses.copy()
+
+        yield self
+
+    self.side_effects.transactions = await wallet_state_manager.add_pending_transactions(
+        self.side_effects.transactions,
+        push=push,
+        merge_spends=merge_spends,
+        sign=sign,
+        additional_signing_responses=self.side_effects.signing_responses,
+    )
