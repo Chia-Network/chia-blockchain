@@ -1673,6 +1673,48 @@ keyring = ">=20.0.0"
 pycryptodome = "*"
 
 [[package]]
+name = "lxml"
+version = "4.2.2"
+description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
+optional = true
+python-versions = "*"
+files = [
+    {file = "lxml-4.2.2-cp27-cp27m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:be1d3c858071d552aab304742726ea1b3a46f21761f2c2a7afa93a37e57597f5"},
+    {file = "lxml-4.2.2-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:d2965ef3521bcc3c82bd218a44f4c1f2630c127b5e1f35da50cb360e872bc3af"},
+    {file = "lxml-4.2.2-cp27-cp27m-manylinux1_x86_64.whl", hash = "sha256:ab5ab5df9589a4538c238cf3711978419562ccf9c72efc06fb2f5e3833b7e0f4"},
+    {file = "lxml-4.2.2-cp27-cp27m-win32.whl", hash = "sha256:810934dddb01a797fcd8ec9d9e981b8ebc7738ae1a5bbd2c90c7cdae5435609e"},
+    {file = "lxml-4.2.2-cp27-cp27m-win_amd64.whl", hash = "sha256:10ad7277b618b9a0bafed7ddf73af6d9c9b3de8d42cbb881859d611d54de665c"},
+    {file = "lxml-4.2.2-cp27-cp27mu-manylinux1_i686.whl", hash = "sha256:48cccd8ba29c4cc967cb0e3317c5931e0f0ade1692895da6ba9a5a31410d75af"},
+    {file = "lxml-4.2.2-cp27-cp27mu-manylinux1_x86_64.whl", hash = "sha256:1fc9e6adc16c0cab2596de5cd7adc5988635ec1e2dcae367e2a2009302ae89b3"},
+    {file = "lxml-4.2.2-cp33-cp33m-win32.whl", hash = "sha256:01b194561b6a25d94b1267b785d6ec67eec6b62cce2591f3096de98ec22a704b"},
+    {file = "lxml-4.2.2-cp33-cp33m-win_amd64.whl", hash = "sha256:a9368022ca262fd15625f365b557d66ce0743bc1e1901d85dfe1af9836f01713"},
+    {file = "lxml-4.2.2-cp34-cp34m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:8eee7864ea7882512bada274c2a58997a09fa8da5f8a31e298ebf7226df0cf75"},
+    {file = "lxml-4.2.2-cp34-cp34m-manylinux1_i686.whl", hash = "sha256:bea02d0662709d905bc18402ad4b84c5a6dc72d9d86dbbe9958eadf3d158e63b"},
+    {file = "lxml-4.2.2-cp34-cp34m-manylinux1_x86_64.whl", hash = "sha256:a8b8c161d9dab9e884f99e7d898f6e06db547a3a0398962b55de96130b6da777"},
+    {file = "lxml-4.2.2-cp34-cp34m-win32.whl", hash = "sha256:34cb8e68be4403d01a84f5dd5b9a089ddaedf28a3e9ff259708d88f9a60e2b7e"},
+    {file = "lxml-4.2.2-cp34-cp34m-win_amd64.whl", hash = "sha256:73e23a2dd19d8f3c012cf6d3b221b32bf2254de49dfed449b2b87dd8fa56611e"},
+    {file = "lxml-4.2.2-cp35-cp35m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:4b487bf101ce0217afcc3eb661713b32f10d30f1cac1e9d966f0a988ea8a389c"},
+    {file = "lxml-4.2.2-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:d78d58d934a3c2f39daaf89aad5e71551ff75550cf4820020ad6ae29f1b82cc9"},
+    {file = "lxml-4.2.2-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:4211c2ff1a465d9bafc671715d40695bfeb59065005a8b565069b4ab3faba5d9"},
+    {file = "lxml-4.2.2-cp35-cp35m-win32.whl", hash = "sha256:967ac7c857b4c67dbc906e2c7d81f89c14ea84d63adf4e95c6a1c9ed1bec2d77"},
+    {file = "lxml-4.2.2-cp35-cp35m-win_amd64.whl", hash = "sha256:512f1b88f46ef1e55cb05150b8e7029be1c10995c3531d6c1205afa8b61d8996"},
+    {file = "lxml-4.2.2-cp36-cp36m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:d06bbb503f9e41c836a1941d163469b6df2f77f004bff609849f58ed52fa2ad4"},
+    {file = "lxml-4.2.2-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:473ad409306e83dca68632bf29e1b40592b159af86318410ac42e8054f2904b8"},
+    {file = "lxml-4.2.2-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:482da759ec33fb78e3781d1c59aafa39a83265bbc796967f830d64d08f7212ad"},
+    {file = "lxml-4.2.2-cp36-cp36m-win32.whl", hash = "sha256:39e80bafa7be141ff2d0bb8ed1652b9ac326573bf0e6678770d729adbd9d2670"},
+    {file = "lxml-4.2.2-cp36-cp36m-win_amd64.whl", hash = "sha256:852d077b69432ad3c2ee622d4a82588fc32c8f260d41ce1a34207e60213b04a1"},
+    {file = "lxml-4.2.2-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:36a47fb5d99f7827cb478cc71f907b728304ead3b12b0eb1a102199a0a0bf8a7"},
+    {file = "lxml-4.2.2-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:37cda88cf6082fd9d78988156140a5922d4b296577b5ff83f72116c4061d7304"},
+    {file = "lxml-4.2.2.tar.gz", hash = "sha256:82f278cd24da1b8a98df89de38946d67381a00e39adef768fd302dc8f4e1c383"},
+]
+
+[package.extras]
+cssselect = ["cssselect (>=0.7)"]
+html5 = ["html5lib"]
+htmlsoup = ["BeautifulSoup4"]
+source = ["Cython (>=0.26.1)"]
+
+[[package]]
 name = "macholib"
 version = "1.16.3"
 description = "Mach-O header analysis and editing"
@@ -3429,11 +3471,11 @@ url = "https://pypi.chia.net/simple"
 reference = "chia"
 
 [extras]
-dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pyupgrade", "twine", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "lxml", "mypy", "pre-commit", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pyupgrade", "twine", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "1b2c16900a9ef7dddafa60c582d92c0f4d7b482f580b87a5b3f47b72d93d94ad"
+content-hash = "67f1758085bbafd427231f9d18d742218100f9a6d37d6d99293f17109ed1c8ae"
