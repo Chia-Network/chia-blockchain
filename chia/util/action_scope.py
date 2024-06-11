@@ -69,6 +69,7 @@ class SQLiteResourceManager:
         return side_effects
 
     async def save_resource(self, resource: SideEffects) -> None:
+        # This sets all rows (there's only one) to the new serialization
         await self.get_active_writer().execute(
             "UPDATE side_effects SET total=?",
             (bytes(resource),),
