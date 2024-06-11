@@ -6,6 +6,9 @@ git status
 
 echo "Installing global npm packages"
 cd npm_macos || exit 1
+# Do some cleanup first
+rm -rf .nx
+rm -rf node_modules
 npm ci
 cd ../../ || exit 1
 git submodule update --init chia-blockchain-gui

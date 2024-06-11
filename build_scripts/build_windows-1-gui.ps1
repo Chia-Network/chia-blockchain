@@ -8,6 +8,8 @@ Write-Output "   ---"
 Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
+if (Test-Path .\.nx) {Remove-Item .\.nx -Recurse -Force}
+if (Test-Path .\node_modules) {Remove-Item .\node_modules -Recurse -Force}
 npm ci
 
 Set-Location -Path "..\..\" -PassThru

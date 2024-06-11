@@ -4,6 +4,9 @@ set -o errexit
 
 echo "Installing global npm packages"
 cd npm_linux || exit 1
+# Do some cleanup first
+rm -rf .nx
+rm -rf node_modules
 npm ci
 
 cd ../../ || exit 1
