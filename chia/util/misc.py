@@ -42,21 +42,6 @@ from chia.util.streamable import Streamable, streamable
 T = TypeVar("T")
 
 
-def format_bytes(bytes: int) -> str:
-    if not isinstance(bytes, int) or bytes < 0:
-        return "Invalid"
-
-    LABELS = ("MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB")
-    BASE = 1024
-    value = bytes / BASE
-    for label in LABELS:
-        value /= BASE
-        if value < BASE:
-            return f"{value:.3f} {label}"
-
-    return f"{value:.3f} {LABELS[-1]}"
-
-
 def format_minutes(minutes: int) -> str:
     if not isinstance(minutes, int):
         return "Invalid"

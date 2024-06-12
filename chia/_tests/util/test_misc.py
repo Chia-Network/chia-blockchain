@@ -8,6 +8,7 @@ import anyio
 import pytest
 
 from chia._tests.util.misc import RecordingWebServer
+from chia.cmds.cmds_util import format_bytes
 from chia.types.blockchain_format.program import Program
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint64
@@ -15,7 +16,6 @@ from chia.util.misc import (
     SplitAsyncManager,
     SplitManager,
     ValuedEvent,
-    format_bytes,
     format_minutes,
     satisfies_hint,
     split_async_manager,
