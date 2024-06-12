@@ -40,7 +40,7 @@ class ChiaFile:
     @classmethod
     def parse(cls, file_path: Path) -> ChiaFile:
         with open(file_path, encoding="utf-8", errors="ignore") as f:
-            file_string = next(f, "")
+            file_string = f.read().strip()
             return cls(file_path, Annotation.parse(file_string) if Annotation.is_annotated(file_string) else None)
 
 
@@ -83,7 +83,8 @@ def build_virtual_dependency_graph(
 
     virtual_graph: Dict[str, List[str]] = {}
     for file, imports in graph.items():
-        root_file = ChiaFile.parse(Path(file))
+        file_path = Path(file)
+        root_file = ChiaFile.parse(file_path)
         if root_file.annotations is None:
             continue
         root = root_file.annotations.package
@@ -96,21 +97,6 @@ def build_virtual_dependency_graph(
 
     # Filter out self before returning the list
     return {k: list({v for v in vs if v != k}) for k, vs in virtual_graph.items()}
-
-
-def is_excluded(file_path: Path, excluded_paths: List[Path]) -> bool:
-    file_path = file_path.resolve()  # Normalize the file path
-
-    for excluded_path in excluded_paths:
-        excluded_path = excluded_path.resolve()  # Normalize the excluded path
-        # Check if the file path matches the excluded path exactly
-        if file_path == excluded_path:
-            return True
-        # Check if the excluded path is a directory and if the file is under this directory
-        if excluded_path.is_dir() and any(parent == excluded_path for parent in file_path.parents):
-            return True
-
-    return False
 
 
 @dataclass(frozen=True)

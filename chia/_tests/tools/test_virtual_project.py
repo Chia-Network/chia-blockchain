@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import textwrap
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -20,6 +21,7 @@ from chia.util.virtual_project_analysis import (
     cli,
     config,
     find_cycles,
+    parse_file_or_package,
 )
 
 
@@ -177,6 +179,16 @@ def test_find_missing_annotations(tmp_path: Path) -> None:
     assert result.output == ""
 
 
+def test_parse_file_or_package() -> None:
+    assert parse_file_or_package("example.py") == File(Path("example.py"))
+    assert parse_file_or_package("example.py (extra info)") == File(Path("example.py"))
+    assert parse_file_or_package("(package_name)") == Package("package_name")
+    assert parse_file_or_package("package_name") == Package("package_name")
+    assert parse_file_or_package("package_name(") == Package("package_name(")
+    assert parse_file_or_package("(package_name") == Package("(package_name")
+    assert parse_file_or_package("package_name)") == Package("package_name)")
+
+
 @pytest.fixture
 def chia_package_structure(tmp_path: Path) -> Path:
     base_dir = tmp_path / "chia_project"
@@ -322,9 +334,49 @@ def test_check_config(tmp_path: Path) -> None:
     chia_dir.mkdir()
 
     # Create some files within the chia package
-    create_python_file(chia_dir, "module1.py", "# Package: one\ndef func1(): pass\nfrom chia.module2 import func2")
-    create_python_file(chia_dir, "module2.py", "# Package: two\ndef func2(): pass\nfrom chia.module3 import func3")
-    create_python_file(chia_dir, "module3.py", "# Package: three\ndef func3(): pass\n")
+    create_python_file(
+        chia_dir,
+        "module1.py",
+        textwrap.dedent(
+            """
+            # Package: one
+            def func1(): pass
+            from chia.module2 import func2
+            """
+        ),
+    )
+    create_python_file(
+        chia_dir,
+        "module1b.py",
+        textwrap.dedent(
+            """
+            # Package: one
+            def func1b(): pass
+            """
+        ),
+    )
+    create_python_file(
+        chia_dir,
+        "module2.py",
+        textwrap.dedent(
+            """
+            # Package: two
+            def func2(): pass
+            from chia.module3 import func3
+            from chia.module1b import func1b
+            """
+        ),
+    )
+    create_python_file(
+        chia_dir,
+        "module3.py",
+        textwrap.dedent(
+            """
+            # Package: three
+            def func3(): pass
+            """
+        ),
+    )
 
     # Run the command
     runner = CliRunner()
@@ -335,18 +387,24 @@ def test_check_config(tmp_path: Path) -> None:
             "--directory",
             str(chia_dir),
             "--ignore-cycles-in",
-            "two",
+            "three",
             "--ignore-specific-file",
-            str(chia_dir / "module1.py"),
+            str(chia_dir / "module3.py"),
             "--ignore-specific-edge",
-            str(chia_dir / "module2.py") + " -> " + str(chia_dir / "module3"),
+            str(chia_dir / "module2.py") + " -> " + str(chia_dir / "module3.py"),
+            "--ignore-specific-edge",
+            str(chia_dir / "module2.py") + " -> " + str(chia_dir / "module1b.py"),
         ],
     )
-    assert "    module two ignored but no cycles were found" in result.output
-    assert f"    file {str(chia_dir / 'module1.py')} ignored but no cycles were found" in result.output
+    assert "    module three ignored but no cycles were found" in result.output
+    assert f"    file {str(chia_dir / 'module3.py')} ignored but no cycles were found" in result.output
     assert (
-        f"    edge {str(chia_dir / 'module2.py') + ' -> ' + str(chia_dir / 'module3')} ignored but no cycles were found"
+        f"edge {str(chia_dir / 'module2.py') + ' -> ' + str(chia_dir / 'module3.py')} ignored but no cycles were found"
         in result.output
+    )
+    assert (
+        f"edge {str(chia_dir / 'module2.py') + ' -> ' + str(chia_dir / 'module1b.py')} ignored but no cycles were found"
+        not in result.output
     )
 
 
@@ -385,20 +443,34 @@ def test_ignore_cycles_in_specific_packages(prepare_mocks2: None) -> None:
     assert len(cycles) == 1  # Cycles in Package1 are ignored
 
 
-def test_ignore_cycles_with_specific_edges(prepare_mocks2: None) -> None:
+def test_ignore_cycles_with_specific_edges(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _mock_chia_file_parse(path: Path) -> ChiaFile:
+        annotations_map = {
+            Path("/path/to/package1/module1a.py"): Annotation(package="Package1"),
+            Path("/path/to/package2/module2.py"): Annotation(package="Package2"),
+            Path("/path/to/package3/module3.py"): Annotation(package="Package3"),
+            Path("/path/to/package1/module1b.py"): Annotation(package="Package1"),
+        }
+        return ChiaFile(path=Path(path), annotations=annotations_map.get(path))
+
+    monkeypatch.setattr("chia.util.virtual_project_analysis.ChiaFile.parse", _mock_chia_file_parse)
+
     graph = {
-        Path("/path/to/package1/module1.py"): [Path("/path/to/package2/module2.py")],
-        Path("/path/to/package2/module2.py"): [Path("/path/to/package3/module3.py")],  # Cycle here
+        Path("/path/to/package1/module1a.py"): [Path("/path/to/package2/module2.py")],
+        Path("/path/to/package2/module2.py"): [Path("/path/to/package3/module3.py")],
+        Path("/path/to/package3/module3.py"): [Path("/path/to/package1/module1b.py")],
+        Path("/path/to/package1/module1b.py"): [],
     }
+    virtual_graph = build_virtual_dependency_graph(DirectoryParameters(dir_path=Path("path")), existing_graph=graph)
     cycles = find_cycles(
         graph,
-        build_virtual_dependency_graph(DirectoryParameters(dir_path=Path("path")), existing_graph=graph),
+        virtual_graph,
         excluded_paths=[],
         ignore_cycles_in=[],
         ignore_specific_files=[],
         ignore_specific_edges=[
-            (File(Path("/path/to/package2/module2.py")), File(Path("/path/to/package1/module1.py"))),
-            (Package("Package1"), File(Path("/path/to/package2/module2.py"))),
+            (File(Path("/path/to/package3/module3.py")), File(Path("/path/to/package2/module2.py"))),
+            (Package("Package3"), Package("Package2")),
         ],
     )
     assert len(cycles) == 0
@@ -474,3 +546,58 @@ def test_config_with_yaml(create_yaml_config: Callable[[Dict[str, Any]], Path]) 
         f"Package(name='ignored_parent', is_file=False))]"
         ")\n"
     )
+
+
+def test_parse_edges(tmp_path: Path) -> None:
+    chia_dir = tmp_path / "chia"
+    chia_dir.mkdir()
+
+    # Create some files within the chia package
+    create_python_file(
+        chia_dir,
+        "module1.py",
+        textwrap.dedent(
+            """
+            # Package: one
+            def func1(): pass
+            from chia.module2 import func2
+            from chia.module3 import func3
+            """
+        ),
+    )
+    create_python_file(
+        chia_dir,
+        "module2.py",
+        textwrap.dedent(
+            """
+            # Package: two
+            def func2(): pass
+            """
+        ),
+    )
+    create_python_file(
+        chia_dir,
+        "module3.py",
+        textwrap.dedent(
+            """
+            # Package: three
+            def func3(): pass
+            """
+        ),
+    )
+
+    # Run the command
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            "print_edges",
+            "--directory",
+            str(chia_dir),
+            "--dependent-package",
+            "one",
+            "--provider-package",
+            "two",
+        ],
+    )
+    assert result.output.strip() == f"{str(chia_dir / 'module1.py')} (one) -> {str(chia_dir / 'module2.py')} (two)"
