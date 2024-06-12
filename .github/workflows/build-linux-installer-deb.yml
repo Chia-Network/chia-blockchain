@@ -437,7 +437,7 @@ jobs:
         if: matrix.mode.name == 'GUI'
         run: |
           [ $(stat -c %a:%G:%U /opt/chia/chrome-sandbox) == "4755:root:root" ]
-  
+
       - name: Remove package
         run: |
           apt-get remove --yes ${{ matrix.mode.package }}
