@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts - ${{ matrix.development.name }}
+    name: Test Install Scripts - ${{ matrix.development.name }} - ${{ matrix.editable.name }}
     runs-on: ${{ matrix.os.runs-on }}
     strategy:
       fail-fast: false
