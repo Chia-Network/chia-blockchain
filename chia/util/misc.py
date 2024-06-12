@@ -34,24 +34,7 @@ from typing import (
 import psutil
 from typing_extensions import Protocol
 
-from chia.util.ints import uint32, uint64
-from chia.util.streamable import Streamable, streamable
-
 T = TypeVar("T")
-
-
-@streamable
-@dataclasses.dataclass(frozen=True)
-class UInt32Range(Streamable):
-    start: uint32 = uint32(0)
-    stop: uint32 = uint32.MAXIMUM
-
-
-@streamable
-@dataclasses.dataclass(frozen=True)
-class UInt64Range(Streamable):
-    start: uint64 = uint64(0)
-    stop: uint64 = uint64.MAXIMUM
 
 
 @dataclass(frozen=True)
