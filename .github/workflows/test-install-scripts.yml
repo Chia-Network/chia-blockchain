@@ -87,22 +87,28 @@ jobs:
           ./Install-gui.ps1
 
       - name: Collect editable info
-        id: editable_info
+        id: editable-info
         shell: bash
         run: |
-          PRE_VERSION=$(chia version)
+          echo "pre-edit-version=$(chia version)" >> "$GITHUB_OUTPUT"
           echo '__version__ = "hello"' >> chia/__init__.py
-          POST_VERSION=$(chia version)
+          echo "post-edit-version=$(chia version)" >> "$GITHUB_OUTPUT"
 
       - name: Check editable
         if: matrix.editable.matrix == 'editable'
         shell: bash
+        env:
+          PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
+          POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
         run: |
           [ "$POST_VERSION" = "hello" -a "$PRE_VERSION" != "hello" ]
 
       - name: Check non-editable
         if: matrix.editable.matrix == 'non-editable'
         shell: bash
+        env:
+          PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
+          POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
         run: |
           [ "$POST_VERSION" != "hello" -a "$PRE_VERSION" = "$POST_VERSION" ]
 
