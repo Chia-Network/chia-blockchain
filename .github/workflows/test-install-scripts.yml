@@ -91,7 +91,7 @@ jobs:
         shell: bash
         run: |
           echo "pre-edit-version=$(chia version)" >> "$GITHUB_OUTPUT"
-          echo '__version__ = "hello"' >> chia/__init__.py
+          echo '__version__ = "shooby-doowah"' >> chia/__init__.py
           echo "post-edit-version=$(chia version)" >> "$GITHUB_OUTPUT"
 
       - name: Check editable
@@ -101,7 +101,7 @@ jobs:
           PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
           POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
         run: |
-          [ "$POST_VERSION" = "hello" -a "$PRE_VERSION" != "hello" ]
+          [ "$POST_VERSION" = "shooby-doowah" -a "$PRE_VERSION" != "shooby-doowah" ]
 
       - name: Check non-editable
         if: matrix.editable.matrix == 'non-editable'
@@ -110,7 +110,7 @@ jobs:
           PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
           POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
         run: |
-          [ "$POST_VERSION" != "hello" -a "$PRE_VERSION" = "$POST_VERSION" ]
+          [ "$POST_VERSION" != "shooby-doowah" -a "$PRE_VERSION" = "$POST_VERSION" ]
 
   test_scripts_in_docker:
     name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
