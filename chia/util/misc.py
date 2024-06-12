@@ -36,17 +36,10 @@ import psutil
 from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 T = TypeVar("T")
-
-
-@streamable
-@dataclasses.dataclass(frozen=True)
-class VersionedBlob(Streamable):
-    version: uint16
-    blob: bytes
 
 
 def format_bytes(bytes: int) -> str:

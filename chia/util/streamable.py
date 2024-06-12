@@ -28,7 +28,7 @@ from typing_extensions import Literal, get_args, get_origin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import uint32
+from chia.util.ints import uint16, uint32
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -629,3 +629,10 @@ class Streamable:
     @classmethod
     def from_json_dict(cls: Type[_T_Streamable], json_dict: Dict[str, Any]) -> _T_Streamable:
         return streamable_from_dict(cls, json_dict)
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class VersionedBlob(Streamable):
+    version: uint16
+    blob: bytes
