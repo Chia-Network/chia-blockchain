@@ -1711,7 +1711,7 @@ async def test_trade_cancellation(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
     # Now let's test the case where two coins need to be spent in order to cancel
-    chia_and_cat_for_something = {
+    chia_and_cat_for_something: OfferSummary = {
         wallet_maker.id(): -5,
         cat_wallet_maker.id(): -6,
         bytes32([0] * 32): 1,  # Doesn't matter
