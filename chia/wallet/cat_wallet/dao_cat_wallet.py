@@ -400,7 +400,7 @@ class DAOCATWallet:
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> List[TransactionRecord]:
+    ) -> None:
         extra_delta, limitations_solution = 0, Program.to([])
         limitations_program_reveal = Program.to([])
         spendable_cat_list = []
@@ -456,15 +456,11 @@ class DAOCATWallet:
         spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
         if fee > 0:  # pragma: no cover
-            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
+            await self.standard_wallet.create_tandem_xch_tx(
                 fee,
                 tx_config,
                 action_scope,
             )
-            assert chia_tx.spend_bundle is not None
-            full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
-        else:
-            full_spend = spend_bundle
 
         record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -474,14 +470,14 @@ class DAOCATWallet:
             fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
-            spend_bundle=full_spend,
-            additions=full_spend.additions(),
-            removals=full_spend.removals(),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=full_spend.name(),
+            name=spend_bundle.name(),
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
@@ -498,7 +494,8 @@ class DAOCATWallet:
             new_locked_coins,
         )
         await self.save_info(dao_cat_info)
-        return [record]
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(record)
 
     async def remove_active_proposal(
         self,
@@ -566,15 +563,9 @@ class DAOCATWallet:
         spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
         if fee > 0:  # pragma: no cover
-            chia_tx = await self.standard_wallet.create_tandem_xch_tx(
-                fee, tx_config=tx_config, action_scope=action_scope
-            )
-            assert chia_tx.spend_bundle is not None
-            full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
-        else:
-            full_spend = spend_bundle
+            await self.standard_wallet.create_tandem_xch_tx(fee, tx_config=tx_config, action_scope=action_scope)
 
-        return full_spend
+        return spend_bundle
 
     def get_asset_id(self) -> str:
         return bytes(self.dao_cat_info.limitations_program_hash).hex()

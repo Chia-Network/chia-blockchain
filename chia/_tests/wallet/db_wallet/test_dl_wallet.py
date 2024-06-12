@@ -75,8 +75,8 @@ class TestDLWallet:
         current_root = current_tree.calculate_root()
 
         for i in range(0, 2):
-            async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-                std_record, launcher_id = await dl_wallet.generate_new_reporter(
+            async with dl_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+                launcher_id = await dl_wallet.generate_new_reporter(
                     current_root,
                     DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash),
                     action_scope,
@@ -84,12 +84,9 @@ class TestDLWallet:
                 )
 
             assert await dl_wallet.get_latest_singleton(launcher_id) is not None
-
-            [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
-            await full_node_api.process_transaction_records(records=[std_record])
+            await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
-            await asyncio.sleep(0.5)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, 0)
         await time_out_assert(10, wallet_0.get_confirmed_balance, 0)
@@ -133,19 +130,17 @@ class TestDLWallet:
         expected_launcher_ids = set()
 
         for i in range(0, 2):
-            async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-                std_record, launcher_id = await dl_wallet.generate_new_reporter(
+            async with dl_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+                launcher_id = await dl_wallet.generate_new_reporter(
                     current_root, DEFAULT_TX_CONFIG, action_scope, fee=uint64(1999999999999)
                 )
             expected_launcher_ids.add(launcher_id)
 
             assert await dl_wallet.get_latest_singleton(launcher_id) is not None
 
-            [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
-            await full_node_api.process_transaction_records(records=[std_record])
+            await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
-            await asyncio.sleep(0.5)
 
         owned_singletons = await dl_wallet.get_owned_singletons()
         owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
@@ -194,15 +189,11 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        async with dl_wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            std_record, launcher_id = await dl_wallet_0.generate_new_reporter(
-                current_root, DEFAULT_TX_CONFIG, action_scope
-            )
+        async with dl_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            launcher_id = await dl_wallet_0.generate_new_reporter(current_root, DEFAULT_TX_CONFIG, action_scope)
 
         assert await dl_wallet_0.get_latest_singleton(launcher_id) is not None
-
-        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
-        await full_node_api.process_transaction_records(records=[std_record])
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await asyncio.sleep(0.5)
@@ -213,16 +204,12 @@ class TestDLWallet:
 
         for i in range(0, 5):
             new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
-            async with dl_wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
-                txs = await dl_wallet_0.create_update_state_spend(
-                    launcher_id, new_root, DEFAULT_TX_CONFIG, action_scope
-                )
+            async with dl_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+                await dl_wallet_0.create_update_state_spend(launcher_id, new_root, DEFAULT_TX_CONFIG, action_scope)
 
-            txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
-            await full_node_api.process_transaction_records(records=txs)
+            await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
-            await asyncio.sleep(0.5)
 
         async def do_tips_match() -> bool:
             latest_singleton_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
@@ -271,17 +258,16 @@ class TestDLWallet:
         current_root = current_tree.calculate_root()
 
         async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            std_record, launcher_id = await dl_wallet.generate_new_reporter(
-                current_root, DEFAULT_TX_CONFIG, action_scope
-            )
+            launcher_id = await dl_wallet.generate_new_reporter(current_root, DEFAULT_TX_CONFIG, action_scope)
 
         assert await dl_wallet.get_latest_singleton(launcher_id) is not None
 
-        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
+        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions(
+            action_scope.side_effects.transactions
+        )
         await full_node_api.process_transaction_records(records=[std_record])
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
-        await asyncio.sleep(0.5)
 
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
         assert previous_record is not None
@@ -290,7 +276,7 @@ class TestDLWallet:
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
 
         async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            txs = await dl_wallet.generate_signed_transaction(
+            await dl_wallet.generate_signed_transaction(
                 [previous_record.lineage_proof.amount],
                 [previous_record.inner_puzzle_hash],
                 DEFAULT_TX_CONFIG,
@@ -299,15 +285,21 @@ class TestDLWallet:
                 new_root_hash=new_root,
                 fee=uint64(1999999999999),
             )
-        assert txs[0].spend_bundle is not None
+        assert action_scope.side_effects.transactions[0].spend_bundle is not None
         with pytest.raises(ValueError, match="is currently pending"):
-            async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as failed_action_scope:
                 await dl_wallet.generate_signed_transaction(
                     [previous_record.lineage_proof.amount],
                     [previous_record.inner_puzzle_hash],
                     DEFAULT_TX_CONFIG,
-                    action_scope,
-                    coins={txs[0].spend_bundle.removals()[0]},
+                    failed_action_scope,
+                    coins={
+                        next(
+                            rem
+                            for rem in action_scope.side_effects.transactions[0].spend_bundle.removals()
+                            if rem.amount == 1
+                        )
+                    },
                     fee=uint64(1999999999999),
                 )
 
@@ -316,7 +308,7 @@ class TestDLWallet:
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
+        txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(action_scope.side_effects.transactions)
         await full_node_api.process_transaction_records(records=txs)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
@@ -332,13 +324,13 @@ class TestDLWallet:
 
         new_root = MerkleTree([Program.to("new root").get_tree_hash()]).calculate_root()
         async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            txs = await dl_wallet.create_update_state_spend(launcher_id, new_root, DEFAULT_TX_CONFIG, action_scope)
+            await dl_wallet.create_update_state_spend(launcher_id, new_root, DEFAULT_TX_CONFIG, action_scope)
         new_record = await dl_wallet.get_latest_singleton(launcher_id)
         assert new_record is not None
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
+        txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(action_scope.side_effects.transactions)
         await full_node_api.process_transaction_records(records=txs)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
@@ -399,14 +391,14 @@ class TestDLWallet:
             return latest_singleton.confirmed
 
         async with dl_wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            std_record, launcher_id = await dl_wallet_0.generate_new_reporter(
-                current_root, DEFAULT_TX_CONFIG, action_scope
-            )
+            launcher_id = await dl_wallet_0.generate_new_reporter(current_root, DEFAULT_TX_CONFIG, action_scope)
 
         initial_record = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert initial_record is not None
 
-        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
+        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions(
+            action_scope.side_effects.transactions
+        )
         await asyncio.wait_for(
             full_node_api.process_transaction_records(records=[std_record]),
             timeout=adjusted_timeout(timeout=15),
@@ -423,17 +415,19 @@ class TestDLWallet:
         await asyncio.sleep(0.5)
 
         # Because these have the same fee, the one that gets pushed first will win
-        async with dl_wallet_1.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            report_txs = await dl_wallet_1.create_update_state_spend(
+        async with dl_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await dl_wallet_1.create_update_state_spend(
                 launcher_id, current_record.root, DEFAULT_TX_CONFIG, action_scope, fee=uint64(2000000000000)
             )
+        report_txs = action_scope.side_effects.transactions
         record_1 = await dl_wallet_1.get_latest_singleton(launcher_id)
         assert record_1 is not None
         assert current_record != record_1
-        async with dl_wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            update_txs = await dl_wallet_0.create_update_state_spend(
+        async with dl_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await dl_wallet_0.create_update_state_spend(
                 launcher_id, bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope, fee=uint64(2000000000000)
             )
+        update_txs = action_scope.side_effects.transactions
         record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_0 is not None
         assert initial_record != record_0
@@ -487,12 +481,14 @@ class TestDLWallet:
         assert await dl_wallet_0.get_singleton_record(record_0.coin_id) is None
 
         async with dl_wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            update_txs_1 = await dl_wallet_0.create_update_state_spend(
+            await dl_wallet_0.create_update_state_spend(
                 launcher_id, bytes32([1] * 32), DEFAULT_TX_CONFIG, action_scope, fee=uint64(2000000000000)
             )
         record_1 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_1 is not None
-        update_txs_1 = await wallet_node_0.wallet_state_manager.add_pending_transactions(update_txs_1)
+        update_txs_1 = await wallet_node_0.wallet_state_manager.add_pending_transactions(
+            action_scope.side_effects.transactions
+        )
         await full_node_api.wait_transaction_records_entered_mempool(update_txs_1)
 
         # Delete any trace of that update
@@ -501,14 +497,14 @@ class TestDLWallet:
             await wallet_node_0.wallet_state_manager.tx_store.delete_transaction_record(tx.name)
 
         async with dl_wallet_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
-            update_txs_0 = await dl_wallet_0.create_update_state_spend(
-                launcher_id, bytes32([2] * 32), DEFAULT_TX_CONFIG, action_scope
-            )
+            await dl_wallet_0.create_update_state_spend(launcher_id, bytes32([2] * 32), DEFAULT_TX_CONFIG, action_scope)
         record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_0 is not None
         assert record_0 != record_1
 
-        update_txs_0 = await wallet_node_0.wallet_state_manager.add_pending_transactions(update_txs_0)
+        update_txs_0 = await wallet_node_0.wallet_state_manager.add_pending_transactions(
+            action_scope.side_effects.transactions
+        )
 
         await asyncio.wait_for(
             full_node_api.process_transaction_records(records=update_txs_1), timeout=adjusted_timeout(timeout=15)
@@ -571,22 +567,16 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     async with wsm_2.lock:
         dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(wsm_2)
 
-    async with dl_wallet_1.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id_1 = await dl_wallet_1.generate_new_reporter(
-            bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope
-        )
+    async with dl_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope)
     assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
-    [std_record] = await wsm_1.add_pending_transactions([std_record])
-    await full_node_api.process_transaction_records(records=[std_record])
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32([0] * 32))
 
-    async with dl_wallet_2.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id_2 = await dl_wallet_2.generate_new_reporter(
-            bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope
-        )
+    async with dl_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope)
     assert await dl_wallet_2.get_latest_singleton(launcher_id_2) is not None
-    [std_record] = await wsm_2.add_pending_transactions([std_record])
-    await full_node_api.process_transaction_records(records=[std_record])
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32([0] * 32))
 
     peer_1 = wallet_node_1.get_full_node_peer()
@@ -596,16 +586,15 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32([0] * 32))
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32([0] * 32))
 
-    async with dl_wallet_1.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await dl_wallet_1.create_new_mirror(
+    async with dl_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await dl_wallet_1.create_new_mirror(
             launcher_id_2, uint64(3), [b"foo", b"bar"], DEFAULT_TX_CONFIG, action_scope, fee=uint64(1_999_999_999_999)
         )
     additions: List[Coin] = []
-    txs = await wsm_1.add_pending_transactions(txs)
-    for tx in txs:
+    for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             additions.extend(tx.spend_bundle.additions())
-    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     mirror_coin: Coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
     mirror = Mirror(
@@ -621,12 +610,11 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
         15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2
     )
 
-    async with dl_wallet_1.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await dl_wallet_1.delete_mirror(
+    async with dl_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await dl_wallet_1.delete_mirror(
             mirror.coin_id, peer_1, DEFAULT_TX_CONFIG, action_scope, fee=uint64(2_000_000_000_000)
         )
-    txs = await wsm_1.add_pending_transactions(txs)
-    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [], launcher_id_2)
     await time_out_assert(15, dl_wallet_2.get_mirrors_for_launcher, [], launcher_id_2)
@@ -660,11 +648,8 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
     async with env.wallet_state_manager.lock:
         dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
 
-    async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        std_record, launcher_id = await dl_wallet.generate_new_reporter(
-            bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope
-        )
-    await env.wallet_state_manager.add_pending_transactions([std_record])
+    async with dl_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        launcher_id = await dl_wallet.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope)
 
     await wallet_environments.process_pending_states(
         [
@@ -731,11 +716,8 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
     )
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([0] * 32))
 
-    async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        update_txs = await dl_wallet.create_update_state_spend(
-            launcher_id, bytes32([2] * 32), DEFAULT_TX_CONFIG, action_scope
-        )
-    await env.wallet_state_manager.add_pending_transactions(update_txs)
+    async with dl_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await dl_wallet.create_update_state_spend(launcher_id, bytes32([2] * 32), DEFAULT_TX_CONFIG, action_scope)
 
     await wallet_environments.process_pending_states(
         [
@@ -778,11 +760,8 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
     )
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([2] * 32))
 
-    async with dl_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        txs = await dl_wallet.create_new_mirror(
-            launcher_id, uint64(0), [b"foo", b"bar"], DEFAULT_TX_CONFIG, action_scope
-        )
-    await env.wallet_state_manager.add_pending_transactions(txs)
+    async with dl_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await dl_wallet.create_new_mirror(launcher_id, uint64(0), [b"foo", b"bar"], DEFAULT_TX_CONFIG, action_scope)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
