@@ -1,40 +1,14 @@
 from __future__ import annotations
 
-import asyncio
-import dataclasses
 import os
 import sys
 from inspect import getframeinfo, stack
 from pathlib import Path
-from typing import ClassVar, Generic, Iterable, List, Tuple, Type, TypeVar, Union, get_args, get_origin
+from typing import Iterable, List, Tuple, Type, TypeVar, get_args, get_origin
 
 import psutil
 
 T = TypeVar("T")
-
-
-class ValuedEventSentinel:
-    pass
-
-
-@dataclasses.dataclass
-class ValuedEvent(Generic[T]):
-    _value_sentinel: ClassVar[ValuedEventSentinel] = ValuedEventSentinel()
-
-    _event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
-    _value: Union[ValuedEventSentinel, T] = _value_sentinel
-
-    def set(self, value: T) -> None:
-        if not isinstance(self._value, ValuedEventSentinel):
-            raise Exception("Value already set")
-        self._value = value
-        self._event.set()
-
-    async def wait(self) -> T:
-        await self._event.wait()
-        if isinstance(self._value, ValuedEventSentinel):
-            raise Exception("Value not set despite event being set")
-        return self._value
 
 
 def available_logical_cores() -> int:
