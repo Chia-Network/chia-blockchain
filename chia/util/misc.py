@@ -22,7 +22,6 @@ from typing import (
     Iterator,
     List,
     Optional,
-    Sequence,
     Tuple,
     Type,
     TypeVar,
@@ -40,10 +39,6 @@ from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 T = TypeVar("T")
-
-
-def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Sequence[object]]:
-    return len(list_in) if length else list_in
 
 
 def validate_directory_writable(path: Path) -> None:
