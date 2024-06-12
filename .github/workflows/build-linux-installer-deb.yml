@@ -433,6 +433,12 @@ jobs:
             false
           fi
 
+      - name: Check permissions of /opt/chia/chrome-sandbox
+        if: matrix.mode.name == 'GUI'
+        run: |
+          [ $(stat -c %a /opt/chia/chrome-sandbox) == "4755" ]
+          [ $(stat -c %G:%U /opt/chia/chrome-sandbox) == "root:root" ]
+  
       - name: Remove package
         run: |
           apt-get remove --yes ${{ matrix.mode.package }}
