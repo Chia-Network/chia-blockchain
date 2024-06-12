@@ -49,12 +49,12 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
-from chia.util.misc import available_logical_cores
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (

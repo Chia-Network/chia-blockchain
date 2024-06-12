@@ -1,28 +1,10 @@
 from __future__ import annotations
 
-import os
-import sys
 from inspect import getframeinfo, stack
 from pathlib import Path
 from typing import Iterable, List, Tuple, Type, TypeVar, get_args, get_origin
 
-import psutil
-
 T = TypeVar("T")
-
-
-def available_logical_cores() -> int:
-    if sys.platform == "darwin":
-        count = os.cpu_count()
-        assert count is not None
-        return count
-
-    cores = len(psutil.Process().cpu_affinity())
-
-    if sys.platform == "win32":
-        cores = min(61, cores)  # https://github.com/python/cpython/issues/89240
-
-    return cores
 
 
 def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:
