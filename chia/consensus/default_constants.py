@@ -3,9 +3,12 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 from .constants import ConsensusConstants
+
+AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
 DEFAULT_CONSTANTS = ConsensusConstants(
     SLOT_BLOCKS_TARGET=uint32(32),
@@ -34,8 +37,15 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     # Default used for tests is std_hash(b'')
     GENESIS_CHALLENGE=bytes32.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
-    # Forks of chia should change this value to provide replay attack protection. This is set to mainnet genesis chall
-    AGG_SIG_ME_ADDITIONAL_DATA=bytes.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"),
+    # Forks of chia should change the AGG_SIG_*_ADDITIONAL_DATA values to provide
+    # replay attack protection. This is set to mainnet genesis challange
+    AGG_SIG_ME_ADDITIONAL_DATA=AGG_SIG_DATA,
+    AGG_SIG_PARENT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([43])),
+    AGG_SIG_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([44])),
+    AGG_SIG_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([45])),
+    AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([46])),
+    AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([47])),
+    AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([48])),
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bytes32.fromhex(
         "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
     ),

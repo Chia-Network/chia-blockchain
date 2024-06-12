@@ -179,32 +179,6 @@ class TestPkmPairs:
         assert [bytes(pk) for pk in pks] == [bytes(PK2), bytes(PK1)]
         assert msgs == [b"msg2", b"msg1" + value + addendum]
 
-    @pytest.mark.parametrize(
-        "opcode",
-        [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-            ConditionOpcode.AGG_SIG_ME,
-        ],
-    )
-    def test_agg_sig_unsafe_restriction(self, opcode: ConditionOpcode) -> None:
-        conds = mk_agg_sig_conditions(opcode, agg_sig_data=[], agg_sig_unsafe_data=[(PK1, b"msg1"), (PK2, b"msg2")])
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"sg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg2")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"g2")
-
 
 class TestPkmPairsForConditionDict:
     def test_agg_sig_unsafe_restriction(self) -> None:

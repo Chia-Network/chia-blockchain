@@ -127,13 +127,21 @@ async def test_sync_no_farmer(
 
     # full node 1 has the complete chain
     for block_batch in to_batches(blocks, 64):
-        await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_1.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     target_peak = full_node_1.full_node.blockchain.get_peak()
 
     # full node 2 is behind by 800 blocks
     for block_batch in to_batches(blocks[:-800], 64):
-        await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_2.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     # connect the nodes and wait for node 2 to sync up to node 1
     await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -2295,7 +2303,11 @@ async def test_long_reorg(
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        await node.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await node.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     peak = node.full_node.blockchain.get_peak()
     chain_1_height = peak.height
@@ -2385,14 +2397,22 @@ async def test_long_reorg_nodes(
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_1.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     # full node 2 has the reorg-chain
     for block_batch in to_batches(reorg_blocks[:-1], 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"reorg chain: {b.height:4} weight: {b.weight}")
-        await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_2.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     await connect_and_get_peer(full_node_1.full_node.server, full_node_2.full_node.server, self_hostname)
 
@@ -2427,7 +2447,11 @@ async def test_long_reorg_nodes(
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        await full_node_3.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_3.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     print("connecting node 3")
     await connect_and_get_peer(full_node_3.full_node.server, full_node_1.full_node.server, self_hostname)
