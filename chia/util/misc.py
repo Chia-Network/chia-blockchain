@@ -40,14 +40,6 @@ from chia.util.streamable import Streamable, streamable
 T = TypeVar("T")
 
 
-if sys.platform == "win32" or sys.platform == "cygwin":
-    termination_signals = [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]
-    sendable_termination_signals = [signal.SIGTERM]
-else:
-    termination_signals = [signal.SIGINT, signal.SIGTERM]
-    sendable_termination_signals = termination_signals
-
-
 @streamable
 @dataclasses.dataclass(frozen=True)
 class UInt32Range(Streamable):
