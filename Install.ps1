@@ -16,12 +16,6 @@ if ($d)
     $extras += "dev"
 }
 
-$pip_parameters = @()
-if (-not $i)
-{
-    $pip_parameters += "--editable"
-}
-
 if ([Environment]::Is64BitOperatingSystem -eq $false)
 {
     Write-Output "Chia requires a 64-bit Windows installation"
@@ -113,8 +107,9 @@ foreach ($extra in $extras)
 .penv/Scripts/pip install "poetry-dynamic-versioning[plugin]"
 .penv/Scripts/poetry install @extras_cli
 
-if (-not $editable)
+if ($i)
 {
+    Write-Output "Running 'pip install --no-deps .' for non-editable"
     .venv/Scripts/python -m pip install --no-deps .
 }
 
