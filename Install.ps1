@@ -109,8 +109,8 @@ foreach ($extra in $extras)
 }
 
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
-.penv/Scripts/poetry env use "$pythonVersion"
-.penv/Scripts/poetry self add "poetry-dynamic-versioning[plugin]"
+.penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
+.penv/Scripts/pip install "poetry-dynamic-versioning[plugin]"
 .penv/Scripts/poetry install @extras_cli
 
 if (-not $editable)
