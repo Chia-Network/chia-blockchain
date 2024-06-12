@@ -24,7 +24,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.errors import CliRpcConnectionError
+from chia.util.errors import CliRpcConnectionError, InvalidPathError
 from chia.util.ints import uint16, uint64
 from chia.util.keychain import KeyData
 from chia.util.streamable import Streamable, streamable
@@ -432,3 +432,15 @@ def prompt_yes_no(prompt: str) -> bool:
             return True
         elif ch == "n":
             return False
+
+
+def validate_directory_writable(path: Path) -> None:
+    write_test_path = path / ".write_test"
+    try:
+        with write_test_path.open("w"):
+            pass
+        write_test_path.unlink()
+    except FileNotFoundError:
+        raise InvalidPathError(path, "Directory doesn't exist")
+    except OSError:
+        raise InvalidPathError(path, "Directory not writable")

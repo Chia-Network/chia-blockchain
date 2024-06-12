@@ -34,23 +34,10 @@ from typing import (
 import psutil
 from typing_extensions import Protocol
 
-from chia.util.errors import InvalidPathError
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 T = TypeVar("T")
-
-
-def validate_directory_writable(path: Path) -> None:
-    write_test_path = path / ".write_test"
-    try:
-        with write_test_path.open("w"):
-            pass
-        write_test_path.unlink()
-    except FileNotFoundError:
-        raise InvalidPathError(path, "Directory doesn't exist")
-    except OSError:
-        raise InvalidPathError(path, "Directory not writable")
 
 
 if sys.platform == "win32" or sys.platform == "cygwin":
