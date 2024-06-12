@@ -42,16 +42,6 @@ from chia.util.streamable import Streamable, streamable
 T = TypeVar("T")
 
 
-def prompt_yes_no(prompt: str) -> bool:
-    while True:
-        response = str(input(prompt + " (y/n): ")).lower().strip()
-        ch = response[:1]
-        if ch == "y":
-            return True
-        elif ch == "n":
-            return False
-
-
 def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Sequence[object]]:
     return len(list_in) if length else list_in
 
