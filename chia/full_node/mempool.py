@@ -20,10 +20,10 @@ from chia.types.eligible_coin_spends import EligibleCoinSpends, UnspentLineageIn
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
+from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
-from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 
