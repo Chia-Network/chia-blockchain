@@ -1,4 +1,4 @@
-# Package: obsolete
+# Package: streamable
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-# Package: obsolete
+# Package: concurrency
 
 from __future__ import annotations
 
