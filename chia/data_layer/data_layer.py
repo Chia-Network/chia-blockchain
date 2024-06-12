@@ -853,17 +853,18 @@ class DataLayer:
                 subscriptions = await self.data_store.get_subscriptions()
 
             # Subscribe to all local store_ids that we can find on chain.
-            local_store_ids = await self.data_store.get_store_ids()
-            subscription_store_ids = {subscription.store_id for subscription in subscriptions}
-            for local_id in local_store_ids:
-                if local_id not in subscription_store_ids:
-                    try:
-                        subscription = await self.subscribe(local_id, [])
-                        subscriptions.insert(0, subscription)
-                    except Exception as e:
-                        self.log.info(
-                            f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
-                        )
+            if self.config.get("auto_subscribe_to_local_stores", False):
+                local_store_ids = await self.data_store.get_store_ids()
+                subscription_store_ids = {subscription.store_id for subscription in subscriptions}
+                for local_id in local_store_ids:
+                    if local_id not in subscription_store_ids:
+                        try:
+                            subscription = await self.subscribe(local_id, [])
+                            subscriptions.insert(0, subscription)
+                        except Exception as e:
+                            self.log.info(
+                                f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
+                            )
 
             work_queue: asyncio.Queue[Job[Subscription]] = asyncio.Queue()
             async with QueuedAsyncPool.managed(
