@@ -785,7 +785,7 @@ class DAOWallet:
             fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
-            spend_bundle=None,
+            spend_bundle=new_spend,
             additions=new_spend.additions(),
             removals=new_spend.removals(),
             wallet_id=self.id(),

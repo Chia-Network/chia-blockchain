@@ -338,7 +338,7 @@ class NFTWallet:
         did_id: Optional[bytes] = None,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> None:
+    ) -> bytes32:
         """
         This must be called under the wallet state manager lock
         """
@@ -438,6 +438,8 @@ class NFTWallet:
             new_did_inner_hash=did_inner_hash,
             memos=[[target_puzzle_hash]],
         )
+
+        return launcher_coin.name()
 
     async def update_metadata(
         self,

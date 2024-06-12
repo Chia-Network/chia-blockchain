@@ -3153,7 +3153,7 @@ class WalletRpcApi:
             else:
                 did_id = decode_puzzle_hash(did_id)
 
-        await nft_wallet.generate_new_nft(
+        nft_id = await nft_wallet.generate_new_nft(
             metadata,
             tx_config,
             action_scope,
@@ -3164,19 +3164,12 @@ class WalletRpcApi:
             fee,
             extra_conditions=extra_conditions,
         )
-        nft_id = None
-        async with action_scope.use() as interface:
-            spend_bundle = SpendBundle.aggregate(
-                [tx.spend_bundle for tx in interface.side_effects.transactions if tx.spend_bundle is not None]
-            )
-        for cs in spend_bundle.coin_spends:
-            if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
-                nft_id = encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config))
+        nft_id_bech32 = encode_puzzle_hash(nft_id, AddressType.NFT.hrp(self.service.config))
         return {
             "wallet_id": wallet_id,
             "success": True,
             "spend_bundle": None,  # tx_endpoint wrapper will take care of this
-            "nft_id": nft_id,
+            "nft_id": nft_id_bech32,
             "transactions": None,  # tx_endpoint wrapper will take care of this
         }
 
