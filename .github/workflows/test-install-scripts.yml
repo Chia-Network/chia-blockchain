@@ -44,6 +44,13 @@ jobs:
             value: false
           - name: Development
             value: true
+        editable:
+          - name: Non-editable
+            value: false
+            matrix: non-editable
+          - name: Editable
+            value: true
+            matrix: editable
 
     steps:
       - name: Checkout Code
@@ -60,6 +67,7 @@ jobs:
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
           development: ${{ matrix.development.value }}
+          editable: ${{ matrix.editable.value }}
           do-system-installs: true
 
       - uses: chia-network/actions/activate-venv@main
@@ -77,6 +85,26 @@ jobs:
         if: matrix.os.matrix == 'windows'
         run: |
           ./Install-gui.ps1
+
+      - name: Collect editable info
+        id: editable_info
+        shell: bash
+        run: |
+          PRE_VERSION=$(chia version)
+          echo '__version__ = "hello"' >> chia/__init__.py
+          POST_VERSION=$(chia version)
+
+      - name: Check editable
+        if: matrix.editable.matrix == 'editable'
+        shell: bash
+        run: |
+          [ "$POST_VERSION" = "hello" -a "$PRE_VERSION" != "hello" ]
+
+      - name: Check non-editable
+        if: matrix.editable.matrix == 'non-editable'
+        shell: bash
+        run: |
+          [ "$POST_VERSION" != "hello" -a "$PRE_VERSION" = "$POST_VERSION" ]
 
   test_scripts_in_docker:
     name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
