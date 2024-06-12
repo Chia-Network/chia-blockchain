@@ -173,7 +173,7 @@ fi
 .penv/bin/pip install "poetry-dynamic-versioning[plugin]"
 # shellcheck disable=SC2086
 .penv/bin/poetry install ${EXTRAS}
-ln -s .venv venv
+ln -s -f .venv venv
 if [ ! -f "activate" ]; then
   ln -s venv/bin/activate .
 fi
