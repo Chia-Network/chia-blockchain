@@ -340,7 +340,7 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
         enable_batch_autoinsert: Optional[bool] = None,
-    ) -> bytes32:
+    ) -> TreeId[int, Optional[bytes32]]:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
@@ -356,16 +356,11 @@ class DataLayer:
             t1 = time.monotonic()
             if enable_batch_autoinsert is None:
                 enable_batch_autoinsert = self.config.get("enable_batch_autoinsert", True)
-            batch_hash = await self.data_store.insert_batch(store_id, changelist, status, enable_batch_autoinsert)
+            new_tree_id = await self.data_store.insert_batch(store_id, changelist, status, enable_batch_autoinsert)
             t2 = time.monotonic()
             self.log.info(f"Data store batch update process time: {t2 - t1}.")
-            # todo return empty node hash from get_tree_root
-            if batch_hash is not None:
-                node_hash = batch_hash
-            else:
-                node_hash = self.none_bytes  # todo change
 
-            return node_hash
+            return new_tree_id
 
     async def publish_update(
         self,
@@ -977,18 +972,23 @@ class DataLayer:
                 )
 
                 if len(changelist) > 0:
-                    new_root_hash = await self.batch_insert(
+                    new_tree_id = await self.batch_insert(
                         store_id=offer_store.store_id,
                         changelist=changelist,
                         enable_batch_autoinsert=False,
                     )
                 else:
-                    existing_root = await self.get_root(store_id=offer_store.store_id)
-                    if existing_root is None:
+                    existing_singleton = await self.get_root(store_id=offer_store.store_id)
+                    if existing_singleton is None:
                         raise Exception(f"store id not available: {offer_store.store_id.hex()}")
-                    new_root_hash = existing_root.root
+                    # TODO: add .from_root()?
+                    new_tree_id = TreeId(
+                        store_id=offer_store.store_id,
+                        generation=existing_singleton.generation,
+                        root_hash=existing_singleton.root,
+                    )
 
-                if new_root_hash is None:
+                if new_tree_id.root_hash is None:
                     raise Exception("only inserts are supported so a None root hash should not be possible")
 
                 proofs: List[Proof] = []
@@ -996,11 +996,11 @@ class DataLayer:
                     node_hash = await self.get_key_value_hash(
                         store_id=offer_store.store_id,
                         key=entry.key,
-                        root_hash=new_root_hash,
+                        root_hash=new_tree_id.root_hash,
                     )
                     proof_of_inclusion = await self.data_store.get_proof_of_inclusion_by_hash(
                         node_hash=node_hash,
-                        tree_id=TreeId.by_root_hash(store_id=offer_store.store_id, root_hash=new_root_hash),
+                        tree_id=TreeId.by_root_hash(store_id=offer_store.store_id, root_hash=new_tree_id.root_hash),
                     )
                     proof = Proof(
                         key=entry.key,

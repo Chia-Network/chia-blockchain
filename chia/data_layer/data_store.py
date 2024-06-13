@@ -551,7 +551,8 @@ class DataStore:
         return True
 
     async def table_is_empty(
-        self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
+        self,
+        tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
     ) -> bool:
         tree_root = await self.get_tree_root(tree_id=tree_id)
 
@@ -1506,7 +1507,7 @@ class DataStore:
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
         enable_batch_autoinsert: bool = True,
-    ) -> Optional[bytes32]:
+    ) -> TreeId[int, Optional[bytes32]]:
         async with self.transaction():
             tree_id = await self._resolve_tree_id(tree_id=TreeId.by_nothing(store_id=store_id))
 
@@ -1717,16 +1718,24 @@ class DataStore:
                 new_root = await self.get_tree_root(tree_id=latest_local_tree_id)
             else:
                 raise Exception(f"No known status: {status}")
-            if new_root.node_hash != root.node_hash:
+
+            # TODO: add .from_root()?
+            new_tree_id = TreeId(
+                store_id=new_root.store_id,
+                generation=new_root.generation,
+                root_hash=new_root.node_hash,
+            )
+
+            if new_tree_id.root_hash != root.node_hash:
                 raise RuntimeError(
                     f"Tree root mismatches after batch update: Expected: {root.node_hash}. Got: {new_root.node_hash}"
                 )
-            if new_root.generation != old_root.generation + 1:
+            if new_tree_id.generation != old_root.generation + 1:
                 raise RuntimeError(
                     "Didn't get the expected generation after batch update: "
                     f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
                 )
-            return root.node_hash
+            return new_tree_id
 
     async def _get_one_ancestor(
         self,

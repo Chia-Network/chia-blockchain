@@ -19,7 +19,7 @@ from chia._tests.core.data_layer.util import (
     create_valid_node_values,
 )
 from chia._tests.util.misc import closing_chia_root_popen
-from chia.data_layer.data_layer_util import NodeType, Status
+from chia.data_layer.data_layer_util import NodeType, Status, TreeId
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -86,10 +86,11 @@ async def valid_node_values_fixture(
     node_type: NodeType,
 ) -> Dict[str, Any]:
     await add_01234567_example(data_store=data_store, store_id=store_id)
+    bare_tree_id = TreeId.by_nothing(store_id=store_id)
 
     if node_type == NodeType.INTERNAL:
-        node_a = await data_store.get_node_by_key(key=b"\x02", store_id=store_id)
-        node_b = await data_store.get_node_by_key(key=b"\x04", store_id=store_id)
+        node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=bare_tree_id)
+        node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=bare_tree_id)
         return create_valid_node_values(node_type=node_type, left_hash=node_a.hash, right_hash=node_b.hash)
     elif node_type == NodeType.TERMINAL:
         return create_valid_node_values(node_type=node_type)
