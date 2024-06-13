@@ -1068,29 +1068,27 @@ class DataStore:
         self,
         key: bytes,
         value: bytes,
-        tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
+        store_id: bytes32,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
     ) -> InsertResult:
         async with self.db_wrapper.writer():
-            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
-            del tree_id
+            tree_id = await self._resolve_tree_id(TreeId.by_nothing(store_id=store_id))
 
-            was_empty = resolved_tree_id.root_hash is None
+            was_empty = tree_id.root_hash is None
 
             if was_empty:
                 reference_node_hash = None
                 side = None
             else:
                 seed = leaf_hash(key=key, value=value)
-                reference_node_hash = await self.get_terminal_node_for_seed(tree_id=resolved_tree_id, seed=seed)
+                reference_node_hash = await self.get_terminal_node_for_seed(tree_id=tree_id, seed=seed)
                 side = self.get_side_for_seed(seed)
 
             return await self.insert(
                 key=key,
                 value=value,
-                tree_id=resolved_tree_id,
+                store_id=tree_id.store_id,
                 reference_node_hash=reference_node_hash,
                 side=side,
                 use_optimized=use_optimized,
@@ -1205,29 +1203,26 @@ class DataStore:
         self,
         key: bytes,
         value: bytes,
-        tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
+        store_id: bytes32,
         reference_node_hash: Optional[bytes32],
         side: Optional[Side],
         use_optimized: bool = True,
         status: Status = Status.PENDING,
     ) -> InsertResult:
-        # TODO: do we now need to block acting on a not-latest generation/root?
         async with self.db_wrapper.writer():
-            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
-            del tree_id
+            tree_id = await self._resolve_tree_id(TreeId.by_nothing(store_id=store_id))
 
             try:
-                await self.get_node_by_key(key=key, tree_id=resolved_tree_id)
+                await self.get_node_by_key(key=key, tree_id=tree_id)
                 raise Exception(f"Key already present: {key.hex()}")
             except KeyNotFoundError:
                 pass
 
-            was_empty = resolved_tree_id.root_hash is None
+            was_empty = tree_id.root_hash is None
             if reference_node_hash is None:
                 if not was_empty:
                     raise Exception(
-                        f"Reference node hash must be specified for non-empty tree: {resolved_tree_id.store_id.hex()}"
+                        f"Reference node hash must be specified for non-empty tree: {tree_id.store_id.hex()}"
                     )
             else:
                 reference_node_type = await self.get_node_type(node_hash=reference_node_hash)
@@ -1242,7 +1237,7 @@ class DataStore:
                     raise Exception("Tree was empty so side must be unspecified, got: {side!r}")
 
                 new_root = await self._insert_root(
-                    store_id=resolved_tree_id.store_id,
+                    store_id=tree_id.store_id,
                     node_hash=new_terminal_node_hash,
                     status=status,
                 )
@@ -1251,7 +1246,7 @@ class DataStore:
                     raise Exception("Tree was not empty, side must be specified.")
                 if reference_node_hash is None:
                     raise Exception("Tree was not empty, reference node hash must be specified.")
-                if resolved_tree_id.root_hash is None:
+                if tree_id.root_hash is None:
                     raise Exception("Internal error.")
 
                 if side == Side.LEFT:
@@ -1265,11 +1260,11 @@ class DataStore:
 
                 ancestors = await self.get_ancestors_common(
                     node_hash=reference_node_hash,
-                    tree_id=resolved_tree_id,
+                    tree_id=tree_id,
                     use_optimized=use_optimized,
                 )
                 new_root = await self.update_ancestor_hashes_on_insert(
-                    tree_id=resolved_tree_id,
+                    tree_id=tree_id,
                     left=left,
                     right=right,
                     traversal_node_hash=reference_node_hash,
@@ -1286,33 +1281,30 @@ class DataStore:
     async def delete(
         self,
         key: bytes,
-        tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
+        store_id: bytes32,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
     ) -> TreeId[int, Optional[bytes32]]:
-        # TODO: do we now need to block acting on a not-latest generation/root?
-        resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        # TODO: yuck but...  useful
-        del tree_id
+        tree_id = await self._resolve_tree_id(tree_id=TreeId.by_nothing(store_id=store_id))
         async with self.db_wrapper.writer():
             try:
-                node = await self.get_node_by_key(key=key, tree_id=resolved_tree_id)
+                node = await self.get_node_by_key(key=key, tree_id=tree_id)
                 node_hash = node.hash
                 assert isinstance(node, TerminalNode)
             except KeyNotFoundError:
                 log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
-                return resolved_tree_id
+                return tree_id
 
             ancestors: List[InternalNode] = await self.get_ancestors_common(
                 node_hash=node_hash,
-                tree_id=resolved_tree_id,
+                tree_id=tree_id,
                 use_optimized=use_optimized,
             )
 
             if len(ancestors) == 0:
                 # the only node is being deleted
                 root = await self._insert_root(
-                    store_id=resolved_tree_id.store_id,
+                    store_id=tree_id.store_id,
                     node_hash=None,
                     status=status,
                 )
@@ -1325,7 +1317,7 @@ class DataStore:
             if len(ancestors) == 1:
                 # the parent is the root so the other side will become the new root
                 root = await self._insert_root(
-                    store_id=resolved_tree_id.store_id,
+                    store_id=tree_id.store_id,
                     node_hash=other_hash,
                     status=status,
                 )
@@ -1334,7 +1326,7 @@ class DataStore:
 
             old_child_hash = parent.hash
             new_child_hash = other_hash
-            new_generation = resolved_tree_id.generation + 1
+            new_generation = tree_id.generation + 1
             # update ancestors after inserting root, to keep table constraints.
             insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
             # more parents to handle so let's traverse them
@@ -1349,11 +1341,11 @@ class DataStore:
                     raise Exception("Internal error.")
 
                 new_child_hash = await self._insert_internal_node(left_hash=left_hash, right_hash=right_hash)
-                insert_ancestors_cache.append((left_hash, right_hash, resolved_tree_id.store_id))
+                insert_ancestors_cache.append((left_hash, right_hash, tree_id.store_id))
                 old_child_hash = ancestor.hash
 
             new_root = await self._insert_root(
-                store_id=resolved_tree_id.store_id,
+                store_id=tree_id.store_id,
                 node_hash=new_child_hash,
                 status=status,
                 generation=new_generation,
@@ -1373,44 +1365,41 @@ class DataStore:
         self,
         key: bytes,
         new_value: bytes,
-        tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
+        store_id: bytes32,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
     ) -> InsertResult:
-        # TODO: do we now need to block acting on a not-latest generation/root?
         async with self.db_wrapper.writer():
-            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
-            del tree_id
+            tree_id = await self._resolve_tree_id(TreeId.by_nothing(store_id=store_id))
 
             try:
-                old_node = await self.get_node_by_key(key=key, tree_id=resolved_tree_id)
+                old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
             except KeyNotFoundError:
                 log.debug(f"Key not found: {key.hex()}. Doing an autoinsert instead")
                 return await self.autoinsert(
                     key=key,
                     value=new_value,
-                    tree_id=resolved_tree_id,
+                    store_id=tree_id.store_id,
                     use_optimized=use_optimized,
                     status=status,
                 )
             if old_node.value == new_value:
                 log.debug(f"New value matches old value in upsert operation: {key.hex()}. Ignoring upsert")
-                return InsertResult(leaf_hash(key, new_value), tree_id=resolved_tree_id)
+                return InsertResult(leaf_hash(key, new_value), tree_id=tree_id)
 
             # create new terminal node
             new_terminal_node_hash = await self._insert_terminal_node(key=key, value=new_value)
 
             ancestors = await self.get_ancestors_common(
                 node_hash=old_node.hash,
-                tree_id=resolved_tree_id,
+                tree_id=tree_id,
                 use_optimized=use_optimized,
             )
 
             # Store contains only the old root, replace it with a new root having the terminal node.
             if len(ancestors) == 0:
                 new_root = await self._insert_root(
-                    store_id=resolved_tree_id.store_id,
+                    store_id=tree_id.store_id,
                     node_hash=new_terminal_node_hash,
                     status=status,
                 )
@@ -1426,7 +1415,7 @@ class DataStore:
                     raise Exception("Internal error.")
 
                 new_root = await self.update_ancestor_hashes_on_insert(
-                    tree_id=resolved_tree_id,
+                    tree_id=tree_id,
                     left=left,
                     right=right,
                     traversal_node_hash=parent.hash,
@@ -1497,38 +1486,33 @@ class DataStore:
 
     async def batch_upsert(
         self,
-        tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
+        store_id: bytes32,
         hash: bytes32,
         to_update_hashes: Set[bytes32],
         pending_upsert_new_hashes: Dict[bytes32, bytes32],
     ) -> bytes32:
-        # TODO: do we now need to block acting on a not-latest generation/root?
         if hash not in to_update_hashes:
             return hash
         node = await self.get_node(hash)
         if isinstance(node, TerminalNode):
             return pending_upsert_new_hashes[hash]
-        new_left_hash = await self.batch_upsert(tree_id, node.left_hash, to_update_hashes, pending_upsert_new_hashes)
-        new_right_hash = await self.batch_upsert(tree_id, node.right_hash, to_update_hashes, pending_upsert_new_hashes)
+        new_left_hash = await self.batch_upsert(store_id, node.left_hash, to_update_hashes, pending_upsert_new_hashes)
+        new_right_hash = await self.batch_upsert(store_id, node.right_hash, to_update_hashes, pending_upsert_new_hashes)
         return await self._insert_internal_node(new_left_hash, new_right_hash)
 
     async def insert_batch(
         self,
-        tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
+        store_id: bytes32,
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
         enable_batch_autoinsert: bool = True,
     ) -> Optional[bytes32]:
         async with self.transaction():
-            # TODO: do we now need to block acting on a not-latest generation/root?
-            #       possibly by just not using TreeId here...  i'll come back and think
-            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
-            del tree_id
+            tree_id = await self._resolve_tree_id(tree_id=TreeId.by_nothing(store_id=store_id))
 
-            old_root = await self.get_tree_root(tree_id=resolved_tree_id)
+            old_root = await self.get_tree_root(tree_id=tree_id)
             # TODO: hum, pending, ...  i forgot what i was thinking about here
-            pending_root = await self.get_pending_root(store_id=resolved_tree_id.store_id)
+            pending_root = await self.get_pending_root(store_id=tree_id.store_id)
             if pending_root is None:
                 latest_local_root: Optional[Root] = old_root
             else:
@@ -1537,7 +1521,7 @@ class DataStore:
                     if pending_root.generation != old_root.generation + 1:
                         raise Exception("Internal error")
                     await self.change_root_status(pending_root, Status.COMMITTED)
-                    await self.build_ancestor_table_for_latest_root(tree_id=resolved_tree_id)
+                    await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
                     latest_local_root = pending_root
                 else:
                     raise Exception("Internal error")
@@ -1545,7 +1529,6 @@ class DataStore:
             assert latest_local_root is not None
 
             # TODO: add .from_root()?
-            # latest_local_tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]] = TreeId(
             latest_local_tree_id: TreeId[int, Optional[bytes32]] = TreeId(
                 store_id=latest_local_root.store_id,
                 generation=latest_local_root.generation,
@@ -1566,7 +1549,7 @@ class DataStore:
 
             pending_autoinsert_hashes: List[bytes32] = []
             pending_upsert_new_hashes: Dict[bytes32, bytes32] = {}
-            leaf_hashes = await self.get_leaf_hashes_by_hashed_key(resolved_tree_id)
+            leaf_hashes = await self.get_leaf_hashes_by_hashed_key(tree_id)
 
             for change in changelist:
                 if change["action"] == "insert":
@@ -1599,7 +1582,7 @@ class DataStore:
                         insert_result = await self.autoinsert(
                             key=key,
                             value=value,
-                            tree_id=latest_local_tree_id,
+                            store_id=latest_local_tree_id.store_id,
                             use_optimized=True,
                             status=Status.COMMITTED,
                         )
@@ -1610,7 +1593,7 @@ class DataStore:
                         insert_result = await self.insert(
                             key,
                             value,
-                            tree_id=latest_local_tree_id,
+                            store_id=latest_local_tree_id.store_id,
                             reference_node_hash=reference_node_hash,
                             side=side,
                             use_optimized=True,
@@ -1623,7 +1606,7 @@ class DataStore:
                     if key_hash_frequency[hash] == 2 and last_action[hash] == "insert" and enable_batch_autoinsert:
                         continue
                     latest_local_tree_id = await self.delete(
-                        key, tree_id=latest_local_tree_id, use_optimized=True, status=Status.COMMITTED
+                        key, store_id=latest_local_tree_id.store_id, use_optimized=True, status=Status.COMMITTED
                     )
                 elif change["action"] == "upsert":
                     key = change["key"]
@@ -1640,7 +1623,7 @@ class DataStore:
                     insert_result = await self.upsert(
                         key,
                         new_value,
-                        tree_id=latest_local_tree_id,
+                        store_id=latest_local_tree_id.store_id,
                         use_optimized=True,
                         status=Status.COMMITTED,
                     )
@@ -1665,12 +1648,12 @@ class DataStore:
                 assert not isinstance(latest_local_tree_id.root_hash, TreeId.Unspecified)
                 assert latest_local_tree_id.root_hash is not None
                 new_root_hash = await self.batch_upsert(
-                    tree_id=latest_local_tree_id,
+                    store_id=latest_local_tree_id.store_id,
                     hash=latest_local_tree_id.root_hash,
                     to_update_hashes=to_update_hashes,
                     pending_upsert_new_hashes=pending_upsert_new_hashes,
                 )
-                latest_local_root = await self._insert_root(resolved_tree_id.store_id, new_root_hash, Status.COMMITTED)
+                latest_local_root = await self._insert_root(tree_id.store_id, new_root_hash, Status.COMMITTED)
                 # TODO: add .from_root()?
                 latest_local_tree_id = TreeId(
                     store_id=latest_local_root.store_id,
@@ -1697,9 +1680,7 @@ class DataStore:
                 # TODO: definitely think this over
                 # if latest_local_root is None or latest_local_root.node_hash is None:
                 if latest_local_tree_id.root_hash is None:
-                    await self._insert_root(
-                        store_id=resolved_tree_id.store_id, node_hash=subtree_hash, status=Status.COMMITTED
-                    )
+                    await self._insert_root(store_id=tree_id.store_id, node_hash=subtree_hash, status=Status.COMMITTED)
                 else:
                     hash_to_parent: Dict[bytes32, InternalNode] = {}
                     min_height_leaf = await self.get_leaf_at_minimum_height(latest_local_tree_id, hash_to_parent)

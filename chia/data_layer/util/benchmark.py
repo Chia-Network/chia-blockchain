@@ -8,10 +8,9 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from chia.data_layer.data_layer_util import Side, TerminalNode, leaf_hash
+from chia.data_layer.data_layer_util import Side, TerminalNode, TreeId, leaf_hash
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.data_layer.data_layer_util import TreeId
 
 
 async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
@@ -28,8 +27,6 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
             store_id = bytes32(b"0" * 32)
             await data_store.create_tree(store_id)
 
-            tree_id = TreeId.by_nothing(store_id=store_id)
-
             insert_time = 0.0
             insert_count = 0
             autoinsert_time = 0.0
@@ -41,7 +38,9 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                 key = i.to_bytes(4, byteorder="big")
                 value = (2 * i).to_bytes(4, byteorder="big")
                 seed = leaf_hash(key=key, value=value)
-                reference_node_hash: Optional[bytes32] = await data_store.get_terminal_node_for_seed(tree_id=tree_id, seed=seed)
+                reference_node_hash: Optional[bytes32] = await data_store.get_terminal_node_for_seed(
+                    tree_id=TreeId.by_nothing(store_id=store_id), seed=seed
+                )
                 side: Optional[Side] = data_store.get_side_for_seed(seed)
 
                 if i == 0:
@@ -53,7 +52,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                         await data_store.insert(
                             key=key,
                             value=value,
-                            tree_id=tree_id,
+                            store_id=store_id,
                             reference_node_hash=reference_node_hash,
                             side=side,
                         )
@@ -61,7 +60,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                         await data_store.insert(
                             key=key,
                             value=value,
-                            tree_id=tree_id,
+                            store_id=store_id,
                             reference_node_hash=reference_node_hash,
                             side=side,
                             use_optimized=False,
@@ -72,12 +71,12 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                 elif i % 3 == 1:
                     t1 = time.time()
                     if not slow_mode:
-                        await data_store.autoinsert(key=key, value=value, tree_id=tree_id)
+                        await data_store.autoinsert(key=key, value=value, store_id=store_id)
                     else:
                         await data_store.autoinsert(
                             key=key,
                             value=value,
-                            tree_id=tree_id,
+                            store_id=store_id,
                             use_optimized=False,
                         )
                     t2 = time.time()
@@ -89,9 +88,9 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                     node = await data_store.get_node(reference_node_hash)
                     assert isinstance(node, TerminalNode)
                     if not slow_mode:
-                        await data_store.delete(key=node.key, tree_id=tree_id)
+                        await data_store.delete(key=node.key, store_id=store_id)
                     else:
-                        await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False)
+                        await data_store.delete(key=node.key, store_id=store_id, use_optimized=False)
                     t2 = time.time()
                     delete_time += t2 - t1
                     delete_count += 1
@@ -100,7 +99,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
             print(f"Average autoinsert time: {autoinsert_time / autoinsert_count}")
             print(f"Average delete time: {delete_time / delete_count}")
             print(f"Total time for {num_nodes} operations: {insert_time + autoinsert_time + delete_time}")
-            root = await data_store.get_tree_root(tree_id=tree_id)
+            root = await data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
             print(f"Root hash: {root.node_hash}")
 
 

@@ -8,7 +8,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional, Union, overload
 
-from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode, TreeId
+from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -37,7 +37,7 @@ async def general_insert(
     insert_result = await data_store.insert(
         key=key,
         value=value,
-        tree_id=TreeId.by_nothing(store_id=store_id),
+        store_id=store_id,
         reference_node_hash=reference_node_hash,
         side=side,
         status=Status.COMMITTED,
