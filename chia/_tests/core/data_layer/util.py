@@ -139,6 +139,8 @@ class ChiaRoot:
             kwargs["env"]["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
 
         chia_executable = shutil.which("chia")
+        if chia_executable is None:
+            chia_executable = "chia"
         modified_args: List[Union[str, os_PathLike_str]] = [
             self.scripts_path.joinpath(chia_executable),
             "--root-path",

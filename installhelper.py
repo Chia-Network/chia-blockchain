@@ -53,6 +53,8 @@ def make_semver(version_str: str) -> str:
 def get_chia_version() -> str:
     version: str = "0.0"
     chia_executable = shutil.which("chia")
+    if chia_executable is None:
+        chia_executable = "chia"
     output = subprocess.run([chia_executable, "version"], capture_output=True)
     if output.returncode == 0:
         version = str(output.stdout.strip(), "utf-8").splitlines()[-1]
