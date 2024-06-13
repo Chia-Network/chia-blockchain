@@ -4,8 +4,8 @@ import contextlib
 import functools
 import os
 import pathlib
+import shutil
 import subprocess
-import sys
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional, Union, overload
 
@@ -138,13 +138,7 @@ class ChiaRoot:
         if "SYSTEMROOT" in os.environ:
             kwargs["env"]["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
 
-        if sys.platform == "win32":
-            # TODO: uh...  why not .exe?  maybe editable vs. not?
-            # TODO: this is apparently now chia.exe with poetry
-            chia_executable = "chia.exe"
-        else:
-            chia_executable = "chia"
-
+        chia_executable = shutil.which("chia")
         modified_args: List[Union[str, os_PathLike_str]] = [
             self.scripts_path.joinpath(chia_executable),
             "--root-path",
