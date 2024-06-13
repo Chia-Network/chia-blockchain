@@ -240,7 +240,7 @@ class DataStore:
 
             new_root = Root(
                 store_id=store_id,
-                node_hash=None if node_hash is None else node_hash,
+                node_hash=node_hash,
                 generation=generation,
                 status=status,
             )
@@ -679,7 +679,7 @@ class DataStore:
                 f"{max_generation_str}"
                 f"{node_hash_str}"
                 "ORDER BY generation DESC LIMIT 1",
-                {"tree_id": store_id, "node_hash": None if hash is None else hash},
+                {"tree_id": store_id, "node_hash": hash},
             )
             row = await cursor.fetchone()
 
@@ -779,7 +779,7 @@ class DataStore:
                 WHERE node_type == :node_type
                 """,
                 {
-                    "root_hash": None if resolved_tree_id.root_hash is None else resolved_tree_id.root_hash,
+                    "root_hash": resolved_tree_id.root_hash,
                     "node_type": NodeType.INTERNAL,
                 },
             )
@@ -1126,7 +1126,7 @@ class DataStore:
                 SELECT key FROM tree_from_root_hash WHERE node_type == :node_type
                 """,
                 {
-                    "root_hash": None if resolved_tree_id.root_hash is None else resolved_tree_id.root_hash,
+                    "root_hash": resolved_tree_id.root_hash,
                     "node_type": NodeType.TERMINAL,
                 },
             )
@@ -1783,30 +1783,44 @@ class DataStore:
         # TODO: yuck but...  useful
         del tree_id
 
-        async with self.db_wrapper.writer():
+        async with self.db_wrapper.writer() as writer:
             if resolved_tree_id.root_hash is None:
                 return
 
-            previous_root = await self.get_tree_root(
-                tree_id=replace(resolved_tree_id, generation=max(resolved_tree_id.generation - 1, 0)),
+            await writer.execute(
+                """
+                WITH RECURSIVE tree_from_root_hash AS (
+                    SELECT
+                        node.hash,
+                        node.left,
+                        node.right,
+                        NULL AS ancestor
+                    FROM node
+                    WHERE node.hash = :root_hash
+                    UNION ALL
+                    SELECT
+                        node.hash,
+                        node.left,
+                        node.right,
+                        tree_from_root_hash.hash AS ancestor
+                    FROM node
+                    JOIN tree_from_root_hash ON node.hash = tree_from_root_hash.left
+                    OR node.hash = tree_from_root_hash.right
+                )
+                INSERT OR REPLACE INTO ancestors (hash, ancestor, tree_id, generation)
+                SELECT
+                    tree_from_root_hash.hash,
+                    tree_from_root_hash.ancestor,
+                    :tree_id,
+                    :generation
+                FROM tree_from_root_hash
+                """,
+                {
+                    "root_hash": resolved_tree_id.root_hash,
+                    "tree_id": resolved_tree_id.store_id,
+                    "generation": resolved_tree_id.generation,
+                },
             )
-            previous_tree_id = TreeId(
-                store_id=resolved_tree_id.store_id,
-                generation=previous_root.generation,
-                root_hash=previous_root.node_hash,
-            )
-
-            if previous_root.node_hash is not None:
-                previous_internal_nodes: List[InternalNode] = await self.get_internal_nodes(tree_id=previous_tree_id)
-                known_hashes: Set[bytes32] = {node.hash for node in previous_internal_nodes}
-            else:
-                known_hashes = set()
-            internal_nodes: List[InternalNode] = await self.get_internal_nodes(tree_id=resolved_tree_id)
-            for node in internal_nodes:
-                # We already have the same values in ancestor tables, if we have the same internal node.
-                # Don't reinsert it so we can save DB space.
-                if node.hash not in known_hashes:
-                    await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id=resolved_tree_id)
 
     async def insert_root_with_ancestor_table(
         self, store_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING

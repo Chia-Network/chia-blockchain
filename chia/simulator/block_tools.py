@@ -150,10 +150,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
     MEMPOOL_BLOCK_BUFFER=uint8(6),
-    # we deliberately make this different from HARD_FORK_HEIGHT in the
-    # tests, to ensure they operate independently (which they need to do for
-    # testnet10)
-    HARD_FORK_FIX_HEIGHT=uint32(5496100),
 )
 
 
@@ -1966,7 +1962,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
     condition_cost = 0
     clvm_cost = 0
 
-    if height >= constants.HARD_FORK_FIX_HEIGHT:
+    if height >= constants.HARD_FORK_HEIGHT:
         blocks = [bytes(g) for g in generator.generator_refs]
         cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
