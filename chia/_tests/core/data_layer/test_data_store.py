@@ -1113,10 +1113,10 @@ async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
 async def test_root_state(data_store: DataStore, store_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
-    result = await data_store.insert(
+    await data_store.insert(
         key=key, value=value, store_id=store_id, reference_node_hash=None, side=None, status=Status.PENDING
     )
-    is_empty = await data_store.table_is_empty(tree_id=result.tree_id)
+    is_empty = await data_store.table_is_empty(tree_id=TreeId.by_nothing(store_id=store_id))
     assert is_empty
 
 
