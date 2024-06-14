@@ -10,10 +10,9 @@ from typing import List, Optional
 import aiohttp
 from typing_extensions import Literal
 
-from chia.data_layer.data_layer_util import NodeType, PluginRemote, Root, SerializedNode, ServerInfo, Status
+from chia.data_layer.data_layer_util import NodeType, PluginRemote, Root, SerializedNode, ServerInfo, Status, TreeId
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.data_layer.data_layer_util import TreeId
 
 
 def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int) -> str:
