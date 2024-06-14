@@ -3,7 +3,7 @@ from __future__ import annotations
 from asyncio import Queue
 from dataclasses import dataclass
 from random import Random
-from typing import AsyncGenerator, Dict, List, Optional, OrderedDict, Set, Tuple
+from typing import TYPE_CHECKING, AsyncGenerator, Dict, List, Optional, OrderedDict, Set, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, Program
@@ -33,6 +33,11 @@ IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 OneNode = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
+# python 3.8 workaround follows - can be removed when 3.8 support is removed
+if TYPE_CHECKING:
+    Mpu = Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]
+else:
+    Mpu = Tuple[FullNodeSimulator, Queue, WSChiaConnection]
 
 ALL_FILTER = wallet_protocol.CoinStateFilters(True, True, True, uint64(0))
 
@@ -796,9 +801,6 @@ async def assert_mempool_removed(
 
     update = wallet_protocol.MempoolItemsRemoved.from_bytes(message.data)
     assert set(update.removed_items) == removed_items
-
-
-Mpu = Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]
 
 
 @pytest.fixture
