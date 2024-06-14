@@ -611,7 +611,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             # TODO: feels dirty having this loop with _resolve_tree_id, but maybe
             #       breaking it like this here is ok
-            if tree_id.generation is None:
+            if isinstance(tree_id.generation, TreeId.Unspecified):
                 tree_id = await self._resolve_tree_id(tree_id=tree_id)
 
             cursor = await reader.execute(
@@ -626,6 +626,7 @@ class DataStore:
             row = await cursor.fetchone()
 
             if row is None:
+
                 raise Exception(
                     f"unable to find root for id, generation: {tree_id.store_id.hex()}, {tree_id.generation}"
                 )
@@ -1703,7 +1704,7 @@ class DataStore:
                         status=Status.COMMITTED,
                     )
 
-            root = await self.get_tree_root(tree_id=latest_local_tree_id)
+            root = await self.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
             if root.node_hash == old_root.node_hash:
                 if len(changelist) != 0:
                     await self.rollback_to_generation(latest_local_tree_id.store_id, old_root.generation)
@@ -1717,7 +1718,7 @@ class DataStore:
                 new_root = await self.get_pending_root(store_id=latest_local_tree_id.store_id)
                 assert new_root is not None
             elif status == Status.COMMITTED:
-                new_root = await self.get_tree_root(tree_id=latest_local_tree_id)
+                new_root = await self.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
             else:
                 raise Exception(f"No known status: {status}")
 
