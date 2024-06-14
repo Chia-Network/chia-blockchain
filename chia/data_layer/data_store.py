@@ -584,11 +584,11 @@ class DataStore:
 
     async def _resolve_tree_id(
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
-    ) -> TreeId[int, bytes32]:
+    ) -> TreeId[int, Optional[bytes32]]:
         # TODO: optimize
 
-        if tree_id.generation is None:
-            if tree_id.root_hash is None:
+        if isinstance(tree_id.generation, TreeId.Unspecified):
+            if isinstance(tree_id.root_hash, TreeId.Unspecified):
                 generation = await self.get_tree_generation(store_id=tree_id.store_id)
             else:
                 # TODO: can this be more direct
@@ -598,7 +598,7 @@ class DataStore:
 
             tree_id = replace(tree_id, generation=generation)
 
-        if tree_id.root_hash is None:
+        if isinstance(tree_id.root_hash, TreeId.Unspecified):
             root = await self.get_tree_root(tree_id=tree_id)
             tree_id = replace(tree_id, root_hash=root.node_hash)
 
@@ -1469,6 +1469,8 @@ class DataStore:
         resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
         # TODO: yuck but...  useful
         del tree_id
+
+        assert resolved_tree_id.root_hash is not None
 
         root_node = await self.get_node(resolved_tree_id.root_hash)
         queue: List[Node] = [root_node]
