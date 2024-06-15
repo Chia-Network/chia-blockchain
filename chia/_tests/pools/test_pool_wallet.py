@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Optional, cast
+from typing import Any, Dict, Iterator, Optional, Union, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,6 +12,7 @@ from chia_rs import G1Element
 from chia._tests.util.benchmarks import rand_g1, rand_hash
 from chia.pools.pool_wallet import PoolWallet
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.streamable import recurse_jsonify
 
 
 @dataclass
@@ -24,16 +26,6 @@ class MockStandardWallet:
 @dataclass
 class MockWalletStateManager:
     root_path: Optional[Path] = None
-
-
-@dataclass
-class MockPoolWalletConfig:
-    launcher_id: bytes32
-    pool_url: str
-    payout_instructions: str
-    target_puzzle_hash: bytes32
-    p2_singleton_puzzle_hash: bytes32
-    owner_public_key: G1Element
 
 
 @dataclass
@@ -56,7 +48,7 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     Test that PoolWallet can create a new pool config
     """
 
-    updated_configs: List[MockPoolWalletConfig] = []
+    updated_configs: Dict[str, Any] = {}
     payout_instructions_ph = rand_hash()
     launcher_id: bytes32 = rand_hash()
     p2_singleton_puzzle_hash: bytes32 = rand_hash()
@@ -75,19 +67,22 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
     )
 
     # No config data
-    def mock_load_pool_config(root_path: Path) -> List[MockPoolWalletConfig]:
-        return []
+    @contextlib.contextmanager
+    def mock_lock_and_load_config(
+        root_path: Path,
+        filename: Union[str, Path],
+        fill_missing_services: bool = False,
+    ) -> Iterator[Dict[str, Any]]:
+        yield {"pool": {"pool_list": []}}
 
-    monkeypatch.setattr("chia.pools.pool_wallet.load_pool_config", mock_load_pool_config)
+    monkeypatch.setattr("chia.util.config.lock_and_load_config", mock_lock_and_load_config)
 
     # Mock pool_config.update_pool_config to capture the updated configs
-    async def mock_pool_config_update_pool_config(
-        root_path: Path, pool_config_list: List[MockPoolWalletConfig]
-    ) -> None:
+    def mock_save_config(root_path: Path, filename: Union[str, Path], config_data: Any) -> None:
         nonlocal updated_configs
-        updated_configs = pool_config_list
+        updated_configs = config_data
 
-    monkeypatch.setattr("chia.pools.pool_wallet.update_pool_config", mock_pool_config_update_pool_config)
+    monkeypatch.setattr("chia.util.config.save_config", mock_save_config)
 
     # Mock PoolWallet.get_current_state to return our canned state
     async def mock_get_current_state(self: Any) -> Any:
@@ -106,13 +101,14 @@ async def test_update_pool_config_new_config(monkeypatch: Any) -> None:
 
     await wallet.update_pool_config()
 
-    assert len(updated_configs) == 1
-    assert updated_configs[0].launcher_id == launcher_id
-    assert updated_configs[0].pool_url == pool_url
-    assert updated_configs[0].payout_instructions == payout_instructions_ph.hex()
-    assert updated_configs[0].target_puzzle_hash == target_puzzle_hash
-    assert updated_configs[0].p2_singleton_puzzle_hash == p2_singleton_puzzle_hash
-    assert updated_configs[0].owner_public_key == owner_pubkey
+    pools = updated_configs["pool"]["pool_list"]
+    assert len(pools) == 1
+    assert pools[0]["launcher_id"] == recurse_jsonify(launcher_id)
+    assert pools[0]["pool_url"] == pool_url
+    assert pools[0]["payout_instructions"] == payout_instructions_ph.hex()
+    assert pools[0]["target_puzzle_hash"] == recurse_jsonify(target_puzzle_hash)
+    assert pools[0]["p2_singleton_puzzle_hash"] == recurse_jsonify(p2_singleton_puzzle_hash)
+    assert pools[0]["owner_public_key"] == recurse_jsonify(bytes(owner_pubkey))
 
 
 @pytest.mark.anyio
@@ -121,7 +117,7 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
     Test that PoolWallet will retain existing payout_instructions when updating the pool config.
     """
 
-    updated_configs: List[MockPoolWalletConfig] = []
+    updated_configs: Dict[str, Any] = {}
     payout_instructions_ph = rand_hash()
     launcher_id: bytes32 = rand_hash()
     p2_singleton_puzzle_hash: bytes32 = rand_hash()
@@ -147,30 +143,33 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
     existing_target_puzzle_hash: bytes32 = rand_hash()
     existing_p2_singleton_puzzle_hash: bytes32 = rand_hash()
     existing_owner_pubkey: G1Element = rand_g1()
-    existing_config: MockPoolWalletConfig = MockPoolWalletConfig(
-        launcher_id=existing_launcher_id,
-        pool_url=existing_pool_url,
-        payout_instructions=existing_payout_instructions_ph.hex(),
-        target_puzzle_hash=existing_target_puzzle_hash,
-        p2_singleton_puzzle_hash=existing_p2_singleton_puzzle_hash,
-        owner_public_key=existing_owner_pubkey,
-    )
+    existing_config: Dict[str, Any] = {
+        "launcher_id": recurse_jsonify(existing_launcher_id),
+        "pool_url": existing_pool_url,
+        "payout_instructions": existing_payout_instructions_ph.hex(),
+        "target_puzzle_hash": recurse_jsonify(existing_target_puzzle_hash),
+        "p2_singleton_puzzle_hash": recurse_jsonify(existing_p2_singleton_puzzle_hash),
+        "owner_public_key": recurse_jsonify(existing_owner_pubkey),
+    }
 
     # No config data
-    def mock_load_pool_config(root_path: Path) -> List[MockPoolWalletConfig]:
+    @contextlib.contextmanager
+    def mock_lock_and_load_config(
+        root_path: Path,
+        filename: Union[str, Path],
+        fill_missing_services: bool = False,
+    ) -> Iterator[Dict[str, Any]]:
         nonlocal existing_config
-        return [existing_config]
+        yield {"pool": {"pool_list": [existing_config]}}
 
-    monkeypatch.setattr("chia.pools.pool_wallet.load_pool_config", mock_load_pool_config)
+    monkeypatch.setattr("chia.util.config.lock_and_load_config", mock_lock_and_load_config)
 
     # Mock pool_config.update_pool_config to capture the updated configs
-    async def mock_pool_config_update_pool_config(
-        root_path: Path, pool_config_list: List[MockPoolWalletConfig]
-    ) -> None:
+    def mock_save_config(root_path: Path, filename: Union[str, Path], config_data: Any) -> None:
         nonlocal updated_configs
-        updated_configs = pool_config_list
+        updated_configs = config_data
 
-    monkeypatch.setattr("chia.pools.pool_wallet.update_pool_config", mock_pool_config_update_pool_config)
+    monkeypatch.setattr("chia.util.config.save_config", mock_save_config)
 
     # Mock PoolWallet.get_current_state to return our canned state
     async def mock_get_current_state(self: Any) -> Any:
@@ -189,13 +188,14 @@ async def test_update_pool_config_existing_payout_instructions(monkeypatch: Any)
 
     await wallet.update_pool_config()
 
-    assert len(updated_configs) == 1
-    assert updated_configs[0].launcher_id == launcher_id
-    assert updated_configs[0].pool_url == pool_url
+    pools = updated_configs["pool"]["pool_list"]
+    assert len(pools) == 1
+    assert pools[0]["launcher_id"] == recurse_jsonify(launcher_id)
+    assert pools[0]["pool_url"] == pool_url
 
     # payout_instructions should still point to existing_payout_instructions_ph
-    assert updated_configs[0].payout_instructions == existing_payout_instructions_ph.hex()
+    assert pools[0]["payout_instructions"] == existing_payout_instructions_ph.hex()
 
-    assert updated_configs[0].target_puzzle_hash == target_puzzle_hash
-    assert updated_configs[0].p2_singleton_puzzle_hash == p2_singleton_puzzle_hash
-    assert updated_configs[0].owner_public_key == owner_pubkey
+    assert pools[0]["target_puzzle_hash"] == recurse_jsonify(target_puzzle_hash)
+    assert pools[0]["p2_singleton_puzzle_hash"] == recurse_jsonify(p2_singleton_puzzle_hash)
+    assert pools[0]["owner_public_key"] == recurse_jsonify(bytes(owner_pubkey))
