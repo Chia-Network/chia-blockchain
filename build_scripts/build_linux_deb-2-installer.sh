@@ -84,6 +84,10 @@ jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json >temp.json &
 
 echo "Building Linux(deb) Electron app"
 PRODUCT_NAME="chia"
+
+echo npx -p electron-builder which electron-builder
+npx -p electron-builder which electron-builder
+
 if [ "$PLATFORM" = "arm64" ]; then
   # electron-builder does not work for arm64 as of Aug 16, 2022.
   # This is a temporary fix.

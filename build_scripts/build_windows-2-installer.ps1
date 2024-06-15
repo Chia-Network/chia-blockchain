@@ -66,6 +66,9 @@ rm package.json
 mv temp.json package.json
 Write-Output "   ---"
 
+Write-Output "npx -p electron-builder which electron-builder"
+npx -p electron-builder which electron-builder
+
 Write-Output "   ---"
 Write-Output "electron-builder create package directory"
 npx electron-builder build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
