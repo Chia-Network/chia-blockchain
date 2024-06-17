@@ -1358,8 +1358,8 @@ async def get_notifications(
     end: Optional[int],
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        if ids is not None and len(ids) == 0:
-            ids = None
+        if ids is not None:
+            ids = None if len(ids) == 0 else list(ids)
         response = await wallet_client.get_notifications(
             GetNotifications(ids=ids, start=uint32.construct_optional(start), end=uint32.construct_optional(end))
         )
