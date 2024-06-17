@@ -457,7 +457,7 @@ jobs:
 
       - name: Run chia dev installers test
         run: |
-          "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
+          "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}" --gui-command open --gui-command "/Volumes/Chia "*/Chia.app
 
       - name: Detach .dmg
         if: always()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import tempfile
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 import click
 import packaging.version
@@ -50,7 +50,8 @@ def installers_group() -> None:
 @installers_group.command(name="test")
 @click.option("--expected-chia-version", "expected_chia_version_str", required=True)
 @click.option("--require-madmax/--require-no-madmax", "require_madmax", default=True)
-def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
+@click.option("--gui-command", multiple=True, required=True)
+def test_command(expected_chia_version_str: str, require_madmax: bool, gui_command: Sequence[str]) -> None:
     print("testing installed executables")
     expected_chia_version = packaging.version.Version(expected_chia_version_str)
 
@@ -127,3 +128,14 @@ def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
         check=True,
         timeout=adjusted_timeout(30),
     )
+
+    try:
+        subprocess.run(
+            args=gui_command,
+            check=True,
+            timeout=adjusted_timeout(30),
+        )
+    except subprocess.TimeoutExpired:
+        pass
+    else:
+        raise Exception("process terminated prior to timeout")
