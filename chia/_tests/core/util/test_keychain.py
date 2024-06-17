@@ -97,7 +97,7 @@ class TestKeychain:
         assert len(kc.get_all_private_keys()) == 0
 
         kc.add_key(bech32_pubkey, label=None, private=False)
-        all_pks = kc.get_all_public_keys_of_type(G1Element)
+        all_pks = kc.get_all_public_keys()
         assert len(all_pks) == 1
         assert all_pks[0] == public_key
         kc.delete_all_keys()
