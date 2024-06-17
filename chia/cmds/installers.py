@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 from typing import Dict, List, Optional, Sequence
 
@@ -129,7 +130,11 @@ def test_command(expected_chia_version_str: str, require_madmax: bool, gui_comma
         timeout=adjusted_timeout(30),
     )
 
-    if len(gui_command) > 0:
+    if len(gui_command) == 0:
+        print("skipping gui launch test")
+    else:
+        print(f"launching: {gui_command}")
+        sys.stdout.flush()
         try:
             subprocess.run(
                 args=gui_command,
