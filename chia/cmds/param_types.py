@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, ClassVar, Optional, Union
 
 import click
 
@@ -13,6 +13,8 @@ from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
 
+one_decimal_mojo = Decimal("0.000000000001")
+
 
 def validate_uint64(
     value: str,
@@ -22,8 +24,8 @@ def validate_uint64(
 ) -> uint64:
     try:
         d_value = Decimal(value)
-    except InvalidOperation:
-        fail_func("Value must be a valid uint64 number", param, ctx)
+    except InvalidOperation as e:
+        fail_func(f"Value must be a valid number: {e}", param, ctx)
     if d_value.is_signed():
         fail_func("Value must be a positive integer", param, ctx)
     if d_value != d_value.to_integral():
@@ -43,16 +45,18 @@ def validate_decimal_xch(
 ) -> Decimal:
     try:
         d_value = Decimal(value)
-    except InvalidOperation:  # won't ever be value error because of the fee limit check
+    except InvalidOperation:
         fail_func("Value must be decimal dotted value in XCH (e.g. 0.00005)", param, ctx)
     if d_value.is_signed():
         fail_func("Value can not be negative", param, ctx)
-    if not d_value.is_zero() and d_value < Decimal("0.000000000001"):
+    if not d_value.is_zero() and d_value < one_decimal_mojo:
         fail_func(
             "Invalid amount of mojos, too many zeros. Either give zero or at least 1 mojo (0.000000000001 xch).",
             param,
             ctx,
         )
+    if d_value % one_decimal_mojo != Decimal(0):  # if there is a remainder, it contains a value smaller than one mojo
+        fail_func("Invalid amount of mojos, Partial mojos (Fractions of a mojo).", param, ctx)
     return d_value
 
 
@@ -61,7 +65,7 @@ class TransactionFeeParamType(click.ParamType):
     A Click parameter type for transaction fees, which can be specified in XCH or mojos.
     """
 
-    name: str = uint64.__name__  # output type
+    name: ClassVar[str] = uint64.__name__  # type: ignore[misc] # type name for cli
     value_limit: Decimal = Decimal("0.5")
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
@@ -113,7 +117,7 @@ class AmountParamType(click.ParamType):
     A Click parameter type for TX / wallet amounts for both XCH and CAT, and of course mojos.
     """
 
-    name: str = CliAmount.__name__  # output type
+    name: ClassVar[str] = CliAmount.__name__  # type: ignore[misc] # type name for cli
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAmount:
         # suggested by click, but being left in as mojos flag makes default misrepresentation less likely.
@@ -155,7 +159,7 @@ class AddressParamType(click.ParamType):
     A Click parameter type for bech32m encoded addresses, it gives a class with the address type and puzzle hash.
     """
 
-    name: str = CliAddress.__name__  # output type
+    name: ClassVar[str] = CliAddress.__name__  # type: ignore[misc] # type name for cli
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAddress:
         # suggested by click, but not really used so removed to make unexpected types more obvious.
@@ -166,7 +170,8 @@ class AddressParamType(click.ParamType):
         try:
             hrp, b32data = bech32_decode(value)
             if hrp in ["xch", "txch"]:  # I hate having to load the config here
-                expected_prefix = ctx.obj.get("expected_prefix") if ctx else None
+                addr_type: AddressType = AddressType.XCH
+                expected_prefix = ctx.obj.get("expected_prefix") if ctx else None  # attempt to get cached prefix
                 if expected_prefix is None:
                     from chia.util.config import load_config
                     from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -174,14 +179,13 @@ class AddressParamType(click.ParamType):
                     root_path = ctx.obj["root_path"] if ctx is not None else DEFAULT_ROOT_PATH
                     config = load_config(root_path, "config.yaml")
                     expected_prefix = selected_network_address_prefix(config)
+
                     if ctx is not None:
-                        ctx.obj["expected_prefix"] = expected_prefix
-                # now that we have the expected prefix, we can validate the address
-                if hrp == expected_prefix:
-                    addr_type = AddressType.XCH
-                else:
+                        ctx.obj["expected_prefix"] = expected_prefix  # cache prefix
+                # now that we have the expected prefix, we can validate the address is for the right network
+                if hrp != expected_prefix:
                     self.fail(f"Unexpected Address Prefix: {hrp}, are you sure its for the right network?", param, ctx)
-            else:
+            else:  # all other address prefixes (Not xch / txch)
                 addr_type = AddressType(hrp)
             return CliAddress(puzzle_hash=decode_puzzle_hash(value), address_type=addr_type, original_address=value)
         except ValueError:
@@ -193,7 +197,7 @@ class Bytes32ParamType(click.ParamType):
     A Click parameter type for bytes32 hex strings, with or without the 0x prefix.
     """
 
-    name: str = bytes32.__name__  # output type
+    name: ClassVar[str] = bytes32.__name__  # type: ignore[misc] # type name for cli
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes32:
         # suggested by click but deemed not necessary due to unnecessary complexity.
@@ -212,7 +216,7 @@ class Uint64ParamType(click.ParamType):
     A Click parameter type for Uint64 integers.
     """
 
-    name: str = uint64.__name__  # output type
+    name: ClassVar[str] = uint64.__name__  # type: ignore[misc] # type name for cli
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
         if isinstance(value, uint64):  # required by click
