@@ -202,13 +202,13 @@ def update_data_store(
 @data_cmd.command("update_multiple_stores", help="Update multiple stores by providing the changelist operations")
 @create_store_updates_option()
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @options.create_fingerprint()
 @click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
 def update_multiple_stores(
     store_updates_string: str,
     data_rpc_port: int,
-    fee: str,
+    fee: uint64,
     fingerprint: Optional[int],
     submit: bool,
 ) -> None:
@@ -228,12 +228,12 @@ def update_multiple_stores(
 @data_cmd.command("submit_pending_root", help="Submit on chain a locally stored batch")
 @create_data_store_id_option()
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @options.create_fingerprint()
 def submit_pending_root(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
-    fee: str,
+    fee: uint64,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import submit_pending_root_cmd
@@ -250,11 +250,11 @@ def submit_pending_root(
 
 @data_cmd.command("submit_all_pending_roots", help="Submit on chain all locally stored batches")
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @options.create_fingerprint()
 def submit_all_pending_roots(
     data_rpc_port: int,
-    fee: str,
+    fee: uint64,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import submit_all_pending_roots_cmd

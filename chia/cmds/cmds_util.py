@@ -339,9 +339,11 @@ class CMDCoinSelectionConfigLoader:
         return CoinSelectionConfigLoader(
             self.min_coin_amount.convert_amount_with_default(mojo_per_unit, None),
             self.max_coin_amount.convert_amount_with_default(mojo_per_unit, None),
-            [cli_amount.convert_amount(mojo_per_unit) for cli_amount in self.excluded_coin_amounts]
-            if self.excluded_coin_amounts is not None
-            else None,
+            (
+                [cli_amount.convert_amount(mojo_per_unit) for cli_amount in self.excluded_coin_amounts]
+                if self.excluded_coin_amounts is not None
+                else None
+            ),
             self.excluded_coin_ids,
         ).autofill(constants=DEFAULT_CONSTANTS)
 

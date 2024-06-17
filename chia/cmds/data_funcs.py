@@ -145,9 +145,7 @@ async def get_keys_cmd(
 ) -> Dict[str, Any]:
     res = dict()
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
-        res = await client.get_keys(
-            store_id=store_id, root_hash=root_hash, page=page, max_page_size=max_page_size
-        )
+        res = await client.get_keys(store_id=store_id, root_hash=root_hash, page=page, max_page_size=max_page_size)
         print(json.dumps(res, indent=2, sort_keys=True))
 
     return res

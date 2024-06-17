@@ -77,9 +77,7 @@ def create_cmd(
         return
     valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
     asyncio.run(
-        create(
-            wallet_rpc_port, fingerprint, pool_url, valid_initial_states[state], fee, prompt=not dont_prompt
-        )
+        create(wallet_rpc_port, fingerprint, pool_url, valid_initial_states[state], fee, prompt=not dont_prompt)
     )
 
 
