@@ -336,7 +336,8 @@ T_MaybeBytes32 = TypeVar("T_MaybeBytes32", bound=Union[Optional[bytes32], "TreeI
 @dataclass(frozen=True)
 class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
     class Unspecified:
-        pass
+        def __repr__(self) -> str:
+            return "TreeId.Unspecified"
 
     unspecified: ClassVar[Unspecified] = Unspecified()
 

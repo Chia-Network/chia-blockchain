@@ -1212,6 +1212,7 @@ async def test_kv_diff_2(data_store: DataStore, store_id: bytes32) -> None:
         reference_node_hash=None,
         side=None,
     )
+    # TODO: didn't mean to be changing this behavior...
     empty_hash = bytes32([0] * 32)
     invalid_hash = bytes32([0] * 31 + [1])
     diff_1 = await data_store.get_kv_diff(store_id, empty_hash, insert_result.node_hash)

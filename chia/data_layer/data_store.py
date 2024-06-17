@@ -585,6 +585,9 @@ class DataStore:
     async def _resolve_tree_id(
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> TreeId[int, Optional[bytes32]]:
+        if tree_id.root_hash == bytes32([0] * 32):
+            # TODO: see if we can first clean up around this two-ways-to-say-one-thing situation
+            tree_id = replace(tree_id, root_hash=None)
         # TODO: optimize
 
         if isinstance(tree_id.generation, TreeId.Unspecified):
@@ -593,7 +596,7 @@ class DataStore:
             else:
                 # TODO: can this be more direct
                 root = await self.get_last_tree_root_by_hash(store_id=tree_id.store_id, hash=tree_id.root_hash)
-                assert root is not None
+                assert root is not None, f"unable to find root: {root!r}"
                 generation = root.generation
 
             tree_id = replace(tree_id, generation=generation)
@@ -836,7 +839,14 @@ class DataStore:
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> List[TerminalNode]:
         async with self.db_wrapper.reader() as reader:
-            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            try:
+                resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            except AssertionError as e:
+                # TODO: blech, review context
+                if not e.args[0].startswith("unable to find root: "):
+                    raise
+                return []
+
             # TODO: yuck but...  useful
             del tree_id
 
@@ -866,7 +876,15 @@ class DataStore:
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> KeysValuesCompressed:
         async with self.db_wrapper.reader() as reader:
-            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            try:
+                resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            except AssertionError as e:
+                # TODO: blech, review context
+                if not e.args[0].startswith("unable to find root: "):
+                    raise
+                # TODO: not cool
+                assert not isinstance(tree_id.root_hash, TreeId.Unspecified)
+                return KeysValuesCompressed({}, {}, {}, tree_id.root_hash)
             # TODO: yuck but...  useful
             del tree_id
 
@@ -909,8 +927,19 @@ class DataStore:
         page: int,
         max_page_size: int,
     ) -> KeysPaginationData:
+        # TODO: back-compat?  let's resolve the meaning of None for root hash
+        if tree_id.root_hash is None:
+            tree_id = replace(tree_id, root_hash=TreeId.unspecified)
         # TODO: hum...  transaction?
-        resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+        try:
+            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+        except AssertionError as e:
+            # TODO: blech, review context
+            if not e.args[0].startswith("unable to find root: "):
+                raise
+            # TODO: not cool
+            assert not isinstance(tree_id.root_hash, TreeId.Unspecified)
+            return KeysPaginationData(0, 0, [], tree_id.root_hash)
         # TODO: yuck but...  useful
         del tree_id
 
@@ -937,6 +966,9 @@ class DataStore:
         page: int,
         max_page_size: int,
     ) -> KeysValuesPaginationData:
+        # TODO: back-compat?  let's resolve the meaning of None for root hash
+        if tree_id.root_hash is None:
+            tree_id = replace(tree_id, root_hash=TreeId.unspecified)
         keys_values_compressed = await self.get_keys_values_compressed(tree_id=tree_id)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
 
@@ -1108,7 +1140,16 @@ class DataStore:
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> List[bytes]:
         async with self.db_wrapper.reader() as reader:
-            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            # TODO: back-compat?  let's resolve the meaning of None for root hash
+            if tree_id.root_hash is None:
+                tree_id = replace(tree_id, root_hash=TreeId.unspecified)
+            try:
+                resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            except AssertionError as e:
+                # TODO: blech, review context
+                if not e.args[0].startswith("unable to find root: "):
+                    raise
+                return []
             # TODO: yuck but...  useful
             del tree_id
 
@@ -1897,8 +1938,10 @@ class DataStore:
         key: bytes,
         tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
     ) -> TerminalNode:
-        if tree_id.root_hash is None:
-            return await self.get_node_by_key_latest_generation(key, tree_id=tree_id)
+        # TODO: recover usage of .get_node_by_key_latest_generation()
+        #       None has mixed use in terms of empty roots vs. not-specified roots
+        # if tree_id.root_hash is None:
+        #     return await self.get_node_by_key_latest_generation(key, tree_id=tree_id)
 
         nodes = await self.get_keys_values(tree_id=tree_id)
 

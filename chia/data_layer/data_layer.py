@@ -387,7 +387,11 @@ class DataLayer:
         async with self.data_store.transaction():
             node = await self.data_store.get_node_by_key(
                 key=key,
-                tree_id=TreeId(store_id=store_id, generation=TreeId.unspecified, root_hash=root_hash),
+                tree_id=TreeId(
+                    store_id=store_id,
+                    generation=TreeId.unspecified,
+                    root_hash=root_hash if root_hash is not None else TreeId.unspecified,
+                ),
             )
             return node.hash
 
@@ -398,7 +402,11 @@ class DataLayer:
             # this either returns the node or raises an exception
             res = await self.data_store.get_node_by_key(
                 key=key,
-                tree_id=TreeId(store_id=store_id, generation=TreeId.unspecified, root_hash=root_hash),
+                tree_id=TreeId(
+                    store_id=store_id,
+                    generation=TreeId.unspecified,
+                    root_hash=root_hash if root_hash is not None else TreeId.unspecified,
+                ),
             )
             return res.value
 
@@ -406,7 +414,11 @@ class DataLayer:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_keys_values(
-            tree_id=TreeId(store_id=store_id, generation=TreeId.unspecified, root_hash=root_hash),
+            tree_id=TreeId(
+                store_id=store_id,
+                generation=TreeId.unspecified,
+                root_hash=root_hash if root_hash is not None else TreeId.unspecified,
+            ),
         )
         if res is None:
             self.log.error("Failed to fetch keys values")
