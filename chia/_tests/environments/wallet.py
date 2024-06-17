@@ -18,9 +18,9 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
-from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
@@ -95,7 +95,7 @@ class WalletEnvironment:
         return self.service._node.wallet_state_manager
 
     @property
-    def xch_wallet(self) -> MainWalletProtocol:
+    def xch_wallet(self) -> Wallet:
         return self.service._node.wallet_state_manager.main_wallet
 
     async def restart(self, new_fingerprint: Optional[int]) -> None:

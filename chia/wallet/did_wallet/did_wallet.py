@@ -51,9 +51,10 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import MainWalletProtocol, WalletProtocol
+from chia.wallet.wallet_protocol import WalletProtocol
 
 
 class DIDWallet:
@@ -65,7 +66,7 @@ class DIDWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     did_info: DIDInfo
-    standard_wallet: MainWalletProtocol
+    standard_wallet: Wallet
     base_puzzle_program: Optional[bytes]
     base_inner_puzzle_hash: Optional[bytes32]
     wallet_id: int
@@ -73,7 +74,7 @@ class DIDWallet:
     @staticmethod
     async def create_new_did_wallet(
         wallet_state_manager: Any,
-        wallet: MainWalletProtocol,
+        wallet: Wallet,
         amount: uint64,
         tx_config: TXConfig,
         backups_ids: List[bytes32] = [],
@@ -105,7 +106,7 @@ class DIDWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-        std_wallet_id = self.standard_wallet.id()
+        std_wallet_id = self.standard_wallet.wallet_id
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
@@ -133,7 +134,7 @@ class DIDWallet:
             name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         self.wallet_id = self.wallet_info.id
-        std_wallet_id = self.standard_wallet.id()
+        std_wallet_id = self.standard_wallet.wallet_id
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
@@ -153,7 +154,7 @@ class DIDWallet:
     @staticmethod
     async def create_new_did_wallet_from_recovery(
         wallet_state_manager: Any,
-        wallet: MainWalletProtocol,
+        wallet: Wallet,
         backup_data: str,
         name: Optional[str] = None,
     ):
@@ -193,7 +194,7 @@ class DIDWallet:
     @staticmethod
     async def create_new_did_wallet_from_coin_spend(
         wallet_state_manager: Any,
-        wallet: MainWalletProtocol,
+        wallet: Wallet,
         launch_coin: Coin,
         inner_puzzle: Program,
         coin_spend: CoinSpend,
@@ -268,7 +269,7 @@ class DIDWallet:
     @staticmethod
     async def create(
         wallet_state_manager: Any,
-        wallet: MainWalletProtocol,
+        wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,
     ):

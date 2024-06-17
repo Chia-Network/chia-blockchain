@@ -151,7 +151,7 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
-from chia.wallet.wallet_protocol import MainWalletProtocol, WalletProtocol
+from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
@@ -191,7 +191,7 @@ class WalletStateManager:
     db_path: Path
     db_wrapper: DBWrapper2
 
-    main_wallet: MainWalletProtocol
+    main_wallet: Wallet
     wallets: Dict[uint32, WalletProtocol[Any]]
     private_key: Optional[PrivateKey]
     root_pubkey: G1Element
@@ -291,7 +291,7 @@ class WalletStateManager:
         puzzle_decorators = self.config.get("puzzle_decorators", {}).get(fingerprint, [])
         self.decorator_manager = PuzzleDecoratorManager.create(puzzle_decorators)
 
-        self.main_wallet = await self.get_main_wallet_driver(self.observation_root).create(self, main_wallet_info)
+        self.main_wallet = await Wallet.create(self, main_wallet_info)
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
 

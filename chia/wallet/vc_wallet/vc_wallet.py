@@ -45,9 +45,10 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord, VCStore
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol, WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager  # pragma: no cover
@@ -58,7 +59,7 @@ _T_VCWallet = TypeVar("_T_VCWallet", bound="VCWallet")
 class VCWallet:
     wallet_state_manager: WalletStateManager
     log: logging.Logger
-    standard_wallet: MainWalletProtocol
+    standard_wallet: Wallet
     wallet_info: WalletInfo
     store: VCStore
 
@@ -66,7 +67,7 @@ class VCWallet:
     async def create_new_vc_wallet(
         cls: Type[_T_VCWallet],
         wallet_state_manager: WalletStateManager,
-        wallet: MainWalletProtocol,
+        wallet: Wallet,
         name: Optional[str] = None,
     ) -> _T_VCWallet:
         name = "VCWallet" if name is None else name
@@ -83,7 +84,7 @@ class VCWallet:
     async def create(
         cls: Type[_T_VCWallet],
         wallet_state_manager: WalletStateManager,
-        wallet: MainWalletProtocol,
+        wallet: Wallet,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
     ) -> _T_VCWallet:

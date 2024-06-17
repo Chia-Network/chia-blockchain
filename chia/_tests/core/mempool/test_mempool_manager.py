@@ -53,9 +53,9 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.payment import Payment
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_protocol import MainWalletProtocol
 
 IDENTITY_PUZZLE = SerializedProgram.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
@@ -1609,7 +1609,7 @@ async def test_identical_spend_aggregation_e2e(
 
     async def make_setup_and_coins(
         full_node_api: FullNodeSimulator, wallet_node: WalletNode
-    ) -> Tuple[MainWalletProtocol, list[WalletCoinRecord], bytes32]:
+    ) -> Tuple[Wallet, list[WalletCoinRecord], bytes32]:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         phs = [await wallet.get_new_puzzlehash() for _ in range(3)]
