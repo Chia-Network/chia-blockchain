@@ -546,7 +546,7 @@ class Wallet:
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
                 puzzle_hash_for_synthetic_public_key(pk_parsed)
             )
-        root_fingerprint: bytes = self.wallet_state_manager.observation_root.get_fingerprint().to_bytes(4, "big")
+        root_pubkey: bytes = self.wallet_state_manager.root_pubkey.get_fingerprint().to_bytes(4, "big")
         if index is None:
             # Pool wallet may have a secret key here
             if self.wallet_state_manager.private_key is not None:
@@ -556,20 +556,19 @@ class Wallet:
                     )
                     if try_owner_sk.get_g1() == pk_parsed:
                         return PathHint(
-                            root_fingerprint,
+                            root_pubkey,
                             [uint64(12381), uint64(8444), uint64(5), uint64(pool_wallet_index)],
                         )
             return None
         return PathHint(
-            root_fingerprint,
+            root_pubkey,
             [uint64(12381), uint64(8444), uint64(2), uint64(index)],
         )
 
     async def execute_signing_instructions(
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
     ) -> List[SigningResponse]:
-        assert isinstance(self.wallet_state_manager.observation_root, G1Element)
-        root_pubkey: G1Element = self.wallet_state_manager.observation_root
+        root_pubkey: G1Element = self.wallet_state_manager.root_pubkey
         pk_lookup: Dict[int, G1Element] = (
             {root_pubkey.get_fingerprint(): root_pubkey} if self.wallet_state_manager.private_key is not None else {}
         )

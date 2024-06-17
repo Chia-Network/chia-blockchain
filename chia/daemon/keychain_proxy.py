@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
 
 from aiohttp import ClientConnectorError, ClientSession
-from chia_rs import AugSchemeMPL, PrivateKey
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -387,7 +387,7 @@ class KeychainProxy(DaemonProxy):
                         err = "G1Elements don't match"
                         self.log.error(f"{err}")
                 else:
-                    key = KeyTypes.parse_observation_root(bytes.fromhex(pk), KeyTypes(response["data"]["key_type"]))
+                    key = G1Element.from_bytes(bytes.fromhex(pk))
             else:
                 self.handle_error(response)
 

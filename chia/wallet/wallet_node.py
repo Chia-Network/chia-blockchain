@@ -414,17 +414,17 @@ class WalletNode:
         self.synced_peers = set()
         private_key = await self.get_key(fingerprint, private=True)
         if private_key is None:
-            observation_root = await self.get_key(fingerprint, private=False)
+            public_key = await self.get_key(fingerprint, private=False)
         else:
             assert isinstance(private_key, PrivateKey)
-            observation_root = private_key.get_g1()
-        if observation_root is None:
+            public_key = private_key.get_g1()
+        if public_key is None:
             self.log_out()
             return False
-        assert not isinstance(observation_root, PrivateKey)
+        assert isinstance(public_key, G1Element)
         # override with private key fetched in case it's different from what was passed
         if fingerprint is None:
-            fingerprint = observation_root.get_fingerprint()
+            fingerprint = public_key.get_fingerprint()
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
@@ -448,7 +448,7 @@ class WalletNode:
             self.server,
             self.root_path,
             self,
-            observation_root,
+            public_key,
         )
 
         if self.state_changed_callback is not None:

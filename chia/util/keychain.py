@@ -36,9 +36,6 @@ MAX_KEYS = 100
 MIN_PASSPHRASE_LEN = 8
 
 
-_T_ObservationRoot = TypeVar("_T_ObservationRoot", bound=ObservationRoot)
-
-
 def supports_os_passphrase_storage() -> bool:
     return sys.platform in ["darwin", "win32", "cygwin"]
 
@@ -483,11 +480,11 @@ class Keychain:
                 pass
         return all_keys
 
-    def get_all_public_keys(self) -> List[ObservationRoot]:
+    def get_all_public_keys(self) -> List[G1Element]:
         """
         Returns all public keys.
         """
-        all_keys: List[ObservationRoot] = []
+        all_keys: List[G1Element] = []
         for index in range(MAX_KEYS + 1):
             try:
                 key_data = self._get_key_data(index)
