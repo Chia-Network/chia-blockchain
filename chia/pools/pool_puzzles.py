@@ -6,7 +6,6 @@ from typing import List, Optional, Tuple
 from chia_rs import G1Element
 from clvm.casts import int_to_bytes
 
-from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
 from chia.pools.pool_wallet_info import LEAVING_POOL, SELF_POOLING, PoolState
@@ -35,6 +34,7 @@ POOL_WAITING_ROOM_HASH = POOL_WAITING_ROOM_MOD.get_tree_hash()
 P2_SINGLETON_HASH = P2_SINGLETON_MOD.get_tree_hash()
 P2_SINGLETON_HASH_QUOTED = calculate_hash_of_quoted_mod_hash(P2_SINGLETON_HASH)
 POOL_OUTER_MOD_HASH = POOL_OUTER_MOD.get_tree_hash()
+SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clsp")
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 SINGLETON_LAUNCHER_HASH_TREE_HASH = shatree_atom(SINGLETON_LAUNCHER_HASH)
 SINGLETON_MOD_HASH = POOL_OUTER_MOD_HASH
