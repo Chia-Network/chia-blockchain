@@ -5,7 +5,9 @@ import cProfile
 import logging
 import pathlib
 import tracemalloc
+from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import AsyncIterator, Optional
 
 from chia.util.path import path_from_root
 
@@ -176,3 +178,17 @@ async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.L
             counter += 1
     finally:
         tracemalloc.stop()
+
+
+@asynccontextmanager
+async def enable_profiler(profile: bool) -> AsyncIterator[Optional[cProfile.Profile]]:
+    if not profile:
+        yield None
+        return
+
+    # this is not covered by any unit tests as it's essentially test code
+    # itself. It's exercised manually when investigating performance issues
+    with cProfile.Profile() as pr:  # pragma: no cover
+        pr.enable()
+        yield pr
+        pr.disable()

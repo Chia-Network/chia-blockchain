@@ -142,7 +142,7 @@ async def add_funds_to_treasury(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
@@ -205,6 +205,8 @@ async def show_proposal(wallet_rpc_port: Optional[int], fp: int, wallet_id: int,
             ptype = "spend"
         elif ptype_val == "u":
             ptype = "update"
+        else:
+            raise Exception(f"Unknown proposal type: {ptype_val!r}")
 
         print("")
         print(f"Details of Proposal: {proposal_id}")
@@ -281,7 +283,7 @@ async def vote_on_proposal(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
@@ -311,7 +313,7 @@ async def close_proposal(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
@@ -340,7 +342,7 @@ async def lockup_coins(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
@@ -366,7 +368,7 @@ async def release_coins(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))
@@ -392,7 +394,7 @@ async def exit_lockup(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(wallet_id, bytes32.from_hexstr(tx_id))
+            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_id[2:]))

@@ -27,7 +27,6 @@ from typing_extensions import final
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import INVALID_PROTOCOL_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version
 from chia.server.api_protocol import ApiProtocol
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
@@ -334,7 +333,7 @@ class ChiaServer:
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, self.get_port(), self._local_type)
+            await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
             # Limit inbound connections to config's specifications.
@@ -485,7 +484,7 @@ class ChiaServer:
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
                 session=session,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, server_port, self._local_type)
+            await connection.perform_handshake(self._network_id, server_port, self._local_type)
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function
@@ -522,7 +521,9 @@ class ChiaServer:
 
         return False
 
-    def connection_closed(self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = False) -> None:
+    async def connection_closed(
+        self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = False
+    ) -> None:
         # closed_connection is true if the callback is being called with a connection that was previously closed
         # in this case we still want to do the banning logic and remove the conection from the list
         # but the other cleanup should already have been done so we skip that
@@ -555,7 +556,7 @@ class ChiaServer:
             connection.cancel_tasks()
             on_disconnect = getattr(self.node, "on_disconnect", None)
             if on_disconnect is not None:
-                on_disconnect(connection)
+                await on_disconnect(connection)
 
     async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType) -> None:
         for message in messages:
@@ -580,6 +581,19 @@ class ChiaServer:
         await self.validate_broadcast_message_type(messages, node_type)
         for _, connection in self.all_connections.items():
             if connection.connection_type is node_type and connection.peer_node_id != exclude:
+                for message in messages:
+                    await connection.send_message(message)
+
+    async def send_to_all_if(
+        self,
+        messages: List[Message],
+        node_type: NodeType,
+        predicate: Callable[[WSChiaConnection], bool],
+        exclude: Optional[bytes32] = None,
+    ) -> None:
+        await self.validate_broadcast_message_type(messages, node_type)
+        for _, connection in self.all_connections.items():
+            if connection.connection_type is node_type and connection.peer_node_id != exclude and predicate(connection):
                 for message in messages:
                     await connection.send_message(message)
 
@@ -682,15 +696,15 @@ class ChiaServer:
             return True
         inbound_count = len(self.get_connections(node_type, outbound=False))
         if node_type == NodeType.FULL_NODE:
-            return inbound_count < cast(int, self.config["target_peer_count"]) - cast(
-                int, self.config["target_outbound_peer_count"]
+            return inbound_count < cast(int, self.config.get("target_peer_count", 40)) - cast(
+                int, self.config.get("target_outbound_peer_count", 8)
             )
         if node_type == NodeType.WALLET:
-            return inbound_count < cast(int, self.config["max_inbound_wallet"])
+            return inbound_count < cast(int, self.config.get("max_inbound_wallet", 20))
         if node_type == NodeType.FARMER:
-            return inbound_count < cast(int, self.config["max_inbound_farmer"])
+            return inbound_count < cast(int, self.config.get("max_inbound_farmer", 10))
         if node_type == NodeType.TIMELORD:
-            return inbound_count < cast(int, self.config["max_inbound_timelord"])
+            return inbound_count < cast(int, self.config.get("max_inbound_timelord", 5))
         return True
 
     def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict[str, Any]) -> bool:
@@ -698,6 +712,7 @@ class ChiaServer:
             host=peer.peer_info.host,
             node_id=peer.peer_node_id,
             trusted_peers=trusted_peers,
+            trusted_cidrs=self.config.get("trusted_cidrs", []),
             testing=self.config.get("testing", False),
         )
 

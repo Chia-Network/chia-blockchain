@@ -7,19 +7,19 @@ git submodule
 
 if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"
-	exit 1
+  exit 1
 elif [ "$1" = "amd64" ]; then
-	export REDHAT_PLATFORM="x86_64"
+  export REDHAT_PLATFORM="x86_64"
 else
-	export REDHAT_PLATFORM="arm64"
+  export REDHAT_PLATFORM="arm64"
 fi
 
 # If the env variable NOTARIZE and the username and password variables are
 # set, this will attempt to Notarize the signed DMG
 
 if [ ! "$CHIA_INSTALLER_VERSION" ]; then
-	echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
-	CHIA_INSTALLER_VERSION="0.0.0"
+  echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
+  CHIA_INSTALLER_VERSION="0.0.0"
 fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
@@ -37,8 +37,8 @@ SPEC_FILE=$(python -c 'import sys; from pathlib import Path; path = Path(sys.arg
 pyinstaller --log-level=INFO "$SPEC_FILE"
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "pyinstaller failed!"
-	exit $LAST_EXIT_CODE
+  echo >&2 "pyinstaller failed!"
+  exit $LAST_EXIT_CODE
 fi
 
 # Creates a directory of licenses
@@ -50,18 +50,25 @@ bash ./build_license_directory.sh
 CLI_RPM_BASE="chia-blockchain-cli-$CHIA_INSTALLER_VERSION-1.$REDHAT_PLATFORM"
 mkdir -p "dist/$CLI_RPM_BASE/opt/chia"
 mkdir -p "dist/$CLI_RPM_BASE/usr/bin"
+mkdir -p "dist/$CLI_RPM_BASE/etc/systemd/system"
 cp -r dist/daemon/* "dist/$CLI_RPM_BASE/opt/chia/"
+cp assets/systemd/*.service "dist/$CLI_RPM_BASE/etc/systemd/system/"
 
 ln -s ../../opt/chia/chia "dist/$CLI_RPM_BASE/usr/bin/chia"
 # This is built into the base build image
 # shellcheck disable=SC1091
 . /etc/profile.d/rvm.sh
 rvm use ruby-3
+
+export FPM_EDITOR="cat >dist/cli.spec <"
+
 # /usr/lib64/libcrypt.so.1 is marked as a dependency specifically because newer versions of fedora bundle
 # libcrypt.so.2 by default, and the libxcrypt-compat package needs to be installed for the other version
 # Marking as a dependency allows yum/dnf to automatically install the libxcrypt-compat package as well
 fpm -s dir -t rpm \
+  --edit \
   -C "dist/$CLI_RPM_BASE" \
+  --directories "/opt/chia" \
   -p "dist/$CLI_RPM_BASE.rpm" \
   --name chia-blockchain-cli \
   --license Apache-2.0 \
@@ -71,6 +78,10 @@ fpm -s dir -t rpm \
   --rpm-tag 'Recommends: libxcrypt-compat' \
   --rpm-tag '%define _build_id_links none' \
   --rpm-tag '%undefine _missing_build_ids_terminate_build' \
+  --before-install=assets/rpm/before-install.sh \
+  --rpm-tag 'Requires(pre): findutils' \
+  --rpm-compression xzmt \
+  --rpm-compression-level 6 \
   .
 # CLI only rpm done
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
@@ -79,7 +90,10 @@ cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
-jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
+jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json >temp.json && mv temp.json package.json
+
+export FPM_EDITOR="cat >../../../build_scripts/dist/gui.spec <"
+jq '.rpm.fpm |= . + ["--edit"]' ../../../build_scripts/electron-builder.json >temp.json && mv temp.json ../../../build_scripts/electron-builder.json
 
 echo "Building Linux(rpm) Electron app"
 OPT_ARCH="--x64"
@@ -90,11 +104,13 @@ PRODUCT_NAME="chia"
 echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
-  --config.rpm.packageName="chia-blockchain"
+  --config.rpm.packageName="chia-blockchain" \
+  --config ../../../build_scripts/electron-builder.json
 npx electron-builder build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
-  --config.rpm.packageName="chia-blockchain"
+  --config.rpm.packageName="chia-blockchain" \
+  --config ../../../build_scripts/electron-builder.json
 LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 
@@ -102,8 +118,8 @@ ls -l dist/linux*-unpacked/resources
 mv package.json.orig package.json
 
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-builder failed!"
-	exit $LAST_EXIT_CODE
+  echo >&2 "electron-builder failed!"
+  exit $LAST_EXIT_CODE
 fi
 
 GUI_RPM_NAME="chia-blockchain-${CHIA_INSTALLER_VERSION}-1.${REDHAT_PLATFORM}.rpm"

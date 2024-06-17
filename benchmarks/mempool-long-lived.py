@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from time import monotonic
-from typing import Dict, Optional
+from typing import Collection, Dict, List, Optional
 
 from chia_rs import G2Element
 from clvm.casts import int_to_bytes
@@ -11,7 +11,7 @@ from clvm.casts import int_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -44,7 +44,7 @@ class BenchBlockRecord:
         return self.timestamp is not None
 
 
-IDENTITY_PUZZLE = Program.to(1)
+IDENTITY_PUZZLE = SerializedProgram.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 
@@ -62,7 +62,7 @@ def make_spend_bundle(coin: Coin, height: int) -> SpendBundle:
             int_to_bytes(coin.amount // 2 - height * 10),
         ],
     ]
-    spend = CoinSpend(coin, IDENTITY_PUZZLE, Program.to(conditions))
+    spend = CoinSpend(coin, IDENTITY_PUZZLE, SerializedProgram.to(conditions))
     return SpendBundle([spend], G2Element())
 
 
@@ -81,8 +81,13 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 async def run_mempool_benchmark() -> None:
     coin_records: Dict[bytes32, CoinRecord] = {}
 
-    async def get_coin_record(coin_id: bytes32) -> Optional[CoinRecord]:
-        return coin_records.get(coin_id)
+    async def get_coin_record(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
+        ret: List[CoinRecord] = []
+        for name in coin_ids:
+            r = coin_records.get(name)
+            if r is not None:
+                ret.append(r)
+        return ret
 
     timestamp = uint64(1631794488)
 
@@ -101,7 +106,7 @@ async def run_mempool_benchmark() -> None:
 
         # add 10 transactions to the mempool
         for i in range(10):
-            coin = Coin(make_hash(height * 10 + i), IDENTITY_PUZZLE_HASH, height * 100000 + i * 100)
+            coin = Coin(make_hash(height * 10 + i), IDENTITY_PUZZLE_HASH, uint64(height * 100000 + i * 100))
             sb = make_spend_bundle(coin, height)
             # make this coin available via get_coin_record, which is called
             # by mempool_manager

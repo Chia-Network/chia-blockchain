@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import pathlib
 from typing import List, Optional, Sequence
 
 import click
@@ -443,10 +444,15 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: bytes32, token_name:
     "-r",
     "--request",
     help="A wallet id of an asset to receive and the amount you wish to receive (formatted like wallet_id:amount)",
-    required=True,
     multiple=True,
 )
-@click.option("-p", "--filepath", help="The path to write the generated offer file to", required=True)
+@click.option(
+    "-p",
+    "--filepath",
+    help="The path to write the generated offer file to",
+    required=True,
+    type=click.Path(dir_okay=False, writable=True, path_type=pathlib.Path),
+)
 @options.create_fee("A fee to add to the offer when it gets taken, in XCH")
 @click.option(
     "--reuse",
@@ -454,16 +460,22 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: bytes32, token_name:
     is_flag=True,
     default=False,
 )
+@click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
 def make_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     offer: Sequence[str],
     request: Sequence[str],
-    filepath: str,
+    filepath: pathlib.Path,
     fee: uint64,
     reuse: bool,
+    override: bool,
 ) -> None:
     from .wallet_funcs import make_offer
+
+    if len(request) == 0 and not override:
+        print("Cannot make an offer without requesting something without --override")
+        return
 
     asyncio.run(
         make_offer(
@@ -864,7 +876,13 @@ def did_transfer_did(
 
     asyncio.run(
         transfer_did(
-            wallet_rpc_port, fingerprint, id, fee, target_address, reset_recovery is False, True if reuse else None
+            wallet_rpc_port,
+            fingerprint,
+            id,
+            fee,
+            target_address,
+            reset_recovery is False,
+            True if reuse else None,
         )
     )
 

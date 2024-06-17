@@ -4,13 +4,14 @@ import pathlib
 import sys
 from typing import Any, Dict, Optional, Set
 
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.rpc.harvester_rpc_api import HarvesterRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
+from chia.types.aliases import HarvesterService
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
@@ -29,16 +30,16 @@ def create_harvester_service(
     consensus_constants: ConsensusConstants,
     farmer_peers: Set[UnresolvedPeerInfo],
     connect_to_daemon: bool = True,
-) -> Service[Harvester, HarvesterAPI]:
+) -> HarvesterService:
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
-    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
     harvester = Harvester(root_path, service_config, updated_constants)
     peer_api = HarvesterAPI(harvester)
     network_id = service_config["selected_network"]
-    rpc_info: Optional[RpcInfo] = None
+    rpc_info: Optional[RpcInfo[HarvesterRpcApi]] = None
     if service_config["start_rpc_server"]:
         rpc_info = (HarvesterRpcApi, service_config["rpc_port"])
     return Service(

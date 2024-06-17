@@ -13,7 +13,7 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Union, cast
 
-import pkg_resources
+import importlib_resources
 import yaml
 from typing_extensions import Literal
 
@@ -21,14 +21,13 @@ from chia.server.outbound_message import NodeType
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.lock import Lockfile
 
-PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
-WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
-
 log = logging.getLogger(__name__)
 
 
 def initial_config_file(filename: Union[str, Path]) -> str:
-    return pkg_resources.resource_string(__name__, f"initial-{filename}").decode()
+    initial_config_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath(f"initial-{filename}")
+    contents: str = initial_config_path.read_text(encoding="utf-8")
+    return contents
 
 
 def create_default_chia_config(root_path: Path, filenames: List[str] = ["config.yaml"]) -> None:

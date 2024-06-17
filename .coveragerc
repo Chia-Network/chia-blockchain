@@ -5,9 +5,8 @@ disable_warnings=
 relative_files=True
 source_pkgs=
   chia
-  tests
 omit=
-  tests/**/config.py
+  chia/_tests/**/config.py
 concurrency=multiprocessing, thread
 parallel=True
 
@@ -25,3 +24,4 @@ exclude_also =
   if typing.TYPE_CHECKING:
   if TYPE_CHECKING:
   ^ *@pytest.mark.skip($|\()
+  benchmark_runner: BenchmarkRunner

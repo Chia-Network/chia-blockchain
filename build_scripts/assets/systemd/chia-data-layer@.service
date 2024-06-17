@@ -1,0 +1,17 @@
+[Unit]
+Description=Chia Data Layer Service for %i
+Requires=chia-daemon@%i.service
+After=chia-daemon@%i.service
+
+[Service]
+Type=simple
+Environment=CHIA_ROOT=/home/%i/.chia/mainnet
+ExecStart=/opt/chia/start_data_layer
+User=%i
+Group=%i
+LimitNOFILE=1048576
+LimitNPROC=1048576
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

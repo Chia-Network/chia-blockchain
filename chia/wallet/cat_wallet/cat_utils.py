@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Iterator, List, Optional
+from typing import Iterator, List, Optional, Union
 
 from chia_rs import G2Element
 
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
@@ -25,10 +25,7 @@ CAT_MOD_HASH_HASH: bytes32 = Program.to(CAT_MOD_HASH).get_tree_hash()
 
 
 def empty_program() -> Program:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to([])  # type: ignore[no-any-return]
+    return Program.to([])
 
 
 # information needed to spend a cc
@@ -65,14 +62,19 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
 
 
 def construct_cat_puzzle(
-    mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program, mod_code_hash: Optional[bytes32] = None
+    mod_code: Program,
+    limitations_program_hash: bytes32,
+    inner_puzzle_or_hash: Union[Program, bytes32],
+    mod_code_hash: Optional[bytes32] = None,
 ) -> Program:
     """
-    Given an inner puzzle hash and tail hash calculate a puzzle program for a specific cc.
+    Given an inner puzzle and a tail hash, calculate a puzzle program for a specific cc.
+    We can also receive an inner puzzle hash instead, which wouldn't calculate a valid
+    puzzle, but that can be useful if calling `.get_tree_hash_precalc()` on it."
     """
     if mod_code_hash is None:
         mod_code_hash = mod_code.get_tree_hash()
-    return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle)
+    return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle_or_hash)
 
 
 def subtotals_for_deltas(deltas: List[int]) -> List[int]:
@@ -97,9 +99,7 @@ def subtotals_for_deltas(deltas: List[int]) -> List[int]:
 def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
     c = spendable_cat.coin
     list = [c.parent_coin_info, spendable_cat.inner_puzzle.get_tree_hash(), c.amount]
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    return Program.to(list)  # type: ignore[no-any-return]
+    return Program.to(list)
 
 
 # This should probably return UnsignedSpendBundle if that type ever exists
@@ -155,7 +155,7 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
             subtotals[index],
             spend_info.extra_delta,
         ]
-        coin_spend = CoinSpend(spend_info.coin, puzzle_reveal, Program.to(solution))
+        coin_spend = make_spend(spend_info.coin, puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
 
     return SpendBundle(coin_spends, NULL_SIGNATURE)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import List, Optional, Tuple
 
 import chia_rs
@@ -276,3 +277,125 @@ class RequestFeeEstimates(Streamable):
 @dataclass(frozen=True)
 class RespondFeeEstimates(Streamable):
     estimates: FeeEstimateGroup
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestRemovePuzzleSubscriptions(Streamable):
+    puzzle_hashes: Optional[List[bytes32]]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondRemovePuzzleSubscriptions(Streamable):
+    puzzle_hashes: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestRemoveCoinSubscriptions(Streamable):
+    coin_ids: Optional[List[bytes32]]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondRemoveCoinSubscriptions(Streamable):
+    coin_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class CoinStateFilters(Streamable):
+    include_spent: bool
+    include_unspent: bool
+    include_hinted: bool
+    min_amount: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestPuzzleState(Streamable):
+    puzzle_hashes: List[bytes32]
+    previous_height: Optional[uint32]
+    header_hash: bytes32
+    filters: CoinStateFilters
+    subscribe_when_finished: bool
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondPuzzleState(Streamable):
+    puzzle_hashes: List[bytes32]
+    height: uint32
+    header_hash: bytes32
+    is_finished: bool
+    coin_states: List[CoinState]
+
+
+@streamable
+@dataclass(frozen=True)
+class RejectPuzzleState(Streamable):
+    reason: uint8  # RejectStateReason
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestCoinState(Streamable):
+    coin_ids: List[bytes32]
+    previous_height: Optional[uint32]
+    header_hash: bytes32
+    subscribe: bool
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondCoinState(Streamable):
+    coin_ids: List[bytes32]
+    coin_states: List[CoinState]
+
+
+@streamable
+@dataclass(frozen=True)
+class RejectCoinState(Streamable):
+    reason: uint8  # RejectStateReason
+
+
+class RejectStateReason(IntEnum):
+    REORG = 0
+    EXCEEDED_SUBSCRIPTION_LIMIT = 1
+
+
+@streamable
+@dataclass(frozen=True)
+class RemovedMempoolItem(Streamable):
+    transaction_id: bytes32
+    reason: uint8  # MempoolRemoveReason
+
+
+@streamable
+@dataclass(frozen=True)
+class MempoolItemsAdded(Streamable):
+    transaction_ids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class MempoolItemsRemoved(Streamable):
+    removed_items: List[RemovedMempoolItem]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestCostInfo(Streamable):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondCostInfo(Streamable):
+    max_transaction_cost: uint64
+    max_block_cost: uint64
+    max_mempool_cost: uint64
+    mempool_cost: uint64
+    mempool_fee: uint64
+    bump_fee_per_cost: uint8

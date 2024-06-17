@@ -5,6 +5,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
+from chia_rs import AugSchemeMPL, BLSCache, G1Element
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -19,12 +20,11 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util import cached_bls
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -44,6 +44,21 @@ log = logging.getLogger(__name__)
 #           :
 
 
+@dataclass(frozen=True)
+class ForkAdd:
+    coin: Coin
+    confirmed_height: uint32
+    timestamp: uint64
+    hint: Optional[bytes]
+    is_coinbase: bool
+
+
+@dataclass(frozen=True)
+class ForkRem:
+    puzzle_hash: bytes32
+    height: uint32
+
+
 @dataclass
 class ForkInfo:
     # defines the last block shared by the fork and the main chain. additions
@@ -58,27 +73,55 @@ class ForkInfo:
     # the header hash of the peak block of this fork
     peak_hash: bytes32
     # The additions include coinbase additions
-    # coin, creation-height, timestamp
-    additions_since_fork: Dict[bytes32, Tuple[Coin, uint32, uint64]] = field(default_factory=dict)
-    # coin-id
-    removals_since_fork: Set[bytes32] = field(default_factory=set)
+    additions_since_fork: Dict[bytes32, ForkAdd] = field(default_factory=dict)
+    # coin-id, ForkRem
+    removals_since_fork: Dict[bytes32, ForkRem] = field(default_factory=dict)
+    # the header hashes of the blocks, starting with the one-past fork_height
+    # i.e. the header hash of fork_height + 1 is stored in block_hashes[0]
+    # followed by fork_height + 2, and so on.
+    block_hashes: List[bytes32] = field(default_factory=list)
 
-    def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock) -> None:
+    def reset(self, fork_height: int, header_hash: bytes32) -> None:
+        self.fork_height = fork_height
+        self.peak_height = fork_height
+        self.peak_hash = header_hash
+        self.additions_since_fork = {}
+        self.removals_since_fork = {}
+        self.block_hashes = []
+
+    def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock, header_hash: bytes32) -> None:
         height = block.height
+
+        assert self.peak_height == height - 1
+
+        assert len(self.block_hashes) == self.peak_height - self.fork_height
+        assert block.height == self.fork_height + 1 + len(self.block_hashes)
+        self.block_hashes.append(header_hash)
+
+        self.peak_height = int(block.height)
+        self.peak_hash = header_hash
+
         if npc_result is not None:
             assert npc_result.conds is not None
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             for spend in npc_result.conds.spends:
-                self.removals_since_fork.add(bytes32(spend.coin_id))
-                for puzzle_hash, amount, _ in spend.create_coin:
+                self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), height)
+                for puzzle_hash, amount, hint in spend.create_coin:
                     coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
-                    self.additions_since_fork[coin.name()] = (coin, height, timestamp)
+                    self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
         for coin in block.get_included_reward_coins():
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
             assert coin.name() not in self.additions_since_fork
-            self.additions_since_fork[coin.name()] = (coin, block.height, timestamp)
+            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
+
+    def rollback(self, header_hash: bytes32, height: int) -> None:
+        assert height <= self.peak_height
+        self.peak_height = height
+        self.peak_hash = header_hash
+        self.additions_since_fork = {k: v for k, v in self.additions_since_fork.items() if v.confirmed_height <= height}
+        self.removals_since_fork = {k: v for k, v in self.removals_since_fork.items() if v.height <= height}
 
 
 async def validate_block_body(
@@ -92,6 +135,7 @@ async def validate_block_body(
     npc_result: Optional[NPCResult],
     fork_info: ForkInfo,
     get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
+    bls_cache: Optional[BLSCache],
     *,
     validate_signature: bool = True,
 ) -> Tuple[Optional[Err], Optional[NPCResult]]:
@@ -258,7 +302,7 @@ async def validate_block_body(
         # Get List of names removed, puzzles hashes for removed coins and conditions created
 
         assert npc_result is not None
-        cost = npc_result.cost
+        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
 
         # 7. Check that cost <= MAX_BLOCK_COST_CLVM
         log.debug(
@@ -363,6 +407,7 @@ async def validate_block_body(
             # and coins created after fork (additions_since_fork)
             if rem in fork_info.removals_since_fork:
                 # This coin was spent in the fork
+                log.error(f"Err.DOUBLE_SPEND_IN_FORK {fork_info.removals_since_fork[rem]}")
                 return Err.DOUBLE_SPEND_IN_FORK, None
             removals_from_db.append(rem)
 
@@ -395,15 +440,15 @@ async def validate_block_body(
         # This coin is not in the current heaviest chain, so it must be in the fork
         if rem not in fork_info.additions_since_fork:
             # Check for spending a coin that does not exist in this fork
-            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} NPC RESULT: {npc_result}")
+            log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} fork_info: {fork_info}")
             return Err.UNKNOWN_UNSPENT, None
-        new_coin, confirmed_height, confirmed_timestamp = fork_info.additions_since_fork[rem]
+        addition: ForkAdd = fork_info.additions_since_fork[rem]
         new_coin_record: CoinRecord = CoinRecord(
-            new_coin,
-            confirmed_height,
+            addition.coin,
+            addition.confirmed_height,
             uint32(0),
             False,
-            confirmed_timestamp,
+            addition.timestamp,
         )
         removal_coin_records[new_coin_record.name] = new_coin_record
 
@@ -451,24 +496,17 @@ async def validate_block_body(
     if npc_result is not None:
         assert npc_result.conds is not None
 
-        block_timestamp: uint64
-        if height < constants.SOFT_FORK2_HEIGHT:
-            # this does not happen on mainnet. testnet10 only
-            block_timestamp = block.foliage_transaction_block.timestamp  # pragma: no cover
-        else:
-            block_timestamp = prev_transaction_block_timestamp
-
         error = mempool_check_time_locks(
             removal_coin_records,
             npc_result.conds,
             prev_transaction_block_height,
-            block_timestamp,
+            prev_transaction_block_timestamp,
         )
         if error:
             return error, None
 
     # create hash_key list for aggsig check
-    pairs_pks: List[bytes48] = []
+    pairs_pks: List[G1Element] = []
     pairs_msgs: List[bytes] = []
     if npc_result:
         assert npc_result.conds is not None
@@ -485,10 +523,11 @@ async def validate_block_body(
     # as the cache is likely to be useful when validating the corresponding
     # finished blocks later.
     if validate_signature:
-        force_cache: bool = isinstance(block, UnfinishedBlock)
-        if not cached_bls.aggregate_verify(
-            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, force_cache
-        ):
-            return Err.BAD_AGGREGATE_SIGNATURE, None
+        if bls_cache is None:
+            if not AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
+                return Err.BAD_AGGREGATE_SIGNATURE, None
+        else:
+            if not bls_cache.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
+                return Err.BAD_AGGREGATE_SIGNATURE, None
 
     return None, npc_result

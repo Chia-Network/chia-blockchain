@@ -206,7 +206,7 @@ def print_min_max_derivation_for_wallets(derivation_paths: List[DerivationPath])
 class WalletDBReader:
     db_wrapper: DBWrapper2  # TODO: Remove db_wrapper member
     config = {"db_readers": 1}
-    sql_log_path = None
+    sql_log_path: Optional[Path] = None
     verbose = False
 
     async def get_all_wallets(self) -> List[Wallet]:
@@ -256,6 +256,7 @@ class WalletDBReader:
             except Exception as e:
                 errors.append(f"Exception while trying to access wallet {main_wallet_id} from users_wallets: {e}")
 
+            max_id: Optional[int] = None
             max_id_row = await execute_fetchone(reader, "SELECT MAX(id) FROM users_wallets")
             if max_id_row is None:
                 errors.append("Error fetching max wallet ID from table users_wallets. No wallets ?!?")
@@ -263,6 +264,9 @@ class WalletDBReader:
                 cursor = await reader.execute("""SELECT * FROM users_wallets""")
                 rows = await cursor.fetchall()
                 max_id = max_id_row[0]
+
+            assert max_id is not None
+
             errors.extend(check_for_gaps([r[0] for r in rows], main_wallet_id, max_id, data_type_plural="Wallet IDs"))
 
             if self.verbose:
@@ -358,18 +362,18 @@ class WalletDBReader:
 
     async def scan(self, db_path: Path) -> int:
         """Returns number of lines of error output (not warnings)"""
-        self.db_wrapper = await DBWrapper2.create(
+        async with DBWrapper2.managed(
             database=db_path,
             reader_count=self.config.get("db_readers", 4),
             log_path=self.sql_log_path,
             synchronous=db_synchronous_on("auto"),
-        )
-        # TODO: Pass down db_wrapper
-        wallets = await self.get_all_wallets()
-        derivation_paths = await self.get_derivation_paths()
-        errors = []
-        warnings = []
-        try:
+        ) as self.db_wrapper:
+            # TODO: Pass down db_wrapper
+            wallets = await self.get_all_wallets()
+            derivation_paths = await self.get_derivation_paths()
+            errors = []
+            warnings = []
+
             if self.verbose:
                 await self.show_tables()
                 print_min_max_derivation_for_wallets(derivation_paths)
@@ -387,8 +391,7 @@ class WalletDBReader:
             if len(errors) > 0:
                 print(f"    ---- Errors Found for {db_path.name}----")
                 print("\n".join(errors))
-        finally:
-            await self.db_wrapper.close()
+
         return len(errors)
 
 

@@ -22,9 +22,9 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    cast,
 )
 
-from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.api_protocol import ApiProtocol
@@ -42,7 +42,8 @@ from chia.util.misc import SignalHandlers
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
-from ..protocols.shared_protocol import capabilities
+from ..protocols.shared_protocol import default_capabilities
+from ..util.chia_version import chia_short_version
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -51,8 +52,9 @@ main_pid: Optional[int] = None
 T = TypeVar("T")
 _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
 _T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
+_T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound=RpcApiProtocol)
 
-RpcInfo = Tuple[Type[RpcApiProtocol], int]
+RpcInfo = Tuple[Type[_T_RpcApiProtocol], int]
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +63,7 @@ class ServiceException(Exception):
     pass
 
 
-class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
+class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol]):
     def __init__(
         self,
         root_path: Path,
@@ -76,7 +78,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         upnp_ports: Optional[List[int]] = None,
         connect_peers: Optional[Set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
-        rpc_info: Optional[RpcInfo] = None,
+        rpc_info: Optional[RpcInfo[_T_RpcApiProtocol]] = None,
         connect_to_daemon: bool = True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
@@ -90,20 +92,20 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         self.root_path = root_path
         self.config = config
         ping_interval = self.config.get("ping_interval")
-        self.self_hostname = self.config.get("self_hostname")
+        self.self_hostname = cast(str, self.config.get("self_hostname"))
         self.daemon_port = self.config.get("daemon_port")
         assert ping_interval is not None
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
-        self.rpc_server: Optional[RpcServer] = None
+        self.rpc_server: Optional[RpcServer[_T_RpcApiProtocol]] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
         self.reconnect_retry_seconds: int = 3
 
         self._log = logging.getLogger(service_name)
         self._log.info(f"Starting service {self._service_name} ...")
-        self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
+        self._log.info(f"chia-blockchain version: {chia_short_version()}")
 
         self.service_config = self.config[service_name]
 
@@ -115,7 +117,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol]):
         if node_type == NodeType.WALLET:
             inbound_rlp = self.service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
-        capabilities_to_use: List[Tuple[uint16, str]] = capabilities
+        capabilities_to_use: List[Tuple[uint16, str]] = default_capabilities[node_type]
         if override_capabilities is not None:
             capabilities_to_use = override_capabilities
 

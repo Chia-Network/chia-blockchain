@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from sys import platform
-from typing import Optional, Tuple, Union, overload
+from typing import ClassVar, Optional, Tuple, Union, overload
 
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
@@ -63,8 +63,8 @@ class KeyringWrapper:
     """
 
     # Static members
-    __shared_instance = None
-    __keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH
+    __shared_instance: ClassVar[Optional[KeyringWrapper]] = None
+    __keys_root_path: ClassVar[Path] = DEFAULT_KEYS_ROOT_PATH
 
     # Instance members
     keys_root_path: Path
@@ -112,18 +112,15 @@ class KeyringWrapper:
 
     @overload
     @staticmethod
-    def get_shared_instance() -> KeyringWrapper:
-        ...
+    def get_shared_instance() -> KeyringWrapper: ...
 
     @overload
     @staticmethod
-    def get_shared_instance(create_if_necessary: Literal[True]) -> KeyringWrapper:
-        ...
+    def get_shared_instance(create_if_necessary: Literal[True]) -> KeyringWrapper: ...
 
     @overload
     @staticmethod
-    def get_shared_instance(create_if_necessary: bool) -> Optional[KeyringWrapper]:
-        ...
+    def get_shared_instance(create_if_necessary: bool) -> Optional[KeyringWrapper]: ...
 
     @staticmethod
     def get_shared_instance(create_if_necessary: bool = True) -> Optional[KeyringWrapper]:
@@ -223,7 +220,7 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                passphrase_store.set_password(  # type: ignore[no-untyped-call]
+                passphrase_store.set_password(
                     MASTER_PASSPHRASE_SERVICE_NAME,
                     MASTER_PASSPHRASE_USER_NAME,
                     passphrase,
@@ -237,7 +234,7 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                passphrase_store.delete_password(  # type: ignore[no-untyped-call]
+                passphrase_store.delete_password(
                     MASTER_PASSPHRASE_SERVICE_NAME,
                     MASTER_PASSPHRASE_USER_NAME,
                 )
@@ -256,7 +253,7 @@ class KeyringWrapper:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
         if passphrase_store is not None:
             try:
-                return passphrase_store.get_password(  # type: ignore[no-any-return,no-untyped-call]
+                return passphrase_store.get_password(  # type: ignore[no-any-return]
                     MASTER_PASSPHRASE_SERVICE_NAME,
                     MASTER_PASSPHRASE_USER_NAME,
                 )
