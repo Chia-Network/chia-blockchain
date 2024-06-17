@@ -1697,27 +1697,3 @@ class WalletRpcClient(RpcClient):
         return ExecuteSigningInstructionsResponse.from_json_dict(
             await self.fetch("execute_signing_instructions", args.to_json_dict())
         )
-
-    async def vault_create(
-        self,
-        secp_pk: bytes,
-        hp_index: uint32,
-        bls_pk: bytes,
-        timelock: uint64,
-        tx_config: TXConfig,
-        fee: uint64 = uint64(0),
-        push: bool = True,
-    ) -> List[TransactionRecord]:
-        response = await self.fetch(
-            "vault_create",
-            {
-                "secp_pk": secp_pk.hex(),
-                "hp_index": hp_index,
-                "bls_pk": bls_pk.hex(),
-                "timelock": timelock,
-                "fee": fee,
-                "push": push,
-                **tx_config.to_json_dict(),
-            },
-        )
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
