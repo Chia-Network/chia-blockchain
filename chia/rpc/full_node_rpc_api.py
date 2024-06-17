@@ -153,6 +153,9 @@ class FullNodeRpcApi:
         if change in ("block", "signage_point"):
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
+        if change == "unfinished_block":
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "unfinished_block_info"))
+
         return payloads
 
     # this function is just here for backwards-compatibility. It will probably

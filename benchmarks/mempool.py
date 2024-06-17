@@ -177,9 +177,9 @@ async def run_mempool_benchmark() -> None:
                 spend_bundle_id = tx.name()
                 npc = await mempool.pre_validate_spendbundle(tx, None, spend_bundle_id)
                 assert npc is not None
-                _, status, error = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
-                assert status == MempoolInclusionStatus.SUCCESS
-                assert error is None
+                info = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
+                assert info.status == MempoolInclusionStatus.SUCCESS
+                assert info.error is None
 
         suffix = "st" if single_threaded else "mt"
 

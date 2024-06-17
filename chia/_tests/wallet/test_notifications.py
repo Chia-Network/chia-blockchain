@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 
@@ -106,6 +106,9 @@ async def test_notifications(
 
     notification_manager_2.potentially_add_new_notification = track_coin_state
 
+    allow_larger_height: Optional[int] = None
+    allow_height: Optional[int] = None
+
     for case in ("block all", "block too low", "allow", "allow_larger", "block_too_large"):
         msg: bytes = bytes(case, "utf8")
         if case == "block all":
@@ -128,6 +131,8 @@ async def test_notifications(
             msg = bytes([0] * 10001)
             AMOUNT = uint64(750000000000)
             FEE = uint64(0)
+        else:
+            raise Exception(f"Unhandled case: {case!r}")
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         if case == "allow":
@@ -150,6 +155,9 @@ async def test_notifications(
         await time_out_assert(30, wallet_1.get_confirmed_balance, funds_1)
         await time_out_assert(30, wallet_2.get_unconfirmed_balance, funds_2)
         await time_out_assert(30, wallet_2.get_confirmed_balance, funds_2)
+
+    assert allow_larger_height is not None
+    assert allow_height is not None
 
     notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 2))
     assert len(notifications) == 2

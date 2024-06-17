@@ -13,6 +13,8 @@ from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
+from chia_rs import BLSCache
+
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -290,6 +292,7 @@ class Blockchain(BlockchainInterface):
         self,
         block: FullBlock,
         pre_validation_result: PreValidationResult,
+        bls_cache: Optional[BLSCache],
         fork_info: Optional[ForkInfo] = None,
     ) -> Tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
@@ -302,6 +305,9 @@ class Blockchain(BlockchainInterface):
         Args:
             block: The FullBlock to be validated.
             pre_validation_result: A result of successful pre validation
+            bls_cache: An optional cache of pairings that are likely to be part
+               of the aggregate signature. If this is set, the cache will always
+               be used (which may be slower if there are no cache hits).
             fork_info: Information about the fork chain this block is part of,
                to make validation more efficient. This is an in-out parameter.
 
@@ -430,6 +436,7 @@ class Blockchain(BlockchainInterface):
             npc_result,
             fork_info,
             self.get_block_generator,
+            bls_cache,
             # If we did not already validate the signature, validate it now
             validate_signature=not pre_validation_result.validated_signature,
         )
@@ -778,6 +785,7 @@ class Blockchain(BlockchainInterface):
             npc_result,
             fork_info,
             self.get_block_generator,
+            None,
             validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )
 

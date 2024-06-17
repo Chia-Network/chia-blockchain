@@ -14,7 +14,7 @@ protocol_version = {
     NodeType.FARMER: "0.0.36",
     NodeType.TIMELORD: "0.0.36",
     NodeType.INTRODUCER: "0.0.36",
-    NodeType.WALLET: "0.0.37",
+    NodeType.WALLET: "0.0.38",
     NodeType.DATA_LAYER: "0.0.36",
 }
 
@@ -37,7 +37,34 @@ class Capability(IntEnum):
     RATE_LIMITS_V2 = 3
 
     # a node can handle a None response and not wait the full timeout
+    # capability removed but functionality is still supported
     NONE_RESPONSE = 4
+
+    # Opts in to receiving mempool updates for subscribed transactions
+    # This is between a full node and receiving wallet
+    MEMPOOL_UPDATES = 5
+
+
+# These are the default capabilities used in all outgoing handshakes.
+# "1" means the capability is supported and enabled.
+_capabilities: List[Tuple[uint16, str]] = [
+    (uint16(Capability.BASE.value), "1"),
+    (uint16(Capability.BLOCK_HEADERS.value), "1"),
+    (uint16(Capability.RATE_LIMITS_V2.value), "1"),
+]
+_mempool_updates = [
+    (uint16(Capability.MEMPOOL_UPDATES.value), "1"),
+]
+
+default_capabilities = {
+    NodeType.FULL_NODE: _capabilities + _mempool_updates,
+    NodeType.HARVESTER: _capabilities,
+    NodeType.FARMER: _capabilities,
+    NodeType.TIMELORD: _capabilities,
+    NodeType.INTRODUCER: _capabilities,
+    NodeType.WALLET: _capabilities,
+    NodeType.DATA_LAYER: _capabilities,
+}
 
 
 @streamable
@@ -49,15 +76,6 @@ class Handshake(Streamable):
     server_port: uint16
     node_type: uint8
     capabilities: List[Tuple[uint16, str]]
-
-
-# "1" means capability is enabled
-capabilities = [
-    (uint16(Capability.BASE.value), "1"),
-    (uint16(Capability.BLOCK_HEADERS.value), "1"),
-    (uint16(Capability.RATE_LIMITS_V2.value), "1"),
-    # (uint16(Capability.NONE_RESPONSE.value), "1"), # capability removed but functionality is still supported
-]
 
 
 @streamable

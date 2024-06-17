@@ -38,13 +38,16 @@ permissions:
   contents: write
 
 jobs:
+  version:
+    uses: ./.github/workflows/reflow-version.yml
+
   build:
     name: Build ${{ matrix.os.arch }}
     runs-on: ${{ matrix.os.runs-on }}
+    needs:
+      - version
     container: chianetwork/ubuntu-20.04-builder:latest
     timeout-minutes: 120
-    outputs:
-      chia-installer-version: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
     strategy:
       fail-fast: false
       matrix:
@@ -58,6 +61,11 @@ jobs:
             arch: arm64
             madmax-suffix: "arm64"
             bladebit-suffix: "ubuntu-arm64.tar.gz"
+
+    env:
+      CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
+      SETUPTOOLS_SCM_PRETEND_VERSION_FOR_CHIA_BLOCKCHAIN: ${{ needs.version.outputs.chia-installer-version }}
+      TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -80,29 +88,6 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check tag type
-        shell: bash
-        run: |
-          REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
-          REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"
-          if [[ "${{ github.event.release.tag_name }}" =~ $REG_B ]] || [[ "${{ inputs.release_type }}" =~ $REG_B ]]; then
-            echo "TAG_TYPE=beta"
-            echo "TAG_TYPE=beta" >> "$GITHUB_ENV"
-          elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
-            echo "TAG_TYPE=rc"
-            echo "TAG_TYPE=rc" >> "$GITHUB_ENV"
-          fi
-
-      # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
-      - name: Get version number
-        id: version_number
-        run: |
-          python3 -m venv ../venv
-          . ../venv/bin/activate
-          pip3 install setuptools_scm
-          echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >> "$GITHUB_OUTPUT"
-          deactivate
 
       - name: Get latest madmax plotter
         env:
@@ -183,8 +168,6 @@ jobs:
           bash build_linux_deb-1-gui.sh
 
       - name: Build .deb package
-        env:
-          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         run: |
           ldd --version
           cd ./build_scripts
@@ -204,6 +187,7 @@ jobs:
     name: Publish ${{ matrix.os.arch }}
     runs-on: ubuntu-latest
     needs:
+      - version
       - build
     timeout-minutes: ${{ matrix.os.timeout }}
     strategy:
@@ -219,7 +203,7 @@ jobs:
             timeout: 5
 
     env:
-      CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
+      CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -350,6 +334,7 @@ jobs:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
+      - version
       - build
     container: ${{ matrix.distribution.url }}
     strategy:
@@ -423,7 +408,7 @@ jobs:
 
       - name: Run chia dev installers test
         run: |
-          chia dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
+          chia dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
 
       - name: Verify /opt/chia present
         run: |

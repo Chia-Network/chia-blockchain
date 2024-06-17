@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.3.1 Chia blockchain 2024-04-28
+
+### Added
+* Added `warp.green` CATs (`wUSDC.b`, `wmilliETH.b`, `wUSDC`, `wmilliETH`, `wUSDT`) to the known CAT list
+
 ## 2.3.0 Chia blockchain 2024-05-01
 
 ### Fixed

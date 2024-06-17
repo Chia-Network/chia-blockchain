@@ -343,10 +343,10 @@ class SimClient:
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
         assert self.service.mempool_manager.peak is not None
-        cost, status, error = await self.service.mempool_manager.add_spend_bundle(
+        info = await self.service.mempool_manager.add_spend_bundle(
             spend_bundle, cost_result, spend_bundle_id, self.service.mempool_manager.peak.height
         )
-        return status, error
+        return info.status, info.error
 
     async def get_coin_record_by_name(self, name: bytes32) -> Optional[CoinRecord]:
         return await self.service.coin_store.get_coin_record(name)
