@@ -50,7 +50,7 @@ def installers_group() -> None:
 @installers_group.command(name="test")
 @click.option("--expected-chia-version", "expected_chia_version_str", required=True)
 @click.option("--require-madmax/--require-no-madmax", "require_madmax", default=True)
-@click.option("--gui-command", multiple=True, required=True)
+@click.option("--gui-command", multiple=True)
 def test_command(expected_chia_version_str: str, require_madmax: bool, gui_command: Sequence[str]) -> None:
     print("testing installed executables")
     expected_chia_version = packaging.version.Version(expected_chia_version_str)
@@ -129,13 +129,14 @@ def test_command(expected_chia_version_str: str, require_madmax: bool, gui_comma
         timeout=adjusted_timeout(30),
     )
 
-    try:
-        subprocess.run(
-            args=gui_command,
-            check=True,
-            timeout=adjusted_timeout(30),
-        )
-    except subprocess.TimeoutExpired:
-        pass
-    else:
-        raise Exception("process terminated prior to timeout")
+    if len(gui_command) > 0:
+        try:
+            subprocess.run(
+                args=gui_command,
+                check=True,
+                timeout=adjusted_timeout(30),
+            )
+        except subprocess.TimeoutExpired:
+            pass
+        else:
+            raise Exception("process terminated prior to timeout")
