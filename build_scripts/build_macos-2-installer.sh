@@ -16,7 +16,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm utilities"
 cd npm_macos || exit 1
-npm ci --foreground-scripts
+npm ci
 NPM_PATH="$(pwd)/node_modules/.bin"
 cd .. || exit 1
 
