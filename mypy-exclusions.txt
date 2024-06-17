@@ -93,7 +93,6 @@ chia._tests.util.test_full_block_utils
 chia._tests.util.test_misc
 chia._tests.util.test_network
 chia._tests.util.time_out_assert
-chia._tests.wallet.cat_wallet.test_trades
 chia._tests.wallet.did_wallet.test_did
 chia._tests.wallet.rpc.test_wallet_rpc
 chia._tests.wallet.test_taproot
