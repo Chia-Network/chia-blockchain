@@ -66,7 +66,6 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain
 from chia.util.misc import to_batches
-from chia.util.observation_root import ObservationRoot
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
 from chia.util.streamable import Streamable, streamable
@@ -230,7 +229,7 @@ class WalletNode:
             cache.clear_after_height(reorg_height)
 
     @overload
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[ObservationRoot]: ...
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[G1Element]: ...
 
     @overload
     async def get_key_for_fingerprint(
@@ -240,20 +239,20 @@ class WalletNode:
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: Literal[False]
-    ) -> Optional[ObservationRoot]: ...
+    ) -> Optional[G1Element]: ...
 
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]: ...
+    ) -> Optional[Union[PrivateKey, G1Element]]: ...
 
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool = False
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
+    ) -> Optional[Union[PrivateKey, G1Element]]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
             # Returns first key if fingerprint is None
-            key: Optional[Union[PrivateKey, ObservationRoot]] = await keychain_proxy.get_key_for_fingerprint(
+            key: Optional[Union[PrivateKey, G1Element]] = await keychain_proxy.get_key_for_fingerprint(
                 fingerprint, private=private
             )
         except KeychainIsEmpty:
@@ -272,17 +271,13 @@ class WalletNode:
 
         return key
 
-    async def get_key(
-        self, fingerprint: Optional[int], private: bool = True
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
+    async def get_key(self, fingerprint: Optional[int], private: bool = True) -> Optional[Union[PrivateKey, G1Element]]:
         """
         Attempt to get the private key for the given fingerprint. If the fingerprint is None,
         get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
         returned for the provided fingerprint, the first key will be returned.
         """
-        key: Optional[Union[PrivateKey, ObservationRoot]] = await self.get_key_for_fingerprint(
-            fingerprint, private=private
-        )
+        key: Optional[Union[PrivateKey, G1Element]] = await self.get_key_for_fingerprint(fingerprint, private=private)
 
         if fingerprint is None and key is not None:
             if isinstance(key, PrivateKey):

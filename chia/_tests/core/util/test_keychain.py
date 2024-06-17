@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import replace
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import importlib_resources
 import pytest
@@ -25,14 +25,12 @@ from chia.util.keychain import (
     Keychain,
     KeyData,
     KeyDataSecrets,
-    KeyTypes,
     bytes_from_mnemonic,
     bytes_to_mnemonic,
     generate_mnemonic,
     mnemonic_from_short_words,
     mnemonic_to_seed,
 )
-from chia.util.observation_root import ObservationRoot
 
 mnemonic = (
     "rapid this oven common drive ribbon bulb urban uncover napkin kitten usage enforce uncle unveil scene "
@@ -160,7 +158,7 @@ class TestKeychain:
 
         mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
         print("entropy to seed:", mnemonic_to_seed(mnemonic).hex())
-        master_sk, _ = kc.add_key(mnemonic)
+        master_sk = kc.add_key(mnemonic)
         tv_master_int = 8075452428075949470768183878078858156044736575259233735633523546099624838313
         tv_child_int = 18507161868329770878190303689452715596635858303241878571348190917018711023613
         assert master_sk == PrivateKey.from_bytes(tv_master_int.to_bytes(32, "big"))
@@ -239,7 +237,7 @@ def test_key_data_generate(label: Optional[str]) -> None:
     key_data = KeyData.generate(label)
     assert key_data.private_key == AugSchemeMPL.key_gen(mnemonic_to_seed(key_data.mnemonic_str()))
     assert key_data.entropy == bytes_from_mnemonic(key_data.mnemonic_str())
-    assert key_data.observation_root == key_data.private_key.get_g1()
+    assert key_data.public_key == key_data.private_key.get_g1()
     assert key_data.fingerprint == key_data.private_key.get_g1().get_fingerprint()
     assert key_data.label == label
 
@@ -251,7 +249,7 @@ def test_key_data_generate(label: Optional[str]) -> None:
 def test_key_data_creation(input_data: object, from_method: Callable[..., KeyData], label: Optional[str]) -> None:
     key_data = from_method(input_data, label)
     assert key_data.fingerprint == fingerprint
-    assert key_data.observation_root == public_key
+    assert key_data.public_key == public_key
     assert key_data.mnemonic == mnemonic.split()
     assert key_data.mnemonic_str() == mnemonic
     assert key_data.entropy == entropy
@@ -260,7 +258,7 @@ def test_key_data_creation(input_data: object, from_method: Callable[..., KeyDat
 
 
 def test_key_data_without_secrets() -> None:
-    key_data = KeyData(fingerprint, bytes(public_key), None, None, KeyTypes.G1_ELEMENT.value)
+    key_data = KeyData(fingerprint, public_key, None, None)
     assert key_data.secrets is None
 
     with pytest.raises(KeychainSecretsMissing):
@@ -292,21 +290,12 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
 @pytest.mark.parametrize(
     "input_data, data_type",
     [
-        (
-            (
-                fingerprint,
-                bytes(G1Element()),
-                None,
-                KeyDataSecrets(mnemonic.split(), entropy, private_key),
-                KeyTypes.G1_ELEMENT.value,
-            ),
-            "public_key",
-        ),
-        ((fingerprint, bytes(G1Element()), None, None, KeyTypes.G1_ELEMENT.value), "fingerprint"),
+        ((fingerprint, G1Element(), None, KeyDataSecrets(mnemonic.split(), entropy, private_key)), "public_key"),
+        ((fingerprint, G1Element(), None, None), "fingerprint"),
     ],
 )
 def test_key_data_post_init(
-    input_data: Tuple[uint32, bytes, Optional[str], Optional[KeyDataSecrets], str], data_type: str
+    input_data: Tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
 ) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)
@@ -479,17 +468,3 @@ async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool)
         for key_data in keys:
             keychain.delete_key_by_fingerprint(key_data.fingerprint)
             assert keychain.keyring_wrapper.get_label(key_data.fingerprint) is None
-
-
-@pytest.mark.parametrize("key_type", [e.value for e in KeyTypes])
-def test_key_type_support(key_type: str) -> None:
-    """
-    The purpose of this test is to make sure that whenever KeyTypes is updated, all relevant functionality is
-    also updated with it.
-    """
-    generate_test_key_for_key_type: Dict[str, Tuple[int, bytes, ObservationRoot]] = {
-        KeyTypes.G1_ELEMENT.value: (G1Element().get_fingerprint(), bytes(G1Element()), G1Element())
-    }
-    obr_fingerprint, obr_bytes, obr = generate_test_key_for_key_type[key_type]
-    assert KeyData(uint32(obr_fingerprint), obr_bytes, None, None, key_type).observation_root == obr
-    assert KeyTypes.parse_observation_root(obr_bytes, KeyTypes(key_type)) == obr

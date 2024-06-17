@@ -5,7 +5,6 @@ from dataclasses import replace
 from typing import Any, AsyncGenerator
 
 import pytest
-from chia_rs import G1Element
 
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.simulator.block_tools import BlockTools
@@ -48,22 +47,21 @@ async def test_add_private_key(keychain_proxy: KeychainProxy) -> None:
 @pytest.mark.anyio
 async def test_add_public_key(keychain_proxy: KeychainProxy) -> None:
     keychain = keychain_proxy
-    assert isinstance(TEST_KEY_3.observation_root, G1Element)
-    await keychain.add_key(TEST_KEY_3.public_key.hex(), TEST_KEY_3.label, private=False)
+    await keychain.add_key(bytes(TEST_KEY_3.public_key).hex(), TEST_KEY_3.label, private=False)
     with pytest.raises(Exception, match="already exists"):
-        await keychain.add_key(TEST_KEY_3.public_key.hex(), "", private=False)
+        await keychain.add_key(bytes(TEST_KEY_3.public_key).hex(), "", private=False)
     key = await keychain.get_key(TEST_KEY_3.fingerprint, include_secrets=False)
     assert key is not None
-    assert key.observation_root == TEST_KEY_3.observation_root
+    assert key.public_key == TEST_KEY_3.public_key
     assert key.secrets is None
 
     pk = await keychain.get_key_for_fingerprint(TEST_KEY_3.fingerprint, private=False)
     assert pk is not None
-    assert pk == TEST_KEY_3.observation_root
+    assert pk == TEST_KEY_3.public_key
 
     pk = await keychain.get_key_for_fingerprint(None, private=False)
     assert pk is not None
-    assert pk == TEST_KEY_3.observation_root
+    assert pk == TEST_KEY_3.public_key
 
     with pytest.raises(KeychainKeyNotFound):
         pk = await keychain.get_key_for_fingerprint(1234567890, private=False)
@@ -84,8 +82,8 @@ async def test_get_key_for_fingerprint(keychain_proxy: KeychainProxy) -> None:
     with pytest.raises(KeychainIsEmpty):
         await keychain.get_key_for_fingerprint(None, private=False)
     await keychain_proxy.add_key(TEST_KEY_1.mnemonic_str(), TEST_KEY_1.label)
-    assert await keychain.get_key_for_fingerprint(TEST_KEY_1.fingerprint, private=False) == TEST_KEY_1.observation_root
-    assert await keychain.get_key_for_fingerprint(None, private=False) == TEST_KEY_1.observation_root
+    assert await keychain.get_key_for_fingerprint(TEST_KEY_1.fingerprint, private=False) == TEST_KEY_1.public_key
+    assert await keychain.get_key_for_fingerprint(None, private=False) == TEST_KEY_1.public_key
     with pytest.raises(KeychainKeyNotFound):
         await keychain.get_key_for_fingerprint(1234567890, private=False)
 

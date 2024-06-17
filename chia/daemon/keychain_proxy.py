@@ -30,8 +30,7 @@ from chia.util.errors import (
     KeychainMalformedResponse,
     KeychainProxyConnectionTimeout,
 )
-from chia.util.keychain import Keychain, KeyData, KeyTypes, bytes_to_mnemonic, mnemonic_to_seed
-from chia.util.observation_root import ObservationRoot
+from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
 from chia.util.ws_message import WsRpcMessage
 
 
@@ -172,47 +171,41 @@ class KeychainProxy(DaemonProxy):
                 raise Exception(f"{error}")
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]: ...
+    async def add_key(self, mnemonic_or_pk: str) -> PrivateKey: ...
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]: ...
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> PrivateKey: ...
 
     @overload
-    async def add_key(
-        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]
-    ) -> Tuple[PrivateKey, KeyTypes]: ...
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> PrivateKey: ...
 
     @overload
-    async def add_key(
-        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
-    ) -> Tuple[ObservationRoot, KeyTypes]: ...
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]) -> G1Element: ...
 
     @overload
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: bool
-    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]: ...
+    ) -> Union[PrivateKey, G1Element]: ...
 
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
-    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
+    ) -> Union[PrivateKey, G1Element]:
         """
         Forwards to Keychain.add_key()
         """
-        key: Union[PrivateKey, ObservationRoot]
-        key_type: KeyTypes
+        key: Union[PrivateKey, G1Element]
         if self.use_local_keychain():
-            key, key_type = self.keychain.add_key(mnemonic_or_pk, label, private)
+            key = self.keychain.add_key(mnemonic_or_pk, label, private)
         else:
             response, success = await self.get_response_for_request(
                 "add_key", {"mnemonic_or_pk": mnemonic_or_pk, "label": label, "private": private}
             )
             if success:
-                key_type = KeyTypes(response["data"]["key_type"])
                 if private:
                     seed = mnemonic_to_seed(mnemonic_or_pk)
                     key = AugSchemeMPL.key_gen(seed)
                 else:
-                    key = KeyTypes.parse_observation_root(hexstr_to_bytes(mnemonic_or_pk), key_type)
+                    key = G1Element.from_bytes(hexstr_to_bytes(mnemonic_or_pk))
             else:
                 error = response["data"].get("error", None)
                 if error == KEYCHAIN_ERR_KEYERROR:
@@ -222,7 +215,7 @@ class KeychainProxy(DaemonProxy):
                 else:
                     self.handle_error(response)
 
-        return key, key_type
+        return key
 
     async def check_keys(self, root_path: Path) -> None:
         """
@@ -345,20 +338,20 @@ class KeychainProxy(DaemonProxy):
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: Literal[False]
-    ) -> Optional[ObservationRoot]: ...
+    ) -> Optional[G1Element]: ...
 
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]: ...
+    ) -> Optional[Union[PrivateKey, G1Element]]: ...
 
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool = True
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
+    ) -> Optional[Union[PrivateKey, G1Element]]:
         """
         Locates and returns a private key matching the provided fingerprint
         """
-        key: Optional[Union[PrivateKey, ObservationRoot]] = None
+        key: Optional[Union[PrivateKey, G1Element]] = None
         if self.use_local_keychain():
             keys = self.keychain.get_keys(include_secrets=private)
             if len(keys) == 0:
@@ -367,15 +360,12 @@ class KeychainProxy(DaemonProxy):
                 selected_key = keys[0]
                 if fingerprint is not None:
                     for key_data in keys:
-                        if key_data.observation_root.get_fingerprint() == fingerprint:
+                        if key_data.public_key.get_fingerprint() == fingerprint:
                             selected_key = key_data
                             break
                     else:
                         raise KeychainKeyNotFound(fingerprint)
-                if private:
-                    key = selected_key.private_key if selected_key.secrets is not None else None
-                else:
-                    key = selected_key.observation_root
+                key = selected_key.private_key if private else selected_key.public_key
         else:
             response, success = await self.get_response_for_request(
                 "get_key_for_fingerprint", {"fingerprint": fingerprint, "private": private}
