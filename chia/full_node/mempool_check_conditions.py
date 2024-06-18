@@ -12,7 +12,6 @@ from chia_rs import (
     ENABLE_MESSAGE_CONDITIONS,
     ENABLE_SOFTFORK_CONDITION,
     MEMPOOL_MODE,
-    NO_RELATIVE_CONDITIONS_ON_EPHEMERAL,
 )
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_block_generator2, run_chia_program
@@ -43,9 +42,6 @@ log = logging.getLogger(__name__)
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
     flags = 0
 
-    if height >= constants.SOFT_FORK2_HEIGHT:
-        flags = flags | NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
-
     if height >= constants.SOFT_FORK4_HEIGHT:
         flags = flags | ENABLE_MESSAGE_CONDITIONS
 
@@ -53,7 +49,7 @@ def get_flags_for_height_and_constants(height: int, constants: ConsensusConstant
         flags = flags | DISALLOW_INFINITY_G1
 
     if height >= constants.HARD_FORK_HEIGHT:
-        # the hard-fork initiated with 2.0. To activate June 2024
+        # the hard-fork initiated with 2.1. To activate June 2024
         # * costs are ascribed to some unknown condition codes, to allow for
         #    soft-forking in new conditions with cost
         # * a new condition, SOFTFORK, is added which takes a first parameter to
@@ -93,12 +89,12 @@ def get_name_puzzle_conditions(
     if mempool_mode:
         flags = flags | MEMPOOL_MODE
 
-    if height >= constants.HARD_FORK_FIX_HEIGHT:
+    if height >= constants.HARD_FORK_HEIGHT:
         run_block = run_block_generator2
 
     try:
         block_args = [bytes(gen) for gen in generator.generator_refs]
-        err, result = run_block(bytes(generator.program), block_args, max_cost, flags)
+        err, result = run_block(bytes(generator.program), block_args, max_cost, flags, DEFAULT_CONSTANTS)
         assert (err is None) != (result is None)
         if err is not None:
             return NPCResult(uint16(err), None)
