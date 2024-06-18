@@ -45,8 +45,7 @@ jobs:
           - name: Windows
             os: windows
             emoji: 🪟
-            runs-on:
-              intel: windows-latest
+            runs-on: windows-latest
 
     steps:
       - uses: chia-network/actions/clean-workspace@main
