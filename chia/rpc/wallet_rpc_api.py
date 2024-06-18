@@ -45,9 +45,8 @@ from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from chia.util.misc import UInt32Range
 from chia.util.path import path_from_root
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, UInt32Range, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CRCATInfo
