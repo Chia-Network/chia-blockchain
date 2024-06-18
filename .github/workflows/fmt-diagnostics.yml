@@ -5,6 +5,10 @@ on:
     branches:
       - "**"
 
+concurrency:
+  group: fmt-diagnostics-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   fmt-diagnostics:
     name: fmt-diagnostics ${{ matrix.os.emoji }} - ${{ matrix.os.name }} ${{ matrix.arch.name }}
