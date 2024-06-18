@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, ClassVar, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import click
 
 from chia.cmds.units import units
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash
-from chia.util.config import selected_network_address_prefix
+from chia.util.config import load_config, selected_network_address_prefix
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
 
@@ -65,7 +66,7 @@ class TransactionFeeParamType(click.ParamType):
     A Click parameter type for transaction fees, which can be specified in XCH or mojos.
     """
 
-    name: ClassVar[str] = uint64.__name__  # type: ignore[misc] # type name for cli
+    name: str = "XCH"  # type name for cli, TODO: Change once the mojo flag is implemented
     value_limit: Decimal = Decimal("0.5")
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
@@ -117,7 +118,7 @@ class AmountParamType(click.ParamType):
     A Click parameter type for TX / wallet amounts for both XCH and CAT, and of course mojos.
     """
 
-    name: ClassVar[str] = CliAmount.__name__  # type: ignore[misc] # type name for cli
+    name: str = "XCH"  # type name for cli, TODO: Change once the mojo flag is implemented
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAmount:
         # suggested by click, but being left in as mojos flag makes default misrepresentation less likely.
@@ -159,7 +160,7 @@ class AddressParamType(click.ParamType):
     A Click parameter type for bech32m encoded addresses, it gives a class with the address type and puzzle hash.
     """
 
-    name: ClassVar[str] = CliAddress.__name__  # type: ignore[misc] # type name for cli
+    name: str = "Address"  # type name for cli
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> CliAddress:
         # suggested by click, but not really used so removed to make unexpected types more obvious.
@@ -173,9 +174,6 @@ class AddressParamType(click.ParamType):
                 addr_type: AddressType = AddressType.XCH
                 expected_prefix = ctx.obj.get("expected_prefix") if ctx else None  # attempt to get cached prefix
                 if expected_prefix is None:
-                    from chia.util.config import load_config
-                    from chia.util.default_root import DEFAULT_ROOT_PATH
-
                     root_path = ctx.obj["root_path"] if ctx is not None else DEFAULT_ROOT_PATH
                     config = load_config(root_path, "config.yaml")
                     expected_prefix = selected_network_address_prefix(config)
@@ -197,7 +195,7 @@ class Bytes32ParamType(click.ParamType):
     A Click parameter type for bytes32 hex strings, with or without the 0x prefix.
     """
 
-    name: ClassVar[str] = bytes32.__name__  # type: ignore[misc] # type name for cli
+    name: str = "HexString"  # type name for cli
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> bytes32:
         # suggested by click but deemed not necessary due to unnecessary complexity.
@@ -216,7 +214,7 @@ class Uint64ParamType(click.ParamType):
     A Click parameter type for Uint64 integers.
     """
 
-    name: ClassVar[str] = uint64.__name__  # type: ignore[misc] # type name for cli
+    name: str = uint64.__name__  # type name for cli
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> uint64:
         if isinstance(value, uint64):  # required by click

@@ -1377,7 +1377,7 @@ async def delete_notifications(
         if delete_all:
             print(f"Success: {await wallet_client.delete_notifications()}")
         else:
-            print(f"Success: {await wallet_client.delete_notifications(ids=ids)}")
+            print(f"Success: {await wallet_client.delete_notifications(ids=list(ids))}")
 
 
 async def sign_message(

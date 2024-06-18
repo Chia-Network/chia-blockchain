@@ -101,7 +101,7 @@ def test_click_amount_type() -> None:
         AmountParamType().convert(0.01, None, None)
 
     # Test CliAmount Class
-    assert decimal_cli_amount.convert_amount(units["chia"]) == uint64(int(Decimal("5.25") * units["chia"]))
+    assert decimal_cli_amount.convert_amount(units["chia"]) == uint64(Decimal("5.25") * units["chia"])
     assert mojos_cli_amount.convert_amount(units["chia"]) == uint64(100000)
     assert one_mojo_cli_amount.convert_amount(units["chia"]) == uint64(1)
     with pytest.raises(ValueError):  # incorrect arg
