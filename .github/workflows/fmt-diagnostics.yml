@@ -50,8 +50,11 @@ jobs:
     steps:
       - uses: chia-network/actions/clean-workspace@main
 
-      - name: Add safe git directory
-        uses: chia-network/actions/git-mark-workspace-safe@main
+      - uses: chia-network/actions/git-mark-workspace-safe@main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
       - uses: actions/checkout@v4
         with:
