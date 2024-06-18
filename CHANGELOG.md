@@ -20,23 +20,23 @@ for setuptools_scm/PEP 440 reasons.
 * Remove `tx_records` from `dl_update_multiple` RPC (breaking change)
 * DL: optimizations for autoinsert and upsert
 * Increase farmer fill rate to 70%
-* Use Rust types for RecentChainData, ProofBlockHeader and WeightProof
-* Use Rust version of MerkleSet
+* Use Rust types for `RecentChainData`, `ProofBlockHeader` and `WeightProof`
+* Use Rust version of `MerkleSet`
 * Remove unused files
 * Make a couple of DAOWallet methods return lists of transaction records
-* Simplify MerkleSet by making it immutable
+* Simplify `MerkleSet` by making it immutable
 * Add ability to profile the farmer process
 * Remove unused current_inner from PoolState
 * Optimize `launcher_id_to_p2_puzzle_hash()`
 * Add genesis challenge to `get_network_info` RPC
 * Puzzle hash optimizations
 * Optimize key derivation in the wallet
-* Bump chia_rs to 0.9.0 and update G1Element handling
 * Add optional trusted CIDR list
-* Make BLSCache a proper class
+* Make `BLSCache` a proper class
 * Split capabilities for each service
 * Use kv compressed in DL batch update
 * Updated gui to `electron 30.0.9`
+* Bump `chia_rs` to `0.9.0` and update G1Element handling
 * Bump `boto3` to `1.34.114`
 * Bump `chiabip158` to `1.5.1`
 * Bump `clvm` to `0.9.10`
