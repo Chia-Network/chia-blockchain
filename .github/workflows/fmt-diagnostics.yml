@@ -62,7 +62,7 @@ jobs:
           log_paths = {}
           for prefix in ["Runner_", "Worker_"]:
               latest = max(
-                  log_file in diag_directory.glob(f"{prefix}*"),
+                  diag_directory.glob(f"{prefix}*"),
                   key=lambda x: x.stat().st_mtime,
               )
               log_paths[prefix] = latest
