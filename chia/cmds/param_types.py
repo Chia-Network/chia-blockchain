@@ -13,7 +13,7 @@ from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64
 from chia.wallet.util.address_type import AddressType
 
-one_decimal_mojo = Decimal("0.000000000001")
+one_decimal_mojo = Decimal("1e-12")
 
 
 def validate_uint64(

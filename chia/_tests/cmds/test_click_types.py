@@ -51,7 +51,7 @@ def test_click_tx_fee_type() -> None:
     # TODO: Test MOJO Logic When Implemented
 
     # Test Decimal / XCH
-    assert TransactionFeeParamType().convert("0.5", None, None) == uint64(int(0.5 * units["chia"]))
+    assert TransactionFeeParamType().convert("0.5", None, None) == uint64(Decimal("0.5") * units["chia"])
     assert TransactionFeeParamType().convert("0.000000000001", None, None) == uint64(1)
     assert TransactionFeeParamType().convert("0", None, None) == uint64(0)
     # Test Decimal Failures
