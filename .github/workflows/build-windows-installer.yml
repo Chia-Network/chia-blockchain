@@ -434,4 +434,4 @@ jobs:
         env:
           INSTALL_PATH: ${{ github.workspace }}\installed
         run: |
-          & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
+          & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}" --gui-command ($env:INSTALL_PATH + "\Chia.exe")
