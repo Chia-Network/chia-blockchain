@@ -58,9 +58,8 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
-from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.path import path_from_root
-from chia.util.streamable import Streamable
+from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle

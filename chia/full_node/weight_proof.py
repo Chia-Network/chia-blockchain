@@ -39,10 +39,10 @@ from chia.types.weight_proof import (
     SubSlotData,
     WeightProof,
 )
+from chia.util.batches import to_batches
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.misc import to_batches
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)

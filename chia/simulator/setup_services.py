@@ -18,6 +18,7 @@ from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.seeder.dns_server import DNSServer, create_dns_server_service
 from chia.seeder.start_crawler import create_full_node_crawler_service
 from chia.server.outbound_message import NodeType
+from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_harvester import create_harvester_service
@@ -47,7 +48,6 @@ from chia.util.db_wrapper import generate_in_memory_db_uri
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
-from chia.util.misc import SignalHandlers
 
 log = logging.getLogger(__name__)
 
