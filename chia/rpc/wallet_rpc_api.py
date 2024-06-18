@@ -909,8 +909,7 @@ class WalletRpcApi:
                         if wallet.type() == WalletType.POOLING_WALLET:
                             assert isinstance(wallet, PoolWallet)
                             pool_wallet_index = await wallet.get_pool_wallet_index()
-                            if pool_wallet_index > max_pwi:
-                                max_pwi = pool_wallet_index
+                            max_pwi = max(max_pwi, pool_wallet_index)
 
                     if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
@@ -3800,8 +3799,7 @@ class WalletRpcApi:
                 fee_amount += record.amount - base_farmer_reward
                 farmer_reward_amount += base_farmer_reward
                 blocks_won += 1
-            if height > last_height_farmed:
-                last_height_farmed = height
+            last_height_farmed = max(last_height_farmed, height)
             amount += record.amount
 
         last_time_farmed = uint64(

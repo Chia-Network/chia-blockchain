@@ -255,9 +255,9 @@ async def request_header_blocks(
         )
     else:
         response = await peer.call_api(FullNodeAPI.request_header_blocks, RequestHeaderBlocks(start_height, end_height))
-    if response is None or isinstance(response, RejectBlockHeaders) or isinstance(response, RejectHeaderBlocks):
+    if response is None or isinstance(response, (RejectBlockHeaders, RejectHeaderBlocks)):
         return None
-    assert isinstance(response, RespondHeaderBlocks) or isinstance(response, RespondBlockHeaders)
+    assert isinstance(response, (RespondHeaderBlocks, RespondBlockHeaders))
     return response.header_blocks
 
 

@@ -2072,7 +2072,7 @@ class WalletStateManager:
                 self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
                 if rollback_wallets is not None:
                     self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
-                if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
+                if isinstance(e, (PeerRequestException, aiosqlite.Error)):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
                     await self.retry_store.remove_state(coin_state)

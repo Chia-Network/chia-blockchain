@@ -284,7 +284,7 @@ def recurse_jsonify(d: Any, next_recursion_step: Optional[Callable[[Any, Any], A
             new_dict[field.name] = next_recursion_step(getattr(d, field.name), None)
         return new_dict
 
-    elif isinstance(d, list) or isinstance(d, tuple):
+    elif isinstance(d, (list, tuple)):
         new_list = []
         for item in d:
             new_list.append(next_recursion_step(item, None))

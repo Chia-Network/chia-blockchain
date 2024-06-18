@@ -172,7 +172,7 @@ def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], 
     pool_member_spend_type = from_kwargs(kwargs, "pool_member_spend_type", str)
     allowable = ["to-waiting-room", "claim-p2-nft"]
     if pool_member_spend_type not in allowable:
-        raise ValueError("`pool_member_spend_type` must be one of %s for POOL_MEMBER puzzle" % "/".join(allowable))
+        raise ValueError(f"`pool_member_spend_type` must be one of {'/'.join(allowable)} for POOL_MEMBER puzzle")
     to_waiting_room = pool_member_spend_type == "to-waiting-room"
     if to_waiting_room:
         key_value_list = from_kwargs(kwargs, "key_value_list", Program)
@@ -190,7 +190,7 @@ def solve_pool_waiting_room(
     pool_leaving_spend_type = from_kwargs(kwargs, "pool_leaving_spend_type", str)
     allowable = ["exit-waiting-room", "claim-p2-nft"]
     if pool_leaving_spend_type not in allowable:
-        raise ValueError("`pool_leaving_spend_type` must be one of %s for POOL_MEMBER puzzle" % "/".join(allowable))
+        raise ValueError(f"`pool_leaving_spend_type` must be one of {'/'.join(allowable)} for POOL_MEMBER puzzle")
     exit_waiting_room = pool_leaving_spend_type == "exit-waiting-room"
     if exit_waiting_room:
         key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, str]])
@@ -207,7 +207,7 @@ def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program],
     p2_singleton_spend_type = from_kwargs(kwargs, "p2_singleton_spend_type", str)
     allowable = ["claim-p2-nft", "delayed-spend"]
     if p2_singleton_spend_type not in allowable:
-        raise ValueError("`p2_singleton_spend_type` must be one of %s for P2_SINGLETON puzzle" % "/".join(allowable))
+        raise ValueError(f"`p2_singleton_spend_type` must be one of {'/'.join(allowable)} for P2_SINGLETON puzzle")
     claim_p2_nft = p2_singleton_spend_type == "claim-p2-nft"
     if claim_p2_nft:
         singleton_inner_puzzle_hash = from_kwargs(kwargs, "singleton_inner_puzzle_hash", bytes32)
@@ -294,7 +294,7 @@ def adaptor_for_singleton_inner_puzzle(puzzle: Program) -> Program:
     puzzle to work as a singleton inner puzzle.
     """
     # this is pretty slow and lame
-    program = binutils.assemble("(a (q . %s) 3)" % binutils.disassemble(puzzle))
+    program = binutils.assemble(f"(a (q . {binutils.disassemble(puzzle)}) 3)")
     return Program.to(program)
 
 
