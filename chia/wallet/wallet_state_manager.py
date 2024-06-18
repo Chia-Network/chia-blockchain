@@ -2289,7 +2289,7 @@ class WalletStateManager:
             tx_records = [
                 dataclasses.replace(
                     tx,
-                    spend_bundle=extra_spend_bundle if i == 0 else None,
+                    spend_bundle=extra_spend_bundle if i == 0 else tx.spend_bundle,
                     name=extra_spend_bundle.name() if i == 0 else bytes32.secret(),
                 )
                 for i, tx in enumerate(tx_records)
