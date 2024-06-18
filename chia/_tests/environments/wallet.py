@@ -101,9 +101,7 @@ class WalletEnvironment:
     async def restart(self, new_fingerprint: Optional[int]) -> None:
         old_peer_info = next(v for v in self.node.server.all_connections.values()).peer_info
         await self.rpc_client.log_in(
-            new_fingerprint
-            if new_fingerprint is not None
-            else self.wallet_state_manager.observation_root.get_fingerprint()
+            new_fingerprint if new_fingerprint is not None else self.wallet_state_manager.root_pubkey.get_fingerprint()
         )
 
         await self.node.server.start_client(old_peer_info, None)

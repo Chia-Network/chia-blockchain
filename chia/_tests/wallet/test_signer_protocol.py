@@ -602,12 +602,12 @@ def test_blind_signer_translation_layer() -> None:
 )
 @pytest.mark.anyio
 async def test_signer_commands(wallet_environments: WalletTestFramework) -> None:
-    wallet: MainWalletProtocol = wallet_environments.environments[0].xch_wallet
+    wallet: Wallet = wallet_environments.environments[0].xch_wallet
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
     client_info: WalletClientInfo = WalletClientInfo(
         wallet_rpc,
-        wallet_state_manager.observation_root.get_fingerprint(),
+        wallet_state_manager.root_pubkey.get_fingerprint(),
         wallet_state_manager.config,
     )
 
