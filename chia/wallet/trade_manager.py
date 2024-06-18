@@ -321,7 +321,7 @@ class TradeManager:
                     else:
                         selected_coins = {coin}
                     [tx] = await wallet.generate_signed_transaction(
-                        uint64(sum([c.amount for c in selected_coins]) - fee_to_pay),
+                        uint64(sum(c.amount for c in selected_coins) - fee_to_pay),
                         new_ph,
                         tx_config.override(
                             excluded_coin_ids=[],

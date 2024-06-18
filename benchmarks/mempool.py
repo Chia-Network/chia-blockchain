@@ -40,7 +40,7 @@ def enable_profiler(profile: bool, name: str) -> Iterator[None]:
     check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot", output_file + ".profile"])
     with open(output_file + ".png", "w+") as f:
         check_call(["dot", "-T", "png", output_file + ".dot"], stdout=f)
-    print("  output written to: %s.png" % output_file)
+    print(f"  output written to: {output_file}.png")
 
 
 def make_hash(height: int) -> bytes32:

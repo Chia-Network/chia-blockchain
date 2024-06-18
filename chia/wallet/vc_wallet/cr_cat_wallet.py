@@ -409,7 +409,7 @@ class CRCATWallet(CATWallet):
             extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
             extra_delta, tail_reveal, tail_solution = 0, Program.to([]), Program.to([])
-        payment_amount: int = sum([p.amount for p in payments])
+        payment_amount: int = sum(p.amount for p in payments)
         starting_amount: int = payment_amount - extra_delta
         if not add_authorizations_to_cr_cats:
             tx_config = tx_config.override(reuse_puzhash=True)
@@ -425,7 +425,7 @@ class CRCATWallet(CATWallet):
 
         cat_coins = sorted(cat_coins, key=Coin.name)  # need determinism because we need definitive origin coin
 
-        selected_cat_amount = sum([c.amount for c in cat_coins])
+        selected_cat_amount = sum(c.amount for c in cat_coins)
         assert selected_cat_amount >= starting_amount
 
         # Figure out if we need to absorb/melt some XCH as part of this

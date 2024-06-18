@@ -136,7 +136,7 @@ async def get_any_service_client(
         if tb is not None:
             print(f"Traceback:\n{tb}")
     except Exception as e:  # this is only here to make the errors more user-friendly.
-        if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
+        if not consume_errors or isinstance(e, (CliRpcConnectionError, click.Abort)):
             # CliRpcConnectionError will be handled by click.
             raise
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
