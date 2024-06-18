@@ -12,7 +12,7 @@ concurrency:
 jobs:
   fmt-diagnostics:
     name: 🕵️‍♀️ fmt-diagnostics ${{ matrix.location.name }} ${{ matrix.os.emoji }} - ${{ matrix.os.name }} ${{ matrix.arch.name }}
-    runs-on: ${{ matrix.os.runs-on }}
+    runs-on: ${{ matrix.platform.runs-on }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
