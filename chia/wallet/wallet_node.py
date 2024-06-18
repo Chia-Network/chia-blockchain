@@ -279,12 +279,14 @@ class WalletNode:
         """
         key: Optional[Union[PrivateKey, G1Element]] = await self.get_key_for_fingerprint(fingerprint, private=private)
 
-        if fingerprint is None and key is not None:
-            if isinstance(key, PrivateKey):
-                fp = key.get_g1().get_fingerprint()
-            else:
-                fp = key.get_fingerprint()
-            self.log.info(f"Using first key found (fingerprint: {fp})")
+        if key is None and fingerprint is not None:
+            key = await self.get_key_for_fingerprint(None, private=private)
+            if key is not None:
+                if isinstance(key, PrivateKey):
+                    fp = key.get_g1().get_fingerprint()
+                else:
+                    fp = key.get_fingerprint()
+                self.log.info(f"Using first key found (fingerprint: {fp})")
 
         return key
 
@@ -407,7 +409,7 @@ class WalletNode:
         #   got Future <Future pending> attached to a different loop
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
         if not fingerprint:
-            fingerprint = await self.get_last_used_fingerprint_if_exists()
+            fingerprint = self.get_last_used_fingerprint()
         multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
@@ -691,12 +693,6 @@ class WalletNode:
                 fingerprint = int(path.read_text().strip())
         except Exception:
             self.log.exception("Non-fatal: Unable to read last used fingerprint.")
-        return fingerprint
-
-    async def get_last_used_fingerprint_if_exists(self) -> Optional[int]:
-        fingerprint = self.get_last_used_fingerprint()
-        if fingerprint is not None and await self.get_key_for_fingerprint(fingerprint) is None:
-            fingerprint = None
         return fingerprint
 
     def get_last_used_fingerprint_path(self) -> Path:

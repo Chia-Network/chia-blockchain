@@ -700,7 +700,7 @@ class CATWallet:
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
                         )
-                    elif regular_chia_to_claim > fee:
+                    elif regular_chia_to_claim > fee:  # pragma: no cover
                         chia_tx, xch_announcement = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
@@ -887,9 +887,3 @@ class CATWallet:
             construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, hint).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )
-
-    def handle_own_derivation(self) -> bool:
-        return False
-
-    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
-        raise NotImplementedError()

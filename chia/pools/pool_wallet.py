@@ -45,7 +45,6 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes, parse_timelock_info
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
@@ -967,9 +966,3 @@ class PoolWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:  # pragma: no cover
         return False  # PoolWallet pre-dates hints
-
-    def handle_own_derivation(self) -> bool:  # pragma: no cover
-        return False
-
-    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
-        raise NotImplementedError()

@@ -11,8 +11,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
-
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_types import WalletType
@@ -58,10 +56,6 @@ class WalletProtocol(Protocol[T]):
     def get_name(self) -> str: ...
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool: ...
-
-    def handle_own_derivation(self) -> bool: ...
-
-    def derivation_for_index(self, index: int) -> List[DerivationRecord]: ...
 
     wallet_info: WalletInfo
     # WalletStateManager is only imported for type hinting thus leaving pylint
