@@ -5,7 +5,8 @@ from typing import Optional
 import click
 
 from chia.cmds import options
-from chia.cmds.param_types import AddressParamType, CliAddress
+from chia.cmds.param_types import AddressParamType, Bytes32ParamType, CliAddress
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 
 
@@ -33,8 +34,8 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 
 
 @plotnft_cmd.command("get_login_link", help="Create a login link for a pool. To get the launcher id, use plotnft show.")
-@click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=str, required=True)
-def get_login_link_cmd(launcher_id: str) -> None:
+@click.option("-l", "--launcher_id", help="Launcher ID of the plotnft", type=Bytes32ParamType(), required=True)
+def get_login_link_cmd(launcher_id: bytes32) -> None:
     import asyncio
 
     from .plotnft_funcs import get_login_link
