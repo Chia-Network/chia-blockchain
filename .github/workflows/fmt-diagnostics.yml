@@ -1,0 +1,71 @@
+name: 🕵️‍♀️ fmt-diagnostics
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  fmt-diagnostics:
+    name: fmt-diagnostics ${{ matrix.os.emoji }} - ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: Linux
+            matrix: linux
+            emoji: 🐧
+            runs-on:
+              intel: ubuntu-latest
+              arm: [linux, arm64]
+          - name: macOS
+            matrix: macos
+            emoji: 🍎
+            runs-on:
+              intel: macos-12
+              arm: [macos, arm64]
+          - name: Windows
+            matrix: windows
+            emoji: 🪟
+            runs-on:
+              intel: windows-latest
+        arch:
+          - name: ARM64
+            matrix: arm
+          - name: Intel
+            matrix: intel
+        python:
+          - major_dot_minor: "3.10"
+        exclude:
+          - os:
+              matrix: windows
+            arch:
+              matrix: arm
+
+    steps:
+      - uses: chia-network/actions/clean-workspace@main
+
+      - name: Add safe git directory
+        uses: chia-network/actions/git-mark-workspace-safe@main
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - shell: python
+        run: |
+          import pathlib
+
+          diag_directory = pathlib.Path.home().joinpath("actions-runner", "_diag")
+          log_paths = {}
+          for prefix in ["Runner_", "Worker_"]:
+              latest = max(
+                  log_file in diag_directory.glob(f"{prefix}*"),
+                  key=lambda x: x.stat().st_mtime,
+              )
+              log_paths[prefix] = latest
+
+          for prefix, path in log_paths.items():
+              print(f"{prefix!r} log: {path}")
