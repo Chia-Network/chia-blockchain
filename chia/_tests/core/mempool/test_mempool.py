@@ -2202,15 +2202,15 @@ class TestGeneratorConditions:
         assert npc_result.conds.spends[0].seconds_relative == 50
 
     @pytest.mark.parametrize(
-        "mempool,operand,expected",
+        "mempool,operand",
         [
-            (True, -1, Err.GENERATOR_RUNTIME_ERROR.value),
-            (False, -1, Err.GENERATOR_RUNTIME_ERROR.value),
-            (True, 1, None),
-            (False, 1, None),
+            (True, -1),
+            (False, -1),
+            (True, 1),
+            (False, 1),
         ],
     )
-    def test_div(self, mempool: bool, operand: int, expected: Optional[int], softfork_height: uint32) -> None:
+    def test_div(self, mempool: bool, operand: int, softfork_height: uint32) -> None:
         # op_div is disallowed on negative numbers in the mempool, and after the
         # softfork
         npc_result = generator_condition_tester(
@@ -2220,11 +2220,8 @@ class TestGeneratorConditions:
             height=softfork_height,
         )
 
-        # with the 2.0 hard fork, division with negative numbers is allowed
-        if operand < 0 and softfork_height >= test_constants.HARD_FORK_HEIGHT:
-            expected = None
-
-        assert npc_result.error == expected
+        # after the 2.0 hard fork, division with negative numbers is allowed
+        assert npc_result.error is None
 
     def test_invalid_condition_list_terminator(self, softfork_height: uint32) -> None:
         # note how the list of conditions isn't correctly terminated with a
@@ -2367,17 +2364,7 @@ class TestGeneratorConditions:
         else:
             generator_base_cost = 20512
 
-        if softfork_height < test_constants.HARD_FORK_HEIGHT and condition in [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-        ]:
-            expected_cost = 0
-        else:
-            expected_cost = ConditionCost.AGG_SIG.value
+        expected_cost = ConditionCost.AGG_SIG.value
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
@@ -2422,40 +2409,11 @@ class TestGeneratorConditions:
     ) -> None:
         pubkey = "0x" + bytes(G1Element.generator()).hex()
 
-        new_condition = condition in [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-        ]
-
-        hard_fork_activated = softfork_height >= test_constants.HARD_FORK_HEIGHT
-
-        expected_error = None
-
         # in mempool mode, we don't allow extra arguments
         if mempool and extra_arg != "":
             expected_error = Err.INVALID_CONDITION.value
-
-        # the original AGG_SIG_* conditions had a quirk (fixed in the hard fork)
-        # where they always required exactly two arguments, regardless of
-        # mempool or not. After the hard fork, they behave like all other
-        # conditions
-        if not new_condition and not hard_fork_activated and extra_arg != "":
-            expected_error = Err.INVALID_CONDITION.value
-
-        # except before the hard fork has activated, new conditions are just
-        # unknown
-        if new_condition and not hard_fork_activated:
+        else:
             expected_error = None
-
-        # before the hard fork activates, the new conditions are unknown and
-        # fail in mempool mode, regardless of whether they have extra arguments
-        # or not
-        if new_condition and not hard_fork_activated and mempool:
-            expected_error = Err.INVALID_CONDITION.value
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
@@ -2569,10 +2527,6 @@ class TestGeneratorConditions:
         # in mempool all unknown conditions are always a failure
         if mempool:
             expect_error = Err.INVALID_CONDITION.value
-        # the SOFTFORK condition is only activated with the hard fork, so
-        # before then there are no errors
-        elif softfork_height < test_constants.HARD_FORK_HEIGHT:
-            expect_error = None
 
         assert npc_result.error == expect_error
 
