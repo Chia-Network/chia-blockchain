@@ -45,6 +45,7 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "big-o==0.11.0",
     "build==1.2.1",
     "coverage==7.5.3",
     "diff-cover==9.0.0",
@@ -74,6 +75,9 @@ dev_dependencies = [
 legacy_keyring_dependencies = [
     "keyrings.cryptfile==1.3.9",
 ]
+
+with open("README.md") as f:
+    long_description = f.read()
 
 kwargs = dict(
     name="chia-blockchain",
@@ -120,7 +124,7 @@ kwargs = dict(
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
     },
-    long_description=open("README.md").read(),
+    long_description=long_description,
     long_description_content_type="text/markdown",
     zip_safe=False,
     project_urls={
