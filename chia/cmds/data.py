@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Union
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, TypeVar, Union
 
 import click
 
@@ -449,7 +449,7 @@ def get_root_history(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def add_missing_files(
-    ids: List[str],
+    ids: Sequence[bytes32],
     overwrite: bool,
     directory: Optional[str],
     data_rpc_port: int,
@@ -460,7 +460,7 @@ def add_missing_files(
     run(
         add_missing_files_cmd(
             rpc_port=data_rpc_port,
-            ids=ids if ids else None,
+            ids=list(ids) if ids else None,
             overwrite=overwrite,
             foldername=None if directory is None else Path(directory),
             fingerprint=fingerprint,
@@ -616,25 +616,23 @@ def check_plugins(
     "clear_pending_roots",
     help="Clear pending roots that will not be published, associated data may not be recoverable",
 )
-@click.option("-i", "--id", "id_str", help="Store ID", type=str, required=True)
+@create_data_store_id_option()
 @click.confirmation_option(
     prompt="Associated data may not be recoverable.\nAre you sure you want to remove the pending roots?",
 )
 @create_rpc_port_option()
 @options.create_fingerprint()
 def clear_pending_roots(
-    id_str: str,
+    id: bytes32,
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import clear_pending_roots
 
-    store_id = bytes32.from_hexstr(id_str)
-
     run(
         clear_pending_roots(
             rpc_port=data_rpc_port,
-            store_id=store_id,
+            store_id=id,
             fingerprint=fingerprint,
         )
     )
@@ -669,16 +667,14 @@ def wallet_log_in(
 @create_key_option(multiple=True)
 @options.create_fingerprint()
 def get_proof(
-    id: str,
+    id: bytes32,
     key_strings: List[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import get_proof_cmd
 
-    store_id = bytes32.from_hexstr(id)
-
-    run(get_proof_cmd(rpc_port=data_rpc_port, store_id=store_id, fingerprint=fingerprint, key_strings=key_strings))
+    run(get_proof_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint, key_strings=key_strings))
 
 
 @data_cmd.command(

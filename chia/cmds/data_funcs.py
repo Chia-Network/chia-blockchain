@@ -245,14 +245,14 @@ async def get_root_history_cmd(
 
 async def add_missing_files_cmd(
     rpc_port: Optional[int],
-    ids: Optional[List[str]],
+    ids: Optional[List[bytes32]],
     overwrite: bool,
     foldername: Optional[Path],
     fingerprint: Optional[int],
 ) -> None:
     async with get_client(rpc_port=rpc_port, fingerprint=fingerprint) as (client, _):
         res = await client.add_missing_files(
-            store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
+            store_ids=ids,
             overwrite=overwrite,
             foldername=foldername,
         )
