@@ -11,42 +11,42 @@ concurrency:
 
 jobs:
   fmt-diagnostics:
-    name: 🕵️‍♀️ fmt-diagnostics ${{ matrix.os.emoji }} - ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    name: 🕵️‍♀️ fmt-diagnostics ${{ matrix.location.name }} ${{ matrix.os.emoji }} - ${{ matrix.os.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - name: Linux
-            matrix: linux
+        platform:
+          - name: Linux GitHub
+            os: linux
             emoji: 🐧
-            runs-on:
-              intel: ubuntu-latest
-              arm: [linux, arm64]
-          - name: macOS
-            matrix: macos
+            runs-on: ubuntu-latest
+          - name: Linux FMT
+            os: linux
+            emoji: 🐧
+            runs-on: linux-arm64-fmt
+          - name: Linux MSP
+            os: linux
+            emoji: 🐧
+            runs-on: linux-arm64-msp
+          - name: macOS GitHub
+            os: macos
             emoji: 🍎
-            runs-on:
-              intel: macos-12
-              arm: [macos, arm64]
+            runs-on: macos-12
+          - name: macOS FMT
+            os: macos
+            emoji: 🍎
+            runs-on: macos-arm64-fmt
+          - name: macOS MSP
+            os: macos
+            emoji: 🍎
+            runs-on: macos-arm64-msp
           - name: Windows
-            matrix: windows
+            os: windows
             emoji: 🪟
             runs-on:
               intel: windows-latest
-        arch:
-          - name: ARM64
-            matrix: arm
-          - name: Intel
-            matrix: intel
-        python:
-          - major_dot_minor: "3.10"
-        exclude:
-          - os:
-              matrix: windows
-            arch:
-              matrix: arm
 
     steps:
       - uses: chia-network/actions/clean-workspace@main
