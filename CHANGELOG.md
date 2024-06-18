@@ -63,7 +63,6 @@ for setuptools_scm/PEP 440 reasons.
 * Add tx_config and extra_conditions to DID creation endpoint
 * DL: Return exception and error from `get_kv_diff` when either of the hashes has no data
 * Link trade cancellations with announcements
-* Revert `final_pubkey: G1Element` from main by @Quexington in https://github.com/Chia-Network/chia-blockchain/pull/18063
 * Add coin id index to coin state batching
 * Remove homebrew rpaths from `_ssl.cpython.so` on macOS during build (fixes #18099)
 * Aligned `lerna` and `nx` versions
