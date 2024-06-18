@@ -14,7 +14,6 @@ from chia_rs import (
     ENABLE_MESSAGE_CONDITIONS,
     ENABLE_SOFTFORK_CONDITION,
     MEMPOOL_MODE,
-    NO_RELATIVE_CONDITIONS_ON_EPHEMERAL,
 )
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_block_generator2, run_chia_program
@@ -43,7 +42,7 @@ log = logging.getLogger(__name__)
 
 
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = NO_RELATIVE_CONDITIONS_ON_EPHEMERAL
+    flags = 0
 
     if height >= constants.SOFT_FORK4_HEIGHT:
         flags = flags | ENABLE_MESSAGE_CONDITIONS
@@ -97,7 +96,7 @@ def get_name_puzzle_conditions(
 
     try:
         block_args = [bytes(gen) for gen in generator.generator_refs]
-        err, result = run_block(bytes(generator.program), block_args, max_cost, flags)
+        err, result = run_block(bytes(generator.program), block_args, max_cost, flags, DEFAULT_CONSTANTS)
         assert (err is None) != (result is None)
         if err is not None:
             return NPCResult(uint16(err), None)
