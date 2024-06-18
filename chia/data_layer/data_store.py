@@ -636,14 +636,14 @@ class DataStore:
         self, store_id: bytes32, hash: Optional[bytes32], max_generation: Optional[int] = None
     ) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
-            max_generation_str = f"AND generation < {max_generation} " if max_generation is not None else ""
+            max_generation_str = "AND generation < :max_generation " if max_generation is not None else ""
             node_hash_str = "AND node_hash == :node_hash " if hash is not None else "AND node_hash is NULL "
             cursor = await reader.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id "
                 f"{max_generation_str}"
                 f"{node_hash_str}"
                 "ORDER BY generation DESC LIMIT 1",
-                {"tree_id": store_id, "node_hash": hash},
+                {"tree_id": store_id, "node_hash": hash, "max_generation": max_generation},
             )
             row = await cursor.fetchone()
 
