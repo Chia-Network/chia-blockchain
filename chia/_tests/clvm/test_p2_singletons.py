@@ -13,6 +13,7 @@ from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.wallet.conditions import CreateCoin
 from chia.wallet.puzzles import p2_singleton_via_delegated_puzzle_safe as dp_safe
+from chia.wallet.util.curry_and_treehash import shatree_atom
 
 ACS = Program.to(1)
 ACS_HASH = ACS.get_tree_hash()
@@ -26,6 +27,8 @@ MOCK_SINGLETON = MOCK_SINGLETON_MOD.curry(
     ACS,
 )
 MOCK_SINGLETON_HASH = MOCK_SINGLETON.get_tree_hash()
+dp_safe.PRE_HASHED_HASHES[MOCK_SINGLETON_MOD_HASH] = shatree_atom(MOCK_SINGLETON_MOD_HASH)
+dp_safe.PRE_HASHED_HASHES[MOCK_SINGLETON_LAUNCHER_HASH] = shatree_atom(MOCK_SINGLETON_LAUNCHER_HASH)
 
 
 @pytest.mark.anyio
@@ -34,6 +37,9 @@ async def test_dp_safe_lifecycle(cost_logger: CostLogger) -> None:
     P2_SINGLETON_HASH = dp_safe.construct_hash(
         MOCK_SINGLETON_LAUNCHER_ID, MOCK_SINGLETON_MOD_HASH, MOCK_SINGLETON_LAUNCHER_HASH
     )
+    assert dp_safe.match(P2_SINGLETON) is not None
+    assert dp_safe.match(ACS) is None
+    assert dp_safe.match(MOCK_SINGLETON) is None
 
     async with sim_and_client() as (sim, sim_client):
         await sim.farm_block(P2_SINGLETON_HASH)
