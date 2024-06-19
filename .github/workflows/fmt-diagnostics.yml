@@ -61,6 +61,7 @@ jobs:
           fetch-depth: 0
 
       - run: |
+          mkdir artifacts/
           diag=~/actions-runner/_diag
           if [ -d "${diag}" ]
           then
@@ -69,7 +70,7 @@ jobs:
               ls -1t ${diag}/${prefix}*.log > logs
               log=$(head -n 1 logs)
               echo ${log}
-              cp ${log} artifacts
+              cp ${log} artifacts/
             done
           else
             echo "No diagnostics directory found at ${diag}"
