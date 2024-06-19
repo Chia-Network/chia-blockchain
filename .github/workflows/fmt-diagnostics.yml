@@ -76,6 +76,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: logs
+          name: logs - ${{ matrix.platform.name }}
           path: artifacts/
-          if-no-files-found: error
