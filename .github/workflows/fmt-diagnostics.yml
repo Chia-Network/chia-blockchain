@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   fmt-diagnostics:
-    name: 🕵️‍♀️ fmt-diagnostics ${{ matrix.location.name }} ${{ matrix.platform.emoji }} - ${{ matrix.platform.name }} ${{ matrix.arch.name }}
+    name: 🕵️‍♀️ ${{ matrix.platform.emoji }} ${{ matrix.platform.name }}
     runs-on: ${{ matrix.platform.runs-on }}
     timeout-minutes: 10
     strategy:
@@ -52,26 +52,20 @@ jobs:
 
       - uses: chia-network/actions/git-mark-workspace-safe@main
 
-      - uses: Chia-Network/actions/setup-python@main
-        with:
-          python-version: "3.10"
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - shell: python
-        run: |
-          import pathlib
-
-          diag_directory = pathlib.Path.home().joinpath("actions-runner", "_diag")
-          log_paths = {}
-          for prefix in ["Runner_", "Worker_"]:
-              latest = max(
-                  diag_directory.glob(f"{prefix}*"),
-                  key=lambda x: x.stat().st_mtime,
-              )
-              log_paths[prefix] = latest
-
-          for prefix, path in log_paths.items():
-              print(f"{prefix!r} log: {path}")
+      - run: |
+          diag=~/actions-runner/_diag
+          if [ -d "${diag}" ]
+          then
+            for prefix in Runner_ Worker_
+            do
+              log=$(ls -t ${prefix}*.log | head -n 1)
+              echo ${log}
+              cp ${log} artifacts
+            done
+          else
+            echo "No diagnostics directory found at ${diag}"
+          fi
