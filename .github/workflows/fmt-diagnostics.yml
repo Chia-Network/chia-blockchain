@@ -69,3 +69,9 @@ jobs:
           else
             echo "No diagnostics directory found at ${diag}"
           fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: artifacts/
+          if-no-files-found: error
