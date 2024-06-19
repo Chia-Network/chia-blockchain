@@ -62,7 +62,7 @@ jobs:
           then
             for prefix in Runner_ Worker_
             do
-              log=$(ls -t ${prefix}*.log | head -n 1)
+              log=$(ls -t ${diag}/${prefix}*.log | head -n 1)
               echo ${log}
               cp ${log} artifacts
             done
