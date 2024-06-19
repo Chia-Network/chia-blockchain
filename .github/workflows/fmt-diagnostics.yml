@@ -65,6 +65,7 @@ jobs:
           diag=~/actions-runner/_diag
           if [ -d "${diag}" ]
           then
+            ls -l "${diag}"
             for prefix in Runner_ Worker_
             do
               ls -1t ${diag}/${prefix}*.log > logs
@@ -75,6 +76,8 @@ jobs:
           else
             echo "No diagnostics directory found at ${diag}"
           fi
+          echo ===== selected logs
+          ls -l artifacts/
 
       - uses: actions/upload-artifact@v4
         with:
