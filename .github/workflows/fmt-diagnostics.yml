@@ -9,6 +9,10 @@ concurrency:
   group: fmt-diagnostics-${{ github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   fmt-diagnostics:
     name: 🕵️‍♀️ ${{ matrix.platform.emoji }} ${{ matrix.platform.name }}
