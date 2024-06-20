@@ -29,7 +29,7 @@ async def default_async_callback(interface: StateInterface[TestSideEffects]) -> 
 def test_set_callback() -> None:
     state_interface = StateInterface(TestSideEffects(), True)
     state_interface.set_callback(default_async_callback)
-    assert state_interface._callback == default_async_callback
+    assert state_interface._callback is default_async_callback
     state_interface_no_callbacks = StateInterface(TestSideEffects(), False)
     with pytest.raises(RuntimeError, match="Callback cannot be edited from inside itself"):
         state_interface_no_callbacks.set_callback(None)
