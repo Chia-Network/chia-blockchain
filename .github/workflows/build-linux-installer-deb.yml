@@ -230,8 +230,9 @@ jobs:
       GUI_DEB_FILE: chia-blockchain_${{ needs.version.outputs.chia-installer-version }}_${{ matrix.os.arch }}.deb
       GUI_DEV_DEB_FILE: chia-blockchain_${{ needs.version.outputs.chia-dev-version }}_${{ matrix.os.arch }}.deb
       GUI_LATEST_DEV_DEB_FILE: chia-blockchain_${{ matrix.os.arch }}_latest_dev.deb
-      DEV_S3_URL: s3://download.chia.net/dev
-      LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev
+      INSTALL_S3_URL: s3://download.chia.net/install/
+      DEV_S3_URL: s3://download.chia.net/dev/
+      LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev/
       TORRENT_S3_URL: s3://download.chia.net/torrents/
       TRACKER_URL: udp://tracker.opentrackr.org:1337/announce
 
@@ -332,15 +333,15 @@ jobs:
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         run: |
           # TODO: what about this?
-          # aws s3 cp artifacts/*.deb artifacts/*.sha256 ${DEV_S3_URL}
+          # aws s3 cp artifacts/*.deb artifacts/*.sha256 ${INSTALL_S3_URL}
           # aws s3 cp artifacts/*.torrent ${TORRENT_S3_URL}
 
-          aws s3 cp artifacts/${GUI_DEB_FILE} ${DEV_S3_URL}
-          aws s3 cp artifacts/${GUI_DEB_FILE}.sha256 ${DEV_S3_URL}
+          aws s3 cp artifacts/${GUI_DEB_FILE} ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${GUI_DEB_FILE}.sha256 ${INSTALL_S3_URL}
           aws s3 cp artifacts/${GUI_DEB_FILE}.torrent ${TORRENT_S3_URL}
 
-          aws s3 cp artifacts/${CLI_DEB_FILE} ${DEV_S3_URL}
-          aws s3 cp artifacts/${CLI_DEB_FILE}.sha256 ${DEV_S3_URL}
+          aws s3 cp artifacts/${CLI_DEB_FILE} ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${CLI_DEB_FILE}.sha256 ${INSTALL_S3_URL}
           aws s3 cp artifacts/${CLI_DEB_FILE}.torrent ${TORRENT_S3_URL}
 
       - name: Upload release artifacts
