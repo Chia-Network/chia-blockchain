@@ -34,11 +34,9 @@ def _struct_hash(singleton_mod_hash: bytes32, launcher_id: bytes32, singleton_la
 
 
 def match(potential_match: Program) -> Optional[Program]:
-    r = potential_match.uncurry()
-    if r is None:
-        return r
-    elif r[0] == PUZZLE:
-        return r[1]
+    mod, args = potential_match.uncurry()
+    if mod == PUZZLE:
+        return args
     else:
         return None
 
