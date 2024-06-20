@@ -80,6 +80,7 @@ jobs:
           ls -l artifacts/
 
       - uses: actions/upload-artifact@v4
+        if: runner.debug
         with:
           name: logs - ${{ matrix.platform.name }}
           path: artifacts/
