@@ -26,10 +26,11 @@ from chia.util.ints import uint32
 transaction_block_heights = []
 last = 225698
 file_path = os.path.realpath(__file__)
-for delta in open(Path(file_path).parent / "transaction_height_delta", "rb").read():
-    new = last + delta
-    transaction_block_heights.append(new)
-    last = new
+with open(Path(file_path).parent / "transaction_height_delta", "rb") as f:
+    for delta in f.read():
+        new = last + delta
+        transaction_block_heights.append(new)
+        last = new
 
 
 @dataclass(frozen=True)

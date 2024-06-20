@@ -8,6 +8,7 @@ from chia_rs import PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
+from chia.server.signal_handlers import SignalHandlers
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.ssl_certs import (
@@ -26,7 +27,6 @@ from chia.util.errors import KeychainFingerprintExists
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.util.lock import Lockfile
-from chia.util.misc import SignalHandlers
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 
 """

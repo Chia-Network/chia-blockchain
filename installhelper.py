@@ -42,7 +42,7 @@ def make_semver(version_str: str) -> str:
     version = f"{major}.{minor}.{patch}"
 
     if prerelease:
-        version += "-{}".format(".".join(prerelease))
+        version += f"-{'.'.join(prerelease)}"
     if local:
         version += f"+{local}"
 

@@ -7,7 +7,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint8, uint32, uint64
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata, ClawbackVersion
 from chia.wallet.util.wallet_types import CoinType, StreamableWalletIdentifier, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCATMetadata, CRCATVersion

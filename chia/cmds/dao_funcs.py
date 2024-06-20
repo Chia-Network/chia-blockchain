@@ -208,10 +208,10 @@ async def list_proposals(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
         soft_close_length = res["soft_close_length"]
         print("############################")
         for prop in proposals:
-            print("Proposal ID: {proposal_id}".format(**prop))
+            print(f"Proposal ID: {prop['proposal_id']}")
             prop_status = "CLOSED" if prop["closed"] else "OPEN"
             print(f"Status: {prop_status}")
-            print("Votes for: {yes_votes}".format(**prop))
+            print(f"Votes for: {prop['yes_votes']}")
             votes_against = prop["amount_voted"] - prop["yes_votes"]
             print(f"Votes against: {votes_against}")
             print("------------------------")

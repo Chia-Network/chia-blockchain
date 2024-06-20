@@ -27,7 +27,7 @@ from chia.util.path import path_from_root
 
 async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
     profile_dir = path_from_root(root_path, f"profile-{service}")
-    log.info("Starting profiler. saving to %s" % profile_dir)
+    log.info("Starting profiler. saving to %s", profile_dir)
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     counter = 0
@@ -38,8 +38,8 @@ async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logge
         # this will throw CancelledError when we're exiting
         await asyncio.sleep(1)
         pr.create_stats()
-        pr.dump_stats(profile_dir / ("slot-%05d.profile" % counter))
-        log.debug("saving profile %05d" % counter)
+        pr.dump_stats(profile_dir / f"slot-{counter:05}.profile")
+        log.debug("saving profile %05d", counter)
         counter += 1
 
 
@@ -59,7 +59,7 @@ if __name__ == "__main__":
         try:
             while True:
                 f = io.StringIO()
-                st = pstats.Stats(str(profile_dir / ("slot-%05d.profile" % counter)), stream=f)
+                st = pstats.Stats(str(profile_dir / f"slot-{counter:05}.profile"), stream=f)
                 st.strip_dirs()
                 st.sort_stats(pstats.SortKey.CUMULATIVE)
                 st.print_stats()
@@ -125,17 +125,17 @@ if __name__ == "__main__":
 
         files = []
         for i in range(first, last + 1):
-            files.append(str(profile_dir / ("slot-%05d.profile" % i)))
+            files.append(str(profile_dir / f"slot-{i:05}.profile"))
 
-        output_file = "chia-hotspot-%d" % first
+        output_file = f"chia-hotspot-{first}"
         if first < last:
-            output_file += "-%d" % last
+            output_file += f"-{last}"
 
-        print("generating call tree for slot(s) [%d, %d]" % (first, last))
+        print(f"generating call tree for slot(s) [{first}, {last}]")
         check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot"] + files)
         with open(output_file + ".png", "w+") as f:
             check_call(["dot", "-T", "png", output_file + ".dot"], stdout=f)
-        print("output written to: %s.png" % output_file)
+        print(f"output written to: {output_file}.png")
 
     if len(sys.argv) == 2:
         # this analyzes the CPU usage at all slots saved to the profiler directory
@@ -161,7 +161,7 @@ profiler.py <profile-directory> <first-slot> <last-slot>
 
 async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
     profile_dir = path_from_root(root_path, f"memory-profile-{service}") / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log.info("Starting memory profiler. saving to %s" % profile_dir)
+    log.info("Starting memory profiler. saving to %s", profile_dir)
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     try:

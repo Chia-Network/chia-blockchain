@@ -354,8 +354,8 @@ class TradeStore:
                 "SELECT distinct cl.coin_id "
                 "from coin_of_interest_to_trade_record cl, trade_records t "
                 "WHERE "
-                "t.status in (%s) "
-                "AND LOWER(hex(cl.trade_id)) = t.trade_id " % (",".join("?" * len(trade_statuses)),),
+                f"t.status in ({','.join('?' * len(trade_statuses))}) "
+                "AND LOWER(hex(cl.trade_id)) = t.trade_id ",
                 [x.value for x in trade_statuses],
             )
         return {bytes32(row[0]) for row in rows}

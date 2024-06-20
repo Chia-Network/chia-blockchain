@@ -189,6 +189,32 @@ def main(
     )
 
 
+def format_number(n: float) -> str:
+    complete = f"{n:.999f}"
+    integral_digits, decimal_separator, decimal_digits = complete.partition(".")
+    for index, digit in enumerate(decimal_digits):
+        if digit != "0":
+            places = index + 1
+            break
+    else:
+        places = 0
+
+    group_size = 3
+
+    places = ((places + group_size) // group_size) * group_size
+    decimal_digits = decimal_digits[:places]
+
+    result = ""
+    result += ",".join(
+        [integral_digits[start : start + group_size] for start in range(0, len(integral_digits), group_size)]
+    )
+    result += "."
+    result += " ".join(
+        [decimal_digits[start : start + group_size] for start in range(0, len(decimal_digits), group_size)]
+    )
+    return result
+
+
 def output_benchmark(
     link_line_separator: str,
     link_prefix: str,
@@ -215,17 +241,17 @@ def output_benchmark(
             three_sigma_str = "-"
             if len(result.durations) > 1:
                 durations_mean = mean(result.durations)
-                mean_str = f"{durations_mean:.3f} s"
+                mean_str = f"{format_number(durations_mean)} s"
 
                 try:
-                    three_sigma_str = f"{durations_mean + 3 * stdev(result.durations):.3f} s"
+                    three_sigma_str = f"{format_number(durations_mean + 3 * stdev(result.durations))} s"
                 except StatisticsError:
                     pass
 
             durations_max = max(result.durations)
-            max_str = f"{durations_max:.3f} s"
+            max_str = f"{format_number(durations_max)} s"
 
-            limit_str = f"{result.limit:.3f} s"
+            limit_str = f"{format_number(result.limit)} s"
 
             percent = 100 * durations_max / result.limit
             if percent >= 100:
@@ -292,17 +318,17 @@ def output_time_out_assert(
             three_sigma_str = "-"
             if len(result.durations) > 1:
                 durations_mean = mean(result.durations)
-                mean_str = f"{durations_mean:.3f} s"
+                mean_str = f"{format_number(durations_mean)} s"
 
                 try:
-                    three_sigma_str = f"{durations_mean + 3 * stdev(result.durations):.3f} s"
+                    three_sigma_str = f"{format_number(durations_mean + 3 * stdev(result.durations))} s"
                 except StatisticsError:
                     pass
 
             durations_max = max(result.durations)
-            max_str = f"{durations_max:.3f} s"
+            max_str = f"{format_number(durations_max)} s"
 
-            limit_str = f"{result.limit:.3f} s"
+            limit_str = f"{format_number(result.limit)} s"
 
             percent = 100 * durations_max / result.limit
             if percent >= 100:

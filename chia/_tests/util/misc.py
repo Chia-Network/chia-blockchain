@@ -15,6 +15,7 @@ import sys
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import Enum
+from inspect import getframeinfo, stack
 from pathlib import Path
 from statistics import mean
 from textwrap import dedent
@@ -28,6 +29,7 @@ from typing import (
     ClassVar,
     Collection,
     Dict,
+    Iterable,
     Iterator,
     List,
     Optional,
@@ -58,7 +60,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
-from chia.util.misc import caller_file_and_line
 from chia.util.network import WebServer
 from chia.wallet.util.compute_hints import HintedCoin
 from chia.wallet.wallet_node import WalletNode
@@ -389,6 +390,34 @@ class BenchmarkRunner:
         kwargs.setdefault("overhead", self.overhead)
         return _AssertRuntime(*args, **kwargs)
 
+    def print_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
+        kwargs.setdefault("enable_assertion", False)
+        # TODO: ick
+        kwargs.setdefault("seconds", 1)
+        kwargs.setdefault("overhead", self.overhead)
+        return _AssertRuntime(*args, **kwargs)
+
+    def record_value(self, value: float, limit: float, label: str) -> None:
+        if ether.record_property is not None:
+            file, line = caller_file_and_line(
+                relative_to=(
+                    pathlib.Path(chia.__file__).parent.parent,
+                    pathlib.Path(chia._tests.__file__).parent.parent,
+                )
+            )
+            data = BenchmarkData(
+                duration=value,
+                path=pathlib.Path(file),
+                line=line,
+                limit=limit,
+                label=label,
+            )
+
+            ether.record_property(  # pylint: disable=E1102
+                data.tag,
+                json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
+            )
+
 
 @contextlib.contextmanager
 def assert_rpc_error(error: str) -> Iterator[None]:
@@ -679,3 +708,17 @@ class ComparableEnum(Enum):
             return NotImplemented
 
         return self.value.__ge__(other.value)
+
+
+def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:
+    caller = getframeinfo(stack()[distance + 1][0])
+
+    caller_path = Path(caller.filename)
+    options: List[str] = [caller_path.as_posix()]
+    for path in relative_to:
+        try:
+            options.append(caller_path.relative_to(path).as_posix())
+        except ValueError:
+            pass
+
+    return min(options, key=len), caller.lineno

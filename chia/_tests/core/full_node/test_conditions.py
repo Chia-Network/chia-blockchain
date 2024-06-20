@@ -9,7 +9,8 @@ import logging
 from typing import List, Optional, Tuple
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import AugSchemeMPL, G2Element
+from clvm.casts import int_to_bytes
 from clvm_tools.binutils import assemble
 
 from chia._tests.conftest import ConsensusMode
@@ -22,6 +23,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
+from chia.util.condition_tools import agg_sig_additional_data
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
@@ -99,12 +101,14 @@ async def check_conditions(
     condition_solution: Program,
     expected_err: Optional[Err] = None,
     spend_reward_index: int = -2,
+    *,
+    aggsig: G2Element = G2Element(),
 ) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
     blocks = await initial_blocks(bt)
     coin = blocks[spend_reward_index].get_included_reward_coins()[0]
 
     coin_spend = make_spend(coin, EASY_PUZZLE, SerializedProgram.from_program(condition_solution))
-    spend_bundle = SpendBundle([coin_spend], G2Element())
+    spend_bundle = SpendBundle([coin_spend], aggsig)
 
     # now let's try to create a block with the spend bundle and ensure that it doesn't validate
 
@@ -495,3 +499,85 @@ class TestConditions:
         else:
             expected_error = None
         await check_conditions(bt, conditions, expected_error)
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "opcode",
+        [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+            ConditionOpcode.AGG_SIG_UNSAFE,
+            ConditionOpcode.AGG_SIG_ME,
+        ],
+    )
+    async def test_agg_sig_illegal_suffix(
+        self,
+        opcode: ConditionOpcode,
+        bt: BlockTools,
+        consensus_mode: ConsensusMode,
+    ) -> None:
+
+        c = bt.constants
+
+        additional_data = agg_sig_additional_data(c.AGG_SIG_ME_ADDITIONAL_DATA)
+        assert c.AGG_SIG_ME_ADDITIONAL_DATA == additional_data[ConditionOpcode.AGG_SIG_ME]
+        assert c.AGG_SIG_PARENT_ADDITIONAL_DATA == additional_data[ConditionOpcode.AGG_SIG_PARENT]
+        assert c.AGG_SIG_PUZZLE_ADDITIONAL_DATA == additional_data[ConditionOpcode.AGG_SIG_PUZZLE]
+        assert c.AGG_SIG_AMOUNT_ADDITIONAL_DATA == additional_data[ConditionOpcode.AGG_SIG_AMOUNT]
+        assert c.AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA == additional_data[ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT]
+        assert c.AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA == additional_data[ConditionOpcode.AGG_SIG_PARENT_AMOUNT]
+        assert c.AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA == additional_data[ConditionOpcode.AGG_SIG_PARENT_PUZZLE]
+
+        blocks = await initial_blocks(bt)
+        if consensus_mode < ConsensusMode.HARD_FORK_2_0 and opcode in [
+            ConditionOpcode.AGG_SIG_PARENT,
+            ConditionOpcode.AGG_SIG_PUZZLE,
+            ConditionOpcode.AGG_SIG_AMOUNT,
+            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
+            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
+        ]:
+            expected_error = Err.BAD_AGGREGATE_SIGNATURE
+        elif opcode == ConditionOpcode.AGG_SIG_UNSAFE:
+            expected_error = Err.INVALID_CONDITION
+        else:
+            expected_error = None
+
+        sk = AugSchemeMPL.key_gen(b"8" * 32)
+        pubkey = sk.get_g1()
+        coin = blocks[-2].get_included_reward_coins()[0]
+        for msg in [
+            c.AGG_SIG_PARENT_ADDITIONAL_DATA,
+            c.AGG_SIG_PUZZLE_ADDITIONAL_DATA,
+            c.AGG_SIG_AMOUNT_ADDITIONAL_DATA,
+            c.AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA,
+            c.AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA,
+            c.AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA,
+        ]:
+            print(f"op: {opcode} msg: {msg}")
+            message = "0x" + msg.hex()
+            if opcode == ConditionOpcode.AGG_SIG_ME:
+                suffix = coin.name() + c.AGG_SIG_ME_ADDITIONAL_DATA
+            elif opcode == ConditionOpcode.AGG_SIG_PARENT:
+                suffix = coin.parent_coin_info + c.AGG_SIG_PARENT_ADDITIONAL_DATA
+            elif opcode == ConditionOpcode.AGG_SIG_PUZZLE:
+                suffix = coin.puzzle_hash + c.AGG_SIG_PUZZLE_ADDITIONAL_DATA
+            elif opcode == ConditionOpcode.AGG_SIG_AMOUNT:
+                suffix = int_to_bytes(coin.amount) + c.AGG_SIG_AMOUNT_ADDITIONAL_DATA
+            elif opcode == ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT:
+                suffix = coin.puzzle_hash + int_to_bytes(coin.amount) + c.AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA
+            elif opcode == ConditionOpcode.AGG_SIG_PARENT_AMOUNT:
+                suffix = coin.parent_coin_info + int_to_bytes(coin.amount) + c.AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA
+            elif opcode == ConditionOpcode.AGG_SIG_PARENT_PUZZLE:
+                suffix = coin.parent_coin_info + coin.puzzle_hash + c.AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA
+            else:
+                suffix = b""
+            sig = AugSchemeMPL.sign(sk, msg + suffix, pubkey)
+            solution = SerializedProgram.to(assemble(f"(({opcode.value[0]} 0x{bytes(pubkey).hex()} {message}))"))
+            coin_spend = make_spend(coin, EASY_PUZZLE, solution)
+            spend_bundle = SpendBundle([coin_spend], sig)
+            await check_spend_bundle_validity(bt, blocks, spend_bundle, expected_err=expected_error)

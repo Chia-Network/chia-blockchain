@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts - ${{ matrix.development.name }}
+    name: Test Install Scripts - ${{ matrix.development.name }} - ${{ matrix.editable.name }}
     runs-on: ${{ matrix.os.runs-on }}
     strategy:
       fail-fast: false
@@ -44,6 +44,13 @@ jobs:
             value: false
           - name: Development
             value: true
+        editable:
+          - name: Non-editable
+            value: false
+            matrix: non-editable
+          - name: Editable
+            value: true
+            matrix: editable
 
     steps:
       - name: Checkout Code
@@ -60,6 +67,7 @@ jobs:
         with:
           python-version: ${{ matrix.python.major-dot-minor }}
           development: ${{ matrix.development.value }}
+          editable: ${{ matrix.editable.value }}
           do-system-installs: true
 
       - uses: chia-network/actions/activate-venv@main
@@ -77,6 +85,32 @@ jobs:
         if: matrix.os.matrix == 'windows'
         run: |
           ./Install-gui.ps1
+
+      - name: Collect editable info
+        id: editable-info
+        shell: bash
+        run: |
+          echo "pre-edit-version=$(chia version)" >> "$GITHUB_OUTPUT"
+          echo '__version__ = "shooby-doowah"' >> chia/__init__.py
+          echo "post-edit-version=$(chia version)" >> "$GITHUB_OUTPUT"
+
+      - name: Check editable
+        if: matrix.editable.matrix == 'editable'
+        shell: bash
+        env:
+          PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
+          POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
+        run: |
+          [ "$POST_VERSION" = "shooby-doowah" -a "$PRE_VERSION" != "shooby-doowah" ]
+
+      - name: Check non-editable
+        if: matrix.editable.matrix == 'non-editable'
+        shell: bash
+        env:
+          PRE_VERSION: ${{ steps.editable-info.outputs.pre-edit-version }}
+          POST_VERSION: ${{ steps.editable-info.outputs.post-edit-version }}
+        run: |
+          [ "$POST_VERSION" != "shooby-doowah" -a "$PRE_VERSION" = "$POST_VERSION" ]
 
   test_scripts_in_docker:
     name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}

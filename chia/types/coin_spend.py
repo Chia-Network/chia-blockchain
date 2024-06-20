@@ -30,11 +30,14 @@ def make_spend(
         pr = puzzle_reveal
     elif isinstance(puzzle_reveal, Program):
         pr = SerializedProgram.from_program(puzzle_reveal)
-
+    else:
+        raise ValueError("Only [SerializedProgram, Program] supported for puzzle reveal")
     if isinstance(solution, SerializedProgram):
         sol = solution
     elif isinstance(solution, Program):
         sol = SerializedProgram.from_program(solution)
+    else:
+        raise ValueError("Only [SerializedProgram, Program] supported for solution")
 
     return CoinSpend(coin, pr, sol)
 

@@ -121,7 +121,7 @@ async def test_nft_wallet_creation_automatically(
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -505,7 +505,7 @@ async def test_nft_wallet_rpc_creation_and_list(
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -627,7 +627,7 @@ async def test_nft_wallet_rpc_update_metadata(
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -778,7 +778,7 @@ async def test_nft_with_did_wallet_creation(
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -944,7 +944,7 @@ async def test_nft_rpc_mint(self_hostname: str, two_wallet_nodes: OldSimulatorsA
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -1066,7 +1066,7 @@ async def test_nft_transfer_nft_with_did(
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
@@ -1234,7 +1234,7 @@ async def test_update_metadata_for_nft_did(
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -1365,7 +1365,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: OldSimulat
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -1540,7 +1540,7 @@ async def test_nft_bulk_transfer(self_hostname: str, two_wallet_nodes: OldSimula
     await full_node_api.wait_for_wallet_synced(wallet_node_0)
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -1692,7 +1692,7 @@ async def test_nft_set_did(self_hostname: str, two_wallet_nodes: OldSimulatorsAn
     await full_node_api.wait_for_wallet_synced(wallet_node_0)
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -1868,7 +1868,7 @@ async def test_set_nft_status(self_hostname: str, two_wallet_nodes: OldSimulator
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -1951,7 +1951,7 @@ async def test_nft_sign_message(self_hostname: str, two_wallet_nodes: OldSimulat
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)

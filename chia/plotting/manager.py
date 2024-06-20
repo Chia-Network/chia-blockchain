@@ -21,7 +21,7 @@ from chia.plotting.util import (
     PlotsRefreshParameter,
     get_plot_filenames,
 )
-from chia.util.misc import to_batches
+from chia.util.batches import to_batches
 
 log = logging.getLogger(__name__)
 
