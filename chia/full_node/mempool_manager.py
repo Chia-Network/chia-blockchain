@@ -4,12 +4,12 @@ import asyncio
 import logging
 import time
 from concurrent.futures import Executor
-from concurrent.futures.process import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, TypeVar
 
-from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, BLSCache, G1Element, supports_fast_forward
+from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, BLSCache, G1Element, supports_fast_forward, validate_clvm_and_signature
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
@@ -48,45 +48,45 @@ MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
 
 # TODO: once the 1.8.0 soft-fork has activated, we don't really need to pass
 # the constants through here
-def validate_clvm_and_signature(
-    spend_bundle_bytes: bytes, max_cost: int, constants: ConsensusConstants, height: uint32
-) -> Tuple[Optional[Err], bytes, List[Tuple[bytes, bytes]], float]:
-    """
-    Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
-    in order to validate the heavy parts of a transaction in a different thread. Returns an optional error,
-    the NPCResult and a cache of the new pairings validated (if not error)
-    """
+# def validate_clvm_and_signature(
+#     spend_bundle_bytes: bytes, max_cost: int, constants: ConsensusConstants, height: uint32
+# ) -> Tuple[Optional[Err], bytes, List[Tuple[bytes, bytes]], float]:
+#     """
+#     Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
+#     in order to validate the heavy parts of a transaction in a different thread. Returns an optional error,
+#     the NPCResult and a cache of the new pairings validated (if not error)
+#     """
 
-    start_time = time.monotonic()
-    additional_data = constants.AGG_SIG_ME_ADDITIONAL_DATA
+#     start_time = time.monotonic()
+#     additional_data = constants.AGG_SIG_ME_ADDITIONAL_DATA
 
-    try:
-        bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
-        program = simple_solution_generator(bundle)
-        # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        result: NPCResult = get_name_puzzle_conditions(
-            program, max_cost, mempool_mode=True, constants=constants, height=height
-        )
+#     try:
+#         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
+#         program = simple_solution_generator(bundle)
+#         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
+#         result: NPCResult = get_name_puzzle_conditions(
+#             program, max_cost, mempool_mode=True, constants=constants, height=height
+#         )
 
-        if result.error is not None:
-            return Err(result.error), b"", [], time.monotonic() - start_time
+#         if result.error is not None:
+#             return Err(result.error), b"", [], time.monotonic() - start_time
 
-        pks: List[G1Element] = []
-        msgs: List[bytes] = []
-        assert result.conds is not None
-        pks, msgs = pkm_pairs(result.conds, additional_data)
+#         pks: List[G1Element] = []
+#         msgs: List[bytes] = []
+#         assert result.conds is not None
+#         pks, msgs = pkm_pairs(result.conds, additional_data)
 
-        # Verify aggregated signature
-        cache = BLSCache(10000)
-        if not cache.aggregate_verify(pks, msgs, bundle.aggregated_signature):
-            return Err.BAD_AGGREGATE_SIGNATURE, b"", [], time.monotonic() - start_time
-        new_cache_entries: List[Tuple[bytes, bytes]] = cache.items()
-    except ValidationError as e:
-        return e.code, b"", [], time.monotonic() - start_time
-    except Exception:
-        return Err.UNKNOWN, b"", [], time.monotonic() - start_time
+#         # Verify aggregated signature
+#         cache = BLSCache(10000)
+#         if not cache.aggregate_verify(pks, msgs, bundle.aggregated_signature):
+#             return Err.BAD_AGGREGATE_SIGNATURE, b"", [], time.monotonic() - start_time
+#         new_cache_entries: List[Tuple[bytes, bytes]] = cache.items()
+#     except ValidationError as e:
+#         return e.code, b"", [], time.monotonic() - start_time
+#     except Exception:
+#         return Err.UNKNOWN, b"", [], time.monotonic() - start_time
 
-    return None, bytes(result), new_cache_entries, time.monotonic() - start_time
+#     return None, bytes(result), new_cache_entries, time.monotonic() - start_time
 
 
 @dataclass
@@ -220,7 +220,7 @@ class MempoolManager:
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            self.pool = ProcessPoolExecutor(
+            self.pool = ThreadPoolExecutor(
                 max_workers=2,
                 mp_context=multiprocessing_context,
                 initializer=setproctitle,
@@ -324,7 +324,7 @@ class MempoolManager:
 
         self._worker_queue_size += 1
         try:
-            err, cached_result_bytes, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
+            _spend, sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
                 self.pool,
                 validate_clvm_and_signature,
                 new_spend_bytes,
@@ -332,15 +332,16 @@ class MempoolManager:
                 self.constants,
                 self.peak.height,
             )
+        except Exception as e:
+            raise ValidationError(e)
         finally:
             self._worker_queue_size -= 1
 
-        if err is not None:
-            raise ValidationError(err)
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
+        
+        ret = NPCResult(None, sbc)
 
-        ret: NPCResult = NPCResult.from_bytes(cached_result_bytes)
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
             f"pre_validate_spendbundle took {duration:0.4f} seconds "
