@@ -7,37 +7,38 @@ from setuptools import find_packages, setup
 
 dependencies = [
     "aiofiles==23.2.1",  # Async IO for files
-    "anyio==4.2.0",
-    "boto3==1.34.46",  # AWS S3 for DL s3 plugin
-    "chiavdf==1.1.1",  # timelord and vdf verification
-    "chiabip158==1.3",  # bip158-style wallet filters
-    "chiapos==2.0.3",  # proof of space
-    "clvm==0.9.8",
-    "clvm_tools==0.4.8",  # Currying, Program.to, other conveniences
-    "chia_rs==0.5.2",
+    "anyio==4.3.0",
+    "boto3==1.34.114",  # AWS S3 for DL s3 plugin
+    "chiavdf==1.1.4",  # timelord and vdf verification
+    "chiabip158==1.5.1",  # bip158-style wallet filters
+    "chiapos==2.0.4",  # proof of space
+    "clvm==0.9.10",
+    "clvm_tools==0.4.9",  # Currying, Program.to, other conveniences
+    "chia_rs==0.9.0",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
-    "aiohttp==3.9.1",  # HTTP server for full node rpc
-    "aiosqlite==0.19.0",  # asyncio wrapper for sqlite, to store blocks
+    "aiohttp==3.9.4",  # HTTP server for full node rpc
+    "aiosqlite==0.20.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==4.1.4",  # Binary data management library
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.8.2",  # Adds color to logs
     "concurrent-log-handler==0.9.25",  # Concurrently log and rotate logs
-    "cryptography==42.0.4",  # Python cryptography library for TLS - keyring conflict
-    "filelock==3.13.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
-    "keyring==24.3.0",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "cryptography==42.0.5",  # Python cryptography library for TLS - keyring conflict
+    "filelock==3.14.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+    "importlib-resources==6.4.0",
+    "keyring==25.1.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     "click==8.1.3",  # For the CLI
-    "dnspython==2.5.0",  # Query DNS seeds
-    "watchdog==2.2.0",  # Filesystem event watching - watches keyring.yaml
+    "dnspython==2.6.1",  # Query DNS seeds
+    "watchdog==4.0.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.24",  # dns lib
-    "typing-extensions==4.9.0",  # typing backports like Protocol and TypedDict
+    "typing-extensions==4.11.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
-    "packaging==23.2",
+    "packaging==24.0",
     "psutil==5.9.4",
     "hsms==0.3.1",
-    "ecdsa==0.18.0",  # For SECP
+    "ecdsa==0.19.0",  # For SECP
 ]
 
 upnp_dependencies = [
@@ -45,30 +46,30 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "build==1.0.3",
-    "coverage==7.4.1",
-    "diff-cover==8.0.1",
+    "build==1.2.1",
+    "coverage==7.5.3",
+    "diff-cover==9.0.0",
     "pre-commit==3.5.0; python_version < '3.9'",
-    "pre-commit==3.6.0; python_version >= '3.9'",
+    "pre-commit==3.7.1; python_version >= '3.9'",
     "py3createtorrent==1.2.0",
-    "pylint==3.0.3",
-    "pytest==8.0.1",
-    "pytest-cov==4.1.0",
-    "pytest-mock==3.12.0",
-    "pytest-xdist==3.5.0",
-    "pyupgrade==3.15.0",
-    "twine==5.0.0",
+    "pylint==3.2.2",
+    "pytest==8.1.1",
+    "pytest-cov==5.0.0",
+    "pytest-mock==3.14.0",
+    "pytest-xdist==3.6.1",
+    "pyupgrade==3.15.2",
+    "twine==5.1.0",
     "isort==5.13.2",
     "flake8==7.0.0",
-    "mypy==1.8.0",
-    "black==23.12.1",
-    "lxml==5.1.0",
+    "mypy==1.10.0",
+    "black==24.4.2",
+    "lxml==5.2.2",
     "aiohttp_cors==0.7.0",  # For blackd
-    "pyinstaller==6.3.0",
-    "types-aiofiles==23.2.0.20240106",
+    "pyinstaller==6.7.0",
+    "types-aiofiles==23.2.0.20240311",
     "types-cryptography==3.3.23.2",
-    "types-pyyaml==6.0.12.12",
-    "types-setuptools==69.1.0.20240217",
+    "types-pyyaml==6.0.12.20240311",
+    "types-setuptools==70.0.0.20240524",
 ]
 
 legacy_keyring_dependencies = [
@@ -85,11 +86,11 @@ kwargs = dict(
     python_requires=">=3.8.1, <4",
     keywords="chia blockchain node",
     install_requires=dependencies,
-    extras_require=dict(
-        dev=dev_dependencies,
-        upnp=upnp_dependencies,
-        legacy_keyring=legacy_keyring_dependencies,
-    ),
+    extras_require={
+        "dev": dev_dependencies,
+        "upnp": upnp_dependencies,
+        "legacy-keyring": legacy_keyring_dependencies,
+    },
     packages=find_packages(include=["build_scripts", "chia", "chia.*", "mozilla-ca"]),
     entry_points={
         "console_scripts": [
@@ -112,6 +113,10 @@ kwargs = dict(
     },
     package_data={
         "": ["*.clsp", "*.clsp.hex", "*.clvm", "*.clib", "py.typed"],
+        "chia._tests.cmds.wallet": ["test_offer.toffer"],
+        "chia._tests.farmer_harvester": ["*.json"],
+        "chia._tests.tools": ["*.json", "test-blockchain-db.sqlite"],
+        "chia._tests.util": ["bip39_test_vectors.json", "clvm_generator.bin", "protocol_messages_bytes-v*"],
         "chia.util": ["initial-*.yaml", "english.txt"],
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],

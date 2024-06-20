@@ -230,24 +230,22 @@ class WalletNode:
             cache.clear_after_height(reorg_height)
 
     @overload
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[ObservationRoot]:
-        ...
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[ObservationRoot]: ...
 
     @overload
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int], private: Literal[True]) -> Optional[PrivateKey]:
-        ...
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: Literal[True]
+    ) -> Optional[PrivateKey]: ...
 
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: Literal[False]
-    ) -> Optional[ObservationRoot]:
-        ...
+    ) -> Optional[ObservationRoot]: ...
 
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
-        ...
+    ) -> Optional[Union[PrivateKey, ObservationRoot]]: ...
 
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool = False
@@ -341,7 +339,9 @@ class WalletNode:
             "pool_state_transitions",
             "singleton_records",
             "mirrors",
+            "mirror_confirmations",
             "launchers",
+            "launcher_confirmations",
             "interested_coins",
             "interested_puzzle_hashes",
             "unacknowledged_asset_tokens",
@@ -623,7 +623,7 @@ class WalletNode:
                     # we might not be able to process some state.
                     coin_ids: List[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
-                        coin_states: List[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, uint32(0))
+                        coin_states: List[CoinState] = await subscribe_to_coin_updates(coin_ids, peer, 0)
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
                                 await self.add_states_from_peer(coin_states, peer)
@@ -632,7 +632,7 @@ class WalletNode:
                     puzzle_hashes: List[bytes32] = item.data
                     for peer in self.server.get_connections(NodeType.FULL_NODE):
                         # Puzzle hash subscription
-                        coin_states = await subscribe_to_phs(puzzle_hashes, peer, uint32(0))
+                        coin_states = await subscribe_to_phs(puzzle_hashes, peer, 0)
                         if len(coin_states) > 0:
                             async with self.wallet_state_manager.lock:
                                 await self.add_states_from_peer(coin_states, peer)
@@ -727,7 +727,7 @@ class WalletNode:
             self.wallet_peers = WalletPeers(
                 self.server,
                 self.config["target_peer_count"],
-                self.root_path / Path(self.config["wallet_peers_file_path"]),
+                self.root_path / Path(self.config.get("wallet_peers_file_path", "wallet/db/wallet_peers.dat")),
                 self.config["introducer_peer"],
                 self.config.get("dns_servers", ["dns-introducer.chia.net"]),
                 self.config["peer_connect_interval"],
@@ -841,6 +841,8 @@ class WalletNode:
 
         # We only process new state updates to avoid slow reprocessing. We set the sync height after adding
         # Things, so we don't have to reprocess these later. There can be many things in ph_update_res.
+        use_delta_sync = self.config.get("use_delta_sync", False)
+        min_height_for_subscriptions = fork_height if use_delta_sync else 0
         already_checked_ph: Set[bytes32] = set()
         while not self._shut_down:
             await self.wallet_state_manager.create_more_puzzle_hashes()
@@ -849,7 +851,9 @@ class WalletNode:
             if not_checked_puzzle_hashes == set():
                 break
             for batch in to_batches(not_checked_puzzle_hashes, 1000):
-                ph_update_res: List[CoinState] = await subscribe_to_phs(batch.entries, full_node, 0)
+                ph_update_res: List[CoinState] = await subscribe_to_phs(
+                    batch.entries, full_node, min_height_for_subscriptions
+                )
                 ph_update_res = list(filter(is_new_state_update, ph_update_res))
                 if not await self.add_states_from_peer(ph_update_res, full_node):
                     # If something goes wrong, abort sync
@@ -867,7 +871,9 @@ class WalletNode:
             if not_checked_coin_ids == set():
                 break
             for batch in to_batches(not_checked_coin_ids, 1000):
-                c_update_res: List[CoinState] = await subscribe_to_coin_updates(batch.entries, full_node, 0)
+                c_update_res: List[CoinState] = await subscribe_to_coin_updates(
+                    batch.entries, full_node, min_height_for_subscriptions
+                )
 
                 if not await self.add_states_from_peer(c_update_res, full_node):
                     # If something goes wrong, abort sync
@@ -1247,7 +1253,10 @@ class WalletNode:
                 backtrack_fork_height: int = await self.wallet_short_sync_backtrack(new_peak_hb, peer)
             else:
                 backtrack_fork_height = new_peak_hb.height - 1
+            fork_height = max(backtrack_fork_height, 0)
 
+            use_delta_sync = self.config.get("use_delta_sync", False)
+            min_height_for_subscriptions = fork_height if use_delta_sync else 0
             cache = self.get_cache_for_peer(peer)
             if peer.peer_node_id not in self.synced_peers:
                 # Edge case, this happens when the peak < WEIGHT_PROOF_RECENT_BLOCKS
@@ -1255,12 +1264,14 @@ class WalletNode:
                 # (Hints are not in filter)
                 all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe()
                 phs: List[bytes32] = await self.get_puzzle_hashes_to_subscribe()
-                ph_updates: List[CoinState] = await subscribe_to_phs(phs, peer, uint32(0))
-                coin_updates: List[CoinState] = await subscribe_to_coin_updates(all_coin_ids, peer, uint32(0))
+                ph_updates: List[CoinState] = await subscribe_to_phs(phs, peer, min_height_for_subscriptions)
+                coin_updates: List[CoinState] = await subscribe_to_coin_updates(
+                    all_coin_ids, peer, min_height_for_subscriptions
+                )
                 success = await self.add_states_from_peer(
                     ph_updates + coin_updates,
                     peer,
-                    fork_height=uint32(max(backtrack_fork_height, 0)),
+                    fork_height=uint32(fork_height),
                 )
                 if success:
                     self.synced_peers.add(peer.peer_node_id)
@@ -1682,6 +1693,10 @@ class WalletNode:
         if not self.is_trusted(peer):
             valid_list = []
             for coin in coin_state.coin_states:
+                if coin.coin.name() not in coin_names:
+                    await peer.close(9999)
+                    self.log.warning(f"Peer {peer.peer_node_id} sent us an unrequested coin state. Banning.")
+                    raise PeerRequestException(f"Peer sent us unrequested coin state {coin}")
                 valid = await self.validate_received_state_from_peer(
                     coin, peer, self.get_cache_for_peer(peer), fork_height
                 )

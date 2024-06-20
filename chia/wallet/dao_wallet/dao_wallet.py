@@ -346,7 +346,7 @@ class DAOWallet:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
-        There is no need for max/min coin amount or excluded amount becuase the dao treasury should
+        There is no need for max/min coin amount or excluded amount because the dao treasury should
         always be a single coin with amount 1
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
@@ -847,7 +847,7 @@ class DAOWallet:
         vote_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         coins = await self.standard_wallet.select_coins(
             uint64(fee + dao_rules.proposal_minimum_amount),
@@ -954,7 +954,7 @@ class DAOWallet:
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
-        return record
+        return [record]
 
     async def generate_proposal_eve_spend(
         self,
@@ -1029,7 +1029,7 @@ class DAOWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
         for pi in self.dao_info.proposals_list:
@@ -1137,7 +1137,7 @@ class DAOWallet:
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
-        return record
+        return [record]
 
     async def create_proposal_close_spend(
         self,
@@ -1279,7 +1279,7 @@ class DAOWallet:
                         if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
                             cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
                             cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
-                            mint_amount = cond.rest().rest().first().as_int()
+                            mint_amount = uint64(cond.rest().rest().first().as_int())
                             new_cat_puzhash = bytes32(cond.rest().rest().rest().first().first().as_atom())
                             eve_puzzle = curry_cat_eve(new_cat_puzhash)
                             if genesis_id is None:
@@ -1290,7 +1290,9 @@ class DAOWallet:
                             assert tail_reconstruction.get_tree_hash() == cat_tail_hash
                             assert isinstance(self.dao_info.current_treasury_coin, Coin)
                             cat_launcher_coin = Coin(
-                                self.dao_info.current_treasury_coin.name(), cat_launcher.get_tree_hash(), mint_amount
+                                self.dao_info.current_treasury_coin.name(),
+                                cat_launcher.get_tree_hash(),
+                                uint64(mint_amount),
                             )
                             full_puz = construct_cat_puzzle(CAT_MOD, cat_tail_hash, eve_puzzle)
 
@@ -1303,7 +1305,7 @@ class DAOWallet:
                                 ]
                             )
                             coin_spends.append(make_spend(cat_launcher_coin, cat_launcher, solution))
-                            eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), mint_amount)
+                            eve_coin = Coin(cat_launcher_coin.name(), full_puz.get_tree_hash(), uint64(mint_amount))
                             tail_solution = Program.to([cat_launcher_coin.parent_coin_info, cat_launcher_coin.amount])
                             solution = Program.to([mint_amount, tail_reconstruction, tail_solution])
                             new_spendable_cat = SpendableCAT(
@@ -1435,6 +1437,9 @@ class DAOWallet:
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
                 delegated_solution = Program.to([])
 
+            else:
+                raise Exception(f"Unknown proposal type: {proposal_type!r}")
+
             treasury_solution = Program.to(
                 [
                     [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH.as_atom(), 0],
@@ -1466,6 +1471,8 @@ class DAOWallet:
         if self_destruct:
             spend_bundle = SpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         else:
+            # TODO: maybe we can refactor this to provide clarity around timer_cs having been defined
+            # pylint: disable-next=E0606
             spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config)

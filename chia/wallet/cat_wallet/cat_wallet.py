@@ -74,7 +74,7 @@ def not_ephemeral_additions(sp: SpendBundle) -> List[Coin]:
         removals.add(cs.coin)
 
     additions: List[Coin] = []
-    max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+    max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
     for cs in sp.coin_spends:
         coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
         max_cost -= cost
@@ -390,8 +390,8 @@ class CATWallet:
                     if cat_curried_args is not None:
                         cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
                         parent_coin_data = CATCoinData(
-                            cat_mod_hash.atom,
-                            tail_program_hash.atom,
+                            bytes32(cat_mod_hash.as_atom()),
+                            bytes32(tail_program_hash.as_atom()),
                             cat_inner_puzzle,
                             coin_state[0].coin.parent_coin_info,
                             uint64(coin_state[0].coin.amount),
@@ -436,9 +436,9 @@ class CATWallet:
         if new:
             return await self.get_new_puzzlehash()
         else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.standard_wallet.id())
+            record: Optional[DerivationRecord] = (
+                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.standard_wallet.id())
+            )
             if record is None:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
@@ -531,18 +531,18 @@ class CATWallet:
         return coins
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
-        record: Optional[
-            DerivationRecord
-        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
+        record: Optional[DerivationRecord] = (
+            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
+        )
         if record is None:
             raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
         return inner_puzzle
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
-        record: Optional[
-            DerivationRecord
-        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
+        record: Optional[DerivationRecord] = (
+            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
+        )
         if record is None:
             return puzzle_hash  # TODO: check if we have a test for this case!
         else:
@@ -710,6 +710,9 @@ class CATWallet:
                             primaries=primaries,
                             conditions=(*extra_conditions, xch_announcement, announcement),
                         )
+                    else:
+                        # TODO: what about when they are equal?
+                        raise Exception("Equality not handled")
                 else:
                     innersol = self.standard_wallet.make_solution(
                         primaries=primaries,
@@ -783,7 +786,12 @@ class CATWallet:
             coins=coins,
             extra_conditions=extra_conditions,
         )
-        # TODO add support for array in stored records
+        if chia_tx is not None:
+            other_tx_removals: Set[Coin] = {removal for removal in chia_tx.removals}
+            other_tx_additions: Set[Coin] = {removal for removal in chia_tx.additions}
+        else:
+            other_tx_removals = set()
+            other_tx_additions = set()
         tx_list = [
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -794,8 +802,8 @@ class CATWallet:
                 confirmed=False,
                 sent=uint32(0),
                 spend_bundle=spend_bundle,
-                additions=spend_bundle.additions(),
-                removals=spend_bundle.removals(),
+                additions=list(set(spend_bundle.additions()) - other_tx_additions),
+                removals=list(set(spend_bundle.removals()) - other_tx_removals),
                 wallet_id=self.id(),
                 sent_to=[],
                 trade_id=None,
@@ -828,6 +836,7 @@ class CATWallet:
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
+
         return tx_list
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:

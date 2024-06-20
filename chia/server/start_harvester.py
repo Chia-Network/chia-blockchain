@@ -4,7 +4,7 @@ import pathlib
 import sys
 from typing import Any, Dict, Optional, Set
 
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
@@ -34,7 +34,7 @@ def create_harvester_service(
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
-    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
     harvester = Harvester(root_path, service_config, updated_constants)
     peer_api = HarvesterAPI(harvester)

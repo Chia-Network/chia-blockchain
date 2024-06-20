@@ -132,6 +132,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
@@ -399,6 +400,16 @@ class WalletStateManager:
             return master_sk_to_wallet_sk(self.get_master_private_key(), record.index)
         return master_sk_to_wallet_sk_unhardened(self.get_master_private_key(), record.index)
 
+    async def get_public_key(self, puzzle_hash: bytes32) -> bytes:
+        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        if record is None:
+            raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
+        if isinstance(record._pubkey, bytes):
+            pk_bytes = record._pubkey
+        else:
+            pk_bytes = bytes(record._pubkey)
+        return pk_bytes
+
     def get_master_private_key(self) -> PrivateKey:
         if self.private_key is None:  # pragma: no cover
             raise ValueError("Wallet is currently in observer mode and access to private key is denied")
@@ -441,95 +452,113 @@ class WalletStateManager:
         self.log.debug(f"Requested to generate puzzle hashes to at least index {unused}")
         start_t = time.time()
         to_generate = num_additional_phs if num_additional_phs is not None else self.initial_num_public_keys
-        new_paths: bool = False
 
+        # iterate all wallets that need derived keys and establish the start
+        # index for all of them
+        start_index: int = 0
+        start_index_by_wallet: Dict[uint32, int] = {}
+        last_index = unused + to_generate
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]
             if not target_wallet.require_derivation_paths():
                 self.log.debug("Skipping wallet %s as no derivation paths required", wallet_id)
                 continue
-            last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
-            self.log.debug(
-                "Fetched last record for wallet %r:  %s (from_zero=%r, unused=%r)", wallet_id, last, from_zero, unused
-            )
-            start_index = 0
-            derivation_paths: List[DerivationRecord] = []
-
-            if last is not None:
-                start_index = last + 1
-
-            # If the key was replaced (from_zero=True), we should generate the puzzle hashes for the new key
             if from_zero:
-                start_index = 0
-            last_index = unused + to_generate
-            if start_index >= last_index:
-                self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
+                start_index_by_wallet[wallet_id] = 0
+                continue
+            last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
+            if last is not None:
+                if last + 1 >= last_index:
+                    self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
+                    continue
+                start_index = min(start_index, last + 1)
+                start_index_by_wallet[wallet_id] = last + 1
             else:
-                creating_msg = (
-                    f"Creating puzzle hashes from {start_index} to {last_index - 1} for wallet_id: {wallet_id}"
-                )
-                self.log.info(f"Start: {creating_msg}")
-                if not target_wallet.handle_own_derivation():
-                    if self.private_key is not None:
-                        intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
-                    # This function shoul work for other types of observation roots too
-                    # However to generalize this function beyond pubkeys is beyond the scope of current work
-                    # So we're just going to sanitize and move on
-                    assert isinstance(self.observation_root, G1Element)
-                    intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.observation_root)
+                start_index_by_wallet[wallet_id] = 0
+
+        if len(start_index_by_wallet) == 0:
+            return
+
+        if not target_wallet.handle_own_derivation():
+            # now derive the keysfrom start_index to last_index
+            # these maps derivation index to public key
+            hardened_keys: Dict[int, G1Element] = {}
+            unhardened_keys: Dict[int, G1Element] = {}
+
+            if self.private_key is not None:
+                # Hardened
+                intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
                 for index in range(start_index, last_index):
-                    if target_wallet.handle_own_derivation():
-                        derivation_paths.extend(target_wallet.derivation_for_index(index))
-                    else:
-                        if self.private_key is not None:
-                            # Hardened
-                            pubkey: G1Element = _derive_path(intermediate_sk, [index]).get_g1()
-                            puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
-                            self.log.debug(
-                                f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}"
-                            )
-                            new_paths = True
-                            derivation_paths.append(
-                                DerivationRecord(
-                                    uint32(index),
-                                    puzzlehash,
-                                    pubkey,
-                                    target_wallet.type(),
-                                    uint32(target_wallet.id()),
-                                    True,
-                                )
-                            )
-                        # Unhardened
-                        pubkey_unhardened: G1Element = _derive_pk_unhardened(intermediate_pk_un, [index])
-                        puzzlehash_unhardened: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey_unhardened)
-                        self.log.debug(
-                            f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
-                        )
+                    hardened_keys[index] = _derive_path(intermediate_sk, [index]).get_g1()
+
+            # This function shoul work for other types of observation roots too
+            # However to generalize this function beyond pubkeys is beyond the scope of current work
+            # So we're just going to sanitize and move on
+            assert isinstance(self.observation_root, G1Element)
+
+            # Unhardened
+            intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.observation_root)
+            for index in range(start_index, last_index):
+                unhardened_keys[index] = _derive_pk_unhardened(intermediate_pk_un, [index])
+
+        for wallet_id, start_index in start_index_by_wallet.items():
+            target_wallet = self.wallets[wallet_id]
+            assert target_wallet.type() != WalletType.POOLING_WALLET
+            assert start_index < last_index
+
+            derivation_paths: List[DerivationRecord] = []
+            creating_msg = f"Creating puzzle hashes from {start_index} to {last_index - 1} for wallet_id: {wallet_id}"
+            self.log.info(f"Start: {creating_msg}")
+            for index in range(start_index, last_index):
+                if target_wallet.handle_own_derivation():
+                    derivation_paths.extend(target_wallet.derivation_for_index(index))
+                else:
+                    pubkey: Optional[G1Element] = hardened_keys.get(index)
+                    if pubkey is not None:
+                        # Hardened
+                        puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
+                        self.log.debug(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
                         derivation_paths.append(
                             DerivationRecord(
                                 uint32(index),
-                                puzzlehash_unhardened,
-                                pubkey_unhardened,
+                                puzzlehash,
+                                pubkey,
                                 target_wallet.type(),
                                 uint32(target_wallet.id()),
-                                False,
+                                True,
                             )
                         )
-                    # We await sleep here to allow an asyncio context switch (since the other parts of this loop do
-                    # not have await and therefore block). This can prevent networking layer from responding to ping.
-                    await asyncio.sleep(0)
-                self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
-            await self.puzzle_store.add_derivation_paths(derivation_paths)
+                    # Unhardened
+                    pubkey = unhardened_keys.get(index)
+                    assert pubkey is not None
+                    puzzlehash_unhardened: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
+                    self.log.debug(
+                        f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
+                    )
+                    derivation_paths.append(
+                        DerivationRecord(
+                            uint32(index),
+                            puzzlehash_unhardened,
+                            pubkey,
+                            target_wallet.type(),
+                            uint32(target_wallet.id()),
+                            False,
+                        )
+                    )
+            self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             if len(derivation_paths) > 0:
+                await self.puzzle_store.add_derivation_paths(derivation_paths)
                 if wallet_id == self.main_wallet.id():
                     await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
                         [record.puzzle_hash for record in derivation_paths]
                     )
-                self.state_changed("new_derivation_index", data_object={"index": derivation_paths[-1].index})
-        # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
-        if mark_existing_as_used and unused > 0 and new_paths:
-            self.log.info(f"Updating last used derivation index: {unused - 1}")
-            await self.puzzle_store.set_used_up_to(uint32(unused - 1))
+        if not target_wallet.handle_own_derivation():
+            if len(unhardened_keys) > 0:
+                self.state_changed("new_derivation_index", data_object={"index": last_index - 1})
+            # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
+            if mark_existing_as_used and unused > 0 and len(unhardened_keys) > 0:
+                self.log.info(f"Updating last used derivation index: {unused - 1}")
+                await self.puzzle_store.set_used_up_to(uint32(unused - 1))
 
     async def update_wallet_puzzle_hashes(self, wallet_id: uint32) -> None:
         derivation_paths: List[DerivationRecord] = []
@@ -634,7 +663,9 @@ class WalletStateManager:
 
         self.pending_tx_callback()
 
-    async def synced(self) -> bool:
+    async def synced(self, block_is_current_at: Optional[int] = None) -> bool:
+        if block_is_current_at is None:
+            block_is_current_at = int(time.time() - 60 * 5)
         if len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
             return False
 
@@ -651,7 +682,7 @@ class WalletStateManager:
         latest_timestamp = self.blockchain.get_latest_timestamp()
         has_pending_queue_items = self.wallet_node.new_peak_queue.has_pending_data_process_items()
 
-        if latest_timestamp > int(time.time()) - 5 * 60 and not has_pending_queue_items:
+        if latest_timestamp > block_is_current_at and not has_pending_queue_items:
             return True
         return False
 
@@ -752,6 +783,10 @@ class WalletStateManager:
         all_unspent_coins: Set[Coin] = {cr.coin for cr in unspent_coin_records}
 
         for record in unconfirmed_tx:
+            if record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                # We do not wish to consider clawback-able funds as unconfirmed.
+                # That is reserved for when the action to actually claw a tx back or forward is initiated.
+                continue
             for addition in record.additions:
                 # This change or a self transaction
                 if await self.does_coin_belong_to_wallet(addition, wallet_id, record.hint_dict()):
@@ -773,6 +808,10 @@ class WalletStateManager:
         removals: Dict[bytes32, Coin] = {}
         unconfirmed_tx = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)
         for record in unconfirmed_tx:
+            if record.type in CLAWBACK_INCOMING_TRANSACTION_TYPES:
+                # We do not wish to consider clawback-able funds as pending removal.
+                # That is reserved for when the action to actually claw a tx back or forward is initiated.
+                continue
             for coin in record.removals:
                 removals[coin.name()] = coin
         trade_removals: Dict[bytes32, WalletCoinRecord] = await self.trade_manager.get_locked_coins()
@@ -844,8 +883,8 @@ class WalletStateManager:
         if cat_curried_args is not None:
             cat_mod_hash, tail_program_hash, cat_inner_puzzle = cat_curried_args
             cat_data: CATCoinData = CATCoinData(
-                bytes32(cat_mod_hash.atom),
-                bytes32(tail_program_hash.atom),
+                bytes32(cat_mod_hash.as_atom()),
+                bytes32(tail_program_hash.as_atom()),
                 cat_inner_puzzle,
                 parent_coin_state.coin.parent_coin_info,
                 uint64(parent_coin_state.coin.amount),
@@ -876,7 +915,7 @@ class WalletStateManager:
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
             did_data: DIDCoinData = DIDCoinData(
                 p2_puzzle,
-                bytes32(recovery_list_hash.atom),
+                bytes32(recovery_list_hash.as_atom()),
                 uint16(num_verification.as_int()),
                 singleton_struct,
                 metadata,
@@ -999,9 +1038,11 @@ class WalletStateManager:
                             memos,  # Forward memo of the first coin
                         )
                     ],
-                    conditions=extra_conditions
-                    if len(coin_spends) > 0 or fee == 0
-                    else (*extra_conditions, CreateCoinAnnouncement(message)),
+                    conditions=(
+                        extra_conditions
+                        if len(coin_spends) > 0 or fee == 0
+                        else (*extra_conditions, CreateCoinAnnouncement(message))
+                    ),
                 )
                 coin_spend: CoinSpend = generate_clawback_spend_bundle(coin, metadata, inner_puzzle, inner_solution)
                 coin_spends.append(coin_spend)
@@ -1260,7 +1301,7 @@ class WalletStateManager:
         assert hinted_coin.hint is not None, f"hint missing for coin {hinted_coin.coin}"
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
-        launch_id: bytes32 = bytes32(parent_data.singleton_struct.rest().first().atom)
+        launch_id = bytes32(parent_data.singleton_struct.rest().first().as_atom())
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             # Check if it was owned by us
@@ -1295,7 +1336,7 @@ class WalletStateManager:
             full_puzzle = create_singleton_puzzle(did_puzzle, launch_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle,
-                Program.to([]).get_tree_hash(),
+                NIL_TREEHASH,
                 uint64(0),
                 parent_data.singleton_struct,
                 parent_data.metadata,
@@ -1473,7 +1514,7 @@ class WalletStateManager:
         """
         wallet_identifier = None
         # DID ID determines which NFT wallet should process the NFT
-        new_did_id = None
+        new_did_id: Optional[bytes32] = None
         old_did_id = None
         # P2 puzzle hash determines if we should ignore the NFT
         uncurried_nft: UncurriedNFT = nft_data.uncurried_nft
@@ -1483,12 +1524,14 @@ class WalletStateManager:
             nft_data.parent_coin_spend.solution,
         )
         if uncurried_nft.supports_did:
-            new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
+            _new_did_id = get_new_owner_did(uncurried_nft, nft_data.parent_coin_spend.solution.to_program())
             old_did_id = uncurried_nft.owner_did
-            if new_did_id is None:
+            if _new_did_id is None:
                 new_did_id = old_did_id
-            if new_did_id == b"":
+            elif _new_did_id == b"":
                 new_did_id = None
+            else:
+                new_did_id = _new_did_id
         self.log.debug(
             "Handling NFT: %s， old DID:%s, new DID:%s, old P2:%s, new P2:%s",
             nft_data.parent_coin_spend,
@@ -1497,12 +1540,12 @@ class WalletStateManager:
             old_p2_puzhash,
             new_p2_puzhash,
         )
-        new_derivation_record: Optional[
-            DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
-        old_derivation_record: Optional[
-            DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
+        new_derivation_record: Optional[DerivationRecord] = (
+            await self.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
+        )
+        old_derivation_record: Optional[DerivationRecord] = (
+            await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
+        )
         if new_derivation_record is None and old_derivation_record is None:
             self.log.debug(
                 "Cannot find a P2 puzzle hash for NFT:%s, this NFT belongs to others.",
@@ -1575,9 +1618,9 @@ class WalletStateManager:
         assert coin_state.created_height is not None
         is_recipient: Optional[bool] = None
         # Check if the wallet is the sender
-        sender_derivation_record: Optional[
-            DerivationRecord
-        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
+        sender_derivation_record: Optional[DerivationRecord] = (
+            await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
+        )
         # Check if the wallet is the recipient
         recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
             metadata.recipient_puzzle_hash
@@ -1606,9 +1649,11 @@ class WalletStateManager:
                     tx_record = TransactionRecord(
                         confirmed_at_height=uint32(coin_state.spent_height),
                         created_at_time=created_timestamp,
-                        to_puzzle_hash=metadata.sender_puzzle_hash
-                        if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
-                        else metadata.recipient_puzzle_hash,
+                        to_puzzle_hash=(
+                            metadata.sender_puzzle_hash
+                            if clawback_spend_bundle.additions()[0].puzzle_hash == metadata.sender_puzzle_hash
+                            else metadata.recipient_puzzle_hash
+                        ),
                         amount=uint64(coin_state.coin.amount),
                         fee_amount=uint64(0),
                         confirmed=True,
@@ -1786,6 +1831,7 @@ class WalletStateManager:
                                 coin_name,
                                 coin_data,
                             )
+                            await self.add_interested_coin_ids([coin_name])
 
                     # if the coin has been spent
                     elif coin_state.created_height is not None and coin_state.spent_height is not None:
@@ -2425,6 +2471,7 @@ class WalletStateManager:
         await self.nft_store.rollback_to_block(height)
         await self.coin_store.rollback_to_block(height)
         await self.interested_store.rollback_to_block(height)
+        await self.dl_store.rollback_to_block(height)
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
@@ -2622,8 +2669,29 @@ class WalletStateManager:
         )
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
-        signing_instructions = await self.main_wallet.gather_signing_info(coin_spends)
-        return signing_instructions
+        pks: List[bytes] = []
+        signing_targets: List[SigningTarget] = []
+        for coin_spend in coin_spends:
+            _coin_spend = coin_spend.as_coin_spend()
+            # Get AGG_SIG conditions
+            conditions_dict = conditions_dict_for_solution(
+                _coin_spend.puzzle_reveal.to_program(),
+                _coin_spend.solution.to_program(),
+                self.constants.MAX_BLOCK_COST_CLVM,
+            )
+            # Create signature
+            for pk, msg in pkm_pairs_for_conditions_dict(
+                conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
+                pk_bytes = bytes(pk)
+                pks.append(pk_bytes)
+                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
+                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
+
+        return SigningInstructions(
+            await self.key_hints_for_pubkeys(pks),
+            signing_targets,
+        )
 
     async def gather_signing_info_for_bundles(self, bundles: List[SpendBundle]) -> List[UnsignedTransaction]:
         utxs: List[UnsignedTransaction] = []

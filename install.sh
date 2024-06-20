@@ -22,22 +22,28 @@ EXTRAS=
 PLOTTER_INSTALL=
 EDITABLE='-e'
 
-while getopts adilpsh flag
-do
+while getopts adilpsh flag; do
   case "${flag}" in
-    # automated
-    a) :;;
-    # development
-    d) EXTRAS=${EXTRAS}dev,;;
-    # non-editable
-    i) EDITABLE='';;
-    # legacy keyring
-    l) EXTRAS=${EXTRAS}legacy_keyring,;;
-    p) PLOTTER_INSTALL=1;;
-    # simple install
-    s) :;;
-    h) usage; exit 0;;
-    *) echo; usage; exit 1;;
+  # automated
+  a) : ;;
+  # development
+  d) EXTRAS=${EXTRAS}dev, ;;
+  # non-editable
+  i) EDITABLE='' ;;
+  # legacy keyring
+  l) EXTRAS=${EXTRAS}legacy-keyring, ;;
+  p) PLOTTER_INSTALL=1 ;;
+  # simple install
+  s) : ;;
+  h)
+    usage
+    exit 0
+    ;;
+  *)
+    echo
+    usage
+    exit 1
+    ;;
   esac
 done
 
@@ -54,7 +60,6 @@ fi
 # Get submodules
 git submodule update --init mozilla-ca
 
-
 # You can specify preferred python version by exporting `INSTALL_PYTHON_VERSION`
 # e.g. `export INSTALL_PYTHON_VERSION=3.8`
 INSTALL_PYTHON_PATH=
@@ -69,7 +74,7 @@ OPENSSL_VERSION_INT=
 find_python() {
   set +e
   unset BEST_VERSION
-  for V in 311 3.11 310 3.10 39 3.9 38 3.8 3; do
+  for V in 312 3.12 311 3.11 310 3.10 39 3.9 38 3.8 3; do
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V
@@ -132,8 +137,8 @@ if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
   exit 1
 fi
 
-if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "12" ]; then
-  echo "Chia requires Python version >= 3.8 and  < 3.12.0" >&2
+if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "13" ]; then
+  echo "Chia requires Python version >= 3.8 and  < 3.13.0" >&2
   echo "Current Python version = $INSTALL_PYTHON_VERSION" >&2
   # If Arch, direct to Arch Wiki
   if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then

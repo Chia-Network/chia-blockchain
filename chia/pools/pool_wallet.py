@@ -218,20 +218,12 @@ class PoolWallet:
             curr_spend_i -= 1
 
         assert pool_state is not None
-        current_inner = pool_state_to_inner_puzzle(
-            pool_state,
-            launcher_coin.name(),
-            self.wallet_state_manager.constants.GENESIS_CHALLENGE,
-            delayed_seconds,
-            delayed_puzhash,
-        )
         return PoolWalletInfo(
             pool_state,
             self.target_state,
             launcher_coin,
             launcher_id,
             p2_singleton_puzzle_hash,
-            current_inner,
             tip_singleton_coin.name(),
             last_singleton_spend_height,
         )
@@ -899,9 +891,9 @@ class PoolWallet:
 
             # Add some buffer (+2) to reduce chances of a reorg
             if peak_height > leave_height + 2:
-                unconfirmed: List[
-                    TransactionRecord
-                ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
+                unconfirmed: List[TransactionRecord] = (
+                    await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
+                )
                 next_tip: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
                 assert next_tip is not None
 

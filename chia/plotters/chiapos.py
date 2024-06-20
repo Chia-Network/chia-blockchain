@@ -2,6 +2,7 @@
 NOTE: This contains duplicate code from `chia.cmds.plots`.
 After `chia plots create` becomes obsolete, consider removing it from there.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 def get_chiapos_install_info() -> Optional[Dict[str, Any]]:
-    chiapos_version: str = importlib.metadata.version("chiapos")
+    chiapos_version = importlib.metadata.version("chiapos")
     return {"display_name": "Chia Proof of Space", "version": chiapos_version, "installed": True}
 
 

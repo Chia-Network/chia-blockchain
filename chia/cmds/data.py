@@ -51,6 +51,17 @@ def create_changelist_option() -> Callable[[FC], FC]:
     )
 
 
+def create_store_updates_option() -> Callable[[FC], FC]:
+    return click.option(
+        "-d",
+        "--store_updates",
+        "store_updates_string",
+        help="str representing the store updates",
+        type=str,
+        required=True,
+    )
+
+
 def create_key_option(multiple: bool = False) -> Callable[[FC], FC]:
     return click.option(
         "-k",
@@ -126,6 +137,9 @@ def create_max_page_size_option() -> Callable[[FC], FC]:
     )
 
 
+# Functions with this mark in this file are not being ported to @tx_out_cmd due to API peculiarities
+# They will therefore not work with observer-only functionality
+# NOTE: tx_endpoint  (This creates wallet transactions and should be parametrized by relevant options)
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
 @create_fee_option()
@@ -160,6 +174,7 @@ def get_value(
     run(get_value_cmd(data_rpc_port, id, key_string, root_hash, fingerprint=fingerprint))
 
 
+# NOTE: tx_endpoint
 @data_cmd.command("update_data_store", help="Update a store by providing the changelist operations")
 @create_data_store_id_option()
 @create_changelist_option()
@@ -189,6 +204,32 @@ def update_data_store(
     )
 
 
+@data_cmd.command("update_multiple_stores", help="Update multiple stores by providing the changelist operations")
+@create_store_updates_option()
+@create_rpc_port_option()
+@create_fee_option()
+@options.create_fingerprint()
+@click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
+def update_multiple_stores(
+    store_updates_string: str,
+    data_rpc_port: int,
+    fee: str,
+    fingerprint: Optional[int],
+    submit: bool,
+) -> None:
+    from chia.cmds.data_funcs import update_multiple_stores_cmd
+
+    run(
+        update_multiple_stores_cmd(
+            rpc_port=data_rpc_port,
+            store_updates=json.loads(store_updates_string),
+            fee=fee,
+            fingerprint=fingerprint,
+            submit_on_chain=submit,
+        )
+    )
+
+
 @data_cmd.command("submit_pending_root", help="Submit on chain a locally stored batch")
 @create_data_store_id_option()
 @create_rpc_port_option()
@@ -206,6 +247,26 @@ def submit_pending_root(
         submit_pending_root_cmd(
             rpc_port=data_rpc_port,
             store_id=id,
+            fee=fee,
+            fingerprint=fingerprint,
+        )
+    )
+
+
+@data_cmd.command("submit_all_pending_roots", help="Submit on chain all locally stored batches")
+@create_rpc_port_option()
+@create_fee_option()
+@options.create_fingerprint()
+def submit_all_pending_roots(
+    data_rpc_port: int,
+    fee: str,
+    fingerprint: Optional[int],
+) -> None:
+    from chia.cmds.data_funcs import submit_all_pending_roots_cmd
+
+    run(
+        submit_all_pending_roots_cmd(
+            rpc_port=data_rpc_port,
             fee=fee,
             fingerprint=fingerprint,
         )
@@ -412,6 +473,7 @@ def add_missing_files(
     )
 
 
+# NOTE: tx_endpoint
 @data_cmd.command("add_mirror", help="Publish mirror urls on chain")
 @click.option("-i", "--id", help="Store id", type=str, required=True)
 @click.option(
@@ -450,6 +512,7 @@ def add_mirror(
     )
 
 
+# NOTE: tx_endpoint
 @data_cmd.command("delete_mirror", help="Delete an owned mirror by its coin id")
 @click.option("-c", "--coin_id", help="Coin id", type=str, required=True)
 @create_fee_option()

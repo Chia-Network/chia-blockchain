@@ -4,7 +4,7 @@ import asyncio
 import json
 import time
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.units import units
@@ -13,6 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 
@@ -39,13 +40,13 @@ async def add_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
         )
 
         print("Successfully created DAO Wallet")
-        print("DAO Treasury ID: {treasury_id}".format(**res))
-        print("DAO Wallet ID: {wallet_id}".format(**res))
-        print("CAT Wallet ID: {cat_wallet_id}".format(**res))
-        print("DAOCAT Wallet ID: {dao_cat_wallet_id}".format(**res))
+        print(f"DAO Treasury ID: {res.treasury_id.hex()}")
+        print(f"DAO Wallet ID: {res.wallet_id}")
+        print(f"CAT Wallet ID: {res.cat_wallet_id}")
+        print(f"DAOCAT Wallet ID: {res.dao_cat_wallet_id}")
 
 
-async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
     proposal_minimum = uint64(int(Decimal(args["proposal_minimum_amount"]) * units["chia"]))
 
     if proposal_minimum % 2 == 0:
@@ -95,13 +96,16 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
 
-        print("Successfully created DAO Wallet")
-        print("DAO Treasury ID: {treasury_id}".format(**res))
-        print("DAO Wallet ID: {wallet_id}".format(**res))
-        print("CAT Wallet ID: {cat_wallet_id}".format(**res))
-        print("DAOCAT Wallet ID: {dao_cat_wallet_id}".format(**res))
+        if args["push"]:
+            print("Successfully created DAO Wallet")
+        print(f"DAO Treasury ID: {res.treasury_id.hex()}")
+        print(f"DAO Wallet ID: {res.wallet_id}")
+        print(f"CAT Wallet ID: {res.cat_wallet_id}")
+        print(f"DAOCAT Wallet ID: {res.dao_cat_wallet_id}")
+        return res.transactions
 
 
 async def get_treasury_id(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -123,7 +127,9 @@ async def get_rules(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: in
             print(f"{rule}: {val}")
 
 
-async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def add_funds_to_treasury(
+    args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int
+) -> List[TransactionRecord]:
     wallet_id = args["wallet_id"]
     funding_wallet_id = args["funding_wallet_id"]
     amount = Decimal(args["amount"])
@@ -134,7 +140,7 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
             mojo_per_unit = get_mojo_per_unit(typ)
         except LookupError:  # pragma: no cover
             print(f"Wallet id: {wallet_id} not found.")
-            return
+            return []
 
         fee = Decimal(args["fee"])
         final_fee: uint64 = uint64(int(fee * units["chia"]))
@@ -154,19 +160,22 @@ async def add_funds_to_treasury(args: Dict[str, Any], wallet_rpc_port: Optional[
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
 
-        tx_id = res["tx_id"]
-        start = time.time()
-        while time.time() - start < 10:
-            await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
-            if len(tx.sent_to) > 0:
-                print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id[2:]))
-                return None
+        if args["push"]:
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(res.tx_id)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, res.tx_id))
+                    return res.transactions
 
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        if args["push"]:
+            print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
+        return res.transactions
 
 
 async def get_treasury_balance(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -231,6 +240,8 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
             ptype = "spend"
         elif ptype_val == "u":
             ptype = "update"
+        else:
+            raise Exception(f"Unknown proposal type: {ptype_val!r}")
 
         print("")
         print(f"Details of Proposal: {proposal_id}")
@@ -284,7 +295,7 @@ async def show_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
             print(f"Address: {address}")
 
 
-async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
     wallet_id = args["wallet_id"]
     vote_amount = args["vote_amount"]
     fee = args["fee"]
@@ -308,21 +319,24 @@ async def vote_on_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int],
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
-        tx_id = res["tx_id"]
-        start = time.time()
-        while time.time() - start < 10:
-            await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
-            if len(tx.sent_to) > 0:
-                print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id[2:]))
-                return None
+        if args["push"]:
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(res.tx_id)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, res.tx_id))
+                    return res.transactions
 
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        if args["push"]:
+            print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
+        return res.transactions
 
 
-async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
@@ -343,21 +357,25 @@ async def close_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
-        tx_id = res["tx_id"]
-        start = time.time()
-        while time.time() - start < 10:
-            await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
-            if len(tx.sent_to) > 0:
-                print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id[2:]))
-                return None
 
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        if args["push"]:
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(res.tx_id)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, res.tx_id))
+                    return res.transactions
+
+        if args["push"]:
+            print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
+        return res.transactions
 
 
-async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
     wallet_id = args["wallet_id"]
     amount = args["amount"]
     final_amount: uint64 = uint64(int(Decimal(amount) * units["cat"]))
@@ -377,21 +395,25 @@ async def lockup_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp:
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
-        tx_id = res["tx_id"]
-        start = time.time()
-        while time.time() - start < 10:
-            await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
-            if len(tx.sent_to) > 0:
-                print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id[2:]))
-                return None
+        if args["push"]:
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(res.tx_id)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, res.tx_id))
+                    return res.transactions
 
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        if args["push"]:
+            print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
+
+        return res.transactions
 
 
-async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
@@ -408,20 +430,24 @@ async def release_coins(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
-        tx_id = res["tx_id"]
-        start = time.time()
-        while time.time() - start < 10:
-            await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
-            if len(tx.sent_to) > 0:
-                print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id[2:]))
-                return None
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+        if args["push"]:
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(res.tx_id)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, res.tx_id))
+                    return res.transactions
+
+        if args["push"]:
+            print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
+        return res.transactions
 
 
-async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> List[TransactionRecord]:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
@@ -439,20 +465,27 @@ async def exit_lockup(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: 
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
-        tx_id = res["tx_id"]
-        start = time.time()
-        while time.time() - start < 10:
-            await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(bytes32.from_hexstr(tx_id))
-            if len(tx.sent_to) > 0:
-                print(transaction_submitted_msg(tx))
-                print(transaction_status_msg(fingerprint, tx_id[2:]))
-                return None
-        print(f"Transaction not yet submitted to nodes. TX ID: {tx_id}")  # pragma: no cover
+
+        if args["push"]:
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(res.tx_id)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, res.tx_id))
+                    return res.transactions
+
+        if args["push"]:
+            print(f"Transaction not yet submitted to nodes. TX ID: {res.tx_id.hex()}")
+        return res.transactions
 
 
-async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def create_spend_proposal(
+    args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int
+) -> List[TransactionRecord]:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
@@ -495,17 +528,20 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
-        if res["success"]:
-            asset_id_name = asset_id if asset_id else "XCH"
-            print(f"Created spend proposal for asset: {asset_id_name}")
+
+        asset_id_name = asset_id if asset_id else "XCH"
+        print(f"Created spend proposal for asset: {asset_id_name}")
+        if args["push"]:
             print("Successfully created proposal.")
-            print("Proposal ID: {}".format(res["proposal_id"]))
-        else:  # pragma: no cover
-            print("Failed to create proposal.")
+        print(f"Proposal ID: {res.proposal_id.hex()}")
+        return res.transactions
 
 
-async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def create_update_proposal(
+    args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int
+) -> List[TransactionRecord]:
     wallet_id = args["wallet_id"]
     fee = Decimal(args["fee"])
     final_fee: uint64 = uint64(int(fee * units["chia"]))
@@ -540,15 +576,18 @@ async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
-        if res["success"]:
+
+        if args["push"]:
             print("Successfully created proposal.")
-            print("Proposal ID: {}".format(res["proposal_id"]))
-        else:  # pragma: no cover
-            print("Failed to create proposal.")
+        print(f"Proposal ID: {res.proposal_id.hex()}")
+        return res.transactions
 
 
-async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
+async def create_mint_proposal(
+    args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int
+) -> List[TransactionRecord]:
     wallet_id = args["wallet_id"]
     fee = args["fee"]
     final_fee: uint64 = uint64(int(Decimal(fee) * units["chia"]))
@@ -572,9 +611,10 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[i
                     "reuse_puzhash": args["reuse_puzhash"],
                 }
             ).to_tx_config(units["chia"], config, fingerprint),
+            push=args["push"],
         )
-        if res["success"]:
+
+        if args["push"]:
             print("Successfully created proposal.")
-            print("Proposal ID: {}".format(res["proposal_id"]))
-        else:  # pragma: no cover
-            print("Failed to create proposal.")
+        print(f"Proposal ID: {res.proposal_id.hex()}")
+        return res.transactions

@@ -13,6 +13,6 @@
     "lerna": "7.1.3"
   },
   "devDependencies": {
-    "electron-builder": "^24.6.3"
+    "electron-builder": "^24.13.3"
   }
 }

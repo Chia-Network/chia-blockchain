@@ -42,42 +42,24 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
     config = load_config(root_path, "config.yaml")
     ret_list: List[PoolWalletConfig] = []
     pool_list = config["pool"].get("pool_list", [])
-    if pool_list is not None:
-        for pool_config_dict in pool_list:
-            try:
-                pool_config = PoolWalletConfig(
-                    bytes32.from_hexstr(pool_config_dict["launcher_id"]),
-                    pool_config_dict["pool_url"],
-                    pool_config_dict["payout_instructions"],
-                    bytes32.from_hexstr(pool_config_dict["target_puzzle_hash"]),
-                    bytes32.from_hexstr(pool_config_dict["p2_singleton_puzzle_hash"]),
-                    G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
-                )
-                ret_list.append(pool_config)
-            except Exception as e:
-                log.error(f"Exception loading config: {pool_config_dict} {e}")
+    if pool_list is None:
+        return ret_list
+
+    for pool_config_dict in pool_list:
+        try:
+            pool_config = PoolWalletConfig(
+                bytes32.from_hexstr(pool_config_dict["launcher_id"]),
+                pool_config_dict["pool_url"],
+                pool_config_dict["payout_instructions"],
+                bytes32.from_hexstr(pool_config_dict["target_puzzle_hash"]),
+                bytes32.from_hexstr(pool_config_dict["p2_singleton_puzzle_hash"]),
+                G1Element.from_bytes(hexstr_to_bytes(pool_config_dict["owner_public_key"])),
+            )
+            ret_list.append(pool_config)
+        except Exception as e:
+            log.error(f"Exception loading config: {pool_config_dict} {e}")
 
     return ret_list
-
-
-# TODO: remove this a few versions after 1.3, since authentication_public_key is deprecated. This is here to support
-# downgrading to versions older than 1.3.
-def add_auth_key(root_path: Path, pool_wallet_config: PoolWalletConfig, auth_key: G1Element) -> None:
-    def update_auth_pub_key_for_entry(config_entry: Dict[str, Any]) -> bool:
-        auth_key_hex = bytes(auth_key).hex()
-        if config_entry.get("authentication_public_key", "") != auth_key_hex:
-            config_entry["authentication_public_key"] = auth_key_hex
-
-            return True
-
-        return False
-
-    update_pool_config_entry(
-        root_path=root_path,
-        pool_wallet_config=pool_wallet_config,
-        update_closure=update_auth_pub_key_for_entry,
-        update_log_message=f"Updating pool config for auth key: {auth_key}",
-    )
 
 
 def update_pool_url(root_path: Path, pool_wallet_config: PoolWalletConfig, pool_url: str) -> None:
@@ -105,21 +87,20 @@ def update_pool_config_entry(
 ) -> None:
     with lock_and_load_config(root_path, "config.yaml") as config:
         pool_list = config["pool"].get("pool_list", [])
+        if pool_list is None:
+            return
         updated = False
-        if pool_list is not None:
-            for pool_config_dict in pool_list:
-                try:
-                    if hexstr_to_bytes(pool_config_dict["owner_public_key"]) == bytes(
-                        pool_wallet_config.owner_public_key
-                    ):
-                        if update_closure(pool_config_dict):
-                            updated = True
-                except Exception as e:
-                    log.error(f"Exception updating config: {pool_config_dict} {e}")
-        if updated:
-            log.info(update_log_message)
-            config["pool"]["pool_list"] = pool_list
-            save_config(root_path, "config.yaml", config)
+        for pool_config_dict in pool_list:
+            try:
+                if hexstr_to_bytes(pool_config_dict["owner_public_key"]) == bytes(pool_wallet_config.owner_public_key):
+                    if update_closure(pool_config_dict):
+                        updated = True
+            except Exception as e:
+                log.error(f"Exception updating config: {pool_config_dict} {e}")
+    if updated:
+        log.info(update_log_message)
+        config["pool"]["pool_list"] = pool_list
+        save_config(root_path, "config.yaml", config)
 
 
 async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]) -> None:

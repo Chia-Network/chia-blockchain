@@ -24,7 +24,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import block_to_block_record
@@ -107,7 +107,7 @@ from chia.util.config import (
 )
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.ssl_check import fix_ssl
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -128,12 +128,11 @@ DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
     "chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles"
 )
 
-test_constants = dataclasses.replace(
-    DEFAULT_CONSTANTS,
-    MIN_PLOT_SIZE=18,
+test_constants = DEFAULT_CONSTANTS.replace(
+    MIN_PLOT_SIZE=uint8(18),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(12),
     DIFFICULTY_STARTING=uint64(2**10),
-    DISCRIMINANT_SIZE_BITS=16,
+    DISCRIMINANT_SIZE_BITS=uint16(16),
     SUB_EPOCH_BLOCKS=uint32(170),
     WEIGHT_PROOF_THRESHOLD=uint8(2),
     WEIGHT_PROOF_RECENT_BLOCKS=uint32(380),
@@ -145,16 +144,12 @@ test_constants = dataclasses.replace(
     # create_prev_sub_epoch_segments() to have access to all the blocks it needs
     # from the cache
     BLOCKS_CACHE_SIZE=uint32(340 * 3),  # Coordinate with the above values
-    SUB_SLOT_TIME_TARGET=600,  # The target number of seconds per slot, mainnet 600
+    SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
-    NUMBER_ZERO_BITS_PLOT_FILTER=1,  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
-    MAX_FUTURE_TIME2=3600 * 24 * 10,
-    MEMPOOL_BLOCK_BUFFER=6,
-    # we deliberately make this different from HARD_FORK_HEIGHT in the
-    # tests, to ensure they operate independently (which they need to do for
-    # testnet10)
-    HARD_FORK_FIX_HEIGHT=uint32(5496100),
+    MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
+    MEMPOOL_BLOCK_BUFFER=uint8(6),
 )
 
 
@@ -169,7 +164,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
             if op != ConditionOpcode.CREATE_COIN.value:
                 continue
             puzzle_hash = next(atoms).as_atom()
-            amount = next(atoms).as_int()
+            amount = uint64(next(atoms).as_int())
             ret.append(Coin(parent_id, puzzle_hash, amount))
     return ret
 
@@ -232,12 +227,12 @@ class BlockTools:
         if automated_testing:
             # Hold onto the wrappers so that they can keep track of whether the certs/keys
             # are in use by another BlockTools instance.
-            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
-                SSLTestCACertAndPrivateKey
-            ] = get_next_private_ca_cert_and_key()
-            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
-                SSLTestNodeCertsAndKeys
-            ] = get_next_nodes_certs_and_keys()
+            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[SSLTestCACertAndPrivateKey] = (
+                get_next_private_ca_cert_and_key()
+            )
+            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[SSLTestNodeCertsAndKeys] = (
+                get_next_nodes_certs_and_keys()
+            )
             create_default_chia_config(root_path)
             create_all_ssl(
                 root_path,
@@ -274,7 +269,7 @@ class BlockTools:
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
-        updated_constants = constants.replace_str_to_bytes(**overrides)
+        updated_constants = replace_str_to_bytes(constants, **overrides)
         self.constants = updated_constants
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
@@ -374,7 +369,7 @@ class BlockTools:
     def change_config(self, new_config: Dict[str, Any]) -> None:
         self._config = new_config
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
-        updated_constants = self.constants.replace_str_to_bytes(**overrides)
+        updated_constants = replace_str_to_bytes(self.constants, **overrides)
         self.constants = updated_constants
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
@@ -1232,7 +1227,7 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        self.log.info(f"Created block {block_record.height } ov=True, iters {block_record.total_iters}")
+                        self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
                         num_blocks -= 1
 
                         blocks[full_block.header_hash] = block_record
@@ -1971,7 +1966,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
     condition_cost = 0
     clvm_cost = 0
 
-    if height >= constants.HARD_FORK_FIX_HEIGHT:
+    if height >= constants.HARD_FORK_HEIGHT:
         blocks = [bytes(g) for g in generator.generator_refs]
         cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost

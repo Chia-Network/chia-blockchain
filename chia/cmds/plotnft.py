@@ -53,6 +53,9 @@ def get_login_link_cmd(launcher_id: str) -> None:
     asyncio.run(get_login_link(launcher_id))
 
 
+# Functions with this mark in this file are not being ported to @tx_out_cmd due to lack of observer key support
+# They will therefore not work with observer-only functionality
+# NOTE: tx_endpoint  (This creates wallet transactions and should be parametrized by relevant options)
 @plotnft_cmd.command("create", help="Create a plot NFT")
 @click.option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
 @options.create_fingerprint()
@@ -94,9 +97,14 @@ def create_cmd(
         print("  pool_url argument (-u) is required for pool starting state")
         return
     valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
-    asyncio.run(create(wallet_rpc_port, fingerprint, pool_url, valid_initial_states[state], Decimal(fee), dont_prompt))
+    asyncio.run(
+        create(
+            wallet_rpc_port, fingerprint, pool_url, valid_initial_states[state], Decimal(fee), prompt=not dont_prompt
+        )
+    )
 
 
+# NOTE: tx_endpoint
 @plotnft_cmd.command("join", help="Join a plot NFT to a Pool")
 @click.option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
@@ -133,11 +141,12 @@ def join_cmd(
             pool_url=pool_url,
             fee=Decimal(fee),
             wallet_id=id,
-            prompt=dont_prompt,
+            prompt=not dont_prompt,
         )
     )
 
 
+# NOTE: tx_endpoint
 @plotnft_cmd.command("leave", help="Leave a pool and return to self-farming")
 @click.option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
@@ -170,7 +179,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
             fingerprint=fingerprint,
             fee=Decimal(fee),
             wallet_id=id,
-            prompt=dont_prompt,
+            prompt=not dont_prompt,
         )
     )
 
@@ -193,6 +202,7 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     asyncio.run(inspect_cmd(wallet_rpc_port, fingerprint, id))
 
 
+# NOTE: tx_endpoint
 @plotnft_cmd.command("claim", help="Claim rewards from a plot NFT")
 @click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
 @options.create_fingerprint()
