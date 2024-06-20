@@ -636,14 +636,14 @@ class DataStore:
         self, store_id: bytes32, hash: Optional[bytes32], max_generation: Optional[int] = None
     ) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
-            max_generation_str = f"AND generation < {max_generation} " if max_generation is not None else ""
+            max_generation_str = "AND generation < :max_generation " if max_generation is not None else ""
             node_hash_str = "AND node_hash == :node_hash " if hash is not None else "AND node_hash is NULL "
             cursor = await reader.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id "
                 f"{max_generation_str}"
                 f"{node_hash_str}"
                 "ORDER BY generation DESC LIMIT 1",
-                {"tree_id": store_id, "node_hash": hash},
+                {"tree_id": store_id, "node_hash": hash, "max_generation": max_generation},
             )
             row = await cursor.fetchone()
 
@@ -1415,7 +1415,6 @@ class DataStore:
 
     async def batch_upsert(
         self,
-        tree_id: bytes32,
         hash: bytes32,
         to_update_hashes: Set[bytes32],
         pending_upsert_new_hashes: Dict[bytes32, bytes32],
@@ -1425,8 +1424,8 @@ class DataStore:
         node = await self.get_node(hash)
         if isinstance(node, TerminalNode):
             return pending_upsert_new_hashes[hash]
-        new_left_hash = await self.batch_upsert(tree_id, node.left_hash, to_update_hashes, pending_upsert_new_hashes)
-        new_right_hash = await self.batch_upsert(tree_id, node.right_hash, to_update_hashes, pending_upsert_new_hashes)
+        new_left_hash = await self.batch_upsert(node.left_hash, to_update_hashes, pending_upsert_new_hashes)
+        new_right_hash = await self.batch_upsert(node.right_hash, to_update_hashes, pending_upsert_new_hashes)
         return await self._insert_internal_node(new_left_hash, new_right_hash)
 
     async def insert_batch(
@@ -1555,7 +1554,6 @@ class DataStore:
                 assert latest_local_root is not None
                 assert latest_local_root.node_hash is not None
                 new_root_hash = await self.batch_upsert(
-                    store_id,
                     latest_local_root.node_hash,
                     to_update_hashes,
                     pending_upsert_new_hashes,

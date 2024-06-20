@@ -372,7 +372,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
     parse_mint_asserts = [
         "Type: MINT",
         "Amount of CAT to mint: 1000",
-        "Address: {}".format(encode_puzzle_hash(bytes32(b"x" * 32), "xch")),
+        f"Address: {encode_puzzle_hash(bytes32(b'x' * 32), 'xch')}",
     ]
     run_cli_command_and_assert(capsys, root_dir, parse_mint_args, parse_mint_asserts)
 

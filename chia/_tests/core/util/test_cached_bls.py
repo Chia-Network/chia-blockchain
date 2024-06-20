@@ -13,7 +13,7 @@ def test_cached_bls():
     sks = [AugSchemeMPL.key_gen(seed + bytes([i])) for i in range(n_keys)]
     pks = [sk.get_g1() for sk in sks]
 
-    msgs = [("msg-%d" % (i,)).encode() for i in range(n_keys)]
+    msgs = [f"msg-{i}".encode() for i in range(n_keys)]
     sigs = [AugSchemeMPL.sign(sk, msg) for sk, msg in zip(sks, msgs)]
     agg_sig = AugSchemeMPL.aggregate(sigs)
 
@@ -48,7 +48,7 @@ def test_cached_bls_repeat_pk():
     sks = [AugSchemeMPL.key_gen(seed) for i in range(n_keys)] + [AugSchemeMPL.key_gen(std_hash(seed))]
     pks = [sk.get_g1() for sk in sks]
 
-    msgs = [("msg-%d" % (i,)).encode() for i in range(n_keys + 1)]
+    msgs = [(f"msg-{i}").encode() for i in range(n_keys + 1)]
     sigs = [AugSchemeMPL.sign(sk, msg) for sk, msg in zip(sks, msgs)]
     agg_sig = AugSchemeMPL.aggregate(sigs)
 
