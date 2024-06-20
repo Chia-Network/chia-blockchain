@@ -3,8 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from concurrent.futures import Executor
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass
 from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, TypeVar
