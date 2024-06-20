@@ -522,19 +522,10 @@ def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
 
 
 def invariant_check_mempool(mempool: Mempool) -> None:
-    with mempool._db_conn:
-        cursor = mempool._db_conn.execute("SELECT SUM(cost) FROM tx")
-        val = cursor.fetchone()[0]
-        if val is None:
-            val = 0
-    assert mempool._total_cost == val
-
-    with mempool._db_conn:
-        cursor = mempool._db_conn.execute("SELECT SUM(fee) FROM tx")
-        val = cursor.fetchone()[0]
-        if val is None:
-            val = 0
-    assert mempool._total_fee == val
+    with mempool._db_conn as conn:
+        cursor = conn.execute("SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(fee), 0) FROM tx")
+        val = cursor.fetchone()
+        assert (mempool._total_cost, mempool._total_fee) == val
 
 
 async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
