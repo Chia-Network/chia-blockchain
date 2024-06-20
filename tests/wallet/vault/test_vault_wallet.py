@@ -297,13 +297,7 @@ async def test_vault_recovery(
         bls_pk=bls_pk,
         timelock=timelock,
     )
-    assert initiate_tx.spend_bundle is not None
-    spends = [Spend.from_coin_spend(spend) for spend in initiate_tx.spend_bundle.coin_spends]
-    signing_info = await wallet_environments.environments[1].rpc_client.gather_signing_info(GatherSigningInfo(spends))
-    signing_responses = await funding_wallet.execute_signing_instructions(signing_info.signing_instructions)
-    signed_response = await funding_wallet.apply_signatures(spends, signing_responses)
-
-    await funding_wallet.wallet_state_manager.submit_transactions([signed_response])
+    await wallet_environments.environments[1].rpc_client.push_transactions([initiate_tx], sign=True)
 
     vault_coin = wallet.vault_info.coin
 
@@ -331,12 +325,7 @@ async def test_vault_recovery(
     wallet_environments.full_node.time_per_block = 100
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
 
-    assert finish_tx.spend_bundle is not None
-    spends = [Spend.from_coin_spend(spend) for spend in finish_tx.spend_bundle.coin_spends]
-    signing_info = await wallet_environments.environments[1].rpc_client.gather_signing_info(GatherSigningInfo(spends))
-    signing_responses = await funding_wallet.execute_signing_instructions(signing_info.signing_instructions)
-    signed_response = await funding_wallet.apply_signatures(spends, signing_responses)
-    await funding_wallet.wallet_state_manager.submit_transactions([signed_response])
+    await wallet_environments.environments[1].rpc_client.push_transactions([finish_tx])
 
     await wallet_environments.process_pending_states(
         [
