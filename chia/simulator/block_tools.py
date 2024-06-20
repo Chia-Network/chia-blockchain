@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 from random import Random
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import anyio
 from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, AugSchemeMPL, G1Element, G2Element, PrivateKey, solution_generator
@@ -38,12 +38,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.full_node.bundle_tools import (
-    best_solution_generator_from_template,
-    detect_potential_template_generator,
-    simple_solution_generator,
-    simple_solution_generator_backrefs,
-)
+from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
@@ -92,7 +87,7 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator, CompressorArg
+from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
@@ -589,7 +584,8 @@ class BlockTools:
         normalized_to_identity_cc_sp: bool = False,
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
-        previous_generator: Optional[Union[CompressorArg, List[uint32]]] = None,
+        # TODO: rename this to block_refs
+        previous_generator: Optional[List[uint32]] = None,
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
         dummy_block_references: bool = False,
@@ -795,16 +791,9 @@ class BlockTools:
                                 block_generator = simple_solution_generator_backrefs(transaction_data)
                                 previous_generator = None
                             else:
-                                if type(previous_generator) is CompressorArg:
-                                    block_generator = best_solution_generator_from_template(
-                                        previous_generator, transaction_data
-                                    )
-                                else:
-                                    block_generator = simple_solution_generator(transaction_data)
-                                    if type(previous_generator) is list:
-                                        block_generator = BlockGenerator(
-                                            block_generator.program, [], previous_generator
-                                        )
+                                block_generator = simple_solution_generator(transaction_data)
+                            if previous_generator is not None:
+                                block_generator = BlockGenerator(block_generator.program, [], previous_generator)
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -888,11 +877,6 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
-                            compressor_arg = detect_potential_template_generator(
-                                full_block.height, full_block.transactions_generator
-                            )
-                            if compressor_arg is not None:
-                                previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
 
@@ -1120,16 +1104,9 @@ class BlockTools:
                                 block_generator = simple_solution_generator_backrefs(transaction_data)
                                 previous_generator = None
                             else:
-                                if previous_generator is not None and type(previous_generator) is CompressorArg:
-                                    block_generator = best_solution_generator_from_template(
-                                        previous_generator, transaction_data
-                                    )
-                                else:
-                                    block_generator = simple_solution_generator(transaction_data)
-                                    if type(previous_generator) is list:
-                                        block_generator = BlockGenerator(
-                                            block_generator.program, [], previous_generator
-                                        )
+                                block_generator = simple_solution_generator(transaction_data)
+                            if previous_generator is not None:
+                                block_generator = BlockGenerator(block_generator.program, [], previous_generator)
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
@@ -1216,11 +1193,6 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
-                            compressor_arg = detect_potential_template_generator(
-                                full_block.height, full_block.transactions_generator
-                            )
-                            if compressor_arg is not None:
-                                previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
                         self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
