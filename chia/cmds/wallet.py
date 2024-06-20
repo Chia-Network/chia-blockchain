@@ -9,8 +9,10 @@ import click
 
 from chia.cmds import options
 from chia.cmds.check_wallet_db import help_text as check_help_text
+from chia.cmds.cmds_util import tx_out_cmd
 from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
@@ -192,6 +194,7 @@ def get_transactions_cmd(
     type=int,
     default=0,
 )
+@tx_out_cmd
 def send_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -206,10 +209,11 @@ def send_cmd(
     coins_to_exclude: Sequence[str],
     reuse: bool,
     clawback_time: int,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import send
 
-    asyncio.run(
+    return asyncio.run(
         send(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -224,6 +228,7 @@ def send_cmd(
             excluded_coin_ids=coins_to_exclude,
             reuse_puzhash=True if reuse else None,
             clawback_time_lock=clawback_time,
+            push=push,
         )
     )
 
@@ -308,14 +313,15 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, n
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def clawback(
-    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str, force: bool
-) -> None:  # pragma: no cover
+    wallet_rpc_port: Optional[int], id: int, fingerprint: int, tx_ids: str, fee: str, force: bool, push: bool
+) -> List[TransactionRecord]:
     from .wallet_funcs import spend_clawback
 
-    asyncio.run(
+    return asyncio.run(
         spend_clawback(
-            wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids, force=force
+            wallet_rpc_port=wallet_rpc_port, fp=fingerprint, fee=Decimal(fee), tx_ids_str=tx_ids, force=force, push=push
         )
     )
 
@@ -461,6 +467,8 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     default=False,
 )
 @click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
+# This command looks like a good candidate for @tx_out_cmd however, pushing an incomplete tx is nonsensical and
+# we already have a canonical offer file format which the idea of exporting a different transaction conflicts with
 def make_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -558,17 +566,19 @@ def get_offers_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def take_offer_cmd(
     path_or_hex: str,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     examine_only: bool,
     fee: str,
-    reuse: bool,
-) -> None:
+    reuse: bool,  # reuse is not used
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import take_offer
 
-    asyncio.run(take_offer(wallet_rpc_port, fingerprint, Decimal(fee), path_or_hex, examine_only))  # reuse is not used
+    return asyncio.run(take_offer(wallet_rpc_port, fingerprint, Decimal(fee), path_or_hex, examine_only, push=push))
 
 
 @wallet_cmd.command("cancel_offer", help="Cancel an existing offer")
@@ -585,10 +595,13 @@ def take_offer_cmd(
 @click.option(
     "-m", "--fee", help="The fee to use when cancelling the offer securely, in XCH", default="0", show_default=True
 )
-def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str) -> None:
+@tx_out_cmd
+def cancel_offer_cmd(
+    wallet_rpc_port: Optional[int], fingerprint: int, id: str, insecure: bool, fee: str, push: bool
+) -> List[TransactionRecord]:
     from .wallet_funcs import cancel_offer
 
-    asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, not insecure))
+    return asyncio.run(cancel_offer(wallet_rpc_port, fingerprint, Decimal(fee), id, not insecure, push=push))
 
 
 @wallet_cmd.command("check", short_help="Check wallet DB integrity", help=check_help_text)
@@ -637,12 +650,13 @@ def did_cmd() -> None:
     show_default=True,
     callback=validate_fee,
 )
+@tx_out_cmd
 def did_create_wallet_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, name: Optional[str], amount: int, fee: str
-) -> None:
+    wallet_rpc_port: Optional[int], fingerprint: int, name: Optional[str], amount: int, fee: str, push: bool
+) -> List[TransactionRecord]:
     from .wallet_funcs import create_did_wallet
 
-    asyncio.run(create_did_wallet(wallet_rpc_port, fingerprint, Decimal(fee), name, amount))
+    return asyncio.run(create_did_wallet(wallet_rpc_port, fingerprint, Decimal(fee), name, amount, push=push))
 
 
 @did_cmd.command("sign_message", help="Sign a message by a DID")
@@ -737,12 +751,13 @@ def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_i
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def did_update_metadata_cmd(
-    wallet_rpc_port: Optional[int], fingerprint: int, id: int, metadata: str, reuse: bool
-) -> None:
+    wallet_rpc_port: Optional[int], fingerprint: int, id: int, metadata: str, reuse: bool, push: bool
+) -> List[TransactionRecord]:
     from .wallet_funcs import update_did_metadata
 
-    asyncio.run(update_did_metadata(wallet_rpc_port, fingerprint, id, metadata, reuse))
+    return asyncio.run(update_did_metadata(wallet_rpc_port, fingerprint, id, metadata, reuse, push=push))
 
 
 @did_cmd.command("find_lost", help="Find the did you should own and recovery the DID wallet")
@@ -817,13 +832,15 @@ def did_find_lost_cmd(
     type=str,
     required=False,
 )
+@tx_out_cmd
 def did_message_spend_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
     puzzle_announcements: Optional[str],
     coin_announcements: Optional[str],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import did_message_spend
 
     puzzle_list: List[str] = []
@@ -836,7 +853,7 @@ def did_message_spend_cmd(
                 bytes.fromhex(announcement)
         except ValueError:
             print("Invalid puzzle announcement format, should be a list of hex strings.")
-            return
+            return []
     if coin_announcements is not None:
         try:
             coin_list = coin_announcements.split(",")
@@ -845,9 +862,9 @@ def did_message_spend_cmd(
                 bytes.fromhex(announcement)
         except ValueError:
             print("Invalid coin announcement format, should be a list of hex strings.")
-            return
+            return []
 
-    asyncio.run(did_message_spend(wallet_rpc_port, fingerprint, id, puzzle_list, coin_list))
+    return asyncio.run(did_message_spend(wallet_rpc_port, fingerprint, id, puzzle_list, coin_list, push=push))
 
 
 @did_cmd.command("transfer", help="Transfer a DID")
@@ -879,6 +896,7 @@ def did_message_spend_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def did_transfer_did(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -887,10 +905,11 @@ def did_transfer_did(
     reset_recovery: bool,
     fee: str,
     reuse: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import transfer_did
 
-    asyncio.run(
+    return asyncio.run(
         transfer_did(
             wallet_rpc_port,
             fingerprint,
@@ -899,6 +918,7 @@ def did_transfer_did(
             target_address,
             reset_recovery is False,
             True if reuse else None,
+            push=push,
         )
     )
 
@@ -996,6 +1016,7 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: s
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def nft_mint_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1014,7 +1035,8 @@ def nft_mint_cmd(
     fee: str,
     royalty_percentage_fraction: int,
     reuse: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import mint_nft
 
     if metadata_uris is None:
@@ -1027,7 +1049,7 @@ def nft_mint_cmd(
     else:
         license_uris_list = [lu.strip() for lu in license_uris.split(",")]
 
-    asyncio.run(
+    return asyncio.run(
         mint_nft(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -1046,6 +1068,7 @@ def nft_mint_cmd(
             d_fee=Decimal(fee),
             royalty_percentage=royalty_percentage_fraction,
             reuse_puzhash=True if reuse else None,
+            push=push,
         )
     )
 
@@ -1079,6 +1102,7 @@ def nft_mint_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def nft_add_uri_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1089,10 +1113,11 @@ def nft_add_uri_cmd(
     license_uri: str,
     fee: str,
     reuse: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import add_uri_to_nft
 
-    asyncio.run(
+    return asyncio.run(
         add_uri_to_nft(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -1103,6 +1128,7 @@ def nft_add_uri_cmd(
             metadata_uri=metadata_uri,
             license_uri=license_uri,
             reuse_puzhash=True if reuse else None,
+            push=push,
         )
     )
 
@@ -1134,6 +1160,7 @@ def nft_add_uri_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def nft_transfer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1142,10 +1169,11 @@ def nft_transfer_cmd(
     target_address: str,
     fee: str,
     reuse: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import transfer_nft
 
-    asyncio.run(
+    return asyncio.run(
         transfer_nft(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -1154,6 +1182,7 @@ def nft_transfer_cmd(
             nft_coin_id=nft_coin_id,
             target_address=target_address,
             reuse_puzhash=True if reuse else None,
+            push=push,
         )
     )
 
@@ -1277,6 +1306,7 @@ def notification_cmd() -> None:
 )
 @click.option("-n", "--message", help="The message of the notification", type=str)
 @click.option("-m", "--fee", help="The fee for the transaction, in XCH", type=str)
+@tx_out_cmd
 def send_notification_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1284,10 +1314,13 @@ def send_notification_cmd(
     amount: str,
     message: str,
     fee: str,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import send_notification
 
-    asyncio.run(send_notification(wallet_rpc_port, fingerprint, Decimal(fee), to_address, message, Decimal(amount)))
+    return asyncio.run(
+        send_notification(wallet_rpc_port, fingerprint, Decimal(fee), to_address, message, Decimal(amount), push=push)
+    )
 
 
 @notification_cmd.command("get", help="Get notification(s) that are in your wallet")
@@ -1353,16 +1386,18 @@ def vcs_cmd() -> None:  # pragma: no cover
 @click.option("-d", "--did", help="The DID of the VC's proof provider", type=str, required=True)
 @click.option("-t", "--target-address", help="The address to send the VC to once it's minted", type=str, required=False)
 @click.option("-m", "--fee", help="Blockchain fee for mint transaction, in XCH", type=str, required=False, default="0")
+@tx_out_cmd
 def mint_vc_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     did: str,
     target_address: Optional[str],
     fee: str,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import mint_vc
 
-    asyncio.run(mint_vc(wallet_rpc_port, fingerprint, did, Decimal(fee), target_address))
+    return asyncio.run(mint_vc(wallet_rpc_port, fingerprint, did, Decimal(fee), target_address, push=push))
 
 
 @vcs_cmd.command("get", short_help="Get a list of existing VCs")
@@ -1418,6 +1453,7 @@ def get_vcs_cmd(
     default=False,
     show_default=True,
 )
+@tx_out_cmd
 def spend_vc_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1426,10 +1462,11 @@ def spend_vc_cmd(
     new_proof_hash: str,
     fee: str,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import spend_vc
 
-    asyncio.run(
+    return asyncio.run(
         spend_vc(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -1438,6 +1475,7 @@ def spend_vc_cmd(
             new_puzhash=new_puzhash,
             new_proof_hash=new_proof_hash,
             reuse_puzhash=reuse_puzhash,
+            push=push,
         )
     )
 
@@ -1516,6 +1554,7 @@ def get_proofs_for_root_cmd(
     default=False,
     show_default=True,
 )
+@tx_out_cmd
 def revoke_vc_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1523,10 +1562,13 @@ def revoke_vc_cmd(
     vc_id: Optional[str],
     fee: str,
     reuse_puzhash: bool,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import revoke_vc
 
-    asyncio.run(revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, Decimal(fee), reuse_puzhash))
+    return asyncio.run(
+        revoke_vc(wallet_rpc_port, fingerprint, parent_coin_id, vc_id, Decimal(fee), reuse_puzhash, push=push)
+    )
 
 
 @vcs_cmd.command("approve_r_cats", help="Claim any R-CATs that are currently pending VC approval")
@@ -1553,6 +1595,7 @@ def revoke_vc_cmd(
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def approve_r_cats_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1562,11 +1605,20 @@ def approve_r_cats_cmd(
     min_coin_amount: Optional[Decimal],
     max_coin_amount: Optional[Decimal],
     reuse: bool,
-) -> None:  # pragma: no cover
+    push: bool,
+) -> List[TransactionRecord]:
     from .wallet_funcs import approve_r_cats
 
-    asyncio.run(
+    return asyncio.run(
         approve_r_cats(
-            wallet_rpc_port, fingerprint, id, min_amount_to_claim, Decimal(fee), min_coin_amount, max_coin_amount, reuse
+            wallet_rpc_port,
+            fingerprint,
+            id,
+            min_amount_to_claim,
+            Decimal(fee),
+            min_coin_amount,
+            max_coin_amount,
+            reuse,
+            push,
         )
     )

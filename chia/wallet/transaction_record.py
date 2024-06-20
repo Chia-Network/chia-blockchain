@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Generic, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
@@ -100,6 +100,13 @@ class TransactionRecordOld(Streamable):
             memos_list.append((coin_id, memos))
         modified_tx["memos"] = memos_list
         return cls.from_json_dict(modified_tx)
+
+    @classmethod
+    def from_json_dict(cls: Type[_T_TransactionRecord], json_dict: Dict[str, Any]) -> _T_TransactionRecord:
+        try:
+            return super().from_json_dict(json_dict)
+        except Exception:
+            return cls.from_json_dict_convenience(json_dict)
 
     def to_json_dict_convenience(self, config: Dict) -> Dict:
         selected = config["selected_network"]

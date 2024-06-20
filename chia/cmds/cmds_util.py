@@ -60,7 +60,7 @@ def transaction_submitted_msg(tx: TransactionRecord) -> str:
 
 
 def transaction_status_msg(fingerprint: int, tx_id: bytes32) -> str:
-    return f"Run 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status"
+    return f"Run 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id.hex()}' to get status"
 
 
 async def validate_client_connection(
@@ -324,6 +324,33 @@ def timelock_args(func: Callable[..., None]) -> Callable[..., None]:
             required=False,
             default=None,
         )(func)
+    )
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class TransactionBundle(Streamable):
+    txs: List[TransactionRecord]
+
+
+def tx_out_cmd(func: Callable[..., List[TransactionRecord]]) -> Callable[..., None]:
+    def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
+        txs: List[TransactionRecord] = func(**kwargs)
+        if transaction_file is not None:
+            print(f"Writing transactions to file {transaction_file}:")
+            with open(Path(transaction_file), "wb") as file:
+                file.write(bytes(TransactionBundle(txs)))
+
+    return click.option(
+        "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
+    )(
+        click.option(
+            "--transaction-file",
+            help="A file to write relevant transactions to",
+            type=str,
+            required=False,
+            default=None,
+        )(original_cmd)
     )
 
 

@@ -1014,7 +1014,7 @@ async def test_cat_change_detection(
     cat_amount_0 = uint64(100)
     cat_amount_1 = uint64(5)
 
-    tx = await client_0.send_transaction(1, cat_amount_0, addr, DEFAULT_TX_CONFIG)
+    tx = (await client_0.send_transaction(1, cat_amount_0, addr, DEFAULT_TX_CONFIG)).transaction
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 

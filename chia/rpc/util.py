@@ -17,8 +17,9 @@ from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_fr
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.blind_signer_tl import BLIND_SIGNER_TRANSLATION
 from chia.wallet.util.clvm_streamable import (
-    byte_serialize_clvm_streamable,
+    TranslationLayer,
     json_deserialize_with_clvm_streamable,
     json_serialize_with_clvm_streamable,
 )
@@ -34,6 +35,9 @@ RpcEndpoint = Callable[..., Awaitable[Dict[str, Any]]]
 MarshallableRpcEndpoint = Callable[..., Awaitable[Streamable]]
 
 
+ALL_TRANSLATION_LAYERS: Dict[str, TranslationLayer] = {"CHIP-0028": BLIND_SIGNER_TRANSLATION}
+
+
 def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     hints = get_type_hints(func)
     request_hint = hints["request"]
@@ -46,7 +50,13 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
             (
                 request_class.from_json_dict(request)
                 if not request.get("CHIP-0029", False)
-                else json_deserialize_with_clvm_streamable(request, request_hint)
+                else json_deserialize_with_clvm_streamable(
+                    request,
+                    request_hint,
+                    translation_layer=(
+                        ALL_TRANSLATION_LAYERS[request["translation"]] if "translation" in request else None
+                    ),
+                )
             ),
             *args,
             **kwargs,
@@ -54,7 +64,12 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
         if not request.get("CHIP-0029", False):
             return response_obj.to_json_dict()
         else:
-            response_dict = json_serialize_with_clvm_streamable(response_obj)
+            response_dict = json_serialize_with_clvm_streamable(
+                response_obj,
+                translation_layer=(
+                    ALL_TRANSLATION_LAYERS[request["translation"]] if "translation" in request else None
+                ),
+            )
             if isinstance(response_dict, str):  # pragma: no cover
                 raise ValueError("Internal Error. Marshalled endpoint was made with clvm_streamable.")
             return response_dict
@@ -156,17 +171,36 @@ def tx_endpoint(
             ]
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
 
-            if not request.get("CHIP-0029", False):
-                response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
+            if request.get("CHIP-0029", False):
+                response["unsigned_transactions"] = [
+                    json_serialize_with_clvm_streamable(
+                        tx,
+                        translation_layer=(
+                            ALL_TRANSLATION_LAYERS[request["translation"]] if "translation" in request else None
+                        ),
+                    )
+                    for tx in unsigned_txs
+                ]
             else:
-                response["unsigned_transactions"] = [byte_serialize_clvm_streamable(tx).hex() for tx in unsigned_txs]
+                response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
 
             new_txs: List[TransactionRecord] = []
             if request.get("sign", self.service.config.get("auto_sign_txs", True)):
                 new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
                     tx_records, response.get("signing_responses", []), "signing_responses" in response
                 )
-                response["signing_responses"] = [byte_serialize_clvm_streamable(r).hex() for r in signing_responses]
+                if request.get("CHIP-0029", False):
+                    response["signing_responses"] = [
+                        json_serialize_with_clvm_streamable(
+                            sr,
+                            translation_layer=(
+                                ALL_TRANSLATION_LAYERS[request["translation"]] if "translation" in request else None
+                            ),
+                        )
+                        for sr in signing_responses
+                    ]
+                else:
+                    response["signing_responses"] = [sr.to_json_dict() for sr in signing_responses]
             else:
                 new_txs = tx_records  # pragma: no cover
 

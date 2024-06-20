@@ -13,7 +13,7 @@ from chia.util.streamable import Streamable
 from chia.wallet.util.clvm_streamable import clvm_streamable
 
 # This file contains the base types for communication between a wallet and an offline transaction signer.
-# These types should be compliant with CHIP-TBD
+# These types should be compliant with CHIP-0028
 
 
 @clvm_streamable

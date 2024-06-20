@@ -1026,7 +1026,7 @@ class DataLayer:
                 for our_offer_store in maker
             }
 
-            wallet_offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
+            res = await self.wallet_rpc.create_offer_for_ids(
                 offer_dict=offer_dict,
                 solver=solver,
                 driver_dict={},
@@ -1036,12 +1036,10 @@ class DataLayer:
                 # This is not a change in behavior, the default was already implicit.
                 tx_config=DEFAULT_TX_CONFIG,
             )
-            if wallet_offer is None:
-                raise Exception("offer is None despite validate_only=False")
 
             offer = Offer(
-                trade_id=trade_record.trade_id,
-                offer=bytes(wallet_offer),
+                trade_id=res.trade_record.trade_id,
+                offer=bytes(res.offer),
                 taker=taker,
                 maker=tuple(our_store_proofs.values()),
             )
@@ -1118,14 +1116,16 @@ class DataLayer:
         # after the transaction is submitted to the chain.  If we roll back data we
         # may lose published data.
 
-        trade_record = await self.wallet_rpc.take_offer(
-            offer=offer,
-            solver=solver,
-            fee=fee,
-            # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
-            # This is not a change in behavior, the default was already implicit.
-            tx_config=DEFAULT_TX_CONFIG,
-        )
+        trade_record = (
+            await self.wallet_rpc.take_offer(
+                offer=offer,
+                solver=solver,
+                fee=fee,
+                # TODO: probably shouldn't be default but due to peculiarities in the RPC, we're using a stop gap.
+                # This is not a change in behavior, the default was already implicit.
+                tx_config=DEFAULT_TX_CONFIG,
+            )
+        ).trade_record
 
         return trade_record
 

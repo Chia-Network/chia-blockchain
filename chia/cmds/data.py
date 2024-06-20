@@ -137,6 +137,9 @@ def create_max_page_size_option() -> Callable[[FC], FC]:
     )
 
 
+# Functions with this mark in this file are not being ported to @tx_out_cmd due to API peculiarities
+# They will therefore not work with observer-only functionality
+# NOTE: tx_endpoint  (This creates wallet transactions and should be parametrized by relevant options)
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
 @create_fee_option()
@@ -171,6 +174,7 @@ def get_value(
     run(get_value_cmd(data_rpc_port, id, key_string, root_hash, fingerprint=fingerprint))
 
 
+# NOTE: tx_endpoint
 @data_cmd.command("update_data_store", help="Update a store by providing the changelist operations")
 @create_data_store_id_option()
 @create_changelist_option()
@@ -469,6 +473,7 @@ def add_missing_files(
     )
 
 
+# NOTE: tx_endpoint
 @data_cmd.command("add_mirror", help="Publish mirror urls on chain")
 @click.option("-i", "--id", help="Store id", type=str, required=True)
 @click.option(
@@ -507,6 +512,7 @@ def add_mirror(
     )
 
 
+# NOTE: tx_endpoint
 @data_cmd.command("delete_mirror", help="Delete an owned mirror by its coin id")
 @click.option("-c", "--coin_id", help="Coin id", type=str, required=True)
 @create_fee_option()

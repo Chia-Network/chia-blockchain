@@ -9,7 +9,17 @@ import pytest
 from typing_extensions import override
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, run_cli_command_and_assert
-from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG
+from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX
+from chia.rpc.wallet_request_types import (
+    CreateNewDAOWalletResponse,
+    DAOAddFundsToTreasuryResponse,
+    DAOCloseProposalResponse,
+    DAOCreateProposalResponse,
+    DAOExitLockupResponse,
+    DAOFreeCoinsFromFinishedProposalsResponse,
+    DAOSendToLockupResponse,
+    DAOVoteOnProposalResponse,
+)
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
@@ -38,17 +48,22 @@ def test_dao_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             name: Optional[str] = None,
             fee: uint64 = uint64(0),
             fee_for_cat: uint64 = uint64(0),
-        ) -> Dict[str, Union[str, int, bytes32]]:
+            push: bool = True,
+        ) -> CreateNewDAOWalletResponse:
             if not treasury_id:
                 treasury_id = bytes32(token_bytes(32))
-            return {
-                "success": True,
-                "type": "DAO",
-                "wallet_id": 2,
-                "treasury_id": treasury_id,
-                "cat_wallet_id": 3,
-                "dao_cat_wallet_id": 4,
-            }
+            return CreateNewDAOWalletResponse.from_json_dict(
+                {
+                    "success": True,
+                    "transactions": [STD_TX.to_json_dict()],
+                    "unsigned_transactions": [STD_UTX.to_json_dict()],
+                    "type": WalletType.DAO,
+                    "wallet_id": 2,
+                    "treasury_id": treasury_id,
+                    "cat_wallet_id": 3,
+                    "dao_cat_wallet_id": 4,
+                }
+            )
 
     inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -126,8 +141,9 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             tx_config: TXConfig,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
-        ) -> Dict[str, Union[str, bool]]:
-            return {"success": True, "tx_id": bytes32(b"1" * 32).hex()}
+            push: bool = True,
+        ) -> DAOAddFundsToTreasuryResponse:
+            return DAOAddFundsToTreasuryResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
         async def dao_get_rules(
             self,
@@ -264,8 +280,9 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             tx_config: TXConfig,
             is_yes_vote: bool,
             fee: uint64 = uint64(0),
-        ) -> Dict[str, Union[str, bool]]:
-            return {"success": True, "tx_id": bytes32(b"1" * 32).hex()}
+            push: bool = True,
+        ) -> DAOVoteOnProposalResponse:
+            return DAOVoteOnProposalResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
         async def dao_close_proposal(
             self,
@@ -275,8 +292,9 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             fee: uint64 = uint64(0),
             self_destruct: bool = False,
             reuse_puzhash: Optional[bool] = None,
-        ) -> Dict[str, Union[str, bool]]:
-            return {"success": True, "tx_id": bytes32(b"1" * 32).hex()}
+            push: bool = True,
+        ) -> DAOCloseProposalResponse:
+            return DAOCloseProposalResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
         async def dao_create_proposal(
             self,
@@ -292,8 +310,9 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             new_dao_rules: Optional[Dict[str, uint64]] = None,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
-        ) -> Dict[str, Union[str, bool]]:
-            return {"success": True, "proposal_id": "0xCAFEF00D"}
+            push: bool = True,
+        ) -> DAOCreateProposalResponse:
+            return DAOCreateProposalResponse([STD_UTX], [STD_TX], bytes32([0] * 32), STD_TX.name, STD_TX)
 
         async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
             return [{"id": 1, "type": 0}, {"id": 2, "type": 14}]
@@ -405,7 +424,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         "-m 0.1",
         "--reuse",
     ]
-    proposal_asserts = ["Successfully created proposal", "Proposal ID: 0xCAFEF00D"]
+    proposal_asserts = ["Successfully created proposal", f"Proposal ID: {bytes32([0] * 32).hex()}"]
     run_cli_command_and_assert(capsys, root_dir, spend_args, proposal_asserts)
 
     bad_spend_args = [
@@ -423,7 +442,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         "-m 0.1",
         "--reuse",
     ]
-    proposal_asserts = ["Successfully created proposal", "Proposal ID: 0xCAFEF00D"]
+    proposal_asserts = ["Successfully created proposal", f"Proposal ID: {bytes32([0] * 32).hex()}"]
     with pytest.raises(ValueError) as e_info:
         run_cli_command_and_assert(capsys, root_dir, bad_spend_args, proposal_asserts)
     assert e_info.value.args[0] == "Must include a json specification or an address / amount pair."
@@ -475,8 +494,9 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             tx_config: TXConfig,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
-        ) -> Dict[str, Union[str, int]]:
-            return {"success": True, "tx_id": bytes32(b"x" * 32).hex()}
+            push: bool = True,
+        ) -> DAOSendToLockupResponse:
+            return DAOSendToLockupResponse([STD_UTX], [STD_TX], STD_TX.name, [STD_TX])
 
         async def dao_free_coins_from_finished_proposals(
             self,
@@ -484,8 +504,9 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             tx_config: TXConfig,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
-        ) -> Dict[str, Union[str, int]]:
-            return {"success": True, "tx_id": bytes32(b"x" * 32).hex()}
+            push: bool = True,
+        ) -> DAOFreeCoinsFromFinishedProposalsResponse:
+            return DAOFreeCoinsFromFinishedProposalsResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
         async def dao_exit_lockup(
             self,
@@ -494,8 +515,9 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             coins: Optional[List[Dict[str, Union[str, int]]]] = None,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
-        ) -> Dict[str, Union[str, int]]:
-            return {"success": True, "tx_id": bytes32(b"x" * 32).hex()}
+            push: bool = True,
+        ) -> DAOExitLockupResponse:
+            return DAOExitLockupResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
         @override
         async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
