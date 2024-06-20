@@ -9,18 +9,17 @@ from dataclasses import dataclass
 from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, TypeVar
 
-from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, BLSCache, G1Element, supports_fast_forward, validate_clvm_and_signature
+from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, BLSCache, supports_fast_forward, validate_clvm_and_signature
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
+from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -32,7 +31,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.condition_tools import pkm_pairs
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor
@@ -44,49 +42,6 @@ log = logging.getLogger(__name__)
 # mempool items replacing existing ones must increase the total fee at least by
 # this amount. 0.00001 XCH
 MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
-
-
-# TODO: once the 1.8.0 soft-fork has activated, we don't really need to pass
-# the constants through here
-# def validate_clvm_and_signature(
-#     spend_bundle_bytes: bytes, max_cost: int, constants: ConsensusConstants, height: uint32
-# ) -> Tuple[Optional[Err], bytes, List[Tuple[bytes, bytes]], float]:
-#     """
-#     Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
-#     in order to validate the heavy parts of a transaction in a different thread. Returns an optional error,
-#     the NPCResult and a cache of the new pairings validated (if not error)
-#     """
-
-#     start_time = time.monotonic()
-#     additional_data = constants.AGG_SIG_ME_ADDITIONAL_DATA
-
-#     try:
-#         bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
-#         program = simple_solution_generator(bundle)
-#         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-#         result: NPCResult = get_name_puzzle_conditions(
-#             program, max_cost, mempool_mode=True, constants=constants, height=height
-#         )
-
-#         if result.error is not None:
-#             return Err(result.error), b"", [], time.monotonic() - start_time
-
-#         pks: List[G1Element] = []
-#         msgs: List[bytes] = []
-#         assert result.conds is not None
-#         pks, msgs = pkm_pairs(result.conds, additional_data)
-
-#         # Verify aggregated signature
-#         cache = BLSCache(10000)
-#         if not cache.aggregate_verify(pks, msgs, bundle.aggregated_signature):
-#             return Err.BAD_AGGREGATE_SIGNATURE, b"", [], time.monotonic() - start_time
-#         new_cache_entries: List[Tuple[bytes, bytes]] = cache.items()
-#     except ValidationError as e:
-#         return e.code, b"", [], time.monotonic() - start_time
-#     except Exception:
-#         return Err.UNKNOWN, b"", [], time.monotonic() - start_time
-
-#     return None, bytes(result), new_cache_entries, time.monotonic() - start_time
 
 
 @dataclass
@@ -339,7 +294,7 @@ class MempoolManager:
 
         if bls_cache is not None:
             bls_cache.update(new_cache_entries)
-        
+
         ret = NPCResult(None, sbc)
 
         log.log(
