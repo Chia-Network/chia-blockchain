@@ -900,13 +900,14 @@ def test_get_offers(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         FINGERPRINT_ARG,
         "--summaries",
     ]
+    tzinfo = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
     # these are various things that should be in the output
     assert_list = [
         "Timelock information:",
         "  - Not valid until ",
         "  - Expires at ",
-        f"{datetime.date.fromtimestamp(0).strftime('%Y-%m-%d %H:%M:%S')}",
-        f"{datetime.date.fromtimestamp(100).strftime('%Y-%m-%d %H:%M:%S')}",
+        f"{datetime.datetime.fromtimestamp(0, tz=tzinfo).strftime('%Y-%m-%d %H:%M %Z')}",
+        f"{datetime.datetime.fromtimestamp(100, tz=tzinfo).strftime('%Y-%m-%d %H:%M %Z')}",
         "height 0",
         "height 100",
     ]
