@@ -1,0 +1,86 @@
+name: 🕵️‍♀️ fmt-diagnostics
+
+on:
+  pull_request:
+    branches:
+      - "**"
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.event.workflow, github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  fmt-diagnostics:
+    name: 🕵️‍♀️ ${{ matrix.platform.emoji }} ${{ matrix.platform.name }}
+    runs-on: ${{ matrix.platform.runs-on }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Linux GitHub
+            os: linux
+            emoji: 🐧
+            runs-on: ubuntu-latest
+          - name: Linux FMT
+            os: linux
+            emoji: 🐧
+            runs-on: linux-arm64-fmt
+          - name: Linux MSP
+            os: linux
+            emoji: 🐧
+            runs-on: linux-arm64-msp
+          - name: macOS GitHub
+            os: macos
+            emoji: 🍎
+            runs-on: macos-12
+          - name: macOS FMT
+            os: macos
+            emoji: 🍎
+            runs-on: mac-arm64-fmt
+          - name: macOS MSP
+            os: macos
+            emoji: 🍎
+            runs-on: mac-arm64-msp
+          - name: Windows
+            os: windows
+            emoji: 🪟
+            runs-on: windows-latest
+
+    steps:
+      - uses: chia-network/actions/clean-workspace@main
+
+      - uses: chia-network/actions/git-mark-workspace-safe@main
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - run: |
+          mkdir artifacts/
+          diag=~/actions-runner/_diag
+          if [ -d "${diag}" ]
+          then
+            ls -l "${diag}"
+            for prefix in Runner_ Worker_
+            do
+              ls -1t ${diag}/${prefix}*.log > logs
+              log=$(head -n 1 logs)
+              echo ${log}
+              cp ${log} artifacts/
+            done
+          else
+            echo "No diagnostics directory found at ${diag}"
+          fi
+          echo ===== selected logs
+          ls -l artifacts/
+
+      - uses: actions/upload-artifact@v4
+        if: runner.debug
+        with:
+          name: logs - ${{ matrix.platform.name }}
+          path: artifacts/
