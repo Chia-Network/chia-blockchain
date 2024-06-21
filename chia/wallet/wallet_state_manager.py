@@ -454,11 +454,17 @@ class WalletStateManager:
             intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
             for index in range(start_index, last_index):
                 hardened_keys[index] = _derive_path(intermediate_sk, [index]).get_g1()
+                # We await sleep here to allow an asyncio context switch (since the other parts of this loop do
+                # not have await and therefore block). This can prevent networking layer from responding to ping.
+                await asyncio.sleep(0)
 
         # Unhardened
         intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.root_pubkey)
         for index in range(start_index, last_index):
             unhardened_keys[index] = _derive_pk_unhardened(intermediate_pk_un, [index])
+            # We await sleep here to allow an asyncio context switch (since the other parts of this loop do
+            # not have await and therefore block). This can prevent networking layer from responding to ping.
+            await asyncio.sleep(0)
 
         for wallet_id, start_index in start_index_by_wallet.items():
             target_wallet = self.wallets[wallet_id]
@@ -491,6 +497,9 @@ class WalletStateManager:
                 self.log.debug(
                     f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
                 )
+                # We await sleep here to allow an asyncio context switch (since the other parts of this loop do
+                # not have await and therefore block). This can prevent networking layer from responding to ping.
+                await asyncio.sleep(0)
                 derivation_paths.append(
                     DerivationRecord(
                         uint32(index),
