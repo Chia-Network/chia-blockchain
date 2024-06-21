@@ -439,8 +439,7 @@ class CoinStore:
             return [], None
 
         # Coin states are keyed by coin id to filter out and prevent duplicates.
-        coin_states_dict: Dict[bytes32, CoinState] = dict()
-        coin_states: List[CoinState]
+        coin_states: List[CoinState] = []
 
         async with self.db_wrapper.reader() as conn:
             puzzle_hashes_db = tuple(puzzle_hashes)
@@ -478,7 +477,8 @@ class CoinStore:
 
             for row in await cursor.fetchall():
                 coin_state = self.row_to_coin_state(row)
-                coin_states_dict[coin_state.coin.name()] = coin_state
+                if coin_state not in coin_states:
+                    coin_states.append(coin_state)
 
             if include_hinted:
                 cursor = await conn.execute(
@@ -500,9 +500,8 @@ class CoinStore:
 
                 for row in await cursor.fetchall():
                     coin_state = self.row_to_coin_state(row)
-                    coin_states_dict[coin_state.coin.name()] = coin_state
-
-            coin_states = list(coin_states_dict.values())
+                    if coin_state not in coin_states:
+                        coin_states.append(coin_state)
 
             if include_hinted:
                 coin_states.sort(key=lambda cr: max(cr.created_height or uint32(0), cr.spent_height or uint32(0)))
