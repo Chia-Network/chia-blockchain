@@ -341,7 +341,7 @@ jobs:
           aws s3 cp artifacts/${GUI_FILE} ${DEV_S3_URL}/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix[matrix.arch.matrix] }}.dmg
           aws s3 cp artifacts/${GUI_FILE}.sha256 ${LATEST_DEV_S3_URL}/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix[matrix.arch.matrix] }}.dmg.sha256
 
-      - name: Create .${{ matrix.os.file-type.extension } torrent
+      - name: Create .${{ matrix.os.file-type.extension }} torrent
         if: env.FULL_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
