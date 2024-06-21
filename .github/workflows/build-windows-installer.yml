@@ -259,8 +259,7 @@ jobs:
       GUI_DEV_FILE: ChiaSetup-${{ needs.version.outputs.chia-dev-version }}.exe
       GUI_LATEST_DEV_FILE: ChiaSetup-latest-dev.exe
       INSTALL_S3_URL: s3://download.chia.net/install/
-      # TODO: ...  shouldn't we use this somewhere?
-      # DEV_S3_URL: s3://download.chia.net/dev/
+      DEV_S3_URL: s3://download.chia.net/dev/
       LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev/
       TORRENT_S3_URL: s3://download.chia.net/torrents/
       TRACKER_URL: udp://tracker.opentrackr.org:1337/announce
