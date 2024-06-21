@@ -184,33 +184,41 @@ jobs:
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   publish:
-    name: Publish ${{ matrix.os.arch }}
+    name: Publish ${{ matrix.arch.name }} ${{ matrix.os.file-type }}
     runs-on: ubuntu-latest
     needs:
       - version
       - build
-    timeout-minutes: ${{ matrix.os.timeout }}
+    timeout-minutes: ${{ matrix.arch.timeout }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10"]
         os:
-          - arch: amd64
-            glue-name: "build-amd64-deb"
+          - file-type: DEB
+            glue-name:
+              arm: build-amd64-deb
+              intel: build-arm64-deb
+            artifact-name:
+              arm: arm64
+              intel: amd64
+        arch:
+          - name: ARM64
+            matrix: arm
             timeout: 5
-          - arch: arm64
-            glue-name: "build-arm64-deb"
+          - name: Intel
+            matrix: intel
             timeout: 5
 
     env:
       # TODO: review for any indirect usage
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
-      CLI_FILE: chia-blockchain-cli_${{ needs.version.outputs.chia-installer-version }}-1_${{ matrix.os.arch }}.deb
-      CLI_DEV_FILE: chia-blockchain-cli_${{ needs.version.outputs.chia-dev-version }}-1_${{ matrix.os.arch }}.deb
-      CLI_LATEST_DEV_FILE: chia-blockchain-cli_${{ matrix.os.arch }}_latest_dev.deb
-      GUI_FILE: chia-blockchain_${{ needs.version.outputs.chia-installer-version }}_${{ matrix.os.arch }}.deb
-      GUI_DEV_FILE: chia-blockchain_${{ needs.version.outputs.chia-dev-version }}_${{ matrix.os.arch }}.deb
-      GUI_LATEST_DEV_FILE: chia-blockchain_${{ matrix.os.arch }}_latest_dev.deb
+      CLI_FILE: chia-blockchain-cli_${{ needs.version.outputs.chia-installer-version }}-1_${{ matrix.os.artifact-name[matrix.arch.matrix] }}.deb
+      CLI_DEV_FILE: chia-blockchain-cli_${{ needs.version.outputs.chia-dev-version }}-1_${{ matrix.os.artifact-name[matrix.arch.matrix] }}.deb
+      CLI_LATEST_DEV_FILE: chia-blockchain-cli_${{ matrix.os.artifact-name[matrix.arch.matrix] }}_latest_dev.deb
+      GUI_FILE: chia-blockchain_${{ needs.version.outputs.chia-installer-version }}_${{ matrix.os.artifact-name[matrix.arch.matrix] }}.deb
+      GUI_DEV_FILE: chia-blockchain_${{ needs.version.outputs.chia-dev-version }}_${{ matrix.os.artifact-name[matrix.arch.matrix] }}.deb
+      GUI_LATEST_DEV_FILE: chia-blockchain_${{ matrix.os.artifact-name[matrix.arch.matrix] }}_latest_dev.deb
       INSTALL_S3_URL: s3://download.chia.net/install/
       DEV_S3_URL: s3://download.chia.net/dev/
       LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev/
@@ -234,7 +242,7 @@ jobs:
       - name: Download constraints file
         uses: actions/download-artifact@v4
         with:
-          name: constraints-file-${{ matrix.os.arch }}
+          name: constraints-file-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
           path: venv
 
       - name: Install utilities
@@ -244,7 +252,7 @@ jobs:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
-          name: chia-installers-linux-deb-${{ matrix.os.arch }}
+          name: chia-installers-linux-deb-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
           path: artifacts/
 
       - name: Set Env
@@ -340,7 +348,7 @@ jobs:
         env:
           REPO_SUFFIX: ${{ env.PRE_RELEASE == 'true' && '-prerelease' || '' }}
         run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}${{ env.REPO_SUFFIX }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
+          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}${{ env.REPO_SUFFIX }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name[matrix.arch.matrix] }}
 
   test:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
