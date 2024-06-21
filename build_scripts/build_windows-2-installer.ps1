@@ -35,7 +35,6 @@ Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
 npm ci
-$NPM_PATH = $pwd.PATH + "\node_modules\.bin"
 
 Set-Location -Path "..\..\" -PassThru
 
@@ -69,10 +68,7 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-builder create package directory"
-$OLD_ENV_PATH = $Env:Path
-$Env:Path = $NPM_PATH + ";" + $Env:Path
-electron-builder build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
-$Env:Path = $OLD_ENV_PATH
+npx electron-builder build --win --x64 --config.productName="Chia" --dir --config ../../../build_scripts/electron-builder.json
 Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 

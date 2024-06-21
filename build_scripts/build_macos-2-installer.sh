@@ -17,7 +17,6 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Installing npm utilities"
 cd npm_macos || exit 1
 npm ci
-NPM_PATH="$(pwd)/node_modules/.bin"
 cd .. || exit 1
 
 echo "Create dist/"
@@ -67,14 +66,8 @@ else
   echo "Not on ci or no secrets so not signing"
   export CSC_IDENTITY_AUTO_DISCOVERY=false
 fi
-echo "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
-  --config.productName="$PRODUCT_NAME" \
-  --config.mac.minimumSystemVersion="11" \
-  --config ../../../build_scripts/electron-builder.json
-"${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
-  --config.productName="$PRODUCT_NAME" \
-  --config.mac.minimumSystemVersion="11" \
-  --config ../../../build_scripts/electron-builder.json
+echo npx electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11" --config ../../../build_scripts/electron-builder.json
+npx electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11" --config ../../../build_scripts/electron-builder.json
 LAST_EXIT_CODE=$?
 ls -l dist/mac*/chia.app/Contents/Resources/app.asar
 

@@ -4,12 +4,15 @@ set -o errexit -o nounset
 
 git status
 
-cd ../ || exit 1
+echo "Installing global npm packages"
+cd npm_macos || exit 1
+npm ci
+cd ../../ || exit 1
 git submodule update --init chia-blockchain-gui
 
 cd ./chia-blockchain-gui || exit 1
 echo "npm build"
-npx --no lerna clean -y # With --no option, `npx` guarantees not to install package from remote registry
+npx lerna clean -y
 npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
