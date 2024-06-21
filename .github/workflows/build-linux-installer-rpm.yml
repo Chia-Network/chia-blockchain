@@ -200,12 +200,12 @@ jobs:
     env:
       # TODO: review for any indirect usage
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
-      CLI_RPM_FILE: chia-blockchain-cli-${{ needs.version.outputs.chia-installer-version }}-1.x86_64.rpm
-      CLI_DEV_RPM_FILE: chia-blockchain-cli-${{ needs.version.outputs.chia-dev-version }}-1.x86_64.rpm
-      CLI_LATEST_DEV_RPM_FILE: chia-blockchain-cli-1.x86_64_latest_dev.rpm
-      GUI_RPM_FILE: chia-blockchain-${{ needs.version.outputs.chia-installer-version }}-1.x86_64.rpm
-      GUI_DEV_RPM_FILE: chia-blockchain-${{ needs.version.outputs.chia-dev-version }}-1.x86_64.rpm
-      GUI_LATEST_DEV_RPM_FILE: chia-blockchain-1.x86_64_latest_dev.rpm
+      CLI_FILE: chia-blockchain-cli-${{ needs.version.outputs.chia-installer-version }}-1.x86_64.rpm
+      CLI_DEV_FILE: chia-blockchain-cli-${{ needs.version.outputs.chia-dev-version }}-1.x86_64.rpm
+      CLI_LATEST_DEV_FILE: chia-blockchain-cli-1.x86_64_latest_dev.rpm
+      GUI_FILE: chia-blockchain-${{ needs.version.outputs.chia-installer-version }}-1.x86_64.rpm
+      GUI_DEV_FILE: chia-blockchain-${{ needs.version.outputs.chia-dev-version }}-1.x86_64.rpm
+      GUI_LATEST_DEV_FILE: chia-blockchain-1.x86_64_latest_dev.rpm
       INSTALL_S3_URL: s3://download.chia.net/install/
       DEV_S3_URL: s3://download.chia.net/dev/
       LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev/
@@ -274,14 +274,14 @@ jobs:
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
         run: |
           ls artifacts/
-          aws s3 cp artifacts/${GUI_RPM_FILE} ${DEV_S3_URL}${GUI_DEV_RPM_FILE}
-          aws s3 cp artifacts/${CLI_RPM_FILE} ${DEV_S3_URL}${CLI_DEV_RPM_FILE}
+          aws s3 cp artifacts/${GUI_FILE} ${DEV_S3_URL}${GUI_DEV_FILE}
+          aws s3 cp artifacts/${CLI_FILE} ${DEV_S3_URL}${CLI_DEV_FILE}
 
       - name: Create Checksums
         run: |
           ls artifacts/
-          sha256sum artifacts/${GUI_RPM_FILE} > artifacts/${GUI_RPM_FILE}.sha256
-          sha256sum artifacts/${CLI_RPM_FILE} > artifacts/${CLI_RPM_FILE}.sha256
+          sha256sum artifacts/${GUI_FILE} > artifacts/${GUI_FILE}.sha256
+          sha256sum artifacts/${CLI_FILE} > artifacts/${CLI_FILE}.sha256
           ls artifacts/
 
       - name: Create .rpm torrent
@@ -289,27 +289,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          py3createtorrent -f -t ${TRACKER_URL} artifacts/${GUI_RPM_FILE} -o artifacts/${GUI_RPM_FILE}.torrent --webseed https://download.chia.net/install/${GUI_RPM_FILE}
-          py3createtorrent -f -t ${TRACKER_URL} artifacts/${CLI_RPM_FILE} -o artifacts/${CLI_RPM_FILE}.torrent --webseed https://download.chia.net/install/${CLI_RPM_FILE}
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${GUI_RPM_FILE}.torrent
+          py3createtorrent -f -t ${TRACKER_URL} artifacts/${GUI_FILE} -o artifacts/${GUI_FILE}.torrent --webseed https://download.chia.net/install/${GUI_FILE}
+          py3createtorrent -f -t ${TRACKER_URL} artifacts/${CLI_FILE} -o artifacts/${CLI_FILE}.torrent --webseed https://download.chia.net/install/${CLI_FILE}
+          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${GUI_FILE}.torrent
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
         run: |
-          aws s3 cp artifacts/${GUI_RPM_FILE} ${LATEST_DEV_S3_URL}/${GUI_LATEST_DEV_RPM_FILE}
-          aws s3 cp artifacts/${GUI_RPM_FILE}.sha256 ${LATEST_DEV_S3_URL}/${GUI_LATEST_DEV_RPM_FILE}.sha256
-          aws s3 cp artifacts/${CLI_RPM_FILE} ${LATEST_DEV_S3_URL}/${CLI_LATEST_DEV_RPM_FILE}
-          aws s3 cp artifacts/${CLI_RPM_FILE}.sha256 ${LATEST_DEV_S3_URL}/${CLI_LATEST_DEV_RPM_FILE}.sha256
+          aws s3 cp artifacts/${GUI_FILE} ${LATEST_DEV_S3_URL}/${GUI_LATEST_DEV_FILE}
+          aws s3 cp artifacts/${GUI_FILE}.sha256 ${LATEST_DEV_S3_URL}/${GUI_LATEST_DEV_FILE}.sha256
+          aws s3 cp artifacts/${CLI_FILE} ${LATEST_DEV_S3_URL}/${CLI_LATEST_DEV_FILE}
+          aws s3 cp artifacts/${CLI_FILE}.sha256 ${LATEST_DEV_S3_URL}/${CLI_LATEST_DEV_FILE}.sha256
 
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          aws s3 cp artifacts/${GUI_RPM_FILE} ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${GUI_RPM_FILE}.sha256 ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${GUI_RPM_FILE}.torrent ${TORRENT_S3_URL}
-          aws s3 cp artifacts/${CLI_RPM_FILE} ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${CLI_RPM_FILE}.sha256 ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${CLI_RPM_FILE}.torrent ${TORRENT_S3_URL}
+          aws s3 cp artifacts/${GUI_FILE} ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${GUI_FILE}.sha256 ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${GUI_FILE}.torrent ${TORRENT_S3_URL}
+          aws s3 cp artifacts/${CLI_FILE} ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${CLI_FILE}.sha256 ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${CLI_FILE}.torrent ${TORRENT_S3_URL}
 
       - name: Upload release artifacts
         if: env.RELEASE == 'true'
@@ -319,8 +319,8 @@ jobs:
           gh release upload \
             --repo ${{ github.repository }} \
             $RELEASE_TAG \
-            artifacts/${GUI_RPM_FILE} \
-            artifacts/${CLI_RPM_FILE}
+            artifacts/${GUI_FILE} \
+            artifacts/${CLI_FILE}
 
       - uses: Chia-Network/actions/github/jwt@main
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET

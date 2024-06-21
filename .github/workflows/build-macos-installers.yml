@@ -251,8 +251,8 @@ jobs:
       # TODO: review for any indirect usage
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
       # TODO: consider case on all of these
-      DMG_FILE: chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
-      DMG_LATEST_DEV_FILE: Chia${{ matrix.os.file-suffix }}_latest_dev.dmg
+      GUI_FILE: chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
+      GUI_LATEST_DEV_FILE: Chia${{ matrix.os.file-suffix }}_latest_dev.dmg
       INSTALL_S3_URL: s3://download.chia.net/install/
       DEV_S3_URL: s3://download.chia.net/dev
       LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev
@@ -314,7 +314,7 @@ jobs:
       - name: Create Checksums
         run: |
           ls
-          sha256sum artifacts/${DMG_FILE} > artifacts/${DMG_FILE}.sha256
+          sha256sum artifacts/${GUI_FILE} > artifacts/${GUI_FILE}.sha256
 
       - name: Configure AWS credentials
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
@@ -326,30 +326,30 @@ jobs:
       - name: Upload to s3
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
         run: |
-          aws s3 cp artifacts/${DMG_FILE} ${DEV_S3_URL}/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
-          aws s3 cp artifacts/${DMG_FILE}.sha256 ${LATEST_DEV_S3_URL}/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg.sha256
+          aws s3 cp artifacts/${GUI_FILE} ${DEV_S3_URL}/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
+          aws s3 cp artifacts/${GUI_FILE}.sha256 ${LATEST_DEV_S3_URL}/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg.sha256
 
       - name: Create torrent
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: env.FULL_RELEASE == 'true'
         run: |
-          py3createtorrent -f -t ${TRACKER_URL} artifacts/${DMG_FILE} -o artifacts/${DMG_FILE}.torrent --webseed https://download.chia.net/install/${DMG_FILE}
+          py3createtorrent -f -t ${TRACKER_URL} artifacts/${GUI_FILE} -o artifacts/${GUI_FILE}.torrent --webseed https://download.chia.net/install/${GUI_FILE}
           ls artifacts/
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${DMG_FILE}.torrent
+          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${GUI_FILE}.torrent
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
         run: |
-          aws s3 cp artifacts/${DMG_FILE} ${LATEST_DEV_S3_URL}/${DMG_LATEST_DEV_FILE}
-          aws s3 cp artifacts/${DMG_FILE}.sha256 ${LATEST_DEV_S3_URL}/${DMG_LATEST_DEV_FILE}.sha256
+          aws s3 cp artifacts/${GUI_FILE} ${LATEST_DEV_S3_URL}/${GUI_LATEST_DEV_FILE}
+          aws s3 cp artifacts/${GUI_FILE}.sha256 ${LATEST_DEV_S3_URL}/${GUI_LATEST_DEV_FILE}.sha256
 
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          aws s3 cp artifacts/${DMG_FILE} ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${DMG_FILE}.sha256 ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${DMG_FILE}.torrent ${TORRENT_S3_URL}
+          aws s3 cp artifacts/${GUI_FILE} ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${GUI_FILE}.sha256 ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${GUI_FILE}.torrent ${TORRENT_S3_URL}
 
       - name: Upload release artifacts
         if: env.RELEASE == 'true'

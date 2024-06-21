@@ -255,9 +255,9 @@ jobs:
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
-      EXE_FILE: ChiaSetup-${{ needs.version.outputs.chia-installer-version }}.exe
-      EXE_DEV_FILE: ChiaSetup-${{ needs.version.outputs.chia-dev-version }}.exe
-      EXE_LATEST_DEV_FILE: ChiaSetup-latest-dev.exe
+      GUI_FILE: ChiaSetup-${{ needs.version.outputs.chia-installer-version }}.exe
+      GUI_DEV_FILE: ChiaSetup-${{ needs.version.outputs.chia-dev-version }}.exe
+      GUI_LATEST_DEV_FILE: ChiaSetup-latest-dev.exe
       INSTALL_S3_URL: s3://download.chia.net/install/
       # TODO: ...  shouldn't we use this somewhere?
       # DEV_S3_URL: s3://download.chia.net/dev/
@@ -327,12 +327,12 @@ jobs:
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
         run: |
           pwd
-          aws s3 cp artifacts/${EXE_FILE} ${DEV_S3_URL}/${EXE_DEV_FILE}
+          aws s3 cp artifacts/${GUI_FILE} ${DEV_S3_URL}/${GUI_DEV_FILE}
 
       - name: Create Checksums
         run: |
           ls artifacts/
-          sha256sum artifacts/${EXE_FILE} > artifacts/${EXE_FILE}.sha256
+          sha256sum artifacts/${GUI_FILE} > artifacts/${GUI_FILE}.sha256
           ls artifacts/
 
       - name: Create torrent
@@ -340,29 +340,29 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          py3createtorrent -f -t ${TRACKER_URL} artifacts/${EXE_FILE} -o artifacts/${EXE_FILE}.torrent --webseed https://download.chia.net/install/${EXE_FILE}
+          py3createtorrent -f -t ${TRACKER_URL} artifacts/${GUI_FILE} -o artifacts/${GUI_FILE}.torrent --webseed https://download.chia.net/install/${GUI_FILE}
           ls
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${EXE_FILE}.torrent
+          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${GUI_FILE}.torrent
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
         run: |
-          aws s3 cp artifacts/${EXE_FILE} ${LATEST_DEV_S3_URL}/${EXE_LATEST_DEV_FILE}
-          aws s3 cp artifacts/${EXE_FILE}.sha256 ${LATEST_DEV_S3_URL}/${EXE_LATEST_DEV_FILE}.sha256
+          aws s3 cp artifacts/${GUI_FILE} ${LATEST_DEV_S3_URL}/${GUI_LATEST_DEV_FILE}
+          aws s3 cp artifacts/${GUI_FILE}.sha256 ${LATEST_DEV_S3_URL}/${GUI_LATEST_DEV_FILE}.sha256
 
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          aws s3 cp artifacts/${EXE_FILE} ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${EXE_FILE}.sha256 ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${EXE_FILE}.torrent ${TORRENT_S3_URL}
+          aws s3 cp artifacts/${GUI_FILE} ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${GUI_FILE}.sha256 ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${GUI_FILE}.torrent ${TORRENT_S3_URL}
 
       - name: Upload release artifacts
         if: env.RELEASE == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${EXE_FILE}
+          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${GUI_FILE}
 
       - uses: Chia-Network/actions/github/jwt@main
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET
