@@ -41,24 +41,11 @@ jobs:
   version:
     uses: ./.github/workflows/reflow-version.yml
 
-  #  variables:
-  #    name: Define Variables
-  #    runs-on: ubuntu-latest
-  #    needs:
-  #      - version
-  #    steps:
-  #      - name: Set Outputs
-  #        run: |
-  #          SOURCE_DIRECTORY="build_scripts/final_installer/"
-  #          echo "source-directory=${SOURCE_DIRECTORY}" >> "${GITHUB_OUTPUT}"
-
   build:
     name: Build ${{ matrix.os.arch }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
-      # TODO: maybe we stop needing version?
       - version
-      - variables
     container: chianetwork/ubuntu-20.04-builder:latest
     timeout-minutes: 120
     strategy:
@@ -76,10 +63,8 @@ jobs:
             bladebit-suffix: "ubuntu-arm64.tar.gz"
 
     env:
-      # TODO: do we need this with the new vars job?
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
       SETUPTOOLS_SCM_PRETEND_VERSION_FOR_CHIA_BLOCKCHAIN: ${{ needs.version.outputs.chia-installer-version }}
-      # TODO: do we need this with the new vars job?
       TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 
     steps:
@@ -188,16 +173,11 @@ jobs:
           cd ./build_scripts
           sh build_linux_deb-2-installer.sh ${{ matrix.os.arch }}
 
-      - name: Collect artifacts
-        run: |
-          mkdir artifacts/
-          mv build_scripts/final_installer/* artifacts/
-
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: chia-installers-linux-deb-${{ matrix.os.arch }}
-          path: artifacts/
+          path: build_scripts/final_installer/
 
       - name: Remove working files to exclude from cache
         run: |
@@ -223,6 +203,7 @@ jobs:
             timeout: 5
 
     env:
+      # TODO: review for any indirect usage
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
       CLI_DEB_FILE: chia-blockchain-cli_${{ needs.version.outputs.chia-installer-version }}-1_${{ matrix.os.arch }}.deb
       CLI_DEV_DEB_FILE: chia-blockchain-cli_${{ needs.version.outputs.chia-dev-version }}-1_${{ matrix.os.arch }}.deb
@@ -297,10 +278,6 @@ jobs:
       - name: Upload to s3
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
         run: |
-          # GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          # CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
-          # echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >> "$GITHUB_ENV"
-
           aws s3 cp "artifacts/${GUI_DEB_FILE}" "${DEV_S3_URL}/${GUI_DEV_DEB_FILE}"
           aws s3 cp "artifacts/${CLI_DEB_FILE}" "${DEV_S3_URL}/${CLI_DEV_DEB_FILE}"
 
