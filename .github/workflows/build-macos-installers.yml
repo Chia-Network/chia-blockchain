@@ -229,7 +229,7 @@ jobs:
         run: security delete-keychain signing_temp.keychain || true
 
   publish:
-    name: Publish ${{ matrix.arch.name }} ${{ matrix.os.file-type }}
+    name: Publish ${{ matrix.arch.name }} ${{ matrix.os.file-type.name }}
     runs-on: ubuntu-latest
     needs:
       - version
@@ -240,7 +240,9 @@ jobs:
       matrix:
         python-version: ["3.10"]
         os:
-          - file-type: DMG
+          - file-type:
+              name: DMG
+              extension: dmg
             glue-name:
               arm: build-mac-m1
               intel: build-macos
@@ -273,8 +275,7 @@ jobs:
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
 
-      - name: Setup Python environment
-        uses: Chia-Network/actions/setup-python@main
+      - uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -298,7 +299,7 @@ jobs:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
-          name: chia-installers-macos-dmg-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
+          name: chia-installers-macos-${{ matrix.os.file-type.extension[matrix.arch.matrix] }}-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
           path: artifacts/
 
       - name: Set Env
@@ -340,13 +341,12 @@ jobs:
           aws s3 cp artifacts/${GUI_FILE} ${DEV_S3_URL}/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix[matrix.arch.matrix] }}.dmg
           aws s3 cp artifacts/${GUI_FILE}.sha256 ${LATEST_DEV_S3_URL}/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix[matrix.arch.matrix] }}.dmg.sha256
 
-      - name: Create torrent
+      - name: Create .${{ matrix.os.file-type.extension } torrent
+        if: env.FULL_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: env.FULL_RELEASE == 'true'
         run: |
           py3createtorrent -f -t ${TRACKER_URL} artifacts/${GUI_FILE} -o artifacts/${GUI_FILE}.torrent --webseed https://download.chia.net/install/${GUI_FILE}
-          ls artifacts/
           gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${GUI_FILE}.torrent
 
       - name: Upload Dev Installer

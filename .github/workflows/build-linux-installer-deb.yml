@@ -184,7 +184,7 @@ jobs:
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   publish:
-    name: Publish ${{ matrix.arch.name }} ${{ matrix.os.file-type }}
+    name: Publish ${{ matrix.arch.name }} ${{ matrix.os.file-type.name }}
     runs-on: ubuntu-latest
     needs:
       - version
@@ -195,7 +195,9 @@ jobs:
       matrix:
         python-version: ["3.10"]
         os:
-          - file-type: DEB
+          - file-type:
+              name: DEB
+              extension: deb
             glue-name:
               arm: build-amd64-deb
               intel: build-arm64-deb
@@ -252,7 +254,7 @@ jobs:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
-          name: chia-installers-linux-deb-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
+          name: chia-installers-linux-${{ matrix.os.file-type.extension[matrix.arch.matrix] }}-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
           path: artifacts/
 
       - name: Set Env
@@ -286,6 +288,7 @@ jobs:
       - name: Upload to s3
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
         run: |
+          ls artifacts/
           aws s3 cp "artifacts/${GUI_FILE}" "${DEV_S3_URL}/${GUI_DEV_FILE}"
           aws s3 cp "artifacts/${CLI_FILE}" "${DEV_S3_URL}/${CLI_DEV_FILE}"
 
@@ -296,10 +299,10 @@ jobs:
           sha256sum artifacts/${CLI_FILE} > artifacts/${CLI_FILE}.sha256
           ls artifacts/
 
-      - name: Create .deb torrent
+      - name: Create .${{ matrix.os.file-type.extension }} torrent
         if: env.FULL_RELEASE == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           py3createtorrent -f -t ${TRACKER_URL} artifacts/${GUI_FILE} -o artifacts/${GUI_FILE}.torrent --webseed https://download.chia.net/install/${GUI_FILE}
           py3createtorrent -f -t ${TRACKER_URL} artifacts/${CLI_FILE} -o artifacts/${CLI_FILE}.torrent --webseed https://download.chia.net/install/${CLI_FILE}
@@ -317,10 +320,6 @@ jobs:
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          # TODO: what about this?
-          # aws s3 cp artifacts/*.deb artifacts/*.sha256 ${INSTALL_S3_URL}
-          # aws s3 cp artifacts/*.torrent ${TORRENT_S3_URL}
-
           aws s3 cp artifacts/${GUI_FILE} ${INSTALL_S3_URL}
           aws s3 cp artifacts/${GUI_FILE}.sha256 ${INSTALL_S3_URL}
           aws s3 cp artifacts/${GUI_FILE}.torrent ${TORRENT_S3_URL}
