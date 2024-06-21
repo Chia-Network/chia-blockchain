@@ -45,7 +45,6 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "big-o==0.11.0",
     "build==1.2.1",
     "coverage==7.5.3",
     "diff-cover==9.0.0",
