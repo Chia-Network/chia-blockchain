@@ -438,9 +438,7 @@ class CoinStore:
         if len(puzzle_hashes) == 0:
             return [], None
 
-        # Coin states are keyed by coin id to filter out and prevent duplicates.
-        coin_states_dict: Dict[bytes32, CoinState] = dict()
-        coin_states: List[CoinState]
+        coin_states: List[CoinState] = []
 
         async with self.db_wrapper.reader() as conn:
             puzzle_hashes_db = tuple(puzzle_hashes)
@@ -477,13 +475,12 @@ class CoinStore:
             )
 
             for row in await cursor.fetchall():
-                coin_state = self.row_to_coin_state(row)
-                coin_states_dict[coin_state.coin.name()] = coin_state
+                coin_states.append(self.row_to_coin_state(row))
 
             if include_hinted:
                 cursor = await conn.execute(
                     f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                    f"coin_parent, amount, timestamp FROM coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                    f"coin_parent, amount, timestamp FROM coin_record "
                     f"WHERE coin_name IN (SELECT coin_id FROM hints "
                     f'WHERE hint IN ({"?," * (puzzle_hash_count - 1)}?)) '
                     f"AND (confirmed_index>=? OR spent_index>=?) "
@@ -499,12 +496,8 @@ class CoinStore:
                 )
 
                 for row in await cursor.fetchall():
-                    coin_state = self.row_to_coin_state(row)
-                    coin_states_dict[coin_state.coin.name()] = coin_state
+                    coin_states.append(self.row_to_coin_state(row))
 
-            coin_states = list(coin_states_dict.values())
-
-            if include_hinted:
                 coin_states.sort(key=lambda cr: max(cr.created_height or uint32(0), cr.spent_height or uint32(0)))
                 while len(coin_states) > max_items + 1:
                     coin_states.pop()
