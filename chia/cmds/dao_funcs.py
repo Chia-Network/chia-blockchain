@@ -39,10 +39,10 @@ async def add_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
         )
 
         print("Successfully created DAO Wallet")
-        print("DAO Treasury ID: {treasury_id}".format(**res))
-        print("DAO Wallet ID: {wallet_id}".format(**res))
-        print("CAT Wallet ID: {cat_wallet_id}".format(**res))
-        print("DAOCAT Wallet ID: {dao_cat_wallet_id}".format(**res))
+        print(f"DAO Treasury ID: {res['treasury_id']}")
+        print(f"DAO Wallet ID: {res['wallet_id']}")
+        print(f"CAT Wallet ID: {res['cat_wallet_id']}")
+        print(f"DAOCAT Wallet ID: {res['dao_cat_wallet_id']}")
 
 
 async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -98,10 +98,10 @@ async def create_dao_wallet(args: Dict[str, Any], wallet_rpc_port: Optional[int]
         )
 
         print("Successfully created DAO Wallet")
-        print("DAO Treasury ID: {treasury_id}".format(**res))
-        print("DAO Wallet ID: {wallet_id}".format(**res))
-        print("CAT Wallet ID: {cat_wallet_id}".format(**res))
-        print("DAOCAT Wallet ID: {dao_cat_wallet_id}".format(**res))
+        print(f"DAO Treasury ID: {res['treasury_id']}")
+        print(f"DAO Wallet ID: {res['wallet_id']}")
+        print(f"CAT Wallet ID: {res['cat_wallet_id']}")
+        print(f"DAOCAT Wallet ID: {res['dao_cat_wallet_id']}")
 
 
 async def get_treasury_id(args: Dict[str, Any], wallet_rpc_port: Optional[int], fp: int) -> None:
@@ -199,10 +199,10 @@ async def list_proposals(args: Dict[str, Any], wallet_rpc_port: Optional[int], f
         soft_close_length = res["soft_close_length"]
         print("############################")
         for prop in proposals:
-            print("Proposal ID: {proposal_id}".format(**prop))
+            print(f"Proposal ID: {prop['proposal_id']}")
             prop_status = "CLOSED" if prop["closed"] else "OPEN"
             print(f"Status: {prop_status}")
-            print("Votes for: {yes_votes}".format(**prop))
+            print(f"Votes for: {prop['yes_votes']}")
             votes_against = prop["amount_voted"] - prop["yes_votes"]
             print(f"Votes against: {votes_against}")
             print("------------------------")
@@ -502,7 +502,7 @@ async def create_spend_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[
             asset_id_name = asset_id if asset_id else "XCH"
             print(f"Created spend proposal for asset: {asset_id_name}")
             print("Successfully created proposal.")
-            print("Proposal ID: {}".format(res["proposal_id"]))
+            print(f"Proposal ID: {res['proposal_id']}")
         else:  # pragma: no cover
             print("Failed to create proposal.")
 
@@ -545,7 +545,7 @@ async def create_update_proposal(args: Dict[str, Any], wallet_rpc_port: Optional
         )
         if res["success"]:
             print("Successfully created proposal.")
-            print("Proposal ID: {}".format(res["proposal_id"]))
+            print(f"Proposal ID: {res['proposal_id']}")
         else:  # pragma: no cover
             print("Failed to create proposal.")
 
@@ -577,6 +577,6 @@ async def create_mint_proposal(args: Dict[str, Any], wallet_rpc_port: Optional[i
         )
         if res["success"]:
             print("Successfully created proposal.")
-            print("Proposal ID: {}".format(res["proposal_id"]))
+            print(f"Proposal ID: {res['proposal_id']}")
         else:  # pragma: no cover
             print("Failed to create proposal.")

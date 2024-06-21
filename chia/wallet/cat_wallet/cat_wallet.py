@@ -588,7 +588,7 @@ class CATWallet:
                 tx_config.coin_selection_config,
             )
             origin_id = list(chia_coins)[0].name()
-            selected_amount = sum([c.amount for c in chia_coins])
+            selected_amount = sum(c.amount for c in chia_coins)
             [chia_tx] = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + amount_to_claim - fee),
                 (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
@@ -625,7 +625,7 @@ class CATWallet:
             extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
             extra_delta, tail_reveal, tail_solution = 0, Program.to([]), Program.to([])
-        payment_amount: int = sum([p.amount for p in payments])
+        payment_amount: int = sum(p.amount for p in payments)
         starting_amount: int = payment_amount - extra_delta
         if coins is None:
             cat_coins = await self.select_coins(
@@ -635,7 +635,7 @@ class CATWallet:
         else:
             cat_coins = coins
 
-        selected_cat_amount = sum([c.amount for c in cat_coins])
+        selected_cat_amount = sum(c.amount for c in cat_coins)
         assert selected_cat_amount >= starting_amount
 
         # Figure out if we need to absorb/melt some XCH as part of this
@@ -778,7 +778,7 @@ class CATWallet:
             memos_with_hint.extend(memo_list)
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
-        payment_sum = sum([p.amount for p in payments])
+        payment_sum = sum(p.amount for p in payments)
         spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,

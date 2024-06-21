@@ -65,7 +65,7 @@ async def test_cat_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsA
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -132,7 +132,7 @@ async def test_cat_creation_unique_lineage_store(self_hostname: str, two_wallet_
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -429,7 +429,7 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -526,7 +526,7 @@ async def test_get_wallet_for_asset_id(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -580,7 +580,7 @@ async def test_cat_doesnt_see_eve(self_hostname: str, two_wallet_nodes: OldSimul
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -670,7 +670,7 @@ async def test_cat_spend_multiple(
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
 
     await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
@@ -785,7 +785,7 @@ async def test_cat_max_amount_send(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -882,7 +882,7 @@ async def test_cat_hint(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -1093,30 +1093,31 @@ async def test_cat_change_detection(
 
 @pytest.mark.anyio
 async def test_unacknowledged_cat_table() -> None:
-    db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
-    db_name.parent.mkdir(parents=True, exist_ok=True)
-    async with DBWrapper2.managed(database=db_name) as db_wrapper:
-        interested_store = await WalletInterestedStore.create(db_wrapper)
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        db_name = Path(temporary_directory).joinpath("test.sqlite")
+        db_name.parent.mkdir(parents=True, exist_ok=True)
+        async with DBWrapper2.managed(database=db_name) as db_wrapper:
+            interested_store = await WalletInterestedStore.create(db_wrapper)
 
-        def asset_id(i: int) -> bytes32:
-            return bytes32([i] * 32)
+            def asset_id(i: int) -> bytes32:
+                return bytes32([i] * 32)
 
-        def coin_state(i: int) -> CoinState:
-            return CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(i)), None, None)
+            def coin_state(i: int) -> CoinState:
+                return CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(i)), None, None)
 
-        await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
-        await interested_store.add_unacknowledged_coin_state(asset_id(1), coin_state(1), 100)
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
-        await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == [(coin_state(1), 100)]
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(2)) == []
-        await interested_store.rollback_to_block(50)
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == []
-        await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(1))
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
-        await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
+            await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
+            await interested_store.add_unacknowledged_coin_state(asset_id(1), coin_state(1), 100)
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+            await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == [(coin_state(1), 100)]
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(2)) == []
+            await interested_store.rollback_to_block(50)
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == []
+            await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(1))
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+            await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
 
 
 @pytest.mark.parametrize(

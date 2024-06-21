@@ -5,7 +5,10 @@ from chia_rs import ConsensusConstants
 
 from chia.consensus.constants import replace_str_to_bytes
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+
+AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
 test_constants = ConsensusConstants(
     SLOT_BLOCKS_TARGET=uint32(32),
@@ -28,7 +31,13 @@ test_constants = ConsensusConstants(
     MAX_FUTURE_TIME2=uint32(2 * 60),
     NUMBER_OF_TIMESTAMPS=uint8(11),
     GENESIS_CHALLENGE=bytes32.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
-    AGG_SIG_ME_ADDITIONAL_DATA=bytes.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"),
+    AGG_SIG_ME_ADDITIONAL_DATA=AGG_SIG_DATA,
+    AGG_SIG_PARENT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([43])),
+    AGG_SIG_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([44])),
+    AGG_SIG_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([45])),
+    AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([46])),
+    AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([47])),
+    AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([48])),
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bytes32.fromhex(
         "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
     ),
@@ -47,11 +56,11 @@ test_constants = ConsensusConstants(
     MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),
     POOL_SUB_SLOT_ITERS=uint64(37600000000),
-    SOFT_FORK2_HEIGHT=uint32(0),
+    SOFT_FORK2_HEIGHT=uint32(0),  # unused
     SOFT_FORK4_HEIGHT=uint32(5650000),
     SOFT_FORK5_HEIGHT=uint32(5940000),
     HARD_FORK_HEIGHT=uint32(5496000),
-    HARD_FORK_FIX_HEIGHT=uint32(5496000),
+    HARD_FORK_FIX_HEIGHT=uint32(0),  # unused
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     PLOT_FILTER_64_HEIGHT=uint32(15592000),
     PLOT_FILTER_32_HEIGHT=uint32(20643000),
@@ -70,6 +79,28 @@ def test_replace_str_to_bytes() -> None:
     )
     assert test2.GENESIS_PRE_FARM_FARMER_PUZZLE_HASH == bytes32.fromhex(
         "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    )
+
+
+def test_replace_str_to_bytes_additional_data() -> None:
+    test2 = replace_str_to_bytes(
+        test_constants,
+        AGG_SIG_ME_ADDITIONAL_DATA="0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    )
+
+    # if we update AGG_SIG_ME_ADDITIONAL_DATA, the other additional data is also
+    # updated
+
+    AGG_SIG_DATA = bytes32.fromhex("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc")
+    assert test2 == replace_str_to_bytes(
+        test_constants,
+        AGG_SIG_ME_ADDITIONAL_DATA="0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        AGG_SIG_PARENT_ADDITIONAL_DATA="0x" + std_hash(AGG_SIG_DATA + bytes([43])).hex(),
+        AGG_SIG_PUZZLE_ADDITIONAL_DATA="0x" + std_hash(AGG_SIG_DATA + bytes([44])).hex(),
+        AGG_SIG_AMOUNT_ADDITIONAL_DATA="0x" + std_hash(AGG_SIG_DATA + bytes([45])).hex(),
+        AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA="0x" + std_hash(AGG_SIG_DATA + bytes([46])).hex(),
+        AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA="0x" + std_hash(AGG_SIG_DATA + bytes([47])).hex(),
+        AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA="0x" + std_hash(AGG_SIG_DATA + bytes([48])).hex(),
     )
 
 

@@ -10,10 +10,12 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Set, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, cast
 
 import aiohttp
 import aiosqlite
+import big_o
+import big_o.complexities
 import pytest
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
@@ -22,6 +24,7 @@ from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, T
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
+    Node,
     NodeType,
     OperationType,
     ProofOfInclusion,
@@ -1514,16 +1517,89 @@ async def test_clear_pending_roots_returns_root(
     assert cleared_root == pending_root
 
 
-@dataclass
-class BatchInsertBenchmarkCase:
-    pre: int
-    count: int
-    limit: float
-    marks: Marks = ()
+@pytest.mark.anyio
+async def test_benchmark_batch_insert_speed(
+    data_store: DataStore,
+    store_id: bytes32,
+    benchmark_runner: BenchmarkRunner,
+) -> None:
+    r = random.Random()
+    r.seed("shadowlands", version=2)
 
-    @property
-    def id(self) -> str:
-        return f"pre={self.pre},count={self.count}"
+    test_size = 100
+    max_pre_size = 20_000
+    # may not be needed if big_o already considers the effect
+    # TODO: must be > 0 to avoid an issue with the log class?
+    lowest_considered_n = 2000
+    simplicity_bias_percentage = 10 / 100
+
+    batch_count, remainder = divmod(max_pre_size, test_size)
+    assert remainder == 0, "the last batch would be a different size"
+
+    changelist = [
+        {
+            "action": "insert",
+            "key": x.to_bytes(32, byteorder="big", signed=False),
+            "value": bytes(r.getrandbits(8) for _ in range(1200)),
+        }
+        for x in range(max_pre_size)
+    ]
+
+    pre = changelist[:max_pre_size]
+
+    records: Dict[int, float] = {}
+
+    total_inserted = 0
+    pre_iter = iter(pre)
+    with benchmark_runner.print_runtime(
+        label="overall",
+        clock=time.monotonic,
+    ):
+        while True:
+            pre_batch = list(itertools.islice(pre_iter, test_size))
+            if len(pre_batch) == 0:
+                break
+
+            with benchmark_runner.print_runtime(
+                label="count",
+                clock=time.monotonic,
+            ) as f:
+                await data_store.insert_batch(
+                    store_id=store_id,
+                    changelist=pre_batch,
+                    # TODO: does this mess up test accuracy?
+                    status=Status.COMMITTED,
+                )
+
+            records[total_inserted] = f.result().duration
+            total_inserted += len(pre_batch)
+
+    considered_durations = {n: duration for n, duration in records.items() if n >= lowest_considered_n}
+    ns = list(considered_durations.keys())
+    durations = list(considered_durations.values())
+    best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations)
+    simplicity_bias = simplicity_bias_percentage * fitted[best_class]
+    best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations, simplicity_bias=simplicity_bias)
+
+    print(f"allowed simplicity bias: {simplicity_bias}")
+    print(big_o.reports.big_o_report(best=best_class, others=fitted))
+
+    assert isinstance(
+        best_class, (big_o.complexities.Constant, big_o.complexities.Linear)
+    ), f"must be constant or linear: {best_class}"
+
+    coefficient_maximums = [0.65, 0.000_25, *(10**-n for n in range(5, 100))]
+
+    coefficients = best_class.coefficients()
+    paired = list(zip(coefficients, coefficient_maximums))
+    assert len(paired) == len(coefficients)
+    for index, [actual, maximum] in enumerate(paired):
+        benchmark_runner.record_value(
+            value=actual,
+            limit=maximum,
+            label=f"{type(best_class).__name__} coefficient {index}",
+        )
+        assert actual <= maximum, f"(coefficient {index}) {actual} > {maximum}: {paired}"
 
 
 @dataclass
@@ -1536,69 +1612,6 @@ class BatchesInsertBenchmarkCase:
     @property
     def id(self) -> str:
         return f"count={self.count},batch_count={self.batch_count}"
-
-
-@datacases(
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=100,
-        limit=2.2,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=1_000,
-        count=100,
-        limit=4,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=1_000,
-        limit=30,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=1_000,
-        count=1_000,
-        limit=36,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=10_000,
-        count=25_000,
-        limit=52,
-    ),
-)
-@pytest.mark.anyio
-async def test_benchmark_batch_insert_speed(
-    data_store: DataStore,
-    store_id: bytes32,
-    benchmark_runner: BenchmarkRunner,
-    case: BatchInsertBenchmarkCase,
-) -> None:
-    r = random.Random()
-    r.seed("shadowlands", version=2)
-
-    changelist = [
-        {
-            "action": "insert",
-            "key": x.to_bytes(32, byteorder="big", signed=False),
-            "value": bytes(r.getrandbits(8) for _ in range(1200)),
-        }
-        for x in range(case.pre + case.count)
-    ]
-
-    pre = changelist[: case.pre]
-    batch = changelist[case.pre : case.pre + case.count]
-
-    if case.pre > 0:
-        await data_store.insert_batch(
-            store_id=store_id,
-            changelist=pre,
-            status=Status.COMMITTED,
-        )
-
-    with benchmark_runner.assert_runtime(seconds=case.limit):
-        await data_store.insert_batch(
-            store_id=store_id,
-            changelist=batch,
-        )
 
 
 @datacases(
@@ -2050,3 +2063,99 @@ async def test_migration_unknown_version(data_store: DataStore) -> None:
         )
     with pytest.raises(Exception, match="Unknown version"):
         await data_store.migrate_db()
+
+
+async def _check_ancestors(
+    data_store: DataStore, store_id: bytes32, root_hash: bytes32
+) -> Dict[bytes32, Optional[bytes32]]:
+    ancestors: Dict[bytes32, Optional[bytes32]] = {}
+    root_node: Node = await data_store.get_node(root_hash)
+    queue: List[Node] = [root_node]
+
+    while queue:
+        node = queue.pop(0)
+        if isinstance(node, InternalNode):
+            left_node = await data_store.get_node(node.left_hash)
+            right_node = await data_store.get_node(node.right_hash)
+            ancestors[left_node.hash] = node.hash
+            ancestors[right_node.hash] = node.hash
+            queue.append(left_node)
+            queue.append(right_node)
+
+    ancestors[root_hash] = None
+    for node_hash, ancestor_hash in ancestors.items():
+        ancestor_node = await data_store._get_one_ancestor(node_hash, store_id)
+        if ancestor_hash is None:
+            assert ancestor_node is None
+        else:
+            assert ancestor_node is not None
+            assert ancestor_node.hash == ancestor_hash
+
+    return ancestors
+
+
+@pytest.mark.anyio
+async def test_build_ancestor_table(data_store: DataStore, store_id: bytes32) -> None:
+    num_values = 1000
+    changelist: List[Dict[str, Any]] = []
+    for value in range(num_values):
+        value_bytes = value.to_bytes(4, byteorder="big")
+        changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
+    await data_store.insert_batch(
+        store_id=store_id,
+        changelist=changelist,
+        status=Status.PENDING,
+    )
+
+    pending_root = await data_store.get_pending_root(store_id=store_id)
+    assert pending_root is not None
+    assert pending_root.node_hash is not None
+    await data_store.change_root_status(pending_root, Status.COMMITTED)
+    await data_store.build_ancestor_table_for_latest_root(store_id=store_id)
+
+    assert pending_root.node_hash is not None
+    await _check_ancestors(data_store, store_id, pending_root.node_hash)
+
+
+@pytest.mark.anyio
+async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -> None:
+    num_values = 100
+    for value in range(num_values):
+        value_bytes = value.to_bytes(4, byteorder="big")
+        await data_store.autoinsert(
+            key=value_bytes,
+            value=value_bytes,
+            store_id=store_id,
+            status=Status.COMMITTED,
+        )
+        root = await data_store.get_tree_root(store_id=store_id)
+        assert root.node_hash is not None
+        ancestors = await _check_ancestors(data_store, store_id, root.node_hash)
+
+    # Check the ancestor table is sparse
+    root_generation = root.generation
+    current_generation_count = 0
+    previous_generation_count = 0
+    for node_hash, ancestor_hash in ancestors.items():
+        async with data_store.db_wrapper.reader() as reader:
+            if ancestor_hash is not None:
+                cursor = await reader.execute(
+                    "SELECT MAX(generation) AS generation FROM ancestors WHERE hash == :hash AND ancestor == :ancestor",
+                    {"hash": node_hash, "ancestor": ancestor_hash},
+                )
+            else:
+                cursor = await reader.execute(
+                    "SELECT MAX(generation) AS generation FROM ancestors WHERE hash == :hash AND ancestor IS NULL",
+                    {"hash": node_hash},
+                )
+            row = await cursor.fetchone()
+            assert row is not None
+            generation = row["generation"]
+            assert generation <= root_generation
+            if generation == root_generation:
+                current_generation_count += 1
+            else:
+                previous_generation_count += 1
+
+    assert current_generation_count == 15
+    assert previous_generation_count == 184

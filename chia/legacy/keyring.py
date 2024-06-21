@@ -23,9 +23,9 @@ except ImportError:
     CryptFileKeyring = None
 
 
+from chia.cmds.cmds_util import prompt_yes_no
 from chia.util.errors import KeychainUserNotFound
 from chia.util.keychain import KeyData, KeyDataSecrets, get_private_key_user
-from chia.util.misc import prompt_yes_no
 
 LegacyKeyring = Union[MacKeyring, WinKeyring, CryptFileKeyring]
 

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from chia_rs import BLSCache
+
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
-from chia.util.cached_bls import BLSCache
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 
@@ -33,8 +34,7 @@ async def check_block_store_invariant(bc: Blockchain):
                     # height can only have a single block with in_main_chain set
                     assert height not in in_chain
                     in_chain.add(height)
-                    if height > max_height:
-                        max_height = height
+                    max_height = max(max_height, height)
 
             # make sure every height is represented in the set
             assert len(in_chain) == max_height + 1
