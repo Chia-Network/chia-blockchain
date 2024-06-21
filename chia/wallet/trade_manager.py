@@ -299,7 +299,9 @@ class TradeManager:
                     self.log.error(f"Cannot find wallet for offer {trade.trade_id}, skip cancellation.")
                     continue
 
-                new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
+                new_ph = await wallet.wallet_state_manager.main_wallet.get_puzzle_hash(
+                    new=(not tx_config.reuse_puzhash)
+                )
 
                 if len(trade_records) > 1 or len(cancellation_coins) > 1:
                     announcement_conditions: Tuple[Condition, ...] = (
