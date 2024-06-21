@@ -264,7 +264,7 @@ jobs:
       # TODO: review for any indirect usage
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
       # TODO: consider case on all of these
-      GUI_FILE: chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix[matrix.arch.matrix] }}.dmg
+      GUI_FILE: chia-${{ needs.version.outputs.chia-installer-version }}${{ matrix.os.file-suffix[matrix.arch.matrix] }}.dmg
       GUI_LATEST_DEV_FILE: Chia${{ matrix.os.file-suffix[matrix.arch.matrix] }}_latest_dev.dmg
       INSTALL_S3_URL: s3://download.chia.net/install/
       DEV_S3_URL: s3://download.chia.net/dev
