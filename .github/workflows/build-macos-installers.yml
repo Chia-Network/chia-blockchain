@@ -312,7 +312,7 @@ jobs:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
-          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension[matrix.arch.matrix] }}-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
+          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
           path: artifacts/
 
       - name: Set Env
