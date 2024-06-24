@@ -9,7 +9,7 @@ git submodule update --init chia-blockchain-gui
 
 cd ./chia-blockchain-gui || exit 1
 echo "npm build"
-npx --no lerna clean -y # With --no option, `npx` guarantees not to install package from remote registry
+npx lerna clean -y # Removes packages/*/node_modules
 npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
