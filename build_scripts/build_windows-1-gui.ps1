@@ -14,8 +14,8 @@ Write-Output "Build GUI npm modules"
 Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 
-Write-Output "lerna clean -y"
-npx --no lerna clean -y # With --no option, `npx` guarantees not to install package from remote registry
+Write-Output "npx lerna clean -y"
+npx lerna clean -y # Removes packages/*/node_modules
 Write-Output "npm ci"
 npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
