@@ -247,7 +247,7 @@ jobs:
     needs:
       - version
       - build
-    timeout-minutes: ${{ matrix.arch.timeout }}
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
