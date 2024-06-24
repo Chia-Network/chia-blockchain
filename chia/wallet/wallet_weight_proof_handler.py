@@ -114,7 +114,7 @@ def get_fork_ses_idx(old_wp: Optional[WeightProof], new_wp: WeightProof) -> int:
     actual fork point, it can return a height that is before the actual fork point.
     """
 
-    log.warn("Starting get_fork_ses_idx")
+    log.warning("Starting get_fork_ses_idx")
 
     now = time.monotonic()
 
@@ -134,6 +134,6 @@ def get_fork_ses_idx(old_wp: Optional[WeightProof], new_wp: WeightProof) -> int:
             ses_index = idx
             break
 
-    log.warn(f"get_fork_ses_idx took {time.monotonic() - now} seconds")
+    log.warning(f"get_fork_ses_idx took {time.monotonic() - now} seconds")
 
     return ses_index
