@@ -611,7 +611,7 @@ class MempoolManager:
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             log.debug(f"Replace attempted. number of MempoolItems: {len(conflicts)}")
-            if not can_replace(conflicts, removal_names, potential):
+            if len(conflicts) > 1 or not can_replace(conflicts, removal_names, potential):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.time() - start_time
