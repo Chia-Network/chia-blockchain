@@ -6,7 +6,7 @@ import os
 import pathlib
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -607,6 +607,11 @@ async def print_offer_summary(
         print(output)
 
 
+def format_timestamp_with_timezone(timestamp: int) -> str:
+    tzinfo = datetime.now(timezone.utc).astimezone().tzinfo
+    return datetime.fromtimestamp(timestamp, tz=tzinfo).strftime("%Y-%m-%d %H:%M %Z")
+
+
 async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient, summaries: bool = False) -> None:
     print()
     print(f"Record with id: {record.trade_id}")
@@ -629,6 +634,15 @@ async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient
         print("Pending Outbound Balances:")
         await print_offer_summary(cat_name_resolver, outbound_balances, has_fee=(fees > 0))
         print(f"Included Fees: {fees / units['chia']} XCH, {fees} mojos")
+        print("Timelock information:")
+        if record.valid_times.min_time is not None:
+            print("  - Not valid until " f"{format_timestamp_with_timezone(record.valid_times.min_time)}")
+        if record.valid_times.min_height is not None:
+            print(f"  - Not valid until height {record.valid_times.min_height}")
+        if record.valid_times.max_time is not None:
+            print("  - Expires at " f"{format_timestamp_with_timezone(record.valid_times.max_time)} " "(+/- 10 min)")
+        if record.valid_times.max_height is not None:
+            print(f"  - Expires at height {record.valid_times.max_height} (wait ~10 blocks after to be reorg safe)")
     print("---------------")
 
 
