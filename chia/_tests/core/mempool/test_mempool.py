@@ -98,11 +98,13 @@ def generate_test_spend_bundle(
     return transaction
 
 
-def make_item(idx: int, cost: uint64 = uint64(80), assert_height: uint32 = uint32(100)) -> MempoolItem:
+def make_item(
+    idx: int, cost: uint64 = uint64(80), assert_height: uint32 = uint32(100), fee: uint64 = uint64(0)
+) -> MempoolItem:
     spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
         SpendBundle([], G2Element()),
-        uint64(0),
+        fee,
         NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0)),
         spend_bundle_name,
         uint32(0),
