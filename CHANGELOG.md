@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.4.1 Chia blockchain 2024-06-25
+
+## What's Changed
+### Fixed
+* Fixed light wallet (wallet only) syncing issues introduced in 2.4.0
+
+### Known Issues
+* A breaking backwards compatibility issue was introduced in 2.4.0 in the daemon RPC call `add_private_key`. We expect to resolve this in a future release.
+
+### Deprecated
+macOS 11 (Big Sur) is deprecated. This release (2.4.1) will be the last release to support macOS 11
+
 ## 2.4.0 Chia blockchain 2024-06-20
 
 ## What's Changed
