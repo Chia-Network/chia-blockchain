@@ -435,6 +435,9 @@ jobs:
           - name: Intel
             matrix: intel
 
+    env:
+      INSTALL_PATH: installed/
+
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
 
@@ -445,8 +448,6 @@ jobs:
           path: packages
 
       - name: Install package
-        env:
-          INSTALL_PATH: installed/
         run: |
           dir ./packages/
           $env:INSTALLER_PATH = (Get-ChildItem packages/ChiaSetup-*.exe)
@@ -457,7 +458,5 @@ jobs:
           Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
 
       - name: Run chia dev installers test
-        env:
-          INSTALL_PATH: installed/
         run: |
           & ($env:INSTALL_PATH + "/resource/app.asar.unpacked/daemon/chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
