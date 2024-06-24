@@ -79,14 +79,16 @@ def get_wp_fork_point(constants: ConsensusConstants, old_wp: Optional[WeightProo
 
     overflow = 0
     count = 0
-    for idx, new_ses in enumerate(new_wp.sub_epochs):
-        if idx == len(new_wp.sub_epochs) - 1 or idx == len(old_wp.sub_epochs):
+    old_sub_epochs = old_wp.sub_epochs
+    new_sub_epochs = new_wp.sub_epochs
+    for idx, new_ses in enumerate(new_sub_epochs):
+        if idx == len(new_sub_epochs) - 1 or idx == len(old_sub_epochs):
             break
-        if new_ses.reward_chain_hash != old_wp.sub_epochs[idx].reward_chain_hash:
+        if new_ses.reward_chain_hash != old_sub_epochs[idx].reward_chain_hash:
             break
 
         count = idx + 1
-        overflow = new_wp.sub_epochs[idx + 1].num_blocks_overflow
+        overflow = new_sub_epochs[idx + 1].num_blocks_overflow
 
     if new_wp.recent_chain_data[0].height < old_wp.recent_chain_data[-1].height:
         # Try to find an exact fork point
@@ -112,15 +114,26 @@ def get_fork_ses_idx(old_wp: Optional[WeightProof], new_wp: WeightProof) -> int:
     actual fork point, it can return a height that is before the actual fork point.
     """
 
+    log.warn("Starting get_fork_ses_idx")
+
+    now = time.monotonic()
+
     if old_wp is None:
         return uint32(0)
+
+    old_sub_epochs = old_wp.sub_epochs
+    new_sub_epochs = new_wp.sub_epochs
+
     ses_index = 0
-    for idx, new_ses in enumerate(new_wp.sub_epochs):
-        if new_ses.reward_chain_hash != old_wp.sub_epochs[idx].reward_chain_hash:
+    for idx, new_ses in enumerate(new_sub_epochs):
+        if new_ses.reward_chain_hash != old_sub_epochs[idx].reward_chain_hash:
             ses_index = idx
             break
 
-        if idx == len(old_wp.sub_epochs) - 1:
+        if idx == len(old_sub_epochs) - 1:
             ses_index = idx
             break
+
+    log.warn(f"get_fork_ses_idx took {time.monotonic() - now} seconds")
+
     return ses_index
