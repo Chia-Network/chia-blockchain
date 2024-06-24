@@ -551,6 +551,7 @@ class TestConditions:
         pubkey = sk.get_g1()
         coin = blocks[-2].get_included_reward_coins()[0]
         for msg in [
+            c.AGG_SIG_ME_ADDITIONAL_DATA,
             c.AGG_SIG_PARENT_ADDITIONAL_DATA,
             c.AGG_SIG_PUZZLE_ADDITIONAL_DATA,
             c.AGG_SIG_AMOUNT_ADDITIONAL_DATA,
