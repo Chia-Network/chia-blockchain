@@ -24,7 +24,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.errors import CliRpcConnectionError
+from chia.util.errors import CliRpcConnectionError, InvalidPathError
 from chia.util.ints import uint16, uint64
 from chia.util.keychain import KeyData
 from chia.util.streamable import Streamable, streamable
@@ -136,7 +136,7 @@ async def get_any_service_client(
         if tb is not None:
             print(f"Traceback:\n{tb}")
     except Exception as e:  # this is only here to make the errors more user-friendly.
-        if not consume_errors or isinstance(e, CliRpcConnectionError) or isinstance(e, click.Abort):
+        if not consume_errors or isinstance(e, (CliRpcConnectionError, click.Abort)):
             # CliRpcConnectionError will be handled by click.
             raise
         print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
@@ -362,3 +362,85 @@ class CMDTXConfigLoader(CMDCoinSelectionConfigLoader):
             cs_config.excluded_coin_ids,
             self.reuse_puzhash,
         ).autofill(constants=DEFAULT_CONSTANTS, config=config, logged_in_fingerprint=fingerprint)
+
+
+def format_bytes(bytes: int) -> str:
+    if not isinstance(bytes, int) or bytes < 0:
+        return "Invalid"
+
+    LABELS = ("MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB")
+    BASE = 1024
+    value = bytes / BASE
+    for label in LABELS:
+        value /= BASE
+        if value < BASE:
+            return f"{value:.3f} {label}"
+
+    return f"{value:.3f} {LABELS[-1]}"
+
+
+def format_minutes(minutes: int) -> str:
+    if not isinstance(minutes, int):
+        return "Invalid"
+
+    if minutes == 0:
+        return "Now"
+
+    hour_minutes = 60
+    day_minutes = 24 * hour_minutes
+    week_minutes = 7 * day_minutes
+    months_minutes = 43800
+    year_minutes = 12 * months_minutes
+
+    years = int(minutes / year_minutes)
+    months = int(minutes / months_minutes)
+    weeks = int(minutes / week_minutes)
+    days = int(minutes / day_minutes)
+    hours = int(minutes / hour_minutes)
+
+    def format_unit_string(str_unit: str, count: int) -> str:
+        return f"{count} {str_unit}{('s' if count > 1 else '')}"
+
+    def format_unit(unit: str, count: int, unit_minutes: int, next_unit: str, next_unit_minutes: int) -> str:
+        formatted = format_unit_string(unit, count)
+        minutes_left = minutes % unit_minutes
+        if minutes_left >= next_unit_minutes:
+            formatted += " and " + format_unit_string(next_unit, int(minutes_left / next_unit_minutes))
+        return formatted
+
+    if years > 0:
+        return format_unit("year", years, year_minutes, "month", months_minutes)
+    if months > 0:
+        return format_unit("month", months, months_minutes, "week", week_minutes)
+    if weeks > 0:
+        return format_unit("week", weeks, week_minutes, "day", day_minutes)
+    if days > 0:
+        return format_unit("day", days, day_minutes, "hour", hour_minutes)
+    if hours > 0:
+        return format_unit("hour", hours, hour_minutes, "minute", 1)
+    if minutes > 0:
+        return format_unit_string("minute", minutes)
+
+    return "Unknown"
+
+
+def prompt_yes_no(prompt: str) -> bool:
+    while True:
+        response = str(input(prompt + " (y/n): ")).lower().strip()
+        ch = response[:1]
+        if ch == "y":
+            return True
+        elif ch == "n":
+            return False
+
+
+def validate_directory_writable(path: Path) -> None:
+    write_test_path = path / ".write_test"
+    try:
+        with write_test_path.open("w"):
+            pass
+        write_test_path.unlink()
+    except FileNotFoundError:
+        raise InvalidPathError(path, "Directory doesn't exist")
+    except OSError:
+        raise InvalidPathError(path, "Directory not writable")

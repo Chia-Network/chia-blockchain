@@ -1949,8 +1949,7 @@ def compute_fee_test(additions: Sequence[Coin], removals: Sequence[Coin]) -> uin
     ret = removal_amount - addition_amount
     # in order to allow creating blocks that mint coins, clamp the fee
     # to 0, if it ends up being negative
-    if ret < 0:
-        ret = 0
+    ret = max(ret, 0)
     return uint64(ret)
 
 

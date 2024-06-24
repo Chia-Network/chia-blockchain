@@ -58,9 +58,8 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
-from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.path import path_from_root
-from chia.util.streamable import Streamable
+from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
@@ -2073,7 +2072,7 @@ class WalletStateManager:
                 self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
                 if rollback_wallets is not None:
                     self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
-                if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
+                if isinstance(e, (PeerRequestException, aiosqlite.Error)):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
                     await self.retry_store.remove_state(coin_state)
