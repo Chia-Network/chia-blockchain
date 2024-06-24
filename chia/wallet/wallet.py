@@ -14,6 +14,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
+from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
@@ -50,6 +51,7 @@ from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
     SigningResponse,
+    SigningTarget,
     Spend,
     SumHint,
     TransactionInfo,
@@ -563,6 +565,31 @@ class Wallet:
         return PathHint(
             root_fingerprint,
             [uint64(12381), uint64(8444), uint64(2), uint64(index)],
+        )
+
+    async def gather_signing_info(self, coin_spends: list[Spend]) -> SigningInstructions:
+        pks: List[bytes] = []
+        signing_targets: List[SigningTarget] = []
+        for coin_spend in coin_spends:
+            _coin_spend = coin_spend.as_coin_spend()
+            # Get AGG_SIG conditions
+            conditions_dict = conditions_dict_for_solution(
+                _coin_spend.puzzle_reveal.to_program(),
+                _coin_spend.solution.to_program(),
+                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            )
+            # Create signature
+            for pk, msg in pkm_pairs_for_conditions_dict(
+                conditions_dict, _coin_spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
+                pk_bytes = bytes(pk)
+                pks.append(pk_bytes)
+                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
+                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
+
+        return SigningInstructions(
+            await self.wallet_state_manager.key_hints_for_pubkeys(pks),
+            signing_targets,
         )
 
     async def execute_signing_instructions(
