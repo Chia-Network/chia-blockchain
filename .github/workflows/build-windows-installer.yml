@@ -460,4 +460,4 @@ jobs:
         env:
           INSTALL_PATH: installed/
         run: |
-          & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
+          & ($env:INSTALL_PATH + "/resource/app.asar.unpacked/daemon/chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
