@@ -174,9 +174,8 @@ class KeychainServer:
     async def handle_command(self, command: str, data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             if command == "add_private_key":
-                return await self.add_key(
-                    {"mnemonic_or_pk": data.get("mnemonic", None), "label": data.get("label", None), "private": True}
-                )
+                data["private"] = True
+                return await self.add_key(data)
             elif command == "add_key":
                 return await self.add_key(data)
             elif command == "check_keys":
