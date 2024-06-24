@@ -53,6 +53,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10"]
+        os:
+          - arch: amd64
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
@@ -133,7 +135,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           development: true
-          constraints-file-artifact-name: constraints-file-intel
+          constraints-file-artifact-name: constraints-file-${{ matrix.os.arch }}
 
       - uses: chia-network/actions/activate-venv@main
 
