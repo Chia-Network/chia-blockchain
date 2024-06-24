@@ -175,6 +175,7 @@ class KeychainServer:
         try:
             if command == "add_private_key":
                 data["private"] = True
+                data["mnemonic_or_pk"] = data.get("mnemonic_or_pk", data.get("mnemonic", None))
                 return await self.add_key(data)
             elif command == "add_key":
                 return await self.add_key(data)
