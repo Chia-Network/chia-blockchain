@@ -276,7 +276,8 @@ jobs:
         exclude:
           - os:
               matrix: macos
-            mode: cli
+            mode:
+              matrix: cli
     env:
       # TODO: review for any indirect usage
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
