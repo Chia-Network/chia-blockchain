@@ -260,7 +260,7 @@ jobs:
             glue-name:
               intel: build-windows
             artifact-platform-name: windows
-            artifact-name:
+            file-arch-name:
               intel: intel
             file-suffix:
               arm: ""
@@ -288,14 +288,14 @@ jobs:
           - os:
               matrix: windows
             mode:
-              matrix: gui
+              matrix: cli
 
     env:
       # TODO: review for any indirect usage
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
-      FILE: ${{ format(matrix.os.names[matrix.mode.matrix].file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.artifact-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
-      DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.artifact-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
-      LATEST_DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].latest-dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.artifact-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
+      FILE: ${{ format(matrix.os.names[matrix.mode.matrix].file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
+      DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
+      LATEST_DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].latest-dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
       INSTALL_S3_URL: s3://download.chia.net/install/
       DEV_S3_URL: s3://download.chia.net/dev/
       LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev/
@@ -319,7 +319,7 @@ jobs:
       - name: Download constraints file
         uses: actions/download-artifact@v4
         with:
-          name: constraints-file-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
+          name: constraints-file-${{ matrix.os.file-arch-name[matrix.arch.matrix] }}
           path: venv
 
       - name: Install utilities
@@ -329,7 +329,7 @@ jobs:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
-          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.os.artifact-name[matrix.arch.matrix] }}
+          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.os.file-arch-name[matrix.arch.matrix] }}
           path: artifacts/
 
       - name: Set Env
