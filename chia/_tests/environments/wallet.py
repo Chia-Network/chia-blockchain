@@ -98,16 +98,6 @@ class WalletEnvironment:
     def xch_wallet(self) -> Wallet:
         return self.service._node.wallet_state_manager.main_wallet
 
-    async def restart(self, new_fingerprint: Optional[int]) -> None:
-        old_peer_info = next(v for v in self.node.server.all_connections.values()).peer_info
-        await self.rpc_client.log_in(
-            new_fingerprint if new_fingerprint is not None else self.wallet_state_manager.root_pubkey.get_fingerprint()
-        )
-
-        await self.node.server.start_client(old_peer_info, None)
-
-        self.wallet_states = {}
-
     def dealias_wallet_id(self, wallet_id_or_alias: Union[int, str]) -> uint32:
         """
         This function turns something that is either a wallet id or a wallet alias into a wallet id.
