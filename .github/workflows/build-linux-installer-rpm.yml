@@ -55,6 +55,7 @@ jobs:
         python-version: ["3.10"]
         os:
           - arch: x86_64
+            artifact-name: intel
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
@@ -135,7 +136,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           development: true
-          constraints-file-artifact-name: constraints-file-${{ matrix.os.arch }}
+          constraints-file-artifact-name: constraints-file-${{ matrix.os.arch-artifact-name }}
 
       - uses: chia-network/actions/activate-venv@main
 
@@ -180,7 +181,7 @@ jobs:
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: chia-installers-linux-rpm-x86_64
+          name: chia-installers-linux-rpm-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
 
       - name: Remove working files to exclude from cache
@@ -228,8 +229,10 @@ jobs:
         arch:
           - name: ARM64
             matrix: arm
+            artifact-name: arm
           - name: Intel
             matrix: intel
+            artifact-name: intel
         exclude:
           - os:
               matrix: redhat
@@ -265,7 +268,7 @@ jobs:
       - name: Download constraints file
         uses: actions/download-artifact@v4
         with:
-          name: constraints-file-${{ matrix.os.file-arch-name[matrix.arch.matrix] }}
+          name: constraints-file-${{ matrix.arch.artifact-name }}
           path: venv
 
       - name: Install utilities
@@ -275,7 +278,7 @@ jobs:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
-          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.os.file-arch-name[matrix.arch.matrix] }}
+          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.arch.artifact-name }}
           path: artifacts/
 
       - name: Set Env

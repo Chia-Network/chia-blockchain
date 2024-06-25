@@ -278,8 +278,10 @@ jobs:
         arch:
           - name: ARM64
             matrix: arm
+            artifact-name: arm
           - name: Intel
             matrix: intel
+            artifact-name: intel
         exclude:
           - os:
               matrix: windows
@@ -319,7 +321,7 @@ jobs:
       - name: Download constraints file
         uses: actions/download-artifact@v4
         with:
-          name: constraints-file-${{ matrix.os.file-arch-name[matrix.arch.matrix] }}
+          name: constraints-file-${{ matrix.arch.artifact-name }}
           path: venv
 
       - name: Install utilities
@@ -329,7 +331,7 @@ jobs:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
-          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.os.file-arch-name[matrix.arch.matrix] }}
+          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.arch.artifact-name }}
           path: artifacts/
 
       - name: Set Env

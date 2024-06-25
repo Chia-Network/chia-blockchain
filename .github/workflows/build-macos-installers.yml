@@ -55,9 +55,11 @@ jobs:
           - runs-on: macos-12
             name: intel
             bladebit-suffix: macos-x86-64.tar.gz
+            arch-artifact-name: intel
           - runs-on: [MacOS, ARM64]
             name: m1
             bladebit-suffix: macos-arm64.tar.gz
+            arch-artifact-name: arm
 
     env:
       CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
@@ -169,7 +171,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           development: true
-          constraints-file-artifact-name: constraints-file-${{ matrix.os.name }}
+          constraints-file-artifact-name: constraints-file-${{ matrix.os.arch-artifact-name }}
 
       - uses: chia-network/actions/activate-venv@main
 
@@ -216,7 +218,7 @@ jobs:
       - name: Upload MacOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: chia-installers-macos-dmg-${{ matrix.os.name }}
+          name: chia-installers-macos-dmg-${{ matrix.os.arch-artifact-name }}
           path: build_scripts/final_installer/
 
       - name: Remove working files to exclude from cache
@@ -267,8 +269,10 @@ jobs:
         arch:
           - name: ARM64
             matrix: arm
+            artifact-name: arm
           - name: Intel
             matrix: intel
+            artifact-name: intel
         exclude:
           - os:
               matrix: macos
@@ -302,7 +306,7 @@ jobs:
       - name: Download constraints file
         uses: actions/download-artifact@v4
         with:
-          name: constraints-file-${{ matrix.os.file-arch-name[matrix.arch.matrix] }}
+          name: constraints-file-${{ matrix.arch.artifact-name }}
           path: venv
 
       - name: Install utilities
@@ -312,7 +316,7 @@ jobs:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
-          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.os.file-arch-name[matrix.arch.matrix] }}
+          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.arch.artifact-name }}
           path: artifacts/
 
       - name: Set Env
@@ -420,7 +424,7 @@ jobs:
         arch:
           - name: ARM64
             matrix: arm
-            artifact-name: m1
+            artifact-name: arm
           - name: Intel
             matrix: intel
             artifact-name: intel
