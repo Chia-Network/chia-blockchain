@@ -15,6 +15,8 @@ from chia._tests.connection_utils import add_dummy_connection, connect_and_get_p
 from chia._tests.core.mempool.test_mempool_manager import (
     IDENTITY_PUZZLE_HASH,
     TEST_COIN,
+    assert_sb_in_pool,
+    assert_sb_not_in_pool,
     make_test_coins,
     mempool_item_from_spendbundle,
     mk_item,
@@ -98,11 +100,13 @@ def generate_test_spend_bundle(
     return transaction
 
 
-def make_item(idx: int, cost: uint64 = uint64(80), assert_height: uint32 = uint32(100)) -> MempoolItem:
+def make_item(
+    idx: int, cost: uint64 = uint64(80), assert_height: uint32 = uint32(100), fee: uint64 = uint64(0)
+) -> MempoolItem:
     spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
         SpendBundle([], G2Element()),
-        uint64(0),
+        fee,
         NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0)),
         spend_bundle_name,
         uint32(0),
@@ -586,12 +590,6 @@ class TestMempoolManager:
         assert sb2 is None
         assert status == MempoolInclusionStatus.PENDING
 
-    def assert_sb_in_pool(self, node: FullNodeSimulator, sb: SpendBundle) -> None:
-        assert sb == node.full_node.mempool_manager.get_spendbundle(sb.name())
-
-    def assert_sb_not_in_pool(self, node: FullNodeSimulator, sb: SpendBundle) -> None:
-        assert node.full_node.mempool_manager.get_spendbundle(sb.name()) is None
-
     @pytest.mark.anyio
     async def test_double_spend_with_higher_fee(
         self, one_node_one_block: Tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
@@ -622,15 +620,15 @@ class TestMempoolManager:
         sb1_2 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=uint64(1))
 
         # Fee increase is insufficient, the old spendbundle must stay
-        self.assert_sb_in_pool(full_node_1, sb1_1)
-        self.assert_sb_not_in_pool(full_node_1, sb1_2)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb1_1)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1_2)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb1_3 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=MEMPOOL_MIN_FEE_INCREASE)
 
         # Fee increase is sufficiently high, sb1_1 gets replaced with sb1_3
-        self.assert_sb_not_in_pool(full_node_1, sb1_1)
-        self.assert_sb_in_pool(full_node_1, sb1_3)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1_1)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb1_3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb2 = generate_test_spend_bundle(wallet_a, coin2, fee=MEMPOOL_MIN_FEE_INCREASE)
@@ -639,8 +637,8 @@ class TestMempoolManager:
 
         # Aggregated spendbundle sb12 replaces sb1_3 since it spends a superset
         # of coins spent in sb1_3
-        self.assert_sb_in_pool(full_node_1, sb12)
-        self.assert_sb_not_in_pool(full_node_1, sb1_3)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb12)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1_3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb3 = generate_test_spend_bundle(wallet_a, coin3, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
@@ -649,20 +647,20 @@ class TestMempoolManager:
 
         # sb23 must not replace existing sb12 as the former does not spend all
         # coins that are spent in the latter (specifically, coin1)
-        self.assert_sb_in_pool(full_node_1, sb12)
-        self.assert_sb_not_in_pool(full_node_1, sb23)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb12)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb23)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         await send_sb(full_node_1, sb3)
         # Adding non-conflicting sb3 should succeed
-        self.assert_sb_in_pool(full_node_1, sb3)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb1234_1 = SpendBundle.aggregate([sb12, sb3, sb4_1])
         await send_sb(full_node_1, sb1234_1)
         # sb1234_1 should not be in pool as it decreases total fees per cost
-        self.assert_sb_not_in_pool(full_node_1, sb1234_1)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1234_1)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_2 = generate_test_spend_bundle(wallet_a, coin4, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
@@ -670,9 +668,9 @@ class TestMempoolManager:
         await send_sb(full_node_1, sb1234_2)
         # sb1234_2 has a higher fee per cost than its conflicts and should get
         # into mempool
-        self.assert_sb_in_pool(full_node_1, sb1234_2)
-        self.assert_sb_not_in_pool(full_node_1, sb12)
-        self.assert_sb_not_in_pool(full_node_1, sb3)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb1234_2)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb12)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
     @pytest.mark.anyio
