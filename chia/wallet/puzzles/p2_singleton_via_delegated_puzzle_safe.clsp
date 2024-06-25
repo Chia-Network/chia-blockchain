@@ -1,0 +1,33 @@
+(mod (
+    SINGLETON_MOD_HASH
+    SINGLETON_STRUCT_HASH
+    singleton_inner_puzhash
+    delegated_puzzle
+    delegated_solution
+    my_id
+  )
+
+  (include condition_codes.clib)
+  (include curry-and-treehash.clib)
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH singleton_inner_puzhash)
+    (puzzle-hash-of-curried-function SINGLETON_MOD_HASH
+      singleton_inner_puzhash
+      SINGLETON_STRUCT_HASH
+    )
+  )
+
+  (c
+    (list
+      ASSERT_PUZZLE_ANNOUNCEMENT
+      (sha256
+        (calculate_full_puzzle_hash SINGLETON_MOD_HASH SINGLETON_STRUCT_HASH singleton_inner_puzhash)
+        (sha256tree (list my_id (sha256tree delegated_puzzle)))
+      )
+    )
+    (c
+      (list ASSERT_MY_COIN_ID my_id)
+      (a delegated_puzzle delegated_solution)
+    )
+  )
+)
