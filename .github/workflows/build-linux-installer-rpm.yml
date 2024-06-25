@@ -180,7 +180,7 @@ jobs:
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: chia-installers-linux-rpm-intel
+          name: chia-installers-linux-rpm-x86_64
           path: build_scripts/final_installer/
 
       - name: Remove working files to exclude from cache
