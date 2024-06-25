@@ -86,7 +86,13 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
                 print(f"        {dict(row)}")
 
 
-async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
+async def _dot_dump(
+    data_store: DataStore,
+    store_id: bytes32,
+    # TODO: a none root hash means unspecified here, not empty
+    #       though it happens to be disallowed here
+    root_hash: bytes32,
+) -> str:
     terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
     internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
 

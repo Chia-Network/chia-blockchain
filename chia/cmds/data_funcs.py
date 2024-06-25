@@ -154,6 +154,7 @@ async def get_keys_cmd(
 async def get_keys_values_cmd(
     rpc_port: Optional[int],
     store_id: bytes32,
+    # TODO: a none root hash means unspecified here, not empty
     root_hash: Optional[bytes32],
     fingerprint: Optional[int],
     page: Optional[int],

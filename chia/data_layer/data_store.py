@@ -785,7 +785,12 @@ class DataStore:
             {"root_hash": root_hash, "node_type": NodeType.TERMINAL},
         )
 
-    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32] = None) -> List[TerminalNode]:
+    async def get_keys_values(
+        self,
+        store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
+        root_hash: Optional[bytes32] = None,
+    ) -> List[TerminalNode]:
         async with self.db_wrapper.reader() as reader:
             if root_hash is None:
                 root = await self.get_tree_root(store_id=store_id)
@@ -814,7 +819,10 @@ class DataStore:
         return terminal_nodes
 
     async def get_keys_values_compressed(
-        self, store_id: bytes32, root_hash: Optional[bytes32] = None
+        self,
+        store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
+        root_hash: Optional[bytes32] = None,
     ) -> KeysValuesCompressed:
         async with self.db_wrapper.reader() as reader:
             if root_hash is None:
@@ -853,7 +861,12 @@ class DataStore:
         return result
 
     async def get_keys_paginated(
-        self, store_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
+        self,
+        store_id: bytes32,
+        page: int,
+        max_page_size: int,
+        # TODO: a none root hash means unspecified here, not empty
+        root_hash: Optional[bytes32] = None,
     ) -> KeysPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(store_id, root_hash)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
@@ -873,7 +886,12 @@ class DataStore:
         )
 
     async def get_keys_values_paginated(
-        self, store_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
+        self,
+        store_id: bytes32,
+        page: int,
+        max_page_size: int,
+        # TODO: a none root hash means unspecified here, not empty
+        root_hash: Optional[bytes32] = None,
     ) -> KeysValuesPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(store_id, root_hash)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
@@ -892,7 +910,13 @@ class DataStore:
         )
 
     async def get_kv_diff_paginated(
-        self, store_id: bytes32, page: int, max_page_size: int, hash1: bytes32, hash2: bytes32
+        self,
+        store_id: bytes32,
+        page: int,
+        max_page_size: int,
+        # TODO: a none root hash means unspecified here, not empty
+        hash1: bytes32,
+        hash2: bytes32,
     ) -> KVDiffPaginationData:
         old_pairs = await self.get_keys_values_compressed(store_id, hash1)
         if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
@@ -1031,11 +1055,21 @@ class DataStore:
                 root=root,
             )
 
-    async def get_keys_values_dict(self, store_id: bytes32, root_hash: Optional[bytes32] = None) -> Dict[bytes, bytes]:
+    async def get_keys_values_dict(
+        self,
+        store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
+        root_hash: Optional[bytes32] = None,
+    ) -> Dict[bytes, bytes]:
         pairs = await self.get_keys_values(store_id=store_id, root_hash=root_hash)
         return {node.key: node.value for node in pairs}
 
-    async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32] = None) -> List[bytes]:
+    async def get_keys(
+        self,
+        store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
+        root_hash: Optional[bytes32] = None,
+    ) -> List[bytes]:
         async with self.db_wrapper.reader() as reader:
             if root_hash is None:
                 root = await self.get_tree_root(store_id=store_id)
@@ -1782,6 +1816,7 @@ class DataStore:
         self,
         key: bytes,
         store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
         root_hash: Optional[bytes32] = None,
     ) -> TerminalNode:
         if root_hash is None:
@@ -2193,6 +2228,8 @@ class DataStore:
     async def get_kv_diff(
         self,
         store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
+        #       though it happens to be disallowed here
         hash_1: bytes32,
         hash_2: bytes32,
     ) -> Set[DiffData]:

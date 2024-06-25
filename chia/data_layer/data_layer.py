@@ -400,7 +400,12 @@ class DataLayer:
             res = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
             return res.value
 
-    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
+    async def get_keys_values(
+        self,
+        store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
+        root_hash: Optional[bytes32],
+    ) -> List[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_keys_values(store_id, root_hash)
@@ -411,6 +416,7 @@ class DataLayer:
     async def get_keys_values_paginated(
         self,
         store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
         root_hash: Optional[bytes32],
         page: int,
         max_page_size: Optional[int] = None,
@@ -431,6 +437,7 @@ class DataLayer:
     async def get_keys_paginated(
         self,
         store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
         root_hash: Optional[bytes32],
         page: int,
         max_page_size: Optional[int] = None,
@@ -820,7 +827,14 @@ class DataLayer:
         return await self.data_store.get_kv_diff(store_id, hash_1, hash_2)
 
     async def get_kv_diff_paginated(
-        self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: Optional[int] = None
+        self,
+        store_id: bytes32,
+        # TODO: a none root hash means unspecified here, not empty
+        #       though in this case we disallow none
+        hash_1: bytes32,
+        hash_2: bytes32,
+        page: int,
+        max_page_size: Optional[int] = None,
     ) -> KVDiffPaginationData:
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024
