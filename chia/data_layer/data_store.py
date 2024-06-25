@@ -40,7 +40,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 
 log = logging.getLogger(__name__)
 
@@ -1676,16 +1676,18 @@ class DataStore:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
             if len(pending_upsert_new_hashes) > 0:
-                to_update_hashes: Set[bytes32] = set()
-                for hash in pending_upsert_new_hashes.keys():
-                    while True:
-                        if hash in to_update_hashes:
-                            break
-                        to_update_hashes.add(hash)
-                        node = await self._get_one_ancestor(hash, tree_id=latest_local_tree_id)
-                        if node is None:
-                            break
-                        hash = node.hash
+                to_update_hashes: Set[bytes32] = set(pending_upsert_new_hashes.keys())
+                to_update_queue: List[bytes32] = list(pending_upsert_new_hashes.keys())
+                batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
+
+                while len(to_update_queue) > 0:
+                    nodes = await self._get_one_ancestor_multiple_hashes(to_update_queue[:batch_size], store_id)
+                    to_update_queue = to_update_queue[batch_size:]
+                    for node in nodes:
+                        if node.hash not in to_update_hashes:
+                            to_update_hashes.add(node.hash)
+                            to_update_queue.append(node.hash)
+
                 # assert latest_local_root is not None
                 # assert latest_local_root.node_hash is not None
                 # TODO: can we do something nicer? or maybe this isn't even right
@@ -1807,6 +1809,32 @@ class DataStore:
                 return None
             return InternalNode.from_row(row=row)
 
+    async def _get_one_ancestor_multiple_hashes(
+        self,
+        node_hashes: List[bytes32],
+        store_id: bytes32,
+        generation: Optional[int] = None,
+    ) -> List[InternalNode]:
+        async with self.db_wrapper.reader() as reader:
+            node_hashes_place_holders = ",".join("?" for _ in node_hashes)
+            if generation is None:
+                generation = await self.get_tree_generation(store_id=store_id)
+            cursor = await reader.execute(
+                f"""
+                SELECT * from node INNER JOIN (
+                    SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
+                    FROM ancestors
+                    WHERE ancestors.hash IN ({node_hashes_place_holders})
+                    AND ancestors.tree_id == ?
+                    AND ancestors.generation <= ?
+                    GROUP BY hash
+                ) asc on asc.hash == node.hash
+                """,
+                [*node_hashes, store_id, generation],
+            )
+            rows = await cursor.fetchall()
+            return [InternalNode.from_row(row=row) for row in rows]
+
     async def build_ancestor_table_for_latest_root(
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> None:
@@ -1814,7 +1842,6 @@ class DataStore:
         resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
         # TODO: yuck but...  useful
         del tree_id
-
         async with self.db_wrapper.writer() as writer:
             if resolved_tree_id.root_hash is None:
                 return
