@@ -353,13 +353,13 @@ class DataStore:
         right_hash: bytes32,
         tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
     ) -> None:
-        resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        # avoid accidental usage
-        del tree_id
-
         node_hash = internal_hash(left_hash=left_hash, right_hash=right_hash)
 
         async with self.db_wrapper.writer() as writer:
+            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            # avoid accidental usage
+            del tree_id
+
             for hash in (left_hash, right_hash):
                 values = {
                     "hash": hash,
@@ -927,31 +927,31 @@ class DataStore:
         page: int,
         max_page_size: int,
     ) -> KeysPaginationData:
-        # TODO: back-compat?  let's resolve the meaning of None for root hash
-        if tree_id.root_hash is None:
-            tree_id = replace(tree_id, root_hash=TreeId.unspecified)
-        # TODO: hum...  transaction?
-        try:
-            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        except AssertionError as e:
-            # TODO: blech, review context
-            if not e.args[0].startswith("unable to find root: "):
-                raise
-            # TODO: not cool
-            assert not isinstance(tree_id.root_hash, TreeId.Unspecified)
-            return KeysPaginationData(0, 0, [], tree_id.root_hash)
-        # avoid accidental usage
-        del tree_id
+        async with self.transaction():
+            # TODO: back-compat?  let's resolve the meaning of None for root hash
+            if tree_id.root_hash is None:
+                tree_id = replace(tree_id, root_hash=TreeId.unspecified)
+            try:
+                resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            except AssertionError as e:
+                # TODO: blech, review context
+                if not e.args[0].startswith("unable to find root: "):
+                    raise
+                # TODO: not cool
+                assert not isinstance(tree_id.root_hash, TreeId.Unspecified)
+                return KeysPaginationData(0, 0, [], tree_id.root_hash)
+            # avoid accidental usage
+            del tree_id
 
-        keys_values_compressed = await self.get_keys_values_compressed(tree_id=resolved_tree_id)
-        pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
+            keys_values_compressed = await self.get_keys_values_compressed(tree_id=resolved_tree_id)
+            pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
 
-        keys: List[bytes] = []
-        for hash in pagination_data.hashes:
-            leaf_hash = keys_values_compressed.keys_values_hashed[hash]
-            node = await self.get_node(leaf_hash)
-            assert isinstance(node, TerminalNode)
-            keys.append(node.key)
+            keys: List[bytes] = []
+            for hash in pagination_data.hashes:
+                leaf_hash = keys_values_compressed.keys_values_hashed[hash]
+                node = await self.get_node(leaf_hash)
+                assert isinstance(node, TerminalNode)
+                keys.append(node.key)
 
         return KeysPaginationData(
             pagination_data.total_pages,
@@ -1324,8 +1324,8 @@ class DataStore:
         use_optimized: bool = True,
         status: Status = Status.PENDING,
     ) -> TreeId[int, Optional[bytes32]]:
-        tree_id = await self._resolve_tree_id(tree_id=TreeId.create(store_id=store_id))
         async with self.db_wrapper.writer():
+            tree_id = await self._resolve_tree_id(tree_id=TreeId.create(store_id=store_id))
             try:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id)
                 node_hash = node.hash
@@ -1504,26 +1504,27 @@ class DataStore:
         tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
         hash_to_parent: Dict[bytes32, InternalNode],
     ) -> TerminalNode:
-        resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        # avoid accidental usage
-        del tree_id
+        async with self.transaction():
+            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            # avoid accidental usage
+            del tree_id
 
-        assert resolved_tree_id.root_hash is not None
+            assert resolved_tree_id.root_hash is not None
 
-        root_node = await self.get_node(resolved_tree_id.root_hash)
-        queue: List[Node] = [root_node]
-        while True:
-            assert len(queue) > 0
-            node = queue.pop(0)
-            if isinstance(node, InternalNode):
-                left_node = await self.get_node(node.left_hash)
-                right_node = await self.get_node(node.right_hash)
-                hash_to_parent[left_node.hash] = node
-                hash_to_parent[right_node.hash] = node
-                queue.append(left_node)
-                queue.append(right_node)
-            elif isinstance(node, TerminalNode):
-                return node
+            root_node = await self.get_node(resolved_tree_id.root_hash)
+            queue: List[Node] = [root_node]
+            while True:
+                assert len(queue) > 0
+                node = queue.pop(0)
+                if isinstance(node, InternalNode):
+                    left_node = await self.get_node(node.left_hash)
+                    right_node = await self.get_node(node.right_hash)
+                    hash_to_parent[left_node.hash] = node
+                    hash_to_parent[right_node.hash] = node
+                    queue.append(left_node)
+                    queue.append(right_node)
+                elif isinstance(node, TerminalNode):
+                    return node
 
     async def batch_upsert(
         self,
@@ -1834,11 +1835,11 @@ class DataStore:
     async def build_ancestor_table_for_latest_root(
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> None:
-        # TODO: do we now need to block acting on a not-latest generation/root?
-        resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        # avoid accidental usage
-        del tree_id
         async with self.db_wrapper.writer() as writer:
+            # TODO: do we now need to block acting on a not-latest generation/root?
+            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+            # avoid accidental usage
+            del tree_id
             if resolved_tree_id.root_hash is None:
                 return
 
