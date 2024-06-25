@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
@@ -373,7 +374,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
         "wallet",
         "send",
         "-a1",
-        "-m1",
+        "-m0.5",
         "-o",
         WALLET_ID_ARG,
         f"-e{bytes32_hexstr}",
@@ -409,7 +410,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                     excluded_coin_ids=[bytes32([98] * 32)],
                     reuse_puzhash=True,
                 ),
-                1000000000000,
+                500000000000,
                 ["0x6262626262626262626262626262626262626262626262626262626262626262"],
                 [{"decorator": "CLAWBACK", "clawback_timelock": 60}],
             )
@@ -426,7 +427,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                 ),
                 1000,
                 "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
-                1000000000000,
+                500000000000,
                 ["0x6262626262626262626262626262626262626262626262626262626262626262"],
                 None,
                 None,
@@ -493,14 +494,14 @@ def test_clawback(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
         "clawback",
         WALLET_ID_ARG,
         FINGERPRINT_ARG,
-        "-m1",
+        "-m0.5",
         "--tx_ids",
         f"{tx_ids[0].hex()},{tx_ids[1].hex()}, {tx_ids[2].hex()}",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, ["transaction_ids", str(r_tx_ids_hex)])
     # these are various things that should be in the output
     expected_calls: logType = {
-        "spend_clawback_coins": [(tx_ids, 1000000000000, False)],
+        "spend_clawback_coins": [(tx_ids, 500000000000, False)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -643,7 +644,7 @@ def test_make_offer_bad_filename(
         FINGERPRINT_ARG,
         f"-p{str(tmp_path)}",
         "--reuse",
-        "-m1",
+        "-m0.5",
         "--offer",
         "1:10",
         "--offer",
@@ -663,7 +664,7 @@ def test_make_offer_bad_filename(
         FINGERPRINT_ARG,
         f"-p{str(test_file)}",
         "--reuse",
-        "-m1",
+        "-m0.5",
         "--offer",
         "1:10",
         "--offer",
@@ -734,7 +735,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         FINGERPRINT_ARG,
         f"-p{str(tmp_path / 'test.offer')}",
         "--reuse",
-        "-m1",
+        "-m0.5",
         "--offer",
         "1:10",
         "--offer",
@@ -748,7 +749,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         "OFFERING:\n  - 10 XCH (10000000000000 mojos)\n  - 100 test3 (100000 mojos)",
         "REQUESTING:\n  - 10 test2 (10000 mojos)\n"
         "  - 1 nft1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyql4ft (1 mojos)",
-        "Including Fees: 1 XCH, 1000000000000 mojos",
+        "Including Fees: 0.5 XCH, 500000000000 mojos",
         "Created offer with ID 0202020202020202020202020202020202020202020202020202020202020202",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args[:-4], ["without --override"])
@@ -801,7 +802,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
                     }
                 },
                 None,
-                1000000000000,
+                500000000000,
                 False,
             )
         ],
@@ -855,7 +856,12 @@ def test_get_offers(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
                     ],
                     trade_id=bytes32([1 + i] * 32),
                     status=uint32(TradeStatus.PENDING_ACCEPT.value),
-                    valid_times=ConditionValidTimes(),
+                    valid_times=ConditionValidTimes(
+                        min_time=uint64(0),
+                        max_time=uint64(100),
+                        min_height=uint32(0),
+                        max_height=uint32(100),
+                    ),
                 )
                 records.append(trade_offer)
             return records
@@ -888,6 +894,26 @@ def test_get_offers(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {"get_all_offers": [(0, 10, None, True, False, True, True, True)]}
+    command_args = [
+        "wallet",
+        "get_offers",
+        FINGERPRINT_ARG,
+        "--summaries",
+    ]
+    tzinfo = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
+    # these are various things that should be in the output
+    assert_list = [
+        "Timelock information:",
+        "  - Not valid until ",
+        "  - Expires at ",
+        f"{datetime.datetime.fromtimestamp(0, tz=tzinfo).strftime('%Y-%m-%d %H:%M %Z')}",
+        f"{datetime.datetime.fromtimestamp(100, tz=tzinfo).strftime('%Y-%m-%d %H:%M %Z')}",
+        "height 0",
+        "height 100",
+    ]
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+    assert expected_calls["get_all_offers"] is not None
+    expected_calls["get_all_offers"].append((0, 10, None, False, True, False, False, False))
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
@@ -935,7 +961,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     ]
 
     with importlib_resources.as_file(test_offer_file_path) as test_offer_file_name:
-        command_args = ["wallet", "take_offer", os.fspath(test_offer_file_name), FINGERPRINT_ARG, "-m1", "--reuse"]
+        command_args = ["wallet", "take_offer", os.fspath(test_offer_file_name), FINGERPRINT_ARG, "-m0.5", "--reuse"]
         run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
 
     expected_calls: logType = {
@@ -944,7 +970,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             (cat2,),
             (bytes32.from_hexstr("accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d"),),
         ],
-        "take_offer": [(Offer.from_bech32(test_offer_file_bech32), DEFAULT_TX_CONFIG, None, 1000000000000)],
+        "take_offer": [(Offer.from_bech32(test_offer_file_bech32), DEFAULT_TX_CONFIG, None, 500000000000)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -980,7 +1006,7 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
 
     inst_rpc_client = CancelOfferRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = ["wallet", "cancel_offer", FINGERPRINT_ARG, "-m1", "--id", test_offer_id]
+    command_args = ["wallet", "cancel_offer", FINGERPRINT_ARG, "-m0.5", "--id", test_offer_id]
     # these are various things that should be in the output
     cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
@@ -996,7 +1022,7 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_offer": [(test_offer_id_bytes, True)],
-        "cancel_offer": [(test_offer_id_bytes, DEFAULT_TX_CONFIG, 1000000000000, True)],
+        "cancel_offer": [(test_offer_id_bytes, DEFAULT_TX_CONFIG, 500000000000, True)],
         "cat_asset_id_to_name": [
             (cat1,),
             (cat2,),

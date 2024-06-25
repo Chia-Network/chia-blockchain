@@ -3,9 +3,12 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 from .constants import ConsensusConstants
+
+AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
 DEFAULT_CONSTANTS = ConsensusConstants(
     SLOT_BLOCKS_TARGET=uint32(32),
@@ -34,8 +37,15 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     # We override this value based on the chain being run (testnet0, testnet1, mainnet, etc)
     # Default used for tests is std_hash(b'')
     GENESIS_CHALLENGE=bytes32.fromhex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
-    # Forks of chia should change this value to provide replay attack protection. This is set to mainnet genesis chall
-    AGG_SIG_ME_ADDITIONAL_DATA=bytes.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"),
+    # Forks of chia should change the AGG_SIG_*_ADDITIONAL_DATA values to provide
+    # replay attack protection. This is set to mainnet genesis challange
+    AGG_SIG_ME_ADDITIONAL_DATA=AGG_SIG_DATA,
+    AGG_SIG_PARENT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([43])),
+    AGG_SIG_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([44])),
+    AGG_SIG_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([45])),
+    AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([46])),
+    AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([47])),
+    AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([48])),
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH=bytes32.fromhex(
         "d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"
     ),
@@ -67,7 +77,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     SOFT_FORK5_HEIGHT=uint32(5940000),
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
-    HARD_FORK_FIX_HEIGHT=uint32(5496000),
+    HARD_FORK_FIX_HEIGHT=uint32(0),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030
@@ -78,23 +88,6 @@ DEFAULT_CONSTANTS = ConsensusConstants(
 
 
 def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None:
-    if network_id == "testnet10":
-        # activate softforks immediately on testnet
-        # these numbers are supposed to match initial-config.yaml
-        if "SOFT_FORK2_HEIGHT" not in overrides:
-            overrides["SOFT_FORK2_HEIGHT"] = 3000000
-        if "SOFT_FORK4_HEIGHT" not in overrides:
-            overrides["SOFT_FORK4_HEIGHT"] = 4465000
-        if "HARD_FORK_HEIGHT" not in overrides:
-            overrides["HARD_FORK_HEIGHT"] = 2997292
-        if "HARD_FORK_FIX_HEIGHT" not in overrides:
-            overrides["HARD_FORK_FIX_HEIGHT"] = 3426000
-        if "PLOT_FILTER_128_HEIGHT" not in overrides:
-            overrides["PLOT_FILTER_128_HEIGHT"] = 3061804
-        if "PLOT_FILTER_64_HEIGHT" not in overrides:
-            overrides["PLOT_FILTER_64_HEIGHT"] = 8010796
-        if "PLOT_FILTER_32_HEIGHT" not in overrides:
-            overrides["PLOT_FILTER_32_HEIGHT"] = 13056556
     if network_id == "testnet11":
         if "SOFT_FORK4_HEIGHT" not in overrides:
             overrides["SOFT_FORK4_HEIGHT"] = 641500
