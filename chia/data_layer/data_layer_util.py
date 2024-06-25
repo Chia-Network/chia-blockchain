@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union, overload
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
@@ -343,34 +343,39 @@ class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
 
     store_id: bytes32
     generation: T_MaybeGeneration
-    # TODO: not entirely sure this is a good idea, but maybe
-    # TODO: ack!  None would both mean not resolved and empty tree...
-    #       add a not specified class of some sort i guess.  use for generation as well?
-    # TODO: does this make this class more than an id class?
-    root_hash: T_MaybeBytes32
 
     # TODO: what if there were an @resolved_tree_id decorator or such that would
     #       resolve the tree id parameter.  it would also have a reader added...?  or
     #       writer if requested and...  that would avoid extra transactions?  some
     #       good feelings, some pretty yucky about this
 
+    root_hash: T_MaybeBytes32
+
+    @overload
     @classmethod
-    def by_nothing(cls, store_id: bytes32) -> TreeId[Unspecified, Unspecified]:
-        # TODO: using TreeId instead of cls because it makes mypy happy, i don't know
-        #       why yet though
-        return TreeId(store_id=store_id, generation=cls.unspecified, root_hash=cls.unspecified)
+    def create(cls, store_id: bytes32) -> TreeId[Unspecified, Unspecified]: ...
+
+    @overload
+    @classmethod
+    def create(cls, store_id: bytes32, *, generation: int) -> TreeId[int, Unspecified]: ...
+
+    @overload
+    @classmethod
+    def create(cls, store_id: bytes32, *, root_hash: bytes32) -> TreeId[Unspecified, bytes32]: ...
 
     @classmethod
-    def by_generation(cls, store_id: bytes32, generation: int) -> TreeId[int, Unspecified]:
-        # TODO: using TreeId instead of cls because it makes mypy happy, i don't know
-        #       why yet though
-        return TreeId(store_id=store_id, generation=generation, root_hash=cls.unspecified)
-
-    @classmethod
-    def by_root_hash(cls, store_id: bytes32, root_hash: bytes32) -> TreeId[Unspecified, bytes32]:
-        # TODO: using TreeId instead of cls because it makes mypy happy, i don't know
-        #       why yet though
-        return TreeId(store_id=store_id, generation=TreeId.unspecified, root_hash=root_hash)
+    def create(
+        cls,
+        store_id: bytes32,
+        *,
+        generation: Union[int, Unspecified] = unspecified,
+        root_hash: Union[Optional[bytes32], Unspecified] = unspecified,
+    ) -> TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]:
+        return TreeId(
+            store_id=store_id,
+            generation=generation if generation is not None else cls.unspecified,
+            root_hash=root_hash if root_hash is not None else cls.unspecified,
+        )
 
 
 @dataclass(frozen=True)

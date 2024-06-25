@@ -3310,7 +3310,7 @@ async def test_unsubmitted_batch_update(
         for key, value in to_insert:
             assert kv_dict["0x" + key.hex()] == "0x" + value.hex()
         prev_keys_values = keys_values
-        old_root = await data_layer.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+        old_root = await data_layer.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
 
         key = b"e"
         value = b"\x00\x05"
@@ -3323,7 +3323,7 @@ async def test_unsubmitted_batch_update(
         await full_node_api.farm_blocks_to_puzzlehash(
             count=NUM_BLOCKS_WITHOUT_SUBMIT, guarantee_transaction_blocks=True
         )
-        root = await data_layer.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+        root = await data_layer.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         assert root == old_root
 
         key = b"f"
@@ -3341,7 +3341,7 @@ async def test_unsubmitted_batch_update(
         await data_rpc_api.clear_pending_roots({"store_id": store_id.hex()})
         pending_root = await data_layer.data_store.get_pending_root(store_id=store_id)
         assert pending_root is None
-        root = await data_layer.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+        root = await data_layer.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         assert root == old_root
 
         key = b"g"

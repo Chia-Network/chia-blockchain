@@ -86,7 +86,7 @@ async def valid_node_values_fixture(
     node_type: NodeType,
 ) -> Dict[str, Any]:
     await add_01234567_example(data_store=data_store, store_id=store_id)
-    bare_tree_id = TreeId.by_nothing(store_id=store_id)
+    bare_tree_id = TreeId.create(store_id=store_id)
 
     if node_type == NodeType.INTERNAL:
         node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=bare_tree_id)

@@ -354,7 +354,7 @@ class DataStore:
         tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
     ) -> None:
         resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        # TODO: yuck but...  useful
+        # avoid accidental usage
         del tree_id
 
         node_hash = internal_hash(left_hash=left_hash, right_hash=right_hash)
@@ -465,7 +465,7 @@ class DataStore:
 
     async def shift_root_generations(self, store_id: bytes32, shift_size: int) -> None:
         async with self.db_wrapper.writer():
-            root = await self.get_tree_root(TreeId.by_nothing(store_id=store_id))
+            root = await self.get_tree_root(TreeId.create(store_id=store_id))
             for _ in range(shift_size):
                 await self._insert_root(store_id=store_id, node_hash=root.node_hash, status=Status.COMMITTED)
 
@@ -699,7 +699,7 @@ class DataStore:
     ) -> List[InternalNode]:
         async with self.db_wrapper.reader() as reader:
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             if resolved_tree_id.root_hash is None:
@@ -742,7 +742,7 @@ class DataStore:
     ) -> List[InternalNode]:
         async with self.db_wrapper.reader():
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             nodes = []
@@ -768,7 +768,7 @@ class DataStore:
     ) -> List[InternalNode]:
         async with self.db_wrapper.reader() as reader:
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             cursor = await reader.execute(
@@ -805,7 +805,7 @@ class DataStore:
         only_keys: bool = False,
     ) -> aiosqlite.Cursor:
         resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        # TODO: yuck but...  useful
+        # avoid accidental usage
         del tree_id
 
         select_clause = "SELECT hash, key" if only_keys else "SELECT *"
@@ -847,7 +847,7 @@ class DataStore:
                     raise
                 return []
 
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             cursor = await self.get_keys_values_cursor(reader, tree_id=resolved_tree_id)
@@ -885,7 +885,7 @@ class DataStore:
                 # TODO: not cool
                 assert not isinstance(tree_id.root_hash, TreeId.Unspecified)
                 return KeysValuesCompressed({}, {}, {}, tree_id.root_hash)
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             cursor = await self.get_keys_values_cursor(reader, tree_id=resolved_tree_id)
@@ -912,7 +912,7 @@ class DataStore:
         result: Dict[bytes32, bytes32] = {}
         async with self.db_wrapper.reader() as reader:
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             cursor = await self.get_keys_values_cursor(reader, tree_id=resolved_tree_id, only_keys=True)
@@ -940,7 +940,7 @@ class DataStore:
             # TODO: not cool
             assert not isinstance(tree_id.root_hash, TreeId.Unspecified)
             return KeysPaginationData(0, 0, [], tree_id.root_hash)
-        # TODO: yuck but...  useful
+        # avoid accidental usage
         del tree_id
 
         keys_values_compressed = await self.get_keys_values_compressed(tree_id=resolved_tree_id)
@@ -988,15 +988,11 @@ class DataStore:
     async def get_kv_diff_paginated(
         self, store_id: bytes32, page: int, max_page_size: int, hash1: bytes32, hash2: bytes32
     ) -> KVDiffPaginationData:
-        old_pairs = await self.get_keys_values_compressed(
-            tree_id=TreeId.by_root_hash(store_id=store_id, root_hash=hash1)
-        )
+        old_pairs = await self.get_keys_values_compressed(tree_id=TreeId.create(store_id=store_id, root_hash=hash1))
         if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
             raise Exception(f"Unable to diff: Can't find keys and values for {hash1}")
 
-        new_pairs = await self.get_keys_values_compressed(
-            tree_id=TreeId.by_root_hash(store_id=store_id, root_hash=hash2)
-        )
+        new_pairs = await self.get_keys_values_compressed(tree_id=TreeId.create(store_id=store_id, root_hash=hash2))
         if len(new_pairs.keys_values_hashed) == 0 and hash2 != bytes32([0] * 32):
             raise Exception(f"Unable to diff: Can't find keys and values for {hash2}")
 
@@ -1048,7 +1044,7 @@ class DataStore:
         path = "".join(reversed("".join(f"{b:08b}" for b in seed)))
         async with self.db_wrapper.reader() as reader:
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             if resolved_tree_id.root_hash is None:
@@ -1107,7 +1103,7 @@ class DataStore:
         status: Status = Status.PENDING,
     ) -> InsertResult:
         async with self.db_wrapper.writer():
-            tree_id = await self._resolve_tree_id(TreeId.by_nothing(store_id=store_id))
+            tree_id = await self._resolve_tree_id(TreeId.create(store_id=store_id))
 
             was_empty = tree_id.root_hash is None
 
@@ -1150,7 +1146,7 @@ class DataStore:
                 if not e.args[0].startswith("unable to find root: "):
                     raise
                 return []
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             cursor = await reader.execute(
@@ -1237,7 +1233,7 @@ class DataStore:
         if status == Status.COMMITTED:
             for left_hash, right_hash, store_id in insert_ancestors_cache:
                 await self._insert_ancestor_table(
-                    left_hash, right_hash, TreeId.by_generation(store_id=store_id, generation=new_generation)
+                    left_hash, right_hash, TreeId.create(store_id=store_id, generation=new_generation)
                 )
 
         return new_root
@@ -1253,7 +1249,7 @@ class DataStore:
         status: Status = Status.PENDING,
     ) -> InsertResult:
         async with self.db_wrapper.writer():
-            tree_id = await self._resolve_tree_id(TreeId.by_nothing(store_id=store_id))
+            tree_id = await self._resolve_tree_id(TreeId.create(store_id=store_id))
 
             try:
                 await self.get_node_by_key(key=key, tree_id=tree_id)
@@ -1328,7 +1324,7 @@ class DataStore:
         use_optimized: bool = True,
         status: Status = Status.PENDING,
     ) -> TreeId[int, Optional[bytes32]]:
-        tree_id = await self._resolve_tree_id(tree_id=TreeId.by_nothing(store_id=store_id))
+        tree_id = await self._resolve_tree_id(tree_id=TreeId.create(store_id=store_id))
         async with self.db_wrapper.writer():
             try:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id)
@@ -1398,7 +1394,7 @@ class DataStore:
                     await self._insert_ancestor_table(
                         left_hash,
                         right_hash,
-                        tree_id=TreeId.by_generation(store_id=store_id, generation=new_generation),
+                        tree_id=TreeId.create(store_id=store_id, generation=new_generation),
                     )
 
         # TODO: add .from_root()?
@@ -1413,7 +1409,7 @@ class DataStore:
         status: Status = Status.PENDING,
     ) -> InsertResult:
         async with self.db_wrapper.writer():
-            tree_id = await self._resolve_tree_id(TreeId.by_nothing(store_id=store_id))
+            tree_id = await self._resolve_tree_id(TreeId.create(store_id=store_id))
 
             try:
                 old_node = await self.get_node_by_key(key=key, tree_id=tree_id)
@@ -1509,7 +1505,7 @@ class DataStore:
         hash_to_parent: Dict[bytes32, InternalNode],
     ) -> TerminalNode:
         resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        # TODO: yuck but...  useful
+        # avoid accidental usage
         del tree_id
 
         assert resolved_tree_id.root_hash is not None
@@ -1552,7 +1548,7 @@ class DataStore:
         enable_batch_autoinsert: bool = True,
     ) -> TreeId[int, Optional[bytes32]]:
         async with self.transaction():
-            tree_id = await self._resolve_tree_id(tree_id=TreeId.by_nothing(store_id=store_id))
+            tree_id = await self._resolve_tree_id(tree_id=TreeId.create(store_id=store_id))
 
             old_root = await self.get_tree_root(tree_id=tree_id)
             # TODO: hum, pending, ...  i forgot what i was thinking about here
@@ -1745,7 +1741,7 @@ class DataStore:
                         status=Status.COMMITTED,
                     )
 
-            root = await self.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+            root = await self.get_tree_root(tree_id=TreeId.create(store_id=store_id))
             if root.node_hash == old_root.node_hash:
                 if len(changelist) != 0:
                     await self.rollback_to_generation(latest_local_tree_id.store_id, old_root.generation)
@@ -1759,7 +1755,7 @@ class DataStore:
                 new_root = await self.get_pending_root(store_id=latest_local_tree_id.store_id)
                 assert new_root is not None
             elif status == Status.COMMITTED:
-                new_root = await self.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+                new_root = await self.get_tree_root(tree_id=TreeId.create(store_id=store_id))
             else:
                 raise Exception(f"No known status: {status}")
 
@@ -1788,7 +1784,7 @@ class DataStore:
     ) -> Optional[InternalNode]:
         async with self.db_wrapper.reader() as reader:
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             cursor = await reader.execute(
@@ -1840,7 +1836,7 @@ class DataStore:
     ) -> None:
         # TODO: do we now need to block acting on a not-latest generation/root?
         resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        # TODO: yuck but...  useful
+        # avoid accidental usage
         del tree_id
         async with self.db_wrapper.writer() as writer:
             if resolved_tree_id.root_hash is None:
@@ -1903,7 +1899,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             # TODO: do we need to require the latest generation?
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             if resolved_tree_id.root_hash is None:
@@ -1992,7 +1988,7 @@ class DataStore:
     ) -> Node:
         async with self.db_wrapper.reader() as reader:
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # TODO: yuck but...  useful
+            # avoid accidental usage
             del tree_id
 
             # TODO: consider actual proper behavior
@@ -2382,12 +2378,12 @@ class DataStore:
         hash_2: bytes32,
     ) -> Set[DiffData]:
         async with self.db_wrapper.reader():
-            tree_id_1 = TreeId.by_root_hash(store_id=store_id, root_hash=hash_1)
+            tree_id_1 = TreeId.create(store_id=store_id, root_hash=hash_1)
             old_pairs = set(await self.get_keys_values(tree_id=tree_id_1))
             if len(old_pairs) == 0 and hash_1 != bytes32([0] * 32):
                 raise Exception(f"Unable to diff: Can't find keys and values for {hash_1}")
 
-            tree_id_2 = TreeId.by_root_hash(store_id=store_id, root_hash=hash_2)
+            tree_id_2 = TreeId.create(store_id=store_id, root_hash=hash_2)
             new_pairs = set(await self.get_keys_values(tree_id=tree_id_2))
             if len(new_pairs) == 0 and hash_2 != bytes32([0] * 32):
                 raise Exception(f"Unable to diff: Can't find keys and values for {hash_2}")

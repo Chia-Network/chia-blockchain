@@ -471,7 +471,7 @@ class DataLayer:
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
-        res = await self.data_store.get_ancestors(node_hash=node_hash, tree_id=TreeId.by_nothing(store_id=store_id))
+        res = await self.data_store.get_ancestors(node_hash=node_hash, tree_id=TreeId.create(store_id=store_id))
         if res is None:
             self.log.error("Failed to get ancestors")
         return res
@@ -485,7 +485,7 @@ class DataLayer:
     async def get_local_root(self, store_id: bytes32) -> Optional[bytes32]:
         await self._update_confirmation_status(store_id=store_id)
 
-        res = await self.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+        res = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         if res is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
             return None
@@ -506,7 +506,7 @@ class DataLayer:
     async def _update_confirmation_status(self, store_id: bytes32) -> None:
         async with self.data_store.transaction():
             try:
-                root = await self.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+                root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
             except Exception:
                 root = None
             singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
@@ -557,7 +557,7 @@ class DataLayer:
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                     await self.data_store.build_ancestor_table_for_latest_root(
-                        tree_id=TreeId.by_nothing(store_id=store_id),
+                        tree_id=TreeId.create(store_id=store_id),
                     )
             await self.data_store.clear_pending_roots(store_id=store_id)
 
@@ -582,7 +582,7 @@ class DataLayer:
         for server_info in servers_info:
             url = server_info.url
 
-            root = await self.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+            root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
             if root.generation > singleton_record.generation:
                 self.log.info(
                     "Fetch data: local DL store is ahead of chain generation. "
@@ -655,14 +655,14 @@ class DataLayer:
             return
         await self._update_confirmation_status(store_id=store_id)
 
-        root = await self.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+        root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         latest_generation = root.generation
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         foldername = self.server_files_location
 
         for generation in range(full_tree_first_publish_generation - 1, 0, -1):
             root = await self.data_store.get_tree_root(
-                tree_id=TreeId.by_generation(store_id=store_id, generation=generation),
+                tree_id=TreeId.create(store_id=store_id, generation=generation),
             )
             file_exists = delete_full_file_if_exists(foldername, store_id, root)
             if not file_exists:
@@ -676,7 +676,7 @@ class DataLayer:
             return
         await self._update_confirmation_status(store_id=store_id)
 
-        root = await self.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+        root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         latest_generation = root.generation
         # Don't store full tree files before this generation.
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
@@ -684,7 +684,7 @@ class DataLayer:
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
         root = await self.data_store.get_tree_root(
-            tree_id=TreeId.by_generation(store_id=store_id, generation=publish_generation)
+            tree_id=TreeId.create(store_id=store_id, generation=publish_generation)
         )
         while publish_generation > 0:
             write_file_result = await write_files_for_root(
@@ -731,12 +731,10 @@ class DataLayer:
                     os.remove(write_file_result.full_tree)
                 os.remove(write_file_result.diff_tree)
             publish_generation -= 1
-            root = await self.data_store.get_tree_root(
-                TreeId.by_generation(store_id=store_id, generation=publish_generation)
-            )
+            root = await self.data_store.get_tree_root(TreeId.create(store_id=store_id, generation=publish_generation))
 
     async def add_missing_files(self, store_id: bytes32, overwrite: bool, foldername: Optional[Path]) -> None:
-        root = await self.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+        root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         latest_generation = root.generation
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
@@ -747,7 +745,7 @@ class DataLayer:
         server_files_location = foldername if foldername is not None else self.server_files_location
         files = []
         for generation in range(1, max_generation + 1):
-            root = await self.data_store.get_tree_root(TreeId.by_generation(store_id=store_id, generation=generation))
+            root = await self.data_store.get_tree_root(TreeId.create(store_id=store_id, generation=generation))
             res = await write_files_for_root(
                 self.data_store,
                 store_id,
@@ -1012,7 +1010,7 @@ class DataLayer:
                     )
                     proof_of_inclusion = await self.data_store.get_proof_of_inclusion_by_hash(
                         node_hash=node_hash,
-                        tree_id=TreeId.by_root_hash(store_id=offer_store.store_id, root_hash=new_tree_id.root_hash),
+                        tree_id=TreeId.create(store_id=offer_store.store_id, root_hash=new_tree_id.root_hash),
                     )
                     proof = Proof(
                         key=entry.key,
@@ -1194,7 +1192,7 @@ class DataLayer:
 
         if not await self.data_store.store_id_exists(store_id=store_id):
             raise Exception(f"No store id stored in the local database for {store_id}")
-        root = await self.data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+        root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         singleton_record = await self.wallet_rpc.dl_latest_singleton(store_id, True)
         if singleton_record is None:
             raise Exception(f"No singleton found for {store_id}")

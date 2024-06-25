@@ -202,7 +202,7 @@ async def insert_from_delta_file(
                 f"Generation: {existing_generation}. Store id: {store_id}."
             )
 
-            root = await data_store.get_tree_root(tree_id=TreeId.by_nothing(store_id=store_id))
+            root = await data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
             with open(filename_full_tree, "wb") as writer:
                 await data_store.write_tree_to_file(root, root_hash, store_id, False, writer)
             log.info(f"Successfully written full tree filename {filename_full_tree}.")

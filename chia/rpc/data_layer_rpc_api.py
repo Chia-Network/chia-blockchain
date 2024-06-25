@@ -589,10 +589,10 @@ class DataLayerRpcApi:
         all_proofs: List[HashOnlyProof] = []
         for key in request.keys:
             node = await self.service.data_store.get_node_by_key(
-                tree_id=TreeId.by_nothing(store_id=request.store_id), key=key
+                tree_id=TreeId.create(store_id=request.store_id), key=key
             )
             pi = await self.service.data_store.get_proof_of_inclusion_by_hash(
-                tree_id=TreeId.by_nothing(store_id=request.store_id),
+                tree_id=TreeId.create(store_id=request.store_id),
                 node_hash=node.hash,
                 use_optimized=True,
             )
