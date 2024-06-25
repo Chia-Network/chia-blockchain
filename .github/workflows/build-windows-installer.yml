@@ -453,9 +453,15 @@ jobs:
         run: |
           dir ./packages/
           $env:INSTALLER_PATH = (Get-ChildItem packages/ChiaSetup-*.exe)
+          echo $env:INSTALLER_PATH -> $env:INSTALL_PATH
           Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
 
       - name: List installed files
+        run: |
+          Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
+
+      - name: List all files
+        if:
         run: |
           Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
 
