@@ -63,7 +63,7 @@ keyring = "25.1.0"  # Store keys in MacOS Keychain, Windows Credential Locker
 packaging = "24.0"
 pip = "24.0"
 psutil = [
-    {version="5.9.4", markers="platform_machine!='aarch64'", source="pypi"},
+    {version="5.9.4", markers="platform_machine!='aarch64'"},
     {version="5.9.4", markers="platform_machine=='aarch64'", source="chia"},
 ]
 pyyaml = "6.0.1"  # Used for config file format
