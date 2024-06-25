@@ -363,6 +363,8 @@ class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
     @classmethod
     def create(cls, store_id: bytes32, *, root_hash: bytes32) -> TreeId[Unspecified, bytes32]: ...
 
+    # TODO: should we allow specification of both via this interface?
+
     @classmethod
     def create(
         cls,
