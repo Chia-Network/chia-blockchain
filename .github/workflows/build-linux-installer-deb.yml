@@ -403,7 +403,7 @@ jobs:
             artifact-name: arm
           - name: Intel
             matrix: intel
-            artifact-name: amd
+            artifact-name: intel
 
     env:
       DEBIAN_FRONTEND: noninteractive
