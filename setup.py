@@ -36,7 +36,7 @@ dependencies = [
     "typing-extensions==4.11.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
     "packaging==24.0",
-    "psutil==5.9.4",
+    "psutil==6.0.0",
     "hsms==0.3.1",
 ]
 
