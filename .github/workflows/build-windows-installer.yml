@@ -453,7 +453,9 @@ jobs:
         run: |
           dir ./packages/
           $env:INSTALLER_PATH = (Get-ChildItem packages/ChiaSetup-*.exe)
-          Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + (New-Object System.Uri(Resolve-Path -Path $env:INSTALL_PATH)).LocalPath)
+          # note that the installer requires the target path use backslashes
+          $env:RESOLVED_INSTALL_PATH = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($env:INSTALL_PATH)
+          Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:RESOLVED_INSTALL_PATH)
           echo ======================================
           dir ./
           echo ======================================
