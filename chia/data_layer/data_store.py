@@ -1395,23 +1395,42 @@ class DataStore:
         else:
             await writer.execute(query, params)
 
+    async def get_nodes(self, node_hashes: List[bytes32]) -> List[Node]:
+        query_parameter_place_holders = ",".join("?" for _ in node_hashes)
+        async with self.db_wrapper.reader() as reader:
+            # TODO: handle SQLITE_MAX_VARIABLE_NUMBER
+            cursor = await reader.execute(
+                f"SELECT * FROM node WHERE hash IN ({query_parameter_place_holders})",
+                [*node_hashes],
+            )
+            rows = await cursor.fetchall()
+
+        hash_to_node = {row["hash"]: row_to_node(row=row) for row in rows}
+
+        missing_hashes = [node_hash.hex() for node_hash in node_hashes if node_hash not in hash_to_node]
+        if missing_hashes:
+            raise Exception(f"Nodes not found for hashes: {', '.join(missing_hashes)}")
+
+        return [hash_to_node[node_hash] for node_hash in node_hashes]
+
     async def get_leaf_at_minimum_height(
         self, root_hash: bytes32, hash_to_parent: Dict[bytes32, InternalNode]
     ) -> TerminalNode:
-        root_node = await self.get_node(root_hash)
-        queue: List[Node] = [root_node]
+        queue: List[bytes32] = [root_hash]
+        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
+
         while True:
             assert len(queue) > 0
-            node = queue.pop(0)
-            if isinstance(node, InternalNode):
-                left_node = await self.get_node(node.left_hash)
-                right_node = await self.get_node(node.right_hash)
-                hash_to_parent[left_node.hash] = node
-                hash_to_parent[right_node.hash] = node
-                queue.append(left_node)
-                queue.append(right_node)
-            elif isinstance(node, TerminalNode):
-                return node
+            nodes = await self.get_nodes(queue[:batch_size])
+            queue = queue[batch_size:]
+
+            for node in nodes:
+                if isinstance(node, TerminalNode):
+                    return node
+                hash_to_parent[node.left_hash] = node
+                hash_to_parent[node.right_hash] = node
+                queue.append(node.left_hash)
+                queue.append(node.right_hash)
 
     async def batch_upsert(
         self,
