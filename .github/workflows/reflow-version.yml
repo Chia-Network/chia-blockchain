@@ -45,7 +45,6 @@ jobs:
           python3 -m venv ../venv
           . ../venv/bin/activate
           python -m pip install --upgrade pip
-          pip install poetry
-          pip install "poetry-dynamic-versioning[plugin]"
+          pip install poetry "poetry-dynamic-versioning[plugin]"
           echo "chia-installer-version=$(poetry version -s)" >> "$GITHUB_OUTPUT"
           deactivate
