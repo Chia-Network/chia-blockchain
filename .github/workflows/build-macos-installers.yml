@@ -52,7 +52,7 @@ jobs:
       matrix:
         python-version: ["3.10"]
         os:
-          - runs-on: macos-11
+          - runs-on: macos-12
             name: intel
             bladebit-suffix: macos-x86-64.tar.gz
           - runs-on: [MacOS, ARM64]
@@ -82,7 +82,7 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MACOSX_DEPLOYMENT_TARGET: 11
+          MACOSX_DEPLOYMENT_TARGET: 12
 
       - name: Test for secrets access
         id: check_secrets
@@ -378,11 +378,6 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - name: 11
-            matrix: 11
-            runs-on:
-              intel: macos-11
-              arm: [macos, arm64]
           - name: 12
             matrix: 12
             runs-on:

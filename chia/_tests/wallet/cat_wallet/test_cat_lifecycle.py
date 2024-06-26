@@ -145,7 +145,7 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
             record.coin
             for record in (await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False))
         ]
-        total_amount = uint64(sum([c.amount for c in coins]))
+        total_amount = uint64(sum(c.amount for c in coins))
         await do_spend(
             sim,
             sim_client,

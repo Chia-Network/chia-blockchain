@@ -79,8 +79,7 @@ class WalletBlockchain(BlockchainInterface):
                 self.add_block_record(record)
                 if record.is_transaction_block:
                     assert record.timestamp is not None
-                    if record.timestamp > latest_timestamp:
-                        latest_timestamp = record.timestamp
+                    latest_timestamp = max(latest_timestamp, record.timestamp)
 
             self._sub_slot_iters = records[-1].sub_slot_iters
             self._difficulty = uint64(records[-1].weight - records[-2].weight)

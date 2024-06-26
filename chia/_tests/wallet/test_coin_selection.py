@@ -53,7 +53,7 @@ class TestCoinSelection:
                 coin_list, uint128(30000000000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 999999, seed=bytes([i])
             )
             assert knapsack is not None
-            assert sum([coin.amount for coin in knapsack]) >= 310000000
+            assert sum(coin.amount for coin in knapsack) >= 310000000
 
     def test_knapsack_coin_selection_2(self, a_hash: bytes32) -> None:
         coin_amounts = [6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
@@ -95,7 +95,7 @@ class TestCoinSelection:
                 uint128(target_amount),
             )
             assert result is not None
-            assert sum([coin.amount for coin in result]) >= target_amount
+            assert sum(coin.amount for coin in result) >= target_amount
             assert len(result) <= 500
 
     @pytest.mark.anyio
@@ -130,7 +130,7 @@ class TestCoinSelection:
                 uint128(target_amount),
             )
             assert result is not None
-            assert sum([coin.amount for coin in result]) >= target_amount
+            assert sum(coin.amount for coin in result) >= target_amount
             assert len(result) == 1  # only one coin should be selected
 
         for i in range(100):
@@ -156,7 +156,7 @@ class TestCoinSelection:
                 uint128(target_amount),
             )
             assert dusty_result is not None
-            assert sum([coin.amount for coin in dusty_result]) >= target_amount
+            assert sum(coin.amount for coin in dusty_result) >= target_amount
             for coin in dusty_result:
                 assert coin.amount > 1
             assert len(dusty_result) <= 500
@@ -199,7 +199,7 @@ class TestCoinSelection:
                 uint128(target_amount),
             )
             assert dusty_below_target is not None
-            assert sum([coin.amount for coin in dusty_below_target]) >= target_amount
+            assert sum(coin.amount for coin in dusty_below_target) >= target_amount
             for coin in dusty_below_target:
                 assert coin.amount == 5000
             assert len(dusty_below_target) <= 500
@@ -236,7 +236,7 @@ class TestCoinSelection:
                 uint128(target_amount),
             )
             assert dusty_below_target is not None
-            assert sum([coin.amount for coin in dusty_below_target]) >= target_amount
+            assert sum(coin.amount for coin in dusty_below_target) >= target_amount
             assert len(dusty_below_target) <= 500
 
     @pytest.mark.anyio
@@ -299,7 +299,7 @@ class TestCoinSelection:
             target_amount,
         )
         assert exact_match_result is not None
-        assert sum([coin.amount for coin in exact_match_result]) >= target_amount
+        assert sum(coin.amount for coin in exact_match_result) >= target_amount
         assert len(exact_match_result) == 1
 
         # check for match of 2
@@ -313,7 +313,7 @@ class TestCoinSelection:
             target_amount,
         )
         assert match_2 is not None
-        assert sum([coin.amount for coin in match_2]) == target_amount
+        assert sum(coin.amount for coin in match_2) == target_amount
         assert len(match_2) == 2
         # check for match of at least 3. it is random after all.
         target_amount = uint128(541)
@@ -326,7 +326,7 @@ class TestCoinSelection:
             target_amount,
         )
         assert match_3 is not None
-        assert sum([coin.amount for coin in match_3]) >= target_amount
+        assert sum(coin.amount for coin in match_3) >= target_amount
         assert len(match_3) >= 3
 
         # check for match of all
@@ -340,7 +340,7 @@ class TestCoinSelection:
             target_amount,
         )
         assert match_all is not None
-        assert sum([coin.amount for coin in match_all]) == target_amount
+        assert sum(coin.amount for coin in match_all) == target_amount
         assert len(match_all) == len(coin_list)
 
         # test smallest greater than target
@@ -360,7 +360,7 @@ class TestCoinSelection:
             target_amount,
         )
         assert smallest_result is not None
-        assert sum([coin.amount for coin in smallest_result]) > target_amount
+        assert sum(coin.amount for coin in smallest_result) > target_amount
         assert len(smallest_result) == 1
 
         # test smallest greater than target with only 1 large coin.
@@ -378,7 +378,7 @@ class TestCoinSelection:
             target_amount,
         )
         assert single_greater_result is not None
-        assert sum([coin.amount for coin in single_greater_result]) > target_amount
+        assert sum(coin.amount for coin in single_greater_result) > target_amount
         assert len(single_greater_result) == 1
 
         # test smallest greater than target with only multiple larger then target coins.
@@ -398,8 +398,8 @@ class TestCoinSelection:
             target_amount,
         )
         assert multiple_greater_result is not None
-        assert sum([coin.amount for coin in multiple_greater_result]) > target_amount
-        assert sum([coin.amount for coin in multiple_greater_result]) == 90000
+        assert sum(coin.amount for coin in multiple_greater_result) > target_amount
+        assert sum(coin.amount for coin in multiple_greater_result) == 90000
         assert len(multiple_greater_result) == 1
 
     @pytest.mark.anyio
@@ -429,8 +429,8 @@ class TestCoinSelection:
         )
         assert result is not None
         print(result)
-        print(sum([c.amount for c in result]))
-        assert sum([coin.amount for coin in result]) >= target_amount
+        print(sum(c.amount for c in result))
+        assert sum(coin.amount for coin in result) >= target_amount
 
     @pytest.mark.anyio
     async def test_smallest_coin_over_amount(self, a_hash: bytes32) -> None:
@@ -539,7 +539,7 @@ class TestCoinSelection:
         )
 
         assert selected_coins is not None
-        assert sum([coin.amount for coin in selected_coins]) >= target_amount
+        assert sum(coin.amount for coin in selected_coins) >= target_amount
         assert len(selected_coins) == 1
         assert list(selected_coins)[0] == Coin(b_hash, b_hash, uint64(6))
 
@@ -575,7 +575,7 @@ class TestCoinSelection:
             target_amount,
         )
         assert zero_amount_result is not None
-        assert sum([coin.amount for coin in zero_amount_result]) >= target_amount
+        assert sum(coin.amount for coin in zero_amount_result) >= target_amount
         assert len(zero_amount_result) == 1
         # make sure that a failure is properly raised if we don't have any coins.
         with pytest.raises(ValueError):
