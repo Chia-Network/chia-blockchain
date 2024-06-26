@@ -122,7 +122,8 @@ async def async_combine(
     target_coin_amount: CliAmount,
     target_coin_ids: Sequence[bytes32],
     largest_first: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         if number_of_coins > 500:
             raise ValueError(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
@@ -131,10 +132,10 @@ async def async_combine(
             mojo_per_unit = get_mojo_per_unit(wallet_type)
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
-            return
+            return []
         if not await wallet_client.get_synced():
             print("Wallet not synced. Please wait.")
-            return
+            return []
         is_xch: bool = wallet_type == WalletType.STANDARD_WALLET  # this lets us know if we are directly combining Chia
         tx_config = CMDTXConfigLoader(
             max_coin_amount=max_coin_amount,
@@ -160,10 +161,10 @@ async def async_combine(
                 conf_coins = [cr for cr in conf_coins if cr.name in target_coin_ids]
             if len(conf_coins) == 0:
                 print("No coins to combine.")
-                return
+                return []
             if len(conf_coins) == 1:
                 print("Only one coin found, you need at least two coins to combine.")
-                return
+                return []
             if largest_first:
                 conf_coins.sort(key=lambda r: r.coin.amount, reverse=True)
             else:
@@ -176,15 +177,18 @@ async def async_combine(
         total_amount: uint128 = uint128(sum(coin.amount for coin in removals))
         if is_xch and total_amount - fee <= 0:
             print("Total amount is less than 0 after fee, exiting.")
-            return
+            return []
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, False))
         additions = [{"amount": (total_amount - fee) if is_xch else total_amount, "puzzle_hash": target_ph}]
-        transaction: TransactionRecord = await wallet_client.send_transaction_multi(
-            wallet_id, additions, tx_config, removals, fee
-        )
+        transaction: TransactionRecord = (
+            await wallet_client.send_transaction_multi(wallet_id, additions, tx_config, removals, fee, push=push)
+        ).transaction
         tx_id = transaction.name.hex()
-        print(f"Transaction sent: {tx_id}")
-        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+        if push:
+            print(f"Transaction sent: {tx_id}")
+            print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+
+        return [transaction]
 
 
 async def async_split(
@@ -197,21 +201,22 @@ async def async_split(
     amount_per_coin: CliAmount,
     target_coin_id_str: str,
     # TODO: [add TXConfig args]
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         target_coin_id: bytes32 = bytes32.from_hexstr(target_coin_id_str)
         if number_of_coins > 500:
             print(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
-            return
+            return []
         try:
             wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(wallet_type)
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
-            return
+            return []
         if not await wallet_client.get_synced():
             print("Wallet not synced. Please wait.")
-            return
+            return []
         is_xch: bool = wallet_type == WalletType.STANDARD_WALLET  # this lets us know if we are directly spitting Chia
         final_amount_per_coin = amount_per_coin.convert_amount(mojo_per_unit)
         total_amount = final_amount_per_coin * number_of_coins
@@ -225,7 +230,7 @@ async def async_split(
                 f"is less than the total amount of the split: {total_amount / mojo_per_unit}, exiting."
             )
             print("Try using a smaller fee or amount.")
-            return
+            return []
         additions: List[Dict[str, Union[uint64, bytes32]]] = []
         for i in range(number_of_coins):  # for readability.
             # we always use new addresses
@@ -236,12 +241,15 @@ async def async_split(
             # TODO: [add TXConfig args]
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
-        transaction: TransactionRecord = await wallet_client.send_transaction_multi(
-            wallet_id, additions, tx_config, [removal_coin_record.coin], fee
-        )
+        transaction: TransactionRecord = (
+            await wallet_client.send_transaction_multi(
+                wallet_id, additions, tx_config, [removal_coin_record.coin], fee, push=push
+            )
+        ).transaction
         tx_id = transaction.name.hex()
-        print(f"Transaction sent: {tx_id}")
-        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+        if push:
+            print(f"Transaction sent: {tx_id}")
+            print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
         dust_threshold = config.get("xch_spam_amount", 1000000)  # min amount per coin in mojo
         spam_filter_after_n_txs = config.get("spam_filter_after_n_txs", 200)  # how many txs to wait before filtering
         if final_amount_per_coin < dust_threshold and wallet_type == WalletType.STANDARD_WALLET:
@@ -251,3 +259,4 @@ async def async_split(
                 f"{'will' if number_of_coins > spam_filter_after_n_txs else 'may'} not show up in your wallet unless "
                 f"you decrease the dust limit to below {final_amount_per_coin} mojos or disable it by setting it to 0."
             )
+        return [transaction]

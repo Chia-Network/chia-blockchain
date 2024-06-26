@@ -22,6 +22,8 @@ from chia.rpc.util import marshal, tx_endpoint
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
+    ExecuteSigningInstructions,
+    ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GetNotifications,
@@ -295,6 +297,8 @@ class WalletRpcApi:
             "/gather_signing_info": self.gather_signing_info,
             "/apply_signatures": self.apply_signatures,
             "/submit_transactions": self.submit_transactions,
+            # Not technically Signer Protocol but related
+            "/execute_signing_instructions": self.execute_signing_instructions,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -383,7 +387,7 @@ class WalletRpcApi:
         if started is True:
             return {"fingerprint": fingerprint}
 
-        return {"success": False, "error": "Unknown Error"}
+        return {"success": False, "error": f"fingerprint {fingerprint} not found in keychain or keychain is empty"}
 
     async def get_logged_in_fingerprint(self, request: Dict[str, Any]) -> EndpointResult:
         return {"fingerprint": self.service.logged_in_fingerprint}
@@ -757,6 +761,9 @@ class WalletRpcApi:
                 if "metadata" in request:
                     if type(request["metadata"]) is dict:
                         metadata = request["metadata"]
+
+                if not push:
+                    raise ValueError("Creation of DID wallet must be automatically pushed for now.")
 
                 async with self.service.wallet_state_manager.lock:
                     did_wallet_name: str = request.get("wallet_name", None)
@@ -1205,6 +1212,7 @@ class WalletRpcApi:
             "transaction": transaction,
             "transaction_id": TransactionRecord.from_json_dict_convenience(transaction).name,
             "transactions": transactions,
+            "unsigned_transactions": response["unsigned_transactions"],
         }
 
     @tx_endpoint(push=True, merge_spends=False)
@@ -4580,4 +4588,15 @@ class WalletRpcApi:
     ) -> SubmitTransactionsResponse:
         return SubmitTransactionsResponse(
             await self.service.wallet_state_manager.submit_transactions(request.signed_transactions)
+        )
+
+    @marshal
+    async def execute_signing_instructions(
+        self,
+        request: ExecuteSigningInstructions,
+    ) -> ExecuteSigningInstructionsResponse:
+        return ExecuteSigningInstructionsResponse(
+            await self.service.wallet_state_manager.execute_signing_instructions(
+                request.signing_instructions, request.partial_allowed
+            )
         )

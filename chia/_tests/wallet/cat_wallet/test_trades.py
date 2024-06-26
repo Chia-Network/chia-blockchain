@@ -223,12 +223,16 @@ async def test_cat_trades(
         )
 
         # Mint some VCs that can spend the CR-CATs
-        vc_record_maker, _ = await client_maker.vc_mint(
-            did_id_maker, wallet_environments.tx_config, target_address=await wallet_maker.get_new_puzzlehash()
-        )
-        vc_record_taker, _ = await client_taker.vc_mint(
-            did_id_taker, wallet_environments.tx_config, target_address=await wallet_taker.get_new_puzzlehash()
-        )
+        vc_record_maker = (
+            await client_maker.vc_mint(
+                did_id_maker, wallet_environments.tx_config, target_address=await wallet_maker.get_new_puzzlehash()
+            )
+        ).vc_record
+        vc_record_taker = (
+            await client_taker.vc_mint(
+                did_id_taker, wallet_environments.tx_config, target_address=await wallet_taker.get_new_puzzlehash()
+            )
+        ).vc_record
         await wallet_environments.process_pending_states(
             [
                 # Balance checking for this scenario is covered in tests/wallet/vc_wallet/test_vc_lifecycle
