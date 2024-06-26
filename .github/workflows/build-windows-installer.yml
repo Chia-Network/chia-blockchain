@@ -438,7 +438,7 @@ jobs:
             matrix: intel
 
     env:
-      INSTALL_PATH: installed/
+      INSTALL_PATH: installed
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -455,8 +455,8 @@ jobs:
           $env:INSTALLER_PATH = (Get-ChildItem packages/ChiaSetup-*.exe)
           echo $env:INSTALLER_PATH -> $env:INSTALL_PATH
           Write-Output ($env:INSTALLER_PATH)
-          Write-Output ("/D=" + $env:GITHUB_WORKSPACE + "/" + $env:INSTALL_PATH)
-          Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:GITHUB_WORKSPACE + "/" + $env:INSTALL_PATH)
+          Write-Output ("/D=" + $env:GITHUB_WORKSPACE + "\\" + $env:INSTALL_PATH)
+          Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:GITHUB_WORKSPACE + "\\" + $env:INSTALL_PATH)
           echo ======================================
           dir ./
           echo ======================================
