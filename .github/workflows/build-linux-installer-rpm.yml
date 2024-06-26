@@ -317,7 +317,7 @@ jobs:
           aws s3 cp "artifacts/${FILE}" "${DEV_S3_URL}/${DEV_FILE}"
           aws s3 cp "artifacts/${FILE}.sha256" "${LATEST_DEV_S3_URL}/${DEV_FILE}.sha256"
 
-      - name: Create .${{ matrix.os.file-type.extension }} torrent
+      - name: Create torrent
         if: env.FULL_RELEASE == 'true' && matrix.mode.matrix == 'gui'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
