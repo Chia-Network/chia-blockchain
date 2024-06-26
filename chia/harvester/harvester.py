@@ -38,8 +38,8 @@ from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
+from chia.util.cpu import available_logical_cores
 from chia.util.ints import uint32
-from chia.util.misc import available_logical_cores
 
 log = logging.getLogger(__name__)
 

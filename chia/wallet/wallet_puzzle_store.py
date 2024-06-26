@@ -84,7 +84,7 @@ class WalletPuzzleStore:
             sql_records.append(
                 (
                     record.index,
-                    bytes(record.pubkey).hex(),
+                    record.pubkey_bytes.hex(),
                     record.puzzle_hash.hex(),
                     record.wallet_type,
                     record.wallet_id,

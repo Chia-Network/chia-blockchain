@@ -85,6 +85,7 @@ chia-blockchain-gui/src/locales/_build
 build_scripts\win_build
 build_scripts/win_build
 win_code_sign_cert.p12
+build_scripts/**/.nx/cache
 
 # chia-blockchain wheel build folder
 build/

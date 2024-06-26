@@ -110,7 +110,7 @@ class WalletTool:
     ) -> List[CoinSpend]:
         spends = []
 
-        spend_value = sum([c.amount for c in coins])
+        spend_value = sum(c.amount for c in coins)
 
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []

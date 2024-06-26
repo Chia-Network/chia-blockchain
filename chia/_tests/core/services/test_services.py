@@ -23,8 +23,14 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.socket import find_available_listen_port
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
-from chia.util.misc import sendable_termination_signals
 from chia.util.timing import adjusted_timeout
+
+if sys.platform == "win32" or sys.platform == "cygwin":
+    termination_signals = [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = [signal.SIGTERM]
+else:
+    termination_signals = [signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = termination_signals
 
 
 class CreateServiceProtocol(Protocol):

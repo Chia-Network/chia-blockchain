@@ -11,6 +11,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_util import dl_verify_proof
@@ -48,9 +49,8 @@ from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from chia.util.misc import UInt32Range
 from chia.util.path import path_from_root
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, UInt32Range, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CRCATInfo
@@ -518,7 +518,9 @@ class WalletRpcApi:
         except ValueError:
             pool_decoded = None
 
-        found_addresses: Set[bytes32] = match_address_to_sk(sk, address_to_check, max_ph_to_search)
+        found_addresses: Set[bytes32] = match_address_to_sk(
+            sk, address_to_check, create_puzzlehash_for_pk, max_ph_to_search
+        )
         found_farmer = False
         found_pool = False
 
@@ -921,15 +923,14 @@ class WalletRpcApi:
                         if wallet.type() == WalletType.POOLING_WALLET:
                             assert isinstance(wallet, PoolWallet)
                             pool_wallet_index = await wallet.get_pool_wallet_index()
-                            if pool_wallet_index > max_pwi:
-                                max_pwi = pool_wallet_index
+                            max_pwi = max(max_pwi, pool_wallet_index)
 
                     if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
 
-                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.get_master_private_key(), uint32(max_pwi + 1)
-                    )
+                    master_sk = self.service.wallet_state_manager.get_master_private_key()
+                    assert isinstance(master_sk, PrivateKey), "Pooling only works with BLS keys at this time"
+                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(master_sk, uint32(max_pwi + 1))
                     owner_pk: G1Element = owner_sk.get_g1()
 
                     initial_target_state = initial_pool_state_from_dict(
@@ -3813,8 +3814,7 @@ class WalletRpcApi:
                 fee_amount += record.amount - base_farmer_reward
                 farmer_reward_amount += base_farmer_reward
                 blocks_won += 1
-            if height > last_height_farmed:
-                last_height_farmed = height
+            last_height_farmed = max(last_height_farmed, height)
             amount += record.amount
 
         last_time_farmed = uint64(

@@ -9,6 +9,7 @@ import pytest
 from chia_rs import G1Element
 
 from chia._tests.conftest import HarvesterFarmerEnvironment
+from chia._tests.util.split_managers import split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmds_util import get_any_service_client
 from chia.farmer.farmer import Farmer
@@ -25,7 +26,6 @@ from chia.util.config import load_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import generate_mnemonic
-from chia.util.misc import split_async_manager
 
 
 def farmer_is_started(farmer: Farmer) -> bool:

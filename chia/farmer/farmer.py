@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Opti
 import aiohttp
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
@@ -669,7 +670,9 @@ class Farmer:
             have_farmer_sk, have_pool_sk = False, False
             search_addresses: List[bytes32] = [self.farmer_target, self.pool_target]
             for sk, _ in all_sks:
-                found_addresses: Set[bytes32] = match_address_to_sk(sk, search_addresses, max_ph_to_search)
+                found_addresses: Set[bytes32] = match_address_to_sk(
+                    sk, search_addresses, create_puzzlehash_for_pk, max_ph_to_search
+                )
 
                 if not have_farmer_sk and self.farmer_target in found_addresses:
                     search_addresses.remove(self.farmer_target)

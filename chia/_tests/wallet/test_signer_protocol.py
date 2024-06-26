@@ -312,7 +312,8 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
 @pytest.mark.anyio
 async def test_p2blsdohp_execute_signing_instructions(wallet_environments: WalletTestFramework) -> None:
     wallet: MainWalletProtocol = wallet_environments.environments[0].xch_wallet
-    root_sk: PrivateKey = wallet.wallet_state_manager.get_master_private_key()
+    root_sk = wallet.wallet_state_manager.get_master_private_key()
+    assert isinstance(root_sk, PrivateKey)
     root_pk: G1Element = root_sk.get_g1()
     root_fingerprint: bytes = root_pk.get_fingerprint().to_bytes(4, "big")
 

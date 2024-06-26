@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import final
 
-from chia.clvm.singleton import SINGLETON_LAUNCHER
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_puzzles import (
+    SINGLETON_LAUNCHER,
     create_absorb_spend,
     create_full_puzzle,
     create_pooling_inner_puzzle,
@@ -460,9 +460,11 @@ class PoolWallet:
         return standard_wallet_record, p2_singleton_puzzle_hash, launcher_coin_id
 
     async def _get_owner_key_cache(self) -> Tuple[PrivateKey, uint32]:
+        private_key = self.wallet_state_manager.get_master_private_key()
+        assert isinstance(private_key, PrivateKey)
         if self._owner_sk_and_index is None:
             self._owner_sk_and_index = find_owner_sk(
-                [self.wallet_state_manager.get_master_private_key()],
+                [private_key],
                 (await self.get_current_state()).current.owner_pubkey,
             )
         assert self._owner_sk_and_index is not None

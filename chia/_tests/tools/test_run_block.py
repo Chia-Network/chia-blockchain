@@ -9,10 +9,19 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 
+AGG_SIG_DATA = bytes32.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2")
+
 constants = DEFAULT_CONSTANTS.replace(
-    AGG_SIG_ME_ADDITIONAL_DATA=bytes32.fromhex("ae83525ba8d1dd3f09b277de18ca3e43fc0af20d20c4b3e92ef2a48bd291ccb2"),
+    AGG_SIG_ME_ADDITIONAL_DATA=AGG_SIG_DATA,
+    AGG_SIG_PARENT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([43])),
+    AGG_SIG_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([44])),
+    AGG_SIG_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([45])),
+    AGG_SIG_PUZZLE_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([46])),
+    AGG_SIG_PARENT_AMOUNT_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([47])),
+    AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA=std_hash(AGG_SIG_DATA + bytes([48])),
     DIFFICULTY_CONSTANT_FACTOR=uint128(10052721566054),
     DIFFICULTY_STARTING=uint64(30),
     EPOCH_BLOCKS=uint32(768),

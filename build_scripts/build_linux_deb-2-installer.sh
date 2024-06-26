@@ -28,6 +28,7 @@ export CHIA_INSTALLER_VERSION
 echo "Installing npm and electron packagers"
 cd npm_linux || exit 1
 npm ci
+NPM_PATH="$(pwd)/node_modules/.bin"
 cd .. || exit 1
 
 echo "Create dist/"
@@ -108,12 +109,12 @@ if [ "$PLATFORM" = "arm64" ]; then
     --config ../../../build_scripts/electron-builder.json
   LAST_EXIT_CODE=$?
 else
-  echo electron-builder build --linux deb --x64 \
+  echo "${NPM_PATH}/electron-builder" build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain" \
     --config ../../../build_scripts/electron-builder.json
-  npx electron-builder build --linux deb --x64 \
+  "${NPM_PATH}/electron-builder" build --linux deb --x64 \
     --config.extraMetadata.name=chia-blockchain \
     --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
     --config.deb.packageName="chia-blockchain" \
