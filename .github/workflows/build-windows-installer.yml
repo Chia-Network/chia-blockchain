@@ -438,7 +438,7 @@ jobs:
             matrix: intel
 
     env:
-      INSTALL_PATH: installed
+      INSTALL_PATH: installed/
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -453,10 +453,7 @@ jobs:
         run: |
           dir ./packages/
           $env:INSTALLER_PATH = (Get-ChildItem packages/ChiaSetup-*.exe)
-          echo $env:INSTALLER_PATH -> $env:INSTALL_PATH
-          Write-Output ($env:INSTALLER_PATH)
-          Write-Output ("/D=" + $env:GITHUB_WORKSPACE + "\\" + $env:INSTALL_PATH)
-          Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:GITHUB_WORKSPACE + "\\" + $env:INSTALL_PATH)
+          Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + (New-Object System.Uri(Resolve-Path -Path $env:INSTALL_PATH)).LocalPath)
           echo ======================================
           dir ./
           echo ======================================
@@ -473,4 +470,4 @@ jobs:
 
       - name: Run chia dev installers test
         run: |
-          & ($env:INSTALL_PATH + "/resource/app.asar.unpacked/daemon/chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
+          & ($env:INSTALL_PATH + "/resources/app.asar.unpacked/daemon/chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
