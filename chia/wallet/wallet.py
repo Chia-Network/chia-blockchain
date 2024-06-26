@@ -87,6 +87,7 @@ class Wallet:
         self = Wallet()
         self.log = logging.getLogger(name)
         self.wallet_state_manager = wallet_state_manager
+        self.wallet_info = info
         self.wallet_id = info.id
 
         return self

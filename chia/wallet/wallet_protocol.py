@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 T = TypeVar("T", contravariant=True)
 
 
+@runtime_checkable
 class WalletProtocol(Protocol[T]):
     @classmethod
     def type(cls) -> WalletType: ...
