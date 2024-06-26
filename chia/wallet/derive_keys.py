@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import List, Optional, Set, Tuple
+from typing import Callable, List, Optional, Set, Tuple, TypeVar
 
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
+from chia.util.observation_root import ObservationRoot
+from chia.util.secret_info import SecretInfo
 
 # EIP 2334 bls key derivation
 # https://eips.ethereum.org/EIPS/eip-2334
@@ -17,16 +18,19 @@ from chia.util.ints import uint32
 # Allows up to 100 pool wallets (plot NFTs)
 MAX_POOL_WALLETS = 100
 
+_T_ObservationRoot = TypeVar("_T_ObservationRoot", bound=ObservationRoot, covariant=True)
+_T_SecretInfo = TypeVar("_T_SecretInfo", bound=SecretInfo[ObservationRoot])
 
-def _derive_path(sk: PrivateKey, path: List[int]) -> PrivateKey:
+
+def _derive_path(sk: _T_SecretInfo, path: List[int]) -> _T_SecretInfo:
     for index in path:
-        sk = AugSchemeMPL.derive_child_sk(sk, index)
+        sk = sk.derive_hardened(index)
     return sk
 
 
-def _derive_path_unhardened(sk: PrivateKey, path: List[int]) -> PrivateKey:
+def _derive_path_unhardened(sk: _T_SecretInfo, path: List[int]) -> _T_SecretInfo:
     for index in path:
-        sk = AugSchemeMPL.derive_child_sk_unhardened(sk, index)
+        sk = sk.derive_unhardened(index)
     return sk
 
 
@@ -36,24 +40,24 @@ def _derive_pk_unhardened(pk: G1Element, path: List[int]) -> G1Element:
     return pk
 
 
-def master_sk_to_farmer_sk(master: PrivateKey) -> PrivateKey:
+def master_sk_to_farmer_sk(master: _T_SecretInfo) -> _T_SecretInfo:
     return _derive_path(master, [12381, 8444, 0, 0])
 
 
-def master_sk_to_pool_sk(master: PrivateKey) -> PrivateKey:
+def master_sk_to_pool_sk(master: _T_SecretInfo) -> _T_SecretInfo:
     return _derive_path(master, [12381, 8444, 1, 0])
 
 
-def master_sk_to_wallet_sk_intermediate(master: PrivateKey) -> PrivateKey:
+def master_sk_to_wallet_sk_intermediate(master: _T_SecretInfo) -> _T_SecretInfo:
     return _derive_path(master, [12381, 8444, 2])
 
 
-def master_sk_to_wallet_sk(master: PrivateKey, index: uint32) -> PrivateKey:
+def master_sk_to_wallet_sk(master: _T_SecretInfo, index: uint32) -> _T_SecretInfo:
     intermediate = master_sk_to_wallet_sk_intermediate(master)
     return _derive_path(intermediate, [index])
 
 
-def master_sk_to_wallet_sk_unhardened_intermediate(master: PrivateKey) -> PrivateKey:
+def master_sk_to_wallet_sk_unhardened_intermediate(master: _T_SecretInfo) -> _T_SecretInfo:
     return _derive_path_unhardened(master, [12381, 8444, 2])
 
 
@@ -61,7 +65,7 @@ def master_pk_to_wallet_pk_unhardened_intermediate(master: G1Element) -> G1Eleme
     return _derive_pk_unhardened(master, [12381, 8444, 2])
 
 
-def master_sk_to_wallet_sk_unhardened(master: PrivateKey, index: uint32) -> PrivateKey:
+def master_sk_to_wallet_sk_unhardened(master: _T_SecretInfo, index: uint32) -> _T_SecretInfo:
     intermediate = master_sk_to_wallet_sk_unhardened_intermediate(master)
     return _derive_path_unhardened(intermediate, [index])
 
@@ -71,14 +75,15 @@ def master_pk_to_wallet_pk_unhardened(master: G1Element, index: uint32) -> G1Ele
     return _derive_pk_unhardened(intermediate, [index])
 
 
-def master_sk_to_local_sk(master: PrivateKey) -> PrivateKey:
+def master_sk_to_local_sk(master: _T_SecretInfo) -> _T_SecretInfo:
     return _derive_path(master, [12381, 8444, 3, 0])
 
 
-def master_sk_to_backup_sk(master: PrivateKey) -> PrivateKey:
+def master_sk_to_backup_sk(master: _T_SecretInfo) -> _T_SecretInfo:
     return _derive_path(master, [12381, 8444, 4, 0])
 
 
+# Pooling has BLS hard coded into the chialisp
 def master_sk_to_singleton_owner_sk(master: PrivateKey, pool_wallet_index: uint32) -> PrivateKey:
     """
     This key controls a singleton on the blockchain, allowing for dynamic pooling (changing pools)
@@ -117,7 +122,10 @@ def find_authentication_sk(all_sks: List[PrivateKey], owner_pk: G1Element) -> Op
 
 
 def match_address_to_sk(
-    sk: PrivateKey, addresses_to_search: List[bytes32], max_ph_to_search: int = 500
+    sk: SecretInfo[_T_ObservationRoot],
+    addresses_to_search: List[bytes32],
+    address_generator: Callable[[_T_ObservationRoot], bytes32],
+    max_ph_to_search: int = 500,
 ) -> Set[bytes32]:
     """
     Checks the list of given address is a derivation of the given sk within the given number of derivations
@@ -131,8 +139,8 @@ def match_address_to_sk(
 
     for i in range(max_ph_to_search):
         phs = [
-            create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()),
-            create_puzzlehash_for_pk(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).get_g1()),
+            address_generator(master_sk_to_wallet_sk(sk, uint32(i)).public_key()),
+            address_generator(master_sk_to_wallet_sk_unhardened(sk, uint32(i)).public_key()),
         ]
 
         for address in search_list:

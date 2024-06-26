@@ -647,7 +647,7 @@ async def test_get_last_used_fingerprint_if_exists(
     assert node.wallet_state_manager.private_key is not None
     assert (
         await node.get_last_used_fingerprint_if_exists()
-        == node.wallet_state_manager.private_key.get_g1().get_fingerprint()
+        == node.wallet_state_manager.private_key.public_key().get_fingerprint()
     )
     await node.keychain_proxy.delete_all_keys()
     assert await node.get_last_used_fingerprint_if_exists() is None

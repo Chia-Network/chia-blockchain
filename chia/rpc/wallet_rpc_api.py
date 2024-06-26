@@ -11,6 +11,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_util import dl_verify_proof
@@ -517,7 +518,9 @@ class WalletRpcApi:
         except ValueError:
             pool_decoded = None
 
-        found_addresses: Set[bytes32] = match_address_to_sk(sk, address_to_check, max_ph_to_search)
+        found_addresses: Set[bytes32] = match_address_to_sk(
+            sk, address_to_check, create_puzzlehash_for_pk, max_ph_to_search
+        )
         found_farmer = False
         found_pool = False
 
@@ -925,9 +928,9 @@ class WalletRpcApi:
                     if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
 
-                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.get_master_private_key(), uint32(max_pwi + 1)
-                    )
+                    master_sk = self.service.wallet_state_manager.get_master_private_key()
+                    assert isinstance(master_sk, PrivateKey), "Pooling only works with BLS keys at this time"
+                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(master_sk, uint32(max_pwi + 1))
                     owner_pk: G1Element = owner_sk.get_g1()
 
                     initial_target_state = initial_pool_state_from_dict(
