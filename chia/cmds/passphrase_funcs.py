@@ -10,11 +10,11 @@ from typing import Any, Dict, Optional, Tuple
 
 import colorama
 
+from chia.cmds.cmds_util import prompt_yes_no
 from chia.daemon.client import acquire_connection_to_daemon
 from chia.util.errors import KeychainMaxUnlockAttempts
 from chia.util.keychain import Keychain, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
-from chia.util.misc import prompt_yes_no
 
 DEFAULT_PASSPHRASE_PROMPT = (
     colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "

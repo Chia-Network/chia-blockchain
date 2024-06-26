@@ -26,6 +26,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Installing npm and electron packagers"
 cd npm_linux || exit 1
 npm ci
+NPM_PATH="$(pwd)/node_modules/.bin"
 cd .. || exit 1
 
 echo "Create dist/"
@@ -101,12 +102,12 @@ if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="chia"
-echo npx electron-builder build --linux rpm "${OPT_ARCH}" \
+echo "${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
   --config.rpm.packageName="chia-blockchain" \
   --config ../../../build_scripts/electron-builder.json
-npx electron-builder build --linux rpm "${OPT_ARCH}" \
+"${NPM_PATH}/electron-builder" build --linux rpm "${OPT_ARCH}" \
   --config.extraMetadata.name=chia-blockchain \
   --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
   --config.rpm.packageName="chia-blockchain" \

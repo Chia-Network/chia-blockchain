@@ -11,9 +11,8 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, Tuple, cast, fi
 import chia
 import chia._tests
 from chia._tests import ether
-from chia._tests.util.misc import DataTypeProtocol
+from chia._tests.util.misc import DataTypeProtocol, caller_file_and_line
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.util.misc import caller_file_and_line
 from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)

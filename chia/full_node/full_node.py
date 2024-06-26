@@ -1286,7 +1286,7 @@ class FullNode:
         self.log.log(
             logging.WARNING if pre_validate_time > 10 else logging.DEBUG,
             f"Block pre-validation: {pre_validate_end - pre_validate_start:0.2f}s "
-            f"CLVM: {sum([pvr.timing/1000.0 for pvr in pre_validation_results]):0.2f}s "
+            f"CLVM: {sum(pvr.timing/1000.0 for pvr in pre_validation_results):0.2f}s "
             f"({len(blocks_to_validate)} blocks, start height: {blocks_to_validate[0].height})",
         )
         for i, block in enumerate(blocks_to_validate):
@@ -2436,7 +2436,7 @@ class FullNode:
         )
 
     async def broadcast_removed_tx(self, mempool_removals: List[MempoolRemoveInfo]) -> None:
-        total_removals = sum([len(r.items) for r in mempool_removals])
+        total_removals = sum(len(r.items) for r in mempool_removals)
         if total_removals == 0:
             return
 
@@ -2798,7 +2798,7 @@ class FullNode:
 
                 self.log.info("Getting random heights for bluebox to compact")
                 heights = await self.block_store.get_random_not_compactified(target_uncompact_proofs)
-                self.log.info("Heights found for bluebox to compact: [%s]" % ", ".join(map(str, heights)))
+                self.log.info("Heights found for bluebox to compact: [%s]", ", ".join(map(str, heights)))
 
                 for h in heights:
                     headers = await self.blockchain.get_header_blocks_in_range(h, h, tx_filter=False)

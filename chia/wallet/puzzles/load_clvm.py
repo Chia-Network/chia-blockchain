@@ -55,10 +55,11 @@ def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_p
             import hashlib
 
             m = hashlib.sha256()
-            m.update(open(f).read().strip().encode("utf8"))
+            with open(f) as open_file:
+                m.update(open_file.read().strip().encode("utf8"))
             return m.hexdigest()
 
-        orig = "%s.orig" % output
+        orig = f"{output}.orig"
 
         compile_clvm_py(full_path, orig, search_paths=search_paths)
         orig256 = sha256file(orig)

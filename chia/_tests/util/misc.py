@@ -15,6 +15,7 @@ import sys
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import Enum
+from inspect import getframeinfo, stack
 from pathlib import Path
 from statistics import mean
 from textwrap import dedent
@@ -28,6 +29,7 @@ from typing import (
     ClassVar,
     Collection,
     Dict,
+    Iterable,
     Iterator,
     List,
     Optional,
@@ -58,7 +60,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
-from chia.util.misc import caller_file_and_line
 from chia.util.network import WebServer
 from chia.wallet.util.compute_hints import HintedCoin
 from chia.wallet.wallet_node import WalletNode
@@ -493,19 +494,10 @@ def create_logger(file: TextIO = sys.stdout) -> logging.Logger:
 
 
 def invariant_check_mempool(mempool: Mempool) -> None:
-    with mempool._db_conn:
-        cursor = mempool._db_conn.execute("SELECT SUM(cost) FROM tx")
-        val = cursor.fetchone()[0]
-        if val is None:
-            val = 0
-    assert mempool._total_cost == val
-
-    with mempool._db_conn:
-        cursor = mempool._db_conn.execute("SELECT SUM(fee) FROM tx")
-        val = cursor.fetchone()[0]
-        if val is None:
-            val = 0
-    assert mempool._total_fee == val
+    with mempool._db_conn as conn:
+        cursor = conn.execute("SELECT COALESCE(SUM(cost), 0), COALESCE(SUM(fee), 0) FROM tx")
+        val = cursor.fetchone()
+        assert (mempool._total_cost, mempool._total_fee) == val
 
 
 async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
@@ -679,3 +671,17 @@ class ComparableEnum(Enum):
             return NotImplemented
 
         return self.value.__ge__(other.value)
+
+
+def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:
+    caller = getframeinfo(stack()[distance + 1][0])
+
+    caller_path = Path(caller.filename)
+    options: List[str] = [caller_path.as_posix()]
+    for path in relative_to:
+        try:
+            options.append(caller_path.relative_to(path).as_posix())
+        except ValueError:
+            pass
+
+    return min(options, key=len), caller.lineno

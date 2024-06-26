@@ -15,10 +15,10 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import UnspentLineageInfo
+from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 from chia.util.ints import uint32, uint64
 from chia.util.lru_cache import LRUCache
-from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 

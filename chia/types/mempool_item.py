@@ -8,7 +8,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.generator_tools import additions_for_npc
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
 
@@ -62,7 +61,13 @@ class MempoolItem:
 
     @property
     def additions(self) -> List[Coin]:
-        return additions_for_npc(self.npc_result)
+        assert self.npc_result.conds is not None
+        additions: List[Coin] = []
+        for spend in self.npc_result.conds.spends:
+            for puzzle_hash, amount, _ in spend.create_coin:
+                coin = Coin(spend.coin_id, puzzle_hash, uint64(amount))
+                additions.append(coin)
+        return additions
 
     @property
     def removals(self) -> List[Coin]:

@@ -14,7 +14,7 @@ dependencies = [
     "chiapos==2.0.4",  # proof of space
     "clvm==0.9.10",
     "clvm_tools==0.4.9",  # Currying, Program.to, other conveniences
-    "chia_rs==0.9.0",
+    "chia_rs==0.10.0",
     "clvm-tools-rs==0.1.40",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.9.4",  # HTTP server for full node rpc
     "aiosqlite==0.20.0",  # asyncio wrapper for sqlite, to store blocks
@@ -76,6 +76,9 @@ legacy_keyring_dependencies = [
     "keyrings.cryptfile==1.3.9",
 ]
 
+with open("README.md") as f:
+    long_description = f.read()
+
 kwargs = dict(
     name="chia-blockchain",
     author="Mariano Sorgente",
@@ -121,7 +124,7 @@ kwargs = dict(
         "chia.ssl": ["chia_ca.crt", "chia_ca.key", "dst_root_ca.pem"],
         "mozilla-ca": ["cacert.pem"],
     },
-    long_description=open("README.md").read(),
+    long_description=long_description,
     long_description_content_type="text/markdown",
     zip_safe=False,
     project_urls={

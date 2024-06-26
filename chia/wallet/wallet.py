@@ -87,6 +87,7 @@ class Wallet:
         self = Wallet()
         self.log = logging.getLogger(name)
         self.wallet_state_manager = wallet_state_manager
+        self.wallet_info = info
         self.wallet_id = info.id
 
         return self
@@ -304,7 +305,7 @@ class Wallet:
 
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
-        spend_value = sum([coin.amount for coin in coins])
+        spend_value = sum(coin.amount for coin in coins)
         self.log.info(f"spend_value is {spend_value} and total_amount is {total_amount}")
         change = spend_value - total_amount
         if negative_change_allowed:

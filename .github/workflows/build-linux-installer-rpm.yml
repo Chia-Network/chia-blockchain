@@ -79,9 +79,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: Chia-Network/actions/enforce-semver@main
-        if: env.FULL_RELEASE == 'true'
-
       - name: Get latest madmax plotter
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

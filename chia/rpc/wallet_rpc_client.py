@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
@@ -1276,7 +1276,7 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("get_notifications", request.to_json_dict())
         return json_deserialize_with_clvm_streamable(response, GetNotificationsResponse)
 
-    async def delete_notifications(self, ids: Optional[List[bytes32]] = None) -> bool:
+    async def delete_notifications(self, ids: Optional[Sequence[bytes32]] = None) -> bool:
         request = {}
         if ids is not None:
             request["ids"] = [id.hex() for id in ids]

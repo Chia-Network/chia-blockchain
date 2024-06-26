@@ -1,19 +1,26 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import AsyncIterator, List
 
 import pytest
+from chia_rs import G2Element
 
+from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -95,3 +102,105 @@ async def test_determine_coin_type(simulator_and_wallet: OldSimulatorsAndWallets
     assert (None, None) == await wallet_state_manager.determine_coin_type(
         peer, CoinState(Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), uint32(0), uint32(0)), None
     )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_commit_transactions_to_db(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wsm = env.wallet_state_manager
+
+    coins = list(
+        await wsm.main_wallet.select_coins(
+            uint64(2_000_000_000_000), coin_selection_config=wallet_environments.tx_config.coin_selection_config
+        )
+    )
+    [tx1] = await wsm.main_wallet.generate_signed_transaction(
+        uint64(0),
+        bytes32([0] * 32),
+        wallet_environments.tx_config,
+        coins={coins[0]},
+    )
+    [tx2] = await wsm.main_wallet.generate_signed_transaction(
+        uint64(0),
+        bytes32([0] * 32),
+        wallet_environments.tx_config,
+        coins={coins[1]},
+    )
+
+    def flatten_spend_bundles(txs: List[TransactionRecord]) -> List[SpendBundle]:
+        return [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
+
+    assert (
+        len(await wsm.tx_store.get_all_transactions_for_wallet(wsm.main_wallet.id(), type=TransactionType.OUTGOING_TX))
+        == 0
+    )
+    new_txs = await wsm.add_pending_transactions(
+        [tx1, tx2],
+        push=False,
+        merge_spends=False,
+        sign=False,
+        extra_spends=[],
+    )
+    bundles = flatten_spend_bundles(new_txs)
+    assert len(bundles) == 2
+    for bundle in bundles:
+        assert bundle.aggregated_signature == G2Element()
+    assert (
+        len(await wsm.tx_store.get_all_transactions_for_wallet(wsm.main_wallet.id(), type=TransactionType.OUTGOING_TX))
+        == 0
+    )
+
+    extra_coin_spend = make_spend(
+        Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), Program.to(1), Program.to([None])
+    )
+    extra_spend = SpendBundle([extra_coin_spend], G2Element())
+
+    new_txs = await wsm.add_pending_transactions(
+        [tx1, tx2],
+        push=False,
+        merge_spends=False,
+        sign=False,
+        extra_spends=[extra_spend],
+    )
+    bundles = flatten_spend_bundles(new_txs)
+    assert len(bundles) == 2
+    for bundle in bundles:
+        assert bundle.aggregated_signature == G2Element()
+    assert (
+        len(await wsm.tx_store.get_all_transactions_for_wallet(wsm.main_wallet.id(), type=TransactionType.OUTGOING_TX))
+        == 0
+    )
+    assert extra_coin_spend in [spend for bundle in bundles for spend in bundle.coin_spends]
+
+    new_txs = await wsm.add_pending_transactions(
+        [tx1, tx2],
+        push=False,
+        merge_spends=True,
+        sign=False,
+        extra_spends=[extra_spend],
+    )
+    bundles = flatten_spend_bundles(new_txs)
+    assert len(bundles) == 1
+    for bundle in bundles:
+        assert bundle.aggregated_signature == G2Element()
+    assert (
+        len(await wsm.tx_store.get_all_transactions_for_wallet(wsm.main_wallet.id(), type=TransactionType.OUTGOING_TX))
+        == 0
+    )
+    assert extra_coin_spend in [spend for bundle in bundles for spend in bundle.coin_spends]
+
+    [tx1, tx2] = await wsm.add_pending_transactions([tx1, tx2], push=True, merge_spends=True, sign=True)
+    bundles = flatten_spend_bundles(new_txs)
+    assert len(bundles) == 1
+    assert (
+        len(await wsm.tx_store.get_all_transactions_for_wallet(wsm.main_wallet.id(), type=TransactionType.OUTGOING_TX))
+        == 2
+    )
+
+    await wallet_environments.full_node.wait_transaction_records_entered_mempool([tx1, tx2])

@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
+from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import Service, async_run
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -19,7 +20,6 @@ from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
-from chia.util.misc import SignalHandlers
 
 SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
 

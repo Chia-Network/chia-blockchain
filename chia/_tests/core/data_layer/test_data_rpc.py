@@ -721,7 +721,7 @@ async def test_get_owned_stores(
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
@@ -2994,7 +2994,7 @@ async def test_pagination_cmds(
         if layer == InterfaceLayer.funcs:
             keys = await get_keys_cmd(
                 rpc_port=rpc_port,
-                store_id="0x" + store_id.hex(),
+                store_id=store_id,
                 root_hash=None,
                 fingerprint=None,
                 page=0,
@@ -3003,7 +3003,7 @@ async def test_pagination_cmds(
             )
             keys_values = await get_keys_values_cmd(
                 rpc_port=rpc_port,
-                store_id="0x" + store_id.hex(),
+                store_id=store_id,
                 root_hash=None,
                 fingerprint=None,
                 page=0,
@@ -3012,9 +3012,9 @@ async def test_pagination_cmds(
             )
             kv_diff = await get_kv_diff_cmd(
                 rpc_port=rpc_port,
-                store_id="0x" + store_id.hex(),
-                hash_1="0x" + hash_1.hex(),
-                hash_2="0x" + hash_2.hex(),
+                store_id=store_id,
+                hash_1=hash_1,
+                hash_2=hash_2,
                 fingerprint=None,
                 page=0,
                 max_page_size=max_page_size,
@@ -3222,7 +3222,7 @@ async def test_unsubmitted_batch_update(
             elif layer == InterfaceLayer.funcs:
                 res = await update_data_store_cmd(
                     rpc_port=rpc_port,
-                    store_id="0x" + store_id.hex(),
+                    store_id=store_id,
                     changelist=changelist,
                     fee=None,
                     fingerprint=None,
@@ -3369,7 +3369,7 @@ async def test_unsubmitted_batch_update(
             update_tx_rec1 = res["tx_id"]
         elif layer == InterfaceLayer.funcs:
             res = await submit_pending_root_cmd(
-                store_id="0x" + store_id.hex(),
+                store_id=store_id,
                 fee=None,
                 fingerprint=None,
                 rpc_port=rpc_port,

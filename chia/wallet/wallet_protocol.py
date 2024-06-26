@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, TypeVar, runtime_checkable
 
 from chia_rs import G1Element, G2Element
 from typing_extensions import NotRequired, Protocol, TypedDict, Unpack
@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 T = TypeVar("T", contravariant=True)
 
 
+@runtime_checkable
 class WalletProtocol(Protocol[T]):
     @classmethod
     def type(cls) -> WalletType: ...
@@ -81,6 +82,7 @@ class WalletProtocol(Protocol[T]):
     wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
 
 
+@runtime_checkable
 class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
     @property
     def max_send_quantity(self) -> int: ...
@@ -149,6 +151,15 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
     ) -> Program: ...
 
     async def get_puzzle(self, new: bool) -> Program: ...
+
+    async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32: ...
+
+    async def get_coins_to_offer(
+        self,
+        asset_id: Optional[bytes32],
+        amount: uint64,
+        coin_selection_config: CoinSelectionConfig,
+    ) -> Set[Coin]: ...
 
 
 class GSTOptionalArgs(TypedDict):

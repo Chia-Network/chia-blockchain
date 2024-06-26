@@ -248,7 +248,7 @@ def test_beta_invalid_directories(
     beta_path = root_path / "beta"
     if write_test:
         (beta_path / ".write_test").mkdir(parents=True)  # `.write_test` is used in  validate_directory_writable
-    if command == configure:
+    if command is configure:
         generate_beta_config(root_path, True, root_path_populated_with_config)
     result = command(root_path, "--path", str(beta_path))
     assert result.exit_code == 1
