@@ -349,7 +349,6 @@ jobs:
           if [ -n "$GLUE_API_URL" ]; then HAS_GLUE_SECRET='true' ; fi
           echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
         env:
-          SIGNING_SECRET: "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"
           AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
           GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
 
