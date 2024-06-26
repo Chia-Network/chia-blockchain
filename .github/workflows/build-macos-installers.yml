@@ -279,8 +279,6 @@ jobs:
             mode:
               matrix: cli
     env:
-      # TODO: review for any indirect usage
-      CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
       FILE: ${{ format(matrix.os.names[matrix.mode.matrix].file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
       DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
       LATEST_DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].latest-dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
