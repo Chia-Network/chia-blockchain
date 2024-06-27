@@ -395,7 +395,7 @@ class Keychain:
             self.keyring_wrapper.set_label(fingerprint, label)
 
         try:
-            self.keyring_wrapper.set_passphrase(
+            self.keyring_wrapper.keyring.set_key(
                 self.service,
                 get_private_key_user(self.user, index),
                 key_data,

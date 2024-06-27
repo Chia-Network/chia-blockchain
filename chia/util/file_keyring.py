@@ -282,7 +282,7 @@ class FileKeyring(FileSystemEventHandler):
         with self.lock_and_reload_if_required():
             return self.cached_keys().get(service, {}).get(user)
 
-    def set_password(self, service: str, user: str, passphrase: str) -> None:
+    def set_key(self, service: str, user: str, key: str) -> None:
         """
         Store the passphrase to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
@@ -292,7 +292,7 @@ class FileKeyring(FileSystemEventHandler):
             # Ensure a dictionary exists for the 'service'
             if keys.get(service) is None:
                 keys[service] = {}
-            keys[service][user] = passphrase
+            keys[service][user] = key
             self.write_keyring()
 
     def delete_password(self, service: str, user: str) -> None:

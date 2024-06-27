@@ -207,7 +207,9 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") is None
 
         # When: setting a passphrase
-        KeyringWrapper.get_shared_instance().set_passphrase("service-abc", "user-xyz", b"super secret passphrase".hex())
+        KeyringWrapper.get_shared_instance().keyring.set_key(
+            "service-abc", "user-xyz", b"super secret passphrase".hex()
+        )
 
         # Expect: passphrase lookup should succeed
         assert (
@@ -226,7 +228,7 @@ class TestKeyringWrapper:
         Overwriting a previously-set passphrase should work
         """
         # When: initially setting the passphrase
-        KeyringWrapper.get_shared_instance().set_passphrase("service-xyz", "user-123", b"initial passphrase".hex())
+        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", b"initial passphrase".hex())
 
         # Expect: passphrase lookup should succeed
         assert (
@@ -235,7 +237,7 @@ class TestKeyringWrapper:
         )
 
         # When: updating the same passphrase
-        KeyringWrapper.get_shared_instance().set_passphrase("service-xyz", "user-123", b"updated passphrase".hex())
+        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", b"updated passphrase".hex())
 
         # Expect: the updated passphrase should be retrieved
         assert (
@@ -252,7 +254,7 @@ class TestKeyringWrapper:
         KeyringWrapper.get_shared_instance().delete_passphrase("some service", "some user")
 
         # When: setting a passphrase
-        KeyringWrapper.get_shared_instance().set_passphrase("some service", "some user", b"500p3r 53cr37".hex())
+        KeyringWrapper.get_shared_instance().keyring.set_key("some service", "some user", b"500p3r 53cr37".hex())
 
         # Expect: passphrase retrieval should succeed
         assert (

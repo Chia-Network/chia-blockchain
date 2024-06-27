@@ -40,7 +40,7 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
             sleep(0.1)
         assert started
 
-        KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
+        KeyringWrapper.get_shared_instance().keyring.set_key(service=service, user=user, key=passphrase)
 
         found_passphrase = KeyringWrapper.get_shared_instance().keyring.get_key(service, user)
         if found_passphrase != passphrase:

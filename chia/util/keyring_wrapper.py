@@ -267,9 +267,6 @@ class KeyringWrapper:
 
     # Keyring interface
 
-    def set_passphrase(self, service: str, user: str, passphrase: str) -> None:
-        self.get_keyring().set_password(service, user, passphrase)
-
     def delete_passphrase(self, service: str, user: str) -> None:
         self.get_keyring().delete_password(service, user)
 
