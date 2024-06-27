@@ -309,7 +309,7 @@ class Keychain:
         is represented by the class `KeyData`.
         """
         user = get_private_key_user(self.user, index)
-        read_str = self.keyring_wrapper.get_passphrase(self.service, user)
+        read_str = self.keyring_wrapper.keyring.get_key(self.service, user)
         if read_str is None or len(read_str) == 0:
             raise KeychainUserNotFound(self.service, user)
         str_bytes = bytes.fromhex(read_str)

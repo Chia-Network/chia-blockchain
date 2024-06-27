@@ -42,7 +42,7 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
 
         KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
 
-        found_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service, user)
+        found_passphrase = KeyringWrapper.get_shared_instance().keyring.get_key(service, user)
         if found_passphrase != passphrase:
             log.error(
                 f"[pid:{os.getpid()}] error: didn't get expected passphrase: "
@@ -100,5 +100,5 @@ class TestFileKeyringSynchronization:
         # Expect: parent process should be able to find all passphrases that were set by the child processes
         for item in passphrase_list:
             expected_passphrase = item[2]
-            actual_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service=item[0], user=item[1])
+            actual_passphrase = KeyringWrapper.get_shared_instance().keyring.get_key(service=item[0], user=item[1])
             assert expected_passphrase == actual_passphrase
