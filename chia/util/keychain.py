@@ -520,7 +520,7 @@ class Keychain:
                         # Just try to delete the label and move on if there wasn't one
                         pass
                     try:
-                        self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
+                        self.keyring_wrapper.keyring.delete_key(self.service, get_private_key_user(self.user, index))
                         removed += 1
                     except Exception:
                         pass

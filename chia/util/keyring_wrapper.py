@@ -267,9 +267,6 @@ class KeyringWrapper:
 
     # Keyring interface
 
-    def delete_passphrase(self, service: str, user: str) -> None:
-        self.get_keyring().delete_password(service, user)
-
     def get_label(self, fingerprint: int) -> Optional[str]:
         return self.keyring.get_label(fingerprint)
 

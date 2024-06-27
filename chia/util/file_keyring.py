@@ -295,7 +295,7 @@ class FileKeyring(FileSystemEventHandler):
             keys[service][user] = key
             self.write_keyring()
 
-    def delete_password(self, service: str, user: str) -> None:
+    def delete_key(self, service: str, user: str) -> None:
         """
         Deletes the passphrase named by the 'user' parameter from the keyring data
         (will force a write to keyring.yaml on success)

@@ -251,7 +251,7 @@ class TestKeyringWrapper:
         Deleting a non-existent passphrase should fail gracefully (no exceptions)
         """
         # Expect: deleting a non-existent passphrase should fail gracefully
-        KeyringWrapper.get_shared_instance().delete_passphrase("some service", "some user")
+        KeyringWrapper.get_shared_instance().keyring.delete_key("some service", "some user")
 
         # When: setting a passphrase
         KeyringWrapper.get_shared_instance().keyring.set_key("some service", "some user", b"500p3r 53cr37".hex())
@@ -262,7 +262,7 @@ class TestKeyringWrapper:
         )
 
         # When: deleting the passphrase
-        KeyringWrapper.get_shared_instance().delete_passphrase("some service", "some user")
+        KeyringWrapper.get_shared_instance().keyring.delete_key("some service", "some user")
 
         # Expect: passphrase retrieval should fail gracefully
         assert KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") is None
