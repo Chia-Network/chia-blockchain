@@ -333,7 +333,7 @@ class InternalNode:
 
 class Unspecified:
     def __repr__(self) -> str:
-        return "TreeId.Unspecified"
+        return "Unspecified"
 
 
 # TODO: this is kinda ugly especially since `is` won't type narrow in mypy anyways
