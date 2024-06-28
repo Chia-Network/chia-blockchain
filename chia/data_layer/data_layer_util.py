@@ -331,6 +331,16 @@ class InternalNode:
         raise Exception("provided hash not present")
 
 
+class Unspecified:
+    def __repr__(self) -> str:
+        return "TreeId.Unspecified"
+
+
+# TODO: this is kinda ugly especially since `is` won't type narrow in mypy anyways
+#       can we make mypy "singleton"-aware?
+unspecified: Unspecified = Unspecified()
+
+
 @dataclass(frozen=True)
 class Root:
     store_id: bytes32

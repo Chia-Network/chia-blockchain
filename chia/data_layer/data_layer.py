@@ -51,8 +51,10 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     SyncStatus,
     TerminalNode,
+    Unspecified,
     UnsubscribeData,
     leaf_hash,
+    unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
@@ -384,7 +386,7 @@ class DataLayer:
         self,
         store_id: bytes32,
         key: bytes,
-        root_hash: Optional[bytes32] = None,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -392,7 +394,9 @@ class DataLayer:
             node = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
             return node.hash
 
-    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> bytes:
+    async def get_value(
+        self, store_id: bytes32, key: bytes, root_hash: Union[bytes32, Unspecified] = unspecified
+    ) -> bytes:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
@@ -403,8 +407,7 @@ class DataLayer:
     async def get_keys_values(
         self,
         store_id: bytes32,
-        # TODO: a none root hash means unspecified here, not empty
-        root_hash: Optional[bytes32],
+        root_hash: Union[bytes32, Unspecified],
     ) -> List[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -416,8 +419,7 @@ class DataLayer:
     async def get_keys_values_paginated(
         self,
         store_id: bytes32,
-        # TODO: a none root hash means unspecified here, not empty
-        root_hash: Optional[bytes32],
+        root_hash: Union[bytes32, Unspecified],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysValuesPaginationData:
@@ -428,7 +430,7 @@ class DataLayer:
         res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
         return res
 
-    async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
+    async def get_keys(self, store_id: bytes32, root_hash: Union[bytes32, Unspecified]) -> List[bytes]:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_keys(store_id, root_hash)
@@ -437,8 +439,7 @@ class DataLayer:
     async def get_keys_paginated(
         self,
         store_id: bytes32,
-        # TODO: a none root hash means unspecified here, not empty
-        root_hash: Optional[bytes32],
+        root_hash: Union[bytes32, Unspecified],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysPaginationData:
