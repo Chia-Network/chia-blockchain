@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
-from enum import IntEnum
+from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 # TODO: remove or formalize this
@@ -331,14 +331,17 @@ class InternalNode:
         raise Exception("provided hash not present")
 
 
-class Unspecified:
+class Unspecified(Enum):
+    # not beautiful, improve when a better way is known
+    # https://github.com/python/typing/issues/236#issuecomment-229515556
+
+    instance = None
+
     def __repr__(self) -> str:
         return "Unspecified"
 
 
-# TODO: this is kinda ugly especially since `is` won't type narrow in mypy anyways
-#       can we make mypy "singleton"-aware?
-unspecified: Unspecified = Unspecified()
+unspecified = Unspecified.instance
 
 
 @dataclass(frozen=True)

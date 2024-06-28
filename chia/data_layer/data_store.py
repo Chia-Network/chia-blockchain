@@ -794,7 +794,7 @@ class DataStore:
     ) -> List[TerminalNode]:
         async with self.db_wrapper.reader() as reader:
             resolved_root_hash: Optional[bytes32]
-            if isinstance(root_hash, Unspecified):
+            if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
                 resolved_root_hash = root.node_hash
             else:
@@ -829,7 +829,7 @@ class DataStore:
     ) -> KeysValuesCompressed:
         async with self.db_wrapper.reader() as reader:
             resolved_root_hash: Optional[bytes32]
-            if isinstance(root_hash, Unspecified):
+            if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
                 resolved_root_hash = root.node_hash
             else:
@@ -1820,7 +1820,7 @@ class DataStore:
         store_id: bytes32,
         root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> TerminalNode:
-        if isinstance(root_hash, Unspecified):
+        if root_hash is unspecified:
             return await self.get_node_by_key_latest_generation(key, store_id)
 
         nodes = await self.get_keys_values(store_id=store_id, root_hash=root_hash)
