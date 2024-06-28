@@ -918,7 +918,7 @@ class DataStore:
         store_id: bytes32,
         page: int,
         max_page_size: int,
-        # TODO: a none root hash means unspecified here, not empty
+        # NOTE: empty is expressed as zeros
         hash1: bytes32,
         hash2: bytes32,
     ) -> KVDiffPaginationData:
@@ -2229,8 +2229,7 @@ class DataStore:
     async def get_kv_diff(
         self,
         store_id: bytes32,
-        # TODO: a none root hash means unspecified here, not empty
-        #       though it happens to be disallowed here
+        # NOTE: empty is expressed as zeros
         hash_1: bytes32,
         hash_2: bytes32,
     ) -> Set[DiffData]:

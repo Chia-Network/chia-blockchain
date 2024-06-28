@@ -239,7 +239,6 @@ class DataLayerRpcApi:
 
         json_nodes = [recurse_jsonify(dataclasses.asdict(node)) for node in keys_values]
         # TODO: here in fact we do support zeros as the empty root, or at least we check for it
-        # TODO: here and elsewhere, the isinstance may not be needed?
         if not json_nodes and resolved_root_hash is not unspecified and resolved_root_hash != bytes32([0] * 32):
             raise Exception(f"Can't find keys and values for {resolved_root_hash}")
 

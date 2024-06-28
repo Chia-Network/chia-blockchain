@@ -830,8 +830,7 @@ class DataLayer:
     async def get_kv_diff_paginated(
         self,
         store_id: bytes32,
-        # TODO: a none root hash means unspecified here, not empty
-        #       though in this case we disallow none
+        # NOTE: empty is expressed as zeros
         hash_1: bytes32,
         hash_2: bytes32,
         page: int,
