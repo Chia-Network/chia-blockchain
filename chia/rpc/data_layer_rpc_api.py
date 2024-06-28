@@ -198,7 +198,7 @@ class DataLayerRpcApi:
             keys_paginated = await self.service.get_keys_paginated(store_id, resolved_root_hash, page, max_page_size)
             keys = keys_paginated.keys
 
-        # TODO: here in fact we do support zeros as the empty root, or at least we check for it
+        # NOTE: here we do support zeros as the empty root
         if keys == [] and resolved_root_hash is not unspecified and resolved_root_hash != bytes32([0] * 32):
             raise Exception(f"Can't find keys for {resolved_root_hash}")
 
@@ -238,7 +238,7 @@ class DataLayerRpcApi:
             keys_values = keys_values_paginated.keys_values
 
         json_nodes = [recurse_jsonify(dataclasses.asdict(node)) for node in keys_values]
-        # TODO: here in fact we do support zeros as the empty root, or at least we check for it
+        # NOTE: here we do support zeros as the empty root
         if not json_nodes and resolved_root_hash is not unspecified and resolved_root_hash != bytes32([0] * 32):
             raise Exception(f"Can't find keys and values for {resolved_root_hash}")
 
