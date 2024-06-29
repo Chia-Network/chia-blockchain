@@ -1073,9 +1073,11 @@ class DataStore:
         root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> List[bytes]:
         async with self.db_wrapper.reader() as reader:
-            if root_hash is None:
+            if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
-                root_hash = root.node_hash
+                resolved_root_hash = root.node_hash
+            else:
+                resolved_root_hash = root_hash
             cursor = await reader.execute(
                 """
                 WITH RECURSIVE
@@ -1089,7 +1091,7 @@ class DataStore:
                     )
                 SELECT key FROM tree_from_root_hash WHERE node_type == :node_type
                 """,
-                {"root_hash": root_hash, "node_type": NodeType.TERMINAL},
+                {"root_hash": resolved_root_hash, "node_type": NodeType.TERMINAL},
             )
 
             keys: List[bytes] = [row["key"] async for row in cursor]
