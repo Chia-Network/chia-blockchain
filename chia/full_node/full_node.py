@@ -2879,7 +2879,7 @@ class FullNode:
 
                 broadcast_list_chunks: List[List[timelord_protocol.RequestCompactProofOfTime]] = []
                 for index in range(0, len(broadcast_list), target_uncompact_proofs):
-                    broadcast_list_chunks.append(broadcast_list[index:index+target_uncompact_proofs])
+                    broadcast_list_chunks.append(broadcast_list[index : index + target_uncompact_proofs])
                 if len(broadcast_list_chunks) == 0:
                     self.log.info("Did not find any uncompact blocks.")
                     continue
