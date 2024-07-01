@@ -16,7 +16,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
@@ -166,7 +165,7 @@ async def test_hints_in_blockchain(
     condition_dict = {
         ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
     }
-    tx: SpendBundle = wt.generate_signed_transaction(
+    tx = wt.generate_signed_transaction(
         uint64(10),
         wt.get_new_puzzlehash(),
         coin_spent,

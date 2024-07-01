@@ -17,9 +17,9 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.batches import to_batches
 from chia.util.ints import uint32, uint64
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 NUM_ITERS = 200
 NUM_PEERS = 5
@@ -93,20 +93,20 @@ async def run_mempool_benchmark() -> None:
 
     wt = WalletTool(DEFAULT_CONSTANTS)
 
-    spend_bundles: List[List[SpendBundle]] = []
+    spend_bundles: List[List[WalletSpendBundle]] = []
 
     # these spend the same coins as spend_bundles but with a higher fee
-    replacement_spend_bundles: List[List[SpendBundle]] = []
+    replacement_spend_bundles: List[List[WalletSpendBundle]] = []
 
     # these spend the same coins as spend_bundles, but they are organized in
     # much larger bundles
-    large_spend_bundles: List[List[SpendBundle]] = []
+    large_spend_bundles: List[List[WalletSpendBundle]] = []
 
     timestamp = uint64(1631794488)
 
     height = uint32(1)
 
-    print("Building SpendBundles")
+    print("Building spend bundles")
     for peer in range(NUM_PEERS):
         print(f"  peer {peer}")
         print("     reward coins")
@@ -129,11 +129,9 @@ async def run_mempool_benchmark() -> None:
             unspent.extend([farmer_coin, pool_coin])
 
         print("     spend bundles")
-        bundles: List[SpendBundle] = []
+        bundles = []
         for coin in unspent:
-            tx: SpendBundle = wt.generate_signed_transaction(
-                uint64(coin.amount // 2), wt.get_new_puzzlehash(), coin, fee=peer + idx
-            )
+            tx = wt.generate_signed_transaction(uint64(coin.amount // 2), wt.get_new_puzzlehash(), coin, fee=peer + idx)
             bundles.append(tx)
         spend_bundles.append(bundles)
 
@@ -150,7 +148,7 @@ async def run_mempool_benchmark() -> None:
         print("     large spend bundles")
         for batch in to_batches(unspent, 200):
             print(f"{len(batch.entries)} coins")
-            tx = SpendBundle.aggregate(
+            tx = WalletSpendBundle.aggregate(
                 [
                     wt.generate_signed_transaction(uint64(c.amount // 2), wt.get_new_puzzlehash(), c, fee=peer + idx)
                     for c in batch.entries
@@ -172,7 +170,7 @@ async def run_mempool_benchmark() -> None:
         rec = fake_block_record(height, timestamp)
         await mempool.new_peak(rec, None)
 
-        async def add_spend_bundles(spend_bundles: List[SpendBundle]) -> None:
+        async def add_spend_bundles(spend_bundles: List[WalletSpendBundle]) -> None:
             for tx in spend_bundles:
                 spend_bundle_id = tx.name()
                 npc = await mempool.pre_validate_spendbundle(tx, None, spend_bundle_id)

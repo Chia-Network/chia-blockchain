@@ -16,10 +16,11 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.spend_bundle import estimate_fees
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 
@@ -123,7 +124,7 @@ class TestBlockchainTransactions:
         spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_puzzlehash, spend_coin)
         spend_bundle_double = wallet_a.generate_signed_transaction(uint64(1001), receiver_puzzlehash, spend_coin)
 
-        block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
+        block_spendbundle = WalletSpendBundle.aggregate([spend_bundle, spend_bundle_double])
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -611,7 +612,7 @@ class TestBlockchainTransactions:
         )
 
         # bundle_together contains both transactions
-        bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
+        bundle_together = WalletSpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
 
         # Create another block that includes our transaction
         new_blocks = bt.get_consecutive_blocks(
@@ -695,7 +696,7 @@ class TestBlockchainTransactions:
         )
 
         # bundle_together contains both transactions
-        bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
+        bundle_together = WalletSpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
 
         # Create another block that includes our transaction
         new_blocks = bt.get_consecutive_blocks(
