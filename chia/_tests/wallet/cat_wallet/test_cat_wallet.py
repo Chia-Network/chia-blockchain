@@ -208,7 +208,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "confirmed_wallet_balance": 0,
                         "unconfirmed_wallet_balance": 100,
                         "spendable_balance": 0,
-                        "pending_change": 0,
+                        "pending_change": 100,  # A little weird but technically correct
                         "max_send_amount": 0,
                         "unspent_coin_count": 0,
                         "pending_coin_removal_count": 1,  # The ephemeral eve spend
@@ -226,7 +226,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                     "cat": {
                         "confirmed_wallet_balance": 100,
                         "spendable_balance": 100,
-                        "pending_change": 0,
+                        "pending_change": -100,
                         "max_send_amount": 100,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": -1,
