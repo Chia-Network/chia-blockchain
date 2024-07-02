@@ -29,7 +29,7 @@ dependencies = [
     "PyYAML==6.0.1",  # Used for config file format
     "setproctitle==1.3.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
-    "click==8.1.3",  # For the CLI
+    "click==8.1.7",  # For the CLI
     "dnspython==2.6.1",  # Query DNS seeds
     "watchdog==4.0.0",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.24",  # dns lib
