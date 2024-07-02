@@ -361,7 +361,10 @@ class FarmerAPI:
                             f"{pool_url}/partial",
                             json=post_partial_request.to_json_dict(),
                             ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.farmer.log),
-                            headers={"User-Agent": f"Chia Blockchain v.{__version__}"},
+                            headers={
+                                "User-Agent": f"Chia Blockchain v.{__version__}",
+                                **self._get_additional_headers_for_partial(peer),
+                            },
                         ) as resp:
                             if not resp.ok:
                                 self.farmer.log.error(f"Error sending partial to {pool_url}, {resp.status}")
@@ -655,6 +658,24 @@ class FarmerAPI:
     @api_request(peer_required=True)
     async def plot_sync_done(self, message: PlotSyncDone, peer: WSChiaConnection) -> None:
         await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)
+
+    def _get_additional_headers_for_partial(self, harvester_peer: WSChiaConnection) -> Dict[str, str]:
+        headers: Dict[str, str] = {
+            "chia-farmer-peer-id": self.farmer.server.node_id.hex(),
+            "chia-farmer-version": __version__,
+            "chia-harvester-peer-id": harvester_peer.peer_node_id.hex(),
+            "chia-harvester-version": harvester_peer.version,
+        }
+        receiver = self.farmer.plot_sync_receivers.get(harvester_peer.peer_node_id)
+        if receiver is None:
+            return headers
+
+        return {
+            **headers,
+            "chia-harvester-raw-capacity-bytes": f"{receiver.total_plot_size()}",
+            "chia-harvester-effective-capacity-bytes": f"{receiver.total_effective_plot_size()}",
+            "chia-harvester-plot-count": f"{len(receiver.plots())}",
+        }
 
     def _process_respond_signatures(
         self, response: harvester_protocol.RespondSignatures
