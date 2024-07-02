@@ -71,9 +71,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set git urls to https instead of ssh
-        run: |
-          git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+      - uses: Chia-Network/actions/git-ssh-to-https@main
 
       - name: Get npm cache directory
         id: npm-cache
