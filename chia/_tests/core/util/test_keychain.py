@@ -5,7 +5,7 @@ import random
 from dataclasses import replace
 from typing import Callable, List, Optional, Tuple
 
-import pkg_resources
+import importlib_resources
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
@@ -42,6 +42,7 @@ fingerprint = uint32(1310648153)
 public_key = G1Element.from_bytes(
     bytes.fromhex("b5acf3599bc5fa5da1c00f6cc3d5bcf1560def67778b7f50a8c373a83f78761505b6250ab776e38a292e26628009aec4")
 )
+bech32_pubkey = "bls12381kkk0xkvmcha9mgwqpakv84du79tqmmm8w79h759gcde6s0mcwc2std39p2mhdcu29yhzvc5qpxhvgmknyl7"
 
 
 class TestKeychain:
@@ -66,13 +67,13 @@ class TestKeychain:
         with pytest.raises(ValueError, match="'ZZZZZZ' is not in the mnemonic dictionary; may be misspelled"):
             bytes_from_mnemonic(" ".join(bad_mnemonic))
 
-        kc.add_private_key(mnemonic)
+        kc.add_key(mnemonic)
         assert kc._get_free_private_key_index() == 1
         assert len(kc.get_all_private_keys()) == 1
 
-        kc.add_private_key(mnemonic_2)
+        kc.add_key(mnemonic_2)
         with pytest.raises(KeychainFingerprintExists) as e:
-            kc.add_private_key(mnemonic_2)
+            kc.add_key(mnemonic_2)
         assert e.value.fingerprint == fingerprint_2
         assert kc._get_free_private_key_index() == 2
         assert len(kc.get_all_private_keys()) == 2
@@ -95,9 +96,15 @@ class TestKeychain:
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 0
 
-        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
-        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
-        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
+        kc.add_key(bech32_pubkey, label=None, private=False)
+        all_pks = kc.get_all_public_keys()
+        assert len(all_pks) == 1
+        assert all_pks[0] == public_key
+        kc.delete_all_keys()
+
+        kc.add_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
+        kc.add_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
+        kc.add_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
 
         assert len(kc.get_all_public_keys()) == 3
 
@@ -105,7 +112,7 @@ class TestKeychain:
         assert kc.get_first_public_key() is not None
 
         kc.delete_all_keys()
-        kc.add_private_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
+        kc.add_key(bytes_to_mnemonic(bytes32.random(seeded_random)))
         assert kc.get_first_public_key() is not None
 
     def test_add_private_key_label(self, empty_temp_file_keyring: TempKeyring):
@@ -115,26 +122,26 @@ class TestKeychain:
         key_data_1 = KeyData.generate(label="key_1")
         key_data_2 = KeyData.generate(label=None)
 
-        keychain.add_private_key(mnemonic=key_data_0.mnemonic_str(), label=key_data_0.label)
+        keychain.add_key(mnemonic_or_pk=key_data_0.mnemonic_str(), label=key_data_0.label)
         assert key_data_0 == keychain.get_key(key_data_0.fingerprint, include_secrets=True)
 
         # Try to add a new key with an existing label should raise
         with pytest.raises(KeychainLabelExists) as e:
-            keychain.add_private_key(mnemonic=key_data_1.mnemonic_str(), label=key_data_0.label)
+            keychain.add_key(mnemonic_or_pk=key_data_1.mnemonic_str(), label=key_data_0.label)
         assert e.value.fingerprint == key_data_0.fingerprint
         assert e.value.label == key_data_0.label
 
         # Adding the same key with a valid label should work fine
-        keychain.add_private_key(mnemonic=key_data_1.mnemonic_str(), label=key_data_1.label)
+        keychain.add_key(mnemonic_or_pk=key_data_1.mnemonic_str(), label=key_data_1.label)
         assert key_data_1 == keychain.get_key(key_data_1.fingerprint, include_secrets=True)
 
         # Trying to add an existing key should not have an impact on the existing label
         with pytest.raises(KeychainFingerprintExists):
-            keychain.add_private_key(mnemonic=key_data_0.mnemonic_str(), label="other label")
+            keychain.add_key(mnemonic_or_pk=key_data_0.mnemonic_str(), label="other label")
         assert key_data_0 == keychain.get_key(key_data_0.fingerprint, include_secrets=True)
 
         # Adding a key with no label should not assign any label
-        keychain.add_private_key(mnemonic=key_data_2.mnemonic_str(), label=key_data_2.label)
+        keychain.add_key(mnemonic_or_pk=key_data_2.mnemonic_str(), label=key_data_2.label)
         assert key_data_2 == keychain.get_key(key_data_2.fingerprint, include_secrets=True)
 
         # All added keys should still be valid with their label
@@ -148,7 +155,7 @@ class TestKeychain:
 
         mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
         print("entropy to seed:", mnemonic_to_seed(mnemonic).hex())
-        master_sk = kc.add_private_key(mnemonic)
+        master_sk = kc.add_key(mnemonic)
         tv_master_int = 8075452428075949470768183878078858156044736575259233735633523546099624838313
         tv_child_int = 18507161868329770878190303689452715596635858303241878571348190917018711023613
         assert master_sk == PrivateKey.from_bytes(tv_master_int.to_bytes(32, "big"))
@@ -156,9 +163,8 @@ class TestKeychain:
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors(self):
-        test_vectors_path = pkg_resources.resource_filename(chia._tests.util.__name__, "bip39_test_vectors.json")
-        with open(test_vectors_path) as f:
-            all_vectors = json.loads(f.read())
+        test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
+        all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
         for vector_list in all_vectors["english"]:
             entropy_bytes = bytes.fromhex(vector_list[0])
@@ -173,9 +179,8 @@ class TestKeychain:
         """
         Tests that the first 4 letters of each mnemonic phrase matches as if it were the full phrase
         """
-        test_vectors_path = pkg_resources.resource_filename(chia._tests.util.__name__, "bip39_test_vectors.json")
-        with open(test_vectors_path) as f:
-            all_vectors = json.load(f)
+        test_vectors_path = importlib_resources.files(chia._tests.util.__name__).joinpath("bip39_test_vectors.json")
+        all_vectors = json.loads(test_vectors_path.read_text(encoding="utf-8"))
 
         for idx, [entropy_hex, full_mnemonic, seed, short_mnemonic] in enumerate(all_vectors["english"]):
             entropy_bytes = bytes.fromhex(entropy_hex)
@@ -309,7 +314,7 @@ async def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
         with pytest.raises(KeychainFingerprintNotFound):
             keychain.get_key(expected_keys[-1].fingerprint, include_secrets)
         # Add it and validate all keys
-        keychain.add_private_key(mnemonic_str)
+        keychain.add_key(mnemonic_str)
         assert all(keychain.get_key(key_data.fingerprint, include_secrets) == key_data for key_data in expected_keys)
     # Remove 10 keys and validate the result `get_key` for each of them after each removal
     while len(expected_keys) > 0:
@@ -335,7 +340,7 @@ async def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
         if not include_secrets:
             key_data = replace(key_data, secrets=None)
         expected_keys.append(key_data)
-        keychain.add_private_key(mnemonic_str)
+        keychain.add_key(mnemonic_str)
         assert keychain.get_keys(include_secrets) == expected_keys
     # Remove all 10 keys and validate the result of `get_keys` after each removal
     while len(expected_keys) > 0:
@@ -351,7 +356,7 @@ async def test_set_label(get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     # Generate a key and add it without label
     key_data_0 = KeyData.generate(label=None)
-    keychain.add_private_key(mnemonic=key_data_0.mnemonic_str(), label=None)
+    keychain.add_key(mnemonic_or_pk=key_data_0.mnemonic_str(), label=None)
     assert key_data_0 == keychain.get_key(key_data_0.fingerprint, include_secrets=True)
     # Set a label and validate it
     key_data_0 = replace(key_data_0, label="key_0")
@@ -364,7 +369,7 @@ async def test_set_label(get_temp_keyring: Keychain) -> None:
     # Add a second key
     key_data_1 = KeyData.generate(label="key_1")
     assert key_data_1.label is not None
-    keychain.add_private_key(key_data_1.mnemonic_str())
+    keychain.add_key(key_data_1.mnemonic_str())
     # Try to set the already existing label for the second key
     with pytest.raises(KeychainLabelExists) as e:
         keychain.set_label(fingerprint=key_data_1.fingerprint, label=key_data_0.label)
@@ -393,7 +398,7 @@ async def test_set_label(get_temp_keyring: Keychain) -> None:
 async def test_set_label_invalid_labels(label: str, message: str, get_temp_keyring: Keychain) -> None:
     keychain: Keychain = get_temp_keyring
     key_data = KeyData.generate()
-    keychain.add_private_key(key_data.mnemonic_str())
+    keychain.add_key(key_data.mnemonic_str())
     with pytest.raises(KeychainLabelInvalid, match=message) as e:
         keychain.set_label(key_data.fingerprint, label)
     assert e.value.label == label
@@ -417,7 +422,7 @@ async def test_delete_label(get_temp_keyring: Keychain) -> None:
     assert_delete_raises()
 
     for key in [key_data_0, key_data_1]:
-        keychain.add_private_key(mnemonic=key.mnemonic_str(), label=key.label)
+        keychain.add_key(mnemonic_or_pk=key.mnemonic_str(), label=key.label)
         assert key == keychain.get_key(key.fingerprint, include_secrets=True)
     # Delete the label of the first key, validate it was removed and make sure the other key retains its label
     keychain.delete_label(key_data_0.fingerprint)
@@ -446,7 +451,7 @@ async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool)
     labels = [f"key_{i}" for i in range(5)]
     keys = [KeyData.generate(label=label) for label in labels]
     for key_data in keys:
-        keychain.add_private_key(mnemonic=key_data.mnemonic_str(), label=key_data.label)
+        keychain.add_key(mnemonic_or_pk=key_data.mnemonic_str(), label=key_data.label)
         assert key_data == keychain.get_key(key_data.fingerprint, include_secrets=True)
         assert key_data.label is not None
         assert keychain.keyring_wrapper.get_label(key_data.fingerprint) == key_data.label

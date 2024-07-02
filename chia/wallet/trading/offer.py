@@ -72,7 +72,7 @@ class NotarizedPayment(Payment):
         return cls(puzzle_hash, amount, memos, nonce)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Offer:
     requested_payments: Dict[
         Optional[bytes32], List[NotarizedPayment]
@@ -82,10 +82,10 @@ class Offer:
 
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
-    _additions: Dict[Coin, List[Coin]] = field(init=False)
+    _additions: Dict[Coin, List[Coin]] = field(init=False, repr=False)
     _hints: Dict[bytes32, bytes32] = field(init=False)
-    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
-    _final_spend_bundle: Optional[SpendBundle] = field(init=False)
+    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False, repr=False)
+    _final_spend_bundle: Optional[SpendBundle] = field(init=False, repr=False)
     _conditions: Optional[Dict[Coin, List[Condition]]] = field(init=False)
 
     @staticmethod
@@ -146,7 +146,7 @@ class Offer:
         # populate the _additions cache
         adds: Dict[Coin, List[Coin]] = {}
         hints: Dict[bytes32, bytes32] = {}
-        max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+        max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
         for cs in self._bundle.coin_spends:
             # you can't spend the same coin twice in the same SpendBundle
             assert cs.coin not in adds
@@ -166,7 +166,7 @@ class Offer:
     def conditions(self) -> Dict[Coin, List[Condition]]:
         if self._conditions is None:
             conditions: Dict[Coin, List[Condition]] = {}
-            max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
             for cs in self._bundle.coin_spends:
                 try:
                     cost, conds = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
@@ -292,7 +292,7 @@ class Offer:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
         offered_amounts: Dict[Optional[bytes32], int] = {}
         for asset_id, coins in offered_coins.items():
-            offered_amounts[asset_id] = uint64(sum([c.amount for c in coins]))
+            offered_amounts[asset_id] = uint64(sum(c.amount for c in coins))
         return offered_amounts
 
     def get_requested_payments(self) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
@@ -301,7 +301,7 @@ class Offer:
     def get_requested_amounts(self) -> Dict[Optional[bytes32], int]:
         requested_amounts: Dict[Optional[bytes32], int] = {}
         for asset_id, coins in self.get_requested_payments().items():
-            requested_amounts[asset_id] = uint64(sum([c.amount for c in coins]))
+            requested_amounts[asset_id] = uint64(sum(c.amount for c in coins))
         return requested_amounts
 
     def arbitrage(self) -> Dict[Optional[bytes32], int]:
@@ -364,7 +364,7 @@ class Offer:
 
         # Then we gather anything else as unknown
         sum_of_additions_so_far: int = sum(pending_dict.values())
-        unknown: int = sum([c.amount for c in non_ephemeral_removals]) - sum_of_additions_so_far
+        unknown: int = sum(c.amount for c in non_ephemeral_removals) - sum_of_additions_so_far
         if unknown > 0:
             pending_dict["unknown"] = unknown
 

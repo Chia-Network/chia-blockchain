@@ -38,23 +38,31 @@ permissions:
   contents: write
 
 jobs:
+  version:
+    uses: ./.github/workflows/reflow-version.yml
+
   build:
     name: Build ${{ matrix.os.name }} DMG
     runs-on: ${{ matrix.os.runs-on }}
+    needs:
+      - version
     timeout-minutes: 90
-    outputs:
-      chia-installer-version: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10"]
         os:
-          - runs-on: macos-11
+          - runs-on: macos-12
             name: intel
             bladebit-suffix: macos-x86-64.tar.gz
           - runs-on: [MacOS, ARM64]
             name: m1
             bladebit-suffix: macos-arm64.tar.gz
+
+    env:
+      CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
+      SETUPTOOLS_SCM_PRETEND_VERSION_FOR_CHIA_BLOCKCHAIN: ${{ needs.version.outputs.chia-installer-version }}
+      TAG_TYPE: ${{ needs.version.outputs.tag-type }}
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -74,20 +82,7 @@ jobs:
         uses: Chia-Network/actions/setjobenv@main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MACOSX_DEPLOYMENT_TARGET: 11
-
-      - name: Check tag type
-        shell: bash
-        run: |
-          REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
-          REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"
-          if [[ "${{ github.event.release.tag_name }}" =~ $REG_B ]] || [[ "${{ inputs.release_type }}" =~ $REG_B ]]; then
-            echo "TAG_TYPE=beta"
-            echo "TAG_TYPE=beta" >> "$GITHUB_ENV"
-          elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
-            echo "TAG_TYPE=rc"
-            echo "TAG_TYPE=rc" >> "$GITHUB_ENV"
-          fi
+          MACOSX_DEPLOYMENT_TARGET: 12
 
       - name: Test for secrets access
         id: check_secrets
@@ -99,15 +94,6 @@ jobs:
           echo HAS_APPLE_SECRET=${HAS_APPLE_SECRET} >> "$GITHUB_OUTPUT"
         env:
           APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
-
-      - name: Create installer version number
-        id: version_number
-        run: |
-          python3 -m venv ../venv
-          . ../venv/bin/activate
-          pip install setuptools_scm
-          echo "CHIA_INSTALLER_VERSION=$(python3 ./build_scripts/installer-version.py)" >> "$GITHUB_OUTPUT"
-          deactivate
 
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
@@ -121,7 +107,7 @@ jobs:
 
       - name: Import Apple app signing certificate
         if: steps.check_secrets.outputs.HAS_APPLE_SECRET
-        uses: Apple-Actions/import-codesign-certs@v2
+        uses: Apple-Actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.APPLE_DEV_ID_APP }}
           p12-password: ${{ secrets.APPLE_DEV_ID_APP_PASS }}
@@ -217,7 +203,6 @@ jobs:
 
       - name: Build MacOS DMG
         env:
-          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
           NOTARIZE: ${{ steps.check_secrets.outputs.HAS_APPLE_SECRET }}
           APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
           APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
@@ -245,8 +230,9 @@ jobs:
 
   publish:
     name: Publish ${{ matrix.os.name }} DMG
-    runs-on: ${{ matrix.os.runs-on }}
+    runs-on: ubuntu-latest
     needs:
+      - version
       - build
     timeout-minutes: 5
     strategy:
@@ -254,17 +240,15 @@ jobs:
       matrix:
         python-version: ["3.10"]
         os:
-          - runs-on: macos-11
-            name: intel
+          - name: intel
             file-suffix: ""
             glue-name: "build-macos"
-          - runs-on: [MacOS, ARM64]
-            name: m1
+          - name: m1
             file-suffix: "-arm64"
             glue-name: "build-mac-m1"
 
     env:
-      CHIA_INSTALLER_VERSION: ${{ needs.build.outputs.chia-installer-version }}
+      CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -318,19 +302,10 @@ jobs:
           AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
           GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
 
-      - name: Install AWS CLI
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        run: |
-          command -v aws || brew install awscli
-
-      - name: Install GH CLI
-        run: |
-          command -v gh || brew install gh
-
       - name: Create Checksums
         run: |
           ls
-          shasum -a 256 ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg > ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256
+          sha256sum ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg > ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256
 
       - name: Configure AWS credentials
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
@@ -345,29 +320,30 @@ jobs:
           GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
           CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
           echo "CHIA_DEV_BUILD=$CHIA_DEV_BUILD" >> "$GITHUB_ENV"
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/dev/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/dev/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/latest-dev/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg.sha256
 
       - name: Create torrent
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: env.FULL_RELEASE == 'true'
         run: |
-          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent --webseed https://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
+          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent --webseed https://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
           ls ${{ github.workspace }}/build_scripts/final_installer/
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
+          gh release upload --repo ${{ github.repository }} $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
         run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg.sha256
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg.sha256
 
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/
 
       - name: Upload release artifacts
         if: env.RELEASE == 'true'
@@ -396,16 +372,12 @@ jobs:
     name: Test ${{ matrix.os.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     needs:
+      - version
       - build
     strategy:
       fail-fast: false
       matrix:
         os:
-          - name: 11
-            matrix: 11
-            runs-on:
-              intel: macos-11
-              arm: [macos, arm64]
           - name: 12
             matrix: 12
             runs-on:
@@ -414,6 +386,10 @@ jobs:
             matrix: 13
             runs-on:
               intel: macos-13
+          - name: 14
+            matrix: 14
+            runs-on:
+              arm: macos-14
         arch:
           - name: ARM64
             matrix: arm
@@ -430,6 +406,10 @@ jobs:
               matrix: 13
             arch:
               matrix: arm
+          - os:
+              matrix: 14
+            arch:
+              matrix: intel
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -452,9 +432,14 @@ jobs:
         run: |
           find "/Volumes/Chia "*
 
+      - name: Test for homebrew rpath
+        if: matrix.arch.name == 'ARM64'
+        run: |
+          ! otool -l "/Volumes/Chia "*/Chia.app/Contents/Resources/app.asar.unpacked/daemon/_internal/lib-dynload/_ssl.*darwin.so | grep /opt/homebrew/lib
+
       - name: Run chia dev installers test
         run: |
-          "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" dev installers test --expected-chia-version "${{ needs.build.outputs.chia-installer-version }}"
+          "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
 
       - name: Detach .dmg
         if: always()

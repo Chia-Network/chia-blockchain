@@ -6,11 +6,13 @@ from typing import Any, List
 
 import pytest
 
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -73,20 +75,23 @@ class TestDLWallet:
         current_root = current_tree.calculate_root()
 
         for i in range(0, 2):
-            dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
+            std_record, launcher_id = await dl_wallet.generate_new_reporter(
                 current_root, DEFAULT_TX_CONFIG.override(reuse_puzhash=reuse_puzhash), fee=uint64(1999999999999)
             )
 
             assert await dl_wallet.get_latest_singleton(launcher_id) is not None
 
-            await wallet_node_0.wallet_state_manager.add_pending_transactions([dl_record, std_record])
-            await full_node_api.process_transaction_records(records=[dl_record, std_record])
+            [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
+            await full_node_api.process_transaction_records(records=[std_record])
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
             await asyncio.sleep(0.5)
 
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, 0)
         await time_out_assert(10, wallet_0.get_confirmed_balance, 0)
+
+        new_puz = await dl_wallet.get_new_puzzle()
+        assert new_puz
 
     @pytest.mark.parametrize(
         "trusted",
@@ -124,15 +129,15 @@ class TestDLWallet:
         expected_launcher_ids = set()
 
         for i in range(0, 2):
-            dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(
+            std_record, launcher_id = await dl_wallet.generate_new_reporter(
                 current_root, DEFAULT_TX_CONFIG, fee=uint64(1999999999999)
             )
             expected_launcher_ids.add(launcher_id)
 
             assert await dl_wallet.get_latest_singleton(launcher_id) is not None
 
-            await wallet_node_0.wallet_state_manager.add_pending_transactions([dl_record, std_record])
-            await full_node_api.process_transaction_records(records=[dl_record, std_record])
+            [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
+            await full_node_api.process_transaction_records(records=[std_record])
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
             await asyncio.sleep(0.5)
@@ -184,12 +189,12 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        dl_record, std_record, launcher_id = await dl_wallet_0.generate_new_reporter(current_root, DEFAULT_TX_CONFIG)
+        std_record, launcher_id = await dl_wallet_0.generate_new_reporter(current_root, DEFAULT_TX_CONFIG)
 
         assert await dl_wallet_0.get_latest_singleton(launcher_id) is not None
 
-        await wallet_node_0.wallet_state_manager.add_pending_transactions([dl_record, std_record])
-        await full_node_api.process_transaction_records(records=[dl_record, std_record])
+        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
+        await full_node_api.process_transaction_records(records=[std_record])
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await asyncio.sleep(0.5)
@@ -202,7 +207,7 @@ class TestDLWallet:
             new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
             txs = await dl_wallet_0.create_update_state_spend(launcher_id, new_root, DEFAULT_TX_CONFIG)
 
-            await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
+            txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
             await full_node_api.process_transaction_records(records=txs)
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
@@ -254,12 +259,12 @@ class TestDLWallet:
         current_tree = MerkleTree(nodes)
         current_root = current_tree.calculate_root()
 
-        dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(current_root, DEFAULT_TX_CONFIG)
+        std_record, launcher_id = await dl_wallet.generate_new_reporter(current_root, DEFAULT_TX_CONFIG)
 
         assert await dl_wallet.get_latest_singleton(launcher_id) is not None
 
-        await wallet_node_0.wallet_state_manager.add_pending_transactions([dl_record, std_record])
-        await full_node_api.process_transaction_records(records=[dl_record, std_record])
+        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
+        await full_node_api.process_transaction_records(records=[std_record])
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
         await asyncio.sleep(0.5)
@@ -293,7 +298,7 @@ class TestDLWallet:
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
+        txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
         await full_node_api.process_transaction_records(records=txs)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
@@ -314,7 +319,7 @@ class TestDLWallet:
         assert new_record != previous_record
         assert not new_record.confirmed
 
-        await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
+        txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
         await full_node_api.process_transaction_records(records=txs)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
@@ -374,14 +379,14 @@ class TestDLWallet:
                 return False
             return latest_singleton.confirmed
 
-        dl_record, std_record, launcher_id = await dl_wallet_0.generate_new_reporter(current_root, DEFAULT_TX_CONFIG)
+        std_record, launcher_id = await dl_wallet_0.generate_new_reporter(current_root, DEFAULT_TX_CONFIG)
 
         initial_record = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert initial_record is not None
 
-        await wallet_node_0.wallet_state_manager.add_pending_transactions([dl_record, std_record])
+        [std_record] = await wallet_node_0.wallet_state_manager.add_pending_transactions([std_record])
         await asyncio.wait_for(
-            full_node_api.process_transaction_records(records=[dl_record, std_record]),
+            full_node_api.process_transaction_records(records=[std_record]),
             timeout=adjusted_timeout(timeout=15),
         )
 
@@ -410,14 +415,14 @@ class TestDLWallet:
         assert initial_record != record_0
         assert record_0 != record_1
 
-        await wallet_node_1.wallet_state_manager.add_pending_transactions(report_txs)
+        report_txs = await wallet_node_1.wallet_state_manager.add_pending_transactions(report_txs)
 
         await asyncio.wait_for(
             full_node_api.wait_transaction_records_entered_mempool(records=report_txs),
             timeout=adjusted_timeout(timeout=15),
         )
 
-        await wallet_node_0.wallet_state_manager.add_pending_transactions(update_txs)
+        update_txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(update_txs)
 
         await asyncio.wait_for(
             full_node_api.process_transaction_records(records=report_txs), timeout=adjusted_timeout(timeout=15)
@@ -462,7 +467,7 @@ class TestDLWallet:
         )
         record_1 = await dl_wallet_0.get_latest_singleton(launcher_id)
         assert record_1 is not None
-        await wallet_node_0.wallet_state_manager.add_pending_transactions(update_txs_1)
+        update_txs_1 = await wallet_node_0.wallet_state_manager.add_pending_transactions(update_txs_1)
         await full_node_api.wait_transaction_records_entered_mempool(update_txs_1)
 
         # Delete any trace of that update
@@ -475,7 +480,7 @@ class TestDLWallet:
         assert record_0 is not None
         assert record_0 != record_1
 
-        await wallet_node_0.wallet_state_manager.add_pending_transactions(update_txs_0)
+        update_txs_0 = await wallet_node_0.wallet_state_manager.add_pending_transactions(update_txs_0)
 
         await asyncio.wait_for(
             full_node_api.process_transaction_records(records=update_txs_1), timeout=adjusted_timeout(timeout=15)
@@ -538,16 +543,16 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     async with wsm_2.lock:
         dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(wsm_2)
 
-    dl_record, std_record, launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG)
+    std_record, launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG)
     assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
-    await wsm_1.add_pending_transactions([dl_record, std_record])
-    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    [std_record] = await wsm_1.add_pending_transactions([std_record])
+    await full_node_api.process_transaction_records(records=[std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32([0] * 32))
 
-    dl_record, std_record, launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG)
+    std_record, launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG)
     assert await dl_wallet_2.get_latest_singleton(launcher_id_2) is not None
-    await wsm_2.add_pending_transactions([dl_record, std_record])
-    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    [std_record] = await wsm_2.add_pending_transactions([std_record])
+    await full_node_api.process_transaction_records(records=[std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32([0] * 32))
 
     peer_1 = wallet_node_1.get_full_node_peer()
@@ -561,7 +566,7 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
         launcher_id_2, uint64(3), [b"foo", b"bar"], DEFAULT_TX_CONFIG, fee=uint64(1_999_999_999_999)
     )
     additions: List[Coin] = []
-    await wsm_1.add_pending_transactions(txs)
+    txs = await wsm_1.add_pending_transactions(txs)
     for tx in txs:
         if tx.spend_bundle is not None:
             additions.extend(tx.spend_bundle.additions())
@@ -569,7 +574,12 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
 
     mirror_coin: Coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
     mirror = Mirror(
-        bytes32(mirror_coin.name()), bytes32(launcher_id_2), uint64(mirror_coin.amount), [b"foo", b"bar"], True
+        bytes32(mirror_coin.name()),
+        bytes32(launcher_id_2),
+        uint64(mirror_coin.amount),
+        [b"foo", b"bar"],
+        True,
+        full_node_api.full_node.blockchain.get_peak_height(),
     )
     await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [mirror], launcher_id_2)
     await time_out_assert(
@@ -577,8 +587,212 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     )
 
     txs = await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, DEFAULT_TX_CONFIG, fee=uint64(2_000_000_000_000))
-    await wsm_1.add_pending_transactions(txs)
+    txs = await wsm_1.add_pending_transactions(txs)
     await full_node_api.process_transaction_records(records=txs)
 
     await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [], launcher_id_2)
     await time_out_assert(15, dl_wallet_2.get_mirrors_for_launcher, [], launcher_id_2)
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "reuse_puzhash": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> None:
+    # Setup
+    full_node_api: FullNodeSimulator = wallet_environments.full_node
+    env = wallet_environments.environments[0]
+    wallet_node = wallet_environments.environments[0].node
+
+    # Define wallet aliases
+    env.wallet_aliases = {
+        "xch": 1,
+        "dl": 2,
+    }
+
+    async with env.wallet_state_manager.lock:
+        dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
+
+    std_record, launcher_id = await dl_wallet.generate_new_reporter(bytes32([0] * 32), DEFAULT_TX_CONFIG)
+    await env.wallet_state_manager.add_pending_transactions([std_record])
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -1,
+                        "<=#spendable_balance": -1,  # any amount decrease
+                        "<=#max_send_amount": -1,  # any amount decrease
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                    "dl": {"init": True},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -1,
+                        ">=#spendable_balance": 1,  # any amount increase
+                        ">=#max_send_amount": 1,  # any amount increase
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -1,
+                    },
+                    "dl": {"unspent_coin_count": 1},
+                },
+            )
+        ]
+    )
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([0] * 32))
+
+    height = full_node_api.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await full_node_api.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
+    )
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
+
+    await time_out_assert(15, is_singleton_confirmed_and_root, False, dl_wallet, launcher_id, bytes32([0] * 32))
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": 1,  # confirmed balance comes back
+                        "<=#spendable_balance": -1,  # any amount decrease
+                        "<=#max_send_amount": -1,  # any amount decrease
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                    "dl": {"unspent_coin_count": -1},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -1,
+                        ">=#spendable_balance": 1,  # any amount increase
+                        ">=#max_send_amount": 1,  # any amount increase
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -1,
+                    },
+                    "dl": {"unspent_coin_count": 1},
+                },
+            )
+        ]
+    )
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([0] * 32))
+
+    update_txs = await dl_wallet.create_update_state_spend(launcher_id, bytes32([2] * 32), DEFAULT_TX_CONFIG)
+    await env.wallet_state_manager.add_pending_transactions(update_txs)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "dl": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "dl": {"pending_coin_removal_count": -1},
+                },
+            )
+        ]
+    )
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([2] * 32))
+
+    height = full_node_api.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await full_node_api.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
+    )
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
+
+    await time_out_assert(15, is_singleton_confirmed_and_root, False, dl_wallet, launcher_id, bytes32([0] * 32))
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "dl": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "dl": {"pending_coin_removal_count": -1},
+                },
+            )
+        ]
+    )
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([2] * 32))
+
+    txs = await dl_wallet.create_new_mirror(launcher_id, uint64(0), [b"foo", b"bar"], DEFAULT_TX_CONFIG)
+    await env.wallet_state_manager.add_pending_transactions(txs)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": -1,  # any amount decrease
+                        "<=#max_send_amount": -1,  # any amount decrease
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                    "dl": {},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        ">=#spendable_balance": 1,  # any amount increase
+                        ">=#max_send_amount": 1,  # any amount increase
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -1,
+                    },
+                    "dl": {"unspent_coin_count": 1},
+                },
+            )
+        ]
+    )
+    assert len(await dl_wallet.get_mirrors_for_launcher(launcher_id)) == 1
+
+    height = full_node_api.full_node.blockchain.get_peak_height()
+    assert height is not None
+    await full_node_api.reorg_from_index_to_new_index(
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
+    )
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
+
+    assert len(await dl_wallet.get_mirrors_for_launcher(launcher_id)) == 0
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": -1,  # any amount decrease
+                        "<=#max_send_amount": -1,  # any amount decrease
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                    "dl": {"unspent_coin_count": -1},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        ">=#spendable_balance": 1,  # any amount increase
+                        ">=#max_send_amount": 1,  # any amount increase
+                        "<=#pending_change": -1,  # any amount decrease
+                        "pending_coin_removal_count": -1,
+                    },
+                    "dl": {"unspent_coin_count": 1},
+                },
+            )
+        ]
+    )
+    assert len(await dl_wallet.get_mirrors_for_launcher(launcher_id)) == 1

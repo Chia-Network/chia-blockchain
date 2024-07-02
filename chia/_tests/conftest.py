@@ -14,7 +14,6 @@ import random
 import sysconfig
 import tempfile
 from contextlib import AsyncExitStack
-from enum import Enum
 from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
 
 import aiohttp
@@ -29,7 +28,15 @@ from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.simulation.test_simulation import test_constants_modified
-from chia._tests.util.misc import BenchmarkRunner, GcMode, RecordingWebServer, TestId, _AssertRuntime, measure_overhead
+from chia._tests.util.misc import (
+    BenchmarkRunner,
+    ComparableEnum,
+    GcMode,
+    RecordingWebServer,
+    TestId,
+    _AssertRuntime,
+    measure_overhead,
+)
 from chia._tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
     SimulatorsAndWallets,
@@ -61,6 +68,7 @@ from chia.simulator.setup_services import (
     setup_seeder,
     setup_timelord,
 )
+from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
@@ -72,14 +80,13 @@ from chia.types.aliases import (
     FarmerService,
     FullNodeService,
     HarvesterService,
-    SimulatorFullNodeService,
     TimelordService,
     WalletService,
 )
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
@@ -187,33 +194,40 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
-class ConsensusMode(Enum):
+class ConsensusMode(ComparableEnum):
     PLAIN = 0
-    HARD_FORK_2_0 = 1
+    SOFT_FORK_4 = 1
+    HARD_FORK_2_0 = 2
+    SOFT_FORK_5 = 3
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_4, ConsensusMode.SOFT_FORK_5],
 )
 def consensus_mode(request):
     return request.param
 
 
 @pytest.fixture(scope="session")
-def blockchain_constants(consensus_mode) -> ConsensusConstants:
-    if consensus_mode == ConsensusMode.PLAIN:
-        return test_constants
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-        return dataclasses.replace(
-            test_constants,
+def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
+    ret: ConsensusConstants = test_constants
+    if consensus_mode >= ConsensusMode.SOFT_FORK_4:
+        ret = ret.replace(
+            SOFT_FORK4_HEIGHT=uint32(2),
+        )
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+        ret = ret.replace(
             HARD_FORK_HEIGHT=uint32(2),
-            HARD_FORK_FIX_HEIGHT=uint32(2),
             PLOT_FILTER_128_HEIGHT=uint32(10),
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
         )
-    raise AssertionError("Invalid Blockchain mode in simulation")
+    if consensus_mode >= ConsensusMode.SOFT_FORK_5:
+        ret = ret.replace(
+            SOFT_FORK5_HEIGHT=uint32(2),
+        )
+    return ret
 
 
 @pytest.fixture(scope="session", name="bt")
@@ -260,7 +274,7 @@ def db_version(request) -> int:
     return request.param
 
 
-SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100]
+SOFTFORK_HEIGHTS = [1000000, 5496000, 5496100, 5716000, 5940000]
 
 
 @pytest.fixture(scope="function", params=SOFTFORK_HEIGHTS)
@@ -274,7 +288,7 @@ saved_blocks_version = "2.0"
 @pytest.fixture(scope="session")
 def default_400_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
     from chia._tests.util.blockchain import persistent_blocks
@@ -285,7 +299,7 @@ def default_400_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
     from chia._tests.util.blockchain import persistent_blocks
@@ -296,7 +310,7 @@ def default_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
     from chia._tests.util.blockchain import persistent_blocks
@@ -313,7 +327,7 @@ def pre_genesis_empty_slots_1000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def default_1500_blocks(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
     from chia._tests.util.blockchain import persistent_blocks
@@ -326,7 +340,7 @@ def default_10000_blocks(bt, consensus_mode):
     from chia._tests.util.blockchain import persistent_blocks
 
     version = ""
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
     return persistent_blocks(
@@ -343,7 +357,7 @@ def default_10000_blocks(bt, consensus_mode):
 @pytest.fixture(scope="session")
 def test_long_reorg_blocks(bt, consensus_mode, default_10000_blocks):
     version = ""
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
     from chia._tests.util.blockchain import persistent_blocks
@@ -365,7 +379,7 @@ def test_long_reorg_blocks(bt, consensus_mode, default_10000_blocks):
 @pytest.fixture(scope="session")
 def test_long_reorg_blocks_light(bt, consensus_mode, default_10000_blocks):
     version = ""
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
     from chia._tests.util.blockchain import persistent_blocks
@@ -384,7 +398,7 @@ def test_long_reorg_blocks_light(bt, consensus_mode, default_10000_blocks):
 @pytest.fixture(scope="session")
 def default_2000_blocks_compact(bt, consensus_mode):
     version = ""
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
     from chia._tests.util.blockchain import persistent_blocks
@@ -406,7 +420,7 @@ def default_10000_blocks_compact(bt, consensus_mode):
     from chia._tests.util.blockchain import persistent_blocks
 
     version = ""
-    if consensus_mode == ConsensusMode.HARD_FORK_2_0:
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         version = "_hardfork"
 
     return persistent_blocks(
@@ -594,7 +608,7 @@ async def wallet_nodes(blockchain_constants, consensus_mode):
     async with setup_simulators_and_wallets(
         2,
         1,
-        dataclasses.replace(blockchain_constants, MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
+        blockchain_constants.replace(MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
     ) as new:
         (nodes, wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
@@ -1181,9 +1195,8 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
         BlockTools,
     ]
 ]:
-    zero_bit_plot_filter_consts = dataclasses.replace(
-        test_constants_modified,
-        NUMBER_ZERO_BITS_PLOT_FILTER=0,
+    zero_bit_plot_filter_consts = test_constants_modified.replace(
+        NUMBER_ZERO_BITS_PLOT_FILTER=uint8(0),
         NUM_SPS_SUB_SLOT=uint32(8),
     )
 

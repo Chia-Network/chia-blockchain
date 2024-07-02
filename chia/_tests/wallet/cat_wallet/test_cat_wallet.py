@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -27,7 +28,7 @@ from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import _derive_path_unhardened, master_sk_to_wallet_sk_unhardened_intermediate
+from chia.wallet.derive_keys import master_pk_to_wallet_pk_unhardened
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
@@ -64,7 +65,7 @@ async def test_cat_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsA
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -131,7 +132,7 @@ async def test_cat_creation_unique_lineage_store(self_hostname: str, two_wallet_
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -336,7 +337,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
     cat_hash = await cat_wallet.get_new_inner_hash()
     tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-    await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
 
     await wallet_environments.process_pending_states(
         [
@@ -428,7 +429,7 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -453,15 +454,17 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
     tx_records = await cat_wallet.generate_signed_transaction(
         [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG.override(reuse_puzhash=True), fee=uint64(1)
     )
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
     for tx_record in tx_records:
         if tx_record.wallet_id is cat_wallet.id():
             assert tx_record.to_puzzle_hash == cat_2_hash
             assert tx_record.spend_bundle is not None
             assert len(tx_record.spend_bundle.coin_spends) == 2
+            old_puzhash: Optional[str] = None
             for cs in tx_record.spend_bundle.coin_spends:
                 if cs.coin.amount == 100:
                     old_puzhash = cs.coin.puzzle_hash.hex()
+            assert old_puzhash is not None
             new_puzhash = [c.puzzle_hash.hex() for c in tx_record.additions]
             assert old_puzhash in new_puzhash
 
@@ -482,7 +485,7 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
 
     cat_hash = await cat_wallet.get_new_inner_hash()
     tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
 
     await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records)
 
@@ -523,7 +526,7 @@ async def test_get_wallet_for_asset_id(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -577,7 +580,7 @@ async def test_cat_doesnt_see_eve(self_hostname: str, two_wallet_nodes: OldSimul
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -602,7 +605,7 @@ async def test_cat_doesnt_see_eve(self_hostname: str, two_wallet_nodes: OldSimul
     tx_records = await cat_wallet.generate_signed_transaction(
         [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, fee=uint64(1)
     )
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
     await full_node_api.process_transaction_records(records=tx_records)
 
     await time_out_assert(30, wallet.get_confirmed_balance, funds - 101)
@@ -618,7 +621,7 @@ async def test_cat_doesnt_see_eve(self_hostname: str, two_wallet_nodes: OldSimul
     [tx_record] = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
         uint64(10), cc2_ph, DEFAULT_TX_CONFIG
     )
-    await wallet.wallet_state_manager.add_pending_transactions([tx_record])
+    [tx_record] = await wallet.wallet_state_manager.add_pending_transactions([tx_record])
     await full_node_api.process_transaction_records(records=[tx_record])
 
     id = cat_wallet_2.id()
@@ -667,7 +670,7 @@ async def test_cat_spend_multiple(
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
 
     await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
@@ -701,7 +704,7 @@ async def test_cat_spend_multiple(
     tx_records = await cat_wallet_0.generate_signed_transaction(
         [uint64(60), uint64(20)], [cat_1_hash, cat_2_hash], DEFAULT_TX_CONFIG
     )
-    await wallet_0.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_0.wallet_state_manager.add_pending_transactions(tx_records)
     await full_node_api.process_transaction_records(records=tx_records)
 
     await time_out_assert(20, cat_wallet_0.get_confirmed_balance, 20)
@@ -716,10 +719,10 @@ async def test_cat_spend_multiple(
     cat_hash = await cat_wallet_0.get_new_inner_hash()
 
     tx_records = await cat_wallet_1.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-    await wallet_1.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet_1.wallet_state_manager.add_pending_transactions(tx_records)
 
     tx_records_2 = await cat_wallet_2.generate_signed_transaction([uint64(20)], [cat_hash], DEFAULT_TX_CONFIG)
-    await wallet_2.wallet_state_manager.add_pending_transactions(tx_records_2)
+    tx_records_2 = await wallet_2.wallet_state_manager.add_pending_transactions(tx_records_2)
 
     await full_node_api.process_transaction_records(records=[*tx_records, *tx_records_2])
 
@@ -742,7 +745,7 @@ async def test_cat_spend_multiple(
             [uint64(30)], [cat_hash], DEFAULT_TX_CONFIG, memos=[[b"too"], [b"many"], [b"memos"]]
         )
 
-    await wallet_1.wallet_state_manager.add_pending_transactions(tx_records_3)
+    tx_records_3 = await wallet_1.wallet_state_manager.add_pending_transactions(tx_records_3)
     await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records_3)
     txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
     for tx in txs:
@@ -782,7 +785,7 @@ async def test_cat_max_amount_send(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -809,7 +812,7 @@ async def test_cat_max_amount_send(
     tx_records = await cat_wallet.generate_signed_transaction(
         amounts, puzzle_hashes, DEFAULT_TX_CONFIG, coins={spent_coint}
     )
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
     await full_node_api.process_transaction_records(records=tx_records)
 
     await asyncio.sleep(2)
@@ -879,7 +882,7 @@ async def test_cat_hint(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -899,7 +902,7 @@ async def test_cat_hint(
         [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, memos=[[cat_2_hash]]
     )
 
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
 
     await full_node_api.process_transaction_records(records=tx_records)
 
@@ -927,7 +930,7 @@ async def test_cat_hint(
         [uint64(10)], [cat_2_hash], DEFAULT_TX_CONFIG, memos=[[cat_2_hash]]
     )
 
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
 
     await full_node_api.process_transaction_records(records=tx_records)
 
@@ -945,7 +948,7 @@ async def test_cat_hint(
 
     cat_hash = await cat_wallet.get_new_inner_hash()
     tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash], DEFAULT_TX_CONFIG)
-    await wallet.wallet_state_manager.add_pending_transactions(tx_records)
+    tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
 
     await full_node_api.process_transaction_records(records=tx_records)
 
@@ -989,8 +992,9 @@ async def test_cat_change_detection(
 
     # Mint CAT to ourselves, immediately spend it to an unhinted puzzle hash that we have manually added to the DB
     # We should pick up this coin as balance even though it is unhinted because it is "change"
-    intermediate_sk_un = master_sk_to_wallet_sk_unhardened_intermediate(wallet_node_0.wallet_state_manager.private_key)
-    pubkey_unhardened = _derive_path_unhardened(intermediate_sk_un, [100000000]).get_g1()
+    pubkey_unhardened = master_pk_to_wallet_pk_unhardened(
+        wallet_node_0.wallet_state_manager.root_pubkey, uint32(100000000)
+    )
     inner_puzhash = puzzle_hash_for_pk(pubkey_unhardened)
     puzzlehash_unhardened = construct_cat_puzzle(
         CAT_MOD, Program.to(None).get_tree_hash(), inner_puzhash
@@ -1010,7 +1014,7 @@ async def test_cat_change_detection(
     cat_amount_0 = uint64(100)
     cat_amount_1 = uint64(5)
 
-    tx = await client_0.send_transaction(1, cat_amount_0, addr, DEFAULT_TX_CONFIG)
+    tx = (await client_0.send_transaction(1, cat_amount_0, addr, DEFAULT_TX_CONFIG)).transaction
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 
@@ -1025,7 +1029,7 @@ async def test_cat_change_detection(
         construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), our_puzzle).get_tree_hash(),
         cat_amount_0,
     )
-    eve_spend = await wallet_node_0.wallet_state_manager.sign_transaction(
+    eve_spend, _ = await wallet_node_0.wallet_state_manager.sign_bundle(
         [
             make_spend(
                 cat_coin,
@@ -1089,30 +1093,31 @@ async def test_cat_change_detection(
 
 @pytest.mark.anyio
 async def test_unacknowledged_cat_table() -> None:
-    db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
-    db_name.parent.mkdir(parents=True, exist_ok=True)
-    async with DBWrapper2.managed(database=db_name) as db_wrapper:
-        interested_store = await WalletInterestedStore.create(db_wrapper)
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        db_name = Path(temporary_directory).joinpath("test.sqlite")
+        db_name.parent.mkdir(parents=True, exist_ok=True)
+        async with DBWrapper2.managed(database=db_name) as db_wrapper:
+            interested_store = await WalletInterestedStore.create(db_wrapper)
 
-        def asset_id(i: int) -> bytes32:
-            return bytes32([i] * 32)
+            def asset_id(i: int) -> bytes32:
+                return bytes32([i] * 32)
 
-        def coin_state(i: int) -> CoinState:
-            return CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(i)), None, None)
+            def coin_state(i: int) -> CoinState:
+                return CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(i)), None, None)
 
-        await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
-        await interested_store.add_unacknowledged_coin_state(asset_id(1), coin_state(1), 100)
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
-        await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == [(coin_state(1), 100)]
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(2)) == []
-        await interested_store.rollback_to_block(50)
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == []
-        await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(1))
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
-        await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
-        assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
+            await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
+            await interested_store.add_unacknowledged_coin_state(asset_id(1), coin_state(1), 100)
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+            await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == [(coin_state(1), 100)]
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(2)) == []
+            await interested_store.rollback_to_block(50)
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(1)) == []
+            await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(1))
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == [(coin_state(0), 0)]
+            await interested_store.delete_unacknowledged_states_for_asset_id(asset_id(0))
+            assert await interested_store.get_unacknowledged_states_for_asset_id(asset_id(0)) == []
 
 
 @pytest.mark.parametrize(
@@ -1224,7 +1229,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                 )
             ],
         )
-        signed_spend = await env.wallet_state_manager.sign_transaction(new_spend.coin_spends)
+        signed_spend, _ = await env.wallet_state_manager.sign_bundle(new_spend.coin_spends)
         await env.rpc_client.push_tx(signed_spend)
         await time_out_assert(10, simulator.tx_id_in_mempool, True, signed_spend.name())
 

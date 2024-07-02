@@ -216,11 +216,11 @@ class S3Plugin:
                 return web.json_response({"downloaded": False})
 
             # Pull the store_id from the filename to make sure we only download for configured stores
-            filename_tree_id = bytes32.fromhex(filename[:64])
+            filename_store_id = bytes32.fromhex(filename[:64])
             parse_result = urlparse(url)
             should_download = False
             for store in self.stores:
-                if store.id == filename_tree_id and parse_result.scheme == "s3" and url in store.urls:
+                if store.id == filename_store_id and parse_result.scheme == "s3" and url in store.urls:
                     should_download = True
                     break
 

@@ -33,7 +33,7 @@ class TestTransactions:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
         )
         # funds += calculate_base_farmer_reward(0)
         await asyncio.sleep(2)
@@ -69,7 +69,7 @@ class TestTransactions:
             await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
         )
         await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
@@ -86,7 +86,7 @@ class TestTransactions:
         [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, ph1, DEFAULT_TX_CONFIG, 0
         )
-        await wallet_0.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet_0.wallet_state_manager.add_pending_transactions([tx])
 
         await time_out_assert(
             10,
@@ -111,10 +111,7 @@ class TestTransactions:
         for i in range(1, 8):
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.random(seeded_random)))
         funds = sum(
-            [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, num_blocks + 1)
-            ]
+            calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
         )
         print(f"Funds: {funds}")
         await time_out_assert(
@@ -153,14 +150,14 @@ class TestTransactions:
             await full_node_api_2.full_node.add_block(block)
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+            calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
         )
         await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
         [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             10, bytes32.random(seeded_random), DEFAULT_TX_CONFIG, 0
         )
-        await wallet_0.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet_0.wallet_state_manager.add_pending_transactions([tx])
 
         await time_out_assert(
             10,

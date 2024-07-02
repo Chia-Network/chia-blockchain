@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
+from chia_rs import confirm_not_included_already_hashed
 from colorlog import getLogger
 
 from chia._tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
@@ -37,10 +38,10 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
+from chia.util.batches import to_batches
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
-from chia.util.misc import to_batches
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
@@ -415,7 +416,7 @@ async def test_wallet_reorg_sync(
 
     # Confirm we have the funds
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
 
     for wallet_node, wallet_server in wallets:
@@ -526,8 +527,10 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
         await full_node_api.request_additions(RequestAdditions(last_block.height, std_hash(b""), [ph]))
 
     # No results
+    fake_coin = std_hash(b"")
+    assert ph != fake_coin
     res1 = await full_node_api.request_additions(
-        RequestAdditions(last_block.height, last_block.header_hash, [std_hash(b"")])
+        RequestAdditions(last_block.height, last_block.header_hash, [fake_coin])
     )
     assert res1 is not None
     response = RespondAdditions.from_bytes(res1.data)
@@ -536,6 +539,16 @@ async def test_request_additions_errors(simulator_and_wallet: OldSimulatorsAndWa
     assert response.proofs is not None
     assert len(response.proofs) == 1
     assert len(response.coins) == 1
+    full_block = await full_node_api.full_node.block_store.get_full_block(last_block.header_hash)
+    assert full_block is not None
+    assert full_block.foliage_transaction_block is not None
+    root = full_block.foliage_transaction_block.additions_root
+    assert confirm_not_included_already_hashed(root, response.proofs[0][0], response.proofs[0][1])
+    # proofs is a tuple of (puzzlehash, proof, proof_2)
+    # proof is a proof of inclusion (or exclusion) of that puzzlehash
+    # proof_2 is a proof of all the coins with that puzzlehash
+    # all coin names are concatenated and hashed into one entry in the merkle set for proof_2
+    # the response contains the list of coins so you can check the proof_2
 
     assert response.proofs[0][0] == std_hash(b"")
     assert response.proofs[0][1] is not None
@@ -564,9 +577,10 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
         payees.append(Payment(payee_ph, uint64(i + 200)))
 
     [tx] = await wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
-
+    await full_node_api.wait_transaction_records_entered_mempool([tx])
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     last_block = full_node_api.full_node.blockchain.get_peak()
@@ -615,7 +629,7 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
     assert response.header_hash == last_block.header_hash
     assert response.proofs is None
     assert len(response.coins) == 12
-    assert sum([len(c_list) for _, c_list in response.coins]) == 24
+    assert sum(len(c_list) for _, c_list in response.coins) == 24
 
     # [] for puzzle hashes returns nothing
     res4 = await full_node_api.request_additions(RequestAdditions(last_block.height, last_block.header_hash, []))
@@ -776,6 +790,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
     await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -833,6 +848,7 @@ async def test_dusted_wallet(
         if dust_remaining % 100 == 0 and dust_remaining != new_dust:
             # construct and send tx
             [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+            [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
             assert tx.spend_bundle is not None
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
@@ -850,6 +866,7 @@ async def test_dusted_wallet(
     if new_dust >= 1:
         # construct and send tx
         [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+        [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
         assert tx.spend_bundle is not None
         await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
@@ -895,6 +912,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
@@ -932,6 +950,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
@@ -989,6 +1008,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
@@ -1023,6 +1043,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await dust_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    [tx] = await dust_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
@@ -1065,6 +1086,7 @@ async def test_dusted_wallet(
         if coins_remaining % 100 == 0 and coins_remaining != spam_filter_after_n_txs:
             # construct and send tx
             [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+            [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
             assert tx.spend_bundle is not None
             await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
             await full_node_api.wait_transaction_records_entered_mempool([tx])
@@ -1078,6 +1100,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await farm_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    [tx] = await farm_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
@@ -1106,6 +1129,7 @@ async def test_dusted_wallet(
 
     # construct and send tx
     [tx] = await dust_wallet.generate_signed_transaction(uint64(0), ph, DEFAULT_TX_CONFIG, primaries=payees)
+    [tx] = await dust_wallet.wallet_state_manager.add_pending_transactions([tx])
     assert tx.spend_bundle is not None
     await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
 
@@ -1337,12 +1361,11 @@ async def test_retry_store(
 
             await assert_coin_state_retry()
 
-            await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
-
             [tx] = await wallet.generate_signed_transaction(
                 uint64(1_000_000_000_000), bytes32([0] * 32), DEFAULT_TX_CONFIG, memos=[ph]
             )
-            await wallet_node.wallet_state_manager.add_pending_transactions([tx])
+            [tx] = await wallet_node.wallet_state_manager.add_pending_transactions([tx])
+            await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
 
             async def tx_in_mempool() -> bool:
                 return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
@@ -1457,8 +1480,8 @@ async def test_long_sync_untrusted_break(
         return trusted_full_node_server.node_id in wallet_node.synced_peers
 
     def only_trusted_peer() -> bool:
-        trusted_peers = sum([wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
-        untrusted_peers = sum([not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values()])
+        trusted_peers = sum(wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values())
+        untrusted_peers = sum(not wallet_node.is_trusted(peer) for peer in wallet_server.all_connections.values())
         return trusted_peers == 1 and untrusted_peers == 0
 
     dummy_peer_info = PeerInfo("0.0.0.0", 0)

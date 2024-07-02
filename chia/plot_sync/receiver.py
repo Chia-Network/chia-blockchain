@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, Sequence, Union
 
 from typing_extensions import Protocol
 
@@ -34,9 +34,12 @@ from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import int16, uint32, uint64
-from chia.util.misc import get_list_or_len
 
 log = logging.getLogger(__name__)
+
+
+def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Sequence[object]]:
+    return len(list_in) if length else list_in
 
 
 @dataclass

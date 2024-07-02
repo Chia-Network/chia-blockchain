@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import psutil
 
 from chia.util.config import load_config
-from chia.util.misc import available_logical_cores
+from chia.util.cpu import available_logical_cores
 
 log = logging.getLogger("beta")
 

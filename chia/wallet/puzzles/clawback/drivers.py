@@ -12,7 +12,7 @@ from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.ints import uint64
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
@@ -129,8 +129,16 @@ def match_clawback_puzzle(
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurried.mod:
         return None
+    if not isinstance(inner_puzzle, SerializedProgram):
+        inner_puzzle = SerializedProgram.from_program(inner_puzzle)
+    if not isinstance(inner_solution, SerializedProgram):
+        inner_solution = SerializedProgram.from_program(inner_solution)
     # Fetch Remark condition
-    conditions = conditions_for_solution(inner_puzzle, inner_solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8)
+    conditions = conditions_for_solution(
+        inner_puzzle,
+        inner_solution,
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM // 8,
+    )
     metadata: Optional[ClawbackMetadata] = None
     new_puzhash: Set[bytes32] = set()
     if conditions is not None:

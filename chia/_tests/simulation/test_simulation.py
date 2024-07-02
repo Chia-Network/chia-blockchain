@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import dataclasses
+import importlib.metadata
 import json
 from typing import AsyncIterator, List, Tuple
 
 import aiohttp
-import pkg_resources
 import pytest
 
 from chia._tests.core.node_height import node_height_at_least
@@ -31,12 +30,11 @@ from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 
-chiapos_version = pkg_resources.get_distribution("chiapos").version
+chiapos_version = importlib.metadata.version("chiapos")
 
-test_constants_modified = dataclasses.replace(
-    test_constants,
+test_constants_modified = test_constants.replace(
     DIFFICULTY_STARTING=uint64(2**8),
-    DISCRIMINANT_SIZE_BITS=1024,
+    DISCRIMINANT_SIZE_BITS=uint16(1024),
     SUB_EPOCH_BLOCKS=uint32(140),
     WEIGHT_PROOF_THRESHOLD=uint8(2),
     WEIGHT_PROOF_RECENT_BLOCKS=uint32(350),
@@ -44,7 +42,7 @@ test_constants_modified = dataclasses.replace(
     NUM_SPS_SUB_SLOT=uint32(32),  # Must be a power of 2
     EPOCH_BLOCKS=uint32(280),
     SUB_SLOT_ITERS_STARTING=uint64(2**20),
-    NUMBER_ZERO_BITS_PLOT_FILTER=5,
+    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(5),
 )
 
 
@@ -220,7 +218,7 @@ class TestSimulation:
             DEFAULT_TX_CONFIG,
             uint64(0),
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tx])
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
         # wait till out of mempool
         await time_out_assert(10, full_node_api.full_node.mempool_manager.get_spendbundle, None, tx.name)
         # wait until the transaction is confirmed
@@ -395,7 +393,7 @@ class TestSimulation:
                 tx_config=DEFAULT_TX_CONFIG,
                 coins={coin},
             )
-            await wallet.wallet_state_manager.add_pending_transactions([tx])
+            [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
             await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
             assert tx.spend_bundle is not None
@@ -447,7 +445,8 @@ class TestSimulation:
             ]
             for tx in transactions:
                 assert tx.spend_bundle is not None, "the above created transaction is missing the expected spend bundle"
-                await wallet.wallet_state_manager.add_pending_transactions([tx])
+
+            transactions = await wallet.wallet_state_manager.add_pending_transactions(transactions)
 
             if records_or_bundles_or_coins == "records":
                 await full_node_api.process_transaction_records(records=transactions)

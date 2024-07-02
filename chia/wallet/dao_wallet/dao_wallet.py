@@ -385,7 +385,7 @@ class DAOWallet:
     async def get_balance_by_asset_type(self, asset_id: Optional[bytes32] = None) -> uint128:
         puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        return uint128(sum([cr.coin.amount for cr in records if not cr.spent]))
+        return uint128(sum(cr.coin.amount for cr in records if not cr.spent))
 
     # if asset_id == None: then we get normal XCH
     async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:
@@ -846,7 +846,7 @@ class DAOWallet:
         vote_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         coins = await self.standard_wallet.select_coins(
             uint64(fee + dao_rules.proposal_minimum_amount),
@@ -953,7 +953,7 @@ class DAOWallet:
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
-        return record
+        return [record]
 
     async def generate_proposal_eve_spend(
         self,
@@ -1028,7 +1028,7 @@ class DAOWallet:
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> List[TransactionRecord]:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
         for pi in self.dao_info.proposals_list:
@@ -1136,7 +1136,7 @@ class DAOWallet:
             memos=[],
             valid_times=parse_timelock_info(extra_conditions),
         )
-        return record
+        return [record]
 
     async def create_proposal_close_spend(
         self,
@@ -1278,7 +1278,7 @@ class DAOWallet:
                         if cond.rest().first().as_atom() == cat_launcher.get_tree_hash():
                             cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
                             cat_tail_hash = cat_wallet.cat_info.limitations_program_hash
-                            mint_amount = cond.rest().rest().first().as_int()
+                            mint_amount = uint64(cond.rest().rest().first().as_int())
                             new_cat_puzhash = bytes32(cond.rest().rest().rest().first().first().as_atom())
                             eve_puzzle = curry_cat_eve(new_cat_puzhash)
                             if genesis_id is None:
@@ -1436,6 +1436,9 @@ class DAOWallet:
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
                 delegated_solution = Program.to([])
 
+            else:
+                raise Exception(f"Unknown proposal type: {proposal_type!r}")
+
             treasury_solution = Program.to(
                 [
                     [proposal_info.current_coin.name(), PROPOSED_PUZ_HASH.as_atom(), 0],
@@ -1467,6 +1470,8 @@ class DAOWallet:
         if self_destruct:
             spend_bundle = SpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         else:
+            # TODO: maybe we can refactor this to provide clarity around timer_cs having been defined
+            # pylint: disable-next=E0606
             spend_bundle = SpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config)

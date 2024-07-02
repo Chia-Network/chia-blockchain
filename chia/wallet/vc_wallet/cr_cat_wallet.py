@@ -18,7 +18,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import VersionedBlob
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD_HASH, CAT_MOD_HASH_HASH, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -311,9 +311,6 @@ class CRCATWallet(CATWallet):
     async def get_new_cat_puzzle_hash(self) -> bytes32:  # pragma: no cover
         raise NotImplementedError("get_new_cat_puzzle_hash is a legacy method and is not available on CR-CAT wallets")
 
-    async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:  # pragma: no cover
-        raise NotImplementedError("get_new_cat_puzzle_hash is a legacy method and is not available on CR-CAT wallets")
-
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:  # pragma: no cover
         raise NotImplementedError(
             "inner_puzzle_for_cat_puzhash is a legacy method and is not available on CR-CAT wallets"
@@ -412,7 +409,7 @@ class CRCATWallet(CATWallet):
             extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
             extra_delta, tail_reveal, tail_solution = 0, Program.to([]), Program.to([])
-        payment_amount: int = sum([p.amount for p in payments])
+        payment_amount: int = sum(p.amount for p in payments)
         starting_amount: int = payment_amount - extra_delta
         if not add_authorizations_to_cr_cats:
             tx_config = tx_config.override(reuse_puzhash=True)
@@ -428,7 +425,7 @@ class CRCATWallet(CATWallet):
 
         cat_coins = sorted(cat_coins, key=Coin.name)  # need determinism because we need definitive origin coin
 
-        selected_cat_amount = sum([c.amount for c in cat_coins])
+        selected_cat_amount = sum(c.amount for c in cat_coins)
         assert selected_cat_amount >= starting_amount
 
         # Figure out if we need to absorb/melt some XCH as part of this
@@ -533,6 +530,9 @@ class CRCATWallet(CATWallet):
                             primaries=primaries,
                             conditions=(*extra_conditions, xch_announcement, announcement),
                         )
+                    else:
+                        # TODO: what about when they are equal?
+                        raise Exception("Equality not handled")
                 else:
                     innersol = self.standard_wallet.make_solution(
                         primaries=primaries,
@@ -652,7 +652,7 @@ class CRCATWallet(CATWallet):
                 )
             )
 
-        unsigned_spend_bundle, other_txs = await self._generate_unsigned_spendbundle(
+        spend_bundle, other_txs = await self._generate_unsigned_spendbundle(
             payments,
             tx_config,
             fee,
@@ -660,10 +660,6 @@ class CRCATWallet(CATWallet):
             coins=coins,
             extra_conditions=extra_conditions,
             add_authorizations_to_cr_cats=add_authorizations_to_cr_cats,
-        )
-
-        signed_spend_bundle: SpendBundle = await self.wallet_state_manager.sign_transaction(
-            unsigned_spend_bundle.coin_spends
         )
 
         other_tx_removals: Set[Coin] = {removal for tx in other_txs for removal in tx.removals}
@@ -677,15 +673,15 @@ class CRCATWallet(CATWallet):
                 fee_amount=fee,
                 confirmed=False,
                 sent=uint32(0),
-                spend_bundle=signed_spend_bundle if i == 0 else None,
-                additions=list(set(signed_spend_bundle.additions()) - other_tx_additions) if i == 0 else [],
-                removals=list(set(signed_spend_bundle.removals()) - other_tx_removals) if i == 0 else [],
+                spend_bundle=spend_bundle if i == 0 else None,
+                additions=list(set(spend_bundle.additions()) - other_tx_additions) if i == 0 else [],
+                removals=list(set(spend_bundle.removals()) - other_tx_removals) if i == 0 else [],
                 wallet_id=self.id(),
                 sent_to=[],
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
-                name=signed_spend_bundle.name(),
-                memos=list(compute_memos(signed_spend_bundle).items()),
+                name=spend_bundle.name(),
+                memos=list(compute_memos(spend_bundle).items()),
                 valid_times=parse_timelock_info(extra_conditions),
             )
             for i, payment in enumerate(payments)
