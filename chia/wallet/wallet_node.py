@@ -1537,6 +1537,8 @@ class WalletNode:
         if weight_proof is None:
             return False
 
+        sub_epochs = weight_proof.sub_epochs
+
         if block.height >= weight_proof.recent_chain_data[0].height:
             # this was already validated as part of the wp validation
             index = block.height - weight_proof.recent_chain_data[0].height
@@ -1562,11 +1564,11 @@ class WalletNode:
             end_height = block.height + 32
             ses_start_height = 0
             end = uint32(0)
-            for idx, ses in enumerate(weight_proof.sub_epochs):
-                if idx == len(weight_proof.sub_epochs) - 1:
+            for idx, ses in enumerate(sub_epochs):
+                if idx == len(sub_epochs) - 1:
                     break
                 next_ses_height = uint32(
-                    (idx + 1) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[idx + 1].num_blocks_overflow
+                    (idx + 1) * self.constants.SUB_EPOCH_BLOCKS + sub_epochs[idx + 1].num_blocks_overflow
                 )
                 # start_ses_hash
                 if ses_start_height <= start_height < next_ses_height:
@@ -1575,12 +1577,11 @@ class WalletNode:
                         end = next_ses_height
                         break
                     else:
-                        if idx > len(weight_proof.sub_epochs) - 3:
+                        if idx > len(sub_epochs) - 3:
                             break
                         # else add extra ses as request start <-> end spans two ses
                         end = uint32(
-                            (idx + 2) * self.constants.SUB_EPOCH_BLOCKS
-                            + weight_proof.sub_epochs[idx + 2].num_blocks_overflow
+                            (idx + 2) * self.constants.SUB_EPOCH_BLOCKS + sub_epochs[idx + 2].num_blocks_overflow
                         )
                         inserted += 1
                         break
@@ -1605,7 +1606,7 @@ class WalletNode:
 
         if not compare_to_recent:
             last = blocks[-1].finished_sub_slots[-1].reward_chain.get_hash()
-            if last != weight_proof.sub_epochs[inserted].reward_chain_hash:
+            if last != sub_epochs[inserted].reward_chain_hash:
                 self.log.error("Failed validation 4")
                 return False
         pk_m_sig: List[Tuple[G1Element, bytes32, G2Element]] = []
