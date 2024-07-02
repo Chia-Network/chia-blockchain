@@ -540,8 +540,11 @@ class Blockchain(BlockchainInterface):
             return [], None
 
         if peak is not None:
-            if block_record.weight <= peak.weight:
+            if block_record.weight < peak.weight:
                 # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
+                return [], None
+            if block_record.weight == peak.weight and peak.total_iters <= block_record.total_iters:
+                # this is an equal weight block but our peak has lower iterations, so we dont change the coin set
                 return [], None
 
             if block_record.prev_hash != peak.header_hash:
