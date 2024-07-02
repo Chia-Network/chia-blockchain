@@ -1821,9 +1821,9 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
 
 @pytest.mark.anyio
 async def test_insert_from_delta_file(
-    data_store: DataStore, tree_id: bytes32, monkeypatch: Any, tmp_path: Path, seeded_random: random.Random
+    data_store: DataStore, store_id: bytes32, monkeypatch: Any, tmp_path: Path, seeded_random: random.Random
 ) -> None:
-    await data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+    await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     num_files = 5
     for generation in range(num_files):
         key = generation.to_bytes(4, byteorder="big")
@@ -1831,31 +1831,31 @@ async def test_insert_from_delta_file(
         await data_store.autoinsert(
             key=key,
             value=value,
-            tree_id=tree_id,
+            store_id=store_id,
             status=Status.COMMITTED,
         )
 
-    root = await data_store.get_tree_root(tree_id=tree_id)
+    root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
     root_hashes = []
     for generation in range(1, num_files + 2):
-        root = await data_store.get_tree_root(tree_id=tree_id, generation=generation)
-        await write_files_for_root(data_store, tree_id, root, tmp_path, 0)
+        root = await data_store.get_tree_root(store_id=store_id, generation=generation)
+        await write_files_for_root(data_store, store_id, root, tmp_path, 0)
         root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
-    with os.scandir(tmp_path.joinpath(f"{tree_id}")) as entries:
+    with os.scandir(tmp_path.joinpath(f"{store_id}")) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == 2 * (num_files + 1)
     for filename in filenames:
         if "full" in filename:
-            tmp_path.joinpath(f"{tree_id}").joinpath(filename).unlink()
-    with os.scandir(tmp_path.joinpath(f"{tree_id}")) as entries:
+            tmp_path.joinpath(f"{store_id}").joinpath(filename).unlink()
+    with os.scandir(tmp_path.joinpath(f"{store_id}")) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + 1
-    kv_before = await data_store.get_keys_values(tree_id=tree_id)
-    await data_store.rollback_to_generation(tree_id, 0)
-    root = await data_store.get_tree_root(tree_id=tree_id)
+    kv_before = await data_store.get_keys_values(store_id=store_id)
+    await data_store.rollback_to_generation(store_id, 0)
+    root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
-    os.rename(tmp_path.joinpath(f"{tree_id}"), tmp_path.joinpath("tmp"))
+    os.rename(tmp_path.joinpath(f"{store_id}"), tmp_path.joinpath("tmp"))
 
     async def mock_http_download(
         target_filename_path: Path,
@@ -1875,15 +1875,15 @@ async def test_insert_from_delta_file(
         timeout: int,
         log: logging.Logger,
     ) -> None:
-        os.rmdir(tmp_path.joinpath(f"{tree_id}"))
-        os.rename(tmp_path.joinpath("tmp"), tmp_path.joinpath(f"{tree_id}"))
+        os.rmdir(tmp_path.joinpath(f"{store_id}"))
+        os.rename(tmp_path.joinpath("tmp"), tmp_path.joinpath(f"{store_id}"))
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     with monkeypatch.context() as m:
         m.setattr("chia.data_layer.download_data.http_download", mock_http_download)
         success = await insert_from_delta_file(
             data_store=data_store,
-            tree_id=tree_id,
+            store_id=store_id,
             existing_generation=0,
             root_hashes=root_hashes,
             server_info=sinfo,
@@ -1895,7 +1895,7 @@ async def test_insert_from_delta_file(
         )
         assert not success
 
-    root = await data_store.get_tree_root(tree_id=tree_id)
+    root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
@@ -1903,7 +1903,7 @@ async def test_insert_from_delta_file(
         m.setattr("chia.data_layer.download_data.http_download", mock_http_download_2)
         success = await insert_from_delta_file(
             data_store=data_store,
-            tree_id=tree_id,
+            store_id=store_id,
             existing_generation=0,
             root_hashes=root_hashes,
             server_info=sinfo,
@@ -1915,12 +1915,12 @@ async def test_insert_from_delta_file(
         )
         assert success
 
-    root = await data_store.get_tree_root(tree_id=tree_id)
+    root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
-    with os.scandir(tmp_path.joinpath(f"{tree_id}")) as entries:
+    with os.scandir(tmp_path.joinpath(f"{store_id}")) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == 2 * (num_files + 1)
-    kv = await data_store.get_keys_values(tree_id=tree_id)
+    kv = await data_store.get_keys_values(store_id=store_id)
     assert kv == kv_before
 
 

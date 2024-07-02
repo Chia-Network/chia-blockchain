@@ -222,7 +222,9 @@ async def insert_from_delta_file(
     for root_hash in root_hashes:
         timestamp = int(time.time())
         existing_generation += 1
-        target_filename_path = get_delta_filename_path(client_foldername, store_id, root_hash, existing_generation, True)
+        target_filename_path = get_delta_filename_path(
+            client_foldername, store_id, root_hash, existing_generation, True
+        )
         filename_exists = target_filename_path.exists()
         success = await download_file(
             target_filename_path=target_filename_path,
