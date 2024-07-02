@@ -562,7 +562,7 @@ class DataLayerWallet:
         spend_bundle = SpendBundle([coin_spend], G2Element())
 
         if announce_new_state:
-            spend_bundle = dataclasses.replace(spend_bundle, coin_spends=[coin_spend, second_coin_spend])
+            spend_bundle = spend_bundle.replace(coin_spends=[coin_spend, second_coin_spend])
 
         dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -1182,8 +1182,7 @@ class DataLayerWallet:
 
             new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None] * 5))
             new_spend: CoinSpend = dl_spend.replace(solution=SerializedProgram.from_program(new_solution))
-            new_bundle: SpendBundle = dataclasses.replace(
-                txs[0].spend_bundle,
+            new_bundle: SpendBundle = txs[0].spend_bundle.replace(
                 coin_spends=[*all_other_spends, new_spend],
             )
             all_bundles.append(new_bundle)
