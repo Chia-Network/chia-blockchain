@@ -34,7 +34,12 @@ def block_is_current_at(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(scope="function", autouse=True)
-async def ignore_block_validation(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+async def ignore_block_validation(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    # https://anyio.readthedocs.io/en/stable/testing.html#asynchronous-fixtures
+    anyio_backend: str,
+) -> None:
     """
     This fixture exists to patch the existing BlockTools with WalletBlockTools and to patch existing code to work with
     simplified blocks. This is done as a step towards the separation of the wallet into its own self contained project.
