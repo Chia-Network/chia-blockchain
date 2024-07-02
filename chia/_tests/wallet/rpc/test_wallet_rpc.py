@@ -2456,6 +2456,7 @@ async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: Wall
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -2470,17 +2471,11 @@ async def test_set_wallet_resync_schema(wallet_rpc_environment: WalletRpcTestEnv
     dbw: DBWrapper2 = wallet_node.wallet_state_manager.db_wrapper
     conn: aiosqlite.Connection
     async with dbw.writer() as conn:
-        await conn.execute("ALTER TABLE coin_record RENAME TO coin_record_temp")
-    assert not await wallet_node.reset_sync_db(db_path, fingerprint)
-    async with dbw.writer() as conn:
-        await conn.execute("ALTER TABLE coin_record_temp RENAME TO coin_record")
-    assert await wallet_node.reset_sync_db(db_path, fingerprint)
-    async with dbw.writer() as conn:
-        await conn.execute("CREATE TABLE testing_schema (a int, b bool)")
-    assert not await wallet_node.reset_sync_db(db_path, fingerprint)
-    async with dbw.writer() as conn:
-        await conn.execute("DROP TABLE testing_schema")
-    assert await wallet_node.reset_sync_db(db_path, fingerprint)
+        await conn.execute("CREATE TABLE blah(temp int)")
+    await wallet_node.reset_sync_db(db_path, fingerprint)
+    assert (
+        len(list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table' AND name='blah'"))) == 0
+    )
 
 
 @pytest.mark.anyio
