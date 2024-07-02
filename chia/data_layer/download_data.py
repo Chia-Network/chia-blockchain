@@ -25,28 +25,28 @@ def get_delta_filename(store_id: bytes32, node_hash: bytes32, generation: int) -
 
 def get_full_tree_filename_path(
     foldername: Path,
-    tree_id: bytes32,
+    store_id: bytes32,
     node_hash: bytes32,
     generation: int,
     group_by_store: bool = False,
 ) -> Path:
     if group_by_store:
-        path = foldername.joinpath(f"{tree_id}")
+        path = foldername.joinpath(f"{store_id}")
         return path.joinpath(f"{node_hash}-full-{generation}-v1.0.dat")
-    return foldername.joinpath(f"{tree_id}-{node_hash}-full-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{store_id}-{node_hash}-full-{generation}-v1.0.dat")
 
 
 def get_delta_filename_path(
     foldername: Path,
-    tree_id: bytes32,
+    store_id: bytes32,
     node_hash: bytes32,
     generation: int,
     group_by_store: bool = False,
 ) -> Path:
     if group_by_store:
-        path = foldername.joinpath(f"{tree_id}")
+        path = foldername.joinpath(f"{store_id}")
         return path.joinpath(f"{node_hash}-delta-{generation}-v1.0.dat")
-    return foldername.joinpath(f"{tree_id}-{node_hash}-delta-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat")
 
 
 def is_filename_valid(filename: str) -> bool:
@@ -167,7 +167,7 @@ async def write_files_for_root(
 
 async def download_file(
     target_filename_path: Path,
-    tree_id: bytes32,
+    store_id: bytes32,
     root_hash: bytes32,
     generation: int,
     server_info: ServerInfo,
@@ -180,7 +180,7 @@ async def download_file(
 ) -> bool:
     if target_filename_path.exists():
         return True
-    filename = get_delta_filename(tree_id, root_hash, generation)
+    filename = get_delta_filename(store_id, root_hash, generation)
     if grouped_by_store:
         filename = filename.replace("-", "/", 1)
 
@@ -192,7 +192,7 @@ async def download_file(
             return False
         return True
 
-    log.info(f"Using downloader {downloader} for store {tree_id.hex()}.")
+    log.info(f"Using downloader {downloader} for store {store_id.hex()}.")
     request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
     async with aiohttp.ClientSession() as session:
         async with session.post(
