@@ -50,6 +50,7 @@ async def get_value_cmd(
     rpc_port: Optional[int],
     store_id: bytes32,
     key: str,
+    # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
     root_hash: Optional[bytes32],
     fingerprint: Optional[int],
 ) -> None:
@@ -137,6 +138,7 @@ async def submit_all_pending_roots_cmd(
 async def get_keys_cmd(
     rpc_port: Optional[int],
     store_id: bytes32,
+    # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
     root_hash: Optional[bytes32],
     fingerprint: Optional[int],
     page: Optional[int],
@@ -154,6 +156,7 @@ async def get_keys_cmd(
 async def get_keys_values_cmd(
     rpc_port: Optional[int],
     store_id: bytes32,
+    # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
     root_hash: Optional[bytes32],
     fingerprint: Optional[int],
     page: Optional[int],
