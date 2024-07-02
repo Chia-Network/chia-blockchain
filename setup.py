@@ -35,7 +35,7 @@ dependencies = [
     "dnslib==0.9.24",  # dns lib
     "typing-extensions==4.11.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.5.1",
-    "packaging==24.0",
+    "packaging==24.1",
     "psutil==5.9.4",
     "hsms==0.3.1",
 ]
