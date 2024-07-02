@@ -370,11 +370,11 @@ class FullNodeStore:
             or signage_point.cc_proof is None
             or signage_point.rc_proof is None
         ):
-            return None
+            return
         if signage_point.rc_vdf.challenge not in self.future_sp_cache:
             self.future_sp_cache[signage_point.rc_vdf.challenge] = []
         if self.in_future_sp_cache(signage_point, index):
-            return None
+            return
 
         self.future_cache_key_times[signage_point.rc_vdf.challenge] = int(time.time())
         self.future_sp_cache[signage_point.rc_vdf.challenge].append((index, signage_point))
