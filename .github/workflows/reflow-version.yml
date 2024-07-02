@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      chia-dev-version: ${{ steps.version-number.outputs.chia-dev-version }}
       chia-installer-version: ${{ steps.version-number.outputs.chia-installer-version }}
       tag-type: ${{ steps.tag-type.outputs.tag-type }}
 
@@ -44,5 +45,8 @@ jobs:
           python3 -m venv ../venv
           . ../venv/bin/activate
           pip install setuptools_scm
-          echo "chia-installer-version=$(python3 ./build_scripts/installer-version.py)" >> "$GITHUB_OUTPUT"
+          VERSION=$(python3 ./build_scripts/installer-version.py)
+          echo "chia-installer-version=${VERSION}" >> "$GITHUB_OUTPUT"
+          GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
+          echo "chia-dev-version=${VERSION}-${GIT_SHORT_HASH}" >> "$GITHUB_OUTPUT"
           deactivate
