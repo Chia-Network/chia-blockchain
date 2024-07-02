@@ -25,7 +25,7 @@ If you are behind a NAT, it can be difficult for peers outside your subnet to re
 on your router or add a NAT (for IPv4 but not IPv6) and firewall rules to allow TCP port 8444 access to your peer.
 These methods tend to be router make/model specific.
 
-Most users should only install harvesters, farmers, plotter, full nodes, and wallets.
+Most users should only install harvesters, farmers, plotters, full nodes, and wallets.
 Setting up a seeder is best left to more advanced users.
 Building Timelords and VDFs is for sophisticated users, in most environments.
 Chia Network and additional volunteers are running sufficient Timelords for consensus.
