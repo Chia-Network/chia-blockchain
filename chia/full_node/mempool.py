@@ -246,13 +246,21 @@ class Mempool:
             return None if row is None else self._row_to_item(row)
 
     # TODO: we need a bulk lookup function like this too
-    def get_items_by_coin_id(self, spent_coin_id: bytes32) -> List[MempoolItem]:
-        with self._db_conn:
-            cursor = self._db_conn.execute(
-                "SELECT * FROM tx WHERE name in (SELECT tx FROM spends WHERE coin_id=?)",
-                (spent_coin_id,),
+    def get_items_by_coin_id(self, spent_coin_id: bytes32) -> Iterator[MempoolItem]:
+        cursor = self._db_conn.execute(
+            """
+            SELECT *
+            FROM tx
+            WHERE name IN (
+                SELECT tx
+                FROM spends
+                WHERE coin_id = ?
             )
-            return [self._row_to_item(row) for row in cursor]
+            """,
+            (spent_coin_id,),
+        )
+        for row in cursor:
+            yield self._row_to_item(row)
 
     def get_items_by_coin_ids(self, spent_coin_ids: List[bytes32]) -> List[MempoolItem]:
         items: List[MempoolItem] = []

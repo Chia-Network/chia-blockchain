@@ -1548,7 +1548,7 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
             mempool_manager, [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i]], coin
         )
         assert result[1] == MempoolInclusionStatus.SUCCESS
-    assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 3
+    assert len(list(mempool_manager.mempool.get_items_by_coin_id(coin_id))) == 3
     assert mempool_manager.mempool.size() == 3
     assert len(list(mempool_manager.mempool.items_by_feerate())) == 3
     # Setup a new peak where the incoming block has spent the coin
@@ -1558,7 +1558,7 @@ async def test_coin_spending_different_ways_then_finding_it_spent_in_new_peak(ne
     await mempool_manager.new_peak(block_record, [coin_id])
     invariant_check_mempool(mempool_manager.mempool)
     # As the coin was a spend in all the mempool items we had, nothing should be left now
-    assert len(mempool_manager.mempool.get_items_by_coin_id(coin_id)) == 0
+    assert len(list(mempool_manager.mempool.get_items_by_coin_id(coin_id))) == 0
     assert mempool_manager.mempool.size() == 0
     assert len(list(mempool_manager.mempool.items_by_feerate())) == 0
 

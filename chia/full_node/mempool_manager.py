@@ -710,7 +710,7 @@ class MempoolManager:
             # to deduplicate
             spendbundle_ids_to_remove: Set[bytes32] = set()
             for spend in spent_coins:
-                items: List[MempoolItem] = self.mempool.get_items_by_coin_id(spend)
+                items = self.mempool.get_items_by_coin_id(spend)
                 for item in items:
                     included_items.append(MempoolItemInfo(item.cost, item.fee, item.height_added_to_mempool))
                     self.remove_seen(item.name)
