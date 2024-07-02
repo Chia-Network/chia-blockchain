@@ -228,7 +228,7 @@ jobs:
           echo '==== collecting installed tests ===='
           if pytest --collect-only -qq --import-mode=append --pyargs chia._tests > installed_tests_raw
           then
-            cat installed_tests_raw | sed -n 's;^venv/.*/\(chia/_tests/.*\);\1;p' | sort > installed_tests
+            cat installed_tests_raw | sed -n 's;^\.venv/.*/\(chia/_tests/.*\);\1;p' | sort > installed_tests
           else
             echo '    ==== installed test collection failure'
             cat installed_tests_raw

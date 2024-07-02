@@ -10,7 +10,7 @@ from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 THIS_IS_WINDOWS = platform.system().lower().startswith("win")
 THIS_IS_MAC = platform.system().lower().startswith("darwin")
 
-ROOT = pathlib.Path(importlib.import_module("chia").__file__).absolute().parent.parent
+ROOT = pathlib.Path(SPECPATH).absolute().parent
 
 
 keyring_imports = collect_submodules("keyring.backends")

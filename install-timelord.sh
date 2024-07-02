@@ -50,7 +50,14 @@ fi
 
 export BUILD_VDF_BENCH=Y # Installs the useful vdf_bench test of CPU squaring speed
 THE_PATH=$(python -c 'import pathlib, chiavdf, importlib_resources; print(pathlib.Path(chiavdf.__file__).parent)')/vdf_client
-CHIAVDF_VERSION=$(python -c 'import os; os.environ["CHIA_SKIP_SETUP"] = "1"; from setup import dependencies; t = [_ for _ in dependencies if _.startswith("chiavdf")][0]; print(t)')
+# Note that this picks the version based on the requirement, not the presently
+# installed chiavdf.
+CHIAVDF_POETRY_INFO=$(.penv/bin/poetry show --no-ansi --no-interaction chiavdf)
+echo "${CHIAVDF_POETRY_INFO}"
+CHIAVDF_POETRY_INFO_VERSION=$(echo "${CHIAVDF_POETRY_INFO}" | grep 'version[[:space:]]*:' | sed 's/version[[:space:]]*: //')
+echo "${CHIAVDF_POETRY_INFO_VERSION}"
+CHIAVDF_VERSION="chiavdf==${CHIAVDF_POETRY_INFO_VERSION}"
+echo "${CHIAVDF_VERSION}"
 
 ubuntu_cmake_install() {
   UBUNTU_PRE_2004=$(python -c 'import subprocess; id = subprocess.run(["lsb_release", "-is"], stdout=subprocess.PIPE); version = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(id.stdout.decode("ascii") == "Ubuntu\n" and float(version.stdout) < float(20.04))')

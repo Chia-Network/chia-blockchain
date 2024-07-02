@@ -7,6 +7,6 @@ SCRIPT_DIRECTORY=$(
   pwd
 )
 # shellcheck disable=SC1091
-. "${SCRIPT_DIRECTORY}/venv/bin/activate"
+. "${SCRIPT_DIRECTORY}/.venv/bin/activate"
 
 "$@"
