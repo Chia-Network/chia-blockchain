@@ -3269,7 +3269,7 @@ class TestReorgs:
     ) -> None:
         b = empty_blockchain
 
-        if consensus_mode < ConsensusMode.SOFT_FORK_4:
+        if consensus_mode < ConsensusMode.HARD_FORK_2_0:
             reorg_point = 13
         else:
             reorg_point = 12
