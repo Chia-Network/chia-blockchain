@@ -227,6 +227,10 @@ class FarmerAPI:
                     self.farmer.log.info(
                         f"Proof of space not good enough for pool {pool_url}: {pool_state_dict['current_difficulty']}"
                     )
+                    self.farmer.log.info(
+                        f"WJB required_iters {required_iters} self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR {self.farmer.constants.DIFFICULTY_CONSTANT_FACTOR} computed_quality_string {computed_quality_string} new_proof_of_space.proof.size {new_proof_of_space.proof.size} new_proof_of_space.sp_hash {new_proof_of_space.sp_hash} calculate_sp_interval_iters(self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS) {calculate_sp_interval_iters(self.farmer.constants, self.farmer.constants.POOL_SUB_SLOT_ITERS)} self.farmer.constants {self.farmer.constants} self.farmer.constants.POOL_SUB_SLOT_ITERS {self.farmer.constants.POOL_SUB_SLOT_ITERS}"
+                    )
+
                     increment_pool_stats(
                         self.farmer.pool_state,
                         p2_singleton_puzzle_hash,
