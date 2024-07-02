@@ -654,3 +654,8 @@ simulator:
   # Should we use real time in the simulated chain?
   # most tests don't need this, however it is pretty important when writing ChiaLisp
   use_current_time: True
+
+  # Fork Settings
+  HARD_FORK_HEIGHT: 0
+  SOFT_FORK4_HEIGHT: 0
+  SOFT_FORK5_HEIGHT: 0

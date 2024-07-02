@@ -100,24 +100,36 @@ def create_chia_directory(
     else:
         config = load_config(chia_root, "config.yaml")
     # simulator overrides
-    config["simulator"]["key_fingerprint"] = fingerprint
+    sim_config = config["simulator"]
+    sim_config["key_fingerprint"] = fingerprint
     if farming_address is None:
         prefix = config["network_overrides"]["config"]["simulator0"]["address_prefix"]
         farming_address = encode_puzzle_hash(get_ph_from_fingerprint(fingerprint), prefix)
-    config["simulator"]["farming_address"] = farming_address
+    sim_config["farming_address"] = farming_address
     if plot_directory is not None:
-        config["simulator"]["plot_directory"] = plot_directory
+        sim_config["plot_directory"] = plot_directory
     # Temporary change to fix win / linux differences.
-    config["simulator"]["plot_directory"] = str(Path(config["simulator"]["plot_directory"]))
-    if "//" in config["simulator"]["plot_directory"] and os.name != "nt":
+    sim_config["plot_directory"] = str(Path(sim_config["plot_directory"]))
+    if "//" in sim_config["plot_directory"] and os.name != "nt":
         # if we're on linux, we need to convert to a linux path.
-        config["simulator"]["plot_directory"] = str(PureWindowsPath(config["simulator"]["plot_directory"]).as_posix())
-    config["simulator"]["auto_farm"] = auto_farm if auto_farm is not None else True
+        sim_config["plot_directory"] = str(PureWindowsPath(sim_config["plot_directory"]).as_posix())
+    sim_config["auto_farm"] = auto_farm if auto_farm is not None else True
     farming_ph = decode_puzzle_hash(farming_address)
     # modify genesis block to give the user the reward
     simulator_consts = config["network_overrides"]["constants"]["simulator0"]
     simulator_consts["GENESIS_PRE_FARM_FARMER_PUZZLE_HASH"] = farming_ph.hex()
     simulator_consts["GENESIS_PRE_FARM_POOL_PUZZLE_HASH"] = farming_ph.hex()
+    # get fork heights then write back to config
+    if "HARD_FORK_HEIGHT" not in sim_config:  # this meh code is done so that we also write to the config file.
+        sim_config["HARD_FORK_HEIGHT"] = 0
+    if "SOFT_FORK4_HEIGHT" not in sim_config:
+        sim_config["SOFT_FORK4_HEIGHT"] = 0
+    if "SOFT_FORK5_HEIGHT" not in sim_config:
+        sim_config["SOFT_FORK5_HEIGHT"] = 0
+    simulator_consts["HARD_FORK_HEIGHT"] = sim_config["HARD_FORK_HEIGHT"]
+    simulator_consts["SOFT_FORK4_HEIGHT"] = sim_config["SOFT_FORK4_HEIGHT"]
+    simulator_consts["SOFT_FORK5_HEIGHT"] = sim_config["SOFT_FORK5_HEIGHT"]
+
     # save config and return the config
     save_config(chia_root, "config.yaml", config)
     return config
