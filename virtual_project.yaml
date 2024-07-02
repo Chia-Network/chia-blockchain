@@ -1,0 +1,53 @@
+exclude_paths:
+  - chia/_tests
+  - chia/util/dump_keyring.py
+ignore:
+  packages:
+    - chia-blockchain
+    - obsolete
+    - development
+    - cmds
+    - wallet
+    - supported_wallets
+    - data_layer
+    - farmer
+    - full_node
+    - service
+    - simulator
+    - consensus
+    - mempool
+    - protocol
+    - seeder
+    - introducer
+    - timelord
+    - streamable
+    - harvester
+    - network
+    - pooling
+    - todo
+  files:
+    - chia/cmds/cmds_util.py
+  edges:
+    - cryptography -> streamable
+    - streamable -> clvm
+    - consensus -> chialisp_puzzles
+    - chialisp_puzzles -> wallet
+    - rpc -> wallet
+    - rpc -> full_node
+    - service -> rpc
+    - rpc -> chia-blockchain
+    - plotting -> chia-blockchain
+    - key_management -> chia-blockchain
+    - service -> key_management
+    - cmds -> key_management
+    - cryptography -> consensus
+    - concurrency -> service
+    - chips -> full_node
+    - service -> chia-blockchain
+    - cmds -> chia-blockchain
+    - chia\util\async_pool.py (concurrency) -> chia\util\log_exceptions.py (service)
+    - chia/cmds/plotnft_funcs.py (pooling) -> chia/cmds/wallet_funcs.py (wallet)
+    - chia/cmds/plotnft_funcs.py (pooling) -> chia/rpc/farmer_rpc_client.py (farmer)
+    - chia/cmds/plotnft_funcs.py (pooling) -> chia/rpc/wallet_rpc_client.py (wallet)
+    - chia/wallet/derive_keys.py (cryptography) -> chia/consensus/coinbase.py (consensus)
+    - chia/server/server.py (service) -> chia/server/introducer_peers.py (network)

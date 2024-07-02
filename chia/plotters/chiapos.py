@@ -1,3 +1,5 @@
+# Package: plotting
+
 """
 NOTE: This contains duplicate code from `chia.cmds.plots`.
 After `chia plots create` becomes obsolete, consider removing it from there.
