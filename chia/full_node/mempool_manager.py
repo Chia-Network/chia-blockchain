@@ -163,7 +163,7 @@ class NewPeakInfo:
 class NewPeakItem:
     transaction_id: bytes32
     spend_bundle: SpendBundle
-    npc_result: NPCResult
+    conds: SpendBundleConditions
 
 
 class MempoolManager:
@@ -309,7 +309,7 @@ class MempoolManager:
         new_spend_bytes: Optional[bytes],
         spend_name: bytes32,
         bls_cache: Optional[BLSCache] = None,
-    ) -> NPCResult:
+    ) -> SpendBundleConditions:
         """
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
@@ -346,12 +346,15 @@ class MempoolManager:
             f"pre_validate_spendbundle took {duration:0.4f} seconds "
             f"for {spend_name} (queue-size: {self._worker_queue_size})",
         )
-        return ret
+        if ret.error is not None:
+            raise ValidationError(Err(ret.error), "pre_validate_spendbundle failed")
+        assert ret.conds is not None
+        return ret.conds
 
     async def add_spend_bundle(
         self,
         new_spend: SpendBundle,
-        npc_result: NPCResult,
+        conds: SpendBundleConditions,
         spend_name: bytes32,
         first_added_height: uint32,
         get_coin_records: Optional[Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]]] = None,
@@ -364,7 +367,7 @@ class MempoolManager:
 
         Args:
             new_spend: spend bundle to validate and add
-            npc_result: result of running the clvm transaction in a fake block
+            conds: result of running the clvm transaction in a fake block
             spend_name: hash of the spend bundle data, passed in as an optimization
 
         Returns:
@@ -383,7 +386,7 @@ class MempoolManager:
             get_coin_records = self.get_coin_records
         err, item, remove_items = await self.validate_spend_bundle(
             new_spend,
-            npc_result,
+            conds,
             spend_name,
             first_added_height,
             get_coin_records,
@@ -413,7 +416,7 @@ class MempoolManager:
     async def validate_spend_bundle(
         self,
         new_spend: SpendBundle,
-        npc_result: NPCResult,
+        conds: SpendBundleConditions,
         spend_name: bytes32,
         first_added_height: uint32,
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]],
@@ -424,7 +427,7 @@ class MempoolManager:
 
         Args:
             new_spend: spend bundle to validate
-            npc_result: result of running the clvm transaction in a fake block
+            conds: result of running the clvm transaction in a fake block
             spend_name: hash of the spend bundle data, passed in as an optimization
             first_added_height: The block height that `new_spend`  first entered this node's mempool.
                 Used to estimate how long a spend has taken to be included on the chain.
@@ -439,21 +442,15 @@ class MempoolManager:
         if self.peak is None:
             return Err.MEMPOOL_NOT_INITIALIZED, None, []
 
-        assert npc_result.error is None
-        if npc_result.error is not None:
-            return Err(npc_result.error), None, []
+        cost = conds.cost
 
-        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
-        log.debug(f"Cost: {cost}")
-
-        assert npc_result.conds is not None
         removal_names: Set[bytes32] = set()
         additions_dict: Dict[bytes32, Coin] = {}
         addition_amount: int = 0
         # Map of coin ID to eligibility information
         eligibility_and_additions: Dict[bytes32, EligibilityAndAdditions] = {}
         non_eligible_coin_ids: List[bytes32] = []
-        for spend in npc_result.conds.spends:
+        for spend in conds.spends:
             coin_id = bytes32(spend.coin_id)
             removal_names.add(coin_id)
             spend_additions = []
@@ -561,7 +558,7 @@ class MempoolManager:
             return fail_reason, None, []
 
         # Verify conditions, create hash_key list for aggsig check
-        for spend in npc_result.conds.spends:
+        for spend in conds.spends:
             coin_record: CoinRecord = removal_record_dict[bytes32(spend.coin_id)]
             # Check that the revealed removal puzzles actually match the puzzle hash
             if spend.puzzle_hash != coin_record.coin.puzzle_hash:
@@ -577,12 +574,12 @@ class MempoolManager:
         assert self.peak.timestamp is not None
         tl_error: Optional[Err] = mempool_check_time_locks(
             removal_record_dict,
-            npc_result.conds,
+            conds,
             self.peak.height,
             self.peak.timestamp,
         )
 
-        timelocks: TimelockConditions = compute_assert_height(removal_record_dict, npc_result.conds)
+        timelocks: TimelockConditions = compute_assert_height(removal_record_dict, conds)
 
         if timelocks.assert_before_height is not None and timelocks.assert_before_height <= timelocks.assert_height:
             # returning None as the "potential" means it failed. We won't store it
@@ -594,7 +591,7 @@ class MempoolManager:
         potential = MempoolItem(
             new_spend,
             uint64(fees),
-            npc_result,
+            conds,
             spend_name,
             first_added_height,
             timelocks.assert_height,
@@ -753,7 +750,7 @@ class MempoolManager:
             for item in old_pool.all_items():
                 info = await self.add_spend_bundle(
                     item.spend_bundle,
-                    item.npc_result,
+                    item.conds,
                     item.spend_bundle_name,
                     item.height_added_to_mempool,
                     local_get_coin_records,
@@ -774,13 +771,13 @@ class MempoolManager:
         for item in potential_txs.values():
             info = await self.add_spend_bundle(
                 item.spend_bundle,
-                item.npc_result,
+                item.conds,
                 item.spend_bundle_name,
                 item.height_added_to_mempool,
                 self.get_coin_records,
             )
             if info.status == MempoolInclusionStatus.SUCCESS:
-                txs_added.append(NewPeakItem(item.spend_bundle_name, item.spend_bundle, item.npc_result))
+                txs_added.append(NewPeakItem(item.spend_bundle_name, item.spend_bundle, item.conds))
             mempool_item_removals.extend(info.removals)
         log.info(
             f"Size of mempool: {self.mempool.size()} spends, "

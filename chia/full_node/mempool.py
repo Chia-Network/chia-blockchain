@@ -142,7 +142,7 @@ class Mempool:
         return MempoolItem(
             item.spend_bundle,
             uint64(fee),
-            item.npc_result,
+            item.conds,
             name,
             uint32(item.height_added_to_mempool),
             assert_height,
@@ -177,7 +177,7 @@ class Mempool:
         transaction_ids: List[bytes32] = []
 
         for transaction_id, item in self._items.items():
-            conds = item.npc_result.conds
+            conds = item.conds
             assert conds is not None
 
             for spend in conds.spends:
@@ -206,7 +206,7 @@ class Mempool:
         transaction_ids: List[bytes32] = []
 
         for transaction_id, item in self._items.items():
-            conds = item.npc_result.conds
+            conds = item.conds
             assert conds is not None
 
             for spend in conds.spends:
@@ -366,7 +366,7 @@ class Mempool:
         """
 
         assert item.fee < MEMPOOL_ITEM_FEE_LIMIT
-        assert item.npc_result.conds is not None
+        assert item.conds is not None
         assert item.cost <= self.mempool_info.max_block_clvm_cost
 
         removals: List[MempoolRemoveInfo] = []
@@ -446,11 +446,11 @@ class Mempool:
                 ),
             )
 
-            all_coin_spends = [(s.coin_id, item.name) for s in item.npc_result.conds.spends]
+            all_coin_spends = [(s.coin_id, item.name) for s in item.conds.spends]
             self._db_conn.executemany("INSERT INTO spends VALUES(?, ?)", all_coin_spends)
 
             self._items[item.name] = InternalMempoolItem(
-                item.spend_bundle, item.npc_result, item.height_added_to_mempool, item.bundle_coin_spends
+                item.spend_bundle, item.conds, item.height_added_to_mempool, item.bundle_coin_spends
             )
 
             self._total_cost += item.cost
@@ -500,8 +500,8 @@ class Mempool:
             if not item_inclusion_filter(name):
                 continue
             try:
-                assert item.npc_result.conds is not None
-                cost = item.npc_result.conds.cost
+                assert item.conds is not None
+                cost = item.conds.cost
                 if skipped_items >= PRIORITY_TX_THRESHOLD:
                     # If we've encountered `PRIORITY_TX_THRESHOLD` number of
                     # transactions that don't fit in the remaining block size,

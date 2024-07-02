@@ -2350,6 +2350,7 @@ class FullNode:
             except Exception:
                 self.mempool_manager.remove_seen(spend_name)
                 raise
+
             async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
@@ -2400,8 +2401,7 @@ class FullNode:
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE, current_peer.peer_node_id)
 
-        conds = mempool_item.npc_result.conds
-        assert conds is not None
+        conds = mempool_item.conds
 
         all_peers = {
             peer_id
@@ -2457,7 +2457,7 @@ class FullNode:
 
         for removal_info in mempool_removals:
             for internal_mempool_item in removal_info.items:
-                conds = internal_mempool_item.npc_result.conds
+                conds = internal_mempool_item.conds
                 assert conds is not None
 
                 hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
