@@ -20,5 +20,13 @@
 ### Testing Notes:
 
 
+### Required Reviewers Checklist:
+(only check the boxes if you are filling the required reviewer role, peer reviews should consider these points but leave them to the required reviewers to confirm)
+- [ ] Cleanup/teardown code is shielded
+- [ ] Tasks are tracked and handled
+- [ ] Tests generally
+  - [ ] Avoid time out asserts in favor of the helpers that process transactions, wait for wallets to be synced, etc
+  - [ ] Avoid directly farming blocks either for rewards or to process transactions
+  - [ ] Avoid sleeps
 
 <!-- Attach any visual examples, or supporting evidence (attach any .gif/video/console output below) -->
