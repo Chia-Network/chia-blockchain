@@ -13,7 +13,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import agg_sig_additional_data, conditions_dict_for_solution, make_aggsig_final_message
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -25,6 +24,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 DEFAULT_SEED = b"seed" * 8
 assert len(DEFAULT_SEED) == 32
@@ -175,7 +175,7 @@ class WalletTool:
                 )
         return spends
 
-    def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
+    def sign_transaction(self, coin_spends: List[CoinSpend]) -> WalletSpendBundle:
         signatures = []
         data = agg_sig_additional_data(self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
         agg_sig_opcodes = [
@@ -206,7 +206,7 @@ class WalletTool:
                     signatures.append(signature)
 
         aggsig = AugSchemeMPL.aggregate(signatures)
-        spend_bundle = SpendBundle(coin_spends, aggsig)
+        spend_bundle = WalletSpendBundle(coin_spends, aggsig)
         return spend_bundle
 
     def generate_signed_transaction(
@@ -218,7 +218,7 @@ class WalletTool:
         fee: int = 0,
         additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
         memo: Optional[bytes32] = None,
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         if condition_dic is None:
             condition_dic = {}
         transaction = self.generate_unsigned_transaction(
@@ -235,7 +235,7 @@ class WalletTool:
         condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
         fee: int = 0,
         additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         if condition_dic is None:
             condition_dic = {}
         transaction = self.generate_unsigned_transaction(

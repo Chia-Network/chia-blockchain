@@ -119,6 +119,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk,
 )
 from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 GENERATOR_MOD: SerializedProgram = load_serialized_clvm_maybe_recompile(
     "rom_bootstrap_generator.clsp", package_or_requirement="chia.consensus.puzzles"
@@ -169,14 +170,14 @@ def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
     return ret
 
 
-def make_spend_bundle(coins: List[Coin], wallet: WalletTool, rng: Random) -> Tuple[SpendBundle, List[Coin]]:
+def make_spend_bundle(coins: List[Coin], wallet: WalletTool, rng: Random) -> Tuple[WalletSpendBundle, List[Coin]]:
     """
     makes a new spend bundle (block generator) spending some of the coins in the
     list of coins. The list will be updated to have spent coins removed and new
     coins appended.
     """
     new_coins: List[Coin] = []
-    spend_bundles: List[SpendBundle] = []
+    spend_bundles: List[WalletSpendBundle] = []
     to_spend = rng.sample(coins, min(5, len(coins)))
     receiver = wallet.get_new_puzzlehash()
     for c in to_spend:
@@ -187,7 +188,7 @@ def make_spend_bundle(coins: List[Coin], wallet: WalletTool, rng: Random) -> Tup
 
     coins.extend(new_coins)
 
-    return SpendBundle.aggregate(spend_bundles), new_coins
+    return WalletSpendBundle.aggregate(spend_bundles), new_coins
 
 
 class BlockTools:

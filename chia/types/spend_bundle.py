@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple, Type, TypeVar
 
 from chia_rs import AugSchemeMPL, G2Element
 
@@ -13,6 +13,26 @@ from chia.util.streamable import Streamable, streamable, streamable_from_dict
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 from .coin_spend import CoinSpend, compute_additions_with_cost
+
+T_SpendBundle = TypeVar("T_SpendBundle", bound="SpendBundle")
+
+
+def aggregate_spend_bundles(spend_bundles: List[T_SpendBundle]) -> Tuple[List[CoinSpend], G2Element]:
+    coin_spends: List[CoinSpend] = []
+    sigs: List[G2Element] = []
+    for bundle in spend_bundles:
+        coin_spends += bundle.coin_spends
+        sigs.append(bundle.aggregated_signature)
+    aggregated_signature = AugSchemeMPL.aggregate(sigs)
+    return coin_spends, aggregated_signature
+
+
+def sb_from_json_dict(cls: Type[T_SpendBundle], json_dict: Dict[str, Any]) -> T_SpendBundle:
+    if "coin_solutions" in json_dict and "coin_spends" not in json_dict:
+        json_dict = dict(
+            aggregated_signature=json_dict["aggregated_signature"], coin_spends=json_dict["coin_solutions"]
+        )
+    return streamable_from_dict(cls, json_dict)
 
 
 @streamable
@@ -30,13 +50,7 @@ class SpendBundle(Streamable):
 
     @classmethod
     def aggregate(cls, spend_bundles: List[SpendBundle]) -> SpendBundle:
-        coin_spends: List[CoinSpend] = []
-        sigs: List[G2Element] = []
-        for bundle in spend_bundles:
-            coin_spends += bundle.coin_spends
-            sigs.append(bundle.aggregated_signature)
-        aggregated_signature = AugSchemeMPL.aggregate(sigs)
-        return cls(coin_spends, aggregated_signature)
+        return cls(*aggregate_spend_bundles(spend_bundles))
 
     # TODO: this should be removed
     def additions(self, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM) -> List[Coin]:
@@ -60,11 +74,7 @@ class SpendBundle(Streamable):
 
     @classmethod
     def from_json_dict(cls, json_dict: Dict[str, Any]) -> SpendBundle:
-        if "coin_solutions" in json_dict and "coin_spends" not in json_dict:
-            json_dict = dict(
-                aggregated_signature=json_dict["aggregated_signature"], coin_spends=json_dict["coin_solutions"]
-            )
-        return streamable_from_dict(cls, json_dict)
+        return sb_from_json_dict(cls, json_dict)
 
 
 # This function executes all the puzzles to compute the difference between

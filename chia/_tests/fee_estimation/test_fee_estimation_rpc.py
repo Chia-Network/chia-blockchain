@@ -15,9 +15,9 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.aliases import WalletService
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.util.streamable import InvalidTypeError
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 @pytest.fixture(scope="function")
@@ -205,7 +205,7 @@ async def test_multiple(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpc
     assert response["target_times"] == [1, 5, 10, 15, 60, 120, 180, 240]
 
 
-def get_test_spendbundle(bt: BlockTools) -> SpendBundle:
+def get_test_spendbundle(bt: BlockTools) -> WalletSpendBundle:
     wallet_a: WalletTool = bt.get_pool_wallet_tool()
     my_puzzle_hash = wallet_a.get_new_puzzlehash()
     recevier_puzzle_hash = bytes32(b"0" * 32)

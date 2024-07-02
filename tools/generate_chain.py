@@ -16,9 +16,9 @@ from chia._tests.util.constants import test_constants
 from chia.simulator.block_tools import create_block_tools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.coin import Coin
-from chia.types.spend_bundle import SpendBundle
 from chia.util.chia_logging import initialize_logging
 from chia.util.ints import uint32, uint64
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 @contextmanager
@@ -134,7 +134,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                     start_time = time.monotonic()
 
                     new_coins: List[Coin] = []
-                    spend_bundles: List[SpendBundle] = []
+                    spend_bundles: List[WalletSpendBundle] = []
                     i = 0
                     for i in range(num_tx_per_block):
                         if unspent_coins == []:
@@ -161,7 +161,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                         farmer_reward_puzzle_hash=farmer_puzzlehash,
                         pool_reward_puzzle_hash=pool_puzzlehash,
                         keep_going_until_tx_block=True,
-                        transaction_data=SpendBundle.aggregate(spend_bundles),
+                        transaction_data=WalletSpendBundle.aggregate(spend_bundles),
                         previous_generator=block_references,
                     )
                     prev_tx_block = b

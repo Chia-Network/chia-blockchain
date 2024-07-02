@@ -10,7 +10,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_utils import (
@@ -41,6 +40,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -256,7 +256,7 @@ class DAOCATWallet:
         proposal_id: bytes32,
         is_yes_vote: bool,
         proposal_puzzle: Optional[Program] = None,
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
         running_sum = 0  # this will be used for change calculation
         change = sum(c.coin.amount for c in coins) - amount
@@ -457,7 +457,7 @@ class DAOCATWallet:
                 tx_config,
             )
             assert chia_tx.spend_bundle is not None
-            full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+            full_spend = WalletSpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         else:
             full_spend = spend_bundle
 
@@ -497,7 +497,7 @@ class DAOCATWallet:
 
     async def remove_active_proposal(
         self, proposal_id_list: List[bytes32], tx_config: TXConfig, fee: uint64 = uint64(0)
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         locked_coins: List[Tuple[LockedCoinInfo, List[bytes32]]] = []
         for lci in self.dao_cat_info.locked_coins:
             my_finished_proposals = []
@@ -559,7 +559,7 @@ class DAOCATWallet:
         if fee > 0:  # pragma: no cover
             chia_tx = await self.standard_wallet.create_tandem_xch_tx(fee, tx_config=tx_config)
             assert chia_tx.spend_bundle is not None
-            full_spend = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+            full_spend = WalletSpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
         else:
             full_spend = spend_bundle
 
