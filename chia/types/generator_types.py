@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List
 
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -13,16 +13,6 @@ class GeneratorBlockCacheInterface:
         # Requested block must be a transaction block
         # ignoring hinting error until we handle our interfaces more formally
         return  # type: ignore[return-value]
-
-
-@dataclass(frozen=True)
-class CompressorArg:
-    """`CompressorArg` is used as input to the Block Compressor"""
-
-    block_height: uint32
-    generator: SerializedProgram = field(repr=False)
-    start: int
-    end: int
 
 
 @streamable

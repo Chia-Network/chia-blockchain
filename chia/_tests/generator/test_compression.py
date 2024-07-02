@@ -13,19 +13,12 @@ from clvm_tools import binutils
 
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.generator.test_rom import run_generator
-from chia.full_node.bundle_tools import (
-    bundle_suitable_for_compression,
-    compressed_coin_spend_entry_list,
-    compressed_spend_bundle_solution,
-    match_standard_transaction_at_any_index,
-    simple_solution_generator,
-    simple_solution_generator_backrefs,
-)
+from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.generator_types import BlockGenerator, CompressorArg
+from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
@@ -65,39 +58,6 @@ assert serialized_length(gen1) == len(gen1)
 assert serialized_length(gen2) == len(gen2)
 
 
-@dataclass(frozen=True)
-class MultipleCompressorArg:
-    arg: List[CompressorArg]
-    split_offset: int
-
-
-def create_multiple_ref_generator(args: MultipleCompressorArg, spend_bundle: SpendBundle) -> BlockGenerator:
-    """
-    Decompress a transaction by referencing bytes from multiple input generator references
-    """
-    compressed_cse_list = compressed_coin_spend_entry_list(spend_bundle)
-    program = TEST_MULTIPLE.curry(
-        DECOMPRESS_PUZZLE,
-        DECOMPRESS_CSE_WITH_PREFIX,
-        args.arg[0].start,
-        args.arg[0].end - args.split_offset,
-        args.arg[1].end - args.split_offset,
-        args.arg[1].end,
-        compressed_cse_list,
-    )
-
-    # TODO aqk: Improve ergonomics of CompressorArg -> GeneratorArg conversion
-    generator_list = [
-        args.arg[0].generator,
-        args.arg[1].generator,
-    ]
-    generator_heights = [
-        FAKE_BLOCK_HEIGHT1,
-        FAKE_BLOCK_HEIGHT2,
-    ]
-    return BlockGenerator(SerializedProgram.from_program(program), generator_list, generator_heights)
-
-
 def spend_bundle_to_coin_spend_entry_list(bundle: SpendBundle) -> List[Any]:
     r = []
     for coin_spend in bundle.coin_spends:
@@ -112,80 +72,8 @@ def spend_bundle_to_coin_spend_entry_list(bundle: SpendBundle) -> List[Any]:
 
 
 class TestCompression:
-    def test_spend_bundle_suitable(self) -> None:
-        sb: SpendBundle = make_spend_bundle(1)
-        assert bundle_suitable_for_compression(sb)
-
     def test_compress_spend_bundle(self) -> None:
         pass
-
-    def test_multiple_input_gen_refs(self) -> None:
-        match = match_standard_transaction_at_any_index(gen1)
-        assert match is not None
-        start1, end1 = match
-        match = match_standard_transaction_at_any_index(gen2)
-        assert match is not None
-        start2, end2 = match
-        ca1 = CompressorArg(FAKE_BLOCK_HEIGHT1, SerializedProgram.from_bytes(gen1), start1, end1)
-        ca2 = CompressorArg(FAKE_BLOCK_HEIGHT2, SerializedProgram.from_bytes(gen2), start2, end2)
-
-        prefix_len1 = end1 - start1
-        prefix_len2 = end2 - start2
-        assert prefix_len1 == prefix_len2
-        prefix_len = prefix_len1
-        results = []
-        for split_offset in range(prefix_len):
-            gen_args = MultipleCompressorArg([ca1, ca2], split_offset)
-            spend_bundle: SpendBundle = make_spend_bundle(1)
-            multi_gen = create_multiple_ref_generator(gen_args, spend_bundle)
-            cost, result = run_generator(multi_gen)
-            results.append(result)
-            assert result is not None
-            assert cost > 0
-        assert all(r == results[0] for r in results)
-
-    def test_compressed_block_results(self) -> None:
-        sb: SpendBundle = make_spend_bundle(1)
-        match = match_standard_transaction_at_any_index(original_generator)
-        assert match is not None
-        start, end = match
-        ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
-        c = compressed_spend_bundle_solution(ca, sb)
-        s = simple_solution_generator(sb)
-        assert c != s
-        cost_c, result_c = run_generator(c)
-        cost_s, result_s = run_generator(s)
-        print()
-        print(result_c)
-        assert result_c is not None
-        assert result_s is not None
-        print(result_s)
-        assert result_c == result_s
-
-    def test_get_removals_for_single_coin(self) -> None:
-        sb: SpendBundle = make_spend_bundle(1)
-        match = match_standard_transaction_at_any_index(original_generator)
-        assert match is not None
-        start, end = match
-        ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
-        c = compressed_spend_bundle_solution(ca, sb)
-        removal = sb.coin_spends[0].coin
-        spend_info = get_puzzle_and_solution_for_coin(c, removal, 0, test_constants)
-        assert bytes(spend_info.puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
-        assert bytes(spend_info.solution) == bytes(sb.coin_spends[0].solution)
-        # Test non compressed generator as well
-        s = simple_solution_generator(sb)
-        spend_info = get_puzzle_and_solution_for_coin(s, removal, 0, test_constants)
-        assert bytes(spend_info.puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
-        assert bytes(spend_info.solution) == bytes(sb.coin_spends[0].solution)
-
-        # test with backrefs (2.0 hard-fork)
-        s = simple_solution_generator_backrefs(sb)
-        spend_info = get_puzzle_and_solution_for_coin(s, removal, test_constants.HARD_FORK_HEIGHT + 1, test_constants)
-        assert Program.from_bytes(bytes(spend_info.puzzle)) == Program.from_bytes(
-            bytes(sb.coin_spends[0].puzzle_reveal)
-        )
-        assert Program.from_bytes(bytes(spend_info.solution)) == Program.from_bytes(bytes(sb.coin_spends[0].solution))
 
 
 class TestDecompression:

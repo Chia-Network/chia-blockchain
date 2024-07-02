@@ -21,7 +21,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import CompressorArg
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
@@ -135,7 +134,6 @@ class FullNodeStore:
     recent_signage_points: LRUCache[bytes32, Tuple[SignagePoint, float]]
     recent_eos: LRUCache[bytes32, Tuple[EndOfSubSlotBundle, float]]
 
-    previous_generator: Optional[CompressorArg]
     pending_tx_request: Dict[bytes32, bytes32]  # tx_id: peer_id
     peers_with_tx: Dict[bytes32, Set[bytes32]]  # tx_id: Set[peer_ids}
     tx_fetch_tasks: Dict[bytes32, asyncio.Task[None]]  # Task id: task
@@ -155,7 +153,6 @@ class FullNodeStore:
         self.future_ip_cache = {}
         self.recent_signage_points = LRUCache(500)
         self.recent_eos = LRUCache(50)
-        self.previous_generator = None
         self.future_cache_key_times = {}
         self.constants = constants
         self.clear_slots()

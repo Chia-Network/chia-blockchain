@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Union
+from typing import List, Optional
 
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.generator_types import BlockGenerator, CompressorArg, GeneratorBlockCacheInterface
+from chia.types.generator_types import BlockGenerator, GeneratorBlockCacheInterface
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
@@ -36,21 +35,3 @@ def create_block_generator(
         generator_list.append(previous_generator)
         generator_heights.append(i)
     return BlockGenerator(generator, generator_list, generator_heights)
-
-
-def create_compressed_generator(
-    original_generator: CompressorArg,
-    compressed_cse_list: List[List[List[Union[bytes, None, int, Program]]]],
-) -> BlockGenerator:
-    """
-    Bind the generator block program template to a particular reference block,
-    template bytes offsets, and SpendBundle.
-    """
-    start = original_generator.start
-    end = original_generator.end
-    program = DECOMPRESS_BLOCK.curry(
-        DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, Program.to(start), Program.to(end), compressed_cse_list
-    )
-    return BlockGenerator(
-        SerializedProgram.from_program(program), [original_generator.generator], [original_generator.block_height]
-    )
