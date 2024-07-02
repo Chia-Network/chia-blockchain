@@ -764,10 +764,10 @@ class DataLayer:
     async def process_unsubscribe(self, store_id: bytes32, retain_data: bool) -> None:
         # This function already acquired `subscriptions_lock`.
         subscriptions = await self.data_store.get_subscriptions()
-        if tree_id not in (subscription.store_id for subscription in subscriptions):
+        if store_id not in (subscription.store_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given store_id.")
         paths: List[Path] = []
-        if await self.data_store.tree_id_exists(store_id) and not retain_data:
+        if await self.data_store.store_id_exists(store_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(store_id)
             all_roots = await self.data_store.get_roots_between(store_id, 1, generation + 1)
             for root in all_roots:

@@ -1454,8 +1454,8 @@ async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_
         else:
             filename = get_delta_filename_path(tmp_path, store_id, root.node_hash, generation, True)
             assert filename.exists()
-        await insert_into_data_store_from_file(data_store, tree_id, root.node_hash, tmp_path.joinpath(filename))
-        current_root = await data_store.get_tree_root(tree_id=tree_id)
+        await insert_into_data_store_from_file(data_store, store_id, root.node_hash, tmp_path.joinpath(filename))
+        current_root = await data_store.get_tree_root(store_id=store_id)
         assert current_root.node_hash == root.node_hash
         generation += 1
 
@@ -1986,7 +1986,7 @@ async def test_insert_from_delta_file_correct_file_exists(
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
         await write_files_for_root(data_store, store_id, root, tmp_path, 0)
         root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
-    store_path = tmp_path.joinpath(f"{tree_id}")
+    store_path = tmp_path.joinpath(f"{store_id}")
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == 2 * (num_files + 1)
@@ -2047,7 +2047,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
     await write_files_for_root(data_store, store_id, root, tmp_path, 0)
 
     incorrect_root_hash = bytes32([0] * 31 + [1])
-    store_path = tmp_path.joinpath(f"{tree_id}")
+    store_path = tmp_path.joinpath(f"{store_id}")
     with os.scandir(store_path) as entries:
         filenames = [entry.name for entry in entries]
         assert len(filenames) == 2

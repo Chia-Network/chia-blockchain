@@ -229,7 +229,7 @@ class S3Plugin:
 
             bucket_str = parse_result.netloc
             my_bucket = self.boto_resource.Bucket(bucket_str)
-            target_filename = self.server_files_path.joinpath(f"{filename_tree_id}").joinpath(filename[65:])
+            target_filename = self.server_files_path.joinpath(f"{filename_store_id}").joinpath(filename[65:])
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
             log.info(f"downloading {url} to {target_filename}...")

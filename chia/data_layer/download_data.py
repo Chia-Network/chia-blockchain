@@ -217,12 +217,12 @@ async def insert_from_delta_file(
     proxy_url: str,
     downloader: Optional[PluginRemote],
 ) -> bool:
-    client_foldername.joinpath(f"{tree_id}").mkdir(parents=True, exist_ok=True)
+    client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
 
     for root_hash in root_hashes:
         timestamp = int(time.time())
         existing_generation += 1
-        target_filename_path = get_delta_filename_path(client_foldername, tree_id, root_hash, existing_generation, True)
+        target_filename_path = get_delta_filename_path(client_foldername, store_id, root_hash, existing_generation, True)
         filename_exists = target_filename_path.exists()
         success = await download_file(
             target_filename_path=target_filename_path,
