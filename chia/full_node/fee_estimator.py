@@ -28,7 +28,7 @@ class SmartFeeEstimator:
         median = fee_result.median
 
         if median != -1:
-            return median
+            return median / 1000.0
 
         if fail_bucket.start == 0:
             return -1.0

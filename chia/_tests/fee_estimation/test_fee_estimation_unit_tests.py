@@ -61,30 +61,30 @@ def test_steady_fee_pressure() -> None:
     estimator = create_bitcoin_fee_estimator(max_block_cost_clvm)
     cost = uint64(5000000)
     fee = uint64(10000000)
+    time_offset_seconds = 40
     num_blocks_wait_in_mempool = 5
 
     start = 100
     end = 300
     estimates_during = []
+    start_from = 250
     for height in range(start, end):
         height = uint32(height)
         items = make_block(height, 1, cost, fee, num_blocks_wait_in_mempool)
         estimator.new_block(FeeBlockInfo(uint32(height), items))
-        estimates_during.append(estimator.estimate_fee_rate(time_offset_seconds=40 * height))
+        if height >= start_from:
+            estimation = estimator.estimate_fee_rate(time_offset_seconds=time_offset_seconds * (height - start_from))
+            estimates_during.append(estimation)
 
-    # est = estimator.estimate_fee_rate(time_offset_seconds=240) #TODO
-    e = []
+    estimates_after = []
+    for height in range(start_from, end):
+        estimation = estimator.estimate_fee_rate(time_offset_seconds=time_offset_seconds * (height - start_from))
+        estimates_after.append(estimation)
 
-    for seconds in range(30, 5 * 60, 30):
-        est2 = estimator.estimate_fee_rate(time_offset_seconds=seconds)
-        e.append(est2)
-
-    # assert est == FeeRate.create(Mojos(fee), CLVMCost(cost)) #TODO
-    estimates_after = [estimator.estimate_fee_rate(time_offset_seconds=40 * height) for height in range(start, end)]
-    block_estimates = [estimator.estimate_fee_rate_for_block(uint32(h)) for h in range(start, end)]
-
-    assert estimates_during == estimates_after
-    assert estimates_after == block_estimates
+    block_estimates = [estimator.estimate_fee_rate_for_block(uint32(h + 1)) for h in range(0, 50)]
+    for idx, es_after in enumerate(estimates_after):
+        assert abs(es_after.mojos_per_clvm_cost - estimates_during[idx].mojos_per_clvm_cost) < 0.001
+        assert es_after.mojos_per_clvm_cost == block_estimates[idx].mojos_per_clvm_cost
 
 
 def test_init_buckets() -> None:

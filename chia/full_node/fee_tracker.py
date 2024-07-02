@@ -70,7 +70,7 @@ class FeeStat:  # TxConfirmStats
     # Track historical moving average of this total over block
     tx_ct_avg: List[float]
 
-    # Count the total number of txs confirmed within Y blocks in each bucket
+    # Count the total number of txs confirmed within Y periods in each bucket
     # Track the historical moving average of these totals over blocks
     confirmed_average: List[List[float]]  # confirmed_average [y][x]
 
@@ -84,7 +84,7 @@ class FeeStat:  # TxConfirmStats
 
     decay: float
 
-    # Resolution of blocks with which confirmations are tracked
+    # Resolution of blocks with which confirmations are tracked (number of blocks per period)
     scale: int
 
     # Mempool counts of outstanding transactions
@@ -133,6 +133,7 @@ class FeeStat:  # TxConfirmStats
         if blocks_to_confirm < 1:
             raise ValueError("tx_confirmed called with < 1 block to confirm")
 
+        # convert from number of blocks to number of periods
         periods_to_confirm = int((blocks_to_confirm + self.scale - 1) / self.scale)
 
         fee_rate = item.fee_per_cost * 1000
