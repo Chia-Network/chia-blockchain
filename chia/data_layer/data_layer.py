@@ -58,8 +58,8 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, Singleton
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
     delete_full_file_if_exists,
-    get_delta_filename,
-    get_full_tree_filename,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     insert_from_delta_file,
     write_files_for_root,
 )
@@ -766,14 +766,32 @@ class DataLayer:
         subscriptions = await self.data_store.get_subscriptions()
         if store_id not in (subscription.store_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given store_id.")
-        filenames: List[str] = []
+        paths: List[Path] = []
         if await self.data_store.store_id_exists(store_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(store_id)
             all_roots = await self.data_store.get_roots_between(store_id, 1, generation + 1)
             for root in all_roots:
                 root_hash = root.node_hash if root.node_hash is not None else self.none_bytes
-                filenames.append(get_full_tree_filename(store_id, root_hash, root.generation))
-                filenames.append(get_delta_filename(store_id, root_hash, root.generation))
+                for group_by_store in (True, False):
+                    paths.append(
+                        get_full_tree_filename_path(
+                            self.server_files_location,
+                            store_id,
+                            root_hash,
+                            root.generation,
+                            group_by_store,
+                        )
+                    )
+                    paths.append(
+                        get_delta_filename_path(
+                            self.server_files_location,
+                            store_id,
+                            root_hash,
+                            root.generation,
+                            group_by_store,
+                        )
+                    )
+
         # stop tracking first, then unsubscribe from the data store
         await self.wallet_rpc.dl_stop_tracking(store_id)
         await self.data_store.unsubscribe(store_id)
@@ -781,8 +799,7 @@ class DataLayer:
             await self.data_store.delete_store_data(store_id)
 
         self.log.info(f"Unsubscribed to {store_id}")
-        for filename in filenames:
-            file_path = self.server_files_location.joinpath(filename)
+        for file_path in paths:
             try:
                 file_path.unlink()
             except FileNotFoundError:
