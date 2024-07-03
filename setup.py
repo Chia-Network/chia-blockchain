@@ -11,7 +11,7 @@ dependencies = [
     "boto3==1.34.114",  # AWS S3 for DL s3 plugin
     "chiavdf==1.1.4",  # timelord and vdf verification
     "chiabip158==1.5.1",  # bip158-style wallet filters
-    "chiapos==2.0.4",  # proof of space
+    "chiapos==2.0.3",  # proof of space
     "clvm==0.9.10",
     "clvm_tools==0.4.9",  # Currying, Program.to, other conveniences
     "chia_rs==0.9.0",
