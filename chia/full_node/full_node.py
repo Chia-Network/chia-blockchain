@@ -2800,6 +2800,7 @@ class FullNode:
 
                 if self._server is None:
                     self.log.info("Not broadcasting uncompact blocks, no server found")
+                    await asyncio.sleep(uncompact_interval_scan)
                     continue
                 connected_timelords = self.server.get_connections(NodeType.TIMELORD)
 
@@ -2882,8 +2883,10 @@ class FullNode:
                     broadcast_list_chunks.append(broadcast_list[index : index + target_uncompact_proofs])
                 if len(broadcast_list_chunks) == 0:
                     self.log.info("Did not find any uncompact blocks.")
+                    await asyncio.sleep(uncompact_interval_scan)
                     continue
                 if self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
+                    await asyncio.sleep(uncompact_interval_scan)
                     continue
                 if self._server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
