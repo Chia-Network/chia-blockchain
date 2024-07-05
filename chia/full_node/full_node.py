@@ -2797,7 +2797,15 @@ class FullNode:
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []
 
                 self.log.info("Getting random heights for bluebox to compact")
-                heights = await self.block_store.get_random_not_compactified(target_uncompact_proofs)
+
+                if self._server is None:
+                    self.log.info("Not broadcasting uncompact blocks, no server found")
+                    await asyncio.sleep(uncompact_interval_scan)
+                    continue
+                connected_timelords = self.server.get_connections(NodeType.TIMELORD)
+
+                total_target_uncompact_proofs = target_uncompact_proofs * max(1, len(connected_timelords))
+                heights = await self.block_store.get_random_not_compactified(total_target_uncompact_proofs)
                 self.log.info("Heights found for bluebox to compact: [%s]", ", ".join(map(str, heights)))
 
                 for h in heights:
@@ -2870,17 +2878,29 @@ class FullNode:
                                 )
                             )
 
-                if len(broadcast_list) > target_uncompact_proofs:
-                    broadcast_list = broadcast_list[:target_uncompact_proofs]
+                broadcast_list_chunks: List[List[timelord_protocol.RequestCompactProofOfTime]] = []
+                for index in range(0, len(broadcast_list), target_uncompact_proofs):
+                    broadcast_list_chunks.append(broadcast_list[index : index + target_uncompact_proofs])
+                if len(broadcast_list_chunks) == 0:
+                    self.log.info("Did not find any uncompact blocks.")
+                    await asyncio.sleep(uncompact_interval_scan)
+                    continue
                 if self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
+                    await asyncio.sleep(uncompact_interval_scan)
                     continue
                 if self._server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
-                    msgs = []
-                    for new_pot in broadcast_list:
-                        msg = make_msg(ProtocolMessageTypes.request_compact_proof_of_time, new_pot)
-                        msgs.append(msg)
-                    await self.server.send_to_all(msgs, NodeType.TIMELORD)
+                    connected_timelords = self.server.get_connections(NodeType.TIMELORD)
+                    chunk_index = 0
+                    for connection in connected_timelords:
+                        peer_node_id = connection.peer_node_id
+                        msgs = []
+                        broadcast_list = broadcast_list_chunks[chunk_index]
+                        chunk_index = (chunk_index + 1) % len(broadcast_list_chunks)
+                        for new_pot in broadcast_list:
+                            msg = make_msg(ProtocolMessageTypes.request_compact_proof_of_time, new_pot)
+                            msgs.append(msg)
+                        await self.server.send_to_specific(msgs, peer_node_id)
                 await asyncio.sleep(uncompact_interval_scan)
         except Exception as e:
             error_stack = traceback.format_exc()
