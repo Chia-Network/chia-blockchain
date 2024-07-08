@@ -10,9 +10,9 @@ from time import sleep
 
 from chia._tests.core.util.test_lockfile import wait_for_enough_files_in_directory
 from chia.simulator.keyring import TempKeyring
+from chia.util.file_keyring import Key
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.util.timing import adjusted_timeout
-from chia.util.file_keyring import Key
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class TestFileKeyringSynchronization:
         num_workers = 10
         keyring_path = str(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         passphrase_list = [
-            ("test-service", f"test-user-{index}", Key(f"passphrase {index}".encode("utf8")), keyring_path, index)
+            ("test-service", f"test-user-{index}", Key(f"passphrase {index}".encode()), keyring_path, index)
             for index in range(num_workers)
         ]
 

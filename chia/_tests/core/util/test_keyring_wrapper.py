@@ -211,9 +211,8 @@ class TestKeyringWrapper:
         KeyringWrapper.get_shared_instance().keyring.set_key("service-abc", "user-xyz", Key(b"super secret passphrase"))
 
         # Expect: passphrase lookup should succeed
-        assert (
-            KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz").secret
-            == b"super secret passphrase"
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") == Key(
+            b"super secret passphrase"
         )
 
         # Expect: non-existent passphrase lookup should fail
@@ -230,18 +229,16 @@ class TestKeyringWrapper:
         KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"initial passphrase"))
 
         # Expect: passphrase lookup should succeed
-        assert (
-            KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123").secret
-            == b"initial passphrase"
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123") == Key(
+            b"initial passphrase"
         )
 
         # When: updating the same passphrase
         KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"updated passphrase"))
 
         # Expect: the updated passphrase should be retrieved
-        assert (
-            KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123").secret
-            == b"updated passphrase"
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123") == Key(
+            b"updated passphrase"
         )
 
     # When: using a new empty keyring
@@ -256,8 +253,8 @@ class TestKeyringWrapper:
         KeyringWrapper.get_shared_instance().keyring.set_key("some service", "some user", Key(b"500p3r 53cr37"))
 
         # Expect: passphrase retrieval should succeed
-        assert (
-            KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user").secret == b"500p3r 53cr37"
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") == Key(
+            b"500p3r 53cr37"
         )
 
         # When: deleting the passphrase
