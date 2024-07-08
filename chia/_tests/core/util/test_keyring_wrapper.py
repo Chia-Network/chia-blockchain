@@ -212,8 +212,8 @@ class TestKeyringWrapper:
 
         # Expect: passphrase lookup should succeed
         assert (
-            KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz")
-            == b"super secret passphrase".hex()
+            KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz").secret
+            == b"super secret passphrase"
         )
 
         # Expect: non-existent passphrase lookup should fail
@@ -231,8 +231,8 @@ class TestKeyringWrapper:
 
         # Expect: passphrase lookup should succeed
         assert (
-            KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123")
-            == b"initial passphrase".hex()
+            KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123").secret
+            == b"initial passphrase"
         )
 
         # When: updating the same passphrase
@@ -240,8 +240,8 @@ class TestKeyringWrapper:
 
         # Expect: the updated passphrase should be retrieved
         assert (
-            KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123")
-            == b"updated passphrase".hex()
+            KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123").secret
+            == b"updated passphrase"
         )
 
     # When: using a new empty keyring
@@ -257,7 +257,7 @@ class TestKeyringWrapper:
 
         # Expect: passphrase retrieval should succeed
         assert (
-            KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") == b"500p3r 53cr37".hex()
+            KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user").secret == b"500p3r 53cr37"
         )
 
         # When: deleting the passphrase
