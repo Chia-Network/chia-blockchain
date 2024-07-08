@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from chia.cmds.cmds_util import get_any_service_client
+from chia.cmds.cmds_util import format_bytes, get_any_service_client
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.misc import format_bytes
 
 
 async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, start: str) -> None:

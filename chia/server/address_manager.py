@@ -544,9 +544,7 @@ class AddressManager:
 
     def get_peers_(self) -> List[TimestampedPeerInfo]:
         addr: List[TimestampedPeerInfo] = []
-        num_nodes = math.ceil(23 * len(self.random_pos) / 100)
-        if num_nodes > 1000:
-            num_nodes = 1000
+        num_nodes = min(1000, math.ceil(23 * len(self.random_pos) / 100))
         for n in range(len(self.random_pos)):
             if len(addr) >= num_nodes:
                 return addr

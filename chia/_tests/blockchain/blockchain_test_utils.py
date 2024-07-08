@@ -34,8 +34,7 @@ async def check_block_store_invariant(bc: Blockchain):
                     # height can only have a single block with in_main_chain set
                     assert height not in in_chain
                     in_chain.add(height)
-                    if height > max_height:
-                        max_height = height
+                    max_height = max(max_height, height)
 
             # make sure every height is represented in the set
             assert len(in_chain) == max_height + 1
