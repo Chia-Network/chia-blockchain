@@ -7,6 +7,7 @@ import pytest
 
 from chia.simulator.keyring import TempKeyring
 from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelError, KeychainLabelExists, KeychainLabelInvalid
+from chia.util.file_keyring import Key
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 
 log = logging.getLogger(__name__)
@@ -207,9 +208,7 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") is None
 
         # When: setting a passphrase
-        KeyringWrapper.get_shared_instance().keyring.set_key(
-            "service-abc", "user-xyz", b"super secret passphrase".hex()
-        )
+        KeyringWrapper.get_shared_instance().keyring.set_key("service-abc", "user-xyz", Key(b"super secret passphrase"))
 
         # Expect: passphrase lookup should succeed
         assert (
@@ -228,7 +227,7 @@ class TestKeyringWrapper:
         Overwriting a previously-set passphrase should work
         """
         # When: initially setting the passphrase
-        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", b"initial passphrase".hex())
+        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"initial passphrase"))
 
         # Expect: passphrase lookup should succeed
         assert (
@@ -237,7 +236,7 @@ class TestKeyringWrapper:
         )
 
         # When: updating the same passphrase
-        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", b"updated passphrase".hex())
+        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"updated passphrase"))
 
         # Expect: the updated passphrase should be retrieved
         assert (
@@ -254,7 +253,7 @@ class TestKeyringWrapper:
         KeyringWrapper.get_shared_instance().keyring.delete_key("some service", "some user")
 
         # When: setting a passphrase
-        KeyringWrapper.get_shared_instance().keyring.set_key("some service", "some user", b"500p3r 53cr37".hex())
+        KeyringWrapper.get_shared_instance().keyring.set_key("some service", "some user", Key(b"500p3r 53cr37"))
 
         # Expect: passphrase retrieval should succeed
         assert (

@@ -24,6 +24,7 @@ from chia.util.errors import (
     KeychainSecretsMissing,
     KeychainUserNotFound,
 )
+from chia.util.file_keyring import Key
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
 from chia.util.keyring_wrapper import KeyringWrapper
@@ -309,10 +310,10 @@ class Keychain:
         is represented by the class `KeyData`.
         """
         user = get_private_key_user(self.user, index)
-        read_str = self.keyring_wrapper.keyring.get_key(self.service, user)
-        if read_str is None or len(read_str) == 0:
+        key = self.keyring_wrapper.keyring.get_key(self.service, user)
+        if key is None or len(key.secret) == 0:
             raise KeychainUserNotFound(self.service, user)
-        str_bytes = bytes.fromhex(read_str)
+        str_bytes = key.secret
 
         public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
         fingerprint = public_key.get_fingerprint()
@@ -370,7 +371,7 @@ class Keychain:
             key = AugSchemeMPL.key_gen(seed)
             assert isinstance(key, PrivateKey)
             pk = key.get_g1()
-            key_data = bytes(pk).hex() + entropy.hex()
+            key_data = Key(bytes(pk) + entropy)
             fingerprint = pk.get_fingerprint()
         else:
             index = self._get_free_private_key_index()
@@ -382,7 +383,7 @@ class Keychain:
                 pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
             key = G1Element.from_bytes(pk_bytes)
             assert isinstance(key, G1Element)
-            key_data = pk_bytes.hex()
+            key_data = Key(pk_bytes)
             fingerprint = key.get_fingerprint()
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
