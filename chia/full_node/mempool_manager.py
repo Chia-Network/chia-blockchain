@@ -286,8 +286,10 @@ class MempoolManager:
                 self.peak.height,
                 bls_cache,
             )
-        except Exception as e:
-            raise ValidationError(e)
+        except Exception as e:  # take returned TypeError and turn into ValidationError class by 
+            error = Err(e.args[0])
+            # breakpoint()
+            raise ValidationError(error)
         finally:
             self._worker_queue_size -= 1
 
