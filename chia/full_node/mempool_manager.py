@@ -176,7 +176,6 @@ class MempoolManager:
         else:
             self.pool = ThreadPoolExecutor(
                 max_workers=2,
-                mp_context=multiprocessing_context,
                 initializer=setproctitle,
                 initargs=(f"{getproctitle()}_mempool_worker",),
             )
@@ -278,13 +277,14 @@ class MempoolManager:
 
         self._worker_queue_size += 1
         try:
-            _spend, sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
+            sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
                 self.pool,
                 validate_clvm_and_signature,
-                new_spend_bytes,
+                new_spend,
                 self.max_tx_clvm_cost,
                 self.constants,
                 self.peak.height,
+                bls_cache,
             )
         except Exception as e:
             raise ValidationError(e)
