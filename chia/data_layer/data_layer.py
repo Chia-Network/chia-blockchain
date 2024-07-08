@@ -849,10 +849,28 @@ class DataLayer:
                 await asyncio.sleep(0.1)
 
         while not self._shut_down:
+            # Add existing subscriptions
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
 
-            # Subscribe to all local store_ids that we can find on chain.
+            # Make sure to include any unsubscribed owned stores
+            # Need this to make sure we process updates and generate DAT files
+            owned_stores = await self.get_owned_stores()
+            subscription_store_ids = {subscription.store_id for subscription in subscriptions}
+            for record in owned_stores:
+                store_id = record.launcher_id
+                if store_id not in subscription_store_ids:
+                    try:
+                        subscription = await self.subscribe(store_id, [])
+                        subscriptions.insert(0, subscription)
+                    except Exception as e:
+                        self.log.info(
+                            f"Can't subscribe to owned store {store_id}: {type(e)} {e} {traceback.format_exc()}"
+                        )
+
+            # Optionally
+            # Subscribe to all local non-owned store_ids that we can find on chain.
+            # This is the prior behavior where all local stores, both owned and not owned, are subscribed to.
             if self.config.get("auto_subscribe_to_local_stores", False):
                 local_store_ids = await self.data_store.get_store_ids()
                 subscription_store_ids = {subscription.store_id for subscription in subscriptions}
@@ -863,7 +881,7 @@ class DataLayer:
                             subscriptions.insert(0, subscription)
                         except Exception as e:
                             self.log.info(
-                                f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
+                                f"Can't subscribe to local store {local_id}: {type(e)} {e} {traceback.format_exc()}"
                             )
 
             work_queue: asyncio.Queue[Job[Subscription]] = asyncio.Queue()
