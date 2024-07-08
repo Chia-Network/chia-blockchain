@@ -208,11 +208,13 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") is None
 
         # When: setting a passphrase
-        KeyringWrapper.get_shared_instance().keyring.set_key("service-abc", "user-xyz", Key(b"super secret passphrase"))
+        KeyringWrapper.get_shared_instance().keyring.set_key(
+            "service-abc", "user-xyz", Key(b"super secret passphrase", {"foo": "bar"})
+        )
 
         # Expect: passphrase lookup should succeed
         assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") == Key(
-            b"super secret passphrase"
+            b"super secret passphrase", {"foo": "bar"}
         )
 
         # Expect: non-existent passphrase lookup should fail
@@ -262,6 +264,16 @@ class TestKeyringWrapper:
 
         # Expect: passphrase retrieval should fail gracefully
         assert KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") is None
+
+        # Check that metadata is properly deleted
+        from chia.cmds.passphrase_funcs import obtain_current_passphrase
+
+        passphrase = obtain_current_passphrase(use_passphrase_cache=True)
+        assert KeyringWrapper.get_shared_instance().keyring.cached_file_content.get_decrypted_data_dict(passphrase) == {
+            "keys": {},
+            "labels": {},
+            "metadata": {},
+        }
 
     def test_emoji_master_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """

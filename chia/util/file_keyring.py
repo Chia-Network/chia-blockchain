@@ -175,23 +175,17 @@ class FileKeyringContent:
 @dataclass(frozen=True)
 class Key:
     secret: bytes
-    type: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
     @classmethod
-    def parse_w_backcompat(cls, data: Union[str, Dict[str, Any]]) -> Key:
-        if isinstance(data, str):
-            return cls(bytes.fromhex(data), None)
-        else:
-            return cls(
-                bytes.fromhex(data["secret"]),
-                data["type"],
-            )
+    def parse(cls, data: str, metadata: Optional[Dict[str, Any]]) -> Key:
+        return cls(
+            bytes.fromhex(data),
+            metadata,
+        )
 
     def to_data(self) -> Union[str, Dict[str, Any]]:
-        if self.type is None:
-            return self.secret.hex()
-        else:
-            return {"secret": self.secret.hex(), "type": self.type}
+        return self.secret.hex()
 
 
 Users = Dict[str, Key]
@@ -207,7 +201,10 @@ class DecrpytedKeyringData:
     def from_dict(cls, data_dict: Dict[str, Any]) -> DecrpytedKeyringData:
         return cls(
             {
-                service: {user: Key.parse_w_backcompat(key) for user, key in users.items()}
+                service: {
+                    user: Key.parse(key, data_dict.get("metadata", {}).get(service, {}).get(user))
+                    for user, key in users.items()
+                }
                 for service, users in data_dict.get("keys", {}).items()
             },
             data_dict.get("labels", {}),
@@ -220,6 +217,10 @@ class DecrpytedKeyringData:
                 for service, users in self.services.items()
             },
             "labels": self.labels,
+            "metadata": {
+                service: {user: key.metadata for user, key in users.items() if key.metadata is not None}
+                for service, users in self.services.items()
+            },
         }
 
 
