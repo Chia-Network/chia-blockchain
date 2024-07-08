@@ -11,7 +11,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
-from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition
@@ -21,6 +20,7 @@ from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.notifications import construct_notification
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 class NotificationManager:
@@ -103,7 +103,7 @@ class NotificationManager:
             notification_puzzle,
             Program.to(None),
         )
-        extra_spend_bundle = SpendBundle([notification_spend], G2Element())
+        extra_spend_bundle = WalletSpendBundle([notification_spend], G2Element())
         [chia_tx] = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
             amount,
             notification_hash,
@@ -118,6 +118,6 @@ class NotificationManager:
             ),
         )
         full_tx: TransactionRecord = dataclasses.replace(
-            chia_tx, spend_bundle=SpendBundle.aggregate([chia_tx.spend_bundle, extra_spend_bundle])
+            chia_tx, spend_bundle=WalletSpendBundle.aggregate([chia_tx.spend_bundle, extra_spend_bundle])
         )
         return full_tx

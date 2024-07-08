@@ -14,7 +14,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.spend_bundle import estimate_fees
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -52,6 +52,7 @@ from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
@@ -282,7 +283,7 @@ class TradeManager:
         announcement_assertions.rotate(1)
 
         all_txs: List[TransactionRecord] = []
-        bundles: List[SpendBundle] = []
+        bundles: List[WalletSpendBundle] = []
         fee_to_pay: uint64 = fee
         for trade, cancellation_coins in zip(trade_records, all_cancellation_coins):
             self.log.info(f"Secure-Cancel pending offer with id trade_id {trade.trade_id.hex()}")
@@ -386,7 +387,7 @@ class TradeManager:
             await self.trade_store.set_status(trade.trade_id, TradeStatus.PENDING_CANCEL)
         # Aggregate spend bundles to the first tx
         if len(all_txs) > 0:
-            all_txs[0] = dataclasses.replace(all_txs[0], spend_bundle=SpendBundle.aggregate(bundles))
+            all_txs[0] = dataclasses.replace(all_txs[0], spend_bundle=WalletSpendBundle.aggregate(bundles))
 
         all_txs = [dataclasses.replace(tx, fee_amount=fee) for tx in all_txs]
 
@@ -648,7 +649,7 @@ class TradeManager:
                 fee_left_to_pay = uint64(0)
                 extra_conditions = tuple()
 
-            total_spend_bundle = SpendBundle.aggregate(
+            total_spend_bundle = WalletSpendBundle.aggregate(
                 [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
             )
 
@@ -683,7 +684,7 @@ class TradeManager:
 
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
         if validate:
-            final_spend_bundle: SpendBundle = offer.to_valid_spend()
+            final_spend_bundle: WalletSpendBundle = offer.to_valid_spend()
             hint_dict: Dict[bytes32, bytes32] = {}
             additions_dict: Dict[bytes32, Coin] = {}
             for hinted_coins, _ in (
@@ -862,7 +863,7 @@ class TradeManager:
         )
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
-        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend(
+        final_spend_bundle: WalletSpendBundle = complete_offer.to_valid_spend(
             solver=Solver({**valid_spend_solver.info, **solver.info})
         )
         await self.maybe_create_wallets_for_offer(complete_offer)

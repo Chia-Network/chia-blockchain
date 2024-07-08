@@ -6,7 +6,6 @@ from chia_rs import Coin
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_info import CATInfo
@@ -23,6 +22,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 GENESIS_BY_ID_MOD = load_clvm_maybe_recompile(
     "genesis_by_coin_id.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
@@ -57,7 +57,7 @@ class LimitationsProgram:
     @classmethod
     async def generate_issuance_bundle(
         cls, wallet, cat_tail_info: Dict, amount: uint64, tx_config: TXConfig
-    ) -> Tuple[TransactionRecord, SpendBundle]:
+    ) -> Tuple[TransactionRecord, WalletSpendBundle]:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
 
@@ -86,7 +86,7 @@ class GenesisById(LimitationsProgram):
     @classmethod
     async def generate_issuance_bundle(
         cls, wallet, _: Dict, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
-    ) -> Tuple[TransactionRecord, SpendBundle]:
+    ) -> Tuple[TransactionRecord, WalletSpendBundle]:
         coins = await wallet.standard_wallet.select_coins(amount + fee, tx_config.coin_selection_config)
 
         origin = coins.copy().pop()
@@ -128,7 +128,7 @@ class GenesisById(LimitationsProgram):
         if wallet.cat_info.my_tail is None:
             await wallet.save_info(CATInfo(tail.get_tree_hash(), tail))
 
-        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
+        return tx_record, WalletSpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
 
 
 class GenesisByPuzhash(LimitationsProgram):
@@ -235,7 +235,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
     @classmethod
     async def generate_issuance_bundle(
         cls, wallet, tail_info: Dict, amount: uint64, tx_config: TXConfig, fee: uint64 = uint64(0)
-    ) -> Tuple[TransactionRecord, SpendBundle]:
+    ) -> Tuple[TransactionRecord, WalletSpendBundle]:
         if "coins" in tail_info:
             coins: List[Coin] = tail_info["coins"]
             origin_id = coins.copy().pop().name()
@@ -290,7 +290,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         if wallet.cat_info.my_tail is None:
             await wallet.save_info(CATInfo(tail.get_tree_hash(), tail))
 
-        return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
+        return tx_record, WalletSpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
 
 
 # This should probably be much more elegant than just a dictionary with strings as identifiers

@@ -39,7 +39,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, str2bool
@@ -127,6 +126,7 @@ from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspe
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -612,7 +612,7 @@ class WalletRpcApi:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(SpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
+        await self.service.push_tx(WalletSpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
         return {}
 
     async def push_transactions(self, request: Dict[str, Any]) -> EndpointResult:
@@ -1027,7 +1027,7 @@ class WalletRpcApi:
                 )
                 assert len(coin_state_list) == 1
                 coin_spend = await fetch_coin_spend_for_coin_state(coin_state_list[0], peer)
-                tr = dataclasses.replace(tr, spend_bundle=SpendBundle([coin_spend], G2Element()))
+                tr = dataclasses.replace(tr, spend_bundle=WalletSpendBundle([coin_spend], G2Element()))
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
         assert tr.spend_bundle is not None
@@ -2262,7 +2262,7 @@ class WalletRpcApi:
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
-        memos = compute_memos(SpendBundle([coin_spend], G2Element()))
+        memos = compute_memos(WalletSpendBundle([coin_spend], G2Element()))
         hints = []
         coin_memos = memos.get(coin_state.coin.name())
         if coin_memos is not None:
@@ -2504,7 +2504,7 @@ class WalletRpcApi:
                 return {
                     "wallet_id": wallet_id,
                     "success": True,
-                    "spend_bundle": SpendBundle.aggregate(
+                    "spend_bundle": WalletSpendBundle.aggregate(
                         [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
                     ),
                     "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
@@ -3125,7 +3125,7 @@ class WalletRpcApi:
             extra_conditions=extra_conditions,
         )
         nft_id = None
-        spend_bundle = SpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None])
+        spend_bundle = WalletSpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None])
         for cs in spend_bundle.coin_spends:
             if cs.coin.puzzle_hash == nft_puzzles.LAUNCHER_PUZZLE_HASH:
                 nft_id = encode_puzzle_hash(cs.coin.name(), AddressType.NFT.hrp(self.service.config))
@@ -3205,7 +3205,7 @@ class WalletRpcApi:
         return {
             "wallet_id": wallet_id,
             "success": True,
-            "spend_bundle": SpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None]),
+            "spend_bundle": WalletSpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None]),
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
 
@@ -3277,7 +3277,7 @@ class WalletRpcApi:
             for coin in nft_list:
                 coin_ids.append(coin.coin.name())
             first = False
-        spend_bundles: List[SpendBundle] = []
+        spend_bundles: List[WalletSpendBundle] = []
         refined_tx_list: List[TransactionRecord] = []
         for tx in tx_list:
             if tx.spend_bundle is not None:
@@ -3285,7 +3285,7 @@ class WalletRpcApi:
             refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
-            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            spend_bundle = WalletSpendBundle.aggregate(spend_bundles)
             # Add all spend bundles to the first tx
             refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
 
@@ -3368,7 +3368,7 @@ class WalletRpcApi:
             for coin in nft_list:
                 coin_ids.append(coin.coin.name())
             first = False
-        spend_bundles: List[SpendBundle] = []
+        spend_bundles: List[WalletSpendBundle] = []
         refined_tx_list: List[TransactionRecord] = []
         for tx in tx_list:
             if tx.spend_bundle is not None:
@@ -3376,7 +3376,7 @@ class WalletRpcApi:
             refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
 
         if len(spend_bundles) > 0:
-            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            spend_bundle = WalletSpendBundle.aggregate(spend_bundles)
             # Add all spend bundles to the first tx
             refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
             for id in coin_ids:
@@ -3483,7 +3483,7 @@ class WalletRpcApi:
                 new_did_inner_hash=b"",
                 extra_conditions=extra_conditions,
             )
-            spend_bundle: Optional[SpendBundle] = None
+            spend_bundle: Optional[WalletSpendBundle] = None
             for tx in txs:
                 if tx.spend_bundle is not None:
                     spend_bundle = tx.spend_bundle
@@ -3591,7 +3591,7 @@ class WalletRpcApi:
         return {
             "wallet_id": wallet_id,
             "success": True,
-            "spend_bundle": SpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None]),
+            "spend_bundle": WalletSpendBundle.aggregate([tx.spend_bundle for tx in txs if tx.spend_bundle is not None]),
             "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }
 

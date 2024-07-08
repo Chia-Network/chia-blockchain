@@ -4,10 +4,10 @@ import contextlib
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast
 
-from chia.types.spend_bundle import SpendBundle
 from chia.util.action_scope import ActionScope
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     # Avoid a circular import here
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class WalletSideEffects:
     transactions: List[TransactionRecord] = field(default_factory=list)
     signing_responses: List[SigningResponse] = field(default_factory=list)
-    extra_spends: List[SpendBundle] = field(default_factory=list)
+    extra_spends: List[WalletSpendBundle] = field(default_factory=list)
 
     def __bytes__(self) -> bytes:
         blob = b""
@@ -59,7 +59,7 @@ class WalletSideEffects:
             for _ in range(0, sb_len_prefix):
                 len_prefix = int.from_bytes(blob[:4], "big")
                 blob = blob[4:]
-                instance.extra_spends.append(SpendBundle.from_bytes(blob[:len_prefix]))
+                instance.extra_spends.append(WalletSpendBundle.from_bytes(blob[:len_prefix]))
                 blob = blob[len_prefix:]
 
         return instance
@@ -75,7 +75,7 @@ async def new_wallet_action_scope(
     merge_spends: bool = True,
     sign: Optional[bool] = None,
     additional_signing_responses: List[SigningResponse] = [],
-    extra_spends: List[SpendBundle] = [],
+    extra_spends: List[WalletSpendBundle] = [],
 ) -> AsyncIterator[WalletActionScope]:
     async with ActionScope.new_scope(WalletSideEffects) as self:
         self = cast(WalletActionScope, self)

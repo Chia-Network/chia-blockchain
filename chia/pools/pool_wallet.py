@@ -42,7 +42,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.spend_bundle import estimate_fees
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes, parse_timelock_info
 from chia.wallet.derive_keys import find_owner_sk
@@ -53,6 +53,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -555,14 +556,14 @@ class PoolWallet:
         else:
             raise RuntimeError("Invalid state")
 
-        unsigned_spend_bundle = SpendBundle([outgoing_coin_spend], G2Element())
+        unsigned_spend_bundle = WalletSpendBundle([outgoing_coin_spend], G2Element())
         assert unsigned_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
         assert unsigned_spend_bundle.removals()[0].name() == singleton.name()
         fee_tx: Optional[TransactionRecord] = None
         if fee > 0:
             fee_tx = await self.generate_fee_transaction(fee, tx_config)
             assert fee_tx.spend_bundle is not None
-            unsigned_spend_bundle = SpendBundle.aggregate([unsigned_spend_bundle, fee_tx.spend_bundle])
+            unsigned_spend_bundle = WalletSpendBundle.aggregate([unsigned_spend_bundle, fee_tx.spend_bundle])
             fee_tx = dataclasses.replace(fee_tx, spend_bundle=None)
 
         tx_record = TransactionRecord(
@@ -598,7 +599,7 @@ class PoolWallet:
         delay_ph: bytes32,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[SpendBundle, bytes32, bytes32]:
+    ) -> Tuple[WalletSpendBundle, bytes32, bytes32]:
         """
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         with the "pooling" inner state, which can be either self pooling or using a pool
@@ -666,10 +667,10 @@ class PoolWallet:
             SerializedProgram.from_program(genesis_launcher_puz),
             SerializedProgram.from_program(genesis_launcher_solution),
         )
-        launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
+        launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
 
         # Current inner will be updated when state is verified on the blockchain
-        full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
+        full_spend = WalletSpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
         return full_spend, puzzle_hash, launcher_coin.name()
 
     async def join_pool(
@@ -827,10 +828,10 @@ class PoolWallet:
         if len(all_spends) == 0 or first_coin_record is None:
             raise ValueError("Nothing to claim, no unspent coinbase rewards")
 
-        claim_spend: SpendBundle = SpendBundle(all_spends, G2Element())
+        claim_spend = WalletSpendBundle(all_spends, G2Element())
 
         # If fee is 0, no signatures are required to absorb
-        full_spend: SpendBundle = claim_spend
+        full_spend = claim_spend
 
         fee_tx = None
         if fee > 0:
@@ -842,7 +843,7 @@ class PoolWallet:
                 ),
             )
             assert fee_tx.spend_bundle is not None
-            full_spend = SpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
+            full_spend = WalletSpendBundle.aggregate([fee_tx.spend_bundle, claim_spend])
             fee_tx = dataclasses.replace(fee_tx, spend_bundle=None)
 
         assert estimate_fees(full_spend) == fee
