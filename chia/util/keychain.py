@@ -324,7 +324,7 @@ class Keychain:
         return KeyData(
             fingerprint=uint32(fingerprint),
             public_key=public_key,
-            label=self.keyring_wrapper.get_label(fingerprint),
+            label=self.keyring_wrapper.keyring.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
         )
 
@@ -392,7 +392,7 @@ class Keychain:
         # Try to set the label first, it may fail if the label is invalid or already exists.
         # This can probably just be moved into `FileKeyring.set_passphrase` after the legacy keyring stuff was dropped.
         if label is not None:
-            self.keyring_wrapper.set_label(fingerprint, label)
+            self.keyring_wrapper.keyring.set_label(fingerprint, label)
 
         try:
             self.keyring_wrapper.keyring.set_key(
@@ -402,7 +402,7 @@ class Keychain:
             )
         except Exception:
             if label is not None:
-                self.keyring_wrapper.delete_label(fingerprint)
+                self.keyring_wrapper.keyring.delete_label(fingerprint)
             raise
 
         return key
@@ -412,13 +412,13 @@ class Keychain:
         Assigns the given label to the first key with the given fingerprint.
         """
         self.get_key(fingerprint)  # raise if the fingerprint doesn't exist
-        self.keyring_wrapper.set_label(fingerprint, label)
+        self.keyring_wrapper.keyring.set_label(fingerprint, label)
 
     def delete_label(self, fingerprint: int) -> None:
         """
         Removes the label assigned to the key with the given fingerprint.
         """
-        self.keyring_wrapper.delete_label(fingerprint)
+        self.keyring_wrapper.keyring.delete_label(fingerprint)
 
     def get_first_private_key(self) -> Optional[Tuple[PrivateKey, bytes]]:
         """
@@ -515,7 +515,7 @@ class Keychain:
                 key_data = self._get_key_data(index, include_secrets=False)
                 if key_data.fingerprint == fingerprint:
                     try:
-                        self.keyring_wrapper.delete_label(key_data.fingerprint)
+                        self.keyring_wrapper.keyring.delete_label(key_data.fingerprint)
                     except (KeychainException, NotImplementedError):
                         # Just try to delete the label and move on if there wasn't one
                         pass

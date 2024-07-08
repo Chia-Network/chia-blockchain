@@ -264,14 +264,3 @@ class KeyringWrapper:
 
     def get_master_passphrase_hint(self) -> Optional[str]:
         return self.keyring.get_passphrase_hint()
-
-    # Keyring interface
-
-    def get_label(self, fingerprint: int) -> Optional[str]:
-        return self.keyring.get_label(fingerprint)
-
-    def set_label(self, fingerprint: int, label: str) -> None:
-        self.keyring.set_label(fingerprint, label)
-
-    def delete_label(self, fingerprint: int) -> None:
-        self.keyring.delete_label(fingerprint)

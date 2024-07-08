@@ -381,49 +381,49 @@ class TestKeyringWrapper:
     def test_get_label(self, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         # label lookup for 1, 2, 3 should return None
-        assert keyring_wrapper.get_label(1) is None
-        assert keyring_wrapper.get_label(2) is None
-        assert keyring_wrapper.get_label(3) is None
+        assert keyring_wrapper.keyring.get_label(1) is None
+        assert keyring_wrapper.keyring.get_label(2) is None
+        assert keyring_wrapper.keyring.get_label(3) is None
 
         # Set and validate a label for 1
-        keyring_wrapper.set_label(1, "one")
-        assert keyring_wrapper.get_label(1) == "one"
+        keyring_wrapper.keyring.set_label(1, "one")
+        assert keyring_wrapper.keyring.get_label(1) == "one"
 
         # Set and validate a label for 3
-        keyring_wrapper.set_label(3, "three")
+        keyring_wrapper.keyring.set_label(3, "three")
 
         # And validate all match the expected values
-        assert keyring_wrapper.get_label(1) == "one"
-        assert keyring_wrapper.get_label(2) is None
-        assert keyring_wrapper.get_label(3) == "three"
+        assert keyring_wrapper.keyring.get_label(1) == "one"
+        assert keyring_wrapper.keyring.get_label(2) is None
+        assert keyring_wrapper.keyring.get_label(3) == "three"
 
     def test_set_label(self, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         # Set and validate a label for 1
-        keyring_wrapper.set_label(1, "one")
-        assert keyring_wrapper.get_label(1) == "one"
+        keyring_wrapper.keyring.set_label(1, "one")
+        assert keyring_wrapper.keyring.get_label(1) == "one"
 
         # Set and validate a label for 2
-        keyring_wrapper.set_label(2, "two")
-        assert keyring_wrapper.get_label(2) == "two"
+        keyring_wrapper.keyring.set_label(2, "two")
+        assert keyring_wrapper.keyring.get_label(2) == "two"
 
         # Change the label of 2
-        keyring_wrapper.set_label(2, "two!")
-        assert keyring_wrapper.get_label(2) == "two!"
+        keyring_wrapper.keyring.set_label(2, "two!")
+        assert keyring_wrapper.keyring.get_label(2) == "two!"
         # 1 should still have the same label
-        assert keyring_wrapper.get_label(1) == "one"
+        assert keyring_wrapper.keyring.get_label(1) == "one"
 
         # Change the label of 2 again
-        keyring_wrapper.set_label(2, "two!!")
-        assert keyring_wrapper.get_label(2) == "two!!"
+        keyring_wrapper.keyring.set_label(2, "two!!")
+        assert keyring_wrapper.keyring.get_label(2) == "two!!"
         # 1 should still have the same label
-        assert keyring_wrapper.get_label(1) == "one"
+        assert keyring_wrapper.keyring.get_label(1) == "one"
 
         # Change the label of 1
-        keyring_wrapper.set_label(1, "one!")
-        assert keyring_wrapper.get_label(1) == "one!"
+        keyring_wrapper.keyring.set_label(1, "one!")
+        assert keyring_wrapper.keyring.get_label(1) == "one!"
         # 2 should still have the same label
-        assert keyring_wrapper.get_label(2) == "two!!"
+        assert keyring_wrapper.keyring.get_label(2) == "two!!"
 
     @pytest.mark.parametrize(
         "label",
@@ -435,8 +435,8 @@ class TestKeyringWrapper:
     )
     def test_set_special_labels(self, label: str, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
-        keyring_wrapper.set_label(1, label)
-        assert keyring_wrapper.get_label(1) == label
+        keyring_wrapper.keyring.set_label(1, label)
+        assert keyring_wrapper.keyring.get_label(1) == label
 
     @pytest.mark.parametrize(
         "label, exception, message",
@@ -458,9 +458,9 @@ class TestKeyringWrapper:
         self, label: str, exception: Type[KeychainLabelError], message: str, empty_temp_file_keyring: TempKeyring
     ) -> None:
         keyring_wrapper = KeyringWrapper.get_shared_instance()
-        keyring_wrapper.set_label(1, "one")
+        keyring_wrapper.keyring.set_label(1, "one")
         with pytest.raises(exception, match=message) as e:
-            keyring_wrapper.set_label(1, label)
+            keyring_wrapper.keyring.set_label(1, label)
         assert e.value.label == label
         if isinstance(e.value, KeychainLabelExists):
             assert e.value.label == "one"
@@ -469,20 +469,20 @@ class TestKeyringWrapper:
     def test_delete_label(self, empty_temp_file_keyring: TempKeyring) -> None:
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         # Set labels for 1,2 and validate them
-        keyring_wrapper.set_label(1, "one")
-        keyring_wrapper.set_label(2, "two")
-        assert keyring_wrapper.get_label(1) == "one"
-        assert keyring_wrapper.get_label(2) == "two"
+        keyring_wrapper.keyring.set_label(1, "one")
+        keyring_wrapper.keyring.set_label(2, "two")
+        assert keyring_wrapper.keyring.get_label(1) == "one"
+        assert keyring_wrapper.keyring.get_label(2) == "two"
         # Remove the label of 1
-        keyring_wrapper.delete_label(1)
-        assert keyring_wrapper.get_label(1) is None
-        assert keyring_wrapper.get_label(2) == "two"
+        keyring_wrapper.keyring.delete_label(1)
+        assert keyring_wrapper.keyring.get_label(1) is None
+        assert keyring_wrapper.keyring.get_label(2) == "two"
         # Remove the label of 2
-        keyring_wrapper.delete_label(2)
-        assert keyring_wrapper.get_label(1) is None
-        assert keyring_wrapper.get_label(2) is None
+        keyring_wrapper.keyring.delete_label(2)
+        assert keyring_wrapper.keyring.get_label(1) is None
+        assert keyring_wrapper.keyring.get_label(2) is None
         # Make sure the deletion fails for 0-2
         for i in range(3):
             with pytest.raises(KeychainFingerprintNotFound) as e:
-                keyring_wrapper.delete_label(i)
+                keyring_wrapper.keyring.delete_label(i)
             assert e.value.fingerprint == i
