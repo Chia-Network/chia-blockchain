@@ -208,9 +208,9 @@ class DecrpytedKeyringData:
         return cls(
             {
                 service: {user: Key.parse_w_backcompat(key) for user, key in users.items()}
-                for service, users in data_dict["keys"].items()
+                for service, users in data_dict.get("keys", {}).items()
             },
-            data_dict["labels"],
+            data_dict.get("labels", {}),
         )
 
     def to_dict(self) -> Dict[str, Any]:
