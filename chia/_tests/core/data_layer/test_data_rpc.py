@@ -1813,7 +1813,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
             break
         await offer_setup.full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await asyncio.sleep(0.5)
-    else:  # pragma: no cover
+    else:
         assert False, "offer was not cancelled"
 
     taker_request = {
@@ -2124,7 +2124,7 @@ async def test_clear_pending_roots(
             finally:
                 client.close()
                 await client.await_closed()
-        else:  # pragma: no cover
+        else:
             assert False, "unhandled parametrization"
 
         assert cleared_root == {"success": True, "root": pending_root.marshal()}
@@ -2352,7 +2352,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
             )
             assert process.stdout is not None
             assert await process.stdout.read() == b""
-        else:  # pragma: no cover
+        else:
             assert False, "unhandled parametrization"
 
         active_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
@@ -3110,7 +3110,7 @@ async def test_pagination_cmds(
             finally:
                 client.close()
                 await client.await_closed()
-        else:  # pragma: no cover
+        else:
             assert False, "unhandled parametrization"
         if max_page_size is None or max_page_size == 100:
             assert keys == {
@@ -3179,7 +3179,7 @@ async def test_pagination_cmds(
                 "total_bytes": 9,
                 "total_pages": 2,
             }
-        else:  # pragma: no cover
+        else:
             assert False, "unhandled parametrization"
 
 
@@ -3282,7 +3282,7 @@ async def test_unsubmitted_batch_update(
                 finally:
                     client.close()
                     await client.await_closed()
-            else:  # pragma: no cover
+            else:
                 assert False, "unhandled parametrization"
 
             await full_node_api.farm_blocks_to_puzzlehash(
@@ -3420,7 +3420,7 @@ async def test_unsubmitted_batch_update(
             finally:
                 client.close()
                 await client.await_closed()
-        else:  # pragma: no cover
+        else:
             assert False, "unhandled parametrization"
 
         pending_root = await data_layer.data_store.get_pending_root(store_id=store_id)
@@ -3550,7 +3550,7 @@ async def test_multistore_update(
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
             else:
                 assert res == {"success": True}
-        else:  # pragma: no cover
+        else:
             assert False, "unhandled parametrization"
 
         if not submit_on_chain:
@@ -3587,7 +3587,7 @@ async def test_multistore_update(
                     res = await client.submit_all_pending_roots(fee=None)
 
                 update_tx_rec0 = bytes32.from_hexstr(res["tx_id"][0])
-            else:  # pragma: no cover
+            else:
                 assert False, "unhandled parametrization"
 
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
