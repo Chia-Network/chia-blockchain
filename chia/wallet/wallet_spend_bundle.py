@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import List
 
-from chia_rs import AugSchemeMPL, G2Element, SpendBundle
+from chia_rs import AugSchemeMPL, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import T_SpendBundle
+from chia.types.spend_bundle import SpendBundle, T_SpendBundle
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 
@@ -21,10 +21,10 @@ class WalletSpendBundle(SpendBundle):
             return False
         return self.coin_spends == other.coin_spends and self.aggregated_signature == other.aggregated_signature
 
-    @staticmethod
-    def from_bytes(bytes: bytes) -> WalletSpendBundle:
-        sb = SpendBundle.from_bytes(bytes)
-        return WalletSpendBundle(sb.coin_spends, sb.aggregated_signature)
+    @classmethod
+    def parse_rust(cls, blob: bytes) -> WalletSpendBundle:
+        bundle, advance = super().parse_rust(blob)
+        return WalletSpendBundle(bundle.coin_spends, bundle.aggregated_signature), advance
 
     @classmethod
     def aggregate(cls, spend_bundles: List[T_SpendBundle]) -> WalletSpendBundle:

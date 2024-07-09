@@ -508,14 +508,15 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     if not dataclasses.is_dataclass(cls):
         raise DefinitionError("@dataclass(frozen=True) required first.", cls)
 
-    try:
-        # Ignore mypy here because we especially want to access a not available member to test if
-        # the dataclass is frozen.
-        object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None  # type: ignore[attr-defined]
-    except dataclasses.FrozenInstanceError:
-        pass
-    else:
-        raise DefinitionError("dataclass needs to be frozen.", cls)
+    # try:
+    #     # Ignore mypy here because we especially want to access a not available member to test if
+    #     # the dataclass is frozen.
+    #     cls._streamable_test_if_dataclass_frozen_ = None  # type: ignore[attr-defined]
+    # except dataclasses.FrozenInstanceError:
+    #     pass
+    # else:
+    #     raise DefinitionError("dataclass needs to be frozen.", cls)
+    assert cls.__dataclass_params__.frozen
 
     if not issubclass(cls, Streamable):
         raise DefinitionError("Streamable inheritance required.", cls)
