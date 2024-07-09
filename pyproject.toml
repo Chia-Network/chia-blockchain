@@ -119,17 +119,26 @@ legacy_keyring = ["keyrings.cryptfile"]
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
-dirty = true
 pattern = "default-unprefixed"
-# format-jinja = "{% if distance == 0 %}{{ base }}{% else %}{{ base }}.dev{{ distance }}{% endif %}{% if dirty %}+dirty{% endif %}"
 format-jinja = """
     {%- if distance == 0 -%}
-        {{ serialize_pep440(base, stage, revision) }}
+        {%- if stage is none -%}
+            {{ base }}
+        {%- else -%}
+            {{ base }}-{{stage}}{{revision}}
+        {%- endif -%}
     {%- else -%}
-        {{ serialize_pep440(base, stage, revision, dev=distance) }}
+        {{ base }}-{{stage}}{{revision}}.dev{{ distance }}
     {%- endif -%}
 """
-style = "pep440"
+#format-jinja = """
+#    {%- if distance == 0 -%}
+#        {{ serialize_pep440(base, stage, revision) }}
+#    {%- else -%}
+#        {{ serialize_pep440(base, stage, revision, dev=distance) }}
+#    {%- endif -%}
+#"""
+style = "semver"
 bump = true
 
 [build-system]
