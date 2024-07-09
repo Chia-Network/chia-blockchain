@@ -223,12 +223,16 @@ async def test_cat_trades(
         )
 
         # Mint some VCs that can spend the CR-CATs
-        vc_record_maker, _ = await client_maker.vc_mint(
-            did_id_maker, wallet_environments.tx_config, target_address=await wallet_maker.get_new_puzzlehash()
-        )
-        vc_record_taker, _ = await client_taker.vc_mint(
-            did_id_taker, wallet_environments.tx_config, target_address=await wallet_taker.get_new_puzzlehash()
-        )
+        vc_record_maker = (
+            await client_maker.vc_mint(
+                did_id_maker, wallet_environments.tx_config, target_address=await wallet_maker.get_new_puzzlehash()
+            )
+        ).vc_record
+        vc_record_taker = (
+            await client_taker.vc_mint(
+                did_id_taker, wallet_environments.tx_config, target_address=await wallet_taker.get_new_puzzlehash()
+            )
+        ).vc_record
         await wallet_environments.process_pending_states(
             [
                 # Balance checking for this scenario is covered in tests/wallet/vc_wallet/test_vc_lifecycle
@@ -1913,7 +1917,7 @@ async def test_trade_bad_spend(
     assert trade_make is not None
     peer = wallet_node_taker.get_full_node_peer()
     offer = Offer.from_bytes(trade_make.offer)
-    bundle = dataclasses.replace(offer._bundle, aggregated_signature=G2Element())
+    bundle = offer._bundle.replace(aggregated_signature=G2Element())
     offer = dataclasses.replace(offer, _bundle=bundle)
     tr1, txs1 = await trade_manager_taker.respond_to_offer(offer, peer, DEFAULT_TX_CONFIG, fee=uint64(10))
     txs1 = await trade_manager_taker.wallet_state_manager.add_pending_transactions(txs1, sign=False)

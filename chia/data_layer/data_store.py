@@ -39,7 +39,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
 
 log = logging.getLogger(__name__)
 
@@ -1395,23 +1395,42 @@ class DataStore:
         else:
             await writer.execute(query, params)
 
+    async def get_nodes(self, node_hashes: List[bytes32]) -> List[Node]:
+        query_parameter_place_holders = ",".join("?" for _ in node_hashes)
+        async with self.db_wrapper.reader() as reader:
+            # TODO: handle SQLITE_MAX_VARIABLE_NUMBER
+            cursor = await reader.execute(
+                f"SELECT * FROM node WHERE hash IN ({query_parameter_place_holders})",
+                [*node_hashes],
+            )
+            rows = await cursor.fetchall()
+
+        hash_to_node = {row["hash"]: row_to_node(row=row) for row in rows}
+
+        missing_hashes = [node_hash.hex() for node_hash in node_hashes if node_hash not in hash_to_node]
+        if missing_hashes:
+            raise Exception(f"Nodes not found for hashes: {', '.join(missing_hashes)}")
+
+        return [hash_to_node[node_hash] for node_hash in node_hashes]
+
     async def get_leaf_at_minimum_height(
         self, root_hash: bytes32, hash_to_parent: Dict[bytes32, InternalNode]
     ) -> TerminalNode:
-        root_node = await self.get_node(root_hash)
-        queue: List[Node] = [root_node]
+        queue: List[bytes32] = [root_hash]
+        batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
+
         while True:
             assert len(queue) > 0
-            node = queue.pop(0)
-            if isinstance(node, InternalNode):
-                left_node = await self.get_node(node.left_hash)
-                right_node = await self.get_node(node.right_hash)
-                hash_to_parent[left_node.hash] = node
-                hash_to_parent[right_node.hash] = node
-                queue.append(left_node)
-                queue.append(right_node)
-            elif isinstance(node, TerminalNode):
-                return node
+            nodes = await self.get_nodes(queue[:batch_size])
+            queue = queue[batch_size:]
+
+            for node in nodes:
+                if isinstance(node, TerminalNode):
+                    return node
+                hash_to_parent[node.left_hash] = node
+                hash_to_parent[node.right_hash] = node
+                queue.append(node.left_hash)
+                queue.append(node.right_hash)
 
     async def batch_upsert(
         self,
@@ -1541,16 +1560,18 @@ class DataStore:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
             if len(pending_upsert_new_hashes) > 0:
-                to_update_hashes: Set[bytes32] = set()
-                for hash in pending_upsert_new_hashes.keys():
-                    while True:
-                        if hash in to_update_hashes:
-                            break
-                        to_update_hashes.add(hash)
-                        node = await self._get_one_ancestor(hash, store_id)
-                        if node is None:
-                            break
-                        hash = node.hash
+                to_update_hashes: Set[bytes32] = set(pending_upsert_new_hashes.keys())
+                to_update_queue: List[bytes32] = list(pending_upsert_new_hashes.keys())
+                batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
+
+                while len(to_update_queue) > 0:
+                    nodes = await self._get_one_ancestor_multiple_hashes(to_update_queue[:batch_size], store_id)
+                    to_update_queue = to_update_queue[batch_size:]
+                    for node in nodes:
+                        if node.hash not in to_update_hashes:
+                            to_update_hashes.add(node.hash)
+                            to_update_queue.append(node.hash)
+
                 assert latest_local_root is not None
                 assert latest_local_root.node_hash is not None
                 new_root_hash = await self.batch_upsert(
@@ -1650,6 +1671,32 @@ class DataStore:
             if row is None:
                 return None
             return InternalNode.from_row(row=row)
+
+    async def _get_one_ancestor_multiple_hashes(
+        self,
+        node_hashes: List[bytes32],
+        store_id: bytes32,
+        generation: Optional[int] = None,
+    ) -> List[InternalNode]:
+        async with self.db_wrapper.reader() as reader:
+            node_hashes_place_holders = ",".join("?" for _ in node_hashes)
+            if generation is None:
+                generation = await self.get_tree_generation(store_id=store_id)
+            cursor = await reader.execute(
+                f"""
+                SELECT * from node INNER JOIN (
+                    SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
+                    FROM ancestors
+                    WHERE ancestors.hash IN ({node_hashes_place_holders})
+                    AND ancestors.tree_id == ?
+                    AND ancestors.generation <= ?
+                    GROUP BY hash
+                ) asc on asc.hash == node.hash
+                """,
+                [*node_hashes, store_id, generation],
+            )
+            rows = await cursor.fetchall()
+            return [InternalNode.from_row(row=row) for row in rows]
 
     async def build_ancestor_table_for_latest_root(self, store_id: bytes32) -> None:
         async with self.db_wrapper.writer() as writer:

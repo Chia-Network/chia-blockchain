@@ -196,8 +196,8 @@ def get_keychain():
 
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
-    SOFT_FORK_4 = 1
-    HARD_FORK_2_0 = 2
+    HARD_FORK_2_0 = 1
+    SOFT_FORK_4 = 2
     SOFT_FORK_5 = 3
 
 

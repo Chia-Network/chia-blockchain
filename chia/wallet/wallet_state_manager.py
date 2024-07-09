@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import multiprocessing.context
@@ -143,6 +144,7 @@ from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope, new_wallet_action_scope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -373,6 +375,16 @@ class WalletStateManager:
         if record.hardened:
             return master_sk_to_wallet_sk(self.get_master_private_key(), record.index)
         return master_sk_to_wallet_sk_unhardened(self.get_master_private_key(), record.index)
+
+    async def get_public_key(self, puzzle_hash: bytes32) -> bytes:
+        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        if record is None:
+            raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
+        if isinstance(record._pubkey, bytes):
+            pk_bytes = record._pubkey
+        else:
+            pk_bytes = bytes(record._pubkey)
+        return pk_bytes
 
     def get_master_private_key(self) -> PrivateKey:
         if self.private_key is None:  # pragma: no cover
@@ -2254,9 +2266,11 @@ class WalletStateManager:
     async def add_pending_transactions(
         self,
         tx_records: List[TransactionRecord],
+        push: bool = True,
         merge_spends: bool = True,
         sign: Optional[bool] = None,
-        additional_signing_responses: List[SigningResponse] = [],
+        additional_signing_responses: Optional[List[SigningResponse]] = None,
+        extra_spends: Optional[List[SpendBundle]] = None,
     ) -> List[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2267,6 +2281,8 @@ class WalletStateManager:
         agg_spend: SpendBundle = SpendBundle.aggregate(
             [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
         )
+        if extra_spends is not None:
+            agg_spend = SpendBundle.aggregate([agg_spend, *extra_spends])
         actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
         if merge_spends and actual_spend_involved:
             tx_records = [
@@ -2277,27 +2293,39 @@ class WalletStateManager:
                 )
                 for i, tx in enumerate(tx_records)
             ]
+        elif extra_spends is not None and extra_spends != []:
+            extra_spends.extend([] if tx_records[0].spend_bundle is None else [tx_records[0].spend_bundle])
+            extra_spend_bundle = SpendBundle.aggregate(extra_spends)
+            tx_records = [
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=extra_spend_bundle if i == 0 else tx.spend_bundle,
+                    name=extra_spend_bundle.name() if i == 0 else bytes32.secret(),
+                )
+                for i, tx in enumerate(tx_records)
+            ]
         if sign:
             tx_records, _ = await self.sign_transactions(
                 tx_records,
-                additional_signing_responses,
-                additional_signing_responses != [],
+                [] if additional_signing_responses is None else additional_signing_responses,
+                additional_signing_responses != [] and additional_signing_responses is not None,
             )
-        all_coins_names = []
-        async with self.db_wrapper.writer_maybe_transaction():
-            for tx_record in tx_records:
-                # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-                await self.tx_store.add_transaction_record(tx_record)
-                all_coins_names.extend([coin.name() for coin in tx_record.additions])
-                all_coins_names.extend([coin.name() for coin in tx_record.removals])
+        if push:
+            all_coins_names = []
+            async with self.db_wrapper.writer_maybe_transaction():
+                for tx_record in tx_records:
+                    # Wallet node will use this queue to retry sending this transaction until full nodes receives it
+                    await self.tx_store.add_transaction_record(tx_record)
+                    all_coins_names.extend([coin.name() for coin in tx_record.additions])
+                    all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        await self.add_interested_coin_ids(all_coins_names)
+            await self.add_interested_coin_ids(all_coins_names)
 
-        if actual_spend_involved:
-            self.tx_pending_changed()
-        for wallet_id in {tx.wallet_id for tx in tx_records}:
-            self.state_changed("pending_transaction", wallet_id)
-        await self.wallet_node.update_ui()
+            if actual_spend_involved:
+                self.tx_pending_changed()
+            for wallet_id in {tx.wallet_id for tx in tx_records}:
+                self.state_changed("pending_transaction", wallet_id)
+            await self.wallet_node.update_ui()
 
         return tx_records
 
@@ -2738,3 +2766,22 @@ class WalletStateManager:
         for bundle in bundles:
             await self.wallet_node.push_tx(bundle)
         return [bundle.name() for bundle in bundles]
+
+    @contextlib.asynccontextmanager
+    async def new_action_scope(
+        self,
+        push: bool = False,
+        merge_spends: bool = True,
+        sign: Optional[bool] = None,
+        additional_signing_responses: List[SigningResponse] = [],
+        extra_spends: List[SpendBundle] = [],
+    ) -> AsyncIterator[WalletActionScope]:
+        async with new_wallet_action_scope(
+            self,
+            push=push,
+            merge_spends=merge_spends,
+            sign=sign,
+            additional_signing_responses=additional_signing_responses,
+            extra_spends=extra_spends,
+        ) as action_scope:
+            yield action_scope

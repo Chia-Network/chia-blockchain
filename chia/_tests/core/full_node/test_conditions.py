@@ -144,10 +144,6 @@ class TestConditions:
         conditions = Program.to(assemble(f"(({opcode} 1337))"))
         additions, removals, new_block = await check_conditions(bt, conditions)
 
-        if consensus_mode < ConsensusMode.HARD_FORK_2_0:
-            # before the hard fork, all unknown conditions have 0 cost
-            expected_cost = 0
-
         # once the hard fork activates, blocks no longer pay the cost of the ROM
         # generator (which includes hashing all puzzles).
         if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
@@ -172,8 +168,6 @@ class TestConditions:
         additions, removals, new_block = await check_conditions(bt, conditions)
 
         if consensus_mode < ConsensusMode.HARD_FORK_2_0:
-            # the SOFTFORK condition is not recognized before the hard fork
-            expected_cost = 0
             block_base_cost = 737056
         else:
             # once the hard fork activates, blocks no longer pay the cost of the ROM
@@ -533,16 +527,7 @@ class TestConditions:
         assert c.AGG_SIG_PARENT_PUZZLE_ADDITIONAL_DATA == additional_data[ConditionOpcode.AGG_SIG_PARENT_PUZZLE]
 
         blocks = await initial_blocks(bt)
-        if consensus_mode < ConsensusMode.HARD_FORK_2_0 and opcode in [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-        ]:
-            expected_error = Err.BAD_AGGREGATE_SIGNATURE
-        elif opcode == ConditionOpcode.AGG_SIG_UNSAFE:
+        if opcode == ConditionOpcode.AGG_SIG_UNSAFE:
             expected_error = Err.INVALID_CONDITION
         else:
             expected_error = None
@@ -551,6 +536,7 @@ class TestConditions:
         pubkey = sk.get_g1()
         coin = blocks[-2].get_included_reward_coins()[0]
         for msg in [
+            c.AGG_SIG_ME_ADDITIONAL_DATA,
             c.AGG_SIG_PARENT_ADDITIONAL_DATA,
             c.AGG_SIG_PUZZLE_ADDITIONAL_DATA,
             c.AGG_SIG_AMOUNT_ADDITIONAL_DATA,

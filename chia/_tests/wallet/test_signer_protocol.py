@@ -3,11 +3,35 @@ from __future__ import annotations
 import dataclasses
 from typing import List, Optional
 
+import click
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from click.testing import CliRunner
 
+from chia._tests.cmds.test_cmd_framework import check_click_parsing
+from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia.rpc.wallet_request_types import ApplySignatures, GatherSigningInfo, SubmitTransactions
+from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo, chia_command
+from chia.cmds.cmds_util import TransactionBundle
+from chia.cmds.signer import (
+    ApplySignaturesCMD,
+    ExecuteSigningInstructionsCMD,
+    GatherSigningInfoCMD,
+    PushTransactionsCMD,
+    QrCodeDisplay,
+    SPIn,
+    SPOut,
+    TransactionsIn,
+    TransactionsOut,
+)
+from chia.rpc.util import ALL_TRANSLATION_LAYERS
+from chia.rpc.wallet_request_types import (
+    ApplySignatures,
+    ExecuteSigningInstructions,
+    GatherSigningInfo,
+    GatherSigningInfoResponse,
+    SubmitTransactions,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
@@ -16,6 +40,7 @@ from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
+from chia.util.streamable import Streamable
 from chia.wallet.conditions import AggSigMe
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import _derive_path_unhardened
@@ -24,6 +49,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     calculate_synthetic_offset,
 )
 from chia.wallet.signer_protocol import (
+    Coin,
     KeyHints,
     PathHint,
     SignedTransaction,
@@ -35,8 +61,24 @@ from chia.wallet.signer_protocol import (
     TransactionInfo,
     UnsignedTransaction,
 )
-from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable, json_serialize_with_clvm_streamable
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
+from chia.wallet.util.blind_signer_tl import (
+    BLIND_SIGNER_TRANSLATION,
+    BSTLPathHint,
+    BSTLSigningInstructions,
+    BSTLSigningResponse,
+    BSTLSigningTarget,
+    BSTLSumHint,
+    BSTLUnsignedTransaction,
+)
+from chia.wallet.util.clvm_streamable import (
+    TranslationLayer,
+    TranslationLayerMapping,
+    byte_serialize_clvm_streamable,
+    clvm_streamable,
+    json_deserialize_with_clvm_streamable,
+    json_serialize_with_clvm_streamable,
+)
+from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -135,9 +177,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     assert utx.signing_instructions.targets[0].fingerprint == synthetic_pubkey.get_fingerprint().to_bytes(4, "big")
     assert utx.signing_instructions.targets[0].message == message
 
-    signing_responses: List[SigningResponse] = await wallet_state_manager.execute_signing_instructions(
-        utx.signing_instructions
-    )
+    signing_responses: List[SigningResponse] = (
+        await wallet_rpc.execute_signing_instructions(ExecuteSigningInstructions(utx.signing_instructions))
+    ).signing_responses
     assert len(signing_responses) == 1
     assert signing_responses[0].hook == utx.signing_instructions.targets[0].hook
     assert AugSchemeMPL.verify(synthetic_pubkey, message, G2Element.from_bytes(signing_responses[0].signature))
@@ -243,6 +285,16 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
             ),
         ]
     )
+
+    # And test that we can get compressed versions if we want
+    request = GatherSigningInfo(
+        [Spend.from_coin_spend(coin_spend), Spend.from_coin_spend(not_our_coin_spend)]
+    ).to_json_dict()
+    response_dict = await wallet_rpc.fetch("gather_signing_info", {"translation": "chip-0029", **request})
+    response: GatherSigningInfoResponse = json_deserialize_with_clvm_streamable(
+        response_dict, GatherSigningInfoResponse, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+    assert response.signing_instructions == not_our_utx.signing_instructions
 
 
 @pytest.mark.parametrize(
@@ -447,3 +499,445 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
         partial_allowed=True,
     )
     assert signing_responses == [SigningResponse(bytes(AugSchemeMPL.sign(other_sk, test_name, sum_pk)), test_name)]
+
+
+def test_blind_signer_translation_layer() -> None:
+    sum_hints: List[SumHint] = [
+        SumHint([b"a", b"b", b"c"], b"offset", b"final"),
+        SumHint([b"c", b"b", b"a"], b"offset2", b"final"),
+    ]
+    path_hints: List[PathHint] = [
+        PathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
+        PathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
+    ]
+    signing_targets: List[SigningTarget] = [
+        SigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
+        SigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
+    ]
+
+    instructions: SigningInstructions = SigningInstructions(
+        KeyHints(sum_hints, path_hints),
+        signing_targets,
+    )
+    transaction: UnsignedTransaction = UnsignedTransaction(
+        TransactionInfo([]),
+        instructions,
+    )
+    signing_response: SigningResponse = SigningResponse(
+        b"signature",
+        bytes32([1] * 32),
+    )
+
+    bstl_sum_hints: List[BSTLSumHint] = [
+        BSTLSumHint([b"a", b"b", b"c"], b"offset", b"final"),
+        BSTLSumHint([b"c", b"b", b"a"], b"offset2", b"final"),
+    ]
+    bstl_path_hints: List[BSTLPathHint] = [
+        BSTLPathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
+        BSTLPathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
+    ]
+    bstl_signing_targets: List[BSTLSigningTarget] = [
+        BSTLSigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
+        BSTLSigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
+    ]
+
+    bstl_instructions: BSTLSigningInstructions = BSTLSigningInstructions(
+        bstl_sum_hints,
+        bstl_path_hints,
+        bstl_signing_targets,
+    )
+    bstl_transaction: BSTLUnsignedTransaction = BSTLUnsignedTransaction(
+        bstl_sum_hints,
+        bstl_path_hints,
+        bstl_signing_targets,
+    )
+    bstl_signing_response: BSTLSigningResponse = BSTLSigningResponse(
+        b"signature",
+        bytes32([1] * 32),
+    )
+    bstl_instructions_json = json_serialize_with_clvm_streamable(bstl_instructions)
+    bstl_transaction_json = json_serialize_with_clvm_streamable(bstl_transaction)
+    bstl_signing_response_json = json_serialize_with_clvm_streamable(bstl_signing_response)
+    assert bstl_instructions_json == json_serialize_with_clvm_streamable(
+        instructions, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+    assert bstl_transaction_json == json_serialize_with_clvm_streamable(
+        transaction, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+    assert bstl_signing_response_json == json_serialize_with_clvm_streamable(
+        signing_response, translation_layer=BLIND_SIGNER_TRANSLATION
+    )
+
+    assert (
+        json_deserialize_with_clvm_streamable(
+            bstl_instructions_json, SigningInstructions, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
+        == instructions
+    )
+    assert (
+        json_deserialize_with_clvm_streamable(
+            bstl_transaction_json, UnsignedTransaction, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
+        == transaction
+    )
+    assert (
+        json_deserialize_with_clvm_streamable(
+            bstl_signing_response_json, SigningResponse, translation_layer=BLIND_SIGNER_TRANSLATION
+        )
+        == signing_response
+    )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "trusted": True,
+            "reuse_puzhash": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_signer_commands(wallet_environments: WalletTestFramework) -> None:
+    wallet: Wallet = wallet_environments.environments[0].xch_wallet
+    wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+    wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+    client_info: WalletClientInfo = WalletClientInfo(
+        wallet_rpc,
+        wallet_state_manager.root_pubkey.get_fingerprint(),
+        wallet_state_manager.config,
+    )
+
+    AMOUNT = uint64(1)
+    [tx] = await wallet.generate_signed_transaction(AMOUNT, bytes32([0] * 32), DEFAULT_TX_CONFIG)
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with open("./temp-tb", "wb") as file:
+            file.write(bytes(TransactionBundle([tx])))
+
+        await GatherSigningInfoCMD(
+            rpc_info=NeedsWalletRPC(client_info=client_info),
+            sp_out=SPOut(
+                translation="CHIP-0028",
+                output_format="file",
+                output_file=["./temp-si"],
+            ),
+            txs_in=TransactionsIn(transaction_file_in="./temp-tb"),
+        ).run()
+
+        await ExecuteSigningInstructionsCMD(
+            rpc_info=NeedsWalletRPC(client_info=client_info),
+            sp_in=SPIn(
+                translation="CHIP-0028",
+                signer_protocol_input=["./temp-si"],
+            ),
+            sp_out=SPOut(
+                translation="CHIP-0028",
+                output_format="file",
+                output_file=["./temp-sr"],
+            ),
+        ).run()
+
+        await ApplySignaturesCMD(
+            rpc_info=NeedsWalletRPC(client_info=client_info),
+            txs_in=TransactionsIn(transaction_file_in="./temp-tb"),
+            sp_in=SPIn(
+                translation="CHIP-0028",
+                signer_protocol_input=["./temp-sr"],
+            ),
+            txs_out=TransactionsOut(transaction_file_out="./temp-stb"),
+        ).run()
+
+        await PushTransactionsCMD(
+            rpc_info=NeedsWalletRPC(client_info=client_info),
+            txs_in=TransactionsIn(transaction_file_in="./temp-stb"),
+        ).run()
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "unconfirmed_wallet_balance": -1 * AMOUNT,
+                            "<=#spendable_balance": -1 * AMOUNT,
+                            "<=#max_send_amount": -1 * AMOUNT,
+                            "pending_change": sum(c.amount for c in tx.removals) - AMOUNT,
+                            "pending_coin_removal_count": 1,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -1 * AMOUNT,
+                            "pending_change": -1 * (sum(c.amount for c in tx.removals) - AMOUNT),
+                            "pending_coin_removal_count": -1,
+                            "set_remainder": True,
+                        },
+                    },
+                ),
+            ]
+        )
+
+
+def test_signer_command_default_parsing() -> None:
+    check_click_parsing(
+        GatherSigningInfoCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            sp_out=SPOut(
+                translation="none",
+                output_format="hex",
+                output_file=tuple(),
+            ),
+            txs_in=TransactionsIn(transaction_file_in="in"),
+        ),
+        "-i",
+        "in",
+    )
+
+    check_click_parsing(
+        ExecuteSigningInstructionsCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            sp_in=SPIn(
+                translation="none",
+                signer_protocol_input=("sp-in",),
+            ),
+            sp_out=SPOut(
+                translation="none",
+                output_format="hex",
+                output_file=tuple(),
+            ),
+        ),
+        "-p",
+        "sp-in",
+    )
+
+    check_click_parsing(
+        ApplySignaturesCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            txs_in=TransactionsIn(transaction_file_in="in"),
+            sp_in=SPIn(
+                translation="none",
+                signer_protocol_input=("sp-in",),
+            ),
+            txs_out=TransactionsOut(transaction_file_out="out"),
+        ),
+        "-i",
+        "in",
+        "-o",
+        "out",
+        "-p",
+        "sp-in",
+    )
+
+    check_click_parsing(
+        PushTransactionsCMD(
+            rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+            txs_in=TransactionsIn(transaction_file_in="in"),
+        ),
+        "-i",
+        "in",
+    )
+
+
+def test_transactions_in() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass
+
+    @chia_command(cmd, "temp_cmd", "blah")
+    class TempCMD(TransactionsIn):
+        def run(self) -> None:
+            assert self.transaction_bundle == TransactionBundle([STD_TX])
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with open("some file", "wb") as file:
+            file.write(bytes(TransactionBundle([STD_TX])))
+
+        result = runner.invoke(cmd, ["temp_cmd", "--transaction-file-in", "some file"], catch_exceptions=False)
+        assert result.output == ""
+
+
+def test_transactions_out() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass
+
+    @chia_command(cmd, "temp_cmd", "blah")
+    class TempCMD(TransactionsOut):
+        def run(self) -> None:
+            self.handle_transaction_output([STD_TX])
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cmd, ["temp_cmd", "--transaction-file-out", "some file"], catch_exceptions=False)
+        assert result.output == ""
+
+        with open("some file", "rb") as file:
+            file.read() == bytes(TransactionBundle([STD_TX]))
+
+
+@clvm_streamable
+@dataclasses.dataclass(frozen=True)
+class FooCoin(Streamable):
+    amount: uint64
+
+    @staticmethod
+    def from_wallet_api(_from: Coin) -> FooCoin:
+        return FooCoin(_from.amount)
+
+    @staticmethod
+    def to_wallet_api(_from: FooCoin) -> Coin:
+        return Coin(
+            bytes32([0] * 32),
+            bytes32([0] * 32),
+            _from.amount,
+        )
+
+
+FOO_COIN_TRANSLATION = TranslationLayer(
+    [
+        TranslationLayerMapping(
+            Coin,
+            FooCoin,
+            FooCoin.from_wallet_api,
+            FooCoin.to_wallet_api,
+        )
+    ]
+)
+
+
+def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "CHIP-0028", FOO_COIN_TRANSLATION)
+
+    @click.group()
+    def cmd() -> None:
+        pass
+
+    coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(13))
+
+    @chia_command(cmd, "temp_cmd", "blah")
+    class TempCMD(SPIn):
+        def run(self) -> None:
+            assert self.read_sp_input(Coin) == [coin, coin]
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with open("some file", "wb") as file:
+            file.write(byte_serialize_clvm_streamable(coin))
+
+        with open("some file2", "wb") as file:
+            file.write(byte_serialize_clvm_streamable(coin))
+
+        result = runner.invoke(
+            cmd,
+            ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"],
+            catch_exceptions=False,
+        )
+        assert result.output == ""
+
+    with runner.isolated_filesystem():
+        with open("some file", "wb") as file:
+            file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
+
+            with open("some file2", "wb") as file:
+                file.write(byte_serialize_clvm_streamable(coin, translation_layer=FOO_COIN_TRANSLATION))
+
+        result = runner.invoke(
+            cmd, ["temp_cmd", "--signer-protocol-input", "some file", "--signer-protocol-input", "some file2"]
+        )
+        assert result.exception is not None
+        result = runner.invoke(
+            cmd,
+            [
+                "temp_cmd",
+                "--signer-protocol-input",
+                "some file",
+                "--signer-protocol-input",
+                "some file2",
+                "--translation",
+                "CHIP-0028",
+            ],
+            catch_exceptions=False,
+        )
+        assert result.output == ""
+
+
+def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(ALL_TRANSLATION_LAYERS, "CHIP-0028", FOO_COIN_TRANSLATION)
+
+    @click.group()
+    def cmd() -> None:
+        pass
+
+    coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+    coin_bytes = byte_serialize_clvm_streamable(coin)
+
+    @chia_command(cmd, "temp_cmd", "blah")
+    class TempCMD(SPOut):
+        def run(self) -> None:
+            self.handle_clvm_output([coin, coin])
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cmd, ["temp_cmd", "--output-format", "hex"], catch_exceptions=False)
+        assert result.output.strip() == coin_bytes.hex() + "\n" + coin_bytes.hex()
+
+        result = runner.invoke(cmd, ["temp_cmd", "--output-format", "file"], catch_exceptions=False)
+        assert result.output == "--output-format=file specifed without any --output-file\n"
+
+        result = runner.invoke(
+            cmd, ["temp_cmd", "--output-format", "file", "--output-file", "some file"], catch_exceptions=False
+        )
+        assert "Incorrect number of file outputs specified" in result.output
+
+        result = runner.invoke(
+            cmd,
+            ["temp_cmd", "--output-format", "file", "--output-file", "some file", "--output-file", "some file2"],
+            catch_exceptions=False,
+        )
+        assert result.output == ""
+
+        with open("some file", "rb") as file:
+            file.read() == coin_bytes
+
+        with open("some file2", "rb") as file:
+            file.read() == coin_bytes
+
+        result = runner.invoke(cmd, ["temp_cmd", "--output-format", "qr"], catch_exceptions=False)
+        assert result.output != ""  # separate test for QrCodeDisplay
+
+        result = runner.invoke(
+            cmd, ["temp_cmd", "--output-format", "hex", "--translation", "CHIP-0028"], catch_exceptions=False
+        )
+        assert result.output.strip() != coin_bytes.hex()
+        coin_hex = byte_serialize_clvm_streamable(coin, translation_layer=ALL_TRANSLATION_LAYERS["CHIP-0028"]).hex()
+        assert result.output.strip() == coin_hex + "\n" + coin_hex
+
+
+def test_qr_code_display() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass
+
+    bytes_to_encode = b"foo bar qat qux bam bat"
+
+    @chia_command(cmd, "temp_cmd", "blah")
+    class TempCMD(QrCodeDisplay):
+        def run(self) -> None:
+            self.display_qr_codes([bytes_to_encode, bytes_to_encode])
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cmd,
+        ["temp_cmd"],
+        input="\n",
+        catch_exceptions=False,
+    )
+
+    # Would be good to check eventually that the QR codes are valid but segno doesn't seem to provide that ATM
+    assert result.output.count("Displaying QR Codes (1/2)") == 1
+    assert result.output.count("Displaying QR Codes (2/2)") == 1
