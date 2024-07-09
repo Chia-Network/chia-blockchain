@@ -235,11 +235,11 @@ class Vault(Wallet):
         for coin in coins:
             if not p2_singleton_spends:
                 p2_solution = Program.to(
-                    [0, self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin.name()]
+                    [self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin.name()]
                 )
             else:
-                p2_solution = Program.to([0, self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
-            sb = SpendBundle([make_spend(coin, p2_singleton_puzzle, p2_solution)], G2Element())
+                p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
+
             p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
         next_puzzle_hash = (

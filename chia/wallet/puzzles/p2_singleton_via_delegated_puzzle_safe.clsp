@@ -27,7 +27,10 @@
     )
     (c
       (list ASSERT_MY_COIN_ID my_id)
-      (a delegated_puzzle delegated_solution)
+      (c
+        (list CREATE_COIN_ANNOUNCEMENT '$')
+        (a delegated_puzzle delegated_solution)
+      )
     )
   )
 )
