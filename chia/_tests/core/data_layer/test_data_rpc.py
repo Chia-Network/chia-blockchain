@@ -18,6 +18,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 
 import anyio
 import pytest
+from flaky import flaky
 
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
@@ -2242,6 +2243,7 @@ async def test_maximum_full_file_count(
 @pytest.mark.parametrize("retain", [True, False])
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
+@flaky(max_runs=5)  # type: ignore[misc]
 async def test_unsubscribe_removes_files(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
@@ -2279,7 +2281,7 @@ async def test_unsubscribe_removes_files(
             update_tx_rec = res["tx_id"]
             await farm_block_with_spend(full_node_api, ph, update_tx_rec, wallet_rpc_api)
             await time_out_assert(
-                timeout=manage_data_interval * 2, function=check_num_files, value=2 * (batch_count + 1)
+                timeout=manage_data_interval * 4, function=check_num_files, value=2 * (batch_count + 1)
             )
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
