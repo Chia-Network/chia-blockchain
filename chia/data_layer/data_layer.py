@@ -758,6 +758,10 @@ class DataLayer:
 
     async def unsubscribe(self, store_id: bytes32, retain_data: bool) -> None:
         async with self.subscription_lock:
+            subscriptions = await self.data_store.get_subscriptions()
+            if store_id not in (subscription.store_id for subscription in subscriptions):
+                raise RuntimeError("No subscription found for the given store_id.")
+
             # Unsubscribe is processed later, after all fetching of data is done, to avoid races.
             self.unsubscribe_data_queue.append(UnsubscribeData(store_id, retain_data))
 

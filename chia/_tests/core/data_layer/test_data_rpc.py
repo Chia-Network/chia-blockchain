@@ -2280,6 +2280,8 @@ async def test_unsubscribe_removes_files(
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
         filenames: set[str] = set()
+        # subscribe to ourselves for simplified testing
+        res = await data_rpc_api.subscribe(request={"id": store_id.hex()})
 
         def check_num_files() -> int:
             nonlocal filenames
@@ -2300,7 +2302,6 @@ async def test_unsubscribe_removes_files(
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
 
-        # filenames = {path.name for path in data_layer.server_files_location.iterdir()}
         for generation, hash in enumerate(root_hashes):
             assert get_delta_filename(store_id, hash, generation + 1) in filenames
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
@@ -2308,7 +2309,7 @@ async def test_unsubscribe_removes_files(
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
 
         # wait for unsubscribe to be processed
-        await asyncio.sleep(manage_data_interval * 6)
+        await asyncio.sleep(manage_data_interval * 3)
 
         filenames = {path.name for path in data_layer.server_files_location.iterdir()}
         assert len(filenames) == (2 * update_count if retain else 0)
