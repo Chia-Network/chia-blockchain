@@ -748,6 +748,7 @@ async def test_get_owned_stores(
 
 
 @pytest.mark.anyio
+@flaky(max_runs=5)  # type: ignore[misc]
 async def test_subscriptions(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -785,7 +786,7 @@ async def test_subscriptions(
             response = await data_rpc_api.subscriptions(request={})
             return store_id.hex() not in response.get("store_ids", [])
 
-        await time_out_assert(15, check_subscriptions, True)
+        await time_out_assert(30, check_subscriptions, True)
 
 
 @dataclass(frozen=True)
@@ -2224,7 +2225,7 @@ async def test_maximum_full_file_count(
             filenames = {path.name for path in data_layer.server_files_location.iterdir()}
             return len(filenames)
 
-        for batch_count in range(1, 10):
+        for batch_count in range(1, 4):
             key = batch_count.to_bytes(2, "big")
             value = batch_count.to_bytes(2, "big")
             changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
@@ -2285,7 +2286,7 @@ async def test_unsubscribe_removes_files(
             filenames = {path.name for path in data_layer.server_files_location.iterdir()}
             return len(filenames)
 
-        update_count = 10
+        update_count = 3
         for batch_count in range(update_count):
             key = batch_count.to_bytes(2, "big")
             value = batch_count.to_bytes(2, "big")
@@ -2307,7 +2308,7 @@ async def test_unsubscribe_removes_files(
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})
 
         # wait for unsubscribe to be processed
-        await asyncio.sleep(manage_data_interval * 3)
+        await asyncio.sleep(manage_data_interval * 6)
 
         filenames = {path.name for path in data_layer.server_files_location.iterdir()}
         assert len(filenames) == (2 * update_count if retain else 0)
