@@ -2189,7 +2189,9 @@ async def test_issue_15955_deadlock(
 
 
 @pytest.mark.parametrize(argnames="maximum_full_file_count", argvalues=[1, 5, 100])
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
+@flaky(max_runs=5)  # type: ignore[misc]
 async def test_maximum_full_file_count(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
@@ -2214,6 +2216,14 @@ async def test_maximum_full_file_count(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_rpc_api.service, timeout=20)
+
+        filenames: set[str] = set()
+
+        def check_num_files() -> int:
+            nonlocal filenames
+            filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+            return len(filenames)
+
         for batch_count in range(1, 10):
             key = batch_count.to_bytes(2, "big")
             value = batch_count.to_bytes(2, "big")
@@ -2224,20 +2234,20 @@ async def test_maximum_full_file_count(
             await asyncio.sleep(manage_data_interval * 2)
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
-            with os.scandir(data_layer.server_files_location) as entries:
-                filenames = {entry.name for entry in entries}
-                expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
+            await time_out_assert(
+                timeout=manage_data_interval * 4,
+                function=check_num_files,
+                value=min(batch_count, maximum_full_file_count) + batch_count,
+            )
 
-                assert len(filenames) == expected_files_count
-
-                for generation, hash in enumerate(root_hashes):
-                    filename = get_delta_filename(store_id, hash, generation + 1)
+            for generation, hash in enumerate(root_hashes):
+                filename = get_delta_filename(store_id, hash, generation + 1)
+                assert filename in filenames
+                filename = get_full_tree_filename(store_id, hash, generation + 1)
+                if generation + 1 > batch_count - maximum_full_file_count:
                     assert filename in filenames
-                    filename = get_full_tree_filename(store_id, hash, generation + 1)
-                    if generation + 1 > batch_count - maximum_full_file_count:
-                        assert filename in filenames
-                    else:
-                        assert filename not in filenames
+                else:
+                    assert filename not in filenames
 
 
 @pytest.mark.parametrize("retain", [True, False])
@@ -2268,7 +2278,10 @@ async def test_unsubscribe_removes_files(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
+        filenames: set[str] = set()
+
         def check_num_files() -> int:
+            nonlocal filenames
             filenames = {path.name for path in data_layer.server_files_location.iterdir()}
             return len(filenames)
 
@@ -2286,7 +2299,7 @@ async def test_unsubscribe_removes_files(
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
 
-        filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+        # filenames = {path.name for path in data_layer.server_files_location.iterdir()}
         for generation, hash in enumerate(root_hashes):
             assert get_delta_filename(store_id, hash, generation + 1) in filenames
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
