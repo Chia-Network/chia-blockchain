@@ -321,7 +321,7 @@ class WalletNode:
         conn: aiosqlite.Connection
         # are not part of core wallet tables, but might appear later
         ignore_tables = {"lineage_proofs_", "sqlite_", "MIGRATED_VALID_TIMES_TXS", "MIGRATED_VALID_TIMES_TRADES"}
-        required_tables = [
+        known_tables = [
             "coin_record",
             "transaction_record",
             "derivation_paths",
@@ -354,22 +354,21 @@ class WalletNode:
             self.log.info("Resetting wallet sync data...")
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
             names = {x[0] for x in rows}
-            names = names - set(required_tables)
+            names = names - set(known_tables)
+            tables_to_drop = []
             for name in names:
                 for ignore_name in ignore_tables:
                     if name.startswith(ignore_name):
                         break
                 else:
-                    self.log.error(
-                        f"Mismatch in expected schema to reset, found unexpected table: {name}. "
-                        "Please check if you've run all migration scripts."
-                    )
-                    return False
+                    tables_to_drop.append(name)
 
             await conn.execute("BEGIN")
             commit = True
             tables = [row[0] for row in rows]
             try:
+                for table in tables_to_drop:
+                    await conn.execute(f"DROP TABLE {table}")
                 if "coin_record" in tables:
                     await conn.execute("DELETE FROM coin_record")
                 if "interested_coins" in tables:
