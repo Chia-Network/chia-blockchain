@@ -52,6 +52,7 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
@@ -113,6 +114,7 @@ from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
     SigningResponse,
+    SigningTarget,
     Spend,
     SumHint,
     TransactionInfo,
@@ -143,7 +145,12 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
-from chia.wallet.vault.vault_drivers import get_vault_full_puzzle_hash, get_vault_inner_puzzle_hash, match_vault_puzzle
+from chia.wallet.vault.vault_drivers import (
+    get_vault_full_puzzle_hash,
+    get_vault_inner_puzzle_hash,
+    match_recovery_puzzle,
+    match_vault_puzzle,
+)
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
@@ -1801,6 +1808,19 @@ class WalletStateManager:
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
 
                     if wallet_identifier is None:
+                        # Confirm tx records for txs which we submitted for coins which aren't in our wallet
+                        # Used for vault recovery spends
+                        if coin_state.spent_height is not None:
+                            all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
+                            tx_records: List[TransactionRecord] = []
+                            for out_tx_record in all_unconfirmed:
+                                for rem_coin in out_tx_record.removals:
+                                    if rem_coin == coin_state.coin:
+                                        tx_records.append(out_tx_record)
+
+                            if len(tx_records) > 0:
+                                for tx_record in tx_records:
+                                    await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
 
@@ -2351,6 +2371,14 @@ class WalletStateManager:
                 additional_signing_responses != [],
             )
         all_coins_names = []
+        # Check that tx_records have additions/removals since vault txs don't have them until they're signed
+        for i, tx in enumerate(tx_records):
+            if tx.additions == []:
+                tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
+            if tx.removals == []:
+                tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
+            tx_records[i] = tx
+
         async with self.db_wrapper.writer_maybe_transaction():
             for tx_record in tx_records:
                 # Wallet node will use this queue to retry sending this transaction until full nodes receives it
@@ -2669,6 +2697,8 @@ class WalletStateManager:
         )
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
+        if isinstance(self.main_wallet, Vault):
+            return await self.main_wallet.gather_signing_info(coin_spends)
         pks: List[bytes] = []
         signing_targets: List[SigningTarget] = []
         for coin_spend in coin_spends:

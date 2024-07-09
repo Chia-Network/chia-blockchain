@@ -8,6 +8,8 @@ import pytest
 from ecdsa import NIST256p, SigningKey
 from ecdsa.util import PRNG
 
+from chia._tests.conftest import ConsensusMode
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia.rpc.wallet_request_types import GatherSigningInfo
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -19,8 +21,6 @@ from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX
 from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
-from tests.conftest import ConsensusMode
-from tests.environments.wallet import WalletStateTransition, WalletTestFramework
 
 
 async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: bool) -> None:
@@ -117,7 +117,6 @@ async def test_vault_creation(
 
     # get a p2_singleton
     p2_singleton_puzzle_hash = wallet.get_p2_singleton_puzzle_hash()
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(1, p2_singleton_puzzle_hash)
 
     coins_to_create = 2
     funding_amount = uint64(1000000000)
@@ -150,36 +149,21 @@ async def test_vault_creation(
         ],
     )
 
-    recs = await wallet.select_coins(uint64(100), DEFAULT_COIN_SELECTION_CONFIG)
-    coin = recs.pop()
-    assert coin.amount == funding_amount
     recipient_ph = await funding_wallet.get_new_puzzlehash()
 
     primaries = [
-        Payment(recipient_ph, uint64(500000000)),
-        Payment(recipient_ph, uint64(510000000)),
+        Payment(recipient_ph, uint64(500000000), memos=[recipient_ph]),
+        Payment(recipient_ph, uint64(510000000), memos=[recipient_ph]),
     ]
     amount = uint64(1000000)
     fee = uint64(100)
     balance_delta = 1011000099
 
     unsigned_txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
-        amount, recipient_ph, DEFAULT_TX_CONFIG, primaries=primaries, fee=fee
+        amount, recipient_ph, DEFAULT_TX_CONFIG, primaries=primaries, fee=fee, memos=[recipient_ph]
     )
-    assert len(unsigned_txs) == 1
 
-    # Farm a block so the vault balance includes farmed coins from the test setup in pre-block update.
-    # Do this after generating the tx so we can be sure to spend the right funding coins
-    await wallet_environments.full_node.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
-
-    assert unsigned_txs[0].spend_bundle is not None
-    spends = [Spend.from_coin_spend(spend) for spend in unsigned_txs[0].spend_bundle.coin_spends]
-    signing_info = await env.rpc_client.gather_signing_info(GatherSigningInfo(spends))
-
-    signing_responses = await wallet.execute_signing_instructions(signing_info.signing_instructions)
-
-    signed_response = await wallet.apply_signatures(spends, signing_responses)
-    await env.wallet_state_manager.submit_transactions([signed_response])
+    await wallet_environments.environments[0].rpc_client.push_transactions(unsigned_txs, sign=True)
     vault_eve_id = wallet.vault_info.coin.name()
 
     await wallet_environments.process_pending_states(
@@ -256,7 +240,6 @@ async def test_vault_recovery(
     assert wallet.vault_info
 
     p2_singleton_puzzle_hash = wallet.get_p2_singleton_puzzle_hash()
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(1, p2_singleton_puzzle_hash)
 
     coins_to_create = 2
     funding_amount = uint64(1000000000)
@@ -297,6 +280,7 @@ async def test_vault_recovery(
         bls_pk=bls_pk,
         timelock=timelock,
     )
+
     await wallet_environments.environments[1].rpc_client.push_transactions([initiate_tx], sign=True)
 
     vault_coin = wallet.vault_info.coin

@@ -177,33 +177,6 @@ class Vault(Wallet):
         )
         return [tx_record]
 
-    async def generate_p2_singleton_spends(
-        self,
-        amount: uint64,
-        tx_config: TXConfig,
-        coins: Optional[Set[Coin]] = None,
-    ) -> List[CoinSpend]:
-        total_balance = await self.get_spendable_balance()
-        if coins is None:
-            if amount > total_balance:
-                raise ValueError(
-                    f"Can't spend more than wallet balance: {total_balance} mojos, tried to spend: {amount} mojos"
-                )
-            coins = await self.select_coins(
-                uint64(amount),
-                tx_config.coin_selection_config,
-            )
-        assert len(coins) > 0
-
-        p2_singleton_puzzle: Program = get_p2_singleton_puzzle(self.launcher_id)
-
-        spends: List[CoinSpend] = []
-        for coin in list(coins):
-            p2_singleton_solution: Program = Program.to([self.vault_info.inner_puzzle_hash, coin.name()])
-            spends.append(make_spend(coin, p2_singleton_puzzle, p2_singleton_solution))
-
-        return spends
-
     async def _generate_unsigned_transaction(
         self,
         amount: uint64,
@@ -249,7 +222,11 @@ class Vault(Wallet):
         p2_singleton_puzhash = p2_singleton_puzzle.get_tree_hash()
         # add the change condition
         if selected_amount > amount:
-            conditions.append(Payment(p2_singleton_puzhash, uint64(selected_amount - total_amount)).as_condition())
+            conditions.append(
+                Payment(
+                    p2_singleton_puzhash, uint64(selected_amount - total_amount), memos=[p2_singleton_puzhash]
+                ).as_condition()
+            )
         # create the p2_singleton spends
         delegated_puzzle = puzzle_for_conditions(conditions)
         delegated_solution = solution_for_conditions(conditions)
@@ -262,6 +239,7 @@ class Vault(Wallet):
                 )
             else:
                 p2_solution = Program.to([0, self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
+            sb = SpendBundle([make_spend(coin, p2_singleton_puzzle, p2_solution)], G2Element())
             p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
         next_puzzle_hash = (
@@ -278,7 +256,6 @@ class Vault(Wallet):
                 [
                     CreatePuzzleAnnouncement(
                         Program.to([spend.coin.name(), puzzle_to_assert.get_tree_hash()]).get_tree_hash(),
-                        # self.vault_info.coin.puzzle_hash
                     ).to_program(),
                     AssertCoinAnnouncement(asserted_id=spend.coin.name(), asserted_msg=b"$").to_program(),
                 ]
@@ -345,9 +322,9 @@ class Vault(Wallet):
         if new:
             return await self.get_new_puzzlehash()
         else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            record: Optional[DerivationRecord] = (
+                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            )
             if record is None:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
@@ -385,6 +362,8 @@ class Vault(Wallet):
             mod, curried_args = spend.puzzle.uncurry()
             if match_vault_puzzle(mod, curried_args):
                 new_sol = spend.solution.replace(rrfrrfrrf=signing_responses[0].signature)
+                # spend.puzzle.run(new_sol)
+                # breakpoint()
                 signed_spends.append(Spend(spend.coin, spend.puzzle, new_sol))
             else:
                 signed_spends.append(spend)
@@ -440,9 +419,9 @@ class Vault(Wallet):
         if new:
             return await self.get_new_puzzle()
         else:
-            record: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            record: Optional[DerivationRecord] = (
+                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
+            )
             if record is None:
                 return await self.get_new_puzzle()
             puzzle = construct_p2_delegated_secp(
@@ -459,9 +438,9 @@ class Vault(Wallet):
         return False
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
-        wallet_identifier: Optional[
-            WalletIdentifier
-        ] = await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(hint)
+        wallet_identifier: Optional[WalletIdentifier] = (
+            await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(hint)
+        )
         if wallet_identifier:
             return True
         return False
