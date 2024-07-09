@@ -878,7 +878,7 @@ class DataLayer:
                     if local_id not in subscription_store_ids:
                         try:
                             subscription = await self.subscribe(local_id, [])
-                            subscriptions.insert(0, Subscription(store_id=local_id, urls=[]))
+                            subscriptions.insert(0, subscription)
                         except Exception as e:
                             self.log.info(
                                 f"Can't subscribe to local store {local_id}: {type(e)} {e} {traceback.format_exc()}"
