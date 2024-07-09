@@ -853,7 +853,7 @@ class DataLayer:
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
 
-            # Make sure to include any unsubscribed owned stores
+            # pseudo-subscribe to all unsubscribed owned stores
             # Need this to make sure we process updates and generate DAT files
             owned_stores = await self.get_owned_stores()
             subscription_store_ids = {subscription.store_id for subscription in subscriptions}
@@ -861,8 +861,8 @@ class DataLayer:
                 store_id = record.launcher_id
                 if store_id not in subscription_store_ids:
                     try:
-                        subscription = await self.subscribe(store_id, [])
-                        subscriptions.insert(0, subscription)
+                        # subscription = await self.subscribe(store_id, [])
+                        subscriptions.insert(0, Subscription(store_id=store_id, servers_info=[]))
                     except Exception as e:
                         self.log.info(
                             f"Can't subscribe to owned store {store_id}: {type(e)} {e} {traceback.format_exc()}"
@@ -878,7 +878,7 @@ class DataLayer:
                     if local_id not in subscription_store_ids:
                         try:
                             subscription = await self.subscribe(local_id, [])
-                            subscriptions.insert(0, subscription)
+                            subscriptions.insert(0, Subscription(store_id=local_id, urls=[]))
                         except Exception as e:
                             self.log.info(
                                 f"Can't subscribe to local store {local_id}: {type(e)} {e} {traceback.format_exc()}"
