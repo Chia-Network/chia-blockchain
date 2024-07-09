@@ -89,6 +89,7 @@ class Wallet:
         self = Wallet()
         self.log = logging.getLogger(name)
         self.wallet_state_manager = wallet_state_manager
+        self.wallet_info = info
         self.wallet_id = info.id
 
         return self
@@ -307,7 +308,7 @@ class Wallet:
 
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
-        spend_value = sum([coin.amount for coin in coins])
+        spend_value = sum(coin.amount for coin in coins)
         self.log.info(f"spend_value is {spend_value} and total_amount is {total_amount}")
         change = spend_value - total_amount
         if negative_change_allowed:
@@ -566,6 +567,31 @@ class Wallet:
         return PathHint(
             root_fingerprint,
             [uint64(12381), uint64(8444), uint64(2), uint64(index)],
+        )
+
+    async def gather_signing_info(self, coin_spends: list[Spend]) -> SigningInstructions:
+        pks: List[bytes] = []
+        signing_targets: List[SigningTarget] = []
+        for coin_spend in coin_spends:
+            _coin_spend = coin_spend.as_coin_spend()
+            # Get AGG_SIG conditions
+            conditions_dict = conditions_dict_for_solution(
+                _coin_spend.puzzle_reveal.to_program(),
+                _coin_spend.solution.to_program(),
+                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            )
+            # Create signature
+            for pk, msg in pkm_pairs_for_conditions_dict(
+                conditions_dict, _coin_spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
+                pk_bytes = bytes(pk)
+                pks.append(pk_bytes)
+                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
+                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
+
+        return SigningInstructions(
+            await self.wallet_state_manager.key_hints_for_pubkeys(pks),
+            signing_targets,
         )
 
     async def execute_signing_instructions(

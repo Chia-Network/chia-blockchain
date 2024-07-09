@@ -62,7 +62,6 @@ chia._tests.core.full_node.test_full_node
 chia._tests.core.full_node.test_node_load
 chia._tests.core.full_node.test_performance
 chia._tests.core.full_node.test_transactions
-chia._tests.core.mempool.test_mempool
 chia._tests.core.server.test_dos
 chia._tests.core.server.test_rate_limits
 chia._tests.core.ssl.test_ssl
@@ -93,7 +92,6 @@ chia._tests.util.test_full_block_utils
 chia._tests.util.test_misc
 chia._tests.util.test_network
 chia._tests.util.time_out_assert
-chia._tests.wallet.cat_wallet.test_trades
 chia._tests.wallet.did_wallet.test_did
 chia._tests.wallet.rpc.test_wallet_rpc
 chia._tests.wallet.test_taproot

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import multiprocessing.context
@@ -52,17 +53,15 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
-from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.observation_root import ObservationRoot
 from chia.util.path import path_from_root
-from chia.util.streamable import Streamable
+from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
@@ -114,7 +113,6 @@ from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
     SigningResponse,
-    SigningTarget,
     Spend,
     SumHint,
     TransactionInfo,
@@ -159,6 +157,7 @@ from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope, new_wallet_action_scope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -2160,7 +2159,7 @@ class WalletStateManager:
                 self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
                 if rollback_wallets is not None:
                     self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
-                if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
+                if isinstance(e, (PeerRequestException, aiosqlite.Error)):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
                     await self.retry_store.remove_state(coin_state)
@@ -2341,9 +2340,11 @@ class WalletStateManager:
     async def add_pending_transactions(
         self,
         tx_records: List[TransactionRecord],
+        push: bool = True,
         merge_spends: bool = True,
         sign: Optional[bool] = None,
-        additional_signing_responses: List[SigningResponse] = [],
+        additional_signing_responses: Optional[List[SigningResponse]] = None,
+        extra_spends: Optional[List[SpendBundle]] = None,
     ) -> List[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2354,6 +2355,8 @@ class WalletStateManager:
         agg_spend: SpendBundle = SpendBundle.aggregate(
             [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
         )
+        if extra_spends is not None:
+            agg_spend = SpendBundle.aggregate([agg_spend, *extra_spends])
         actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
         if merge_spends and actual_spend_involved:
             tx_records = [
@@ -2364,13 +2367,24 @@ class WalletStateManager:
                 )
                 for i, tx in enumerate(tx_records)
             ]
+        elif extra_spends is not None and extra_spends != []:
+            extra_spends.extend([] if tx_records[0].spend_bundle is None else [tx_records[0].spend_bundle])
+            extra_spend_bundle = SpendBundle.aggregate(extra_spends)
+            tx_records = [
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=extra_spend_bundle if i == 0 else tx.spend_bundle,
+                    name=extra_spend_bundle.name() if i == 0 else bytes32.secret(),
+                )
+                for i, tx in enumerate(tx_records)
+            ]
         if sign:
             tx_records, _ = await self.sign_transactions(
                 tx_records,
-                additional_signing_responses,
-                additional_signing_responses != [],
+                [] if additional_signing_responses is None else additional_signing_responses,
+                additional_signing_responses != [] and additional_signing_responses is not None,
             )
-        all_coins_names = []
+
         # Check that tx_records have additions/removals since vault txs don't have them until they're signed
         for i, tx in enumerate(tx_records):
             if tx.additions == []:
@@ -2379,20 +2393,22 @@ class WalletStateManager:
                 tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
             tx_records[i] = tx
 
-        async with self.db_wrapper.writer_maybe_transaction():
-            for tx_record in tx_records:
-                # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-                await self.tx_store.add_transaction_record(tx_record)
-                all_coins_names.extend([coin.name() for coin in tx_record.additions])
-                all_coins_names.extend([coin.name() for coin in tx_record.removals])
+        if push:
+            all_coins_names = []
+            async with self.db_wrapper.writer_maybe_transaction():
+                for tx_record in tx_records:
+                    # Wallet node will use this queue to retry sending this transaction until full nodes receives it
+                    await self.tx_store.add_transaction_record(tx_record)
+                    all_coins_names.extend([coin.name() for coin in tx_record.additions])
+                    all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        await self.add_interested_coin_ids(all_coins_names)
+            await self.add_interested_coin_ids(all_coins_names)
 
-        if actual_spend_involved:
-            self.tx_pending_changed()
-        for wallet_id in {tx.wallet_id for tx in tx_records}:
-            self.state_changed("pending_transaction", wallet_id)
-        await self.wallet_node.update_ui()
+            if actual_spend_involved:
+                self.tx_pending_changed()
+            for wallet_id in {tx.wallet_id for tx in tx_records}:
+                self.state_changed("pending_transaction", wallet_id)
+            await self.wallet_node.update_ui()
 
         return tx_records
 
@@ -2697,31 +2713,7 @@ class WalletStateManager:
         )
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
-        if isinstance(self.main_wallet, Vault):
-            return await self.main_wallet.gather_signing_info(coin_spends)
-        pks: List[bytes] = []
-        signing_targets: List[SigningTarget] = []
-        for coin_spend in coin_spends:
-            _coin_spend = coin_spend.as_coin_spend()
-            # Get AGG_SIG conditions
-            conditions_dict = conditions_dict_for_solution(
-                _coin_spend.puzzle_reveal.to_program(),
-                _coin_spend.solution.to_program(),
-                self.constants.MAX_BLOCK_COST_CLVM,
-            )
-            # Create signature
-            for pk, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
-            ):
-                pk_bytes = bytes(pk)
-                pks.append(pk_bytes)
-                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
-                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
-
-        return SigningInstructions(
-            await self.key_hints_for_pubkeys(pks),
-            signing_targets,
-        )
+        return await self.main_wallet.gather_signing_info(coin_spends)
 
     async def gather_signing_info_for_bundles(self, bundles: List[SpendBundle]) -> List[UnsignedTransaction]:
         utxs: List[UnsignedTransaction] = []
@@ -2835,6 +2827,25 @@ class WalletStateManager:
         for bundle in bundles:
             await self.wallet_node.push_tx(bundle)
         return [bundle.name() for bundle in bundles]
+
+    @contextlib.asynccontextmanager
+    async def new_action_scope(
+        self,
+        push: bool = False,
+        merge_spends: bool = True,
+        sign: Optional[bool] = None,
+        additional_signing_responses: List[SigningResponse] = [],
+        extra_spends: List[SpendBundle] = [],
+    ) -> AsyncIterator[WalletActionScope]:
+        async with new_wallet_action_scope(
+            self,
+            push=push,
+            merge_spends=merge_spends,
+            sign=sign,
+            additional_signing_responses=additional_signing_responses,
+            extra_spends=extra_spends,
+        ) as action_scope:
+            yield action_scope
 
     async def create_vault_wallet(
         self,

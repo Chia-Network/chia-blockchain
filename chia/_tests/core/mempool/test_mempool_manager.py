@@ -738,18 +738,29 @@ def mk_item(
 ) -> MempoolItem:
     # we don't actually care about the puzzle and solutions for the purpose of
     # can_replace()
-    spends = [make_spend(c, SerializedProgram.to(None), SerializedProgram.to(None)) for c in coins]
-    spend_bundle = SpendBundle(spends, G2Element())
-    npc_result = NPCResult(None, make_test_conds(cost=cost, spend_ids=[c.name() for c in coins]))
+    spend_ids = []
+    coin_spends = []
+    bundle_coin_spends = {}
+    for c in coins:
+        coin_id = c.name()
+        spend_ids.append(coin_id)
+        spend = make_spend(c, SerializedProgram.to(None), SerializedProgram.to(None))
+        coin_spends.append(spend)
+        bundle_coin_spends[coin_id] = BundleCoinSpend(
+            coin_spend=spend, eligible_for_dedup=False, eligible_for_fast_forward=False, additions=[]
+        )
+    spend_bundle = SpendBundle(coin_spends, G2Element())
+    npc_result = NPCResult(None, make_test_conds(cost=cost, spend_ids=spend_ids))
     return MempoolItem(
-        spend_bundle,
-        uint64(fee),
-        npc_result,
-        spend_bundle.name(),
-        uint32(0),
-        None if assert_height is None else uint32(assert_height),
-        None if assert_before_height is None else uint32(assert_before_height),
-        None if assert_before_seconds is None else uint64(assert_before_seconds),
+        spend_bundle=spend_bundle,
+        fee=uint64(fee),
+        npc_result=npc_result,
+        spend_bundle_name=spend_bundle.name(),
+        height_added_to_mempool=uint32(0),
+        assert_height=None if assert_height is None else uint32(assert_height),
+        assert_before_height=None if assert_before_height is None else uint32(assert_before_height),
+        assert_before_seconds=None if assert_before_seconds is None else uint64(assert_before_seconds),
+        bundle_coin_spends=bundle_coin_spends,
     )
 
 

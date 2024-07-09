@@ -20,7 +20,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.errors import Err
 from chia.util.ints import uint64
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.drivers import (
     create_augmented_cond_puzzle_hash,
     create_clawback_merkle_tree,

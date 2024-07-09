@@ -62,13 +62,13 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request
+from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
-from chia.util.misc import to_batches
 
 if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode
