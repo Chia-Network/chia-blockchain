@@ -132,7 +132,7 @@ format-jinja = """
             {{ base }}-dev{{ distance }}
         {%- else -%}
             {{ base }}-{{stage}}{{revision}}.dev{{ distance }}
-        {%- endif -%}   
+        {%- endif -%}
     {%- endif -%}
 """
 #format-jinja = """
