@@ -510,7 +510,7 @@ async def test_duplicate_output() -> None:
 async def test_block_cost_exceeds_max() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_records)
     conditions = []
-    for i in range(2400):
+    for i in range(3800):
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i])
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="BLOCK_COST_EXCEEDS_MAX"):
