@@ -21,9 +21,9 @@ class WalletSpendBundle(SpendBundle):
             return False
         return self.coin_spends == other.coin_spends and self.aggregated_signature == other.aggregated_signature
 
-    @classmethod
-    def parse_rust(cls, blob: bytes) -> WalletSpendBundle:
-        bundle, advance = super().parse_rust(blob)
+    @staticmethod
+    def parse_rust(blob: bytes, flag: bool = False) -> [WalletSpendBundle, int]:
+        bundle, advance = super(WalletSpendBundle, WalletSpendBundle).parse_rust(blob)
         return WalletSpendBundle(bundle.coin_spends, bundle.aggregated_signature), advance
 
     @classmethod
