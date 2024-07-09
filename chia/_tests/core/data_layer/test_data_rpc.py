@@ -2266,6 +2266,10 @@ async def test_unsubscribe_removes_files(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
+        def check_num_files() -> int:
+            filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+            return len(filenames)
+
         update_count = 10
         for batch_count in range(update_count):
             key = batch_count.to_bytes(2, "big")
@@ -2274,12 +2278,13 @@ async def test_unsubscribe_removes_files(
             res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
             update_tx_rec = res["tx_id"]
             await farm_block_with_spend(full_node_api, ph, update_tx_rec, wallet_rpc_api)
-            await asyncio.sleep(manage_data_interval * 2)
+            await time_out_assert(
+                timeout=manage_data_interval * 2, function=check_num_files, value=2 * (batch_count + 1)
+            )
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
 
         filenames = {path.name for path in data_layer.server_files_location.iterdir()}
-        assert len(filenames) == 2 * update_count
         for generation, hash in enumerate(root_hashes):
             assert get_delta_filename(store_id, hash, generation + 1) in filenames
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
