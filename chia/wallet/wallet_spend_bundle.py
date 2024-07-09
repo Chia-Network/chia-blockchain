@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Tuple
 
 from chia_rs import AugSchemeMPL, G2Element
 
@@ -22,7 +22,7 @@ class WalletSpendBundle(SpendBundle):
         return self.coin_spends == other.coin_spends and self.aggregated_signature == other.aggregated_signature
 
     @staticmethod
-    def parse_rust(blob: bytes, flag: bool = False) -> [WalletSpendBundle, int]:
+    def parse_rust(blob: bytes, flag: bool = False) -> Tuple[WalletSpendBundle, int]:
         bundle, advance = super(WalletSpendBundle, WalletSpendBundle).parse_rust(blob)
         return WalletSpendBundle(bundle.coin_spends, bundle.aggregated_signature), advance
 
