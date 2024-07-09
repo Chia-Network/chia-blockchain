@@ -78,8 +78,8 @@ def decrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
     return output[len(CHECKBYTES_VALUE) :]
 
 
-def default_file_keyring_data() -> DecrpytedKeyringData:
-    return DecrpytedKeyringData({}, {})
+def default_file_keyring_data() -> DecryptedKeyringData:
+    return DecryptedKeyringData({}, {})
 
 
 def keyring_path_from_root(keys_root_path: Path) -> Path:
@@ -153,7 +153,7 @@ class FileKeyringContent:
         return dict(yaml.safe_load(data_yml))
 
     def update_encrypted_data_dict(
-        self, passphrase: str, decrypted_dict: DecrpytedKeyringData, update_salt: bool
+        self, passphrase: str, decrypted_dict: DecryptedKeyringData, update_salt: bool
     ) -> None:
         self.nonce = generate_nonce()
         if update_salt:
@@ -193,12 +193,12 @@ Services = Dict[str, Users]
 
 
 @dataclass
-class DecrpytedKeyringData:
+class DecryptedKeyringData:
     services: Services
     labels: Dict[int, str]  # {fingerprint: label}
 
     @classmethod
-    def from_dict(cls, data_dict: Dict[str, Any]) -> DecrpytedKeyringData:
+    def from_dict(cls, data_dict: Dict[str, Any]) -> DecryptedKeyringData:
         return cls(
             {
                 service: {
@@ -240,7 +240,7 @@ class FileKeyring(FileSystemEventHandler):
     load_keyring_lock: threading.RLock = field(default_factory=threading.RLock)  # Guards access to needs_load_keyring
     needs_load_keyring: bool = False
     # Cache of the decrypted YAML contained in keyring.data
-    cached_data_dict: DecrpytedKeyringData = field(default_factory=default_file_keyring_data)
+    cached_data_dict: DecryptedKeyringData = field(default_factory=default_file_keyring_data)
     keyring_last_mod_time: Optional[float] = None
     # Key/value pairs to set on the outer payload on the next write
     file_content_properties_for_next_write: Dict[str, Any] = field(default_factory=dict)
@@ -430,7 +430,7 @@ class FileKeyring(FileSystemEventHandler):
             # TODO, this prompts for the passphrase interactively, move this out
             passphrase = obtain_current_passphrase(use_passphrase_cache=True)
 
-        self.cached_data_dict = DecrpytedKeyringData.from_dict(
+        self.cached_data_dict = DecryptedKeyringData.from_dict(
             self.cached_file_content.get_decrypted_data_dict(passphrase)
         )
 

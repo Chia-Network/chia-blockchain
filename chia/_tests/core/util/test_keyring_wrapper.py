@@ -200,69 +200,63 @@ class TestKeyringWrapper:
         )
 
     # When: using a new empty keyring
-    def test_get_passphrase(self, empty_temp_file_keyring: TempKeyring):
+    def test_get_key(self, empty_temp_file_keyring: TempKeyring):
         """
-        Simple passphrase setting and retrieval
+        Simple key setting and retrieval
         """
-        # Expect: passphrase lookup should return None
+        # Expect: key lookup should return None
         assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") is None
 
-        # When: setting a passphrase
+        # When: setting a key
         KeyringWrapper.get_shared_instance().keyring.set_key(
-            "service-abc", "user-xyz", Key(b"super secret passphrase", {"foo": "bar"})
+            "service-abc", "user-xyz", Key(b"super secret key", {"foo": "bar"})
         )
 
-        # Expect: passphrase lookup should succeed
+        # Expect: key lookup should succeed
         assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") == Key(
-            b"super secret passphrase", {"foo": "bar"}
+            b"super secret key", {"foo": "bar"}
         )
 
-        # Expect: non-existent passphrase lookup should fail
-        assert (
-            KeyringWrapper.get_shared_instance().keyring.get_key("service-123", "some non-existent passphrase") is None
-        )
+        # Expect: non-existent key lookup should fail
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-123", "some non-existent key") is None
 
     # When: using a new empty keyring
-    def test_set_passphrase_overwrite(self, empty_temp_file_keyring: TempKeyring):
+    def test_set_key_overwrite(self, empty_temp_file_keyring: TempKeyring):
         """
-        Overwriting a previously-set passphrase should work
+        Overwriting a previously-set key should work
         """
-        # When: initially setting the passphrase
-        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"initial passphrase"))
+        # When: initially setting the key
+        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"initial key"))
 
-        # Expect: passphrase lookup should succeed
-        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123") == Key(
-            b"initial passphrase"
-        )
+        # Expect: key lookup should succeed
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123") == Key(b"initial key")
 
-        # When: updating the same passphrase
-        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"updated passphrase"))
+        # When: updating the same key
+        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"updated key"))
 
-        # Expect: the updated passphrase should be retrieved
-        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123") == Key(
-            b"updated passphrase"
-        )
+        # Expect: the updated key should be retrieved
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123") == Key(b"updated key")
 
     # When: using a new empty keyring
-    def test_delete_passphrase(self, empty_temp_file_keyring: TempKeyring):
+    def test_delete_key(self, empty_temp_file_keyring: TempKeyring):
         """
-        Deleting a non-existent passphrase should fail gracefully (no exceptions)
+        Deleting a non-existent key should fail gracefully (no exceptions)
         """
-        # Expect: deleting a non-existent passphrase should fail gracefully
+        # Expect: deleting a non-existent key should fail gracefully
         KeyringWrapper.get_shared_instance().keyring.delete_key("some service", "some user")
 
-        # When: setting a passphrase
+        # When: setting a key
         KeyringWrapper.get_shared_instance().keyring.set_key("some service", "some user", Key(b"500p3r 53cr37"))
 
-        # Expect: passphrase retrieval should succeed
+        # Expect: key retrieval should succeed
         assert KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") == Key(
             b"500p3r 53cr37"
         )
 
-        # When: deleting the passphrase
+        # When: deleting the key
         KeyringWrapper.get_shared_instance().keyring.delete_key("some service", "some user")
 
-        # Expect: passphrase retrieval should fail gracefully
+        # Expect: key retrieval should fail gracefully
         assert KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") is None
 
         # Check that metadata is properly deleted
