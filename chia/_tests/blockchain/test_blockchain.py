@@ -30,7 +30,6 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.keyring import TempKeyring
@@ -2528,20 +2527,13 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks[-1])
         assert blocks[-1].transactions_generator is not None
-        generator_arg = detect_potential_template_generator(blocks[-1].height, blocks[-1].transactions_generator)
-        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-            # once the hard for activates, we don't use this form of block
-            # compression anymore
-            assert generator_arg is None
-        else:
-            assert generator_arg is not None
 
         blocks = bt.get_consecutive_blocks(
             1,
             block_list_input=blocks,
             guarantee_transaction_block=True,
             transaction_data=tx,
-            previous_generator=generator_arg,
+            previous_generator=[blocks[-1].height],
         )
         block = blocks[-1]
         if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
