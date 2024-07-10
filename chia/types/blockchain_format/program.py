@@ -29,6 +29,15 @@ from .tree_hash import sha256_treehash
 
 INFINITE_COST = 11000000000
 
+DEFAULT_FLAGS = (
+    ENABLE_SOFTFORK_CONDITION
+    | ENABLE_BLS_OPS_OUTSIDE_GUARD
+    | ENABLE_FIXED_DIV
+    | AGG_SIG_ARGS
+    | ENABLE_MESSAGE_CONDITIONS
+    | DISALLOW_INFINITY_G1
+    | MEMPOOL_MODE
+)
 
 T_CLVMStorage = TypeVar("T_CLVMStorage", bound=CLVMStorage)
 T_Program = TypeVar("T_Program", bound="Program")
@@ -139,22 +148,13 @@ class Program(SExp):
         cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, flags)
         return cost, Program.to(r)
 
-    def run_with_cost(self, max_cost: int, args: Any) -> Tuple[int, Program]:
+    def run_with_cost(self, max_cost: int, args: Any, flags=DEFAULT_FLAGS) -> Tuple[int, Program]:
         # when running puzzles in the wallet, default to enabling all soft-forks
         # as well as enabling mempool-mode (i.e. strict mode)
-        default_flags = (
-            ENABLE_SOFTFORK_CONDITION
-            | ENABLE_BLS_OPS_OUTSIDE_GUARD
-            | ENABLE_FIXED_DIV
-            | AGG_SIG_ARGS
-            | ENABLE_MESSAGE_CONDITIONS
-            | DISALLOW_INFINITY_G1
-            | MEMPOOL_MODE
-        )
-        return self._run(max_cost, default_flags, args)
+        return self._run(max_cost, flags, args)
 
-    def run(self, args: Any) -> Program:
-        cost, r = self.run_with_cost(INFINITE_COST, args)
+    def run(self, args: Any, max_cost=INFINITE_COST, flags=DEFAULT_FLAGS) -> Program:
+        cost, r = self._run(max_cost, flags, args)
         return r
 
     def run_with_flags(self, max_cost: int, flags: int, args: Any) -> Tuple[int, Program]:
