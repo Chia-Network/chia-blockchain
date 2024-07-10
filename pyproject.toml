@@ -103,7 +103,7 @@ types-cryptography = { version = "3.3.23.2", optional = true }
 types-pyyaml = { version = "6.0.12.20240311", optional = true }
 types-setuptools = { version = "70.0.0.20240524", optional = true }
 lxml = { version = "5.2.2", optional = true }
-miniupnpc = { version = "2.2.2", source = "chia", optional = true }
+miniupnpc = {version = "^2.2.8", optional = true}
 pyupgrade = { version = "3.15.2", optional = true }
 # big-o = {version = "0.11.0", optional = true}
 # numpy = [
