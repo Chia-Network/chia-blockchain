@@ -7,7 +7,7 @@ from enum import Enum
 from functools import cached_property
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union, overload, Iterator
+from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Type, TypeVar, Union, overload
 
 import importlib_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -332,7 +332,7 @@ class Keychain:
 
         self.keyring_wrapper = keyring_wrapper
 
-    def _get_key_data(self, index: int, include_secrets: bool = True) -> KeyData:
+    def _get_key_data(self, index: int, include_secrets: bool = True) -> Optional[KeyData]:
         """
         Returns the parsed keychain contents for a specific 'user' (key index). The content
         is represented by the class `KeyData`.
@@ -343,21 +343,24 @@ class Keychain:
             raise KeychainUserNotFound(self.service, user)
         str_bytes = key.secret
 
-        pk_bytes: bytes = str_bytes[: G1Element.SIZE]
-        observation_root: ObservationRoot = G1Element.from_bytes(pk_bytes)
-        fingerprint = observation_root.get_fingerprint()
-        if len(str_bytes) == G1Element.SIZE + 32:
-            entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
-        else:
-            entropy = None
+        if key.metadata is None or key.metadata.get("type", KeyTypes.G1_ELEMENT.value) == KeyTypes.G1_ELEMENT.value:
+            pk_bytes: bytes = str_bytes[: G1Element.SIZE]
+            observation_root: ObservationRoot = G1Element.from_bytes(pk_bytes)
+            fingerprint = observation_root.get_fingerprint()
+            if len(str_bytes) == G1Element.SIZE + 32:
+                entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+            else:
+                entropy = None
 
-        return KeyData(
-            fingerprint=uint32(fingerprint),
-            public_key=pk_bytes,
-            label=self.keyring_wrapper.keyring.get_label(fingerprint),
-            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
-            key_type=KeyTypes.G1_ELEMENT.value,
-        )
+            return KeyData(
+                fingerprint=uint32(fingerprint),
+                public_key=pk_bytes,
+                label=self.keyring_wrapper.keyring.get_label(fingerprint),
+                secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
+                key_type=KeyTypes.G1_ELEMENT.value,
+            )
+        else:
+            return None
 
     def _get_free_private_key_index(self) -> int:
         """
