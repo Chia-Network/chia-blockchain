@@ -122,6 +122,7 @@ class DataLayer:
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     subscription_update_concurrency: int = 5
+    group_files_by_store: bool
 
     @property
     def server(self) -> ChiaServer:
@@ -183,6 +184,7 @@ class DataLayer:
             maximum_full_file_count=config.get("maximum_full_file_count", 1),
             subscription_update_concurrency=config.get("subscription_update_concurrency", 5),
             unsubscribe_data_queue=[],
+            group_files_by_store=config.get("group_files_by_store", False),
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -591,6 +593,7 @@ class DataLayer:
                     self.log,
                     proxy_url,
                     await self.get_downloader(store_id, url),
+                    self.group_files_by_store,
                 )
                 if success:
                     self.log.info(
@@ -661,6 +664,7 @@ class DataLayer:
                 root,
                 self.server_files_location,
                 full_tree_first_publish_generation,
+                self.group_files_by_store,
             )
             if not write_file_result.result:
                 # this particular return only happens if the files already exist, no need to log anything
@@ -670,6 +674,7 @@ class DataLayer:
                     request_json = {
                         "store_id": store_id.hex(),
                         "diff_filename": write_file_result.diff_tree.name,
+                        "group_files_by_store": self.group_files_by_store,
                     }
                     if write_file_result.full_tree is not None:
                         request_json["full_tree_filename"] = write_file_result.full_tree.name
@@ -721,6 +726,7 @@ class DataLayer:
                 server_files_location,
                 full_tree_first_publish_generation,
                 overwrite,
+                self.group_files_by_store,
             )
             files.append(res.diff_tree.name)
             if res.full_tree is not None:
@@ -728,7 +734,11 @@ class DataLayer:
 
         uploaders = await self.get_uploaders(store_id)
         if uploaders is not None and len(uploaders) > 0:
-            request_json = {"store_id": store_id.hex(), "files": json.dumps(files)}
+            request_json = {
+                "store_id": store_id.hex(),
+                "files": json.dumps(files),
+                "group_files_by_store": self.group_files_by_store,
+            }
             for uploader in uploaders:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(

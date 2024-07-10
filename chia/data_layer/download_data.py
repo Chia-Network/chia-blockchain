@@ -126,14 +126,15 @@ async def write_files_for_root(
     foldername: Path,
     full_tree_first_publish_generation: int,
     overwrite: bool = False,
+    group_by_store: bool = False,
 ) -> WriteFilesResult:
     if root.node_hash is not None:
         node_hash = root.node_hash
     else:
         node_hash = bytes32([0] * 32)  # todo change
 
-    filename_full_tree = get_full_tree_filename_path(foldername, store_id, node_hash, root.generation, True)
-    filename_diff_tree = get_delta_filename_path(foldername, store_id, node_hash, root.generation, True)
+    filename_full_tree = get_full_tree_filename_path(foldername, store_id, node_hash, root.generation, group_by_store)
+    filename_diff_tree = get_delta_filename_path(foldername, store_id, node_hash, root.generation, group_by_store)
     filename_full_tree.parent.mkdir(parents=True, exist_ok=True)
 
     written = False
@@ -177,6 +178,7 @@ async def download_file(
     client_foldername: Path,
     log: logging.Logger,
     grouped_by_store: bool,
+    group_downloaded_files_by_store: bool,
 ) -> bool:
     if target_filename_path.exists():
         return True
@@ -193,7 +195,12 @@ async def download_file(
         return True
 
     log.info(f"Using downloader {downloader} for store {store_id.hex()}.")
-    request_json = {"url": server_info.url, "client_folder": str(client_foldername), "filename": filename}
+    request_json = {
+        "url": server_info.url,
+        "client_folder": str(client_foldername),
+        "filename": filename,
+        "group_files_by_store": group_downloaded_files_by_store,
+    }
     async with aiohttp.ClientSession() as session:
         async with session.post(
             downloader.url + "/download",
@@ -216,6 +223,7 @@ async def insert_from_delta_file(
     log: logging.Logger,
     proxy_url: str,
     downloader: Optional[PluginRemote],
+    group_files_by_store: bool = False,
 ) -> bool:
     client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
 
@@ -223,7 +231,7 @@ async def insert_from_delta_file(
         timestamp = int(time.time())
         existing_generation += 1
         target_filename_path = get_delta_filename_path(
-            client_foldername, store_id, root_hash, existing_generation, True
+            client_foldername, store_id, root_hash, existing_generation, group_files_by_store
         )
         filename_exists = target_filename_path.exists()
         success = await download_file(
@@ -238,6 +246,7 @@ async def insert_from_delta_file(
             client_foldername=client_foldername,
             log=log,
             grouped_by_store=True,
+            group_downloaded_files_by_store=group_files_by_store,
         )
         if not success:
             # Older versions store all files in a single folder
@@ -253,6 +262,7 @@ async def insert_from_delta_file(
                 client_foldername=client_foldername,
                 log=log,
                 grouped_by_store=False,
+                group_downloaded_files_by_store=group_files_by_store,
             )
             if not success:
                 new_server_info = await data_store.server_misses_file(store_id, server_info, timestamp)
@@ -270,7 +280,7 @@ async def insert_from_delta_file(
                 store_id,
                 root_hash,
                 existing_generation,
-                True,
+                group_files_by_store,
             )
             await insert_into_data_store_from_file(
                 data_store,

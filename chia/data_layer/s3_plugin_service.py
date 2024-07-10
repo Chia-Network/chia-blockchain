@@ -144,30 +144,51 @@ class S3Plugin:
             my_bucket = self.boto_resource.Bucket(bucket_str)
             full_tree_name: Optional[str] = data.get("full_tree_filename", None)
             diff_name: str = data["diff_filename"]
+            group_files_by_store: bool = data.get("group_files_by_store", False)
 
             # filenames must follow the DataLayer naming convention
-            if full_tree_name is not None and not is_filename_valid(f"{store_id}-{full_tree_name}"):
+            full_tree_name_to_check = f"{store_id}-{full_tree_name}" if group_files_by_store else full_tree_name
+            delta_name_to_check = f"{store_id}-{diff_name}" if group_files_by_store else diff_name
+            if full_tree_name is not None and not is_filename_valid(full_tree_name_to_check):
                 return web.json_response({"uploaded": False})
-            if not is_filename_valid(f"{store_id}-{diff_name}"):
+            if not is_filename_valid(delta_name_to_check):
                 return web.json_response({"uploaded": False})
 
-            store_path = self.server_files_path.joinpath(f"{store_id}")
-            full_tree_path = None if full_tree_name is None else store_path.joinpath(full_tree_name)
-            diff_path = store_path.joinpath(diff_name)
+            if not group_files_by_store:
+                # Pull the store_id from the filename to make sure we only upload for configured stores
+                full_store_id = None if full_tree_name is None else bytes32.fromhex(full_tree_name[:64])
+                diff_store_id = bytes32.fromhex(diff_name[:64])
 
+                if full_store_id is not None and not (full_store_id == diff_store_id == store_id):
+                    return web.json_response({"uploaded": False})
+                if full_store_id is None and diff_store_id != store_id:
+                    return web.json_response({"uploaded": False})
+
+            if group_files_by_store:
+                store_path = self.server_files_path.joinpath(f"{store_id}")
+                full_tree_path = None if full_tree_name is None else store_path.joinpath(full_tree_name)
+                diff_path = store_path.joinpath(diff_name)
+                target_full_tree_path = None if full_tree_path is None else f"{store_id}/{full_tree_path.name}"
+                target_diff_path = f"{store_id}/{diff_path.name}"
+            else:
+                full_tree_path = None if full_tree_name is None else self.server_files_path.joinpath(full_tree_name)
+                diff_path = self.server_files_path.joinpath(diff_name)
+                target_full_tree_path = None if full_tree_path is None else full_tree_path.name
+                target_diff_path = diff_path.name
             try:
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     if full_tree_path is not None:
+                        assert target_full_tree_path is not None
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
                             functools.partial(
                                 my_bucket.upload_file,
                                 full_tree_path,
-                                f"{store_id}/{full_tree_path.name}",
+                                target_full_tree_path,
                             ),
                         )
                     await asyncio.get_running_loop().run_in_executor(
-                        pool, functools.partial(my_bucket.upload_file, diff_path, f"{store_id}/{diff_path.name}")
+                        pool, functools.partial(my_bucket.upload_file, diff_path, target_diff_path)
                     )
             except ClientError as e:
                 log.error(f"failed uploading file to aws {type(e).__name__} {e}")
@@ -210,6 +231,7 @@ class S3Plugin:
             data = await request.json()
             url = data["url"]
             filename = data["filename"]
+            group_files_by_store = data.get("group_files_by_store", False)
 
             # filename must follow the DataLayer naming convention
             if not is_filename_valid(filename.replace("/", "-", 1)):
@@ -229,7 +251,10 @@ class S3Plugin:
 
             bucket_str = parse_result.netloc
             my_bucket = self.boto_resource.Bucket(bucket_str)
-            target_filename = self.server_files_path.joinpath(f"{filename_store_id}").joinpath(filename[65:])
+            if group_files_by_store:
+                target_filename = self.server_files_path.joinpath(f"{filename_store_id}").joinpath(filename[65:])
+            else:
+                target_filename = self.server_files_path.joinpath(filename)
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
             log.info(f"downloading {url} to {target_filename}...")
@@ -248,6 +273,7 @@ class S3Plugin:
             store_id = bytes32.from_hexstr(data["store_id"])
             bucket_str = self.get_bucket(store_id)
             files = json.loads(data["files"])
+            group_files_by_store: bool = data.get("group_files_by_store", False)
             my_bucket = self.boto_resource.Bucket(bucket_str)
             existing_file_list = []
             for my_bucket_object in my_bucket.objects.all():
@@ -255,11 +281,24 @@ class S3Plugin:
             try:
                 for file_name in files:
                     # filenames must follow the DataLayer naming convention
-                    if not is_filename_valid(f"{store_id}-{file_name}"):
-                        log.error(f"failed uploading file {store_id}-{file_name}, invalid file name")
-                        continue
+                    if group_files_by_store:
+                        if not is_filename_valid(f"{store_id}-{file_name}"):
+                            log.error(f"failed uploading file {store_id}-{file_name}, invalid file name")
+                            continue
+                    else:
+                        if not is_filename_valid(file_name):
+                            log.error(f"failed uploading file {file_name}, invalid file name")
+                            continue
 
-                    file_path = self.server_files_path.joinpath(f"{store_id}").joinpath(file_name)
+                        if not (bytes32.fromhex(file_name[:64]) == store_id):
+                            log.error(f"failed uploading file {file_name}, store id mismatch")
+
+                    if group_files_by_store:
+                        file_path = self.server_files_path.joinpath(f"{store_id}").joinpath(file_name)
+                        target_file_name = f"{store_id}/{file_name}
+                    else:
+                        file_path = self.server_files_path.joinpath(file_name)
+                        target_file_name = file_name
                     if not os.path.isfile(file_path):
                         log.error(f"failed uploading file to aws, file {file_path} does not exist")
                         continue
@@ -271,7 +310,7 @@ class S3Plugin:
                     with concurrent.futures.ThreadPoolExecutor() as pool:
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
-                            functools.partial(my_bucket.upload_file, file_path, f"{store_id}/{file_name}"),
+                            functools.partial(my_bucket.upload_file, file_path, target_file_name),
                         )
             except ClientError as e:
                 log.error(f"failed uploading file to aws {e}")
