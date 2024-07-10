@@ -26,6 +26,7 @@ from chia.util.errors import (
     KeychainSecretsMissing,
     KeychainUserNotFound,
 )
+from chia.util.file_keyring import Key
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
 from chia.util.keyring_wrapper import KeyringWrapper
@@ -337,10 +338,10 @@ class Keychain:
         is represented by the class `KeyData`.
         """
         user = get_private_key_user(self.user, index)
-        read_str = self.keyring_wrapper.get_passphrase(self.service, user)
-        if read_str is None or len(read_str) == 0:
+        key = self.keyring_wrapper.keyring.get_key(self.service, user)
+        if key is None or len(key.secret) == 0:
             raise KeychainUserNotFound(self.service, user)
-        str_bytes = bytes.fromhex(read_str)
+        str_bytes = key.secret
 
         pk_bytes: bytes = str_bytes[: G1Element.SIZE]
         observation_root: ObservationRoot = G1Element.from_bytes(pk_bytes)
@@ -353,7 +354,7 @@ class Keychain:
         return KeyData(
             fingerprint=uint32(fingerprint),
             public_key=pk_bytes,
-            label=self.keyring_wrapper.get_label(fingerprint),
+            label=self.keyring_wrapper.keyring.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
             key_type=KeyTypes.G1_ELEMENT.value,
         )
@@ -412,7 +413,7 @@ class Keychain:
             key_type = KeyTypes.G1_ELEMENT
             assert isinstance(key, PrivateKey)
             pk = key.get_g1()
-            key_data = bytes(pk).hex() + entropy.hex()
+            key_data = Key(bytes(pk) + entropy)
             fingerprint = pk.get_fingerprint()
         else:
             index = self._get_free_private_key_index()
@@ -427,7 +428,7 @@ class Keychain:
                 key_type = KeyTypes.G1_ELEMENT
             else:
                 raise ValueError(f"Cannot identify type of pubkey {mnemonic_or_pk}")  # pragma: no cover
-            key_data = pk_bytes.hex()
+            key_data = Key(pk_bytes)
             fingerprint = key.get_fingerprint()
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
@@ -437,17 +438,17 @@ class Keychain:
         # Try to set the label first, it may fail if the label is invalid or already exists.
         # This can probably just be moved into `FileKeyring.set_passphrase` after the legacy keyring stuff was dropped.
         if label is not None:
-            self.keyring_wrapper.set_label(fingerprint, label)
+            self.keyring_wrapper.keyring.set_label(fingerprint, label)
 
         try:
-            self.keyring_wrapper.set_passphrase(
+            self.keyring_wrapper.keyring.set_key(
                 self.service,
                 get_private_key_user(self.user, index),
                 key_data,
             )
         except Exception:
             if label is not None:
-                self.keyring_wrapper.delete_label(fingerprint)
+                self.keyring_wrapper.keyring.delete_label(fingerprint)
             raise
 
         return key, key_type
@@ -457,13 +458,13 @@ class Keychain:
         Assigns the given label to the first key with the given fingerprint.
         """
         self.get_key(fingerprint)  # raise if the fingerprint doesn't exist
-        self.keyring_wrapper.set_label(fingerprint, label)
+        self.keyring_wrapper.keyring.set_label(fingerprint, label)
 
     def delete_label(self, fingerprint: int) -> None:
         """
         Removes the label assigned to the key with the given fingerprint.
         """
-        self.keyring_wrapper.delete_label(fingerprint)
+        self.keyring_wrapper.keyring.delete_label(fingerprint)
 
     def get_first_private_key(self) -> Optional[Tuple[PrivateKey, bytes]]:
         """
@@ -572,12 +573,12 @@ class Keychain:
                 key_data = self._get_key_data(index, include_secrets=False)
                 if key_data.fingerprint == fingerprint:
                     try:
-                        self.keyring_wrapper.delete_label(key_data.fingerprint)
+                        self.keyring_wrapper.keyring.delete_label(key_data.fingerprint)
                     except (KeychainException, NotImplementedError):
                         # Just try to delete the label and move on if there wasn't one
                         pass
                     try:
-                        self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
+                        self.keyring_wrapper.keyring.delete_key(self.service, get_private_key_user(self.user, index))
                         removed += 1
                     except Exception:
                         pass

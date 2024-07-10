@@ -15,6 +15,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint64
+from chia.util.streamable import parse_rust
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
@@ -683,12 +684,12 @@ class Offer:
     # We basically hijack the SpendBundle versions for most of it
     @classmethod
     def parse(cls, f: BinaryIO) -> Offer:
-        parsed_bundle = SpendBundle.parse(f)
+        parsed_bundle = parse_rust(f, SpendBundle)
         return cls.from_bytes(bytes(parsed_bundle))
 
     def stream(self, f: BinaryIO) -> None:
-        as_spend_bundle = SpendBundle.from_bytes(bytes(self))
-        as_spend_bundle.stream(f)
+        spend_bundle_bytes = self.to_spend_bundle().to_bytes()
+        f.write(spend_bundle_bytes)
 
     def __bytes__(self) -> bytes:
         return bytes(self.to_spend_bundle())

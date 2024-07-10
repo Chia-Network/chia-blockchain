@@ -174,6 +174,11 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
 
                 if any(connection.peer_info == resolved for connection in self._server.all_connections.values()):
                     continue
+                if any(
+                    connection.peer_info.host == resolved.host and connection.peer_server_port == resolved.port
+                    for connection in self._server.all_connections.values()
+                ):
+                    continue
 
                 if not await self._server.start_client(resolved, None):
                     self._log.info(f"Failed to connect to {resolved}")

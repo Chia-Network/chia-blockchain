@@ -330,7 +330,7 @@ jobs:
         run: |
           py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent --webseed https://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
           ls ${{ github.workspace }}/build_scripts/final_installer/
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
+          gh release upload --repo ${{ github.repository }} $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
@@ -341,9 +341,9 @@ jobs:
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
 
       - name: Upload release artifacts
         if: env.RELEASE == 'true'
