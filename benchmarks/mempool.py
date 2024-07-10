@@ -106,7 +106,7 @@ async def run_mempool_benchmark() -> None:
 
     height = uint32(1)
 
-    print("Building SpendBundles")
+    print("Building spend bundles")
     for peer in range(NUM_PEERS):
         print(f"  peer {peer}")
         print("     reward coins")
@@ -129,11 +129,9 @@ async def run_mempool_benchmark() -> None:
             unspent.extend([farmer_coin, pool_coin])
 
         print("     spend bundles")
-        bundles: List[SpendBundle] = []
+        bundles = []
         for coin in unspent:
-            tx: SpendBundle = wt.generate_signed_transaction(
-                uint64(coin.amount // 2), wt.get_new_puzzlehash(), coin, fee=peer + idx
-            )
+            tx = wt.generate_signed_transaction(uint64(coin.amount // 2), wt.get_new_puzzlehash(), coin, fee=peer + idx)
             bundles.append(tx)
         spend_bundles.append(bundles)
 

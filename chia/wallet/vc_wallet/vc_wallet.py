@@ -17,7 +17,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
@@ -48,6 +47,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager  # pragma: no cover
@@ -201,7 +201,7 @@ class VCWallet:
             solution = solution_for_delegated_puzzle(dpuz, Program.to(None))
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
             coin_spends.append(make_spend(coin, puzzle, solution))
-        spend_bundle = SpendBundle(coin_spends, G2Element())
+        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
@@ -299,7 +299,7 @@ class VCWallet:
             conditions=extra_conditions,
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
-        spend_bundles = [SpendBundle([coin_spend], G2Element())]
+        spend_bundles = [WalletSpendBundle([coin_spend], G2Element())]
         tx_list: List[TransactionRecord] = []
         if did_announcement is not None:
             # Need to spend DID
@@ -322,7 +322,7 @@ class VCWallet:
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             spend_bundles.append(chia_tx.spend_bundle)
             tx_list.append(dataclasses.replace(chia_tx, spend_bundle=None))
-        spend_bundle = SpendBundle.aggregate(spend_bundles)
+        spend_bundle = WalletSpendBundle.aggregate(spend_bundles)
         now = uint64(int(time.time()))
         tx_list.append(
             TransactionRecord(
@@ -402,7 +402,7 @@ class VCWallet:
             extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
         )
         assert did_tx.spend_bundle is not None
-        final_bundle: SpendBundle = SpendBundle.aggregate([SpendBundle([vc_spend], G2Element()), did_tx.spend_bundle])
+        final_bundle = WalletSpendBundle.aggregate([WalletSpendBundle([vc_spend], G2Element()), did_tx.spend_bundle])
         did_tx = dataclasses.replace(did_tx, spend_bundle=final_bundle, name=final_bundle.name())
         if fee > 0:
             chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
@@ -410,7 +410,7 @@ class VCWallet:
             )
             assert did_tx.spend_bundle is not None
             assert chia_tx.spend_bundle is not None
-            new_bundle = SpendBundle.aggregate([chia_tx.spend_bundle, did_tx.spend_bundle])
+            new_bundle = WalletSpendBundle.aggregate([chia_tx.spend_bundle, did_tx.spend_bundle])
             did_tx = dataclasses.replace(did_tx, spend_bundle=new_bundle, name=new_bundle.name())
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
             return [did_tx, chia_tx]
@@ -541,10 +541,10 @@ class VCWallet:
             else:
                 raise ValueError("Wallet cannot verify all spends in specified offer")  # pragma: no cover
 
-        vc_spends: List[SpendBundle] = []
+        vc_spends: List[WalletSpendBundle] = []
         for launcher_id, vc in vcs.items():
             vc_spends.append(
-                SpendBundle.aggregate(
+                WalletSpendBundle.aggregate(
                     [
                         tx.spend_bundle
                         for tx in (
@@ -563,9 +563,9 @@ class VCWallet:
             )
 
         return Offer.from_spend_bundle(
-            SpendBundle.aggregate(
+            WalletSpendBundle.aggregate(
                 [
-                    SpendBundle(
+                    WalletSpendBundle(
                         [
                             *(
                                 spend

@@ -21,7 +21,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.spend_bundle import estimate_fees
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import (
@@ -65,6 +65,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -341,8 +342,8 @@ class DataLayerWallet:
             SerializedProgram.from_program(SINGLETON_LAUNCHER),
             SerializedProgram.from_program(genesis_launcher_solution),
         )
-        launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
-        full_spend: SpendBundle = SpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
+        launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
+        full_spend = WalletSpendBundle.aggregate([create_launcher_tx_record.spend_bundle, launcher_sb])
 
         # Delete from standard transaction so we don't push duplicate spends
         std_record: TransactionRecord = dataclasses.replace(create_launcher_tx_record, spend_bundle=full_spend)
@@ -559,10 +560,10 @@ class DataLayerWallet:
             SerializedProgram.from_program(full_sol),
         )
 
-        spend_bundle = SpendBundle([coin_spend], G2Element())
+        spend_bundle = WalletSpendBundle([coin_spend], G2Element())
 
         if announce_new_state:
-            spend_bundle = spend_bundle.replace(coin_spends=[coin_spend, second_coin_spend])
+            spend_bundle = WalletSpendBundle([coin_spend, second_coin_spend], spend_bundle.aggregated_signature)
 
         dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -589,7 +590,7 @@ class DataLayerWallet:
                 fee, AssertAnnouncement(True, asserted_origin_id=current_coin.name(), asserted_msg=b"$"), tx_config
             )
             assert chia_tx.spend_bundle is not None
-            aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
+            aggregate_bundle = WalletSpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
             dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle, name=aggregate_bundle.name())
             chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
             txs: List[TransactionRecord] = [dl_tx, chia_tx]
@@ -766,7 +767,7 @@ class DataLayerWallet:
                 ]
             ),
         )
-        mirror_bundle: SpendBundle = SpendBundle([mirror_spend], G2Element())
+        mirror_bundle = WalletSpendBundle([mirror_spend], G2Element())
         txs = [
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -801,7 +802,7 @@ class DataLayerWallet:
             assert chia_tx.spend_bundle is not None
             txs = [
                 dataclasses.replace(
-                    txs[0], spend_bundle=SpendBundle.aggregate([txs[0].spend_bundle, chia_tx.spend_bundle])
+                    txs[0], spend_bundle=WalletSpendBundle.aggregate([txs[0].spend_bundle, chia_tx.spend_bundle])
                 ),
                 dataclasses.replace(chia_tx, spend_bundle=None),
             ]
@@ -951,7 +952,7 @@ class DataLayerWallet:
             if tx is not None:
                 relevant_dl_txs.append(tx)
         # Let's check our standard wallet for fee transactions related to these dl txs
-        all_spends: List[SpendBundle] = [tx.spend_bundle for tx in relevant_dl_txs if tx.spend_bundle is not None]
+        all_spends: List[WalletSpendBundle] = [tx.spend_bundle for tx in relevant_dl_txs if tx.spend_bundle is not None]
         all_removal_ids: Set[bytes32] = {removal.name() for sb in all_spends for removal in sb.removals()}
         unconfirmed_std_txs: List[TransactionRecord] = (
             await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.standard_wallet.id())
@@ -1144,7 +1145,7 @@ class DataLayerWallet:
 
         offered_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v < 0 and k is not None]
         fee_left_to_pay: uint64 = fee
-        all_bundles: List[SpendBundle] = []
+        all_bundles: List[WalletSpendBundle] = []
         all_transactions: List[TransactionRecord] = []
         for launcher in offered_launchers:
             try:
@@ -1182,9 +1183,7 @@ class DataLayerWallet:
 
             new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None] * 5))
             new_spend: CoinSpend = dl_spend.replace(solution=SerializedProgram.from_program(new_solution))
-            new_bundle: SpendBundle = txs[0].spend_bundle.replace(
-                coin_spends=[*all_other_spends, new_spend],
-            )
+            new_bundle = WalletSpendBundle([*all_other_spends, new_spend], txs[0].spend_bundle.aggregated_signature)
             all_bundles.append(new_bundle)
             all_transactions.append(
                 dataclasses.replace(
@@ -1201,7 +1200,7 @@ class DataLayerWallet:
             for k, v in offer_dict.items()
             if v > 0
         }
-        return Offer(requested_payments, SpendBundle.aggregate(all_bundles), driver_dict), all_transactions
+        return Offer(requested_payments, WalletSpendBundle.aggregate(all_bundles), driver_dict), all_transactions
 
     @staticmethod
     async def finish_graftroot_solutions(offer: Offer, solver: Solver) -> Offer:
@@ -1272,7 +1271,7 @@ class DataLayerWallet:
                     spend = new_spend
             new_spends.append(spend)
 
-        return Offer({}, SpendBundle(new_spends, offer.aggregated_signature()), offer.driver_dict)
+        return Offer({}, WalletSpendBundle(new_spends, offer.aggregated_signature()), offer.driver_dict)
 
     @staticmethod
     async def get_offer_summary(offer: Offer) -> Dict[str, Any]:

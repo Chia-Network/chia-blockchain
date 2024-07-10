@@ -8,14 +8,14 @@ from chia_rs import G2Element
 
 from chia._tests.cmds.wallet.test_consts import STD_TX
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_action_scope import WalletSideEffects
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 MOCK_SR = SigningResponse(b"hey", bytes32([0] * 32))
-MOCK_SB = SpendBundle([], G2Element())
+MOCK_SB = WalletSpendBundle([], G2Element())
 
 
 def test_back_and_forth_serialization() -> None:
@@ -32,7 +32,7 @@ def test_back_and_forth_serialization() -> None:
 @dataclass
 class MockWalletStateManager:
     most_recent_call: Optional[
-        Tuple[List[TransactionRecord], bool, bool, bool, List[SigningResponse], List[SpendBundle]]
+        Tuple[List[TransactionRecord], bool, bool, bool, List[SigningResponse], List[WalletSpendBundle]]
     ] = None
 
     async def add_pending_transactions(
@@ -42,7 +42,7 @@ class MockWalletStateManager:
         merge_spends: bool,
         sign: bool,
         additional_signing_responses: List[SigningResponse],
-        extra_spends: List[SpendBundle],
+        extra_spends: List[WalletSpendBundle],
     ) -> List[TransactionRecord]:
         self.most_recent_call = (txs, push, merge_spends, sign, additional_signing_responses, extra_spends)
         return txs

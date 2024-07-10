@@ -34,7 +34,6 @@ from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
@@ -48,6 +47,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_store import GetCoinRecords
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 test_offer_file_path = importlib_resources.files(__name__.rpartition(".")[0]).joinpath("test_offer.toffer")
 test_offer_file_bech32 = test_offer_file_path.read_text(encoding="utf-8")
@@ -125,7 +125,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: Tuple[TestRpcCli
                     fee_amount=uint64(1234567 + i),
                     confirmed=False,
                     sent=uint32(0),
-                    spend_bundle=SpendBundle([], G2Element()),
+                    spend_bundle=WalletSpendBundle([], G2Element()),
                     additions=[Coin(bytes32([1 + i] * 32), bytes32([2 + i] * 32), uint64(12345678))],
                     removals=[Coin(bytes32([2 + i] * 32), bytes32([4 + i] * 32), uint64(12345678))],
                     wallet_id=uint32(1),
@@ -338,7 +338,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                 fee_amount=uint64(1234567),
                 confirmed=False,
                 sent=uint32(0),
-                spend_bundle=SpendBundle([], G2Element()),
+                spend_bundle=WalletSpendBundle([], G2Element()),
                 additions=[Coin(get_bytes32(1), get_bytes32(2), uint64(12345678))],
                 removals=[Coin(get_bytes32(2), get_bytes32(4), uint64(12345678))],
                 wallet_id=uint32(1),
@@ -740,7 +740,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
                 (offer_dict, tx_config, driver_dict, solver, fee, validate_only),
             )
 
-            created_offer = Offer({}, SpendBundle([], G2Element()), {})
+            created_offer = Offer({}, WalletSpendBundle([], G2Element()), {})
             trade_offer: TradeRecord = TradeRecord(
                 confirmed_at_index=uint32(0),
                 accepted_at_time=None,
@@ -748,7 +748,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
                 is_my_offer=True,
                 sent=uint32(0),
                 sent_to=[],
-                offer=bytes(SpendBundle([], G2Element())),
+                offer=bytes(WalletSpendBundle([], G2Element())),
                 taken_offer=None,
                 coins_of_interest=[],
                 trade_id=get_bytes32(2),
@@ -883,7 +883,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
                     is_my_offer=True,
                     sent=uint32(0),
                     sent_to=[],
-                    offer=bytes(SpendBundle([], G2Element())),
+                    offer=bytes(WalletSpendBundle([], G2Element())),
                     taken_offer=None,
                     coins_of_interest=[
                         Coin(bytes32([2 + i] * 32), bytes32([3 + i] * 32), uint64(1000)),
