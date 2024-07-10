@@ -60,7 +60,7 @@ dnslib = "0.9.24"  # dns lib
 dnspython = "2.6.1"  # Query DNS seeds
 filelock = "3.14.0"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
 keyring = "25.1.0"  # Store keys in MacOS Keychain, Windows Credential Locker
-packaging = "24.0"
+packaging = "24.1"
 pip = "24.0"
 psutil = [
     {version="5.9.4", markers="platform_machine!='aarch64'"},
