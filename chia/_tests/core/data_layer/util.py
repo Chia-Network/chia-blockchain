@@ -4,6 +4,7 @@ import contextlib
 import functools
 import os
 import pathlib
+import shutil
 import subprocess
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional, Union, overload
@@ -137,8 +138,11 @@ class ChiaRoot:
         if "SYSTEMROOT" in os.environ:
             kwargs["env"]["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
 
+        chia_executable = shutil.which("chia")
+        if chia_executable is None:
+            chia_executable = "chia"
         modified_args: List[Union[str, os_PathLike_str]] = [
-            self.scripts_path.joinpath("chia"),
+            self.scripts_path.joinpath(chia_executable),
             "--root-path",
             self.path,
             *args,
@@ -151,7 +155,10 @@ class ChiaRoot:
         kwargs["stdout"] = stdout
         kwargs["stderr"] = stderr
 
-        return subprocess.run(*final_args, **kwargs)
+        try:
+            return subprocess.run(*final_args, **kwargs)
+        except OSError as e:
+            raise Exception(f"failed to run:\n    {final_args}\n    {kwargs}") from e
 
     def read_log(self) -> str:
         return self.path.joinpath("log", "debug.log").read_text(encoding="utf-8")
