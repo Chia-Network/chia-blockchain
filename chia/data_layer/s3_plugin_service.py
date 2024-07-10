@@ -147,9 +147,12 @@ class S3Plugin:
             group_files_by_store: bool = data.get("group_files_by_store", False)
 
             # filenames must follow the DataLayer naming convention
-            full_tree_name_to_check = f"{store_id}-{full_tree_name}" if group_files_by_store else full_tree_name
+            if full_tree_name is not None:
+                full_tree_name_to_check = f"{store_id}-{full_tree_name}" if group_files_by_store else full_tree_name
+            else:
+                full_tree_name_to_check = None
             delta_name_to_check = f"{store_id}-{diff_name}" if group_files_by_store else diff_name
-            if full_tree_name is not None and not is_filename_valid(full_tree_name_to_check):
+            if full_tree_name_to_check is not None and not is_filename_valid(full_tree_name_to_check):
                 return web.json_response({"uploaded": False})
             if not is_filename_valid(delta_name_to_check):
                 return web.json_response({"uploaded": False})

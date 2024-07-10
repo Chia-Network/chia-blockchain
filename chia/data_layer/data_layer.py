@@ -122,7 +122,7 @@ class DataLayer:
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     subscription_update_concurrency: int = 5
-    group_files_by_store: bool
+    group_files_by_store: bool = False
 
     @property
     def server(self) -> ChiaServer:
