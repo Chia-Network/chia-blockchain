@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.notification_store import Notification
@@ -20,6 +19,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.vc_wallet.vc_store import VCRecord
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
 
@@ -127,13 +127,13 @@ class DIDUpdateRecoveryIDsResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True)
 class DIDMessageSpendResponse(TransactionEndpointResponse):
-    spend_bundle: SpendBundle
+    spend_bundle: WalletSpendBundle
 
 
 @streamable
 @dataclass(frozen=True)
 class DIDUpdateMetadataResponse(TransactionEndpointResponse):
-    spend_bundle: SpendBundle
+    spend_bundle: WalletSpendBundle
     wallet_id: uint32
 
 
@@ -199,7 +199,7 @@ class CancelOffersResponse(TransactionEndpointResponse):
 @dataclass(frozen=True)
 class NFTMintNFTResponse(TransactionEndpointResponse):
     wallet_id: uint32
-    spend_bundle: SpendBundle
+    spend_bundle: WalletSpendBundle
     nft_id: str
 
 
@@ -207,27 +207,27 @@ class NFTMintNFTResponse(TransactionEndpointResponse):
 @dataclass(frozen=True)
 class NFTAddURIResponse(TransactionEndpointResponse):
     wallet_id: uint32
-    spend_bundle: SpendBundle
+    spend_bundle: WalletSpendBundle
 
 
 @streamable
 @dataclass(frozen=True)
 class NFTTransferNFTResponse(TransactionEndpointResponse):
     wallet_id: uint32
-    spend_bundle: SpendBundle
+    spend_bundle: WalletSpendBundle
 
 
 @streamable
 @dataclass(frozen=True)
 class NFTSetNFTDIDResponse(TransactionEndpointResponse):
     wallet_id: uint32
-    spend_bundle: SpendBundle
+    spend_bundle: WalletSpendBundle
 
 
 @streamable
 @dataclass(frozen=True)
 class NFTMintBulkResponse(TransactionEndpointResponse):
-    spend_bundle: SpendBundle
+    spend_bundle: WalletSpendBundle
     nft_id_list: List[str]
 
 

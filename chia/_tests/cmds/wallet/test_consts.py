@@ -3,12 +3,12 @@ from __future__ import annotations
 from chia_rs import Coin, G2Element
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.signer_protocol import KeyHints, SigningInstructions, TransactionInfo, UnsignedTransaction
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 FINGERPRINT: str = "123456"
 FINGERPRINT_ARG: str = f"-f{FINGERPRINT}"
@@ -31,7 +31,7 @@ STD_TX = TransactionRecord(
     fee_amount=uint64(1234567),
     confirmed=False,
     sent=uint32(0),
-    spend_bundle=SpendBundle([], G2Element()),
+    spend_bundle=WalletSpendBundle([], G2Element()),
     additions=[Coin(get_bytes32(1), get_bytes32(2), uint64(12345678))],
     removals=[Coin(get_bytes32(2), get_bytes32(4), uint64(12345678))],
     wallet_id=uint32(1),

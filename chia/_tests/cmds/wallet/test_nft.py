@@ -15,11 +15,11 @@ from chia.rpc.wallet_request_types import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 # NFT Commands
 
@@ -123,7 +123,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
                 [STD_UTX],
                 [STD_TX],
                 uint32(wallet_id),
-                SpendBundle([], G2Element()),
+                WalletSpendBundle([], G2Element()),
                 bytes32([0] * 32).hex(),
             )
 
@@ -196,7 +196,7 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
             push: bool,
         ) -> NFTAddURIResponse:
             self.add_to_log("add_uri_to_nft", (wallet_id, nft_coin_id, key, uri, fee, tx_config, push))
-            return NFTAddURIResponse([STD_UTX], [STD_TX], uint32(wallet_id), SpendBundle([], G2Element()))
+            return NFTAddURIResponse([STD_UTX], [STD_TX], uint32(wallet_id), WalletSpendBundle([], G2Element()))
 
     inst_rpc_client = NFTAddUriRpcClient()  # pylint: disable=no-value-for-parameter
     nft_coin_id = get_bytes32(2).hex()
@@ -253,7 +253,7 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
                 [STD_UTX],
                 [STD_TX],
                 uint32(wallet_id),
-                SpendBundle([], G2Element()),
+                WalletSpendBundle([], G2Element()),
             )
 
     inst_rpc_client = NFTTransferRpcClient()  # pylint: disable=no-value-for-parameter
@@ -365,7 +365,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
                 [STD_UTX],
                 [STD_TX],
                 uint32(wallet_id),
-                SpendBundle([], G2Element()),
+                WalletSpendBundle([], G2Element()),
             )
 
     inst_rpc_client = NFTSetDidRpcClient()  # pylint: disable=no-value-for-parameter
