@@ -295,7 +295,7 @@ class S3Plugin:
 
                     if group_files_by_store:
                         file_path = self.server_files_path.joinpath(f"{store_id}").joinpath(file_name)
-                        target_file_name = f"{store_id}/{file_name}
+                        target_file_name = f"{store_id}/{file_name}"
                     else:
                         file_path = self.server_files_path.joinpath(file_name)
                         target_file_name = file_name
