@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence
 
 import click
 
 from chia.cmds import options
+from chia.cmds.cmds_util import tx_out_cmd
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.transaction_record import TransactionRecord
 
 
 @click.group("coins", help="Manage your wallets coins")
@@ -148,6 +150,7 @@ def list_cmd(
     default=False,
     help="Sort coins from largest to smallest or smallest to largest.",
 )
+@tx_out_cmd
 def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -160,10 +163,11 @@ def combine_cmd(
     fee: uint64,
     input_coins: Sequence[bytes32],
     largest_first: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .coin_funcs import async_combine
 
-    asyncio.run(
+    return asyncio.run(
         async_combine(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
@@ -176,6 +180,7 @@ def combine_cmd(
             target_coin_amount=target_amount,
             target_coin_ids=input_coins,
             largest_first=largest_first,
+            push=push,
         )
     )
 
@@ -206,6 +211,7 @@ def combine_cmd(
     required=True,
 )
 @click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")
+@tx_out_cmd
 def split_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -214,10 +220,11 @@ def split_cmd(
     fee: uint64,
     amount_per_coin: CliAmount,
     target_coin_id: str,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .coin_funcs import async_split
 
-    asyncio.run(
+    return asyncio.run(
         async_split(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
@@ -226,5 +233,6 @@ def split_cmd(
             number_of_coins=number_of_coins,
             amount_per_coin=amount_per_coin,
             target_coin_id_str=target_coin_id,
+            push=push,
         )
     )
