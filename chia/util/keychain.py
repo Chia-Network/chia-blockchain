@@ -36,7 +36,7 @@ from chia.util.streamable import Streamable, streamable
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
 DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8
-MAX_KEYS = 100
+MAX_KEYS = 101
 MIN_PASSPHRASE_LEN = 8
 
 
@@ -470,7 +470,7 @@ class Keychain:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
-        for index in range(MAX_KEYS + 1):
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index)
                 return key_data.private_key, key_data.entropy
@@ -482,7 +482,7 @@ class Keychain:
         """
         Return first private key which have the given public key fingerprint.
         """
-        for index in range(MAX_KEYS + 1):
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index)
                 if key_data.fingerprint == fingerprint:
@@ -497,7 +497,7 @@ class Keychain:
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
         """
         all_keys: List[Tuple[PrivateKey, bytes]] = []
-        for index in range(MAX_KEYS + 1):
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index)
                 all_keys.append((key_data.private_key, key_data.entropy))
@@ -509,7 +509,7 @@ class Keychain:
         """
         Return the KeyData of the first key which has the given public key fingerprint.
         """
-        for index in range(MAX_KEYS + 1):
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index, include_secrets)
                 if key_data.observation_root.get_fingerprint() == fingerprint:
@@ -523,7 +523,7 @@ class Keychain:
         Returns the KeyData of all keys which can be retrieved.
         """
         all_keys: List[KeyData] = []
-        for index in range(MAX_KEYS + 1):
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index, include_secrets)
                 all_keys.append(key_data)
@@ -536,7 +536,7 @@ class Keychain:
         Returns all public keys.
         """
         all_keys: List[ObservationRoot] = []
-        for index in range(MAX_KEYS + 1):
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index)
                 all_keys.append(key_data.observation_root)
@@ -546,7 +546,7 @@ class Keychain:
 
     def get_all_public_keys_of_type(self, key_type: Type[_T_ObservationRoot]) -> List[_T_ObservationRoot]:
         all_keys: List[_T_ObservationRoot] = []
-        for index in range(MAX_KEYS + 1):
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index)
                 if key_data.key_type == TYPES_TO_KEY_TYPES[key_type]:
@@ -568,7 +568,7 @@ class Keychain:
         Deletes all keys which have the given public key fingerprint and returns how many keys were removed.
         """
         removed = 0
-        for index in range(MAX_KEYS + 1):
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index, include_secrets=False)
                 if key_data.fingerprint == fingerprint:
@@ -603,7 +603,7 @@ class Keychain:
         """
         Deletes all keys from the keychain.
         """
-        for index in range(MAX_KEYS + 1):
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index)
                 self.delete_key_by_fingerprint(key_data.fingerprint)
