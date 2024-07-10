@@ -41,12 +41,16 @@ jobs:
 
       - name: Create installer version number
         id: version-number
+        # TODO figure out better way to handle versioning
         run: |
           python3 -m venv ../venv
           . ../venv/bin/activate
-          pip install setuptools_scm
-          VERSION=$(python3 ./build_scripts/installer-version.py)
+          python -m pip install --upgrade pip
+          pip install poetry "poetry-dynamic-versioning[plugin]"
+
+          VERSION=$(poetry version -s)
           echo "chia-installer-version=${VERSION}" >> "$GITHUB_OUTPUT"
           GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
           echo "chia-dev-version=${VERSION}-${GIT_SHORT_HASH}" >> "$GITHUB_OUTPUT"
+
           deactivate

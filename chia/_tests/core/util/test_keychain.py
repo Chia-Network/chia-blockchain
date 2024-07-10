@@ -454,14 +454,14 @@ async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool)
         keychain.add_key(mnemonic_or_pk=key_data.mnemonic_str(), label=key_data.label)
         assert key_data == keychain.get_key(key_data.fingerprint, include_secrets=True)
         assert key_data.label is not None
-        assert keychain.keyring_wrapper.get_label(key_data.fingerprint) == key_data.label
+        assert keychain.keyring_wrapper.keyring.get_label(key_data.fingerprint) == key_data.label
     if delete_all:
         # Delete the keys via `delete_all` and make sure no labels are left
         keychain.delete_all_keys()
         for key_data in keys:
-            assert keychain.keyring_wrapper.get_label(key_data.fingerprint) is None
+            assert keychain.keyring_wrapper.keyring.get_label(key_data.fingerprint) is None
     else:
         # Delete the keys via fingerprint and make sure the label gets dropped
         for key_data in keys:
             keychain.delete_key_by_fingerprint(key_data.fingerprint)
-            assert keychain.keyring_wrapper.get_label(key_data.fingerprint) is None
+            assert keychain.keyring_wrapper.keyring.get_label(key_data.fingerprint) is None
