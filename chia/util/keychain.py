@@ -190,48 +190,6 @@ def get_private_key_user(user: str, index: int) -> str:
     return f"wallet-{user}-{index}"
 
 
-@final
-@streamable
-@dataclass(frozen=True)
-class KeyDataSecrets(Streamable):
-    mnemonic: List[str]
-    entropy: bytes
-    private_key: PrivateKey
-
-    def __post_init__(self) -> None:
-        # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyDataSecrets`
-        # instance with an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of
-        # keys here.
-        mnemonic_str = self.mnemonic_str()
-        try:
-            bytes_from_mnemonic(mnemonic_str)
-        except Exception as e:
-            raise KeychainKeyDataMismatch("mnemonic") from e
-        if bytes_from_mnemonic(mnemonic_str) != self.entropy:
-            raise KeychainKeyDataMismatch("entropy")
-        if AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_str)) != self.private_key:
-            raise KeychainKeyDataMismatch("private_key")
-
-    @classmethod
-    def from_mnemonic(cls, mnemonic: str) -> KeyDataSecrets:
-        return cls(
-            mnemonic=mnemonic.split(),
-            entropy=bytes_from_mnemonic(mnemonic),
-            private_key=AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic)),
-        )
-
-    @classmethod
-    def from_entropy(cls, entropy: bytes) -> KeyDataSecrets:
-        return cls.from_mnemonic(bytes_to_mnemonic(entropy))
-
-    @classmethod
-    def generate(cls) -> KeyDataSecrets:
-        return cls.from_mnemonic(generate_mnemonic())
-
-    def mnemonic_str(self) -> str:
-        return " ".join(self.mnemonic)
-
-
 class KeyTypes(str, Enum):
     G1_ELEMENT = "G1 Element"
     VAULT_LAUNCHER = "Vault Launcher"
@@ -258,6 +216,63 @@ class KeyTypes(str, Enum):
         else:  # pragma: no cover
             # mypy should prevent this from ever running
             raise RuntimeError("Not all key types have been handled in KeyTypes.parse_secret_info")
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class KeyDataSecrets(Streamable):
+    mnemonic: List[str]
+    entropy: bytes
+    secret_info_bytes: bytes
+    key_type: str = KeyTypes.G1_ELEMENT.value
+
+    @property
+    def private_key(self) -> SecretInfo[ObservationRoot]:
+        return PUBLIC_TYPES_TO_PRIVATE_TYPES[KEY_TYPES_TO_TYPES[KeyTypes(self.key_type)]].from_bytes(
+            self.secret_info_bytes
+        )
+
+    def __post_init__(self) -> None:
+        # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyDataSecrets`
+        # instance with an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of
+        # keys here.
+        mnemonic_str = self.mnemonic_str()
+        try:
+            bytes_from_mnemonic(mnemonic_str)
+        except Exception as e:
+            raise KeychainKeyDataMismatch("mnemonic") from e
+        if bytes_from_mnemonic(mnemonic_str) != self.entropy:
+            raise KeychainKeyDataMismatch("entropy")
+        if (
+            PUBLIC_TYPES_TO_PRIVATE_TYPES[KEY_TYPES_TO_TYPES[KeyTypes(self.key_type)]].from_seed(
+                mnemonic_to_seed(mnemonic_str)
+            )
+            != self.private_key
+        ):
+            raise KeychainKeyDataMismatch("private_key")
+
+    @classmethod
+    def from_mnemonic(cls, mnemonic: str, key_type: KeyTypes = KeyTypes.G1_ELEMENT) -> KeyDataSecrets:
+        return cls(
+            mnemonic=mnemonic.split(),
+            entropy=bytes_from_mnemonic(mnemonic),
+            secret_info_bytes=bytes(
+                PUBLIC_TYPES_TO_PRIVATE_TYPES[KEY_TYPES_TO_TYPES[key_type]].from_seed(mnemonic_to_seed(mnemonic))
+            ),
+            key_type=key_type,
+        )
+
+    @classmethod
+    def from_entropy(cls, entropy: bytes) -> KeyDataSecrets:
+        return cls.from_mnemonic(bytes_to_mnemonic(entropy))
+
+    @classmethod
+    def generate(cls) -> KeyDataSecrets:
+        return cls.from_mnemonic(generate_mnemonic())
+
+    def mnemonic_str(self) -> str:
+        return " ".join(self.mnemonic)
 
 
 TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {
