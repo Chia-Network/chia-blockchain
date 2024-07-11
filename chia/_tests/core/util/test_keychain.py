@@ -21,6 +21,7 @@ from chia.util.errors import (
     KeychainSecretsMissing,
 )
 from chia.util.ints import uint32
+from chia.util.key_types import Secp256r1PrivateKey
 from chia.util.keychain import (
     Keychain,
     KeyData,
@@ -33,6 +34,7 @@ from chia.util.keychain import (
     mnemonic_to_seed,
 )
 from chia.util.observation_root import ObservationRoot
+from chia.util.secret_info import SecretInfo
 
 mnemonic = (
     "rapid this oven common drive ribbon bulb urban uncover napkin kitten usage enforce uncle unveil scene "
@@ -487,9 +489,17 @@ def test_key_type_support(key_type: str) -> None:
     The purpose of this test is to make sure that whenever KeyTypes is updated, all relevant functionality is
     also updated with it.
     """
-    generate_test_key_for_key_type: Dict[str, Tuple[int, bytes, ObservationRoot]] = {
-        KeyTypes.G1_ELEMENT.value: (G1Element().get_fingerprint(), bytes(G1Element()), G1Element())
+    secp_sk = Secp256r1PrivateKey.from_seed(mnemonic_to_seed(mnemonic))
+    secp_pk = secp_sk.public_key()
+    generate_test_key_for_key_type: Dict[str, Tuple[int, ObservationRoot, SecretInfo[ObservationRoot]]] = {
+        KeyTypes.G1_ELEMENT.value: (
+            G1Element().get_fingerprint(),
+            G1Element(),
+            PrivateKey.from_seed(mnemonic_to_seed(mnemonic)),
+        ),
+        KeyTypes.SECP_256_R1.value: (secp_pk.get_fingerprint(), secp_pk, secp_sk),
     }
-    obr_fingerprint, obr_bytes, obr = generate_test_key_for_key_type[key_type]
-    assert KeyData(uint32(obr_fingerprint), obr_bytes, None, None, key_type).observation_root == obr
-    assert KeyTypes.parse_observation_root(obr_bytes, KeyTypes(key_type)) == obr
+    obr_fingerprint, obr, secret_info = generate_test_key_for_key_type[key_type]
+    assert KeyData(uint32(obr_fingerprint), bytes(obr), None, None, key_type).observation_root == obr
+    assert KeyTypes.parse_observation_root(bytes(obr), KeyTypes(key_type)) == obr
+    assert KeyTypes.parse_secret_info(bytes(secret_info), KeyTypes(key_type)) == secret_info

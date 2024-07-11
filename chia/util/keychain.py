@@ -29,8 +29,10 @@ from chia.util.errors import (
 from chia.util.file_keyring import Key
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
+from chia.util.key_types import Secp256r1PrivateKey, Secp256r1PublicKey
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.util.observation_root import ObservationRoot
+from chia.util.secret_info import SecretInfo
 from chia.util.streamable import Streamable, streamable
 
 CURRENT_KEY_VERSION = "1.8"
@@ -231,18 +233,38 @@ class KeyDataSecrets(Streamable):
 
 class KeyTypes(str, Enum):
     G1_ELEMENT = "G1 Element"
+    SECP_256_R1 = "SECP256r1"
 
     @classmethod
     def parse_observation_root(cls: Type[KeyTypes], pk_bytes: bytes, key_type: KeyTypes) -> ObservationRoot:
         if key_type == cls.G1_ELEMENT:
             return G1Element.from_bytes(pk_bytes)
+        elif key_type == cls.SECP_256_R1:
+            return Secp256r1PublicKey.from_bytes(pk_bytes)
         else:  # pragma: no cover
             # mypy should prevent this from ever running
             raise RuntimeError("Not all key types have been handled in KeyTypes.parse_observation_root")
 
+    @classmethod
+    def parse_secret_info(cls: Type[KeyTypes], sk_bytes: bytes, key_type: KeyTypes) -> SecretInfo[ObservationRoot]:
+        if key_type == cls.G1_ELEMENT:
+            return PrivateKey.from_bytes(sk_bytes)
+        elif key_type == cls.SECP_256_R1:
+            return Secp256r1PrivateKey.from_bytes(sk_bytes)
+        else:  # pragma: no cover
+            # mypy should prevent this from ever running
+            raise RuntimeError("Not all key types have been handled in KeyTypes.parse_secret_info")
 
-TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {G1Element: KeyTypes.G1_ELEMENT}
+
+TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {
+    G1Element: KeyTypes.G1_ELEMENT,
+    Secp256r1PublicKey: KeyTypes.SECP_256_R1,
+}
 KEY_TYPES_TO_TYPES: Dict[KeyTypes, Type[ObservationRoot]] = {v: k for k, v in TYPES_TO_KEY_TYPES.items()}
+PUBLIC_TYPES_TO_PRIVATE_TYPES: Dict[Type[ObservationRoot], Type[SecretInfo[ObservationRoot]]] = {
+    G1Element: PrivateKey,
+    Secp256r1PublicKey: Secp256r1PrivateKey,
+}
 
 
 @final
