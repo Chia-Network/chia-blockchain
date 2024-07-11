@@ -317,7 +317,7 @@ class Keychain:
 
         public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
         fingerprint = public_key.get_fingerprint()
-        if len(str_bytes) == G1Element.SIZE + 32:
+        if len(str_bytes) > G1Element.SIZE:
             entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
         else:
             entropy = None
