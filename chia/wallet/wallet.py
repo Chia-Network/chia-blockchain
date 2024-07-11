@@ -169,8 +169,8 @@ class Wallet:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
-        secret_key = await self.wallet_state_manager.get_private_key(puzzle_hash)
-        return puzzle_for_pk(secret_key.get_g1())
+        public_key = await self.wallet_state_manager.get_public_key(puzzle_hash)
+        return puzzle_for_pk(G1Element.from_bytes(public_key))
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
@@ -293,7 +293,7 @@ class Wallet:
 
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
-        spend_value = sum([coin.amount for coin in coins])
+        spend_value = sum(coin.amount for coin in coins)
         self.log.info(f"spend_value is {spend_value} and total_amount is {total_amount}")
         change = spend_value - total_amount
         if negative_change_allowed:

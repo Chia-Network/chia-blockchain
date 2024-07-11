@@ -49,11 +49,12 @@ def make_item(coin_spends: List[CoinSpend]) -> MempoolItem:
     npc_result = get_name_puzzle_conditions(
         generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0), constants=DEFAULT_CONSTANTS
     )
-    bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, npc_result)
+    assert npc_result.conds is not None
+    bundle_coin_spends, fee = make_bundle_spends_map_and_fee(spend_bundle, npc_result.conds)
     return MempoolItem(
         spend_bundle=spend_bundle,
         fee=fee,
-        npc_result=npc_result,
+        conds=npc_result.conds,
         spend_bundle_name=spend_bundle.name(),
         height_added_to_mempool=TEST_HEIGHT,
         bundle_coin_spends=bundle_coin_spends,

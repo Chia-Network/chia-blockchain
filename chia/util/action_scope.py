@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from typing import AsyncIterator, Awaitable, Callable, Dict, Generic, List, Optional, Protocol, Type, TypeVar
+from typing import AsyncIterator, Awaitable, Callable, Generic, Optional, Protocol, Type, TypeVar, final
 
 import aiosqlite
 
@@ -13,21 +13,17 @@ class ResourceManager(Protocol):
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(cls, initial_resource: SideEffects) -> AsyncIterator[ResourceManager]:  # pragma: no cover
-        # We have to put this yield here for mypy to recognize the function as a generator
+        # yield included to make this a generator as expected by @contextlib.asynccontextmanager
         yield  # type: ignore[misc]
 
     @contextlib.asynccontextmanager
     async def use(self) -> AsyncIterator[None]:  # pragma: no cover
-        # We have to put this yield here for mypy to recognize the function as a generator
+        # yield included to make this a generator as expected by @contextlib.asynccontextmanager
         yield
 
     async def get_resource(self, resource_type: Type[_T_SideEffects]) -> _T_SideEffects: ...
 
     async def save_resource(self, resource: SideEffects) -> None: ...
-
-    async def get_memos(self) -> Dict[bytes, bytes]: ...
-
-    async def save_memos(self, memos: Dict[bytes, bytes]) -> None: ...
 
 
 @dataclass
@@ -48,8 +44,7 @@ class SQLiteResourceManager:
         async with DBWrapper2.managed(":memory:", reader_count=0) as db:
             self = cls(db)
             async with self._db.writer() as conn:
-                await conn.execute("CREATE TABLE memos(" " key blob," " value blob" ")")
-                await conn.execute("CREATE TABLE side_effects(" " total blob" ")")
+                await conn.execute("CREATE TABLE side_effects(total blob)")
                 await conn.execute(
                     "INSERT INTO side_effects VALUES(?)",
                     (bytes(initial_resource),),
@@ -58,6 +53,8 @@ class SQLiteResourceManager:
 
     @contextlib.asynccontextmanager
     async def use(self) -> AsyncIterator[None]:
+        if self._active_writer is not None:
+            raise RuntimeError("SQLiteResourceManager cannot currently support nested transactions")
         async with self._db.writer() as conn:
             self._active_writer = conn
             try:
@@ -72,22 +69,10 @@ class SQLiteResourceManager:
         return side_effects
 
     async def save_resource(self, resource: SideEffects) -> None:
-        await self.get_active_writer().execute("DELETE FROM side_effects")
+        # This sets all rows (there's only one) to the new serialization
         await self.get_active_writer().execute(
-            "INSERT INTO side_effects VALUES(?)",
+            "UPDATE side_effects SET total=?",
             (bytes(resource),),
-        )
-
-    async def get_memos(self) -> Dict[bytes, bytes]:
-        rows = await self.get_active_writer().execute_fetchall("SELECT key, value FROM memos")
-        memos = {row[0]: row[1] for row in rows}
-        return memos
-
-    async def save_memos(self, memos: Dict[bytes, bytes]) -> None:
-        await self.get_active_writer().execute("DELETE FROM memos")
-        await self.get_active_writer().executemany(
-            "INSERT INTO memos VALUES(?, ?)",
-            memos.items(),
         )
 
 
@@ -101,11 +86,13 @@ class SideEffects(Protocol):
 _T_SideEffects = TypeVar("_T_SideEffects", bound=SideEffects)
 
 
+@final
 @dataclass
 class ActionScope(Generic[_T_SideEffects]):
     """
-    The idea of a wallet action is to map a single user input to many potentially distributed wallet functions and side
-    effects. The eventual goal is to have this be the only connection between a wallet type and the WSM.
+    The idea of an "action" is to map a single client input to many potentially distributed functions and side
+    effects. The action holds on to a temporary state that the many callers modify at will but only one at a time.
+    When the action is closed, the state is still available and can be committed elsewhere or discarded.
 
     Utilizes a "resource manager" to hold the state in order to take advantage of rollbacks and prevent concurrent tasks
     from interferring with each other.
@@ -113,7 +100,7 @@ class ActionScope(Generic[_T_SideEffects]):
 
     _resource_manager: ResourceManager
     _side_effects_format: Type[_T_SideEffects]
-    _callbacks: List[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = field(default_factory=list)
+    _callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = None
     _final_side_effects: Optional[_T_SideEffects] = field(init=False, default=None)
 
     @property
@@ -135,40 +122,38 @@ class ActionScope(Generic[_T_SideEffects]):
     ) -> AsyncIterator[ActionScope[_T_SideEffects]]:
         async with resource_manager_backend.managed(side_effects_format()) as resource_manager:
             self = cls(_resource_manager=resource_manager, _side_effects_format=side_effects_format)
-            try:
-                yield self
-            except Exception:
-                raise
-            else:
-                async with self.use(_callbacks_allowed=False) as interface:
-                    for callback in self._callbacks:
-                        await callback(interface)
-                    self._final_side_effects = interface.side_effects
+
+            yield self
+
+            async with self.use(_callbacks_allowed=False) as interface:
+                if self._callback is not None:
+                    await self._callback(interface)
+                self._final_side_effects = interface.side_effects
 
     @contextlib.asynccontextmanager
     async def use(self, _callbacks_allowed: bool = True) -> AsyncIterator[StateInterface[_T_SideEffects]]:
         async with self._resource_manager.use():
-            memos = await self._resource_manager.get_memos()
             side_effects = await self._resource_manager.get_resource(self._side_effects_format)
-            interface = StateInterface(memos, side_effects, _callbacks_allowed)
-            try:
-                yield interface
-            except Exception:
-                raise
-            else:
-                await self._resource_manager.save_memos(interface.memos)
-                await self._resource_manager.save_resource(interface.side_effects)
-                self._callbacks.extend(interface._new_callbacks)
+            interface = StateInterface(side_effects, _callbacks_allowed)
+
+            yield interface
+
+            await self._resource_manager.save_resource(interface.side_effects)
+            self._callback = interface.callback
 
 
 @dataclass
 class StateInterface(Generic[_T_SideEffects]):
-    memos: Dict[bytes, bytes]
     side_effects: _T_SideEffects
     _callbacks_allowed: bool
-    _new_callbacks: List[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = field(default_factory=list)
+    _callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = None
 
-    def add_callback(self, callback: Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]) -> None:
+    @property
+    def callback(self) -> Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]]:
+        return self._callback
+
+    def set_callback(self, new_callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]]) -> None:
         if not self._callbacks_allowed:
-            raise ValueError("Cannot create a new callback from within another callback")
-        self._new_callbacks.append(callback)
+            raise RuntimeError("Callback cannot be edited from inside itself")
+
+        self._callback = new_callback

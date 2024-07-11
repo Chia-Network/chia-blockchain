@@ -6,6 +6,84 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.4.1 Chia blockchain 2024-06-25
+
+## What's Changed
+### Fixed
+* Fixed light wallet (wallet only) syncing issues introduced in 2.4.0
+
+### Known Issues
+* A breaking backwards compatibility issue was introduced in 2.4.0 in the daemon RPC call `add_private_key`. We expect to resolve this in a future release.
+* You cannot import or use a 12-word mnemonic key with 2.4.0 or 2.4.1. To import and use a 12-word mnemonic key we recommend you use 2.3.1. This will be resolved in a future release
+
+### Deprecated
+macOS 11 (Big Sur) is deprecated. This release (2.4.1) will be the last release to support macOS 11
+
+## 2.4.0 Chia blockchain 2024-06-20
+
+## What's Changed
+### Added
+* Soft fork 5: disallow infinity G1 points as public keys in AGG_SIG_* conditions
+* DL: Added support for updating multiple datastores in a single batch update
+* Add unfinished block to state change event (thanks @felixbrucker)
+* CHIP-0026 Mempool Updates
+* Preliminary support for observer mode. Ability to add public keys via CLI
+
+### Changed
+* Remove `tx_records` from `dl_update_multiple` RPC (breaking change)
+* DL: optimizations for autoinsert and upsert
+* Increase farmer fill rate to 70%
+* Use Rust types for `RecentChainData`, `ProofBlockHeader` and `WeightProof`
+* Use Rust version of `MerkleSet`
+* Remove unused files
+* Make a couple of DAOWallet methods return lists of transaction records
+* Simplify `MerkleSet` by making it immutable
+* Add ability to profile the farmer process
+* Remove unused current_inner from PoolState
+* Optimize `launcher_id_to_p2_puzzle_hash()`
+* Add genesis challenge to `get_network_info` RPC
+* Puzzle hash optimizations
+* Optimize key derivation in the wallet
+* Add optional trusted CIDR list
+* Make `BLSCache` a proper class
+* Split capabilities for each service
+* Use kv compressed in DL batch update
+* Updated gui to `electron 30.0.9`
+* Bump `chia_rs` to `0.9.0` and update G1Element handling
+* Bump `boto3` to `1.34.114`
+* Bump `chiabip158` to `1.5.1`
+* Bump `clvm` to `0.9.10`
+* Bump `aiohttp` to `3.9.4`
+* Bump `filelock` to `3.14.0`
+* Bump `importlib-resources` to `6.4.0`
+* Bump `keyring` to `25.1.0`
+* Bump `dnspython` to `2.6.1`
+* Bump `typing-extensions` to `4.11.0`,
+* Bump `packaging` to `24.0`
+* Bump `hsms` to `0.3.1`,
+
+### Fixed
+* Add bytes type to `DerivationRecord.pubkey`
+* Do not return unexpected coins from `get_coin_state`
+* Fix memo plotid
+* Filter out duplicate coins returned by `RequestPuzzleState`
+* fix confusion between prompt and don't prompt in the plotnft CLI
+* drop deprecated `authentication_public_key` from pool config
+* Fixed some typos (thanks @wersfeds)
+* Make sure to use no more than 61 cpus on windows (fixes #17967)
+* Handle reorgs in data layer wallet
+* Modify `VerifiedCredential.launch` to handle multiple source coins
+* Add tx_config and extra_conditions to DID creation endpoint
+* DL: Return exception and error from `get_kv_diff` when either of the hashes has no data
+* Link trade cancellations with announcements
+* Add coin id index to coin state batching
+* Remove homebrew rpaths from `_ssl.cpython.so` on macOS during build (fixes #18099)
+* Aligned `lerna` and `nx` versions
+* Set permissions in DEB `postinst.sh` for chrome-sandbox (fixes #17956)
+
+### Deprecated
+macOS 11 (Big Sur) is deprecated. This release (2.4.0) will be the last release to support macOS 11
+
 ## 2.3.1 Chia blockchain 2024-04-28
 
 ### Added

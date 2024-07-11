@@ -22,7 +22,7 @@ class KeyTool:
     def sign(self, public_key: G1Element, message: bytes) -> G2Element:
         secret_exponent = self.dict.get(public_key)
         if not secret_exponent:
-            raise ValueError("unknown pubkey %s" % bytes(public_key).hex())
+            raise ValueError(f"unknown pubkey {bytes(public_key).hex()}")
         bls_private_key = PrivateKey.from_bytes(secret_exponent.to_bytes(32, "big"))
         return AugSchemeMPL.sign(bls_private_key, message)
 

@@ -78,8 +78,8 @@ def decrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
     return output[len(CHECKBYTES_VALUE) :]
 
 
-def default_file_keyring_data() -> Dict[str, Any]:
-    return {"keys": {}, "labels": {}}
+def default_file_keyring_data() -> DecryptedKeyringData:
+    return DecryptedKeyringData({}, {})
 
 
 def keyring_path_from_root(keys_root_path: Path) -> Path:
@@ -152,11 +152,13 @@ class FileKeyringContent:
         data_yml = decrypt_data(encrypted_data_yml, key, self.nonce)
         return dict(yaml.safe_load(data_yml))
 
-    def update_encrypted_data_dict(self, passphrase: str, decrypted_dict: Dict[str, Any], update_salt: bool) -> None:
+    def update_encrypted_data_dict(
+        self, passphrase: str, decrypted_dict: DecryptedKeyringData, update_salt: bool
+    ) -> None:
         self.nonce = generate_nonce()
         if update_salt:
             self.salt = generate_salt()
-        data_yaml = yaml.safe_dump(decrypted_dict)
+        data_yaml = yaml.safe_dump(decrypted_dict.to_dict())
         key = symmetric_key_from_passphrase(passphrase, self.salt)
         self.data = base64.b64encode(encrypt_data(data_yaml.encode(), key, self.nonce)).decode("utf-8")
 
@@ -168,6 +170,58 @@ class FileKeyringContent:
         result["salt"] = result["salt"].hex()
         result["nonce"] = result["nonce"].hex()
         return result
+
+
+@dataclass(frozen=True)
+class Key:
+    secret: bytes
+    metadata: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def parse(cls, data: str, metadata: Optional[Dict[str, Any]]) -> Key:
+        return cls(
+            bytes.fromhex(data),
+            metadata,
+        )
+
+    def to_data(self) -> Union[str, Dict[str, Any]]:
+        return self.secret.hex()
+
+
+Users = Dict[str, Key]
+Services = Dict[str, Users]
+
+
+@dataclass
+class DecryptedKeyringData:
+    services: Services
+    labels: Dict[int, str]  # {fingerprint: label}
+
+    @classmethod
+    def from_dict(cls, data_dict: Dict[str, Any]) -> DecryptedKeyringData:
+        return cls(
+            {
+                service: {
+                    user: Key.parse(key, data_dict.get("metadata", {}).get(service, {}).get(user))
+                    for user, key in users.items()
+                }
+                for service, users in data_dict.get("keys", {}).items()
+            },
+            data_dict.get("labels", {}),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "keys": {
+                service: {user: key.to_data() for user, key in users.items()}
+                for service, users in self.services.items()
+            },
+            "labels": self.labels,
+            "metadata": {
+                service: {user: key.metadata for user, key in users.items() if key.metadata is not None}
+                for service, users in self.services.items()
+            },
+        }
 
 
 @final
@@ -186,7 +240,7 @@ class FileKeyring(FileSystemEventHandler):
     load_keyring_lock: threading.RLock = field(default_factory=threading.RLock)  # Guards access to needs_load_keyring
     needs_load_keyring: bool = False
     # Cache of the decrypted YAML contained in keyring.data
-    cached_data_dict: Dict[str, Any] = field(default_factory=default_file_keyring_data)
+    cached_data_dict: DecryptedKeyringData = field(default_factory=default_file_keyring_data)
     keyring_last_mod_time: Optional[float] = None
     # Key/value pairs to set on the outer payload on the next write
     file_content_properties_for_next_write: Dict[str, Any] = field(default_factory=dict)
@@ -260,21 +314,19 @@ class FileKeyring(FileSystemEventHandler):
         """
         return not self.cached_file_content.empty()
 
-    def cached_keys(self) -> Dict[str, Dict[str, str]]:
+    def cached_keys(self) -> Services:
         """
         Returns keyring.data.keys
         """
-        keys_dict: Dict[str, Dict[str, str]] = self.cached_data_dict["keys"]
-        return keys_dict
+        return self.cached_data_dict.services
 
     def cached_labels(self) -> Dict[int, str]:
         """
         Returns keyring.data.labels
         """
-        labels_dict: Dict[int, str] = self.cached_data_dict["labels"]
-        return labels_dict
+        return self.cached_data_dict.labels
 
-    def get_password(self, service: str, user: str) -> Optional[str]:
+    def get_key(self, service: str, user: str) -> Optional[Key]:
         """
         Returns the passphrase named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
@@ -282,7 +334,7 @@ class FileKeyring(FileSystemEventHandler):
         with self.lock_and_reload_if_required():
             return self.cached_keys().get(service, {}).get(user)
 
-    def set_password(self, service: str, user: str, passphrase: str) -> None:
+    def set_key(self, service: str, user: str, key: Key) -> None:
         """
         Store the passphrase to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
@@ -292,10 +344,10 @@ class FileKeyring(FileSystemEventHandler):
             # Ensure a dictionary exists for the 'service'
             if keys.get(service) is None:
                 keys[service] = {}
-            keys[service][user] = passphrase
+            keys[service][user] = key
             self.write_keyring()
 
-    def delete_password(self, service: str, user: str) -> None:
+    def delete_key(self, service: str, user: str) -> None:
         """
         Deletes the passphrase named by the 'user' parameter from the keyring data
         (will force a write to keyring.yaml on success)
@@ -378,7 +430,9 @@ class FileKeyring(FileSystemEventHandler):
             # TODO, this prompts for the passphrase interactively, move this out
             passphrase = obtain_current_passphrase(use_passphrase_cache=True)
 
-        self.cached_data_dict.update(self.cached_file_content.get_decrypted_data_dict(passphrase))
+        self.cached_data_dict = DecryptedKeyringData.from_dict(
+            self.cached_file_content.get_decrypted_data_dict(passphrase)
+        )
 
     def write_keyring(self, fresh_salt: bool = False) -> None:
         from chia.cmds.passphrase_funcs import obtain_current_passphrase

@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional
 
+from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.misc import SignalHandlers
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 

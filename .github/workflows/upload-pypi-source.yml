@@ -29,7 +29,7 @@ jobs:
   mypy:
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -109,7 +109,7 @@ jobs:
   check:
     name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -165,11 +165,16 @@ jobs:
 
   upload_source_dist:
     name: Lint and Upload source distribution
-    runs-on: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     needs:
       - mypy
       - check
+    strategy:
+      matrix:
+        python-version: [3.8]
+        os: [ubuntu-latest]
+
     steps:
       - name: Add safe git directory
         uses: chia-network/actions/git-mark-workspace-safe@main
@@ -194,6 +199,7 @@ jobs:
 
       - name: Build source distribution
         run: |
+          # TODO: let poetry do this?
           python -m build --sdist --outdir dist .
 
       - name: Upload artifacts
