@@ -281,12 +281,12 @@ def test_key_data_without_secrets() -> None:
 @pytest.mark.parametrize(
     "input_data, data_type",
     [
-        ((mnemonic.split()[:-1], entropy, private_key), "mnemonic"),
-        ((mnemonic.split(), KeyDataSecrets.generate().entropy, private_key), "entropy"),
-        ((mnemonic.split(), entropy, KeyDataSecrets.generate().private_key), "private_key"),
+        ((mnemonic.split()[:-1], entropy, bytes(private_key)), "mnemonic"),
+        ((mnemonic.split(), KeyDataSecrets.generate().entropy, bytes(private_key)), "entropy"),
+        ((mnemonic.split(), entropy, KeyDataSecrets.generate().secret_info_bytes), "private_key"),
     ],
 )
-def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateKey], data_type: str) -> None:
+def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, bytes], data_type: str) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyDataSecrets(*input_data)
 
@@ -299,7 +299,7 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
                 fingerprint,
                 bytes(G1Element()),
                 None,
-                KeyDataSecrets(mnemonic.split(), entropy, private_key),
+                KeyDataSecrets(mnemonic.split(), entropy, bytes(private_key)),
                 KeyTypes.G1_ELEMENT.value,
             ),
             "public_key",
