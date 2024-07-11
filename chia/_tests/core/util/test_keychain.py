@@ -321,12 +321,12 @@ def test_key_data_without_secrets(key_info: KeyInfo) -> None:
 @pytest.mark.parametrize(
     "input_data, data_type",
     [
-        ((_24keyinfo.mnemonic.split()[:-1], _24keyinfo.entropy, _24keyinfo.private_key), "mnemonic"),
-        ((_24keyinfo.mnemonic.split(), KeyDataSecrets.generate().entropy, _24keyinfo.private_key), "entropy"),
-        ((_24keyinfo.mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().private_key), "private_key"),
+        ((mnemonic.split()[:-1], _24keyinfo.entropy, _24keyinfo.private_key), "mnemonic"),
+        ((mnemonic.split(), KeyDataSecrets.generate().entropy, _24keyinfo.private_key), "entropy"),
+        ((mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().secret_info_bytes), "private_key"),
     ],
 )
-def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateKey], data_type: str) -> None:
+def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, bytes], data_type: str) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyDataSecrets(*input_data)
 
