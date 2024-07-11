@@ -29,7 +29,7 @@ macOS 11 (Big Sur) is deprecated. This release (2.4.1) will be the last release 
 
 ### Added
 
-- Soft fork 5: disallow infinity G1 points as public keys in AGG*SIG*\* conditions
+- Soft fork 5: disallow infinity G1 points as public keys in `AGG_SIG_*` conditions
 - DL: Added support for updating multiple datastores in a single batch update
 - Add unfinished block to state change event (thanks @felixbrucker)
 - CHIP-0026 Mempool Updates
@@ -436,7 +436,7 @@ macOS 11 (Big Sur) is deprecated. This release (2.4.0) will be the last release 
 - add fee for cat creation
 - max_coin_amount should default to None in wallet send command
 - Add extra_conditions to special offer making
-- bump chia*rs to include bugfix for new AGG_SIG*\* conditions in mempool mode
+- bump `chia_rs` to include bugfix for new `AGG_SIG\*` conditions in mempool mode
 - Fix `chia farm summary` aborting early if no local full node present (fixes #16164) (thanks @xchdata1)
 - fix typo in PendingTxCache
 - rename `chia data add_missing_files` `-f`/`--foldername` to `-d`/`--directory`
@@ -481,7 +481,7 @@ macOS 11 (Big Sur) is deprecated. This release (2.4.0) will be the last release 
 - Move CAT_MOD from cat_loader -> cat_utils
 - Use a more aggresive activation schedule on testnet10
 - Full_node: More set usage in subscription code
-- Rename exclude*coin*_ -> excluded*coin*_ for consistency
+- Rename `exclude_coin_*` -> `excluded_coin_*` for consistency
 - Add `**kwargs` to all `generate_signed_transaction` definitions
 - Full_node: Add `max_height` to `CoinStore.get_coin_states_by_ids`
 - Util: Some tweaks to `StructStream` and sized ints
@@ -1220,7 +1220,7 @@ macOS 11 (Big Sur) is deprecated. This release (2.4.0) will be the last release 
 - Added RPCs for NFT (see <https://docs.chia.net/docs/12rpcs/nft_rpcs>)
 - Enable stricter mempool rule when dealing with multiple extra arguments
 - Added a retry when loading pool info from a pool at 2 minute intervals
-- Added CLI options `--sort-by-height` and –sort-by-relevance`to`chia wallet get_transactions`
+- Added CLI options `--sort-by-height` and `-–sort-by-relevance` to `chia wallet get_transactions`
 - Harvester: Introduce `recursive_plot_scan`
 - Add libgmp-dev to Bladebit installation - thanks to @TheLastCicada
 - Add support for multiple of the same CAT in aggregate offers - Thanks to @roseiliend
@@ -1444,7 +1444,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 - Added new CLI option, chia keys derive, to allow deriving any number of keys in various ways. This is particularly useful to do an exhaustive search for a given address using chia keys derive search.
 - Div soft fork block height set to 2,300,000.
 - Added the ability to add an optional fee for creating and changing plot NFTs.
-- Added _multiprocessing_start_method:_ entry in config.yaml that allows setting the python _start method_ for multiprocessing (default is _spawn_ on Windows & MacOS, _fork_ on Unix).
+- Added `multiprocessing_start_method:` entry in config.yaml that allows setting the python _start method_ for multiprocessing (default is `spawn` on Windows & MacOS, `fork` on Unix).
 - Added option to "Cancel transaction" accepted offers that are stuck in "pending".
 
 ### Changed
@@ -1509,7 +1509,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 - If you start with wallet mode and then switch to farmer mode and back to wallet mode, the full node will continue to sync in the background. To get the full node to stop syncing after switching to wallet mode, you will need to close the Chia and relaunch the Chia app.
 - Wallets with large number of transactions or large number of coins will take longer to sync (more than a few minutes), but should take less time than a full node sync. It could fail in some cases.
 - Huge numbers cannot be put into amount/fee input for transactions in the GUI.
-- Some Linux systems experience excessive memory usage with the value _default_/_python_default_/_fork_ configured for _multiprocessing_start_method:_. Setting this value to _spawn_ may produce better results, but in some uncommon cases, is know to cause crashes.
+- Some Linux systems experience excessive memory usage with the value `default`/`python_default`/`fork` configured for `multiprocessing_start_method:`. Setting this value to `spawn` may produce better results, but in some uncommon cases, is know to cause crashes.
 - Sending a TX with too low of a fee can cause an infinite spinner in the GUI when the mempool is full.
   - Workaround: Restart the GUI, or clear unconfirmed TX.
 - Claiming rewards when self-pooling using CLI will show an error message, but it will actually create the transaction.
@@ -1692,7 +1692,7 @@ Today we’re releasing version 1.2.6 to address a resource bug with nodes, and 
 
 ### Changed
 
-- Thanks @altendky for Correct \* to \*\* kwargs unpacking in time_out_assert().
+- Thanks @altendky for Correct `*` to `**` kwargs unpacking in time_out_assert().
 - Thanks @altendky for changing the default to paginate to chia wallet get_transactions to address cases such as piping and output redirection to a file where the command previously just hung while waiting for the user to press c for the next page.
 - Removed commented-out debug breakpoints.
 - Enabled Rust condition checker to add the ability to parse the output conditions from a generator program in Rust. It also validates some of the conditions in Rust.
