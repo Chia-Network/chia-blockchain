@@ -649,9 +649,6 @@ class WalletNode:
                     peer = item.data[1]
                     assert peer is not None
                     await self.new_peak_wallet(new_peak, peer)
-                    # Check if any coin needs auto spending
-                    if self.config.get("auto_claim", {}).get("enabled", False):
-                        await self.wallet_state_manager.auto_claim_coins()
                 else:
                     self.log.debug("Pulled from queue: UNKNOWN %s", item.item_type)
                     assert False
@@ -1161,11 +1158,16 @@ class WalletNode:
             if not await self.new_peak_from_untrusted(new_peak_hb, peer):
                 return
 
-        if peer.peer_node_id in self.synced_peers:
-            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
         # todo why do we call this if there was an exception / the sync is not finished
         async with self.wallet_state_manager.lock:
             await self.wallet_state_manager.new_peak(new_peak.height)
+
+            # Check if any coin needs auto spending
+            if self.config.get("auto_claim", {}).get("enabled", False):
+                await self.wallet_state_manager.auto_claim_coins()
+
+        if peer.peer_node_id in self.synced_peers:
+            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
 
     async def new_peak_from_trusted(
         self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection
