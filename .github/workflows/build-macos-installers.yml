@@ -55,7 +55,7 @@ jobs:
           - runs-on: macos-12
             name: intel
             bladebit-suffix: macos-x86-64.tar.gz
-          - runs-on: [MacOS, ARM64]
+          - runs-on: macos-13-arm64
             name: m1
             bladebit-suffix: macos-arm64.tar.gz
 
@@ -343,7 +343,7 @@ jobs:
         run: |
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/install/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256
-          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
+          aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent s3://download.chia.net/torrents/Chia-${{ env.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
 
       - name: Upload release artifacts
         if: env.RELEASE == 'true'
@@ -355,18 +355,23 @@ jobs:
             $RELEASE_TAG \
             build_scripts/final_installer/*.dmg
 
-      - uses: Chia-Network/actions/github/jwt@main
-        if: steps.check_secrets.outputs.HAS_GLUE_SECRET
-
       - name: Mark pre-release installer complete
+        uses: Chia-Network/actions/github/glue@main
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
+        with:
+          json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}"
+          glue_path: "success/${{ matrix.os.glue-name }}"
 
       - name: Mark release installer complete
+        uses: Chia-Network/actions/github/glue@main
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name }}
+        with:
+          json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}"
+          glue_path: "success/${{ matrix.os.glue-name }}"
 
   test:
     name: Test ${{ matrix.os.name }} ${{ matrix.arch.name }}
