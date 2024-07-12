@@ -21,7 +21,8 @@ jobs:
 
       - uses: Chia-Network/actions/github/jwt@main
 
-      - uses: Chia-Network/actions/github/glue@main
+      - name: Start pre-release
+        uses: Chia-Network/actions/github/glue@main
         if: "github.event.release.prerelease"
         with:
           json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
@@ -29,7 +30,8 @@ jobs:
           glue_project: "${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}"
           glue_path: "start"
 
-      - uses: Chia-Network/actions/github/glue@main
+      - name: Start release
+        uses: Chia-Network/actions/github/glue@main
         if: "!github.event.release.prerelease"
         with:
           json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
