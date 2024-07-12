@@ -19,8 +19,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: Chia-Network/actions/github/jwt@main
-
       - name: Start pre-release
         uses: Chia-Network/actions/github/glue@main
         if: "github.event.release.prerelease"
