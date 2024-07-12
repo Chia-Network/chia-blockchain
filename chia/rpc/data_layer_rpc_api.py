@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
@@ -22,8 +22,10 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     TakeOfferRequest,
     TakeOfferResponse,
+    Unspecified,
     VerifyOfferResponse,
     VerifyProofResponse,
+    unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.rpc.data_layer_rpc_util import marshal
@@ -161,12 +163,16 @@ class DataLayerRpcApi:
     async def get_value(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
-        root_hash = request.get("root_hash")
+        # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
+        root_hash: Optional[str] = request.get("root_hash")
+        resolved_root_hash: Union[bytes32, Unspecified]
         if root_hash is not None:
-            root_hash = bytes32.from_hexstr(root_hash)
+            resolved_root_hash = bytes32.from_hexstr(root_hash)
+        else:
+            resolved_root_hash = unspecified
         if self.service is None:
             raise Exception("Data layer not created")
-        value = await self.service.get_value(store_id=store_id, key=key, root_hash=root_hash)
+        value = await self.service.get_value(store_id=store_id, key=key, root_hash=resolved_root_hash)
         hex = None
         if value is not None:
             hex = value.hex()
@@ -174,22 +180,27 @@ class DataLayerRpcApi:
 
     async def get_keys(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
-        root_hash = request.get("root_hash")
+        # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
+        root_hash: Optional[str] = request.get("root_hash")
         page = request.get("page", None)
         max_page_size = request.get("max_page_size", None)
+        resolved_root_hash: Union[bytes32, Unspecified]
         if root_hash is not None:
-            root_hash = bytes32.from_hexstr(root_hash)
+            resolved_root_hash = bytes32.from_hexstr(root_hash)
+        else:
+            resolved_root_hash = unspecified
         if self.service is None:
             raise Exception("Data layer not created")
 
         if page is None:
-            keys = await self.service.get_keys(store_id, root_hash)
+            keys = await self.service.get_keys(store_id, resolved_root_hash)
         else:
-            keys_paginated = await self.service.get_keys_paginated(store_id, root_hash, page, max_page_size)
+            keys_paginated = await self.service.get_keys_paginated(store_id, resolved_root_hash, page, max_page_size)
             keys = keys_paginated.keys
 
-        if keys == [] and root_hash is not None and root_hash != bytes32([0] * 32):
-            raise Exception(f"Can't find keys for {root_hash}")
+        # NOTE: here we do support zeros as the empty root
+        if keys == [] and resolved_root_hash is not unspecified and resolved_root_hash != bytes32([0] * 32):
+            raise Exception(f"Can't find keys for {resolved_root_hash}")
 
         response: EndpointResult = {"keys": [f"0x{key.hex()}" for key in keys]}
 
@@ -206,25 +217,30 @@ class DataLayerRpcApi:
 
     async def get_keys_values(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
-        root_hash = request.get("root_hash")
+        # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
+        root_hash: Optional[str] = request.get("root_hash")
         page = request.get("page", None)
         max_page_size = request.get("max_page_size", None)
+        resolved_root_hash: Union[bytes32, Unspecified]
         if root_hash is not None:
-            root_hash = bytes32.from_hexstr(root_hash)
+            resolved_root_hash = bytes32.from_hexstr(root_hash)
+        else:
+            resolved_root_hash = unspecified
         if self.service is None:
             raise Exception("Data layer not created")
 
         if page is None:
-            keys_values = await self.service.get_keys_values(store_id, root_hash)
+            keys_values = await self.service.get_keys_values(store_id, resolved_root_hash)
         else:
             keys_values_paginated = await self.service.get_keys_values_paginated(
-                store_id, root_hash, page, max_page_size
+                store_id, resolved_root_hash, page, max_page_size
             )
             keys_values = keys_values_paginated.keys_values
 
         json_nodes = [recurse_jsonify(dataclasses.asdict(node)) for node in keys_values]
-        if not json_nodes and root_hash is not None and root_hash != bytes32([0] * 32):
-            raise Exception(f"Can't find keys and values for {root_hash}")
+        # NOTE: here we do support zeros as the empty root
+        if not json_nodes and resolved_root_hash is not unspecified and resolved_root_hash != bytes32([0] * 32):
+            raise Exception(f"Can't find keys and values for {resolved_root_hash}")
 
         response: EndpointResult = {"keys_values": json_nodes}
 
