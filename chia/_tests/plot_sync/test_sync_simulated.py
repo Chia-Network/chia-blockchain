@@ -30,8 +30,8 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.batches import to_batches
 from chia.util.ints import int16, uint8, uint64
-from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 

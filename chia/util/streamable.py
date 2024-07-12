@@ -28,7 +28,7 @@ from typing_extensions import Literal, get_args, get_origin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import uint32
+from chia.util.ints import uint16, uint32, uint64
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
@@ -272,7 +272,9 @@ def function_to_post_init_process_one_item(f_type: Type[object]) -> ConvertFunct
     return lambda item: post_init_process_item(f_type, item)
 
 
-def recurse_jsonify(d: Any, next_recursion_step: Optional[Callable[[Any, Any], Any]] = None) -> Any:
+def recurse_jsonify(
+    d: Any, next_recursion_step: Optional[Callable[[Any, Any], Any]] = None, **next_recursion_env: Any
+) -> Any:
     """
     Makes bytes objects into strings with 0x, and makes large ints into strings.
     """
@@ -281,19 +283,19 @@ def recurse_jsonify(d: Any, next_recursion_step: Optional[Callable[[Any, Any], A
     if dataclasses.is_dataclass(d):
         new_dict = {}
         for field in dataclasses.fields(d):
-            new_dict[field.name] = next_recursion_step(getattr(d, field.name), None)
+            new_dict[field.name] = next_recursion_step(getattr(d, field.name), None, **next_recursion_env)
         return new_dict
 
-    elif isinstance(d, list) or isinstance(d, tuple):
+    elif isinstance(d, (list, tuple)):
         new_list = []
         for item in d:
-            new_list.append(next_recursion_step(item, None))
+            new_list.append(next_recursion_step(item, None, **next_recursion_env))
         return new_list
 
     elif isinstance(d, dict):
         new_dict = {}
         for name, val in d.items():
-            new_dict[name] = next_recursion_step(val, None)
+            new_dict[name] = next_recursion_step(val, None, **next_recursion_env)
         return new_dict
 
     elif issubclass(type(d), bytes):
@@ -629,3 +631,24 @@ class Streamable:
     @classmethod
     def from_json_dict(cls: Type[_T_Streamable], json_dict: Dict[str, Any]) -> _T_Streamable:
         return streamable_from_dict(cls, json_dict)
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class VersionedBlob(Streamable):
+    version: uint16
+    blob: bytes
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class UInt32Range(Streamable):
+    start: uint32 = uint32(0)
+    stop: uint32 = uint32.MAXIMUM
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class UInt64Range(Streamable):
+    start: uint64 = uint64(0)
+    stop: uint64 = uint64.MAXIMUM

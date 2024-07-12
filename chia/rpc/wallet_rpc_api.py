@@ -22,6 +22,8 @@ from chia.rpc.util import marshal, tx_endpoint
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
+    ExecuteSigningInstructions,
+    ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GetNotifications,
@@ -45,9 +47,8 @@ from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
-from chia.util.misc import UInt32Range
 from chia.util.path import path_from_root
-from chia.util.streamable import Streamable, streamable
+from chia.util.streamable import Streamable, UInt32Range, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CRCATInfo
@@ -297,6 +298,8 @@ class WalletRpcApi:
             "/gather_signing_info": self.gather_signing_info,
             "/apply_signatures": self.apply_signatures,
             "/submit_transactions": self.submit_transactions,
+            # Not technically Signer Protocol but related
+            "/execute_signing_instructions": self.execute_signing_instructions,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -385,7 +388,7 @@ class WalletRpcApi:
         if started is True:
             return {"fingerprint": fingerprint}
 
-        return {"success": False, "error": "Unknown Error"}
+        return {"success": False, "error": f"fingerprint {fingerprint} not found in keychain or keychain is empty"}
 
     async def get_logged_in_fingerprint(self, request: Dict[str, Any]) -> EndpointResult:
         return {"fingerprint": self.service.logged_in_fingerprint}
@@ -762,22 +765,23 @@ class WalletRpcApi:
                     if type(request["metadata"]) is dict:
                         metadata = request["metadata"]
 
-                did_wallet_name: str = request.get("wallet_name", None)
-                if did_wallet_name is not None:
-                    did_wallet_name = did_wallet_name.strip()
-                did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                    wallet_state_manager,
-                    main_wallet,
-                    uint64(request["amount"]),
-                    tx_config,
-                    action_scope,
-                    backup_dids,
-                    uint64(num_needed),
-                    metadata,
-                    did_wallet_name,
-                    uint64(request.get("fee", 0)),
-                    extra_conditions=extra_conditions,
-                )
+                async with self.service.wallet_state_manager.lock:
+                    did_wallet_name: str = request.get("wallet_name", None)
+                    if did_wallet_name is not None:
+                        did_wallet_name = did_wallet_name.strip()
+                    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+                        wallet_state_manager,
+                        main_wallet,
+                        uint64(request["amount"]),
+                        tx_config,
+                        action_scope,
+                        backup_dids,
+                        uint64(num_needed),
+                        metadata,
+                        did_wallet_name,
+                        uint64(request.get("fee", 0)),
+                        extra_conditions=extra_conditions,
+                    )
 
                 my_did_id = encode_puzzle_hash(
                     bytes32.fromhex(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
@@ -914,8 +918,7 @@ class WalletRpcApi:
                         if wallet.type() == WalletType.POOLING_WALLET:
                             assert isinstance(wallet, PoolWallet)
                             pool_wallet_index = await wallet.get_pool_wallet_index()
-                            if pool_wallet_index > max_pwi:
-                                max_pwi = pool_wallet_index
+                            max_pwi = max(max_pwi, pool_wallet_index)
 
                     if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
@@ -1214,6 +1217,7 @@ class WalletRpcApi:
             "transaction": transaction,
             "transaction_id": TransactionRecord.from_json_dict_convenience(transaction).name,
             "transactions": transactions,
+            "unsigned_transactions": response["unsigned_transactions"],
         }
 
     @tx_endpoint(push=True, merge_spends=False)
@@ -3872,8 +3876,7 @@ class WalletRpcApi:
                 fee_amount += record.amount - base_farmer_reward
                 farmer_reward_amount += base_farmer_reward
                 blocks_won += 1
-            if height > last_height_farmed:
-                last_height_farmed = height
+            last_height_farmed = max(last_height_farmed, height)
             amount += record.amount
 
         last_time_farmed = uint64(
@@ -4677,4 +4680,15 @@ class WalletRpcApi:
     ) -> SubmitTransactionsResponse:
         return SubmitTransactionsResponse(
             await self.service.wallet_state_manager.submit_transactions(request.signed_transactions)
+        )
+
+    @marshal
+    async def execute_signing_instructions(
+        self,
+        request: ExecuteSigningInstructions,
+    ) -> ExecuteSigningInstructionsResponse:
+        return ExecuteSigningInstructionsResponse(
+            await self.service.wallet_state_manager.execute_signing_instructions(
+                request.signing_instructions, request.partial_allowed
+            )
         )

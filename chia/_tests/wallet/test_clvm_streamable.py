@@ -6,8 +6,13 @@ from typing import List, Optional, Tuple
 import pytest
 
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.signer_protocol import Coin, Spend
 from chia.wallet.util.clvm_streamable import (
+    TranslationLayer,
+    TranslationLayerMapping,
     byte_deserialize_clvm_streamable,
     byte_serialize_clvm_streamable,
     clvm_streamable,
@@ -114,3 +119,91 @@ def test_compound_type_serialization() -> None:
         @dataclasses.dataclass(frozen=True)
         class DoesntWork(Streamable):
             tuples_are_not_supported: Tuple[str]
+
+
+@clvm_streamable
+@dataclasses.dataclass(frozen=True)
+class FooSpend(Streamable):
+    coin: Coin
+    puzzle_and_solution: Program
+
+    @staticmethod
+    def from_wallet_api(_from: Spend) -> FooSpend:
+        return FooSpend(
+            _from.coin,
+            Program.to((_from.puzzle, _from.solution)),
+        )
+
+    @staticmethod
+    def to_wallet_api(_from: FooSpend) -> Spend:
+        return Spend(
+            _from.coin,
+            _from.puzzle_and_solution.first(),
+            _from.puzzle_and_solution.rest(),
+        )
+
+
+def test_translation_layer() -> None:
+    FOO_TRANSLATION = TranslationLayer(
+        [
+            TranslationLayerMapping(
+                Spend,
+                FooSpend,
+                FooSpend.from_wallet_api,
+                FooSpend.to_wallet_api,
+            )
+        ]
+    )
+
+    coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+    spend = Spend(
+        coin,
+        Program.to("puzzle"),
+        Program.to("solution"),
+    )
+    foo_spend = FooSpend(
+        coin,
+        Program.to(("puzzle", "solution")),
+    )
+
+    byte_serialize_clvm_streamable(foo_spend) == byte_serialize_clvm_streamable(
+        spend, translation_layer=FOO_TRANSLATION
+    )
+    program_serialize_clvm_streamable(foo_spend) == program_serialize_clvm_streamable(
+        spend, translation_layer=FOO_TRANSLATION
+    )
+    json_serialize_with_clvm_streamable(foo_spend) == json_serialize_with_clvm_streamable(
+        spend, translation_layer=FOO_TRANSLATION
+    )
+    assert spend == byte_deserialize_clvm_streamable(
+        byte_serialize_clvm_streamable(foo_spend), Spend, translation_layer=FOO_TRANSLATION
+    )
+    assert spend == program_deserialize_clvm_streamable(
+        program_serialize_clvm_streamable(foo_spend), Spend, translation_layer=FOO_TRANSLATION
+    )
+    assert spend == json_deserialize_with_clvm_streamable(
+        json_serialize_with_clvm_streamable(foo_spend), Spend, translation_layer=FOO_TRANSLATION
+    )
+
+    # Deserialization should only work now if using the translation layer
+    with pytest.raises(Exception):
+        byte_deserialize_clvm_streamable(byte_serialize_clvm_streamable(foo_spend), Spend)
+    with pytest.raises(Exception):
+        program_deserialize_clvm_streamable(program_serialize_clvm_streamable(foo_spend), Spend)
+    with pytest.raises(Exception):
+        json_deserialize_with_clvm_streamable(json_serialize_with_clvm_streamable(foo_spend), Spend)
+
+    # Test that types not registered with translation layer are serialized properly
+    assert coin == byte_deserialize_clvm_streamable(
+        byte_serialize_clvm_streamable(coin, translation_layer=FOO_TRANSLATION), Coin, translation_layer=FOO_TRANSLATION
+    )
+    assert coin == program_deserialize_clvm_streamable(
+        program_serialize_clvm_streamable(coin, translation_layer=FOO_TRANSLATION),
+        Coin,
+        translation_layer=FOO_TRANSLATION,
+    )
+    assert coin == json_deserialize_with_clvm_streamable(
+        json_serialize_with_clvm_streamable(coin, translation_layer=FOO_TRANSLATION),
+        Coin,
+        translation_layer=FOO_TRANSLATION,
+    )

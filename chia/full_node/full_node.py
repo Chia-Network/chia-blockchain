@@ -29,7 +29,7 @@ from typing import (
     final,
 )
 
-from chia_rs import AugSchemeMPL
+from chia_rs import AugSchemeMPL, BLSCache
 from packaging.version import Version
 
 from chia.consensus.block_body_validation import ForkInfo
@@ -44,7 +44,6 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
-from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
@@ -86,7 +85,6 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.cached_bls import BLSCache
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
@@ -1287,7 +1285,7 @@ class FullNode:
         self.log.log(
             logging.WARNING if pre_validate_time > 10 else logging.DEBUG,
             f"Block pre-validation: {pre_validate_end - pre_validate_start:0.2f}s "
-            f"CLVM: {sum([pvr.timing/1000.0 for pvr in pre_validation_results]):0.2f}s "
+            f"CLVM: {sum(pvr.timing/1000.0 for pvr in pre_validation_results):0.2f}s "
             f"({len(blocks_to_validate)} blocks, start height: {blocks_to_validate[0].height})",
         )
         for i, block in enumerate(blocks_to_validate):
@@ -1480,12 +1478,6 @@ class FullNode:
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
 
-        if (
-            self.full_node_store.previous_generator is not None
-            and state_change_summary.fork_height < self.full_node_store.previous_generator.block_height
-        ):
-            self.full_node_store.previous_generator = None
-
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
             state_change_summary,
             self.subscriptions.has_coin_subscription,
@@ -1549,13 +1541,6 @@ class FullNode:
         # Update the mempool (returns successful pending transactions added to the mempool)
         spent_coins: List[bytes32] = [coin_id for coin_id, _ in state_change_summary.removals]
         mempool_new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), spent_coins)
-
-        # Check if we detected a spent transaction, to load up our generator cache
-        if block.transactions_generator is not None and self.full_node_store.previous_generator is None:
-            generator_arg = detect_potential_template_generator(block.height, block.transactions_generator)
-            if generator_arg:
-                self.log.info(f"Saving previous generator for height {block.height}")
-                self.full_node_store.previous_generator = generator_arg
 
         return PeakPostProcessingResult(
             mempool_new_peak_result.items,
@@ -1980,7 +1965,7 @@ class FullNode:
             assert npc_result.conds is not None
             pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
             if not self._bls_cache.aggregate_verify(
-                pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature, True
+                pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature
             ):
                 raise ConsensusError(Err.BAD_AGGREGATE_SIGNATURE)
 
@@ -2351,6 +2336,7 @@ class FullNode:
             except Exception:
                 self.mempool_manager.remove_seen(spend_name)
                 raise
+
             async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
@@ -2401,8 +2387,7 @@ class FullNode:
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE, current_peer.peer_node_id)
 
-        conds = mempool_item.npc_result.conds
-        assert conds is not None
+        conds = mempool_item.conds
 
         all_peers = {
             peer_id
@@ -2437,7 +2422,7 @@ class FullNode:
         )
 
     async def broadcast_removed_tx(self, mempool_removals: List[MempoolRemoveInfo]) -> None:
-        total_removals = sum([len(r.items) for r in mempool_removals])
+        total_removals = sum(len(r.items) for r in mempool_removals)
         if total_removals == 0:
             return
 
@@ -2458,7 +2443,7 @@ class FullNode:
 
         for removal_info in mempool_removals:
             for internal_mempool_item in removal_info.items:
-                conds = internal_mempool_item.npc_result.conds
+                conds = internal_mempool_item.conds
                 assert conds is not None
 
                 hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
@@ -2798,8 +2783,16 @@ class FullNode:
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []
 
                 self.log.info("Getting random heights for bluebox to compact")
-                heights = await self.block_store.get_random_not_compactified(target_uncompact_proofs)
-                self.log.info("Heights found for bluebox to compact: [%s]" % ", ".join(map(str, heights)))
+
+                if self._server is None:
+                    self.log.info("Not broadcasting uncompact blocks, no server found")
+                    await asyncio.sleep(uncompact_interval_scan)
+                    continue
+                connected_timelords = self.server.get_connections(NodeType.TIMELORD)
+
+                total_target_uncompact_proofs = target_uncompact_proofs * max(1, len(connected_timelords))
+                heights = await self.block_store.get_random_not_compactified(total_target_uncompact_proofs)
+                self.log.info("Heights found for bluebox to compact: [%s]", ", ".join(map(str, heights)))
 
                 for h in heights:
                     headers = await self.blockchain.get_header_blocks_in_range(h, h, tx_filter=False)
@@ -2871,17 +2864,29 @@ class FullNode:
                                 )
                             )
 
-                if len(broadcast_list) > target_uncompact_proofs:
-                    broadcast_list = broadcast_list[:target_uncompact_proofs]
+                broadcast_list_chunks: List[List[timelord_protocol.RequestCompactProofOfTime]] = []
+                for index in range(0, len(broadcast_list), target_uncompact_proofs):
+                    broadcast_list_chunks.append(broadcast_list[index : index + target_uncompact_proofs])
+                if len(broadcast_list_chunks) == 0:
+                    self.log.info("Did not find any uncompact blocks.")
+                    await asyncio.sleep(uncompact_interval_scan)
+                    continue
                 if self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
+                    await asyncio.sleep(uncompact_interval_scan)
                     continue
                 if self._server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
-                    msgs = []
-                    for new_pot in broadcast_list:
-                        msg = make_msg(ProtocolMessageTypes.request_compact_proof_of_time, new_pot)
-                        msgs.append(msg)
-                    await self.server.send_to_all(msgs, NodeType.TIMELORD)
+                    connected_timelords = self.server.get_connections(NodeType.TIMELORD)
+                    chunk_index = 0
+                    for connection in connected_timelords:
+                        peer_node_id = connection.peer_node_id
+                        msgs = []
+                        broadcast_list = broadcast_list_chunks[chunk_index]
+                        chunk_index = (chunk_index + 1) % len(broadcast_list_chunks)
+                        for new_pot in broadcast_list:
+                            msg = make_msg(ProtocolMessageTypes.request_compact_proof_of_time, new_pot)
+                            msgs.append(msg)
+                        await self.server.send_to_specific(msgs, peer_node_id)
                 await asyncio.sleep(uncompact_interval_scan)
         except Exception as e:
             error_stack = traceback.format_exc()

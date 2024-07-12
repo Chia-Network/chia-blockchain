@@ -88,7 +88,7 @@ async def test_nft_offer_sell_nft(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
+    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
     await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
@@ -237,7 +237,7 @@ async def test_nft_offer_request_nft(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
+    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
     await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
@@ -384,7 +384,7 @@ async def test_nft_offer_sell_did_to_did(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
+    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
     await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
@@ -555,7 +555,7 @@ async def test_nft_offer_sell_nft_for_cat(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
+    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
     await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
@@ -749,7 +749,7 @@ async def test_nft_offer_request_nft_for_cat(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
+    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2))
     await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
     await full_node_api.farm_rewards_to_wallet(funds, wallet_taker, timeout=30)
 
@@ -958,7 +958,7 @@ async def test_nft_offer_sell_cancel(
 
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
-    funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
+    funds = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3))
     await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
 
     async with wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
@@ -1082,7 +1082,7 @@ async def test_nft_offer_sell_cancel_in_batch(
     await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
     await full_node_api.farm_rewards_to_wallet(funds, wallet_maker, timeout=30)
 
@@ -1226,8 +1226,8 @@ async def test_complex_nft_offer(
     await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Need money for fees and offering
-    funds_maker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
-    funds_taker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 6)])
+    funds_maker = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3))
+    funds_taker = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 6))
 
     await full_node_api.farm_rewards_to_wallet(amount=funds_maker, wallet=wsm_maker.main_wallet, timeout=60)
     await full_node_api.farm_rewards_to_wallet(amount=funds_taker, wallet=wsm_taker.main_wallet, timeout=60)

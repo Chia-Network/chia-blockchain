@@ -59,9 +59,8 @@ from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
-from chia.util.misc import UInt32Range, UInt64Range, VersionedBlob
 from chia.util.path import path_from_root
-from chia.util.streamable import Streamable
+from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle, match_cat_puzzle
@@ -145,7 +144,7 @@ from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import WalletActionScope, new_wallet_action_scope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -376,6 +375,16 @@ class WalletStateManager:
         if record.hardened:
             return master_sk_to_wallet_sk(self.get_master_private_key(), record.index)
         return master_sk_to_wallet_sk_unhardened(self.get_master_private_key(), record.index)
+
+    async def get_public_key(self, puzzle_hash: bytes32) -> bytes:
+        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        if record is None:
+            raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
+        if isinstance(record._pubkey, bytes):
+            pk_bytes = record._pubkey
+        else:
+            pk_bytes = bytes(record._pubkey)
+        return pk_bytes
 
     def get_master_private_key(self) -> PrivateKey:
         if self.private_key is None:  # pragma: no cover
@@ -2079,7 +2088,7 @@ class WalletStateManager:
                 self.log.exception(f"Failed to add coin_state: {coin_state}, error: {e}")
                 if rollback_wallets is not None:
                     self.wallets = rollback_wallets  # Restore since DB will be rolled back by writer
-                if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
+                if isinstance(e, (PeerRequestException, aiosqlite.Error)):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
                     await self.retry_store.remove_state(coin_state)
@@ -2265,6 +2274,7 @@ class WalletStateManager:
         merge_spends: bool = True,
         sign: Optional[bool] = None,
         additional_signing_responses: Optional[List[SigningResponse]] = None,
+        extra_spends: Optional[List[SpendBundle]] = None,
     ) -> List[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2275,6 +2285,8 @@ class WalletStateManager:
         agg_spend: SpendBundle = SpendBundle.aggregate(
             [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
         )
+        if extra_spends is not None:
+            agg_spend = SpendBundle.aggregate([agg_spend, *extra_spends])
         actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
         if merge_spends and actual_spend_involved:
             tx_records = [
@@ -2282,6 +2294,17 @@ class WalletStateManager:
                     tx,
                     spend_bundle=agg_spend if i == 0 else None,
                     name=agg_spend.name() if i == 0 else bytes32.secret(),
+                )
+                for i, tx in enumerate(tx_records)
+            ]
+        elif extra_spends is not None and extra_spends != []:
+            extra_spends.extend([] if tx_records[0].spend_bundle is None else [tx_records[0].spend_bundle])
+            extra_spend_bundle = SpendBundle.aggregate(extra_spends)
+            tx_records = [
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=extra_spend_bundle if i == 0 else tx.spend_bundle,
+                    name=extra_spend_bundle.name() if i == 0 else bytes32.secret(),
                 )
                 for i, tx in enumerate(tx_records)
             ]
@@ -2755,12 +2778,14 @@ class WalletStateManager:
         merge_spends: bool = True,
         sign: Optional[bool] = None,
         additional_signing_responses: List[SigningResponse] = [],
+        extra_spends: List[SpendBundle] = [],
     ) -> AsyncIterator[WalletActionScope]:
-        async with WalletActionScope.new(
+        async with new_wallet_action_scope(
             self,
             push=push,
             merge_spends=merge_spends,
             sign=sign,
             additional_signing_responses=additional_signing_responses,
+            extra_spends=extra_spends,
         ) as action_scope:
             yield action_scope

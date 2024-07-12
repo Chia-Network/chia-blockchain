@@ -23,27 +23,28 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 @pytest.mark.anyio
 async def test_notification_store_backwards_compat() -> None:
     # First create the DB the way it would have otheriwse been created
-    db_name = Path(tempfile.TemporaryDirectory().name).joinpath("test.sqlite")
-    db_name.parent.mkdir(parents=True, exist_ok=True)
-    async with DBWrapper2.managed(
-        database=db_name,
-    ) as db_wrapper:
-        async with db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute(
-                "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)"
-            )
-            cursor = await conn.execute(
-                "INSERT OR REPLACE INTO notifications (coin_id, msg, amount) VALUES(?, ?, ?)",
-                (
-                    bytes32([0] * 32),
-                    bytes([0] * 10),
-                    bytes([0]),
-                ),
-            )
-            await cursor.close()
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        db_name = Path(temporary_directory).joinpath("test.sqlite")
+        db_name.parent.mkdir(parents=True, exist_ok=True)
+        async with DBWrapper2.managed(
+            database=db_name,
+        ) as db_wrapper:
+            async with db_wrapper.writer_maybe_transaction() as conn:
+                await conn.execute(
+                    "CREATE TABLE IF NOT EXISTS notifications(coin_id blob PRIMARY KEY,msg blob,amount blob)"
+                )
+                cursor = await conn.execute(
+                    "INSERT OR REPLACE INTO notifications (coin_id, msg, amount) VALUES(?, ?, ?)",
+                    (
+                        bytes32([0] * 32),
+                        bytes([0] * 10),
+                        bytes([0]),
+                    ),
+                )
+                await cursor.close()
 
-        await NotificationStore.create(db_wrapper)
-        await NotificationStore.create(db_wrapper)
+            await NotificationStore.create(db_wrapper)
+            await NotificationStore.create(db_wrapper)
 
 
 @pytest.mark.parametrize(
@@ -87,7 +88,7 @@ async def test_notifications(
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2], timeout=30)
 
-    funds_1 = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
+    funds_1 = sum(calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3))
     funds_2 = 0
 
     await time_out_assert(30, wallet_1.get_unconfirmed_balance, funds_1)

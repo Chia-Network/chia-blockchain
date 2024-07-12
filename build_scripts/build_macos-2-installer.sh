@@ -17,6 +17,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Installing npm utilities"
 cd npm_macos || exit 1
 npm ci
+NPM_PATH="$(pwd)/node_modules/.bin"
 cd .. || exit 1
 
 echo "Create dist/"
@@ -36,6 +37,10 @@ fi
 echo "Building pip and NPM license directory"
 pwd
 bash ./build_license_directory.sh
+
+# Remove rpaths on some libraries to homebrew directories that
+# appears sometimes m-series chips (prefer bundled from @loader_path/..)
+bash ./remove_brew_rpaths.sh
 
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 # Change to the gui package
@@ -62,8 +67,14 @@ else
   echo "Not on ci or no secrets so not signing"
   export CSC_IDENTITY_AUTO_DISCOVERY=false
 fi
-echo npx electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11" --config ../../../build_scripts/electron-builder.json
-npx electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11" --config ../../../build_scripts/electron-builder.json
+echo "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
+  --config.productName="$PRODUCT_NAME" \
+  --config.mac.minimumSystemVersion="11" \
+  --config ../../../build_scripts/electron-builder.json
+"${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
+  --config.productName="$PRODUCT_NAME" \
+  --config.mac.minimumSystemVersion="11" \
+  --config ../../../build_scripts/electron-builder.json
 LAST_EXIT_CODE=$?
 ls -l dist/mac*/chia.app/Contents/Resources/app.asar
 
