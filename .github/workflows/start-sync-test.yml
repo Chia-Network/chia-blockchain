@@ -25,14 +25,14 @@ jobs:
         uses: Chia-Network/actions/github/glue@main
         with:
           json_data: '{"test_ref": "${{ env.RELEASE_TAG }}"}'
-          glue_url: '${{ secrets.GLUE_API_URL }}'
-          glue_project: 'sync-test/$RELEASE_TAG'
-          glue_path: 'start'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "sync-test/$RELEASE_TAG"
+          glue_path: "start"
 
       - name: Trigger sync test workflow success via github-glue
         uses: Chia-Network/actions/github/glue@main
         with:
           json_data: '{"test_ref": "${{ env.RELEASE_TAG }}"}'
-          glue_url: '${{ secrets.GLUE_API_URL }}'
-          glue_project: 'sync-test/$RELEASE_TAG'
-          glue_path: 'success/deploy'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "sync-test/$RELEASE_TAG"
+          glue_path: "success/deploy"

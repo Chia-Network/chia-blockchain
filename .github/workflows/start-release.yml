@@ -25,14 +25,14 @@ jobs:
         if: "github.event.release.prerelease"
         with:
           json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
-          glue_url: '${{ secrets.GLUE_API_URL }}'
-          glue_project: '${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}'
-          glue_path: 'start'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}"
+          glue_path: "start"
 
       - uses: Chia-Network/actions/github/glue@main
         if: "!github.event.release.prerelease"
         with:
           json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
-          glue_url: '${{ secrets.GLUE_API_URL }}'
-          glue_project: '${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}'
-          glue_path: 'start'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}"
+          glue_path: "start"
