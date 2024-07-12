@@ -343,15 +343,16 @@ jobs:
             $RELEASE_TAG \
             artifacts/${FILE}
 
-      - uses: Chia-Network/actions/github/jwt@main
-        if: steps.check_secrets.outputs.HAS_GLUE_SECRET
-
       - name: Mark installer complete
+        uses: Chia-Network/actions/github/glue@main
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET && (env.PRE_RELEASE == 'true' || env.FULL_RELEASE == 'true')
         env:
           REPO_SUFFIX: ${{ env.PRE_RELEASE == 'true' && '-prerelease' || '' }}
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}${{ env.REPO_SUFFIX }}/${{ env.RELEASE_TAG }}/success/${{ matrix.os.glue-name[matrix.arch.matrix] }}
+        with:
+          json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "${{ env.RFC_REPO }}${{ env.REPO_SUFFIX }}/${{ env.RELEASE_TAG }}"
+          glue_path: "success/${{ matrix.os.glue-name }}"
 
   test:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}

@@ -31,11 +31,13 @@ from chia.data_layer.data_layer_util import (
     Status,
     Subscription,
     TerminalNode,
+    Unspecified,
     get_hashes_for_page,
     internal_hash,
     key_hash,
     leaf_hash,
     row_to_node,
+    unspecified,
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -785,13 +787,20 @@ class DataStore:
             {"root_hash": root_hash, "node_type": NodeType.TERMINAL},
         )
 
-    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32] = None) -> List[TerminalNode]:
+    async def get_keys_values(
+        self,
+        store_id: bytes32,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
+    ) -> List[TerminalNode]:
         async with self.db_wrapper.reader() as reader:
-            if root_hash is None:
+            resolved_root_hash: Optional[bytes32]
+            if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
-                root_hash = root.node_hash
+                resolved_root_hash = root.node_hash
+            else:
+                resolved_root_hash = root_hash
 
-            cursor = await self.get_keys_values_cursor(reader, root_hash)
+            cursor = await self.get_keys_values_cursor(reader, resolved_root_hash)
             terminal_nodes: List[TerminalNode] = []
             async for row in cursor:
                 if row["depth"] > 62:
@@ -814,14 +823,19 @@ class DataStore:
         return terminal_nodes
 
     async def get_keys_values_compressed(
-        self, store_id: bytes32, root_hash: Optional[bytes32] = None
+        self,
+        store_id: bytes32,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> KeysValuesCompressed:
         async with self.db_wrapper.reader() as reader:
-            if root_hash is None:
+            resolved_root_hash: Optional[bytes32]
+            if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
-                root_hash = root.node_hash
+                resolved_root_hash = root.node_hash
+            else:
+                resolved_root_hash = root_hash
 
-            cursor = await self.get_keys_values_cursor(reader, root_hash)
+            cursor = await self.get_keys_values_cursor(reader, resolved_root_hash)
             keys_values_hashed: Dict[bytes32, bytes32] = {}
             key_hash_to_length: Dict[bytes32, int] = {}
             leaf_hash_to_length: Dict[bytes32, int] = {}
@@ -835,7 +849,7 @@ class DataStore:
                 key_hash_to_length[key_hash(node.key)] = len(node.key)
                 leaf_hash_to_length[leaf_hash(node.key, node.value)] = len(node.key) + len(node.value)
 
-            return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, root_hash)
+            return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, resolved_root_hash)
 
     async def get_leaf_hashes_by_hashed_key(
         self, store_id: bytes32, root_hash: Optional[bytes32] = None
@@ -853,7 +867,11 @@ class DataStore:
         return result
 
     async def get_keys_paginated(
-        self, store_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
+        self,
+        store_id: bytes32,
+        page: int,
+        max_page_size: int,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> KeysPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(store_id, root_hash)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.key_hash_to_length, max_page_size)
@@ -873,7 +891,11 @@ class DataStore:
         )
 
     async def get_keys_values_paginated(
-        self, store_id: bytes32, page: int, max_page_size: int, root_hash: Optional[bytes32] = None
+        self,
+        store_id: bytes32,
+        page: int,
+        max_page_size: int,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> KeysValuesPaginationData:
         keys_values_compressed = await self.get_keys_values_compressed(store_id, root_hash)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
@@ -892,7 +914,13 @@ class DataStore:
         )
 
     async def get_kv_diff_paginated(
-        self, store_id: bytes32, page: int, max_page_size: int, hash1: bytes32, hash2: bytes32
+        self,
+        store_id: bytes32,
+        page: int,
+        max_page_size: int,
+        # NOTE: empty is expressed as zeros
+        hash1: bytes32,
+        hash2: bytes32,
     ) -> KVDiffPaginationData:
         old_pairs = await self.get_keys_values_compressed(store_id, hash1)
         if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
@@ -1031,15 +1059,25 @@ class DataStore:
                 root=root,
             )
 
-    async def get_keys_values_dict(self, store_id: bytes32, root_hash: Optional[bytes32] = None) -> Dict[bytes, bytes]:
+    async def get_keys_values_dict(
+        self,
+        store_id: bytes32,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
+    ) -> Dict[bytes, bytes]:
         pairs = await self.get_keys_values(store_id=store_id, root_hash=root_hash)
         return {node.key: node.value for node in pairs}
 
-    async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32] = None) -> List[bytes]:
+    async def get_keys(
+        self,
+        store_id: bytes32,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
+    ) -> List[bytes]:
         async with self.db_wrapper.reader() as reader:
-            if root_hash is None:
+            if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
-                root_hash = root.node_hash
+                resolved_root_hash = root.node_hash
+            else:
+                resolved_root_hash = root_hash
             cursor = await reader.execute(
                 """
                 WITH RECURSIVE
@@ -1053,7 +1091,7 @@ class DataStore:
                     )
                 SELECT key FROM tree_from_root_hash WHERE node_type == :node_type
                 """,
-                {"root_hash": root_hash, "node_type": NodeType.TERMINAL},
+                {"root_hash": resolved_root_hash, "node_type": NodeType.TERMINAL},
             )
 
             keys: List[bytes] = [row["key"] async for row in cursor]
@@ -1790,9 +1828,9 @@ class DataStore:
 
         return None
 
-    async def maybe_get_node_by_key(self, key: bytes, tree_id: bytes32) -> Optional[TerminalNode]:
+    async def maybe_get_node_by_key(self, key: bytes, store_id: bytes32) -> Optional[TerminalNode]:
         try:
-            node = await self.get_node_by_key_latest_generation(key, tree_id)
+            node = await self.get_node_by_key_latest_generation(key, store_id)
             return node
         except KeyNotFoundError:
             return None
@@ -1801,9 +1839,9 @@ class DataStore:
         self,
         key: bytes,
         store_id: bytes32,
-        root_hash: Optional[bytes32] = None,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> TerminalNode:
-        if root_hash is None:
+        if root_hash is unspecified:
             return await self.get_node_by_key_latest_generation(key, store_id)
 
         nodes = await self.get_keys_values(store_id=store_id, root_hash=root_hash)
@@ -2212,6 +2250,7 @@ class DataStore:
     async def get_kv_diff(
         self,
         store_id: bytes32,
+        # NOTE: empty is expressed as zeros
         hash_1: bytes32,
         hash_2: bytes32,
     ) -> Set[DiffData]:
