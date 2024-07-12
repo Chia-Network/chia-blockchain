@@ -1411,8 +1411,15 @@ async def test_server_http_ban(
     "test_delta",
     [True, False],
 )
+@boolean_datacases(name="group_files_by_store", false="group by singleton", true="don't group by singleton")
 @pytest.mark.anyio
-async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_delta: bool, tmp_path: Path) -> None:
+async def test_data_server_files(
+    data_store: DataStore,
+    store_id: bytes32,
+    test_delta: bool,
+    group_files_by_store: bool,
+    tmp_path: Path,
+) -> None:
     roots: List[Root] = []
     num_batches = 10
     num_ops_per_batch = 100
@@ -1441,7 +1448,7 @@ async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_
                 counter += 1
             await data_store_server.insert_batch(store_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(store_id)
-            await write_files_for_root(data_store_server, store_id, root, tmp_path, 0)
+            await write_files_for_root(data_store_server, store_id, root, tmp_path, 0, False, group_files_by_store)
             roots.append(root)
 
     generation = 1
@@ -1449,10 +1456,10 @@ async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_
     for root in roots:
         assert root.node_hash is not None
         if not test_delta:
-            filename = get_full_tree_filename_path(tmp_path, store_id, root.node_hash, generation, True)
+            filename = get_full_tree_filename_path(tmp_path, store_id, root.node_hash, generation, group_files_by_store)
             assert filename.exists()
         else:
-            filename = get_delta_filename_path(tmp_path, store_id, root.node_hash, generation, True)
+            filename = get_delta_filename_path(tmp_path, store_id, root.node_hash, generation, group_files_by_store)
             assert filename.exists()
         await insert_into_data_store_from_file(data_store, store_id, root.node_hash, tmp_path.joinpath(filename))
         current_root = await data_store.get_tree_root(store_id=store_id)
@@ -1964,8 +1971,9 @@ async def test_get_node_by_key_with_overlapping_keys(raw_data_store: DataStore) 
 
 
 @pytest.mark.anyio
+@boolean_datacases(name="group_files_by_store", true="group by singleton", false="don't group by singleton")
 async def test_insert_from_delta_file_correct_file_exists(
-    data_store: DataStore, store_id: bytes32, tmp_path: Path
+    data_store: DataStore, store_id: bytes32, tmp_path: Path, group_files_by_store: bool
 ) -> None:
     await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     num_files = 5
@@ -1984,9 +1992,9 @@ async def test_insert_from_delta_file_correct_file_exists(
     root_hashes = []
     for generation in range(1, num_files + 2):
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
-        await write_files_for_root(data_store, store_id, root, tmp_path, 0)
+        await write_files_for_root(data_store, store_id, root, tmp_path, 0, False, group_files_by_store)
         root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
-    store_path = tmp_path.joinpath(f"{store_id}")
+    store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == 2 * (num_files + 1)
@@ -2013,6 +2021,7 @@ async def test_insert_from_delta_file_correct_file_exists(
         log=log,
         proxy_url="",
         downloader=None,
+        group_files_by_store=group_files_by_store,
     )
     assert success
 
@@ -2026,8 +2035,9 @@ async def test_insert_from_delta_file_correct_file_exists(
 
 
 @pytest.mark.anyio
+@boolean_datacases(name="group_files_by_store", true="group by singleton", false="don't group by singleton")
 async def test_insert_from_delta_file_incorrect_file_exists(
-    data_store: DataStore, store_id: bytes32, tmp_path: Path
+    data_store: DataStore, store_id: bytes32, tmp_path: Path, group_files_by_store: bool
 ) -> None:
     await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     root = await data_store.get_tree_root(store_id=store_id)
@@ -2044,20 +2054,20 @@ async def test_insert_from_delta_file_incorrect_file_exists(
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 2
-    await write_files_for_root(data_store, store_id, root, tmp_path, 0)
+    await write_files_for_root(data_store, store_id, root, tmp_path, 0, False, group_files_by_store)
 
     incorrect_root_hash = bytes32([0] * 31 + [1])
-    store_path = tmp_path.joinpath(f"{store_id}")
+    store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
     with os.scandir(store_path) as entries:
         filenames = [entry.name for entry in entries]
         assert len(filenames) == 2
         os.rename(
             store_path.joinpath(filenames[0]),
-            get_delta_filename_path(tmp_path, store_id, incorrect_root_hash, 2, True),
+            get_delta_filename_path(tmp_path, store_id, incorrect_root_hash, 2, group_files_by_store),
         )
         os.rename(
             store_path.joinpath(filenames[1]),
-            get_full_tree_filename_path(tmp_path, store_id, incorrect_root_hash, 2, True),
+            get_full_tree_filename_path(tmp_path, store_id, incorrect_root_hash, 2, group_files_by_store),
         )
 
     await data_store.rollback_to_generation(store_id, 1)
@@ -2073,6 +2083,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
         log=log,
         proxy_url="",
         downloader=None,
+        group_files_by_store=group_files_by_store,
     )
     assert not success
 

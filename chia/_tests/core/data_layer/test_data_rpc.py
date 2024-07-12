@@ -94,6 +94,7 @@ async def init_data_layer_service(
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
     enable_batch_autoinsert: bool = True,
+    group_files_by_store: bool = False,
 ) -> AsyncIterator[DataLayerService]:
     config = bt.config
     config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
@@ -103,6 +104,7 @@ async def init_data_layer_service(
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["manage_data_interval"] = 5
     config["data_layer"]["enable_batch_autoinsert"] = enable_batch_autoinsert
+    config["data_layer"]["group_files_by_store"] = group_files_by_store
     if maximum_full_file_count is not None:
         config["data_layer"]["maximum_full_file_count"] = maximum_full_file_count
     if db_path is not None:
@@ -124,9 +126,17 @@ async def init_data_layer(
     wallet_service: Optional[WalletService] = None,
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
+    group_files_by_store: bool = False,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
-        wallet_rpc_port, bt, db_path, wallet_service, manage_data_interval, maximum_full_file_count
+        wallet_rpc_port,
+        bt,
+        db_path,
+        wallet_service,
+        manage_data_interval,
+        maximum_full_file_count,
+        True,
+        group_files_by_store,
     ) as data_layer_service:
         yield data_layer_service._api.data_layer
 
@@ -2188,12 +2198,15 @@ async def test_issue_15955_deadlock(
 
 
 @pytest.mark.parametrize(argnames="maximum_full_file_count", argvalues=[1, 5, 100])
+@boolean_datacases(name="group_files_by_store", false="group by singleton", true="don't group by singleton")
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_maximum_full_file_count(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
     maximum_full_file_count: int,
+    group_files_by_store: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
@@ -2205,6 +2218,7 @@ async def test_maximum_full_file_count(
         db_path=tmp_path,
         manage_data_interval=manage_data_interval,
         maximum_full_file_count=maximum_full_file_count,
+        group_files_by_store=group_files_by_store,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
@@ -2224,7 +2238,12 @@ async def test_maximum_full_file_count(
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
             expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
-            with os.scandir(data_layer.server_files_location.joinpath(f"{store_id}")) as entries:
+            server_files_location = (
+                data_layer.server_files_location.joinpath(f"{store_id}")
+                if group_files_by_store
+                else data_layer.server_files_location
+            )
+            with os.scandir(server_files_location) as entries:
                 filenames = {entry.name for entry in entries}
                 assert len(filenames) == expected_files_count
             for generation, hash in enumerate(root_hashes):
@@ -2233,7 +2252,7 @@ async def test_maximum_full_file_count(
                     store_id,
                     hash,
                     generation + 1,
-                    True,
+                    group_files_by_store,
                 )
                 assert delta_path.exists()
                 full_file_path = get_full_tree_filename_path(
@@ -2241,7 +2260,7 @@ async def test_maximum_full_file_count(
                     store_id,
                     hash,
                     generation + 1,
-                    True,
+                    group_files_by_store,
                 )
                 if generation + 1 > batch_count - maximum_full_file_count:
                     assert full_file_path.exists()
@@ -2250,6 +2269,7 @@ async def test_maximum_full_file_count(
 
 
 @pytest.mark.parametrize("retain", [True, False])
+@boolean_datacases(name="group_files_by_store", false="group by singleton", true="don't group by singleton")
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
 async def test_unsubscribe_removes_files(
@@ -2257,6 +2277,7 @@ async def test_unsubscribe_removes_files(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
     retain: bool,
+    group_files_by_store: bool,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
@@ -2268,6 +2289,7 @@ async def test_unsubscribe_removes_files(
         db_path=tmp_path,
         manage_data_interval=manage_data_interval,
         maximum_full_file_count=100,
+        group_files_by_store=group_files_by_store,
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
@@ -2288,13 +2310,29 @@ async def test_unsubscribe_removes_files(
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
 
-        store_path = data_layer.server_files_location.joinpath(f"{store_id}")
+        store_path = (
+            data_layer.server_files_location.joinpath(f"{store_id}")
+            if group_files_by_store
+            else data_layer.server_files_location
+        )
         filenames = {path.name for path in store_path.iterdir()}
         assert len(filenames) == 2 * update_count
         for generation, hash in enumerate(root_hashes):
-            path = get_delta_filename_path(data_layer.server_files_location, store_id, hash, generation + 1, True)
+            path = get_delta_filename_path(
+                data_layer.server_files_location,
+                store_id,
+                hash,
+                generation + 1,
+                group_files_by_store,
+            )
             assert path.exists()
-            path = get_full_tree_filename_path(data_layer.server_files_location, store_id, hash, generation + 1, True)
+            path = get_full_tree_filename_path(
+                data_layer.server_files_location,
+                store_id,
+                hash,
+                generation + 1,
+                group_files_by_store,
+            )
             assert path.exists()
 
         res = await data_rpc_api.unsubscribe(request={"id": store_id.hex(), "retain": retain})

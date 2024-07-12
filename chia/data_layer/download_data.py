@@ -225,7 +225,8 @@ async def insert_from_delta_file(
     downloader: Optional[PluginRemote],
     group_files_by_store: bool = False,
 ) -> bool:
-    client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
+    if group_files_by_store:
+        client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
 
     for root_hash in root_hashes:
         timestamp = int(time.time())
