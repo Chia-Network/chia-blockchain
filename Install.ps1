@@ -10,15 +10,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 $extras = @()
+$extras += "upnp"
 if ($d)
 {
     $extras += "dev"
-}
-
-$pip_parameters = @()
-if (-not $i)
-{
-    $pip_parameters += "--editable"
 }
 
 if ([Environment]::Is64BitOperatingSystem -eq $false)
@@ -100,30 +95,35 @@ if ($openSSLVersion -lt 269488367)
     Write-Output "Anything before 1.1.1n is vulnerable to CVE-2022-0778."
 }
 
-if ($extras.length -gt 0)
+$extras_cli = @()
+foreach ($extra in $extras)
 {
-    $extras_cli = $extras -join ","
-    $pip_parameters += ".[$extras_cli]"
-}
-else
-{
-    $pip_parameters += "."
+    $extras_cli += "--extras"
+    $extras_cli += $extra
 }
 
-py -$pythonVersion -m venv venv
+./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
+.penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
+# TODO: Decide if this is needed or should be handled automatically in some way
+.penv/Scripts/pip install "poetry-dynamic-versioning[plugin]"
+.penv/Scripts/poetry install @extras_cli
 
-venv\scripts\python -m pip install --upgrade pip setuptools wheel
-venv\scripts\pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-& venv\scripts\pip install @pip_parameters --extra-index-url https://pypi.chia.net/simple/
+if ($i)
+{
+    Write-Output "Running 'pip install --no-deps .' for non-editable"
+    .venv/Scripts/python -m pip install --no-deps .
+}
 
 if ($p)
 {
     $PREV_VIRTUAL_ENV = "$env:VIRTUAL_ENV"
-    $env:VIRTUAL_ENV = "venv"
+    $env:VIRTUAL_ENV = ".venv"
     .\Install-plotter.ps1 bladebit
     .\Install-plotter.ps1 madmax
     $env:VIRTUAL_ENV = "$PREV_VIRTUAL_ENV"
 }
+
+cmd /c mklink /j venv .venv
 
 Write-Output ""
 Write-Output "Chia blockchain .\Install.ps1 complete."
@@ -133,6 +133,6 @@ Write-Output ""
 Write-Output "Try the Quick Start Guide to running chia-blockchain:"
 Write-Output "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
 Write-Output ""
-Write-Output "To install the GUI run '.\venv\scripts\Activate.ps1' then '.\Install-gui.ps1'."
+Write-Output "To install the GUI run '.\.venv\scripts\Activate.ps1' then '.\Install-gui.ps1'."
 Write-Output ""
-Write-Output "Type '.\venv\Scripts\Activate.ps1' and then 'chia init' to begin."
+Write-Output "Type '.\.venv\Scripts\Activate.ps1' and then 'chia init' to begin."

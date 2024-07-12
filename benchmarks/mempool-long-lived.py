@@ -114,9 +114,9 @@ async def run_mempool_benchmark() -> None:
                 coin.name(): CoinRecord(coin, uint32(height // 2), uint32(0), False, uint64(timestamp // 2))
             }
             spend_bundle_id = sb.name()
-            npc = await mempool.pre_validate_spendbundle(sb, None, spend_bundle_id)
-            assert npc is not None
-            await mempool.add_spend_bundle(sb, npc, spend_bundle_id, uint32(height))
+            sbc = await mempool.pre_validate_spendbundle(sb, None, spend_bundle_id)
+            assert sbc is not None
+            await mempool.add_spend_bundle(sb, sbc, spend_bundle_id, uint32(height))
 
         if height % 100 == 0:
             print(

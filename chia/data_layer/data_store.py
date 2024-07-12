@@ -986,7 +986,13 @@ class DataStore:
         )
 
     async def get_kv_diff_paginated(
-        self, store_id: bytes32, page: int, max_page_size: int, hash1: bytes32, hash2: bytes32
+        self,
+        store_id: bytes32,
+        page: int,
+        max_page_size: int,
+        # NOTE: empty is expressed as zeros
+        hash1: bytes32,
+        hash2: bytes32,
     ) -> KVDiffPaginationData:
         old_pairs = await self.get_keys_values_compressed(tree_id=TreeId.create(store_id=store_id, root_hash=hash1))
         if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
@@ -1498,6 +1504,24 @@ class DataStore:
                 await writer.execute(query, params)
         else:
             await writer.execute(query, params)
+
+    async def get_nodes(self, node_hashes: List[bytes32]) -> List[Node]:
+        query_parameter_place_holders = ",".join("?" for _ in node_hashes)
+        async with self.db_wrapper.reader() as reader:
+            # TODO: handle SQLITE_MAX_VARIABLE_NUMBER
+            cursor = await reader.execute(
+                f"SELECT * FROM node WHERE hash IN ({query_parameter_place_holders})",
+                [*node_hashes],
+            )
+            rows = await cursor.fetchall()
+
+        hash_to_node = {row["hash"]: row_to_node(row=row) for row in rows}
+
+        missing_hashes = [node_hash.hex() for node_hash in node_hashes if node_hash not in hash_to_node]
+        if missing_hashes:
+            raise Exception(f"Nodes not found for hashes: {', '.join(missing_hashes)}")
+
+        return [hash_to_node[node_hash] for node_hash in node_hashes]
 
     async def get_leaf_at_minimum_height(
         self,
@@ -2375,6 +2399,7 @@ class DataStore:
     async def get_kv_diff(
         self,
         store_id: bytes32,
+        # NOTE: empty is expressed as zeros
         hash_1: bytes32,
         hash_2: bytes32,
     ) -> Set[DiffData]:

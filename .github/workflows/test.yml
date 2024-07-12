@@ -284,11 +284,17 @@ jobs:
           set -o pipefail
           coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/_tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
+      - name: Identify parent commit
+        id: parent-commit
+        run: |
+          echo hash=$(git rev-parse HEAD~1) >> "$GITHUB_OUTPUT"
+
       - name: Coverage report (diff)
         if: (github.base_ref != '' || github.event.before != '') && always()
         env:
-          compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
+          compare-branch: ${{ github.base_ref == '' && steps.parent-commit.hash || format('origin/{0}', github.base_ref) }}
         run: |
+          set -o pipefail
           diff-cover --config-file=.diffcover.toml --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
           COV_STATUS="${PIPESTATUS[0]}"
           echo "COV_STATUS=$COV_STATUS" >> "$GITHUB_ENV"

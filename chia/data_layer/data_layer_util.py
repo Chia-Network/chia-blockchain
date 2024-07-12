@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
-from enum import IntEnum
+from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union, overload
 
 # TODO: remove or formalize this
@@ -335,11 +335,17 @@ T_MaybeBytes32 = TypeVar("T_MaybeBytes32", bound=Union[Optional[bytes32], "TreeI
 @final
 @dataclass(frozen=True)
 class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
-    class Unspecified:
+    class Unspecified(Enum):
+        # not beautiful, improve when a better way is known
+        # https://github.com/python/typing/issues/236#issuecomment-229515556
+
+        instance = None
+
         def __repr__(self) -> str:
             return "TreeId.Unspecified"
 
-    unspecified: ClassVar[Unspecified] = Unspecified()
+    # TODO: is this really useful vs. just saying Unspecified.instance?
+    unspecified: ClassVar[Unspecified] = Unspecified.instance
 
     store_id: bytes32
     generation: T_MaybeGeneration

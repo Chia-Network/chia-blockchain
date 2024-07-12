@@ -998,7 +998,6 @@ class TestDIDWallet:
         response = await api_0.did_message_spend(
             {"wallet_id": did_wallet_1.wallet_id, "coin_announcements": ["0abc"], "puzzle_announcements": ["0def"]}
         )
-        assert "spend_bundle" in response
         spend = response["spend_bundle"].coin_spends[0]
         conditions = conditions_dict_for_solution(
             spend.puzzle_reveal, spend.solution, wallet.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM

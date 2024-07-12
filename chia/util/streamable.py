@@ -272,7 +272,9 @@ def function_to_post_init_process_one_item(f_type: Type[object]) -> ConvertFunct
     return lambda item: post_init_process_item(f_type, item)
 
 
-def recurse_jsonify(d: Any, next_recursion_step: Optional[Callable[[Any, Any], Any]] = None) -> Any:
+def recurse_jsonify(
+    d: Any, next_recursion_step: Optional[Callable[[Any, Any], Any]] = None, **next_recursion_env: Any
+) -> Any:
     """
     Makes bytes objects into strings with 0x, and makes large ints into strings.
     """
@@ -281,19 +283,19 @@ def recurse_jsonify(d: Any, next_recursion_step: Optional[Callable[[Any, Any], A
     if dataclasses.is_dataclass(d):
         new_dict = {}
         for field in dataclasses.fields(d):
-            new_dict[field.name] = next_recursion_step(getattr(d, field.name), None)
+            new_dict[field.name] = next_recursion_step(getattr(d, field.name), None, **next_recursion_env)
         return new_dict
 
     elif isinstance(d, (list, tuple)):
         new_list = []
         for item in d:
-            new_list.append(next_recursion_step(item, None))
+            new_list.append(next_recursion_step(item, None, **next_recursion_env))
         return new_list
 
     elif isinstance(d, dict):
         new_dict = {}
         for name, val in d.items():
-            new_dict[name] = next_recursion_step(val, None)
+            new_dict[name] = next_recursion_step(val, None, **next_recursion_env)
         return new_dict
 
     elif issubclass(type(d), bytes):
