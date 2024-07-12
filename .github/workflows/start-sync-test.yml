@@ -26,7 +26,7 @@ jobs:
         with:
           json_data: '{"test_ref": "${{ env.RELEASE_TAG }}"}'
           glue_url: "${{ secrets.GLUE_API_URL }}"
-          glue_project: "sync-test/$RELEASE_TAG"
+          glue_project: "sync-test/${{ env.RELEASE_TAG }}"
           glue_path: "start"
 
       - name: Trigger sync test workflow success via github-glue
@@ -34,5 +34,5 @@ jobs:
         with:
           json_data: '{"test_ref": "${{ env.RELEASE_TAG }}"}'
           glue_url: "${{ secrets.GLUE_API_URL }}"
-          glue_project: "sync-test/$RELEASE_TAG"
+          glue_project: "sync-test/${{ env.RELEASE_TAG }}"
           glue_path: "success/deploy"
