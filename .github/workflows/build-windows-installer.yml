@@ -363,14 +363,22 @@ jobs:
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET
 
       - name: Mark pre-release installer complete
+        uses: Chia-Network/actions/github/glue@main
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}/success/build-windows
+        with:
+          json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
+          glue_url: '${{ secrets.GLUE_API_URL }}'
+          glue_project: '${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}'
+          glue_path: 'success/build-windows'
 
       - name: Mark release installer complete
+        uses: Chia-Network/actions/github/glue@main
         if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{"chia_ref": "${{ env.RELEASE_TAG }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}/success/build-windows
+        with:
+          json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
+          glue_url: '${{ secrets.GLUE_API_URL }}'
+          glue_project: '${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}'
+          glue_path: 'success/build-windows'
 
   test:
     name: Test ${{ matrix.os.name }}
