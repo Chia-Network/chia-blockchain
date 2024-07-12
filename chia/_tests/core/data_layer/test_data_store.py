@@ -1827,8 +1827,14 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
 
 
 @pytest.mark.anyio
+@boolean_datacases(name="group_files_by_store", true="group by singleton", false="don't group by singleton")
 async def test_insert_from_delta_file(
-    data_store: DataStore, store_id: bytes32, monkeypatch: Any, tmp_path: Path, seeded_random: random.Random
+    data_store: DataStore,
+    store_id: bytes32,
+    monkeypatch: Any,
+    tmp_path: Path,
+    seeded_random: random.Random,
+    group_files_by_store: bool,
 ) -> None:
     await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     num_files = 5
@@ -1845,24 +1851,29 @@ async def test_insert_from_delta_file(
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
     root_hashes = []
+
+    tmp_path_1 = tmp_path.joinpath("1")
+    tmp_path_2 = tmp_path.joinpath("2")
+
     for generation in range(1, num_files + 2):
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
-        await write_files_for_root(data_store, store_id, root, tmp_path, 0)
+        await write_files_for_root(data_store, store_id, root, tmp_path_1, 0, False, group_files_by_store)
         root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
-    with os.scandir(tmp_path.joinpath(f"{store_id}")) as entries:
+    store_path = tmp_path_1.joinpath(f"{store_id}") if group_files_by_store else tmp_path_1
+    with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == 2 * (num_files + 1)
     for filename in filenames:
         if "full" in filename:
-            tmp_path.joinpath(f"{store_id}").joinpath(filename).unlink()
-    with os.scandir(tmp_path.joinpath(f"{store_id}")) as entries:
+            store_path.joinpath(filename).unlink()
+    with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == num_files + 1
     kv_before = await data_store.get_keys_values(store_id=store_id)
     await data_store.rollback_to_generation(store_id, 0)
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
-    os.rename(tmp_path.joinpath(f"{store_id}"), tmp_path.joinpath("tmp"))
+    os.rename(store_path, tmp_path_2)
 
     async def mock_http_download(
         target_filename_path: Path,
@@ -1882,8 +1893,7 @@ async def test_insert_from_delta_file(
         timeout: int,
         log: logging.Logger,
     ) -> None:
-        os.rmdir(tmp_path.joinpath(f"{store_id}"))
-        os.rename(tmp_path.joinpath("tmp"), tmp_path.joinpath(f"{store_id}"))
+        os.rename(tmp_path_2, store_path)
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     with monkeypatch.context() as m:
@@ -1894,11 +1904,12 @@ async def test_insert_from_delta_file(
             existing_generation=0,
             root_hashes=root_hashes,
             server_info=sinfo,
-            client_foldername=tmp_path,
+            client_foldername=tmp_path_1,
             timeout=15,
             log=log,
             proxy_url="",
             downloader=None,
+            group_files_by_store=group_files_by_store,
         )
         assert not success
 
@@ -1914,17 +1925,18 @@ async def test_insert_from_delta_file(
             existing_generation=0,
             root_hashes=root_hashes,
             server_info=sinfo,
-            client_foldername=tmp_path,
+            client_foldername=tmp_path_1,
             timeout=15,
             log=log,
             proxy_url="",
             downloader=None,
+            group_files_by_store=group_files_by_store,
         )
         assert success
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
-    with os.scandir(tmp_path.joinpath(f"{store_id}")) as entries:
+    with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
         assert len(filenames) == 2 * (num_files + 1)
     kv = await data_store.get_keys_values(store_id=store_id)
