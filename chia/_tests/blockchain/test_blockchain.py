@@ -2533,7 +2533,7 @@ class TestBodyValidation:
             block_list_input=blocks,
             guarantee_transaction_block=True,
             transaction_data=tx,
-            previous_generator=[blocks[-1].height],
+            block_refs=[blocks[-1].height],
         )
         block = blocks[-1]
         if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
@@ -2616,7 +2616,7 @@ class TestBodyValidation:
         )
 
         assert blocks[-1].transactions_generator is not None
-        block_generator = BlockGenerator(blocks[-1].transactions_generator, [], [])
+        block_generator = BlockGenerator(blocks[-1].transactions_generator, [])
         npc_result = get_name_puzzle_conditions(
             block_generator,
             b.constants.MAX_BLOCK_COST_CLVM * 1000,
@@ -2682,7 +2682,7 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
         assert block_2.transactions_generator is not None
-        block_generator = BlockGenerator(block_2.transactions_generator, [], [])
+        block_generator = BlockGenerator(block_2.transactions_generator, [])
         assert block.transactions_info is not None
         npc_result = get_name_puzzle_conditions(
             block_generator,
@@ -2709,7 +2709,7 @@ class TestBodyValidation:
         new_fsb_sig = bt.get_plot_signature(new_m, block.reward_chain_block.proof_of_space.plot_public_key)
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
         assert block_2.transactions_generator is not None
-        block_generator = BlockGenerator(block_2.transactions_generator, [], [])
+        block_generator = BlockGenerator(block_2.transactions_generator, [])
         assert block.transactions_info is not None
         npc_result = get_name_puzzle_conditions(
             block_generator,
@@ -2737,7 +2737,7 @@ class TestBodyValidation:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fsb_sig)
 
         assert block_2.transactions_generator is not None
-        block_generator = BlockGenerator(block_2.transactions_generator, [], [])
+        block_generator = BlockGenerator(block_2.transactions_generator, [])
         max_cost = (
             min(b.constants.MAX_BLOCK_COST_CLVM * 1000, block.transactions_info.cost)
             if block.transactions_info is not None
@@ -3619,7 +3619,7 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> No
 
     spend_bundle2 = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
     blocks_reorg_chain = bt.get_consecutive_blocks(
-        4, blocks_reorg_chain, seed=b"2", previous_generator=[uint32(5), uint32(11)], transaction_data=spend_bundle2
+        4, blocks_reorg_chain, seed=b"2", block_refs=[uint32(5), uint32(11)], transaction_data=spend_bundle2
     )
     blocks_reorg_chain = bt.get_consecutive_blocks(4, blocks_reorg_chain, seed=b"2")
 
@@ -3678,7 +3678,7 @@ async def test_reorg_stale_fork_height(empty_blockchain: Blockchain, bt: BlockTo
 
     # this block (height 10) refers back to the generator in block 5
     spend_bundle2 = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
-    blocks = bt.get_consecutive_blocks(4, blocks, previous_generator=[uint32(5)], transaction_data=spend_bundle2)
+    blocks = bt.get_consecutive_blocks(4, blocks, block_refs=[uint32(5)], transaction_data=spend_bundle2)
 
     for block in blocks[:5]:
         await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK)
@@ -3788,7 +3788,7 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
     chain_a = bt.get_consecutive_blocks(
         5,
         chain_a,
-        previous_generator=[uint32(10)],
+        block_refs=[uint32(10)],
         transaction_data=spend_bundle,
         guarantee_transaction_block=True,
     )
@@ -3828,9 +3828,7 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
     )
 
     spend_bundle = wallet_a.generate_signed_transaction(uint64(1_000), receiver_puzzlehash, all_coins.pop())
-    chain_b = bt.get_consecutive_blocks(
-        10, chain_b, seed=b"2", previous_generator=[uint32(15)], transaction_data=spend_bundle
-    )
+    chain_b = bt.get_consecutive_blocks(10, chain_b, seed=b"2", block_refs=[uint32(15)], transaction_data=spend_bundle)
 
     assert len(chain_a) == len(chain_b)
 
