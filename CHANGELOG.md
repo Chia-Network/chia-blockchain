@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.4.2 Chia blockchain 2024-07-10
+## What's Changed
+### Fixed
+* Fix 12-word mnemonic support in keychain (Fixes #18243)
+* Fix backwards compatibility for daemon RPC `add_private_key`
+
+### Deprecated
+macOS 12 (Monterey) is deprecated. This release (2.4.2) will be the last release to support macOS 12
+
 ## 2.4.1 Chia blockchain 2024-06-25
 
 ## What's Changed
