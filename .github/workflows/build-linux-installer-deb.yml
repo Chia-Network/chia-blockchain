@@ -201,9 +201,7 @@ jobs:
             file-type:
               name: DEB
               extension: deb
-            glue-name:
-              arm: build-amd64-deb
-              intel: build-arm64-deb
+            glue-name: deb
             artifact-platform-name: linux
             file-arch-name:
               arm: arm64
@@ -223,15 +221,19 @@ jobs:
         mode:
           - name: GUI
             matrix: gui
+            glue-name: gui
           - name: CLI
             matrix: cli
+            glue-name: cli
         arch:
           - name: ARM64
             matrix: arm
             artifact-name: arm
+            glue-name: arm
           - name: Intel
             matrix: intel
             artifact-name: intel
+            glue-name: intel
 
     env:
       FILE: ${{ format(matrix.os.names[matrix.mode.matrix].file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
@@ -352,7 +354,7 @@ jobs:
           json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
           glue_url: "${{ secrets.GLUE_API_URL }}"
           glue_project: "${{ env.RFC_REPO }}${{ env.REPO_SUFFIX }}/${{ env.RELEASE_TAG }}"
-          glue_path: "success/${{ matrix.os.glue-name }}"
+          glue_path: "success/build-${{ matrix.os.glue-name }}-${{ matrix.arch.glue-name }}-${{ matrix.mode.glue-name }}"
 
   test:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
