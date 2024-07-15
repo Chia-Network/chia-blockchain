@@ -600,7 +600,7 @@ class NFTWallet:
             memos_with_hint.extend(memo_list)
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
-        payment_sum = sum([p.amount for p in payments])
+        payment_sum = sum(p.amount for p in payments)
         unsigned_spend_bundle = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,

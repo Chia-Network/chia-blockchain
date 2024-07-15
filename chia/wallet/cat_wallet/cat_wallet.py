@@ -597,7 +597,7 @@ class CATWallet:
                     tx_config.coin_selection_config,
                 )
                 origin_id = list(chia_coins)[0].name()
-                selected_amount = sum([c.amount for c in chia_coins])
+                selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
                     uint64(selected_amount + amount_to_claim - fee),
                     (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
@@ -785,7 +785,7 @@ class CATWallet:
             memos_with_hint.extend(memo_list)
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
-        payment_sum = sum([p.amount for p in payments])
+        payment_sum = sum(p.amount for p in payments)
         spend_bundle = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,
