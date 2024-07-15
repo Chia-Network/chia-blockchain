@@ -1,4 +1,4 @@
-name: 📦🚀 Build Installer - Linux DEB
+name: 📦 Publish Installer
 
 on:
   workflow_call:
