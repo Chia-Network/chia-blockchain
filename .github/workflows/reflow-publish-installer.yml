@@ -3,7 +3,7 @@ name: 📦 Publish Installer
 on:
   workflow_call:
     inputs:
-      concurrency_name:
+      concurrency-name:
         required: true
         type: string
       configuration:
