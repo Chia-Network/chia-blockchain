@@ -234,6 +234,8 @@ jobs:
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
       concurrency-name: macos
+      chia-installer-version: needs.version.outputs.chia-installer-version
+      chia-dev-version: needs.version.outputs.chia-dev-version
       configuration: ${{ toJSON( matrix.configuration ) }}
     needs:
       - version
