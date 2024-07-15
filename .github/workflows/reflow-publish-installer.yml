@@ -20,9 +20,6 @@ jobs:
   publish:
     name: Publish ${{ matrix.arch.name }} ${{ matrix.mode.name }} ${{ matrix.os.file-type.name }}
     runs-on: ubuntu-latest
-    needs:
-      - version
-      - build
     timeout-minutes: 5
     strategy:
       fail-fast: false
