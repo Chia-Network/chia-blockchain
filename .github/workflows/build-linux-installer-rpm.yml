@@ -187,56 +187,57 @@ jobs:
   publish:
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
-      configuration: ${{ toJSON( matrix ) }}
+      configuration: ${{ toJSON( matrix.configuration ) }}
     needs:
       - version
       - build
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
-        os:
-          - matrix: redhat
-            file-type:
-              name: RPM
-              extension: rpm
-            glue-name: rpm
-            artifact-platform-name: linux
-            file-arch-name:
-              intel: x86_64
-            file-suffix:
-              arm: ""
-              intel: ""
-            names:
-              cli:
-                file: chia-blockchain-cli-{0}-1.{2}.rpm
-                def-file: chia-blockchain-cli-{1}-1.{2}.rpm
-                latest-dev-file: chia-blockchain-cli-1.{2}_latest_dev.rpm
-              gui:
-                file: chia-blockchain-{0}-1.{2}.rpm
-                def-file: chia-blockchain-{1}-1.{2}.rpm
-                latest-dev-file: chia-blockchain-1.{2}_latest_dev.rpm
-        mode:
-          - name: GUI
-            matrix: gui
-            glue-name: gui
-          - name: CLI
-            matrix: cli
-            glue-name: cli
-        arch:
-          - name: ARM64
-            matrix: arm
-            artifact-name: arm
-            glue-name: arm
-          - name: Intel
-            matrix: intel
-            artifact-name: intel
-            glue-name: intel
-        exclude:
-          - os:
-              matrix: redhat
+        configuration:
+          - python-version: ["3.10"]
+            os:
+              - matrix: redhat
+                file-type:
+                  name: RPM
+                  extension: rpm
+                glue-name: rpm
+                artifact-platform-name: linux
+                file-arch-name:
+                  intel: x86_64
+                file-suffix:
+                  arm: ""
+                  intel: ""
+                names:
+                  cli:
+                    file: chia-blockchain-cli-{0}-1.{2}.rpm
+                    def-file: chia-blockchain-cli-{1}-1.{2}.rpm
+                    latest-dev-file: chia-blockchain-cli-1.{2}_latest_dev.rpm
+                  gui:
+                    file: chia-blockchain-{0}-1.{2}.rpm
+                    def-file: chia-blockchain-{1}-1.{2}.rpm
+                    latest-dev-file: chia-blockchain-1.{2}_latest_dev.rpm
+            mode:
+              - name: GUI
+                matrix: gui
+                glue-name: gui
+              - name: CLI
+                matrix: cli
+                glue-name: cli
             arch:
-              matrix: arm
+              - name: ARM64
+                matrix: arm
+                artifact-name: arm
+                glue-name: arm
+              - name: Intel
+                matrix: intel
+                artifact-name: intel
+                glue-name: intel
+            exclude:
+              - os:
+                  matrix: redhat
+                arch:
+                  matrix: arm
 
   test:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.state.name }}

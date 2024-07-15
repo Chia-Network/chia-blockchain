@@ -244,56 +244,57 @@ jobs:
   publish:
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
-      configuration: ${{ toJSON( matrix ) }}
+      configuration: ${{ toJSON( matrix.configuration ) }}
     needs:
       - version
       - build
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
-        os:
-          - matrix: windows
-            file-type:
-              name: EXE
-              extension: exe
-            glue-name: windows
-            artifact-platform-name: windows
-            file-arch-name:
-              intel: intel
-            file-suffix:
-              arm: ""
-              intel: ""
-            names:
-              gui:
-                file: ChiaSetup-{0}.exe
-                dev-file: ChiaSetup-{1}.exe
-                latest-dev-file: ChiaSetup-latest-dev.exe
-        mode:
-          - name: GUI
-            matrix: gui
-            glue-name: gui
-          - name: CLI
-            matrix: cli
-            glue-name: cli
-        arch:
-          - name: ARM64
-            matrix: arm
-            artifact-name: arm
-            glue-name: arm
-          - name: Intel
-            matrix: intel
-            artifact-name: intel
-            glue-name: intel
-        exclude:
-          - os:
-              matrix: windows
-            arch:
-              matrix: arm
-          - os:
-              matrix: windows
+        configuration:
+          - python-version: ["3.10"]
+            os:
+              - matrix: windows
+                file-type:
+                  name: EXE
+                  extension: exe
+                glue-name: windows
+                artifact-platform-name: windows
+                file-arch-name:
+                  intel: intel
+                file-suffix:
+                  arm: ""
+                  intel: ""
+                names:
+                  gui:
+                    file: ChiaSetup-{0}.exe
+                    dev-file: ChiaSetup-{1}.exe
+                    latest-dev-file: ChiaSetup-latest-dev.exe
             mode:
-              matrix: cli
+              - name: GUI
+                matrix: gui
+                glue-name: gui
+              - name: CLI
+                matrix: cli
+                glue-name: cli
+            arch:
+              - name: ARM64
+                matrix: arm
+                artifact-name: arm
+                glue-name: arm
+              - name: Intel
+                matrix: intel
+                artifact-name: intel
+                glue-name: intel
+            exclude:
+              - os:
+                  matrix: windows
+                arch:
+                  matrix: arm
+              - os:
+                  matrix: windows
+                mode:
+                  matrix: cli
 
   test:
     name: Test ${{ matrix.os.name }}

@@ -188,52 +188,53 @@ jobs:
   publish:
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
-      configuration: ${{ toJSON( matrix ) }}
+      configuration: ${{ toJSON( matrix.configuration ) }}
     needs:
       - version
       - build
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
-        os:
-          - matrix: debian
-            file-type:
-              name: DEB
-              extension: deb
-            glue-name: deb
-            artifact-platform-name: linux
-            file-arch-name:
-              arm: arm64
-              intel: amd64
-            file-suffix:
-              arm: ""
-              intel: ""
-            names:
-              cli:
-                file: chia-blockchain-cli_{0}-1_{2}.deb
-                dev-file: chia-blockchain-cli_{1}-1_{2}.deb
-                latest-dev-file: chia-blockchain-cli_{2}_latest_dev.deb
-              gui:
-                file: chia-blockchain_{0}_{2}.deb
-                dev-file: chia-blockchain_{1}_{2}.deb
-                latest-dev-file: chia-blockchain_{2}_latest_dev.deb
-        mode:
-          - name: GUI
-            matrix: gui
-            glue-name: gui
-          - name: CLI
-            matrix: cli
-            glue-name: cli
-        arch:
-          - name: ARM64
-            matrix: arm
-            artifact-name: arm
-            glue-name: arm
-          - name: Intel
-            matrix: intel
-            artifact-name: intel
-            glue-name: intel
+        configuration:
+          - python-version: ["3.10"]
+            os:
+              - matrix: debian
+                file-type:
+                  name: DEB
+                  extension: deb
+                glue-name: deb
+                artifact-platform-name: linux
+                file-arch-name:
+                  arm: arm64
+                  intel: amd64
+                file-suffix:
+                  arm: ""
+                  intel: ""
+                names:
+                  cli:
+                    file: chia-blockchain-cli_{0}-1_{2}.deb
+                    dev-file: chia-blockchain-cli_{1}-1_{2}.deb
+                    latest-dev-file: chia-blockchain-cli_{2}_latest_dev.deb
+                  gui:
+                    file: chia-blockchain_{0}_{2}.deb
+                    dev-file: chia-blockchain_{1}_{2}.deb
+                    latest-dev-file: chia-blockchain_{2}_latest_dev.deb
+            mode:
+              - name: GUI
+                matrix: gui
+                glue-name: gui
+              - name: CLI
+                matrix: cli
+                glue-name: cli
+            arch:
+              - name: ARM64
+                matrix: arm
+                artifact-name: arm
+                glue-name: arm
+              - name: Intel
+                matrix: intel
+                artifact-name: intel
+                glue-name: intel
 
   test:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}
