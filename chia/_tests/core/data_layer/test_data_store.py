@@ -1893,6 +1893,10 @@ async def test_insert_from_delta_file(
         timeout: int,
         log: logging.Logger,
     ) -> None:
+        try:
+            os.rmdir(store_path)
+        except OSError:
+            pass
         os.rename(tmp_path_2, store_path)
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
