@@ -187,6 +187,7 @@ jobs:
   publish:
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
+      concurrency-name: rpm
       configuration: ${{ toJSON( matrix.configuration ) }}
     needs:
       - version

@@ -3,13 +3,16 @@ name: 📦 Publish Installer
 on:
   workflow_call:
     inputs:
+      concurrency_name:
+        required: true
+        type: string
       configuration:
         required: true
         type: string
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 permissions:

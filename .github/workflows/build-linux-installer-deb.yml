@@ -188,6 +188,7 @@ jobs:
   publish:
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
+      concurrency-name: deb
       configuration: ${{ toJSON( matrix.configuration ) }}
     needs:
       - version

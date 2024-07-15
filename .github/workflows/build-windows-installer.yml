@@ -244,6 +244,7 @@ jobs:
   publish:
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
+      concurrency-name: windows
       configuration: ${{ toJSON( matrix.configuration ) }}
     needs:
       - version
