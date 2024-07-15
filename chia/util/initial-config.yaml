@@ -118,6 +118,7 @@ seeder:
   crawler:
     start_rpc_server: True
     rpc_port: 8561
+    prune_peer_days: 90 # Peers older than this many days will be removed from the crawler database
     ssl:
       private_crt: "config/ssl/crawler/private_crawler.crt"
       private_key: "config/ssl/crawler/private_crawler.key"
