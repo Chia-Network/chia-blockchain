@@ -1376,7 +1376,7 @@ class NFTWallet:
 
         # We've now created all the intermediate, launcher, eve and transfer spends.
         # Create the xch spend to fund the minting.
-        spend_value = sum([coin.amount for coin in xch_coins])
+        spend_value = sum(coin.amount for coin in xch_coins)
         change: uint64 = uint64(spend_value - total_amount)
         if xch_change_ph is None:
             xch_change_ph = await self.standard_wallet.get_new_puzzlehash()
@@ -1633,7 +1633,7 @@ class NFTWallet:
 
         # We've now created all the intermediate, launcher, eve and transfer spends.
         # Create the xch spend to fund the minting.
-        spend_value = sum([coin.amount for coin in xch_coins])
+        spend_value = sum(coin.amount for coin in xch_coins)
         change: uint64 = uint64(spend_value - total_amount)
         xch_spends = []
         if xch_change_ph is None:

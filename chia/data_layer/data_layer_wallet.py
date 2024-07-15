@@ -566,7 +566,7 @@ class DataLayerWallet:
         spend_bundle = SpendBundle([coin_spend], G2Element())
 
         if announce_new_state:
-            spend_bundle = dataclasses.replace(spend_bundle, coin_spends=[coin_spend, second_coin_spend])
+            spend_bundle = spend_bundle.replace(coin_spends=[coin_spend, second_coin_spend])
 
         dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),

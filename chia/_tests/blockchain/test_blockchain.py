@@ -5,7 +5,7 @@ import random
 import time
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from typing import AsyncIterator, Dict, List, Optional, Tuple
+from typing import AsyncIterator, Dict, List, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, MerkleSet
@@ -30,7 +30,6 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.keyring import TempKeyring
@@ -49,12 +48,12 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
-from chia.util.misc import available_logical_cores
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -2071,42 +2070,15 @@ class TestBodyValidation:
             ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
         ],
     )
-    @pytest.mark.parametrize(
-        "with_garbage,expected",
-        [
-            (True, (AddBlockResult.INVALID_BLOCK, Err.INVALID_CONDITION, None)),
-            (False, (AddBlockResult.NEW_PEAK, None, 2)),
-        ],
-    )
+    @pytest.mark.parametrize("with_garbage", [True, False])
     async def test_aggsig_garbage(
         self,
         empty_blockchain: Blockchain,
         opcode: ConditionOpcode,
         with_garbage: bool,
-        expected: Tuple[AddBlockResult, Optional[Err], Optional[uint32]],
         bt: BlockTools,
         consensus_mode: ConsensusMode,
     ) -> None:
-        # in the 2.0 hard fork, we relax the strict 2-parameters rule of
-        # AGG_SIG_* conditions, in consensus mode. In mempool mode we always
-        # apply strict rules.
-        if consensus_mode >= ConsensusMode.HARD_FORK_2_0 and with_garbage:
-            expected = (AddBlockResult.NEW_PEAK, None, uint32(2))
-
-        # before the 2.0 hard fork, these conditions do not exist
-        # but WalletTool still lets us create them, and aggregate them into the
-        # block signature. When the pre-hard fork node sees them, the conditions
-        # are ignored, but the aggregate signature is corrupt.
-        if consensus_mode < ConsensusMode.HARD_FORK_2_0 and opcode in [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-        ]:
-            expected = (AddBlockResult.INVALID_BLOCK, Err.BAD_AGGREGATE_SIGNATURE, None)
-
         b = empty_blockchain
         blocks = bt.get_consecutive_blocks(
             3,
@@ -2153,7 +2125,9 @@ class TestBodyValidation:
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
         res, error, state_change = await b.add_block(blocks[-1], repl_preval_results, None)
-        assert (res, error, state_change.fork_height if state_change else None) == expected
+        assert res == AddBlockResult.NEW_PEAK
+        assert error is None
+        assert state_change is not None and state_change.fork_height == uint32(2)
 
     @pytest.mark.anyio
     @pytest.mark.parametrize("with_garbage", [True, False])
@@ -2553,20 +2527,13 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks[-1])
         assert blocks[-1].transactions_generator is not None
-        generator_arg = detect_potential_template_generator(blocks[-1].height, blocks[-1].transactions_generator)
-        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-            # once the hard for activates, we don't use this form of block
-            # compression anymore
-            assert generator_arg is None
-        else:
-            assert generator_arg is not None
 
         blocks = bt.get_consecutive_blocks(
             1,
             block_list_input=blocks,
             guarantee_transaction_block=True,
             transaction_data=tx,
-            previous_generator=generator_arg,
+            previous_generator=[blocks[-1].height],
         )
         block = blocks[-1]
         if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
@@ -3269,7 +3236,7 @@ class TestReorgs:
     ) -> None:
         b = empty_blockchain
 
-        if consensus_mode < ConsensusMode.SOFT_FORK_4:
+        if consensus_mode < ConsensusMode.HARD_FORK_2_0:
             reorg_point = 13
         else:
             reorg_point = 12

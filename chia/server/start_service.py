@@ -31,6 +31,7 @@ from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.signal_handlers import SignalHandlers
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
@@ -38,7 +39,6 @@ from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
-from chia.util.misc import SignalHandlers
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
@@ -173,6 +173,11 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                     resolved_peers[unresolved] = resolved
 
                 if any(connection.peer_info == resolved for connection in self._server.all_connections.values()):
+                    continue
+                if any(
+                    connection.peer_info.host == resolved.host and connection.peer_server_port == resolved.port
+                    for connection in self._server.all_connections.values()
+                ):
                     continue
 
                 if not await self._server.start_client(resolved, None):

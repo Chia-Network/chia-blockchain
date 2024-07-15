@@ -208,7 +208,6 @@ class FullNodeSimulator(FullNodeAPI):
                 block_list_input=current_blocks,
                 guarantee_transaction_block=True,
                 current_time=current_time,
-                previous_generator=self.full_node.full_node_store.previous_generator,
             )
         await self.full_node.add_block(more[-1])
         return more[-1]

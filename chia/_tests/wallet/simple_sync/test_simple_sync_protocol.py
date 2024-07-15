@@ -153,7 +153,7 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
     )
     fn_amount = sum(
         cr.coin.amount
@@ -238,7 +238,7 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(puzzle_hash))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
 
     await time_out_assert(20, standard_wallet.get_confirmed_balance, funds)
