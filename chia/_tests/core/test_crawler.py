@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
@@ -24,10 +23,10 @@ from chia.util.ints import uint32, uint64, uint128
 
 @pytest.mark.anyio
 async def test_unknown_messages(
-        self_hostname: str,
-        one_node: SimulatorsAndWalletsServices,
-        crawler_service: CrawlerService,
-        caplog: pytest.LogCaptureFixture,
+    self_hostname: str,
+    one_node: SimulatorsAndWalletsServices,
+    crawler_service: CrawlerService,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
     crawler = crawler_service._node
@@ -48,10 +47,10 @@ async def test_unknown_messages(
 
 @pytest.mark.anyio
 async def test_valid_message(
-        self_hostname: str,
-        one_node: SimulatorsAndWalletsServices,
-        crawler_service: CrawlerService,
-        caplog: pytest.LogCaptureFixture,
+    self_hostname: str,
+    one_node: SimulatorsAndWalletsServices,
+    crawler_service: CrawlerService,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
     crawler = crawler_service._node
