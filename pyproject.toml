@@ -38,76 +38,76 @@ priority = "supplemental"
 
 [tool.poetry.dependencies]
 python = ">=3.8.10, <3.13"
-aiofiles = "23.2.1"  # Async IO for files
-aiohttp = "3.9.4"  # HTTP server for full node rpc
-aiosqlite = "0.20.0"  # asyncio wrapper for sqlite, to store blocks
-anyio = "4.3.0"
-bitstring = "4.1.4"  # Binary data management library
-boto3 = "1.34.143"  # AWS S3 for Data Layer S3 plugin
-chiabip158 = "1.5.1"  # bip158-style wallet filters
-chiapos = "2.0.4"  # proof of space
-chia_rs = "0.10.0"
-chiavdf = "1.1.4"  # timelord and vdf verification
-click = "8.1.3"  # For the CLI
-clvm = "0.9.10"
-clvm_tools = "0.4.9"  # Currying Program.to other conveniences
-clvm_tools_rs = "0.1.40"  # Rust implementation of clvm_tools' compiler
-colorama = "0.4.6"  # Colorizes terminal output
-colorlog = "6.8.2"  # Adds color to logs
-concurrent_log_handler = "0.9.25"  # Concurrently log and rotate logs
-cryptography = "42.0.5"  # Python cryptography library for TLS - keyring conflict
-dnslib = "0.9.24"  # dns lib
-dnspython = "2.6.1"  # Query DNS seeds
-filelock = "3.15.4"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
-keyring = "25.1.0"  # Store keys in MacOS Keychain, Windows Credential Locker
-packaging = "24.0"
-pip = "24.0"
+aiofiles = "*"  # Async IO for files
+aiohttp = "*"  # HTTP server for full node rpc
+aiosqlite = "*"  # asyncio wrapper for sqlite, to store blocks
+anyio = "*"
+bitstring = "*"  # Binary data management library
+boto3 = "*"  # AWS S3 for Data Layer S3 plugin
+chiabip158 = "*"  # bip158-style wallet filters
+chiapos = "*"  # proof of space
+chia_rs = "*"
+chiavdf = "*"  # timelord and vdf verification
+click = "*"  # For the CLI
+clvm = "*"
+clvm_tools = "*"  # Currying Program.to other conveniences
+clvm_tools_rs = "*"  # Rust implementation of clvm_tools' compiler
+colorama = "*"  # Colorizes terminal output
+colorlog = "*"  # Adds color to logs
+concurrent_log_handler = "*"  # Concurrently log and rotate logs
+cryptography = "*"  # Python cryptography library for TLS - keyring conflict
+dnslib = "*"  # dns lib
+dnspython = "*"  # Query DNS seeds
+filelock = "*"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
+keyring = "*"  # Store keys in MacOS Keychain, Windows Credential Locker
+packaging = "*"
+pip = "*"
 psutil = [
-    {version="5.9.4", markers="platform_machine!='aarch64'"},
-    {version="5.9.4", markers="platform_machine=='aarch64'", source="chia"},
+    {version="*", markers="platform_machine!='aarch64'"},
+    {version="*", markers="platform_machine=='aarch64'", source="chia"},
 ]
-pyyaml = "6.0.1"  # Used for config file format
-setproctitle = "1.3.3"  # Gives the chia processes readable names
-setuptools = "70.0.0"
-sortedcontainers = "2.4.0"  # For maintaining sorted mempools
-typing-extensions = "4.11.0"  # typing backports like Protocol and TypedDict
-watchdog = "4.0.1"  # Filesystem event watching - watches keyring.yaml
+pyyaml = "*"  # Used for config file format
+setproctitle = "*"  # Gives the chia processes readable names
+setuptools = "*"
+sortedcontainers = "*"  # For maintaining sorted mempools
+typing-extensions = "*"  # typing backports like Protocol and TypedDict
+watchdog = "*"  # Filesystem event watching - watches keyring.yaml
 zstd = [
-	{version="1.5.5.1", python = "<3.12"},
-	{version="1.5.5.1", python = "3.12", source="chia"},
+	{version="*", python = "<3.12"},
+	{version="*", python = "3.12", source="chia"},
 ]
-importlib-resources = "6.4.0"
-hsms = "0.3.1"
-aiohttp_cors = { version = "0.7.0", optional = true }
-black = { version = "24.4.2", optional = true }
-build = { version = "1.2.1", optional = true }
-coverage = { version = "7.5.3", optional = true }
-diff-cover = { version = "9.0.0", optional = true }
-flake8 = { version = "7.0.0", optional = true }
-isort = { version = "5.13.2", optional = true }
+importlib-resources = "*"
+hsms = "*"
+aiohttp_cors = { version = "*", optional = true }
+black = { version = "*", optional = true }
+build = { version = "*", optional = true }
+coverage = { version = "*", optional = true }
+diff-cover = { version = "*", optional = true }
+flake8 = { version = "*", optional = true }
+isort = { version = "*", optional = true }
 # TODO: but...  keyrings_cryptfile goes 15 minutes without locking while this does in 75 seconds
-"keyrings.cryptfile" = { version = "1.3.9", optional = true }
-mypy = { version = "1.10.0", optional = true }
-pre-commit = [ { version = "3.5.0", python = "<3.9", optional = true }, { version = "3.7.1", python = ">=3.9", optional = true } ]
-py3createtorrent = { version = "1.1.0", optional = true }
-pyinstaller = { version = "6.9.0", optional = true }
-pylint = { version = "3.2.2", optional = true }
-pytest = { version = "8.1.1", optional = true }
-pytest-cov = { version = "5.0.0", optional = true }
-pytest-mock = { version = "3.14.0", optional = true }
-pytest-monitor = { version = "1.6.6", platform = "linux", optional = true }
-pytest-xdist = { version = "3.6.1", optional = true }
-types-aiofiles = { version = "23.2.0.20240311", optional = true }
-types-cryptography = { version = "3.3.23.2", optional = true }
-types-pyyaml = { version = "6.0.12.20240311", optional = true }
-types-setuptools = { version = "70.0.0.20240524", optional = true }
-lxml = { version = "5.2.2", optional = true }
-miniupnpc = { version = "2.2.2", source = "chia", optional = true }
-pyupgrade = { version = "3.15.2", optional = true }
-# big-o = {version = "0.11.0", optional = true}
+"keyrings.cryptfile" = { version = "*", optional = true }
+mypy = { version = "*", optional = true }
+pre-commit = [ { version = "*", python = "<3.9", optional = true }, { version = "*", python = ">=3.9", optional = true } ]
+py3createtorrent = { version = "*", optional = true }
+pyinstaller = { version = "*", optional = true }
+pylint = { version = "*", optional = true }
+pytest = { version = "*", optional = true }
+pytest-cov = { version = "*", optional = true }
+pytest-mock = { version = "*", optional = true }
+pytest-monitor = { version = "*", platform = "linux", optional = true }
+pytest-xdist = { version = "*", optional = true }
+types-aiofiles = { version = "*", optional = true }
+types-cryptography = { version = "*", optional = true }
+types-pyyaml = { version = "*", optional = true }
+types-setuptools = { version = "*", optional = true }
+lxml = { version = "*", optional = true }
+miniupnpc = { version = "*", source = "chia", optional = true }
+pyupgrade = { version = "*", optional = true }
+# big-o = {version = "*", optional = true}
 # numpy = [
-# 	{version="1.24.4", python = "<3.9", optional = true},
-# 	{version="1.26.4", python = ">=3.9", optional = true}]
+# 	{version="*", python = "<3.9", optional = true},
+# 	{version="*", python = ">=3.9", optional = true}]
 
 
 [tool.poetry.extras]

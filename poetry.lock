@@ -2275,24 +2275,6 @@ pyyaml = ">=5.1"
 virtualenv = ">=20.10.0"
 
 [[package]]
-name = "pre-commit"
-version = "3.7.1"
-description = "A framework for managing and maintaining multi-language pre-commit hooks."
-optional = true
-python-versions = ">=3.9"
-files = [
-    {file = "pre_commit-3.7.1-py2.py3-none-any.whl", hash = "sha256:fae36fd1d7ad7d6a5a1c0b0d5adb2ed1a3bda5a21bf6c3e5372073d7a11cd4c5"},
-    {file = "pre_commit-3.7.1.tar.gz", hash = "sha256:8ca3ad567bc78a4972a3f1a477e94a79d4597e8140a6e0b651c5e33899c3654a"},
-]
-
-[package.dependencies]
-cfgv = ">=2.0.0"
-identify = ">=1.0.0"
-nodeenv = ">=0.11.1"
-pyyaml = ">=5.1"
-virtualenv = ">=20.10.0"
-
-[[package]]
 name = "psutil"
 version = "5.9.4"
 description = "Cross-platform lib for process and system monitoring in Python."
@@ -3424,4 +3406,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "812c5cdf6c64d6fb0ef4d9b7baa0073daccfbbee21a2fa39d66ab7437a6f2d6e"
+content-hash = "c7f1a2550fa28ecc454dd88a2b0d35db9c45d0e18592e0ba2b71b6ac5dcec1f3"
