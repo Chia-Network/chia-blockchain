@@ -359,7 +359,6 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
             memos=["hey"],
         )
     ).transactions
-    txs = await wallet_node_0.wallet_state_manager.add_pending_transactions(txs)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(

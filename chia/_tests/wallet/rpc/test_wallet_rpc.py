@@ -1125,7 +1125,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
-    assert removals[0] in tx_res.transaction.removals
+    assert removals[0] in {removal for tx in tx_res.transactions for removal in tx.removals}
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Test unacknowledged CAT
