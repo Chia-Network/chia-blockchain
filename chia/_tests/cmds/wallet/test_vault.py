@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from chia_rs import Coin, G1Element, G2Element
-from tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, run_cli_command_and_assert
-from tests.cmds.wallet.test_consts import FINGERPRINT_ARG, WALLET_ID_ARG, get_bytes32
 
+from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, run_cli_command_and_assert
+from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, WALLET_ID_ARG, get_bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
@@ -61,6 +61,7 @@ def test_vault_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     command_args = [
         "vault",
         "create",
+        FINGERPRINT_ARG,
         "-pk",
         pk,
         "-rk",
@@ -73,7 +74,7 @@ def test_vault_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
         fee,
     ]
     assert_list = ["Successfully created a Vault wallet"]
-    run_cli_command_and_assert(capsys, root_dir, command_args + [FINGERPRINT_ARG], assert_list)
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
 
 
 def test_vault_recovery(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:

@@ -27,7 +27,6 @@ from typing import (
 
 import aiosqlite
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from clvm.casts import int_to_bytes
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
@@ -143,12 +142,7 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
-from chia.wallet.vault.vault_drivers import (
-    get_vault_full_puzzle_hash,
-    get_vault_inner_puzzle_hash,
-    match_recovery_puzzle,
-    match_vault_puzzle,
-)
+from chia.wallet.vault.vault_drivers import get_vault_full_puzzle_hash, get_vault_inner_puzzle_hash, match_vault_puzzle
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
@@ -1810,7 +1804,7 @@ class WalletStateManager:
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet
                         # Used for vault recovery spends
                         if coin_state.spent_height is not None:
-                            all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
+                            all_unconfirmed = await self.tx_store.get_all_unconfirmed()
                             tx_records: List[TransactionRecord] = []
                             for out_tx_record in all_unconfirmed:
                                 for rem_coin in out_tx_record.removals:
@@ -1961,7 +1955,7 @@ class WalletStateManager:
 
                                 # Reorg rollback adds reorged transactions so it's possible there is tx_record already
                                 # Even though we are just adding coin record to the db (after reorg)
-                                tx_records: List[TransactionRecord] = []
+                                tx_records = []
                                 for out_tx_record in all_unconfirmed:
                                     for rem_coin in out_tx_record.removals:
                                         if rem_coin == coin_state.coin:
@@ -2388,8 +2382,10 @@ class WalletStateManager:
         # Check that tx_records have additions/removals since vault txs don't have them until they're signed
         for i, tx in enumerate(tx_records):
             if tx.additions == []:
+                assert isinstance(tx.spend_bundle, SpendBundle)
                 tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
             if tx.removals == []:
+                assert isinstance(tx.spend_bundle, SpendBundle)
                 tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
             tx_records[i] = tx
 
@@ -2876,7 +2872,7 @@ class WalletStateManager:
         vault_full_puzzle_hash = get_vault_full_puzzle_hash(launcher_coin.name(), vault_inner_puzzle_hash)
         memos = [secp_pk, hidden_puzzle_hash]
         if bls_pk:
-            memos.extend([bls_pk.to_bytes(), int_to_bytes(timelock)])
+            memos.extend([bls_pk.to_bytes(), Program.to(timelock).as_atom()])
 
         genesis_launcher_solution = Program.to([vault_full_puzzle_hash, amount, memos])
         announcement_message = genesis_launcher_solution.get_tree_hash()

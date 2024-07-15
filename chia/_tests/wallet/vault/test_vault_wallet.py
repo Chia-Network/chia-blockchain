@@ -10,12 +10,9 @@ from ecdsa.util import PRNG
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia.rpc.wallet_request_types import GatherSigningInfo
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
-from chia.wallet.signer_protocol import Spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
@@ -239,19 +236,13 @@ async def test_vault_recovery(
     await wallet.sync_vault_launcher()
     assert wallet.vault_info
 
-    p2_singleton_puzzle_hash = wallet.get_p2_singleton_puzzle_hash()
+    p2_addr = await wallet_environments.environments[0].rpc_client.get_next_address(wallet.id(), False)
 
-    coins_to_create = 2
     funding_amount = uint64(1000000000)
     funding_wallet = wallet_environments.environments[1].xch_wallet
-    for _ in range(coins_to_create):
-        funding_tx = await funding_wallet.generate_signed_transaction(
-            funding_amount,
-            p2_singleton_puzzle_hash,
-            DEFAULT_TX_CONFIG,
-            memos=[wallet.vault_info.pubkey],
-        )
-        await funding_wallet.wallet_state_manager.add_pending_transactions(funding_tx)
+    await wallet_environments.environments[1].rpc_client.send_transaction(
+        funding_wallet.id(), funding_amount, p2_addr, DEFAULT_TX_CONFIG
+    )
 
     await wallet_environments.process_pending_states(
         [
@@ -264,7 +255,7 @@ async def test_vault_recovery(
                 },
                 post_block_balance_updates={
                     1: {
-                        "confirmed_wallet_balance": funding_amount * 2,
+                        "confirmed_wallet_balance": funding_amount,
                         "set_remainder": True,
                     }
                 },
@@ -296,6 +287,7 @@ async def test_vault_recovery(
                 },
                 post_block_balance_updates={
                     1: {
+                        "confirmed_wallet_balance": 1,
                         "set_remainder": True,
                     }
                 },
@@ -307,7 +299,9 @@ async def test_vault_recovery(
     assert recovery_coin.parent_coin_info == vault_coin.name()
 
     wallet_environments.full_node.time_per_block = 100
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(
+        count=2, guarantee_transaction_blocks=True, farm_to=bytes32(b"1" * 32)
+    )
 
     await wallet_environments.environments[1].rpc_client.push_transactions([finish_tx])
 
@@ -331,3 +325,31 @@ async def test_vault_recovery(
 
     recovered_coin = wallet.vault_info.coin
     assert recovered_coin.parent_coin_info == recovery_coin.name()
+
+    # spend recovery balance
+    env.wallet_state_manager.config["test_sk"] = RECOVERY_SECP_SK
+    recipient_ph = await funding_wallet.get_new_puzzlehash()
+    amount = uint64(200)
+
+    unsigned_txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
+        amount, recipient_ph, DEFAULT_TX_CONFIG, memos=[recipient_ph]
+    )
+
+    await wallet_environments.environments[0].rpc_client.push_transactions(unsigned_txs, sign=True)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "set_remainder": True,
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": -amount - 1,
+                        "set_remainder": True,
+                    }
+                },
+            ),
+        ],
+    )

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from chia_rs import G1Element, G2Element
-from clvm.casts import int_to_bytes
 from ecdsa.keys import SigningKey
 from typing_extensions import Unpack
 
@@ -117,7 +116,7 @@ class Vault(Wallet):
         )
         return puzzle
 
-    async def get_new_puzzlehash(self) -> bytes32:
+    async def get_new_vault_puzzlehash(self) -> bytes32:
         puzzle = await self.get_new_puzzle()
         return puzzle.get_tree_hash()
 
@@ -243,9 +242,9 @@ class Vault(Wallet):
             p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
         next_puzzle_hash = (
-            self.vault_info.coin.puzzle_hash if tx_config.reuse_puzhash else (await self.get_new_puzzlehash())
+            self.vault_info.coin.puzzle_hash if tx_config.reuse_puzhash else (await self.get_new_vault_puzzlehash())
         )
-        vault_conditions: List[Condition] = []
+        vault_conditions: List[Program] = []
         recreate_vault_condition = CreateCoin(
             next_puzzle_hash, uint64(self.vault_info.coin.amount), memos=[next_puzzle_hash]
         ).to_program()
@@ -320,13 +319,13 @@ class Vault(Wallet):
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         if new:
-            return await self.get_new_puzzlehash()
+            return self.get_p2_singleton_puzzle_hash()
         else:
             record: Optional[DerivationRecord] = (
                 await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
             )
             if record is None:
-                return await self.get_new_puzzlehash()
+                return self.get_p2_singleton_puzzle_hash()
             return record.puzzle_hash
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
@@ -362,8 +361,6 @@ class Vault(Wallet):
             mod, curried_args = spend.puzzle.uncurry()
             if match_vault_puzzle(mod, curried_args):
                 new_sol = spend.solution.replace(rrfrrfrrf=signing_responses[0].signature)
-                # spend.puzzle.run(new_sol)
-                # breakpoint()
                 signed_spends.append(Spend(spend.coin, spend.puzzle, new_sol))
             else:
                 signed_spends.append(spend)
@@ -424,8 +421,9 @@ class Vault(Wallet):
             )
             if record is None:
                 return await self.get_new_puzzle()
+            assert isinstance(record._pubkey, bytes)
             puzzle = construct_p2_delegated_secp(
-                record.pubkey, self.wallet_state_manager.constants.GENESIS_CHALLENGE, record.puzzle_hash
+                record._pubkey, self.wallet_state_manager.constants.GENESIS_CHALLENGE, record.puzzle_hash
             )
             return puzzle
 
@@ -457,7 +455,7 @@ class Vault(Wallet):
         )
         puzhash = self.get_p2_singleton_puzzle_hash()
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        assert records is not None
+        assert records
         spendable_amount = uint128(sum([rec.coin.amount for rec in records]))
         coins = await select_coins(
             spendable_amount,
@@ -515,7 +513,7 @@ class Vault(Wallet):
         )
         memos = [secp_pk, hidden_puzzle_hash]
         if bls_pk:
-            memos.extend([bls_pk.to_bytes(), int_to_bytes(timelock)])
+            memos.extend([bls_pk.to_bytes(), Program.to(timelock).as_atom()])
 
         # Generate the current inner puzzle
         inner_puzzle = get_vault_inner_puzzle(

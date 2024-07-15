@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from chia_rs import G1Element
 
@@ -101,7 +101,7 @@ def get_vault_full_puzzle_hash(launcher_id: bytes32, inner_puzzle_hash: bytes32)
 
 
 def get_recovery_finish_puzzle(
-    new_vault_inner_puzhash: bytes32, timelock: uint64, amount: uint64, memos: List[bytes]
+    new_vault_inner_puzhash: bytes32, timelock: uint64, amount: uint64, memos: Union[List[bytes], Program]
 ) -> Program:
     recovery_condition = Program.to([[51, new_vault_inner_puzhash, amount, memos]])
     return RECOVERY_FINISH_MOD.curry(timelock, recovery_condition)
@@ -162,7 +162,7 @@ def get_new_vault_info_from_spend(spend: CoinSpend) -> Tuple[bytes, bytes32, Opt
             memos = cond.at("rrrf") if cond.list_len() == 4 else None
             assert memos is not None
             secp_pk = memos.at("f").as_atom()
-            hidden_puzzle_hash = memos.at("rf").as_atom()
+            hidden_puzzle_hash = bytes32(memos.at("rf").as_atom())
             if memos.list_len() > 2:
                 bls_pk = G1Element.from_bytes(memos.at("rrf").as_atom())
                 timelock = uint64(memos.at("rrrf").as_int())

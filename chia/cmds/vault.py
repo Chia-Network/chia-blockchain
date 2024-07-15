@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from decimal import Decimal
 from typing import Optional, Sequence
 
 import click
 
 from chia.cmds import options
-from chia.cmds.plotnft import validate_fee
+from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 
 
 @click.group("vault", help="Manage your vault")
@@ -56,36 +57,29 @@ def vault_cmd(ctx: click.Context) -> None:
     required=False,
     default=0,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @click.option("-n", "--name", help="Set the vault name", type=str)
 @click.option(
     "-ma",
     "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
-    type=str,
+    type=AmountParamType(),
     required=False,
-    default="0",
+    default=cli_amount_none,
 )
 @click.option(
     "-l",
     "--max-coin-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
-    type=str,
+    type=AmountParamType(),
     required=False,
-    default=None,
+    default=cli_amount_none,
 )
 @click.option(
     "--exclude-coin",
     "coins_to_exclude",
     multiple=True,
+    type=Bytes32ParamType(),
     help="Exclude this coin from being spent.",
 )
 @click.option(
@@ -101,11 +95,11 @@ def vault_create_cmd(
     recovery_public_key: Optional[str],
     recovery_timelock: Optional[int],
     hidden_puzzle_index: Optional[int],
-    fee: str,
+    fee: uint64,
     name: Optional[str],
-    min_coin_amount: str,
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
     reuse: bool,
 ) -> None:
     from .vault_funcs import create_vault
@@ -121,7 +115,7 @@ def vault_create_cmd(
             recovery_public_key,
             recovery_timelock,
             hidden_puzzle_index,
-            Decimal(fee),
+            fee,
             name,
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
@@ -192,22 +186,23 @@ def vault_create_cmd(
     "-ma",
     "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
-    type=str,
+    type=AmountParamType(),
     required=False,
-    default="0",
+    default=cli_amount_none,
 )
 @click.option(
     "-l",
     "--max-coin-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
-    type=str,
+    type=AmountParamType(),
     required=False,
-    default=None,
+    default=cli_amount_none,
 )
 @click.option(
     "--exclude-coin",
     "coins_to_exclude",
     multiple=True,
+    type=Bytes32ParamType(),
     help="Exclude this coin from being spent.",
 )
 @click.option(
@@ -226,9 +221,9 @@ def vault_recover_cmd(
     recovery_timelock: Optional[int],
     recovery_initiate_file: str,
     recovery_finish_file: str,
-    min_coin_amount: str,
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
     reuse: bool,
 ) -> None:
     from .vault_funcs import recover_vault
