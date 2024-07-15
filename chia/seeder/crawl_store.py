@@ -397,12 +397,28 @@ class CrawlStore:
             )
             """
         )
+        await self.crawl_db.execute(
+            """
+            delete from good_peers
+            where not exists (
+                select peer_records.ip_address
+                from peer_records
+                where peer_records.ip_address = good_peers.ip
+            )
+            """
+        )
+        await self.crawl_db.commit()
         await self.crawl_db.execute("VACUUM")
+
+        to_delete: List[str] = []
 
         # Deletes the old records from the in memory Dicts
         for peer_id, peer_record in self.host_to_records.items():
             if peer_record.best_timestamp < cutoff:
-                del self.host_to_records[peer_id]
+                to_delete.append(peer_id)
+
+        for peer_id in to_delete:
+            del self.host_to_records[peer_id]
 
             if peer_id in self.host_to_selected_time:
                 del self.host_to_selected_time[peer_id]

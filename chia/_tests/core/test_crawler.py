@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
+from datetime import datetime, timedelta
 from typing import cast
 
 import pytest
@@ -22,10 +24,10 @@ from chia.util.ints import uint32, uint64, uint128
 
 @pytest.mark.anyio
 async def test_unknown_messages(
-    self_hostname: str,
-    one_node: SimulatorsAndWalletsServices,
-    crawler_service: CrawlerService,
-    caplog: pytest.LogCaptureFixture,
+        self_hostname: str,
+        one_node: SimulatorsAndWalletsServices,
+        crawler_service: CrawlerService,
+        caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
     crawler = crawler_service._node
@@ -46,10 +48,10 @@ async def test_unknown_messages(
 
 @pytest.mark.anyio
 async def test_valid_message(
-    self_hostname: str,
-    one_node: SimulatorsAndWalletsServices,
-    crawler_service: CrawlerService,
-    caplog: pytest.LogCaptureFixture,
+        self_hostname: str,
+        one_node: SimulatorsAndWalletsServices,
+        crawler_service: CrawlerService,
+        caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
     crawler = crawler_service._node
@@ -103,9 +105,10 @@ async def test_crawler_to_db(crawler_service: CrawlerService, one_node: Simulato
     # add peer to the db & mark it as connected
     await crawl_store.add_peer(peer_record, peer_reliability)
     assert peer_record == crawl_store.host_to_records[peer_address]
+    await crawler.save_to_db()
+    good_peers = await crawl_store.get_good_peers()
+    assert good_peers == [peer_address]
 
-    # validate the db data
-    await time_out_assert(20, crawl_store.get_good_peers, [peer_address])
 
 @pytest.mark.anyio
 async def test_crawler_peer_cleanup(crawler_service: CrawlerService, one_node: SimulatorsAndWalletsServices) -> None:
@@ -121,7 +124,7 @@ async def test_crawler_peer_cleanup(crawler_service: CrawlerService, one_node: S
     assert crawl_store is not None
     peer_addresses = ["10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5"]
 
-    for peer_address in peer_addresses:
+    for idx, peer_address in enumerate(peer_addresses):
         # create peer records
         peer_record = PeerRecord(
             peer_address,
@@ -132,7 +135,7 @@ async def test_crawler_peer_cleanup(crawler_service: CrawlerService, one_node: S
             uint32(0),
             uint64(0),
             uint64(int(time.time())),
-            uint64(0),
+            uint64(int((datetime.now() - timedelta(days=idx * 10)).timestamp())),
             "undefined",
             uint64(0),
             tls_version="unknown",
@@ -143,5 +146,11 @@ async def test_crawler_peer_cleanup(crawler_service: CrawlerService, one_node: S
         await crawl_store.add_peer(peer_record, peer_reliability)
         assert peer_record == crawl_store.host_to_records[peer_address]
 
-    # validate the db data
-    await time_out_assert(20, crawl_store.get_good_peers, peer_addresses)
+    await crawler.save_to_db()
+    good_peers = await crawl_store.get_good_peers()
+    assert set(good_peers) == set(peer_addresses)
+
+    await crawl_store.prune_old_peers(older_than_days=31)
+    assert 4 == len(crawl_store.host_to_records)
+    good_peers = await crawl_store.get_good_peers()
+    assert set(good_peers) == {"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4"}, good_peers

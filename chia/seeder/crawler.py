@@ -72,6 +72,7 @@ class Crawler:
     version_cache: List[Tuple[str, str]] = field(default_factory=list)
     handshake_time: Dict[str, uint64] = field(default_factory=dict)
     best_timestamp_per_peer: Dict[str, uint64] = field(default_factory=dict)
+    start_crawler_loop: bool = True
 
     @property
     def server(self) -> ChiaServer:
@@ -90,9 +91,10 @@ class Crawler:
 
         # Connect to the DB
         self.crawl_store: CrawlStore = await CrawlStore.create(await aiosqlite.connect(self.db_path))
-        # Bootstrap the initial peers
-        await self.load_bootstrap_peers()
-        self.crawl_task = asyncio.create_task(self.crawl())
+        if self.start_crawler_loop:
+            # Bootstrap the initial peers
+            await self.load_bootstrap_peers()
+            self.crawl_task = asyncio.create_task(self.crawl())
         try:
             yield
         finally:
