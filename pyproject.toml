@@ -88,7 +88,7 @@ isort = { version = "*", optional = true }
 # TODO: but...  keyrings_cryptfile goes 15 minutes without locking while this does in 75 seconds
 "keyrings.cryptfile" = { version = "*", optional = true }
 mypy = { version = "*", optional = true }
-pre-commit = [ { version = "*", python = "<3.9", optional = true }, { version = "*", python = ">=3.9", optional = true } ]
+pre-commit = [ { version = "<=3.5.0", python = "<3.9", optional = true }, { version = ">=3.7.1", python = ">=3.9", optional = true } ]
 py3createtorrent = { version = "*", optional = true }
 pyinstaller = { version = "*", optional = true }
 pylint = { version = "*", optional = true }
@@ -106,8 +106,8 @@ miniupnpc = { version = "*", source = "chia", optional = true }
 pyupgrade = { version = "*", optional = true }
 # big-o = {version = "*", optional = true}
 # numpy = [
-# 	{version="*", python = "<3.9", optional = true},
-# 	{version="*", python = ">=3.9", optional = true}]
+# 	{version="<=1.24.4", python = "<3.9", optional = true},
+# 	{version=">=1.26.4", python = ">=3.9", optional = true}]
 
 
 [tool.poetry.extras]
