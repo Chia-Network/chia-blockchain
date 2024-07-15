@@ -2381,12 +2381,11 @@ class WalletStateManager:
 
         # Check that tx_records have additions/removals since vault txs don't have them until they're signed
         for i, tx in enumerate(tx_records):
-            if tx.additions == []:
-                assert isinstance(tx.spend_bundle, SpendBundle)
-                tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
-            if tx.removals == []:
-                assert isinstance(tx.spend_bundle, SpendBundle)
-                tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
+            if tx.spend_bundle is not None:
+                if tx.additions == []:
+                    tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
+                if tx.removals == []:
+                    tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
             tx_records[i] = tx
 
         if push:
