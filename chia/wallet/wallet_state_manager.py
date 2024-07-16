@@ -1805,14 +1805,14 @@ class WalletStateManager:
                         # Used for vault recovery spends
                         if coin_state.spent_height is not None:
                             all_unconfirmed = await self.tx_store.get_all_unconfirmed()
-                            tx_records: List[TransactionRecord] = []
+                            tx_records_to_confirm: List[TransactionRecord] = []
                             for out_tx_record in all_unconfirmed:
                                 for rem_coin in out_tx_record.removals:
                                     if rem_coin == coin_state.coin:
-                                        tx_records.append(out_tx_record)
+                                        tx_records_to_confirm.append(out_tx_record)
 
-                            if len(tx_records) > 0:
-                                for tx_record in tx_records:
+                            if len(tx_records_to_confirm) > 0:
+                                for tx_record in tx_records_to_confirm:
                                     await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
@@ -1955,7 +1955,7 @@ class WalletStateManager:
 
                                 # Reorg rollback adds reorged transactions so it's possible there is tx_record already
                                 # Even though we are just adding coin record to the db (after reorg)
-                                tx_records = []
+                                tx_records: List[TransactionRecord] = []
                                 for out_tx_record in all_unconfirmed:
                                     for rem_coin in out_tx_record.removals:
                                         if rem_coin == coin_state.coin:
@@ -2385,6 +2385,7 @@ class WalletStateManager:
                 if tx.additions == []:
                     tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
                 if tx.removals == []:
+                    assert isinstance(tx.spend_bundle, SpendBundle)
                     tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
             tx_records[i] = tx
 
