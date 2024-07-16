@@ -212,7 +212,7 @@ class Vault(Wallet):
                 tx_config.coin_selection_config,
             )
         assert len(coins) > 0
-        selected_amount = sum([coin.amount for coin in coins])
+        selected_amount = sum(coin.amount for coin in coins)
         assert selected_amount >= amount
 
         conditions = [primary.as_condition() for primary in primaries]
@@ -456,7 +456,7 @@ class Vault(Wallet):
         puzhash = self.get_p2_singleton_puzzle_hash()
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
         assert records
-        spendable_amount = uint128(sum([rec.coin.amount for rec in records]))
+        spendable_amount = uint128(sum(rec.coin.amount for rec in records))
         coins = await select_coins(
             spendable_amount,
             coin_selection_config,
@@ -685,6 +685,7 @@ class Vault(Wallet):
         hints, _ = compute_spend_hints_and_additions(coin_spend)
         inner_puzzle_hash = hints[coin_state.coin.name()].hint
         dr = None
+        new_recovery_info = None
         replace_key = False
         replace_recovery = False
         if inner_puzzle_hash is not None:
@@ -739,7 +740,11 @@ class Vault(Wallet):
         lineage_proof = LineageProof(
             parent_state.coin.parent_coin_info, parent_inner_puzzle_hash, parent_state.coin.amount
         )
-        # assert hidden_puzzle_hash is not None
+        if replace_recovery:
+            assert isinstance(new_recovery_info, RecoveryInfo)
+            recovery: RecoveryInfo = new_recovery_info
+        else:
+            recovery = self.vault_info.recovery_info
         new_vault_info = VaultInfo(
             coin_state.coin,
             self.vault_info.pubkey if not replace_key else new_secp_pk,
@@ -747,7 +752,7 @@ class Vault(Wallet):
             next_inner_puzzle.get_tree_hash(),
             lineage_proof,
             self.vault_info.is_recoverable if not replace_key else replace_recovery,
-            self.vault_info.recovery_info if not replace_recovery else new_recovery_info,
+            recovery,
         )
 
         await self.update_vault_store(new_vault_info, coin_spend)
