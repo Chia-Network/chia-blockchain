@@ -232,7 +232,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: chia-installers-windows-exe-intel
-          path: ${{ github.workspace }}\chia-blockchain-gui\release-builds\
+          path: chia-blockchain-gui\release-builds\windows-installer\
 
       - name: Remove Windows exe and installer to exclude from cache
         run: |
@@ -242,7 +242,7 @@ jobs:
           Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force
 
   publish:
-    name: Publish EXE
+    name: Publish ${{ matrix.arch.name }} ${{ matrix.mode.name }} ${{ matrix.os.file-type.name }}
     runs-on: ubuntu-latest
     needs:
       - version
@@ -252,9 +252,58 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10"]
+        os:
+          - matrix: windows
+            file-type:
+              name: EXE
+              extension: exe
+            glue-name: windows
+            artifact-platform-name: windows
+            file-arch-name:
+              intel: intel
+            file-suffix:
+              arm: ""
+              intel: ""
+            names:
+              gui:
+                file: ChiaSetup-{0}.exe
+                dev-file: ChiaSetup-{1}.exe
+                latest-dev-file: ChiaSetup-latest-dev.exe
+        mode:
+          - name: GUI
+            matrix: gui
+            glue-name: gui
+          - name: CLI
+            matrix: cli
+            glue-name: cli
+        arch:
+          - name: ARM64
+            matrix: arm
+            artifact-name: arm
+            glue-name: arm
+          - name: Intel
+            matrix: intel
+            artifact-name: intel
+            glue-name: intel
+        exclude:
+          - os:
+              matrix: windows
+            arch:
+              matrix: arm
+          - os:
+              matrix: windows
+            mode:
+              matrix: cli
 
     env:
-      CHIA_INSTALLER_VERSION: ${{ needs.version.outputs.chia-installer-version }}
+      FILE: ${{ format(matrix.os.names[matrix.mode.matrix].file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
+      DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
+      LATEST_DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].latest-dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
+      INSTALL_S3_URL: s3://download.chia.net/install/
+      DEV_S3_URL: s3://download.chia.net/dev/
+      LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev/
+      TORRENT_S3_URL: s3://download.chia.net/torrents/
+      TRACKER_URL: udp://tracker.opentrackr.org:1337/announce
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -273,7 +322,7 @@ jobs:
       - name: Download constraints file
         uses: actions/download-artifact@v4
         with:
-          name: constraints-file-intel
+          name: constraints-file-${{ matrix.arch.artifact-name }}
           path: venv
 
       - name: Install utilities
@@ -283,8 +332,8 @@ jobs:
       - name: Download packages
         uses: actions/download-artifact@v4
         with:
-          name: chia-installers-windows-exe-intel
-          path: chia-blockchain-gui/release-builds/
+          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.arch.artifact-name }}
+          path: artifacts/
 
       - name: Set Env
         uses: Chia-Network/actions/setjobenv@main
@@ -303,7 +352,6 @@ jobs:
           if [ -n "$GLUE_API_URL" ]; then HAS_GLUE_SECRET='true' ; fi
           echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
         env:
-          SIGNING_SECRET: "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"
           AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
           GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
 
@@ -314,68 +362,59 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
           aws-region: us-west-2
 
+      - name: Create Checksums
+        run: |
+          ls artifacts/
+          sha256sum "artifacts/${FILE}" > "artifacts/${FILE}.sha256"
+
       - name: Upload to s3
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
         run: |
-          GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
-          CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
-          echo CHIA_DEV_BUILD=${CHIA_DEV_BUILD} >> "$GITHUB_OUTPUT"
-          echo ${CHIA_DEV_BUILD}
-          pwd
-          aws s3 cp chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${CHIA_INSTALLER_VERSION}.exe s3://download.chia.net/dev/ChiaSetup-${CHIA_DEV_BUILD}.exe
-
-      - name: Create Checksums
-        run: |
-          ls "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/
-          sha256sum "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe > "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256
-          ls "$GITHUB_WORKSPACE"/chia-blockchain-gui/release-builds/windows-installer/
+          ls artifacts/
+          aws s3 cp "artifacts/${FILE}" "${DEV_S3_URL}/${DEV_FILE}"
+          aws s3 cp "artifacts/${FILE}.sha256" "${LATEST_DEV_S3_URL}/${DEV_FILE}.sha256"
 
       - name: Create torrent
-        if: env.FULL_RELEASE == 'true'
+        if: env.FULL_RELEASE == 'true' && matrix.mode.matrix == 'gui'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe -o "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download.chia.net/install/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
-          ls
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent
+          py3createtorrent -f -t ${TRACKER_URL} artifacts/${FILE} -o artifacts/${FILE}.torrent --webseed https://download.chia.net/install/${FILE}
+          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${FILE}.torrent
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
         run: |
-          aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe s3://download.chia.net/latest-dev/ChiaSetup-latest-dev.exe
-          aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/latest-dev/ChiaSetup-latest-dev.exe.sha256
+          aws s3 cp artifacts/${FILE} ${LATEST_DEV_S3_URL}/${LATEST_DEV_FILE}
+          aws s3 cp artifacts/${FILE}.sha256 ${LATEST_DEV_S3_URL}/${LATEST_DEV_FILE}.sha256
 
       - name: Upload Release Files
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         run: |
-          aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe s3://download.chia.net/install/
-          aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/install/
-          aws s3 cp "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe.torrent s3://download.chia.net/torrents/
+          aws s3 cp artifacts/${FILE} ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${FILE}.sha256 ${INSTALL_S3_URL}
+          aws s3 cp artifacts/${FILE}.torrent ${TORRENT_S3_URL}
 
       - name: Upload release artifacts
         if: env.RELEASE == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG "${GITHUB_WORKSPACE}"/chia-blockchain-gui/release-builds/windows-installer/ChiaSetup-${{ env.CHIA_INSTALLER_VERSION }}.exe
+          gh release upload \
+            --repo ${{ github.repository }} \
+            $RELEASE_TAG \
+            artifacts/${FILE}
 
-      - name: Mark pre-release installer complete
+      - name: Mark installer complete
         uses: Chia-Network/actions/github/glue@main
-        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.PRE_RELEASE == 'true'
+        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && (env.PRE_RELEASE == 'true' || env.FULL_RELEASE == 'true')
+        env:
+          REPO_SUFFIX: ${{ env.PRE_RELEASE == 'true' && '-prerelease' || '' }}
         with:
           json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
           glue_url: "${{ secrets.GLUE_API_URL }}"
-          glue_project: "${{ env.RFC_REPO }}-prerelease/${{ env.RELEASE_TAG }}"
-          glue_path: "success/build-windows"
-
-      - name: Mark release installer complete
-        uses: Chia-Network/actions/github/glue@main
-        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
-        with:
-          json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
-          glue_url: "${{ secrets.GLUE_API_URL }}"
-          glue_project: "${{ env.RFC_REPO }}/${{ env.RELEASE_TAG }}"
-          glue_path: "success/build-windows"
+          glue_project: "${{ env.RFC_REPO }}${{ env.REPO_SUFFIX }}/${{ env.RELEASE_TAG }}"
+          glue_path: "success/build-${{ matrix.os.glue-name }}-${{ matrix.arch.glue-name }}-${{ matrix.mode.glue-name }}"
 
   test:
     name: Test ${{ matrix.os.name }}
@@ -399,6 +438,9 @@ jobs:
           - name: Intel
             matrix: intel
 
+    env:
+      INSTALL_PATH: installed/
+
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
 
@@ -409,19 +451,26 @@ jobs:
           path: packages
 
       - name: Install package
-        env:
-          INSTALL_PATH: ${{ github.workspace }}\installed
         run: |
           dir ./packages/
-          $env:INSTALLER_PATH = (Get-ChildItem packages/windows-installer/ChiaSetup-*.exe)
-          Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:INSTALL_PATH)
+          $env:INSTALLER_PATH = (Get-ChildItem packages/ChiaSetup-*.exe)
+          # note that the installer requires the target path use backslashes
+          $env:RESOLVED_INSTALL_PATH = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($env:INSTALL_PATH)
+          Start-Process -Wait -FilePath $env:INSTALLER_PATH -ArgumentList "/S", ("/D=" + $env:RESOLVED_INSTALL_PATH)
+          echo ======================================
+          dir ./
+          echo ======================================
+          dir ./installed/
 
       - name: List installed files
         run: |
           Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
 
-      - name: Run chia dev installers test
-        env:
-          INSTALL_PATH: ${{ github.workspace }}\installed
+      - name: List all files
+        if:
         run: |
-          & ($env:INSTALL_PATH + "\resources\app.asar.unpacked\daemon\chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
+          Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
+
+      - name: Run chia dev installers test
+        run: |
+          & ($env:INSTALL_PATH + "/resources/app.asar.unpacked/daemon/chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"

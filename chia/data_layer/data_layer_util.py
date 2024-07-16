@@ -5,8 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union, overload
 
-# TODO: remove or formalize this
-import aiosqlite as aiosqlite
+import aiosqlite
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
