@@ -35,11 +35,7 @@ def create_full_node_crawler_service(
     service_config = config[SERVICE_NAME]
     crawler_config = service_config["crawler"]
 
-    crawler = Crawler(
-        service_config,
-        root_path=root_path,
-        constants=consensus_constants,
-    )
+    crawler = Crawler(service_config, root_path=root_path, constants=consensus_constants, start_crawler_loop=False)
     api = CrawlerAPI(crawler)
 
     network_id = service_config["selected_network"]

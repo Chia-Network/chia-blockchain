@@ -5,6 +5,7 @@ import logging
 import random
 import time
 from dataclasses import dataclass, field, replace
+from datetime import datetime, timedelta
 from typing import Dict, List
 
 import aiosqlite
@@ -380,3 +381,47 @@ class CrawlStore:
         if len(result) > 0:
             random.shuffle(result)  # mix up the peers
         return result
+
+    async def prune_old_peers(self, older_than_days: int) -> None:
+        cutoff = int((datetime.now() - timedelta(days=older_than_days)).timestamp())
+
+        # Deletes the old records from the DB
+        await self.crawl_db.execute("delete from peer_records where best_timestamp < ?", (cutoff,))
+        await self.crawl_db.execute(
+            """
+            delete from peer_reliability
+            where not exists (
+                select peer_records.peer_id
+                from peer_records
+                where peer_records.peer_id = peer_reliability.peer_id
+            )
+            """
+        )
+        await self.crawl_db.execute(
+            """
+            delete from good_peers
+            where not exists (
+                select peer_records.ip_address
+                from peer_records
+                where peer_records.ip_address = good_peers.ip
+            )
+            """
+        )
+        await self.crawl_db.commit()
+        await self.crawl_db.execute("VACUUM")
+
+        to_delete: List[str] = []
+
+        # Deletes the old records from the in memory Dicts
+        for peer_id, peer_record in self.host_to_records.items():
+            if peer_record.best_timestamp < cutoff:
+                to_delete.append(peer_id)
+
+        for peer_id in to_delete:
+            del self.host_to_records[peer_id]
+
+            if peer_id in self.host_to_selected_time:
+                del self.host_to_selected_time[peer_id]
+
+            if peer_id in self.host_to_reliability:
+                del self.host_to_reliability[peer_id]
