@@ -3,12 +3,13 @@ from __future__ import annotations
 import dataclasses
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 
-from chia_rs import fast_forward_singleton
+from chia_rs import fast_forward_singleton, get_name_puzzle_conditions
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.util.errors import Err, ValidationError
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -332,17 +333,20 @@ class EligibleCoinSpends:
             coin_spends=new_coin_spends, aggregated_signature=mempool_item.spend_bundle.aggregated_signature
         )
         # We need to run the new spend bundle to make sure it remains valid
-        generator = simple_solution_generator(new_sb)
-        new_npc_result = get_name_puzzle_conditions(
-            generator=generator,
-            max_cost=mempool_item.conds.cost,
-            mempool_mode=True,
-            height=height,
-            constants=constants,
-        )
-        if new_npc_result.error is not None:
-            raise ValueError("Mempool item became invalid after singleton fast forward.")
-        assert new_npc_result.conds is not None
+        # generator = simple_solution_generator(new_sb)
+        assert mempool_item.npc_result.conds is not None
+        try:
+            new_sbc_result = get_name_puzzle_conditions(
+                new_sb,
+                mempool_item.npc_result.conds.cost,
+                constants,
+                True,
+                height,
+            )
+        except TypeError as e:
+            error = Err(e.args[0])
+            raise ValueError(f"Mempool item became invalid after singleton fast forward with error {error}.")
+        new_npc_result = NPCResult(None, new_sbc_result)
         # Update bundle_coin_spends using the collected data
         for coin_id in replaced_coin_ids:
             mempool_item.bundle_coin_spends.pop(coin_id, None)
