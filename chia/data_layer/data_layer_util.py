@@ -767,7 +767,7 @@ class PluginRemote:
     def unmarshal(cls, marshalled: Dict[str, Any]) -> PluginRemote:
         return cls(
             url=marshalled["url"],
-            headers=marshalled["headers"],
+            headers=marshalled.get("headers", {}),
         )
 
 
