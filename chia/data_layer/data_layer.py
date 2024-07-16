@@ -557,11 +557,13 @@ class DataLayer:
 
         timestamp = int(time.time())
         servers_info = await self.data_store.get_available_servers_for_store(store_id, timestamp)
+        self.log.debug(f"Fetch data: {len(servers_info)} available servers for {store_id}")
         # TODO: maybe append a random object to the whole DataLayer class?
         random.shuffle(servers_info)
         for server_info in servers_info:
             url = server_info.url
 
+            self.log.debug(f"Fetch data: trying server {url} for {store_id}")
             root = await self.data_store.get_tree_root(store_id=store_id)
             if root.generation > singleton_record.generation:
                 self.log.info(
@@ -842,6 +844,7 @@ class DataLayer:
 
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
+        self.log.debug(f"Starting manage data task with interval {manage_data_interval}s")
         while not self._shut_down:
             async with self.subscription_lock:
                 try:
@@ -869,6 +872,8 @@ class DataLayer:
             # Subscribe to all local store_ids that we can find on chain.
             local_store_ids = await self.data_store.get_store_ids()
             subscription_store_ids = {subscription.store_id for subscription in subscriptions}
+
+            self.log.debug(f"Updating a total of {len(subscriptions)} subscriptions.")
             for local_id in local_store_ids:
                 if local_id not in subscription_store_ids:
                     try:
@@ -907,13 +912,19 @@ class DataLayer:
     ) -> None:
         subscription = job.input
 
+        self.log.debug(f"Updating subscription: {subscription.store_id.hex()}")
         try:
+            self.log.debug(f"update_subscriptions_from_wallet: {subscription.store_id.hex()}")
             await self.update_subscriptions_from_wallet(subscription.store_id)
+            self.log.debug(f"fetch_and_validate: {subscription.store_id.hex()}")
             await self.fetch_and_validate(subscription.store_id)
+            self.log.debug(f"upload_files: {subscription.store_id.hex()}")
             await self.upload_files(subscription.store_id)
+            self.log.debug(f"clean_old_full_tree_files: {subscription.store_id.hex()}")
             await self.clean_old_full_tree_files(subscription.store_id)
         except Exception as e:
             self.log.error(f"Exception while fetching data: {type(e)} {e} {traceback.format_exc()}.")
+        self.log.debug(f"Finished updating subscription: {subscription.store_id.hex()}")
 
     async def build_offer_changelist(
         self,
