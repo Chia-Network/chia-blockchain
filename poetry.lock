@@ -2492,13 +2492,13 @@ setuptools = ">=42.0.0"
 
 [[package]]
 name = "pylint"
-version = "3.2.2"
+version = "3.2.5"
 description = "python code static checker"
 optional = true
 python-versions = ">=3.8.0"
 files = [
-    {file = "pylint-3.2.2-py3-none-any.whl", hash = "sha256:3f8788ab20bb8383e06dd2233e50f8e08949cfd9574804564803441a4946eab4"},
-    {file = "pylint-3.2.2.tar.gz", hash = "sha256:d068ca1dfd735fb92a07d33cb8f288adc0f6bc1287a139ca2425366f7cbe38f8"},
+    {file = "pylint-3.2.5-py3-none-any.whl", hash = "sha256:32cd6c042b5004b8e857d727708720c54a676d1e22917cf1a2df9b4d4868abd6"},
+    {file = "pylint-3.2.5.tar.gz", hash = "sha256:e9b7171e242dcc6ebd0aaa7540481d1a72860748a0a7816b8fe6cf6c80a6fe7e"},
 ]
 
 [package.dependencies]
@@ -3423,4 +3423,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "18a5a0e0c03855565eb651c0eeade75a20f9e419e5fc05c4ed94431b47c75cda"
+content-hash = "4901a91bd45d3b01fae3d6e2e576364f27524063e0dea028570a5dcc915f7fb6"
