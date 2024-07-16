@@ -188,8 +188,8 @@ jobs:
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
       concurrency-name: rpm
-      chia-installer-version: needs.version.outputs.chia-installer-version
-      chia-dev-version: needs.version.outputs.chia-dev-version
+      chia-installer-version: ${{ needs.version.outputs.chia-installer-version }}
+      chia-dev-version: ${{ needs.version.outputs.chia-dev-version }}
       configuration: ${{ toJSON( matrix.configuration ) }}
     needs:
       - version
@@ -197,7 +197,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        FILE: ${{ format(matrix.os.names[matrix.mode.matrix].file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
         configuration:
           - python-version: ["3.10"]
             os:
