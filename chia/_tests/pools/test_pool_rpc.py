@@ -896,6 +896,8 @@ class TestPoolWalletRpc:
         assert pw_info.current.pool_url == "https://pool-a.org"
         assert pw_info.current.relative_lock_height == 5
 
+        await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
         join_pool_tx: TransactionRecord = (
             await client.pw_join_pool(
                 wallet_id,

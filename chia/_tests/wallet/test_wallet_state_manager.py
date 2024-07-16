@@ -120,18 +120,22 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
             uint64(2_000_000_000_000), coin_selection_config=wallet_environments.tx_config.coin_selection_config
         )
     )
-    [tx1] = await wsm.main_wallet.generate_signed_transaction(
-        uint64(0),
-        bytes32([0] * 32),
-        wallet_environments.tx_config,
-        coins={coins[0]},
-    )
-    [tx2] = await wsm.main_wallet.generate_signed_transaction(
-        uint64(0),
-        bytes32([0] * 32),
-        wallet_environments.tx_config,
-        coins={coins[1]},
-    )
+
+    async with wsm.new_action_scope(push=False) as action_scope:
+        [tx1] = await wsm.main_wallet.generate_signed_transaction(
+            uint64(0),
+            bytes32([0] * 32),
+            wallet_environments.tx_config,
+            action_scope,
+            coins={coins[0]},
+        )
+        [tx2] = await wsm.main_wallet.generate_signed_transaction(
+            uint64(0),
+            bytes32([0] * 32),
+            wallet_environments.tx_config,
+            action_scope,
+            coins={coins[1]},
+        )
 
     def flatten_spend_bundles(txs: List[TransactionRecord]) -> List[SpendBundle]:
         return [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]

@@ -21,6 +21,7 @@ from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.notifications import construct_notification
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_action_scope import WalletActionScope
 
 
 class NotificationManager:
@@ -88,6 +89,7 @@ class NotificationManager:
         msg: bytes,
         amount: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> TransactionRecord:
@@ -108,6 +110,7 @@ class NotificationManager:
             amount,
             notification_hash,
             tx_config,
+            action_scope,
             fee,
             coins=coins,
             origin_id=origin_coin,
