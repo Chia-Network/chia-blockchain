@@ -521,6 +521,7 @@ class Mempool:
                         unique_additions.extend(spend_data.additions)
                     cost_saving = 0
                 else:
+                    # item gets modified in the following call
                     await eligible_coin_spends.process_fast_forward_spends(
                         mempool_item=item,
                         get_unspent_lineage_info_for_puzzle_hash=get_unspent_lineage_info_for_puzzle_hash,
