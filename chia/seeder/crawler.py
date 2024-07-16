@@ -72,6 +72,7 @@ class Crawler:
     version_cache: List[Tuple[str, str]] = field(default_factory=list)
     handshake_time: Dict[str, uint64] = field(default_factory=dict)
     best_timestamp_per_peer: Dict[str, uint64] = field(default_factory=dict)
+    start_crawler_loop: bool = True
 
     @property
     def server(self) -> ChiaServer:
@@ -90,9 +91,10 @@ class Crawler:
 
         # Connect to the DB
         self.crawl_store: CrawlStore = await CrawlStore.create(await aiosqlite.connect(self.db_path))
-        # Bootstrap the initial peers
-        await self.load_bootstrap_peers()
-        self.crawl_task = asyncio.create_task(self.crawl())
+        if self.start_crawler_loop:
+            # Bootstrap the initial peers
+            await self.load_bootstrap_peers()
+            self.crawl_task = asyncio.create_task(self.crawl())
         try:
             yield
         finally:
@@ -304,7 +306,9 @@ class Crawler:
                 if len(peers_to_crawl) == 0:
                     continue
 
+                peer_cutoff = int(self.config.get("crawler", {}).get("prune_peer_days", 90))
                 await self.save_to_db()
+                await self.crawl_store.prune_old_peers(older_than_days=peer_cutoff)
                 await self.print_summary(t_start, total_nodes, tried_nodes)
                 await asyncio.sleep(15)  # 15 seconds between db updates
                 self._state_changed("crawl_batch_completed")

@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      chia-dev-version: ${{ steps.version-number.outputs.chia-dev-version }}
       chia-installer-version: ${{ steps.version-number.outputs.chia-installer-version }}
       tag-type: ${{ steps.tag-type.outputs.tag-type }}
 
@@ -46,5 +47,10 @@ jobs:
           . ../venv/bin/activate
           python -m pip install --upgrade pip
           pip install poetry "poetry-dynamic-versioning[plugin]"
-          echo "chia-installer-version=$(poetry version -s)" >> "$GITHUB_OUTPUT"
+
+          VERSION=$(poetry version -s)
+          echo "chia-installer-version=${VERSION}" >> "$GITHUB_OUTPUT"
+          GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
+          echo "chia-dev-version=${VERSION}-${GIT_SHORT_HASH}" >> "$GITHUB_OUTPUT"
+
           deactivate

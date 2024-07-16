@@ -80,6 +80,14 @@ def create_chia_directory(
         config["selected_network"] = "simulator0"
         config["wallet"]["selected_network"] = "simulator0"
         config["full_node"]["selected_network"] = "simulator0"
+        config["seeder"]["selected_network"] = "simulator0"
+        config["harvester"]["selected_network"] = "simulator0"
+        config["pool"]["selected_network"] = "simulator0"
+        config["farmer"]["selected_network"] = "simulator0"
+        config["timelord"]["selected_network"] = "simulator0"
+        config["ui"]["selected_network"] = "simulator0"
+        config["introducer"]["selected_network"] = "simulator0"
+        config["data_layer"]["selected_network"] = "simulator0"
         if not docker_mode:  # We want predictable ports for our docker image.
             # set ports and networks, we don't want to cause a port conflict.
             port_offset = randint(1, 20000)
