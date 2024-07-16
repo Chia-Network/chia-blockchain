@@ -3423,4 +3423,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "18a5a0e0c03855565eb651c0eeade75a20f9e419e5fc05c4ed94431b47c75cda"
+content-hash = "cee6e1747ad1e13471a275fbf3c155d5a467db30353f5073306123d8f56340df"
