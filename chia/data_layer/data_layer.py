@@ -664,8 +664,7 @@ class DataLayer:
                 root,
                 self.server_files_location,
                 full_tree_first_publish_generation,
-                False,
-                self.group_files_by_store,
+                group_by_store=self.group_files_by_store,
             )
             if not write_file_result.result:
                 # this particular return only happens if the files already exist, no need to log anything

@@ -1448,7 +1448,7 @@ async def test_data_server_files(
                 counter += 1
             await data_store_server.insert_batch(store_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(store_id)
-            await write_files_for_root(data_store_server, store_id, root, tmp_path, 0, False, group_files_by_store)
+            await write_files_for_root(data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store)
             roots.append(root)
 
     generation = 1
@@ -2008,7 +2008,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     root_hashes = []
     for generation in range(1, num_files + 2):
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
-        await write_files_for_root(data_store, store_id, root, tmp_path, 0, False, group_files_by_store)
+        await write_files_for_root(data_store, store_id, root, tmp_path, 0, group_by_store=group_files_by_store)
         root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
     store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
     with os.scandir(store_path) as entries:
@@ -2070,7 +2070,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 2
-    await write_files_for_root(data_store, store_id, root, tmp_path, 0, False, group_files_by_store)
+    await write_files_for_root(data_store, store_id, root, tmp_path, 0, group_by_store=group_files_by_store)
 
     incorrect_root_hash = bytes32([0] * 31 + [1])
     store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
