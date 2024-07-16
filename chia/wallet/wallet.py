@@ -204,6 +204,10 @@ class Wallet:
         puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
         return puzhash
 
+    async def get_new_puzzlehash_and_key(self) -> Tuple[bytes32, bytes]:
+        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+        return (dr.puzzle_hash, dr.pubkey if isinstance(dr.pubkey, bytes) else bytes(dr.pubkey))
+
     def make_solution(
         self,
         primaries: List[Payment],

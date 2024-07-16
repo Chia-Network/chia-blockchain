@@ -203,9 +203,7 @@ class TestDIDWallet:
         coin = await did_wallet_1.get_coin()
         assert did_wallet_2.did_info.temp_coin == coin
         newpuzhash = await did_wallet_2.get_new_did_inner_hash()
-        pubkey = bytes(
-            (await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)).pubkey
-        )
+        _, pubkey = await did_wallet_2.standard_wallet.get_new_puzzlehash_and_key()
         message_tx, message_spend_bundle, attest_data = await did_wallet_0.create_attestment(
             did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, DEFAULT_TX_CONFIG
         )
@@ -368,9 +366,7 @@ class TestDIDWallet:
             )
         assert did_wallet_4.get_name() == "Profile 2"
 
-        pubkey = (
-            await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
-        ).pubkey
+        _, pubkey = await did_wallet_4.standard_wallet.get_new_puzzlehash_and_key()
         new_ph = did_wallet_4.did_info.temp_puzhash
         message_tx, message_spend_bundle, attest1 = await did_wallet.create_attestment(
             coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
@@ -467,7 +463,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         coin = await did_wallet.get_coin()
         info = Program.to([])
-        pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
+        _, pubkey = await did_wallet.standard_wallet.get_new_puzzlehash_and_key()
         with pytest.raises(Exception):  # We expect a CLVM 80 error for this test
             await did_wallet.recovery_spend(coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([])))
 
@@ -640,9 +636,7 @@ class TestDIDWallet:
             )
         new_ph = await did_wallet_3.get_new_did_inner_hash()
         coin = await did_wallet_2.get_coin()
-        pubkey = (
-            await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
-        ).pubkey
+        _, pubkey = await did_wallet_3.standard_wallet.get_new_puzzlehash_and_key()
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         message_tx, message_spend_bundle, attest_data = await did_wallet.create_attestment(
             coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
@@ -684,9 +678,7 @@ class TestDIDWallet:
             )
         coin = await did_wallet.get_coin()
         new_ph = await did_wallet_4.get_new_did_inner_hash()
-        pubkey = (
-            await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
-        ).pubkey
+        _, pubkey = await did_wallet_4.standard_wallet.get_new_puzzlehash_and_key()
         message_tx, message_spend_bundle, attest1 = await did_wallet_3.create_attestment(
             coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
         )

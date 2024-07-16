@@ -399,12 +399,17 @@ class DIDWallet:
                 return
         self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
+        print(f"inner puzzle:\n{inner_puzzle}")
+        # inner_puzzle = did_data.inner_puzzle
+        print(f"DID data inner puzzle:\n{did_data.inner_puzzle}")
+        assert inner_puzzle == did_data.inner_puzzle
         # Check inner puzzle consistency
         assert self.did_info.origin_coin is not None
 
         # TODO: if not the first singleton, and solution mode == recovery
         if not self._coin_is_first_singleton(coin):
             full_puzzle = create_singleton_puzzle(inner_puzzle, self.did_info.origin_coin.name())
+            # ERROR, THIS ASSERT FAILS
             assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
@@ -449,27 +454,16 @@ class DIDWallet:
         output_str += f":{self.did_info.metadata}"
         return output_str
 
-    async def load_parent(self, did_info: DIDInfo):
+    async def load_parent(self, did_info: DIDInfo) -> None:
         """
         Load the parent info when importing a DID
         :param did_info: DID info
         :return:
         """
-        # full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, origin.name())
-        # All additions in this block here:
-
-        new_pubkey = (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
-        new_puzhash = puzzle_for_pk(new_pubkey).get_tree_hash()
         parent_info = None
         assert did_info.origin_coin is not None
         assert did_info.current_inner is not None
-        new_did_inner_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
-            p2_puzhash=new_puzhash,
-            recovery_list=did_info.backup_ids,
-            num_of_backup_ids_needed=did_info.num_of_backup_ids_needed,
-            launcher_id=did_info.origin_coin.name(),
-            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
-        )
+        new_did_inner_puzhash, new_pubkey = await self.standard_wallet.get_new_puzzlehash_and_key()
         wallet_node = self.wallet_state_manager.wallet_node
         parent_coin: Coin = did_info.origin_coin
         while True:
@@ -495,7 +489,7 @@ class DIDWallet:
                     current_inner=did_info.current_inner,
                     temp_coin=child_coin,
                     temp_puzhash=new_did_inner_puzhash,
-                    temp_pubkey=bytes(new_pubkey),
+                    temp_pubkey=new_pubkey,
                     sent_recovery_transaction=did_info.sent_recovery_transaction,
                     metadata=did_info.metadata,
                 )
@@ -544,11 +538,6 @@ class DIDWallet:
             metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         return create_singleton_puzzle_hash(innerpuz_hash, origin_coin_name)
-
-    async def get_new_puzzle(self) -> Program:
-        return self.puzzle_for_pk(
-            (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
-        )
 
     def get_my_DID(self) -> str:
         assert self.did_info.origin_coin is not None
@@ -1099,8 +1088,7 @@ class DIDWallet:
         return [did_record]
 
     async def get_new_p2_inner_hash(self) -> bytes32:
-        puzzle = await self.get_new_p2_inner_puzzle()
-        return puzzle.get_tree_hash()
+        return await self.standard_wallet.get_new_puzzlehash()
 
     async def get_new_p2_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
@@ -1145,6 +1133,7 @@ class DIDWallet:
         record: DerivationRecord = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
             did_hash
         )
+        assert record is None
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
         uncurried_args = uncurry_innerpuz(self.did_info.current_inner)
@@ -1155,6 +1144,7 @@ class DIDWallet:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                 p2_puzzle.get_tree_hash()
             )
+            assert record is not None
         if not (self.did_info.num_of_backup_ids_needed > 0 and len(self.did_info.backup_ids) == 0):
             # We have the recovery list, don't reset it
             old_recovery_list_hash = None
@@ -1169,7 +1159,7 @@ class DIDWallet:
         )
         return inner_puzzle
 
-    def get_parent_for_coin(self, coin) -> Optional[LineageProof]:
+    def get_parent_for_coin(self, coin: Coin) -> Optional[LineageProof]:
         parent_info = None
         for name, ccparent in self.did_info.parent_info:
             if name == coin.parent_coin_info:
@@ -1461,7 +1451,7 @@ class DIDWallet:
         return did_info
 
     def require_derivation_paths(self) -> bool:
-        return True
+        return False
 
     async def get_coin(self) -> Coin:
         spendable_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
