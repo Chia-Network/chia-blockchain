@@ -554,9 +554,11 @@ class DataStore:
         self,
         tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
     ) -> bool:
-        tree_root = await self.get_tree_root(tree_id=tree_id)
+        resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+        # avoid accidental usage
+        del tree_id
 
-        return tree_root.node_hash is None
+        return resolved_tree_id.root_hash is None
 
     async def get_store_ids(self) -> Set[bytes32]:
         async with self.db_wrapper.reader() as reader:
