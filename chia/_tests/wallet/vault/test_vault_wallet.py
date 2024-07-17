@@ -213,12 +213,14 @@ async def test_vault_creation(
 )
 @pytest.mark.parametrize("setup_function", [vault_setup])
 @pytest.mark.parametrize("with_recovery", [True])
+@pytest.mark.parametrize("spent_recovery", [True, False])
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="requires secp")
 @pytest.mark.anyio
 async def test_vault_recovery(
     wallet_environments: WalletTestFramework,
     setup_function: Callable[[WalletTestFramework, bool], Awaitable[None]],
     with_recovery: bool,
+    spent_recovery: bool,
 ) -> None:
     await setup_function(wallet_environments, with_recovery)
     env = wallet_environments.environments[0]
@@ -263,6 +265,34 @@ async def test_vault_recovery(
         ],
     )
 
+    # make a spend before recovery
+    if spent_recovery:
+        amount = uint64(10000)
+        recipient_ph = await funding_wallet.get_new_puzzlehash()
+        unsigned_txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
+            amount, recipient_ph, DEFAULT_TX_CONFIG, memos=[recipient_ph]
+        )
+
+        await wallet_environments.environments[0].rpc_client.push_transactions(unsigned_txs, sign=True)
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "set_remainder": True,
+                        }
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": -amount + 1,
+                            "set_remainder": True,
+                        }
+                    },
+                ),
+            ],
+        )
+
     [initiate_tx, finish_tx] = await env.rpc_client.vault_recovery(
         wallet_id=wallet.id(),
         secp_pk=RECOVERY_SECP_PK,
@@ -281,13 +311,12 @@ async def test_vault_recovery(
             WalletStateTransition(
                 pre_block_balance_updates={
                     1: {
-                        "init": True,
                         "set_remainder": True,
                     }
                 },
                 post_block_balance_updates={
                     1: {
-                        "confirmed_wallet_balance": 1,
+                        "<=#confirmed_wallet_balance": 1,
                         "set_remainder": True,
                     }
                 },
@@ -310,12 +339,12 @@ async def test_vault_recovery(
             WalletStateTransition(
                 pre_block_balance_updates={
                     1: {
-                        "init": True,
                         "set_remainder": True,
                     }
                 },
                 post_block_balance_updates={
                     1: {
+                        "<=#confirmed_wallet_balance": 1,
                         "set_remainder": True,
                     }
                 },
@@ -331,11 +360,11 @@ async def test_vault_recovery(
     recipient_ph = await funding_wallet.get_new_puzzlehash()
     amount = uint64(200)
 
-    unsigned_txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
+    unsigned_spend: List[TransactionRecord] = await wallet.generate_signed_transaction(
         amount, recipient_ph, DEFAULT_TX_CONFIG, memos=[recipient_ph]
     )
 
-    await wallet_environments.environments[0].rpc_client.push_transactions(unsigned_txs, sign=True)
+    await wallet_environments.environments[0].rpc_client.push_transactions(unsigned_spend, sign=True)
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
