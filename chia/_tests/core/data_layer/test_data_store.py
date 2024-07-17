@@ -1448,7 +1448,9 @@ async def test_data_server_files(
                 counter += 1
             await data_store_server.insert_batch(store_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(store_id)
-            await write_files_for_root(data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store)
+            await write_files_for_root(
+                data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
+            )
             roots.append(root)
 
     generation = 1
