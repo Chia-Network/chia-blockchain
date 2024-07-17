@@ -191,6 +191,7 @@ jobs:
       chia-installer-version: ${{ needs.version.outputs.chia-installer-version }}
       chia-dev-version: ${{ needs.version.outputs.chia-dev-version }}
       configuration: ${{ toJSON( matrix.configuration ) }}
+    secrets: inherit
     needs:
       - version
       - build
