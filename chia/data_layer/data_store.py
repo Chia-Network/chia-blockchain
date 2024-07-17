@@ -928,9 +928,6 @@ class DataStore:
         max_page_size: int,
     ) -> KeysPaginationData:
         async with self.transaction():
-            # TODO: back-compat?  let's resolve the meaning of None for root hash
-            if tree_id.root_hash is None:
-                tree_id = replace(tree_id, root_hash=TreeId.unspecified)
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
             except AssertionError as e:
@@ -966,9 +963,6 @@ class DataStore:
         page: int,
         max_page_size: int,
     ) -> KeysValuesPaginationData:
-        # TODO: back-compat?  let's resolve the meaning of None for root hash
-        if tree_id.root_hash is None:
-            tree_id = replace(tree_id, root_hash=TreeId.unspecified)
         keys_values_compressed = await self.get_keys_values_compressed(tree_id=tree_id)
         pagination_data = get_hashes_for_page(page, keys_values_compressed.leaf_hash_to_length, max_page_size)
 
@@ -1142,9 +1136,6 @@ class DataStore:
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> List[bytes]:
         async with self.db_wrapper.reader() as reader:
-            # TODO: back-compat?  let's resolve the meaning of None for root hash
-            if tree_id.root_hash is None:
-                tree_id = replace(tree_id, root_hash=TreeId.unspecified)
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
             except AssertionError as e:

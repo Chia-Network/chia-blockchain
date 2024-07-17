@@ -368,6 +368,19 @@ class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
     @classmethod
     def create(cls, store_id: bytes32, *, root_hash: bytes32) -> TreeId[Unspecified, bytes32]: ...
 
+    @overload
+    @classmethod
+    def create(cls, store_id: bytes32, *, root_hash: Unspecified) -> TreeId[Unspecified, Unspecified]: ...
+
+    @overload
+    @classmethod
+    def create(
+        cls,
+        store_id: bytes32,
+        *,
+        root_hash: Union[bytes32, Unspecified],
+    ) -> TreeId[Unspecified, Union[bytes32, Unspecified]]: ...
+
     # TODO: should we allow specification of both via this interface?
 
     @classmethod
