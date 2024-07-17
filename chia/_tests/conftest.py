@@ -1054,7 +1054,7 @@ async def timelord_service(bt: BlockTools) -> AsyncIterator[TimelordService]:
 
 @pytest.fixture(scope="function")
 async def crawler_service(root_path_populated_with_config: Path, database_uri: str) -> AsyncIterator[CrawlerService]:
-    async with setup_crawler(root_path_populated_with_config, database_uri) as service:
+    async with setup_crawler(root_path_populated_with_config, database_uri, start_crawler_loop=False) as service:
         yield service
 
 
