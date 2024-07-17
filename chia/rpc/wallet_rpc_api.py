@@ -2281,8 +2281,7 @@ class WalletRpcApi:
         # Get coin state
         peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
-        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        uncurried = uncurry_puzzle(full_puzzle)
+        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
@@ -2306,7 +2305,7 @@ class WalletRpcApi:
             "num_verification": num_verification.as_int(),
             "metadata": did_program_to_metadata(metadata),
             "launcher_id": launcher_id.hex(),
-            "full_puzzle": full_puzzle,
+            "full_puzzle": coin_spend.puzzle_reveal,
             "solution": coin_spend.solution.to_program().as_python(),
             "hints": hints,
         }
@@ -2329,8 +2328,7 @@ class WalletRpcApi:
         # Get coin state
         peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
-        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        uncurried = uncurry_puzzle(full_puzzle)
+        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}

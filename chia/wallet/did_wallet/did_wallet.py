@@ -371,7 +371,7 @@ class DIDWallet:
                 )
             )[0]
             coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
-            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal.to_program())
+            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             assert did_curried_args is not None
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args

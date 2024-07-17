@@ -422,10 +422,10 @@ class DAOWallet:
             cs = (await wallet_node.get_coin_state([coin.parent_coin_info], peer, height))[0]
             parent_spend = await fetch_coin_spend(cs.spent_height, cs.coin, peer)
 
-            puzzle = Program.from_bytes(bytes(parent_spend.puzzle_reveal))
-            solution = Program.from_bytes(bytes(parent_spend.solution))
-            uncurried = uncurry_puzzle(puzzle)
-            matched_funding_puz = match_funding_puzzle(uncurried, solution, coin, [self.dao_info.treasury_id])
+            uncurried = uncurry_puzzle(parent_spend.puzzle_reveal)
+            matched_funding_puz = match_funding_puzzle(
+                uncurried, parent_spend.solution.to_program(), coin, [self.dao_info.treasury_id]
+            )
             if matched_funding_puz:
                 # funding coin
                 xch_funds_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
