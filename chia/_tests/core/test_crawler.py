@@ -22,14 +22,32 @@ from chia.util.ints import uint32, uint64, uint128
 
 
 @pytest.mark.anyio
+async def test_crawler_loops_by_default(crawler_service: CrawlerService) -> None:
+    """
+    Ensures that when the crawler is started with all defaults, the crawling loop is started
+    """
+    crawler = crawler_service._node
+    assert crawler.crawl_task is not None
+
+
+@pytest.mark.anyio
+async def test_crawler_no_loops(crawler_service_no_loop: CrawlerService) -> None:
+    """
+    Ensures that when the crawler is call in no loop mode, there is no loop running
+    """
+    crawler = crawler_service_no_loop._node
+    assert crawler.crawl_task is None
+
+
+@pytest.mark.anyio
 async def test_unknown_messages(
     self_hostname: str,
     one_node: SimulatorsAndWalletsServices,
-    crawler_service: CrawlerService,
+    crawler_service_no_loop: CrawlerService,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
-    crawler = crawler_service._node
+    crawler = crawler_service_no_loop._node
     full_node = full_node_service._node
     assert await crawler.server.start_client(
         PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
@@ -49,11 +67,11 @@ async def test_unknown_messages(
 async def test_valid_message(
     self_hostname: str,
     one_node: SimulatorsAndWalletsServices,
-    crawler_service: CrawlerService,
+    crawler_service_no_loop: CrawlerService,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     [full_node_service], _, _ = one_node
-    crawler = crawler_service._node
+    crawler = crawler_service_no_loop._node
     full_node = full_node_service._node
     assert await crawler.server.start_client(
         PeerInfo(self_hostname, cast(FullNodeAPI, full_node_service._api).server.get_port()), None
@@ -72,14 +90,14 @@ async def test_valid_message(
 
 
 @pytest.mark.anyio
-async def test_crawler_to_db(crawler_service: CrawlerService, one_node: SimulatorsAndWalletsServices) -> None:
+async def test_crawler_to_db(crawler_service_no_loop: CrawlerService, one_node: SimulatorsAndWalletsServices) -> None:
     """
     This is a lot more of an integration test, but it tests the whole process. We add a node to the crawler, then we
     save it to the db and validate.
     """
     [full_node_service], _, _ = one_node
     full_node = full_node_service._node
-    crawler = crawler_service._node
+    crawler = crawler_service_no_loop._node
     crawl_store = crawler.crawl_store
     assert crawl_store is not None
     peer_address = "127.0.0.1"
@@ -110,7 +128,9 @@ async def test_crawler_to_db(crawler_service: CrawlerService, one_node: Simulato
 
 
 @pytest.mark.anyio
-async def test_crawler_peer_cleanup(crawler_service: CrawlerService, one_node: SimulatorsAndWalletsServices) -> None:
+async def test_crawler_peer_cleanup(
+    crawler_service_no_loop: CrawlerService, one_node: SimulatorsAndWalletsServices
+) -> None:
     """
     This is a lot more of an integration test, but it tests the whole process. We add multiple nodes to the crawler,
     then we save them to the db and validate. One of the nodes is older than the 90 day cutoff, so we also
@@ -118,7 +138,7 @@ async def test_crawler_peer_cleanup(crawler_service: CrawlerService, one_node: S
     """
     [full_node_service], _, _ = one_node
     full_node = full_node_service._node
-    crawler = crawler_service._node
+    crawler = crawler_service_no_loop._node
     crawl_store = crawler.crawl_store
     assert crawl_store is not None
     peer_addresses = ["10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5"]

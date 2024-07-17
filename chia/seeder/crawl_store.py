@@ -260,19 +260,19 @@ class CrawlStore:
         return self.reliable_peers
 
     async def load_to_db(self) -> None:
-        log.info("Saving peers to DB...")
+        log.warning("Saving peers to DB...")
         for peer_id in list(self.host_to_reliability.keys()):
             if peer_id in self.host_to_reliability and peer_id in self.host_to_records:
                 reliability = self.host_to_reliability[peer_id]
                 record = self.host_to_records[peer_id]
                 await self.add_peer(record, reliability, True)
         await self.crawl_db.commit()
-        log.info(" - Done saving peers to DB")
+        log.warning(" - Done saving peers to DB")
 
     async def unload_from_db(self) -> None:
         self.host_to_records = {}
         self.host_to_reliability = {}
-        log.info("Loading peer reliability records...")
+        log.warning("Loading peer reliability records...")
         cursor = await self.crawl_db.execute(
             "SELECT * from peer_reliability",
         )
@@ -302,8 +302,8 @@ class CrawlStore:
                 row[19],
             )
             self.host_to_reliability[reliability.peer_id] = reliability
-        log.info("  - Done loading peer reliability records...")
-        log.info("Loading peer records...")
+        log.warning("  - Done loading peer reliability records...")
+        log.warning("Loading peer records...")
         cursor = await self.crawl_db.execute(
             "SELECT * from peer_records",
         )
@@ -314,7 +314,7 @@ class CrawlStore:
                 row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11]
             )
             self.host_to_records[peer.peer_id] = peer
-        log.info("  - Done loading peer records...")
+        log.warning("  - Done loading peer records...")
 
     # Crawler -> DNS.
     async def load_reliable_peers_to_db(self) -> None:
@@ -323,13 +323,13 @@ class CrawlStore:
             if reliability.is_reliable():
                 peers.append(peer_id)
         self.reliable_peers = len(peers)
-        log.info("Deleting old good_peers from DB...")
+        log.warning("Deleting old good_peers from DB...")
         cursor = await self.crawl_db.execute(
             "DELETE from good_peers",
         )
         await cursor.close()
-        log.info(" - Done deleting old good_peers...")
-        log.info("Saving new good_peers to DB...")
+        log.warning(" - Done deleting old good_peers...")
+        log.warning("Saving new good_peers to DB...")
         for peer_id in peers:
             cursor = await self.crawl_db.execute(
                 "INSERT OR REPLACE INTO good_peers VALUES(?)",
@@ -337,7 +337,7 @@ class CrawlStore:
             )
             await cursor.close()
         await self.crawl_db.commit()
-        log.info(" - Done saving new good_peers to DB...")
+        log.warning(" - Done saving new good_peers to DB...")
 
     def load_host_to_version(self) -> tuple[dict[str, str], dict[str, uint64]]:
         versions = {}
