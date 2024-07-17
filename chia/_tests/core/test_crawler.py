@@ -22,6 +22,24 @@ from chia.util.ints import uint32, uint64, uint128
 
 
 @pytest.mark.anyio
+async def test_crawler_loops_by_default(crawler_service: CrawlerService) -> None:
+    """
+    Ensures that when the crawler is started with all defaults, the crawling loop is started
+    """
+    crawler = crawler_service._node
+    assert crawler.crawl_task is not None
+
+
+@pytest.mark.anyio
+async def test_crawler_no_loops(crawler_service_no_loop: CrawlerService) -> None:
+    """
+    Ensures that when the crawler is call in no loop mode, there is no loop running
+    """
+    crawler = crawler_service_no_loop._node
+    assert crawler.crawl_task is None
+
+
+@pytest.mark.anyio
 async def test_unknown_messages(
     self_hostname: str,
     one_node: SimulatorsAndWalletsServices,
