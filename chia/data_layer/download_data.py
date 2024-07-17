@@ -167,6 +167,7 @@ async def write_files_for_root(
 
 
 async def download_file(
+    data_store: DataStore,
     target_filename_path: Path,
     store_id: bytes32,
     root_hash: bytes32,
@@ -176,6 +177,7 @@ async def download_file(
     downloader: Optional[PluginRemote],
     timeout: int,
     client_foldername: Path,
+    timestamp: int,
     log: logging.Logger,
     grouped_by_store: bool,
     group_downloaded_files_by_store: bool,
@@ -191,6 +193,12 @@ async def download_file(
         try:
             await http_download(target_filename_path, filename, proxy_url, server_info, timeout, log)
         except (asyncio.TimeoutError, aiohttp.ClientError):
+            new_server_info = await data_store.server_misses_file(store_id, server_info, timestamp)
+            log.info(
+                f"Failed to download {filename} from {new_server_info.url}."
+                f"Miss {new_server_info.num_consecutive_failures}."
+            )
+            log.info(f"Next attempt from {new_server_info.url} in {new_server_info.ignore_till - timestamp}s.")
             return False
         return True
 
@@ -235,23 +243,11 @@ async def insert_from_delta_file(
             client_foldername, store_id, root_hash, existing_generation, group_files_by_store
         )
         filename_exists = target_filename_path.exists()
-        success = await download_file(
-            target_filename_path=target_filename_path,
-            store_id=store_id,
-            root_hash=root_hash,
-            generation=existing_generation,
-            server_info=server_info,
-            proxy_url=proxy_url,
-            downloader=downloader,
-            timeout=timeout,
-            client_foldername=client_foldername,
-            log=log,
-            grouped_by_store=True,
-            group_downloaded_files_by_store=group_files_by_store,
-        )
-        if not success:
-            # Older versions store all files in a single folder
+        attempts = 0
+        for grouped_by_store in (False, True):
+            attempts += 1
             success = await download_file(
+                data_store=data_store,
                 target_filename_path=target_filename_path,
                 store_id=store_id,
                 root_hash=root_hash,
@@ -261,17 +257,14 @@ async def insert_from_delta_file(
                 downloader=downloader,
                 timeout=timeout,
                 client_foldername=client_foldername,
+                timestamp=timestamp,
                 log=log,
-                grouped_by_store=False,
+                grouped_by_store=grouped_by_store,
                 group_downloaded_files_by_store=group_files_by_store,
             )
-            if not success:
-                new_server_info = await data_store.server_misses_file(store_id, server_info, timestamp)
-                log.info(
-                    f"Failed to download {target_filename_path.name} from {new_server_info.url}."
-                    f"Miss {new_server_info.num_consecutive_failures}."
-                )
-                log.info(f"Next attempt from {new_server_info.url} in {new_server_info.ignore_till - timestamp}s.")
+            if success:
+                break
+            if attempts == 2:
                 return False
 
         log.info(f"Successfully downloaded delta file {target_filename_path.name}.")
