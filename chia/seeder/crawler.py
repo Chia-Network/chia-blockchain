@@ -216,6 +216,7 @@ class Crawler:
         while self.state_changed_callback is None:
             self.log.warning("Waiting for state changed callback...")
             await asyncio.sleep(0.1)
+        self.log.warning("  - Got state changed callback...")
         assert self.crawl_store is not None
         t_start = time.time()
         total_nodes = 0
