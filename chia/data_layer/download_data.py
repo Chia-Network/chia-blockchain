@@ -243,9 +243,7 @@ async def insert_from_delta_file(
             client_foldername, store_id, root_hash, existing_generation, group_files_by_store
         )
         filename_exists = target_filename_path.exists()
-        attempts = 0
         for grouped_by_store in (False, True):
-            attempts += 1
             success = await download_file(
                 data_store=data_store,
                 target_filename_path=target_filename_path,
@@ -264,8 +262,8 @@ async def insert_from_delta_file(
             )
             if success:
                 break
-            if attempts == 2:
-                return False
+        else:
+            return False
 
         log.info(f"Successfully downloaded delta file {target_filename_path.name}.")
         try:
