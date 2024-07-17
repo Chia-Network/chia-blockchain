@@ -214,7 +214,7 @@ class Crawler:
         # Sometimes, the daemon connection + state changed callback isn't up and ready
         # by the time we get to the first _state_changed call, so this just ensures it's there before moving on
         while self.state_changed_callback is None:
-            self.log.info("Waiting for state changed callback...")
+            self.log.warning("Waiting for state changed callback...")
             await asyncio.sleep(0.1)
         assert self.crawl_store is not None
         t_start = time.time()
