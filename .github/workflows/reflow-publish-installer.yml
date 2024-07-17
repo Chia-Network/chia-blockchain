@@ -114,7 +114,7 @@ jobs:
           aws s3 cp "artifacts/${FILE}.sha256" "${LATEST_DEV_S3_URL}/${DEV_FILE}.sha256"
 
       - name: Create torrent
-        if: env.FULL_RELEASE == 'true' && matrix.mode.matrix == 'gui'
+        if: env.RELEASE == 'true' && matrix.mode.matrix == 'gui'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -128,7 +128,7 @@ jobs:
           aws s3 cp artifacts/${FILE}.sha256 ${LATEST_DEV_S3_URL}/${LATEST_DEV_FILE}.sha256
 
       - name: Upload Release Files
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.RELEASE == 'true'
         run: |
           aws s3 cp artifacts/${FILE} ${INSTALL_S3_URL}
           aws s3 cp artifacts/${FILE}.sha256 ${INSTALL_S3_URL}
@@ -146,7 +146,7 @@ jobs:
 
       - name: Mark installer complete
         uses: Chia-Network/actions/github/glue@main
-        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && (env.PRE_RELEASE == 'true' || env.FULL_RELEASE == 'true')
+        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && (env.RELEASE == 'true')
         env:
           REPO_SUFFIX: ${{ env.PRE_RELEASE == 'true' && '-prerelease' || '' }}
         with:
