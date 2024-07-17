@@ -224,6 +224,7 @@ class Crawler:
         try:
             while not self._shut_down:
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(25000, 250000)
+                self.log.warning(f"Crawling {len(peers_to_crawl)} peers...")
                 tasks = set()
                 for peer in peers_to_crawl:
                     if peer.port == self.other_peers_port:
