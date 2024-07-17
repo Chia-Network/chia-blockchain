@@ -71,7 +71,7 @@ async def test_wallet_action_scope() -> None:
     assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [])
 
     async with wsm.new_action_scope(  # type: ignore[attr-defined]
-        push=False, merge_spends=True, sign=True, additional_signing_responses=[]
+        push=False, merge_spends=True, sign=True, additional_signing_responses=[], extra_spends=[]
     ) as action_scope:
         async with action_scope.use() as interface:
             interface.side_effects.transactions = []
