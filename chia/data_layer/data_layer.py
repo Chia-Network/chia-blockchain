@@ -991,7 +991,6 @@ class DataLayer:
                     existing_singleton = await self.get_root(store_id=offer_store.store_id)
                     if existing_singleton is None:
                         raise Exception(f"store id not available: {offer_store.store_id.hex()}")
-                    # TODO: add .from_root()?
                     new_tree_id = TreeId(
                         store_id=offer_store.store_id,
                         generation=existing_singleton.generation,

@@ -381,7 +381,15 @@ class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
         root_hash: Union[bytes32, Unspecified],
     ) -> TreeId[Unspecified, Union[bytes32, Unspecified]]: ...
 
-    # TODO: should we allow specification of both via this interface?
+    @overload
+    @classmethod
+    def create(
+        cls,
+        store_id: bytes32,
+        *,
+        generation: int,
+        root_hash: Optional[bytes32],
+    ) -> TreeId[int, Union[bytes32, Optional[bytes32]]]: ...
 
     @classmethod
     def create(
@@ -395,6 +403,14 @@ class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
             store_id=store_id,
             generation=generation if generation is not None else cls.unspecified,
             root_hash=root_hash if root_hash is not None else cls.unspecified,
+        )
+
+    @classmethod
+    def from_root(cls, root: Root) -> TreeId[int, Optional[bytes32]]:
+        return cls.create(
+            store_id=root.store_id,
+            generation=root.generation,
+            root_hash=root.node_hash,
         )
 
 

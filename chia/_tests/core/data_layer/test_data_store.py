@@ -1836,8 +1836,7 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
         root = await raw_data_store.get_pending_root(store_id)
         assert root is not None
         await raw_data_store.change_root_status(root, Status.COMMITTED)
-        # TODO: add .from_root()?
-        tree_id = TreeId(store_id=root.store_id, generation=root.generation, root_hash=root.node_hash)
+        tree_id = TreeId.from_root(root=root)
         kv = await raw_data_store.get_keys_values(tree_id=tree_id)
         start_index = index * keys_per_pending_root
         end_index = (index + 1) * keys_per_pending_root

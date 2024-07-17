@@ -1308,10 +1308,7 @@ class DataStore:
                     status=status,
                 )
 
-            # TODO: add .from_root()?
-            new_tree_id = TreeId(
-                store_id=new_root.store_id, generation=new_root.generation, root_hash=new_root.node_hash
-            )
+            new_tree_id = TreeId.from_root(root=new_root)
             return InsertResult(node_hash=new_terminal_node_hash, tree_id=new_tree_id)
 
     async def delete(
@@ -1344,8 +1341,7 @@ class DataStore:
                     node_hash=None,
                     status=status,
                 )
-                # TODO: add .from_root()?
-                return TreeId(store_id=root.store_id, generation=root.generation, root_hash=root.node_hash)
+                return TreeId.from_root(root=root)
 
             parent = ancestors[0]
             other_hash = parent.other_child_hash(hash=node_hash)
@@ -1357,8 +1353,7 @@ class DataStore:
                     node_hash=other_hash,
                     status=status,
                 )
-                # TODO: add .from_root()?
-                return TreeId(store_id=root.store_id, generation=root.generation, root_hash=root.node_hash)
+                return TreeId.from_root(root=root)
 
             old_child_hash = parent.hash
             new_child_hash = other_hash
@@ -1394,8 +1389,7 @@ class DataStore:
                         tree_id=TreeId.create(store_id=store_id, generation=new_generation),
                     )
 
-        # TODO: add .from_root()?
-        return TreeId(store_id=new_root.store_id, generation=new_root.generation, root_hash=new_root.node_hash)
+        return TreeId.from_root(root=new_root)
 
     async def upsert(
         self,
@@ -1459,12 +1453,7 @@ class DataStore:
                     status=status,
                 )
 
-            # TODO: add .from_root()?
-            new_tree_id = TreeId(
-                store_id=new_root.store_id,
-                generation=new_root.generation,
-                root_hash=new_root.node_hash,
-            )
+            new_tree_id = TreeId.from_root(root=new_root)
             return InsertResult(node_hash=new_terminal_node_hash, tree_id=new_tree_id)
 
     async def clean_node_table(self, writer: Optional[aiosqlite.Connection] = None) -> None:
@@ -1584,12 +1573,7 @@ class DataStore:
 
             assert latest_local_root is not None
 
-            # TODO: add .from_root()?
-            latest_local_tree_id: TreeId[int, Optional[bytes32]] = TreeId(
-                store_id=latest_local_root.store_id,
-                generation=latest_local_root.generation,
-                root_hash=latest_local_root.node_hash,
-            )
+            latest_local_tree_id = TreeId.from_root(root=latest_local_root)
 
             key_hash_frequency: Dict[bytes32, int] = {}
             first_action: Dict[bytes32, str] = {}
@@ -1711,12 +1695,7 @@ class DataStore:
                     pending_upsert_new_hashes=pending_upsert_new_hashes,
                 )
                 latest_local_root = await self._insert_root(tree_id.store_id, new_root_hash, Status.COMMITTED)
-                # TODO: add .from_root()?
-                latest_local_tree_id = TreeId(
-                    store_id=latest_local_root.store_id,
-                    generation=latest_local_root.generation,
-                    root_hash=latest_local_root.node_hash,
-                )
+                latest_local_tree_id = TreeId.from_root(root=latest_local_root)
 
             # Start with the leaf nodes and pair them to form new nodes at the next level up, repeating this process
             # in a bottom-up fashion until a single root node remains. This constructs a balanced tree from the leaves.
@@ -1775,12 +1754,7 @@ class DataStore:
             else:
                 raise Exception(f"No known status: {status}")
 
-            # TODO: add .from_root()?
-            new_tree_id = TreeId(
-                store_id=new_root.store_id,
-                generation=new_root.generation,
-                root_hash=new_root.node_hash,
-            )
+            new_tree_id = TreeId.from_root(root=new_root)
 
             if new_tree_id.root_hash != root.node_hash:
                 raise RuntimeError(
@@ -1900,12 +1874,7 @@ class DataStore:
             root = await self._insert_root(store_id=store_id, node_hash=node_hash, status=status)
             # Don't update the ancestor table for non-committed status.
             if status == Status.COMMITTED:
-                # TODO: add .from_root()?
-                tree_id = TreeId(
-                    store_id=root.store_id,
-                    generation=root.generation,
-                    root_hash=root.node_hash,
-                )
+                tree_id = TreeId.from_root(root=root)
 
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
 
