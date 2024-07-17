@@ -266,12 +266,11 @@ class Mempool:
         items: List[MempoolItem] = []
         for batch in to_batches(spent_coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
             args = ",".join(["?"] * len(batch.entries))
-            with self._db_conn:
-                cursor = self._db_conn.execute(
-                    f"SELECT * FROM tx WHERE name IN (SELECT tx FROM spends WHERE coin_id IN ({args}))",
-                    tuple(batch.entries),
-                )
-                items.extend(self._row_to_item(row) for row in cursor)
+            cursor = self._db_conn.execute(
+                f"SELECT * FROM tx WHERE name IN (SELECT tx FROM spends WHERE coin_id IN ({args}))",
+                tuple(batch.entries),
+            )
+            items.extend(self._row_to_item(row) for row in cursor)
         return items
 
     def get_min_fee_rate(self, cost: int) -> Optional[float]:
