@@ -18,7 +18,7 @@ on:
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency-name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 permissions:
@@ -132,6 +132,10 @@ jobs:
         run: |
           aws s3 cp artifacts/${FILE} ${INSTALL_S3_URL}
           aws s3 cp artifacts/${FILE}.sha256 ${INSTALL_S3_URL}
+
+      - name: Upload Release Torrent
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.RELEASE == 'true' && matrix.mode.matrix == 'gui'
+        run: |
           aws s3 cp artifacts/${FILE}.torrent ${TORRENT_S3_URL}
 
       - name: Upload release artifacts

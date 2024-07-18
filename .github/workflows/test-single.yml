@@ -20,7 +20,7 @@ on:
       file_name:
         required: true
         type: string
-      concurrency_name:
+      concurrency-name:
         required: true
         type: string
       configuration:
@@ -41,7 +41,7 @@ on:
         default: true
 
 concurrency:
-  group: ${{ inputs.concurrency_name }}-${{ github.event_name == 'pull_request' && format('{0}-{1}', github.event.workflow, github.event.pull_request.number) || github.run_id }}
+  group: ${{ inputs.concurrency-name }}-${{ github.event_name == 'pull_request' && format('{0}-{1}', github.event.workflow, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 defaults:
