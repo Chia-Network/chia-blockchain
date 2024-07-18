@@ -401,8 +401,8 @@ class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
     ) -> TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]:
         return TreeId(
             store_id=store_id,
-            generation=generation if generation is not None else cls.unspecified,
-            root_hash=root_hash if root_hash is not None else cls.unspecified,
+            generation=generation,
+            root_hash=root_hash,
         )
 
     @classmethod
