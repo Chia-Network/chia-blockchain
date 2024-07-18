@@ -185,6 +185,7 @@ jobs:
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   publish:
+    name: 📦 Publish Installers
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
       concurrency-name: rpm

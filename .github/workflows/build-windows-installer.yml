@@ -240,6 +240,7 @@ jobs:
           Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force
 
   publish:
+    name: 📦 Publish Installers
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
       concurrency-name: windows
