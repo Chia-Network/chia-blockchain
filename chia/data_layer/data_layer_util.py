@@ -5,8 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
-# TODO: remove or formalize this
-import aiosqlite as aiosqlite
+import aiosqlite
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
@@ -768,7 +767,7 @@ class PluginRemote:
     def unmarshal(cls, marshalled: Dict[str, Any]) -> PluginRemote:
         return cls(
             url=marshalled["url"],
-            headers=marshalled["headers"],
+            headers=marshalled.get("headers", {}),
         )
 
 

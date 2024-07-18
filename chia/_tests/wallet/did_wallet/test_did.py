@@ -9,7 +9,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
-from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
@@ -83,24 +83,17 @@ class TestDIDWallet:
         await full_node_api.farm_blocks_to_wallet(1, wallet_1)
 
         # Wallet1 sets up DIDWallet1 without any backup set
-        async with wallet_node_0.wallet_state_manager.lock:
+        async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), DEFAULT_TX_CONFIG
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), DEFAULT_TX_CONFIG, action_scope
             )
 
         with pytest.raises(RuntimeError):
             assert await did_wallet_0.get_coin() == set()
         assert await did_wallet_0.get_info_for_recovery() is None
 
-        spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_0.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        assert spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet_0)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1])
 
         await time_out_assert(15, did_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_0.get_unconfirmed_balance, 101)
@@ -155,19 +148,13 @@ class TestDIDWallet:
         await full_node_api.farm_blocks_to_wallet(1, wallet_2)
 
         # Wallet1 sets up DIDWallet1 without any backup set
-        async with wallet_node_0.wallet_state_manager.lock:
+        async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), DEFAULT_TX_CONFIG
+                wallet_node_0.wallet_state_manager, wallet_0, uint64(101), DEFAULT_TX_CONFIG, action_scope
             )
 
-        spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_0.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet_0)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1, wallet_node_2])
 
         await time_out_assert(15, did_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_0.get_unconfirmed_balance, 101)
@@ -175,19 +162,13 @@ class TestDIDWallet:
         # Wallet1 sets up DIDWallet_1 with DIDWallet_0 as backup
         backup_ids = [bytes.fromhex(did_wallet_0.get_my_DID())]
 
-        async with wallet_node_1.wallet_state_manager.lock:
+        async with wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_1.wallet_state_manager, wallet_1, uint64(201), DEFAULT_TX_CONFIG, backup_ids
+                wallet_node_1.wallet_state_manager, wallet_1, uint64(201), DEFAULT_TX_CONFIG, action_scope, backup_ids
             )
 
-        spend_bundle_list = await wallet_node_1.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet_0)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1, wallet_node_2])
 
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 201)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 201)
@@ -206,19 +187,12 @@ class TestDIDWallet:
         pubkey = bytes(
             (await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)).pubkey
         )
-        message_tx, message_spend_bundle, attest_data = await did_wallet_0.create_attestment(
-            did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, DEFAULT_TX_CONFIG
-        )
-        [message_tx] = await did_wallet_0.wallet_state_manager.add_pending_transactions([message_tx])
-        assert message_spend_bundle is not None
-        spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_0.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet_0)
+        async with did_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            message_spend_bundle, attest_data = await did_wallet_0.create_attestment(
+                did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, DEFAULT_TX_CONFIG, action_scope
+            )
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1, wallet_node_2])
 
         (
             test_info_list,
@@ -226,21 +200,18 @@ class TestDIDWallet:
         ) = await did_wallet_2.load_attest_files_for_recovery_spend([attest_data])
         assert message_spend_bundle == test_message_spend_bundle
 
-        txs = await did_wallet_2.recovery_spend(
-            did_wallet_2.did_info.temp_coin,
-            newpuzhash,
-            test_info_list,
-            pubkey,
-            test_message_spend_bundle,
-        )
-        assert txs[0].spend_bundle is not None
-        txs = await did_wallet_2.wallet_state_manager.add_pending_transactions(txs)
+        async with did_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet_2.recovery_spend(
+                did_wallet_2.did_info.temp_coin,
+                newpuzhash,
+                test_info_list,
+                pubkey,
+                test_message_spend_bundle,
+                action_scope,
+            )
 
-        await time_out_assert_not_none(
-            5, full_node_api.full_node.mempool_manager.get_spendbundle, txs[0].spend_bundle.name()
-        )
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet_0)
+        await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1, wallet_node_2])
 
         await time_out_assert(45, did_wallet_2.get_confirmed_balance, 201)
         await time_out_assert(45, did_wallet_2.get_unconfirmed_balance, 201)
@@ -249,17 +220,10 @@ class TestDIDWallet:
             assert wallet.wallet_state_manager.wallets[wallet.id()] == wallet
 
         some_ph = 32 * b"\2"
-        txs = await did_wallet_2.create_exit_spend(some_ph, DEFAULT_TX_CONFIG)
-        txs = await did_wallet_2.wallet_state_manager.add_pending_transactions(txs)
-
-        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_2.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet_0)
+        async with did_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet_2.create_exit_spend(some_ph, DEFAULT_TX_CONFIG, action_scope)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1, wallet_node_2])
 
         async def get_coins_with_ph() -> bool:
             coins = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, some_ph)
@@ -300,37 +264,28 @@ class TestDIDWallet:
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
 
         await full_node_api.farm_blocks_to_wallet(1, wallet)
+        await full_node_api.farm_blocks_to_wallet(1, wallet2)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, action_scope
             )
         assert did_wallet.get_name() == "Profile 1"
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
 
         recovery_list = [bytes.fromhex(did_wallet.get_my_DID())]
 
-        async with wallet_node_2.wallet_state_manager.lock:
+        async with wallet2.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_2.wallet_state_manager, wallet2, uint64(101), DEFAULT_TX_CONFIG, recovery_list
+                wallet_node_2.wallet_state_manager, wallet2, uint64(101), DEFAULT_TX_CONFIG, action_scope, recovery_list
             )
 
-        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_2.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         await time_out_assert(15, did_wallet_2.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_2.get_unconfirmed_balance, 101)
@@ -339,19 +294,13 @@ class TestDIDWallet:
 
         recovery_list.append(bytes.fromhex(did_wallet_2.get_my_DID()))
 
-        async with wallet_node_2.wallet_state_manager.lock:
+        async with wallet2.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_3: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_2.wallet_state_manager, wallet2, uint64(201), DEFAULT_TX_CONFIG, recovery_list
+                wallet_node_2.wallet_state_manager, wallet2, uint64(201), DEFAULT_TX_CONFIG, action_scope, recovery_list
             )
 
-        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_3.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         assert did_wallet_3.did_info.backup_ids == recovery_list
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 201)
@@ -372,26 +321,16 @@ class TestDIDWallet:
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
         ).pubkey
         new_ph = did_wallet_4.did_info.temp_puzhash
-        message_tx, message_spend_bundle, attest1 = await did_wallet.create_attestment(
-            coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
-        )
-        [message_tx] = await did_wallet.wallet_state_manager.add_pending_transactions([message_tx])
-        assert message_spend_bundle is not None
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
+        async with did_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            message_spend_bundle, attest1 = await did_wallet.create_attestment(
+                coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG, action_scope
+            )
 
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        message_tx2, message_spend_bundle2, attest2 = await did_wallet_2.create_attestment(
-            coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
-        )
-        [message_tx2] = await did_wallet_2.wallet_state_manager.add_pending_transactions([message_tx2])
-        assert message_spend_bundle2 is not None
-        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_2.id()
-        )
+        async with did_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope_2:
+            message_spend_bundle2, attest2 = await did_wallet_2.create_attestment(
+                coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG, action_scope_2
+            )
 
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         message_spend_bundle = message_spend_bundle.aggregate([message_spend_bundle, message_spend_bundle2])
 
         (
@@ -400,19 +339,16 @@ class TestDIDWallet:
         ) = await did_wallet_4.load_attest_files_for_recovery_spend([attest1, attest2])
         assert message_spend_bundle == test_message_spend_bundle
 
-        await full_node_api.farm_blocks_to_wallet(1, wallet)
+        await full_node_api.process_transaction_records(
+            records=[*action_scope.side_effects.transactions, *action_scope_2.side_effects.transactions]
+        )
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
         await time_out_assert(15, did_wallet_4.get_confirmed_balance, 0)
         await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 0)
-        txs = await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, message_spend_bundle)
-        txs = await did_wallet_4.wallet_state_manager.add_pending_transactions(txs)
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_4.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet)
+        async with did_wallet_4.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, message_spend_bundle, action_scope)
+        await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         await time_out_assert(15, did_wallet_4.get_confirmed_balance, 201)
         await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 201)
@@ -451,17 +387,13 @@ class TestDIDWallet:
 
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, action_scope
             )
 
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
@@ -469,7 +401,10 @@ class TestDIDWallet:
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         with pytest.raises(Exception):  # We expect a CLVM 80 error for this test
-            await did_wallet.recovery_spend(coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([])))
+            async with did_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+                await did_wallet.recovery_spend(
+                    coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([])), action_scope
+                )
 
     @pytest.mark.parametrize(
         "trusted",
@@ -483,7 +418,6 @@ class TestDIDWallet:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
-        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
         api_0 = WalletRpcApi(wallet_node)
         if trusted:
             wallet_node.config["trusted_peers"] = {
@@ -499,15 +433,12 @@ class TestDIDWallet:
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, action_scope
             )
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
@@ -534,12 +465,9 @@ class TestDIDWallet:
         recovery_list = [bytes32.fromhex(did_wallet.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
-        txs = await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
-        txs = await did_wallet.wallet_state_manager.add_pending_transactions(txs)
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        async with did_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet.create_update_spend(DEFAULT_TX_CONFIG, action_scope)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
@@ -582,32 +510,25 @@ class TestDIDWallet:
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
-
-        async with wallet_node.wallet_state_manager.lock:
-            did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG
-            )
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         await full_node_api.farm_blocks_to_wallet(1, wallet2)
+
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, action_scope
+            )
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         recovery_list = [bytes.fromhex(did_wallet.get_my_DID())]
 
-        async with wallet_node_2.wallet_state_manager.lock:
+        async with wallet2.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node_2.wallet_state_manager, wallet2, uint64(101), DEFAULT_TX_CONFIG, recovery_list
+                wallet_node_2.wallet_state_manager, wallet2, uint64(101), DEFAULT_TX_CONFIG, action_scope, recovery_list
             )
-        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_2.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
         await time_out_assert(25, did_wallet_2.get_confirmed_balance, 101)
         await time_out_assert(25, did_wallet_2.get_unconfirmed_balance, 101)
         assert did_wallet_2.did_info.backup_ids == recovery_list
@@ -616,15 +537,10 @@ class TestDIDWallet:
         recovery_list = [bytes.fromhex(did_wallet_2.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
-        txs = await did_wallet.create_update_spend(DEFAULT_TX_CONFIG)
-        txs = await did_wallet.wallet_state_manager.add_pending_transactions(txs)
-
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        async with did_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet.create_update_spend(DEFAULT_TX_CONFIG, action_scope)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
@@ -644,31 +560,21 @@ class TestDIDWallet:
             await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
         ).pubkey
         await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
-        message_tx, message_spend_bundle, attest_data = await did_wallet.create_attestment(
-            coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
-        )
-        [message_tx] = await did_wallet.wallet_state_manager.add_pending_transactions([message_tx])
-        assert message_spend_bundle is not None
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        async with did_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            message_spend_bundle, attest_data = await did_wallet.create_attestment(
+                coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG, action_scope
+            )
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         (
             info,
             message_spend_bundle,
         ) = await did_wallet_3.load_attest_files_for_recovery_spend([attest_data])
-        txs = await did_wallet_3.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle)
-        txs = await did_wallet_3.wallet_state_manager.add_pending_transactions(txs)
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_3.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet)
+        async with did_wallet_3.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet_3.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle, action_scope)
+        await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         await time_out_assert(15, did_wallet_3.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 101)
@@ -687,34 +593,24 @@ class TestDIDWallet:
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
         ).pubkey
-        message_tx, message_spend_bundle, attest1 = await did_wallet_3.create_attestment(
-            coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG
-        )
-        [message_tx] = await did_wallet_3.wallet_state_manager.add_pending_transactions([message_tx])
-        assert message_spend_bundle is not None
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_3.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        async with did_wallet_3.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            message_spend_bundle, attest1 = await did_wallet_3.create_attestment(
+                coin.name(), new_ph, pubkey, DEFAULT_TX_CONFIG, action_scope
+            )
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
         await time_out_assert(15, wallet.get_pending_change_balance, 0)
         (
             test_info_list,
             test_message_spend_bundle,
         ) = await did_wallet_4.load_attest_files_for_recovery_spend([attest1])
-        txs = await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, test_message_spend_bundle)
-        txs = await did_wallet_2.wallet_state_manager.add_pending_transactions(txs)
+        async with did_wallet_4.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet_4.recovery_spend(
+                coin, new_ph, test_info_list, pubkey, test_message_spend_bundle, action_scope
+            )
 
-        spend_bundle_list = await wallet_node_2.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_4.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        await full_node_api.farm_blocks_to_wallet(1, wallet)
+        await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         await time_out_assert(15, did_wallet_4.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 101)
@@ -759,36 +655,29 @@ class TestDIDWallet:
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 uint64(101),
                 DEFAULT_TX_CONFIG,
+                action_scope,
                 [bytes(ph)],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
                 fee=fee,
             )
         assert did_wallet_1.get_name() == "Profile 1"
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         # Transfer DID
         new_puzhash = await wallet2.get_new_puzzlehash()
-        txs = await did_wallet_1.transfer_did(new_puzhash, fee, with_recovery, DEFAULT_TX_CONFIG)
-        txs = await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        async with did_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet_1.transfer_did(new_puzhash, fee, with_recovery, DEFAULT_TX_CONFIG, action_scope)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
         # Check if the DID wallet is created in the wallet2
 
         await time_out_assert(30, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
@@ -845,22 +734,19 @@ class TestDIDWallet:
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, []
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, action_scope, []
             )
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         await did_wallet_1.update_recovery_list([bytes(ph)], 1)
-        txs = await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG)
-        txs = await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
-        await full_node_api.farm_blocks_to_wallet(1, wallet)
+        async with did_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG, action_scope)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         assert did_wallet_1.did_info.backup_ids[0] == bytes(ph)
@@ -898,20 +784,19 @@ class TestDIDWallet:
         await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
         did_amount = uint64(101)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 did_amount,
                 DEFAULT_TX_CONFIG,
+                action_scope,
                 [],
                 metadata={"twitter": "twitter"},
                 fee=fee,
             )
-        transaction_records = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        await full_node_api.process_transaction_records(records=transaction_records)
+
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=15)
 
         assert await did_wallet_1.get_confirmed_balance() == did_amount
@@ -941,11 +826,11 @@ class TestDIDWallet:
             await wallet.select_coins(odd_amount, DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[coin_id]))
         ).pop()
         assert coin_1.amount % 2 == 0
-        [tx] = await wallet.generate_signed_transaction(
-            odd_amount, ph1, DEFAULT_TX_CONFIG.override(excluded_coin_ids=[coin_id]), fee
-        )
-        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
-        await full_node_api.process_transaction_records(records=[tx])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                odd_amount, ph1, DEFAULT_TX_CONFIG.override(excluded_coin_ids=[coin_id]), action_scope, fee
+            )
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=15)
 
         assert await wallet1.get_confirmed_balance() == odd_amount
@@ -965,7 +850,6 @@ class TestDIDWallet:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
-        wallet1 = wallet_node_2.wallet_state_manager.main_wallet
         api_0 = WalletRpcApi(wallet_node)
         if trusted:
             wallet_node.config["trusted_peers"] = {
@@ -983,16 +867,12 @@ class TestDIDWallet:
 
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, [], fee=fee
+                wallet_node.wallet_state_manager, wallet, uint64(101), DEFAULT_TX_CONFIG, action_scope, [], fee=fee
             )
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet1)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         response = await api_0.did_message_spend(
@@ -1037,14 +917,11 @@ class TestDIDWallet:
         expected_confirmed_balance = await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
         did_amount = uint64(101)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, did_amount, DEFAULT_TX_CONFIG, [], fee=fee
+                wallet_node.wallet_state_manager, wallet, did_amount, DEFAULT_TX_CONFIG, action_scope, [], fee=fee
             )
-        transaction_records = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        await full_node_api.process_transaction_records(records=transaction_records)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=15)
 
         expected_confirmed_balance -= did_amount + fee
@@ -1063,12 +940,10 @@ class TestDIDWallet:
         metadata = {}
         metadata["Twitter"] = "http://www.twitter.com"
         await did_wallet_1.update_metadata(metadata)
-        txs = await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG, fee)
-        txs = await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
-        transaction_records = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        await full_node_api.process_transaction_records(records=transaction_records)
+        async with did_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet_1.create_update_spend(DEFAULT_TX_CONFIG, action_scope, fee)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
 
         expected_confirmed_balance -= fee
 
@@ -1097,7 +972,6 @@ class TestDIDWallet:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
-        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
         api_0 = WalletRpcApi(wallet_node)
         ph = await wallet.get_new_puzzlehash()
 
@@ -1116,24 +990,21 @@ class TestDIDWallet:
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
-        async with wallet_node.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node.wallet_state_manager,
                 wallet,
                 uint64(101),
                 DEFAULT_TX_CONFIG,
+                action_scope,
                 [bytes(ph)],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
                 fee=fee,
             )
         assert did_wallet_1.get_name() == "Profile 1"
-        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         # Test general string
         message = "Hello World"
@@ -1249,26 +1120,19 @@ class TestDIDWallet:
         # Node 0 sets up a DID Wallet with a backup set, but num_of_backup_ids_needed=0
         # (a malformed solution, but legal for the clvm puzzle)
         recovery_list = [bytes.fromhex("00" * 32)]
-        async with wallet_node_0.wallet_state_manager.lock:
+        async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_0.wallet_state_manager,
                 wallet_0,
                 uint64(101),
                 DEFAULT_TX_CONFIG,
+                action_scope,
                 backups_ids=recovery_list,
                 num_of_backup_ids_needed=0,
             )
 
-        spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_0.id()
-        )
-
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        assert spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-
-        # Node 1 creates the DID Wallet with create_new_did_wallet_from_coin_spend
-        await full_node_api.farm_blocks_to_wallet(1, wallet_0)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0])
 
         await time_out_assert(15, did_wallet_0.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_0.get_unconfirmed_balance, 101)
@@ -1316,36 +1180,31 @@ class TestDIDWallet:
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
-        async with wallet_node_1.wallet_state_manager.lock:
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_1.wallet_state_manager,
                 wallet,
                 uint64(101),
                 DEFAULT_TX_CONFIG,
+                action_scope,
                 [bytes32(ph)],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
                 fee=fee,
             )
         assert did_wallet_1.get_name() == "Profile 1"
-        spend_bundle_list = await wallet_node_1.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2])
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         # Transfer DID
         new_puzhash = await wallet2.get_new_puzzlehash()
-        txs = await did_wallet_1.transfer_did(new_puzhash, fee, True, tx_config=DEFAULT_TX_CONFIG)
-        txs = await did_wallet_1.wallet_state_manager.add_pending_transactions(txs)
-        spend_bundle_list = await wallet_node_1.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            did_wallet_1.id()
-        )
-        spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        async with did_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet_1.transfer_did(
+                new_puzhash, fee, True, tx_config=DEFAULT_TX_CONFIG, action_scope=action_scope
+            )
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_1, wallet_node_2])
         # Check if the DID wallet is created in the wallet2
         await time_out_assert(30, get_wallet_num, 2, wallet_node_2.wallet_state_manager)
         await time_out_assert(30, get_wallet_num, 1, wallet_node_1.wallet_state_manager)
@@ -1395,12 +1254,12 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, monkey
     # Setup
     wallet_node = wallet_environments.environments[0].node
     wallet = wallet_environments.environments[0].xch_wallet
-    client = wallet_environments.environments[0].rpc_client
 
     # Generate DID wallet
-    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node.wallet_state_manager, wallet, uint64(1), DEFAULT_TX_CONFIG
-    )
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+            wallet_node.wallet_state_manager, wallet, uint64(1), DEFAULT_TX_CONFIG, action_scope
+        )
 
     await wallet_environments.process_pending_states(
         [
@@ -1419,16 +1278,17 @@ async def test_did_coin_records(wallet_environments: WalletTestFramework, monkey
     )
 
     for _ in range(0, 2):
-        txs = await did_wallet.transfer_did(
-            await wallet.get_puzzle_hash(new=False), uint64(0), True, wallet_environments.tx_config
-        )
-        spend_bundles = [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
-        assert len(spend_bundles) > 0
-        await client.push_tx(SpendBundle.aggregate(spend_bundles))
+        async with did_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await did_wallet.transfer_did(
+                await wallet.get_puzzle_hash(new=False), uint64(0), True, wallet_environments.tx_config, action_scope
+            )
         await wallet_environments.process_pending_states(
             [
                 WalletStateTransition(
-                    pre_block_balance_updates={},
+                    pre_block_balance_updates={
+                        1: {"set_remainder": True},
+                        2: {"set_remainder": True},
+                    },
                     post_block_balance_updates={
                         1: {"set_remainder": True},
                         2: {"set_remainder": True},

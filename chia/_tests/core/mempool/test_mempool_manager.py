@@ -1622,10 +1622,11 @@ async def test_identical_spend_aggregation_e2e(
         for _ in range(2):
             await farm_a_block(full_node_api, wallet_node, ph)
         other_recipients = [Payment(puzzle_hash=p, amount=uint64(200), memos=[]) for p in phs[1:]]
-        [tx] = await wallet.generate_signed_transaction(
-            uint64(200), phs[0], DEFAULT_TX_CONFIG, primaries=other_recipients
-        )
-        [tx], _ = await wallet.wallet_state_manager.sign_transactions([tx])
+        async with wallet.wallet_state_manager.new_action_scope(push=False, sign=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                uint64(200), phs[0], DEFAULT_TX_CONFIG, action_scope, primaries=other_recipients
+            )
+        [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
         await send_to_mempool(full_node_api, tx.spend_bundle)
         await farm_a_block(full_node_api, wallet_node, ph)
@@ -1640,10 +1641,11 @@ async def test_identical_spend_aggregation_e2e(
     wallet, coins, ph = await make_setup_and_coins(full_node_api, wallet_node)
 
     # Make sure spending AB then BC would generate a conflict for the latter
-    [tx_a] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[0].coin})
-    [tx_b] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[1].coin})
-    [tx_c] = await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, coins={coins[2].coin})
-    [tx_a, tx_b, tx_c], _ = await wallet.wallet_state_manager.sign_transactions([tx_a, tx_b, tx_c])
+    async with wallet.wallet_state_manager.new_action_scope(push=False, merge_spends=False, sign=True) as action_scope:
+        await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, action_scope, coins={coins[0].coin})
+        await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, action_scope, coins={coins[1].coin})
+        await wallet.generate_signed_transaction(uint64(30), ph, DEFAULT_TX_CONFIG, action_scope, coins={coins[2].coin})
+    [tx_a, tx_b, tx_c] = action_scope.side_effects.transactions
     assert tx_a.spend_bundle is not None
     assert tx_b.spend_bundle is not None
     assert tx_c.spend_bundle is not None
@@ -1657,10 +1659,11 @@ async def test_identical_spend_aggregation_e2e(
     # Make sure DE and EF would aggregate on E when E is eligible for deduplication
 
     # Create a coin with the identity puzzle hash
-    [tx] = await wallet.generate_signed_transaction(
-        uint64(200), IDENTITY_PUZZLE_HASH, DEFAULT_TX_CONFIG, coins={coins[3].coin}
-    )
-    [tx], _ = await wallet.wallet_state_manager.sign_transactions([tx])
+    async with wallet.wallet_state_manager.new_action_scope(push=False, merge_spends=False, sign=True) as action_scope:
+        await wallet.generate_signed_transaction(
+            uint64(200), IDENTITY_PUZZLE_HASH, DEFAULT_TX_CONFIG, action_scope, coins={coins[3].coin}
+        )
+    [tx] = action_scope.side_effects.transactions
     assert tx.spend_bundle is not None
     await send_to_mempool(full_node_api, tx.spend_bundle)
     await farm_a_block(full_node_api, wallet_node, ph)
@@ -1682,23 +1685,26 @@ async def test_identical_spend_aggregation_e2e(
     message = b"Identical spend aggregation test"
     e_announcement = AssertCoinAnnouncement(asserted_id=e_coin_id, asserted_msg=message)
     # Create transactions D and F that consume an announcement created by E
-    [tx_d] = await wallet.generate_signed_transaction(
-        uint64(100),
-        ph,
-        DEFAULT_TX_CONFIG,
-        fee=uint64(0),
-        coins={coins[4].coin},
-        extra_conditions=(e_announcement,),
-    )
-    [tx_f] = await wallet.generate_signed_transaction(
-        uint64(150),
-        ph,
-        DEFAULT_TX_CONFIG,
-        fee=uint64(0),
-        coins={coins[5].coin},
-        extra_conditions=(e_announcement,),
-    )
-    [tx_d, tx_f], _ = await wallet.wallet_state_manager.sign_transactions([tx_d, tx_f])
+    async with wallet.wallet_state_manager.new_action_scope(push=False, merge_spends=False, sign=True) as action_scope:
+        await wallet.generate_signed_transaction(
+            uint64(100),
+            ph,
+            DEFAULT_TX_CONFIG,
+            action_scope,
+            fee=uint64(0),
+            coins={coins[4].coin},
+            extra_conditions=(e_announcement,),
+        )
+        await wallet.generate_signed_transaction(
+            uint64(150),
+            ph,
+            DEFAULT_TX_CONFIG,
+            action_scope,
+            fee=uint64(0),
+            coins={coins[5].coin},
+            extra_conditions=(e_announcement,),
+        )
+    [tx_d, tx_f] = action_scope.side_effects.transactions
     assert tx_d.spend_bundle is not None
     assert tx_f.spend_bundle is not None
     # Create transaction E now that spends e_coin to create another eligible
@@ -1724,10 +1730,11 @@ async def test_identical_spend_aggregation_e2e(
     sb_e2 = spend_bundle_from_conditions(conditions, e_coin)
     g_coin = coins[6].coin
     g_coin_id = g_coin.name()
-    [tx_g] = await wallet.generate_signed_transaction(
-        uint64(13), ph, DEFAULT_TX_CONFIG, coins={g_coin}, extra_conditions=(e_announcement,)
-    )
-    [tx_g], _ = await wallet.wallet_state_manager.sign_transactions([tx_g])
+    async with wallet.wallet_state_manager.new_action_scope(push=False, merge_spends=False, sign=True) as action_scope:
+        await wallet.generate_signed_transaction(
+            uint64(13), ph, DEFAULT_TX_CONFIG, action_scope, coins={g_coin}, extra_conditions=(e_announcement,)
+        )
+    [tx_g] = action_scope.side_effects.transactions
     assert tx_g.spend_bundle is not None
     sb_e2g = SpendBundle.aggregate([sb_e2, tx_g.spend_bundle])
     sb_e2g_name = sb_e2g.name()

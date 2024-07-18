@@ -212,13 +212,15 @@ class TestSimulation:
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
-        [tx] = await wallet.generate_signed_transaction(
-            uint64(10),
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            DEFAULT_TX_CONFIG,
-            uint64(0),
-        )
-        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                uint64(10),
+                await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                DEFAULT_TX_CONFIG,
+                action_scope,
+                uint64(0),
+            )
+        [tx] = await wallet.wallet_state_manager.add_pending_transactions(action_scope.side_effects.transactions)
         # wait till out of mempool
         await time_out_assert(10, full_node_api.full_node.mempool_manager.get_spendbundle, None, tx.name)
         # wait until the transaction is confirmed
@@ -387,15 +389,17 @@ class TestSimulation:
 
         # repeating just to try to expose any flakiness
         for coin in coins:
-            [tx] = await wallet.generate_signed_transaction(
-                amount=uint64(tx_amount),
-                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                tx_config=DEFAULT_TX_CONFIG,
-                coins={coin},
-            )
-            [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
+            async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+                await wallet.generate_signed_transaction(
+                    amount=uint64(tx_amount),
+                    puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                    tx_config=DEFAULT_TX_CONFIG,
+                    action_scope=action_scope,
+                    coins={coin},
+                )
 
-            await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+            [tx] = action_scope.side_effects.transactions
+            await full_node_api.wait_transaction_records_entered_mempool(records=action_scope.side_effects.transactions)
             assert tx.spend_bundle is not None
             assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
             # TODO: this fails but it seems like it shouldn't when above passes
@@ -432,21 +436,20 @@ class TestSimulation:
         # repeating just to try to expose any flakiness
         for repeat in range(repeats):
             coins = [next(coins_iter) for _ in range(tx_per_repeat)]
-            transactions = [
-                (
+            async with wallet.wallet_state_manager.new_action_scope(push=True, merge_spends=False) as action_scope:
+                for coin in coins:
                     await wallet.generate_signed_transaction(
                         amount=uint64(tx_amount),
                         puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
                         tx_config=DEFAULT_TX_CONFIG,
+                        action_scope=action_scope,
                         coins={coin},
                     )
-                )[0]
-                for coin in coins
-            ]
-            for tx in transactions:
+
+            for tx in action_scope.side_effects.transactions:
                 assert tx.spend_bundle is not None, "the above created transaction is missing the expected spend bundle"
 
-            transactions = await wallet.wallet_state_manager.add_pending_transactions(transactions)
+            transactions = action_scope.side_effects.transactions
 
             if records_or_bundles_or_coins == "records":
                 await full_node_api.process_transaction_records(records=transactions)
