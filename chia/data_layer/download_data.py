@@ -19,7 +19,9 @@ def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: in
     return f"{store_id}-{node_hash}-full-{generation}-v1.0.dat"
 
 
-def get_delta_filename(store_id: bytes32, node_hash: bytes32, generation: int) -> str:
+def get_delta_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
+    if group_by_store:
+        return f"{store_id}/{node_hash}-delta-{generation}-v1.0.dat"
     return f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat"
 
 
@@ -49,7 +51,12 @@ def get_delta_filename_path(
     return foldername.joinpath(f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat")
 
 
-def is_filename_valid(filename: str) -> bool:
+def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
+    if group_by_store:
+        if filename.count("/") != 1:
+            return False
+        filename = filename.replace("/", "-")
+
     split = filename.split("-")
 
     try:
@@ -184,9 +191,7 @@ async def download_file(
 ) -> bool:
     if target_filename_path.exists():
         return True
-    filename = get_delta_filename(store_id, root_hash, generation)
-    if grouped_by_store:
-        filename = filename.replace("-", "/", 1)
+    filename = get_delta_filename(store_id, root_hash, generation, grouped_by_store)
 
     if downloader is None:
         # use http downloader - this raises on any error

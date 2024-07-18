@@ -136,6 +136,26 @@ class S3Plugin:
 
         return web.json_response({"handle_upload": False})
 
+    def get_path_for_filename(
+        self, store_id: bytes32, filename: Optional[str], group_files_by_store: bool
+    ) -> Optional[Path]:
+        if filename is None:
+            return None
+
+        if group_by_store:
+            return self.server_files_path.joinpath(f"{store_id}").joinpath(filename)
+        return self.server_files_path.joinpath(filename)
+
+    def get_s3_target_from_path(
+        self, store_id: bytes32, path: Optional[Path], group_files_by_store: bool
+    ) -> Optional[str]:
+        if path is None:
+            return None
+
+        if group_files_by_store:
+            return f"{store_id}/{path.name}"
+        return path.name
+
     async def upload(self, request: web.Request) -> web.Response:
         try:
             data = await request.json()
@@ -167,17 +187,11 @@ class S3Plugin:
                 if full_store_id is None and diff_store_id != store_id:
                     return web.json_response({"uploaded": False})
 
-            if group_files_by_store:
-                store_path = self.server_files_path.joinpath(f"{store_id}")
-                full_tree_path = None if full_tree_name is None else store_path.joinpath(full_tree_name)
-                diff_path = store_path.joinpath(diff_name)
-                target_full_tree_path = None if full_tree_path is None else f"{store_id}/{full_tree_path.name}"
-                target_diff_path = f"{store_id}/{diff_path.name}"
-            else:
-                full_tree_path = None if full_tree_name is None else self.server_files_path.joinpath(full_tree_name)
-                diff_path = self.server_files_path.joinpath(diff_name)
-                target_full_tree_path = None if full_tree_path is None else full_tree_path.name
-                target_diff_path = diff_path.name
+            full_tree_path = self.get_path_for_filename(store_id, full_tree_name, group_files_by_store)
+            diff_path = self.get_path_for_filename(store_id, diff_name, group_files_by_store)
+            target_full_tree_path = self.get_s3_target_from_path(store_id, full_tree_path, group_files_by_store)
+            target_diff_path = self.get_s3_target_from_path(store_id, diff_path, group_files_by_store)
+
             try:
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     if full_tree_path is not None:
@@ -237,7 +251,7 @@ class S3Plugin:
             group_files_by_store = data.get("group_files_by_store", False)
 
             # filename must follow the DataLayer naming convention
-            if not is_filename_valid(filename.replace("/", "-", 1)):
+            if not is_filename_valid(filename, group_files_by_store):
                 return web.json_response({"downloaded": False})
 
             # Pull the store_id from the filename to make sure we only download for configured stores
@@ -254,10 +268,8 @@ class S3Plugin:
 
             bucket_str = parse_result.netloc
             my_bucket = self.boto_resource.Bucket(bucket_str)
-            if group_files_by_store:
-                target_filename = self.server_files_path.joinpath(f"{filename_store_id}").joinpath(filename[65:])
-            else:
-                target_filename = self.server_files_path.joinpath(filename)
+            trimmed_filename = filename[65:] if group_files_by_store else filename
+            target_filename = self.get_path_for_filename(filename_store_id, trimmed_filename, group_files_by_store)
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
             log.info(f"downloading {url} to {target_filename}...")
@@ -296,12 +308,9 @@ class S3Plugin:
                         if not (bytes32.fromhex(file_name[:64]) == store_id):
                             log.error(f"failed uploading file {file_name}, store id mismatch")
 
-                    if group_files_by_store:
-                        file_path = self.server_files_path.joinpath(f"{store_id}").joinpath(file_name)
-                        target_file_name = f"{store_id}/{file_name}"
-                    else:
-                        file_path = self.server_files_path.joinpath(file_name)
-                        target_file_name = file_name
+                    file_path = self.get_path_for_filename(store_id, file_name, group_files_by_store)
+                    target_file_name = self.get_s3_target_from_path(store_id, file_path, group_files_by_store)
+
                     if not os.path.isfile(file_path):
                         log.error(f"failed uploading file to aws, file {file_path} does not exist")
                         continue
