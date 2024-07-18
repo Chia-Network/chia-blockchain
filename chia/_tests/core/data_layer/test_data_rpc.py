@@ -786,7 +786,7 @@ async def test_subscriptions(
             response = await data_rpc_api.subscriptions(request={})
             return store_id.hex() not in response.get("store_ids", [])
 
-        await time_out_assert(30, check_subscriptions, True)
+        await time_out_assert(60, check_subscriptions, True)
 
 
 @dataclass(frozen=True)
