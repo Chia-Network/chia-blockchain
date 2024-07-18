@@ -163,12 +163,11 @@ def get_new_vault_info_from_spend(spend: CoinSpend) -> Tuple[bytes, bytes32, Opt
             assert memos is not None
             secp_pk = memos.at("f").as_atom()
             hidden_puzzle_hash = bytes32(memos.at("rf").as_atom())
+            bls_pk = None
+            timelock = None
             if memos.list_len() > 2:
                 bls_pk = G1Element.from_bytes(memos.at("rrf").as_atom())
                 timelock = uint64(memos.at("rrrf").as_int())
-            else:
-                bls_pk = None
-                timelock = None
             break
     return secp_pk, hidden_puzzle_hash, bls_pk, timelock
 

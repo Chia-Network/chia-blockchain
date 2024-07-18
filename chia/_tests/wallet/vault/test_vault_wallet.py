@@ -83,13 +83,6 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
     await wallet_environments.full_node.wait_for_wallet_synced(env.node, 20)
 
 
-def sign_message(message: bytes) -> bytes:
-    seed = b"chia_secp"
-    SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
-    signed_message: bytes = SECP_SK.sign_deterministic(message)
-    return signed_message
-
-
 @pytest.mark.parametrize(
     "wallet_environments",
     [{"num_environments": 2, "blocks_needed": [1, 1]}],

@@ -94,7 +94,7 @@ def vault_create_cmd(
     public_key: str,
     recovery_public_key: Optional[str],
     recovery_timelock: Optional[int],
-    hidden_puzzle_index: Optional[int],
+    hidden_puzzle_index: int,
     fee: uint64,
     name: Optional[str],
     min_coin_amount: CliAmount,
@@ -103,9 +103,6 @@ def vault_create_cmd(
     reuse: bool,
 ) -> None:
     from .vault_funcs import create_vault
-
-    if hidden_puzzle_index is None:
-        hidden_puzzle_index = 0
 
     asyncio.run(
         create_vault(
