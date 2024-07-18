@@ -17,6 +17,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.observation_root import ObservationRoot
 from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
@@ -168,10 +169,12 @@ class Wallet:
     def require_derivation_paths(self) -> bool:
         return True
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_for_pk(self, pubkey: ObservationRoot) -> Program:
+        assert isinstance(pubkey, G1Element), "Standard wallet cannot support non-BLS keys yet"
         return puzzle_for_pk(pubkey)
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+    def puzzle_hash_for_pk(self, pubkey: ObservationRoot) -> bytes32:
+        assert isinstance(pubkey, G1Element), "Standard wallet cannot support non-BLS keys yet"
         return puzzle_hash_for_pk(pubkey)
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
@@ -391,6 +394,7 @@ class Wallet:
         # CHIP-0002 message signing as documented at:
         # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
         private = await self.wallet_state_manager.get_private_key(puzzle_hash)
+        assert isinstance(private, PrivateKey)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
         if mode == SigningMode.CHIP_0002_HEX_INPUT:
@@ -552,7 +556,9 @@ class Wallet:
         root_fingerprint: bytes = self.wallet_state_manager.observation_root.get_fingerprint().to_bytes(4, "big")
         if index is None:
             # Pool wallet may have a secret key here
-            if self.wallet_state_manager.private_key is not None:
+            if self.wallet_state_manager.private_key is not None and isinstance(
+                self.wallet_state_manager.private_key, PrivateKey
+            ):
                 for pool_wallet_index in range(MAX_POOL_WALLETS):
                     try_owner_sk = master_sk_to_singleton_owner_sk(
                         self.wallet_state_manager.private_key, uint32(pool_wallet_index)
@@ -598,20 +604,20 @@ class Wallet:
     ) -> List[SigningResponse]:
         assert isinstance(self.wallet_state_manager.observation_root, G1Element)
         root_pubkey: G1Element = self.wallet_state_manager.observation_root
-        pk_lookup: Dict[int, G1Element] = (
-            {root_pubkey.get_fingerprint(): root_pubkey} if self.wallet_state_manager.private_key is not None else {}
-        )
-        sk_lookup: Dict[int, PrivateKey] = (
-            {root_pubkey.get_fingerprint(): self.wallet_state_manager.get_master_private_key()}
-            if self.wallet_state_manager.private_key is not None
-            else {}
-        )
+        pk_lookup: Dict[int, G1Element] = {}
+        sk_lookup: Dict[int, PrivateKey] = {}
         aggregate_responses_at_end: bool = True
         responses: List[SigningResponse] = []
 
         # TODO: expand path hints and sum hints recursively (a sum hint can give a new key to path hint)
         # Next, expand our pubkey set with path hints
         if self.wallet_state_manager.private_key is not None:
+            root_secret_key = self.wallet_state_manager.get_master_private_key()
+            assert isinstance(root_secret_key, PrivateKey)
+            root_fingerprint = root_pubkey.get_fingerprint()
+            pk_lookup[root_fingerprint] = root_pubkey
+            sk_lookup[root_fingerprint] = root_secret_key
+
             for path_hint in signing_instructions.key_hints.path_hints:
                 if int.from_bytes(path_hint.root_fingerprint, "big") != root_pubkey.get_fingerprint():
                     if not partial_allowed:
@@ -620,12 +626,10 @@ class Wallet:
                         continue
                 else:
                     path = [int(step) for step in path_hint.path]
-                    derive_child_sk = _derive_path(self.wallet_state_manager.get_master_private_key(), path)
-                    derive_child_sk_unhardened = _derive_path_unhardened(
-                        self.wallet_state_manager.get_master_private_key(), path
-                    )
-                    derive_child_pk = derive_child_sk.get_g1()
-                    derive_child_pk_unhardened = derive_child_sk_unhardened.get_g1()
+                    derive_child_sk = _derive_path(root_secret_key, path)
+                    derive_child_sk_unhardened = _derive_path_unhardened(root_secret_key, path)
+                    derive_child_pk = derive_child_sk.public_key()
+                    derive_child_pk_unhardened = derive_child_sk_unhardened.public_key()
                     pk_lookup[derive_child_pk.get_fingerprint()] = derive_child_pk
                     pk_lookup[derive_child_pk_unhardened.get_fingerprint()] = derive_child_pk_unhardened
                     sk_lookup[derive_child_pk.get_fingerprint()] = derive_child_sk

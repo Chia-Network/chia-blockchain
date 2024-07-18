@@ -12,6 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.observation_root import ObservationRoot
 from chia.wallet.conditions import Condition
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
@@ -114,7 +115,7 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> List[TransactionRecord]: ...
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program: ...
+    def puzzle_for_pk(self, pubkey: ObservationRoot) -> Program: ...
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program: ...
 

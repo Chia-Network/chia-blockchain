@@ -124,7 +124,7 @@ class AnyoneCanSpend(Wallet):
             )
         ]
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:  # pragma: no cover
+    def puzzle_for_pk(self, pubkey: ObservationRoot) -> Program:  # pragma: no cover
         raise ValueError("This won't work")
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
@@ -176,7 +176,7 @@ class AnyoneCanSpend(Wallet):
     async def get_puzzle(self, new: bool) -> Program:  # pragma: no cover
         return ACS
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:  # pragma: no cover
+    def puzzle_hash_for_pk(self, pubkey: ObservationRoot) -> bytes32:  # pragma: no cover
         raise ValueError("This won't work")
 
     def require_derivation_paths(self) -> bool:
