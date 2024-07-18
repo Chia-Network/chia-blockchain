@@ -231,6 +231,7 @@ jobs:
         run: security delete-keychain signing_temp.keychain || true
 
   publish:
+    name: 📦 Publish Installers
     uses: ./.github/workflows/reflow-publish-installer.yml
     with:
       concurrency-name: macos
