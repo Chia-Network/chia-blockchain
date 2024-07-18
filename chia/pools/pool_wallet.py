@@ -441,9 +441,11 @@ class PoolWallet:
         return p2_singleton_puzzle_hash, launcher_coin_id
 
     async def _get_owner_key_cache(self) -> Tuple[PrivateKey, uint32]:
+        private_key = self.wallet_state_manager.get_master_private_key()
+        assert isinstance(private_key, PrivateKey)
         if self._owner_sk_and_index is None:
             self._owner_sk_and_index = find_owner_sk(
-                [self.wallet_state_manager.get_master_private_key()],
+                [private_key],
                 (await self.get_current_state()).current.owner_pubkey,
             )
         assert self._owner_sk_and_index is not None

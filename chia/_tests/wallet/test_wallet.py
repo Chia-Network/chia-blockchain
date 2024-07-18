@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
@@ -1895,7 +1895,9 @@ class TestWalletSimulator:
 
         puzzle_hashes = []
         for i in range(211):
-            pubkey = master_sk_to_wallet_sk(wallet.wallet_state_manager.get_master_private_key(), uint32(i)).get_g1()
+            sk = wallet.wallet_state_manager.get_master_private_key()
+            assert isinstance(sk, PrivateKey)
+            pubkey = master_sk_to_wallet_sk(sk, uint32(i)).public_key()
             puzzle: Program = wallet.puzzle_for_pk(pubkey)
             puzzle_hash: bytes32 = puzzle.get_tree_hash()
             puzzle_hashes.append(puzzle_hash)
