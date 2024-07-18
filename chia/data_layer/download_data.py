@@ -15,7 +15,9 @@ from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int) -> str:
+def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
+    if group_by_store:
+        return f"{store_id}/{node_hash}-full-{generation}-v1.0.dat"
     return f"{store_id}-{node_hash}-full-{generation}-v1.0.dat"
 
 
@@ -78,7 +80,9 @@ def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
         return False
 
     generate_file_func = get_delta_filename if file_type == "delta" else get_full_tree_filename
-    reformatted = generate_file_func(store_id=store_id, node_hash=node_hash, generation=generation)
+    reformatted = generate_file_func(
+        store_id=store_id, node_hash=node_hash, generation=generation, group_by_store=False
+    )
 
     return reformatted == filename
 
