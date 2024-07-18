@@ -132,6 +132,10 @@ jobs:
         run: |
           aws s3 cp artifacts/${FILE} ${INSTALL_S3_URL}
           aws s3 cp artifacts/${FILE}.sha256 ${INSTALL_S3_URL}
+
+      - name: Upload Release Torrent
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.RELEASE == 'true' && matrix.mode.matrix == 'gui'
+        run: |
           aws s3 cp artifacts/${FILE}.torrent ${TORRENT_S3_URL}
 
       - name: Upload release artifacts
