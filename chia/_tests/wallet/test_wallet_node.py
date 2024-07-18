@@ -24,11 +24,11 @@ from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import Self, api_request
+from chia.util.batches import to_batches
 from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
-from chia.util.misc import to_batches
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_node import Balance, WalletNode
@@ -640,8 +640,9 @@ async def test_transaction_send_cache(
     )
 
     # Generate the transaction
-    [tx] = await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), DEFAULT_TX_CONFIG)
-    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), DEFAULT_TX_CONFIG, action_scope)
+    [tx] = action_scope.side_effects.transactions
 
     # Make sure it is sent to the peer
     await wallet_node._resend_queue()

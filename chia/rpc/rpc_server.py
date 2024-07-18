@@ -364,7 +364,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                 log.debug("Received binary data")
             else:
                 if msg.type == WSMsgType.ERROR:
-                    log.error("Error during receive %s" % ws.exception())
+                    log.error("Error during receive %s", ws.exception())
                 elif msg.type == WSMsgType.CLOSED:
                     pass
 
