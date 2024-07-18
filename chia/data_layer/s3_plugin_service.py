@@ -142,7 +142,7 @@ class S3Plugin:
         if filename is None:
             return None
 
-        if group_by_store:
+        if group_files_by_store:
             return self.server_files_path.joinpath(f"{store_id}").joinpath(filename)
         return self.server_files_path.joinpath(filename)
 
@@ -270,6 +270,7 @@ class S3Plugin:
             my_bucket = self.boto_resource.Bucket(bucket_str)
             trimmed_filename = filename[65:] if group_files_by_store else filename
             target_filename = self.get_path_for_filename(filename_store_id, trimmed_filename, group_files_by_store)
+            assert target_filename is not None
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
             log.info(f"downloading {url} to {target_filename}...")
@@ -309,6 +310,7 @@ class S3Plugin:
                             log.error(f"failed uploading file {file_name}, store id mismatch")
 
                     file_path = self.get_path_for_filename(store_id, file_name, group_files_by_store)
+                    assert file_path is not None
                     target_file_name = self.get_s3_target_from_path(store_id, file_path, group_files_by_store)
 
                     if not os.path.isfile(file_path):
