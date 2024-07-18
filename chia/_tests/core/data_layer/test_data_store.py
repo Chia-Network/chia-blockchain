@@ -1377,6 +1377,7 @@ async def test_server_http_ban(
             log=log,
             proxy_url="",
             downloader=None,
+            connect_timeout=5,
         )
 
     assert success is False
@@ -1400,6 +1401,7 @@ async def test_server_http_ban(
             log=log,
             proxy_url="",
             downloader=None,
+            connect_timeout=5,
         )
 
     subscriptions = await data_store.get_subscriptions()
@@ -1907,6 +1909,7 @@ async def test_insert_from_delta_file_correct_file_exists(
         log=log,
         proxy_url="",
         downloader=None,
+        connect_timeout=5,
     )
     assert success
 
@@ -1966,6 +1969,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
         log=log,
         proxy_url="",
         downloader=None,
+        connect_timeout=5,
     )
     assert not success
 

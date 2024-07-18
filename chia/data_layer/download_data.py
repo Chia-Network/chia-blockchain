@@ -149,6 +149,7 @@ async def insert_from_delta_file(
     log: logging.Logger,
     proxy_url: str,
     downloader: Optional[PluginRemote],
+    connect_timeout: int,
 ) -> bool:
     for root_hash in root_hashes:
         timestamp = int(time.time())
@@ -164,7 +165,15 @@ async def insert_from_delta_file(
             if downloader is None:
                 # use http downloader - this raises on any error
                 try:
-                    await http_download(client_foldername, filename, proxy_url, server_info, timeout, log)
+                    await http_download(
+                        client_foldername,
+                        filename,
+                        proxy_url,
+                        server_info,
+                        timeout,
+                        log,
+                        connect_timeout=connect_timeout,
+                    )
                 except (asyncio.TimeoutError, aiohttp.ClientError):
                     new_server_info = await data_store.server_misses_file(store_id, server_info, timestamp)
                     log.info(
@@ -254,6 +263,7 @@ async def http_download(
     server_info: ServerInfo,
     timeout: int,
     log: logging.Logger,
+    connect_timeout: int,
 ) -> None:
     """
     Download a file from a server using aiohttp.
@@ -262,7 +272,10 @@ async def http_download(
     async with aiohttp.ClientSession() as session:
         headers = {"accept-encoding": "gzip"}
         async with session.get(
-            server_info.url + "/" + filename, headers=headers, timeout=timeout, proxy=proxy_url
+            server_info.url + "/" + filename,
+            headers=headers,
+            timeout=aiohttp.ClientTimeout(total=timeout, sock_connect=connect_timeout),
+            proxy=proxy_url,
         ) as resp:
             resp.raise_for_status()
             size = int(resp.headers.get("content-length", 0))

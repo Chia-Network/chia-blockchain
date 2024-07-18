@@ -586,7 +586,8 @@ class DataLayer:
                 max_generation=singleton_record.generation,
             )
             try:
-                timeout = self.config.get("client_timeout", 15)
+                timeout = self.config.get("client_timeout", 45)
+                connect_timeout = self.config.get("connect_timeout", 5)
                 proxy_url = self.config.get("proxy_url", None)
                 success = await insert_from_delta_file(
                     self.data_store,
@@ -599,6 +600,7 @@ class DataLayer:
                     self.log,
                     proxy_url,
                     await self.get_downloader(store_id, url),
+                    connect_timeout=connect_timeout,
                 )
                 if success:
                     self.log.info(
