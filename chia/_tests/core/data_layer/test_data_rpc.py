@@ -2266,6 +2266,8 @@ async def test_unsubscribe_removes_files(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
+        # subscribe to ourselves
+        await data_rpc_api.subscribe(request={"id": store_id.hex()})
         update_count = 10
         for batch_count in range(update_count):
             key = batch_count.to_bytes(2, "big")
