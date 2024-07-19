@@ -18,7 +18,6 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Tuple, cast
 
 import anyio
 import pytest
-from flaky import flaky
 
 from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
@@ -780,13 +779,12 @@ async def test_subscriptions(
         # test unsubscribe
         response = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
         assert response is not None
-        assert len([x for x in data_layer.unsubscribe_data_queue if x.store_id == store_id]) == 1
 
-        async def check_subscriptions() -> bool:
-            response = await data_rpc_api.subscriptions(request={})
-            return store_id.hex() not in response.get("store_ids", [])
+        # wait for unsubscribe to be processed
+        await asyncio.sleep(interval * 5)
 
-        await time_out_assert(10, check_subscriptions, True)
+        response = await data_rpc_api.subscriptions(request={})
+        assert store_id.hex() not in response.get("store_ids", [])
 
 
 @dataclass(frozen=True)
@@ -2190,9 +2188,7 @@ async def test_issue_15955_deadlock(
 
 
 @pytest.mark.parametrize(argnames="maximum_full_file_count", argvalues=[1, 5, 100])
-@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
-@flaky(max_runs=5)  # type: ignore[misc]
 async def test_maximum_full_file_count(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
@@ -2217,15 +2213,7 @@ async def test_maximum_full_file_count(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_rpc_api.service, timeout=20)
-
-        filenames: set[str] = set()
-
-        def check_num_files() -> int:
-            nonlocal filenames
-            filenames = {path.name for path in data_layer.server_files_location.iterdir()}
-            return len(filenames)
-
-        for batch_count in range(1, 4):
+        for batch_count in range(1, 10):
             key = batch_count.to_bytes(2, "big")
             value = batch_count.to_bytes(2, "big")
             changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
@@ -2235,26 +2223,25 @@ async def test_maximum_full_file_count(
             await asyncio.sleep(manage_data_interval * 2)
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
-            await time_out_assert(
-                timeout=manage_data_interval * 4,
-                function=check_num_files,
-                value=min(batch_count, maximum_full_file_count) + batch_count,
-            )
+            with os.scandir(data_layer.server_files_location) as entries:
+                filenames = {entry.name for entry in entries}
+                expected_files_count = min(batch_count, maximum_full_file_count) + batch_count
 
-            for generation, hash in enumerate(root_hashes):
-                filename = get_delta_filename(store_id, hash, generation + 1)
-                assert filename in filenames
-                filename = get_full_tree_filename(store_id, hash, generation + 1)
-                if generation + 1 > batch_count - maximum_full_file_count:
+                assert len(filenames) == expected_files_count
+
+                for generation, hash in enumerate(root_hashes):
+                    filename = get_delta_filename(store_id, hash, generation + 1)
                     assert filename in filenames
-                else:
-                    assert filename not in filenames
+                    filename = get_full_tree_filename(store_id, hash, generation + 1)
+                    if generation + 1 > batch_count - maximum_full_file_count:
+                        assert filename in filenames
+                    else:
+                        assert filename not in filenames
 
 
 @pytest.mark.parametrize("retain", [True, False])
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
-@flaky(max_runs=5)  # type: ignore[misc]
 async def test_unsubscribe_removes_files(
     self_hostname: str,
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
@@ -2279,16 +2266,7 @@ async def test_unsubscribe_removes_files(
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
 
-        filenames: set[str] = set()
-        # subscribe to ourselves for simplified testing
-        res = await data_rpc_api.subscribe(request={"id": store_id.hex()})
-
-        def check_num_files() -> int:
-            nonlocal filenames
-            filenames = {path.name for path in data_layer.server_files_location.iterdir()}
-            return len(filenames)
-
-        update_count = 3
+        update_count = 10
         for batch_count in range(update_count):
             key = batch_count.to_bytes(2, "big")
             value = batch_count.to_bytes(2, "big")
@@ -2296,12 +2274,12 @@ async def test_unsubscribe_removes_files(
             res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
             update_tx_rec = res["tx_id"]
             await farm_block_with_spend(full_node_api, ph, update_tx_rec, wallet_rpc_api)
-            await time_out_assert(
-                timeout=manage_data_interval * 4, function=check_num_files, value=2 * (batch_count + 1)
-            )
+            await asyncio.sleep(manage_data_interval * 2)
             root_hash = await data_rpc_api.get_root({"id": store_id.hex()})
             root_hashes.append(root_hash["hash"])
 
+        filenames = {path.name for path in data_layer.server_files_location.iterdir()}
+        assert len(filenames) == 2 * update_count
         for generation, hash in enumerate(root_hashes):
             assert get_delta_filename(store_id, hash, generation + 1) in filenames
             assert get_full_tree_filename(store_id, hash, generation + 1) in filenames
