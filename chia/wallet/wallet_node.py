@@ -69,6 +69,7 @@ from chia.util.keychain import Keychain
 from chia.util.observation_root import ObservationRoot
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task
+from chia.util.secret_info import SecretInfo
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
@@ -235,7 +236,7 @@ class WalletNode:
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: Literal[True]
-    ) -> Optional[PrivateKey]: ...
+    ) -> Optional[SecretInfo[Any]]: ...
 
     @overload
     async def get_key_for_fingerprint(
@@ -245,15 +246,15 @@ class WalletNode:
     @overload
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]: ...
+    ) -> Optional[Union[SecretInfo[Any], ObservationRoot]]: ...
 
     async def get_key_for_fingerprint(
         self, fingerprint: Optional[int], private: bool = False
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
+    ) -> Optional[Union[SecretInfo[Any], ObservationRoot]]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
             # Returns first key if fingerprint is None
-            key: Optional[Union[PrivateKey, ObservationRoot]] = await keychain_proxy.get_key_for_fingerprint(
+            key: Optional[Union[SecretInfo[Any], ObservationRoot]] = await keychain_proxy.get_key_for_fingerprint(
                 fingerprint, private=private
             )
         except KeychainIsEmpty:
@@ -272,23 +273,39 @@ class WalletNode:
 
         return key
 
+    @overload
+    async def get_key(self, fingerprint: Optional[int]) -> Optional[ObservationRoot]: ...
+
+    @overload
+    async def get_key(self, fingerprint: Optional[int], private: Literal[True]) -> Optional[SecretInfo[Any]]: ...
+
+    @overload
+    async def get_key(self, fingerprint: Optional[int], private: Literal[False]) -> Optional[ObservationRoot]: ...
+
+    @overload
+    async def get_key(
+        self, fingerprint: Optional[int], private: bool
+    ) -> Optional[Union[SecretInfo[Any], ObservationRoot]]: ...
+
     async def get_key(
         self, fingerprint: Optional[int], private: bool = True
-    ) -> Optional[Union[PrivateKey, ObservationRoot]]:
+    ) -> Optional[Union[SecretInfo[Any], ObservationRoot]]:
         """
         Attempt to get the private key for the given fingerprint. If the fingerprint is None,
         get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
         returned for the provided fingerprint, the first key will be returned.
         """
-        key: Optional[Union[PrivateKey, ObservationRoot]] = await self.get_key_for_fingerprint(
+        key: Optional[Union[SecretInfo[Any], ObservationRoot]] = await self.get_key_for_fingerprint(
             fingerprint, private=private
         )
 
         if fingerprint is None and key is not None:
-            if isinstance(key, PrivateKey):
-                fp = key.get_g1().get_fingerprint()
+            if private:
+                # Mypy can't understand that private being True both ensures SecretInfo[Any] and this branch
+                fp = key.public_key().get_fingerprint()  # type: ignore[union-attr]
             else:
-                fp = key.get_fingerprint()
+                # Mypy can't understand that private being False both ensures ObservationRoot and this branch
+                fp = key.get_fingerprint()  # type: ignore[union-attr]
             self.log.info(f"Using first key found (fingerprint: {fp})")
 
         return key
@@ -421,8 +438,12 @@ class WalletNode:
         if private_key is None:
             observation_root = await self.get_key(fingerprint, private=False)
         else:
-            assert isinstance(private_key, PrivateKey)
-            observation_root = private_key.get_g1()
+            if not isinstance(private_key, PrivateKey):
+                raise ValueError(
+                    "Cannot start wallet with non-BLS public key."
+                    "Try starting in observer mode first and adding private key by some other means."
+                )
+            observation_root = private_key.public_key()
         if observation_root is None:
             self.log_out()
             return False

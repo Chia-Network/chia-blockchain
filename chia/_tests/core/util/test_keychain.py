@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import dataclass, replace
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import importlib_resources
 import pytest
@@ -98,7 +98,7 @@ class TestKeychain:
         entropy = bytes_from_mnemonic(mnemonic)
         assert bytes_to_mnemonic(entropy) == mnemonic
         mnemonic_2 = generate_mnemonic()
-        fingerprint_2 = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_2)).get_g1().get_fingerprint()
+        fingerprint_2 = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_2)).public_key().get_fingerprint()
 
         # misspelled words in the mnemonic
         bad_mnemonic = mnemonic.split(" ")
@@ -130,7 +130,7 @@ class TestKeychain:
 
         seed_2 = mnemonic_to_seed(mnemonic)
         seed_key_2 = AugSchemeMPL.key_gen(seed_2)
-        kc.delete_key_by_fingerprint(seed_key_2.get_g1().get_fingerprint())
+        kc.delete_key_by_fingerprint(seed_key_2.public_key().get_fingerprint())
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 1
 
@@ -201,7 +201,7 @@ class TestKeychain:
         tv_master_int = 8075452428075949470768183878078858156044736575259233735633523546099624838313
         tv_child_int = 18507161868329770878190303689452715596635858303241878571348190917018711023613
         assert master_sk == PrivateKey.from_bytes(tv_master_int.to_bytes(32, "big"))
-        child_sk = AugSchemeMPL.derive_child_sk(master_sk, 0)
+        child_sk = master_sk.derive_hardened(0)
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors(self):
@@ -279,8 +279,8 @@ def test_key_data_generate(label: Optional[str]) -> None:
     key_data = KeyData.generate(label)
     assert key_data.private_key == AugSchemeMPL.key_gen(mnemonic_to_seed(key_data.mnemonic_str()))
     assert key_data.entropy == bytes_from_mnemonic(key_data.mnemonic_str())
-    assert key_data.observation_root == key_data.private_key.get_g1()
-    assert key_data.fingerprint == key_data.private_key.get_g1().get_fingerprint()
+    assert key_data.observation_root == key_data.private_key.public_key()
+    assert key_data.fingerprint == key_data.private_key.public_key().get_fingerprint()
     assert key_data.label == label
 
 
@@ -533,7 +533,7 @@ def test_key_type_support(key_type: str) -> None:
     vault_root = VaultRoot(launcher_id)
     secp_sk = Secp256r1PrivateKey.from_seed(mnemonic_to_seed(mnemonic))
     secp_pk = secp_sk.public_key()
-    generate_test_key_for_key_type: Dict[str, Tuple[int, ObservationRoot, Optional[SecretInfo[ObservationRoot]]]] = {
+    generate_test_key_for_key_type: Dict[str, Tuple[int, ObservationRoot, Optional[SecretInfo[Any]]]] = {
         KeyTypes.G1_ELEMENT.value: (
             G1Element().get_fingerprint(),
             G1Element(),

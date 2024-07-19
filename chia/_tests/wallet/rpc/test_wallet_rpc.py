@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiosqlite
 import pytest
-from chia_rs import G2Element
+from chia_rs import G2Element, PrivateKey
 
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.wallet.test_wallet_coin_store import (
@@ -1654,10 +1654,12 @@ async def _check_delete_key(
 
     sk = await wallet_node.get_key_for_fingerprint(farmer_fp, private=True)
     assert sk is not None
+    assert isinstance(sk, PrivateKey)
     farmer_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
 
     sk = await wallet_node.get_key_for_fingerprint(pool_fp, private=True)
     assert sk is not None
+    assert isinstance(sk, PrivateKey)
     pool_ph = create_puzzlehash_for_pk(create_sk(sk, uint32(0)).get_g1())
 
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:

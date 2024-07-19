@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, Tuple
 
 import click
+from chia_rs import PrivateKey
 
 from chia.cmds import options
 
@@ -328,6 +329,10 @@ def search_cmd(
     if fingerprint is None and filename is not None:
         sk = resolve_derivation_master_key(filename)
 
+    if not isinstance(sk, PrivateKey):
+        print("Cannot derive from non-BLS keys")
+        return
+
     found: bool = search_derive(
         ctx.obj["root_path"],
         fingerprint,
@@ -378,6 +383,10 @@ def wallet_address_cmd(
     sk = None
     if fingerprint is None and filename is not None:
         sk = resolve_derivation_master_key(filename)
+
+    if not isinstance(sk, PrivateKey):
+        print("Cannot derive from non-BLS keys")
+        return
 
     derive_wallet_address(
         ctx.obj["root_path"], fingerprint, index, count, prefix, non_observer_derivation, show_hd_path, sk
@@ -449,6 +458,10 @@ def child_key_cmd(
     sk = None
     if fingerprint is None and filename is not None:
         sk = resolve_derivation_master_key(filename)
+
+    if not isinstance(sk, PrivateKey):
+        print("Cannot derive from non-BLS keys")
+        return
 
     derive_child_key(
         fingerprint,

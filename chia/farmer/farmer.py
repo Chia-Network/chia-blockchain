@@ -231,7 +231,12 @@ class Farmer:
 
     async def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
         keychain_proxy = await self.ensure_keychain_proxy()
-        return await keychain_proxy.get_all_private_keys()
+        all_keys = []
+        for key, entropy in await keychain_proxy.get_all_private_keys():
+            if not isinstance(key, PrivateKey):
+                continue
+            all_keys.append((key, entropy))
+        return all_keys
 
     async def setup_keys(self) -> bool:
         no_keys_error_str = "No keys exist. Please run 'chia keys generate' or open the UI."

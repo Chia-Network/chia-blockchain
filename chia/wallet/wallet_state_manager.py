@@ -203,7 +203,7 @@ class WalletStateManager:
 
     main_wallet: MainWalletProtocol
     wallets: Dict[uint32, WalletProtocol[Any]]
-    private_key: Optional[SecretInfo[ObservationRoot]]
+    private_key: Optional[SecretInfo[Any]]
     observation_root: ObservationRoot
 
     trade_manager: TradeManager
@@ -226,7 +226,7 @@ class WalletStateManager:
 
     @staticmethod
     async def create(
-        private_key: Optional[SecretInfo[ObservationRoot]],
+        private_key: Optional[SecretInfo[Any]],
         config: Dict[str, Any],
         db_path: Path,
         constants: ConsensusConstants,
@@ -393,7 +393,7 @@ class WalletStateManager:
             raise ValueError("Public key derivation is not supported for non-G1Element keys")
         return master_pk_to_wallet_pk_unhardened(self.observation_root, index)
 
-    async def get_private_key(self, puzzle_hash: bytes32) -> SecretInfo[ObservationRoot]:
+    async def get_private_key(self, puzzle_hash: bytes32) -> SecretInfo[Any]:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
         if record is None:
             raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
@@ -415,7 +415,7 @@ class WalletStateManager:
             pk_bytes = bytes(record._pubkey)
         return pk_bytes
 
-    def get_master_private_key(self) -> SecretInfo[ObservationRoot]:
+    def get_master_private_key(self) -> SecretInfo[Any]:
         if self.private_key is None:  # pragma: no cover
             raise ValueError("Wallet is currently in observer mode and access to private key is denied")
 

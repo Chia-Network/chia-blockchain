@@ -321,7 +321,7 @@ class KeychainServer:
 
         private_keys = self.get_keychain_for_request(request).get_all_private_keys()
         for sk, entropy in private_keys:
-            all_keys.append({"pk": bytes(sk.get_g1()).hex(), "entropy": entropy.hex()})
+            all_keys.append({"pk": bytes(sk.public_key()).hex(), "entropy": entropy.hex()})
 
         return {"success": True, "private_keys": all_keys}
 
@@ -334,7 +334,7 @@ class KeychainServer:
         if sk_ent is None:
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
 
-        pk_str = bytes(sk_ent[0].get_g1()).hex()
+        pk_str = bytes(sk_ent[0].public_key()).hex()
         ent_str = sk_ent[1].hex()
         key = {"pk": pk_str, "entropy": ent_str}
 
