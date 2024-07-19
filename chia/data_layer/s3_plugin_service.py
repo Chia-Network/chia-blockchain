@@ -137,14 +137,10 @@ class S3Plugin:
         return web.json_response({"handle_upload": False})
 
     @overload
-    def get_path_for_filename(
-        self, store_id: bytes32, filename: str, group_files_by_store: bool
-    ) -> Path: ...
+    def get_path_for_filename(self, store_id: bytes32, filename: str, group_files_by_store: bool) -> Path: ...
 
     @overload
-    def get_path_for_filename(
-        self, store_id: bytes32, filename: None, group_files_by_store: bool
-    ) -> None: ...
+    def get_path_for_filename(self, store_id: bytes32, filename: None, group_files_by_store: bool) -> None: ...
 
     def get_path_for_filename(
         self, store_id: bytes32, filename: Optional[str], group_files_by_store: bool
@@ -157,14 +153,10 @@ class S3Plugin:
         return self.server_files_path.joinpath(filename)
 
     @overload
-    def get_s3_target_from_path(
-        self, store_id: bytes32, path: Path, group_files_by_store: bool
-    ) -> str: ...
+    def get_s3_target_from_path(self, store_id: bytes32, path: Path, group_files_by_store: bool) -> str: ...
 
     @overload
-    def get_s3_target_from_path(
-        self, store_id: bytes32, path: None, group_files_by_store: bool
-    ) -> None: ...
+    def get_s3_target_from_path(self, store_id: bytes32, path: None, group_files_by_store: bool) -> None: ...
 
     def get_s3_target_from_path(
         self, store_id: bytes32, path: Optional[Path], group_files_by_store: bool
