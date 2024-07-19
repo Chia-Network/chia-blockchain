@@ -10,7 +10,7 @@ import aiohttp
 import pytest
 from aiohttp import WSMessage
 from aiohttp.web_ws import WebSocketResponse
-from chia_rs import G1Element
+from chia_rs import G1Element, PrivateKey
 from pytest_mock import MockerFixture
 
 from chia._tests.util.misc import Marks, datacases
@@ -205,6 +205,8 @@ test_key_data_2 = KeyData.from_mnemonic(
     "hammer stable page grunt venture purse canyon discover "
     "egg vivid spare immune awake code announce message"
 )
+assert isinstance(test_key_data.private_key, PrivateKey)
+assert isinstance(test_key_data_2.private_key, PrivateKey)
 
 success_response_data = {
     "success": True,

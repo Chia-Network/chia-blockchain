@@ -41,7 +41,7 @@ async def test_get_private_key(root_path_populated_with_config: Path, get_temp_k
     config = load_config(root_path, "config.yaml", "wallet")
     node = WalletNode(config, root_path, test_constants, keychain)
     sk, _ = keychain.add_key(generate_mnemonic())
-    fingerprint = sk.get_g1().get_fingerprint()
+    fingerprint = sk.public_key().get_fingerprint()
 
     key = await node.get_key(fingerprint)
 
@@ -57,7 +57,7 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
     config = load_config(root_path, "config.yaml", "wallet")
     node = WalletNode(config, root_path, test_constants, keychain)
     sk, _ = keychain.add_key(generate_mnemonic())
-    fingerprint = sk.get_g1().get_fingerprint()
+    fingerprint = sk.public_key().get_fingerprint()
 
     # Add a couple more keys
     keychain.add_key(generate_mnemonic())
@@ -164,7 +164,7 @@ def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychai
     config = load_config(root_path, "config.yaml", "wallet")
     node = WalletNode(config, root_path, test_constants)
     sk, _ = keychain.add_key(generate_mnemonic())
-    fingerprint = sk.get_g1().get_fingerprint()
+    fingerprint = sk.public_key().get_fingerprint()
 
     node.log_in(fingerprint)
 
@@ -190,7 +190,7 @@ def test_log_in_failure_to_write_last_used_fingerprint(
         config = load_config(root_path, "config.yaml", "wallet")
         node = WalletNode(config, root_path, test_constants)
         sk, _ = keychain.add_key(generate_mnemonic())
-        fingerprint = sk.get_g1().get_fingerprint()
+        fingerprint = sk.public_key().get_fingerprint()
 
         # Expect log_in to succeed, even though we can't write the last used fingerprint
         node.log_in(fingerprint)
@@ -207,7 +207,7 @@ def test_log_out(root_path_populated_with_config: Path, get_temp_keyring: Keycha
     config = load_config(root_path, "config.yaml", "wallet")
     node = WalletNode(config, root_path, test_constants)
     sk, _ = keychain.add_key(generate_mnemonic())
-    fingerprint = sk.get_g1().get_fingerprint()
+    fingerprint = sk.public_key().get_fingerprint()
 
     node.log_in(fingerprint)
 
@@ -653,7 +653,7 @@ async def test_get_last_used_fingerprint_if_exists(
     assert await node.get_last_used_fingerprint_if_exists() is None
 
     sk_2, _ = await node.keychain_proxy.add_key(generate_mnemonic())
-    fingerprint_2: int = sk_2.get_g1().get_fingerprint()
+    fingerprint_2: int = sk_2.public_key().get_fingerprint()
 
     node._close()
     await node._await_closed(shutting_down=False)

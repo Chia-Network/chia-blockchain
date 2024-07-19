@@ -35,6 +35,8 @@ def get_ph_from_fingerprint(fingerprint: int, key_id: int = 1) -> bytes32:
     if priv_key_and_entropy is None:
         raise Exception("Fingerprint not found")
     private_key = priv_key_and_entropy[0]
+    if not isinstance(private_key, PrivateKey):
+        raise ValueError("Can only use BLS keys for the simulator")
     sk_for_wallet_id: PrivateKey = master_sk_to_wallet_sk(private_key, uint32(key_id))
     puzzle_hash: bytes32 = create_puzzlehash_for_pk(sk_for_wallet_id.get_g1())
     return puzzle_hash
@@ -145,6 +147,9 @@ def display_key_info(fingerprint: int, prefix: str) -> None:
         print(f"Fingerprint {fingerprint} not found")
         return
     sk, seed = private_key_and_seed
+    if not isinstance(sk, PrivateKey):
+        print("Can only use BLS keys for the simulator")
+        return
     print("\nFingerprint:", sk.get_g1().get_fingerprint())
     print("Master public key (m):", sk.get_g1())
     print("Farmer public key (m/12381/8444/0/0):", master_sk_to_farmer_sk(sk).get_g1())
@@ -171,7 +176,7 @@ def generate_and_return_fingerprint(mnemonic: Optional[str] = None) -> int:
         mnemonic = generate_mnemonic()
     try:
         sk, _ = Keychain().add_key(mnemonic, None)
-        fingerprint: int = sk.get_g1().get_fingerprint()
+        fingerprint: int = sk.public_key().get_fingerprint()
     except KeychainFingerprintExists as e:
         fingerprint = e.fingerprint
         print(f"Fingerprint: {fingerprint} for provided private key already exists.")
