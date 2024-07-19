@@ -11,7 +11,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, overload
 from urllib.parse import urlparse
 
 import boto3 as boto3
@@ -136,6 +136,16 @@ class S3Plugin:
 
         return web.json_response({"handle_upload": False})
 
+    @overload
+    def get_path_for_filename(
+        self, store_id: bytes32, filename: str, group_files_by_store: bool
+    ) -> Path: ...
+
+    @overload
+    def get_path_for_filename(
+        self, store_id: bytes32, filename: None, group_files_by_store: bool
+    ) -> None: ...
+
     def get_path_for_filename(
         self, store_id: bytes32, filename: Optional[str], group_files_by_store: bool
     ) -> Optional[Path]:
@@ -145,6 +155,16 @@ class S3Plugin:
         if group_files_by_store:
             return self.server_files_path.joinpath(f"{store_id}").joinpath(filename)
         return self.server_files_path.joinpath(filename)
+
+    @overload
+    def get_s3_target_from_path(
+        self, store_id: bytes32, path: Path, group_files_by_store: bool
+    ) -> str: ...
+
+    @overload
+    def get_s3_target_from_path(
+        self, store_id: bytes32, path: None, group_files_by_store: bool
+    ) -> None: ...
 
     def get_s3_target_from_path(
         self, store_id: bytes32, path: Optional[Path], group_files_by_store: bool
@@ -195,7 +215,6 @@ class S3Plugin:
             try:
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     if full_tree_path is not None:
-                        assert target_full_tree_path is not None
                         await asyncio.get_running_loop().run_in_executor(
                             pool,
                             functools.partial(
@@ -270,7 +289,6 @@ class S3Plugin:
             my_bucket = self.boto_resource.Bucket(bucket_str)
             trimmed_filename = filename[65:] if group_files_by_store else filename
             target_filename = self.get_path_for_filename(filename_store_id, trimmed_filename, group_files_by_store)
-            assert target_filename is not None
             # Create folder for parent directory
             target_filename.parent.mkdir(parents=True, exist_ok=True)
             log.info(f"downloading {url} to {target_filename}...")
@@ -310,7 +328,6 @@ class S3Plugin:
                             log.error(f"failed uploading file {file_name}, store id mismatch")
 
                     file_path = self.get_path_for_filename(store_id, file_name, group_files_by_store)
-                    assert file_path is not None
                     target_file_name = self.get_s3_target_from_path(store_id, file_path, group_files_by_store)
 
                     if not os.path.isfile(file_path):
