@@ -8,7 +8,7 @@ from threading import Lock
 from time import sleep, time
 from typing import List, Optional
 
-from chia_rs import G1Element
+from chia_rs import G1Element, PrivateKey
 from chiapos import Verifier
 
 from chia.plotting.manager import PlotManager
@@ -119,7 +119,7 @@ def check_plots(
     # for keychain access, KeychainProxy/connect_to_keychain should be used instead of Keychain.
     kc: Keychain = Keychain()
     plot_manager.set_public_keys(
-        [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()],
+        [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys() if isinstance(sk, PrivateKey)],
         [G1Element.from_bytes(bytes.fromhex(pk)) for pk in config["farmer"]["pool_public_keys"]],
     )
     plot_manager.start_refreshing()
