@@ -1359,6 +1359,7 @@ async def test_server_http_ban(
         server_info: ServerInfo,
         timeout: int,
         log: logging.Logger,
+        connect_timeout: int,
     ) -> None:
         if error:
             raise aiohttp.ClientConnectionError()
