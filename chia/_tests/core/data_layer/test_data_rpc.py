@@ -748,7 +748,6 @@ async def test_get_owned_stores(
 
 
 @pytest.mark.anyio
-@flaky(max_runs=5)  # type: ignore[misc]
 async def test_subscriptions(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -781,12 +780,13 @@ async def test_subscriptions(
         # test unsubscribe
         response = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
         assert response is not None
+        assert len([x for x in data_layer.unsubscribe_data_queue if x.store_id == store_id]) == 1
 
         async def check_subscriptions() -> bool:
             response = await data_rpc_api.subscriptions(request={})
             return store_id.hex() not in response.get("store_ids", [])
 
-        await time_out_assert(60, check_subscriptions, True)
+        await time_out_assert(10, check_subscriptions, True)
 
 
 @dataclass(frozen=True)

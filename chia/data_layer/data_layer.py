@@ -873,7 +873,12 @@ class DataLayer:
 
             # pseudo-subscribe to all unsubscribed owned stores
             # Need this to make sure we process updates and generate DAT files
-            owned_stores = await self.get_owned_stores()
+            try:
+                owned_stores = await self.get_owned_stores()
+            except ValueError:
+                # Sometimes the DL wallet isn't available, so we can't get the owned stores.
+                # We'll try again next time.
+                owned_stores = []
             subscription_store_ids = {subscription.store_id for subscription in subscriptions}
             for record in owned_stores:
                 store_id = record.launcher_id
