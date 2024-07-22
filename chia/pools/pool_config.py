@@ -92,7 +92,7 @@ def update_pool_config_entry(
         updated = False
         for pool_config_dict in pool_list:
             try:
-                if hexstr_to_bytes(pool_config_dict["owner_public_key"]) == bytes(pool_wallet_config.owner_public_key):
+                if hexstr_to_bytes(pool_config_dict["launcher_id"]) == bytes(pool_wallet_config.launcher_id):
                     if update_closure(pool_config_dict):
                         updated = True
             except Exception as e:
@@ -101,6 +101,8 @@ def update_pool_config_entry(
         log.info(update_log_message)
         config["pool"]["pool_list"] = pool_list
         save_config(root_path, "config.yaml", config)
+    else:
+        log.error(f"Failed to update pool config entry for launcher_id {pool_wallet_config.launcher_id}")
 
 
 async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]) -> None:
