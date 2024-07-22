@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, Tuple, cast
-
+import logging
 import anyio
 import pytest
 
@@ -3779,3 +3779,47 @@ async def test_auto_subscribe_to_local_stores(
                 assert fake_store.hex() in response["store_ids"]
             else:
                 assert fake_store.hex() not in response["store_ids"]
+
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.anyio
+async def test_local_store_exception(
+    self_hostname: str,
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
+    tmp_path: Path,
+    monkeypatch: Any,
+    caplog: pytest.LogCaptureFixture
+) -> None:
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+        self_hostname, one_wallet_and_one_simulator_services
+    )
+    manage_data_interval = 5
+    fake_store = bytes32([1] * 32)
+
+    async def mock_get_store_ids(self: Any) -> Set[bytes32]:
+        return {fake_store}
+
+    with monkeypatch.context() as m, caplog.at_level(logging.DEBUG):
+        m.setattr("chia.data_layer.data_store.DataStore.get_store_ids", mock_get_store_ids)
+
+        config = bt.config
+        config["data_layer"]["auto_subscribe_to_local_stores"] = True
+        bt.change_config(new_config=config)
+
+        async with init_data_layer(
+            wallet_rpc_port=wallet_rpc_port,
+            bt=bt,
+            db_path=tmp_path,
+            manage_data_interval=manage_data_interval,
+            maximum_full_file_count=100,
+        ) as data_layer:
+            data_rpc_api = DataLayerRpcApi(data_layer)
+            res = await data_rpc_api.create_data_store({})
+            assert res is not None
+
+            store_id = bytes32(hexstr_to_bytes(res["id"]))
+            await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
+
+            await asyncio.sleep(manage_data_interval * 2)
+
+            assert f"Can't subscribe to local store {fake_store.hex()}:" in caplog.text
