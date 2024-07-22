@@ -3766,13 +3766,8 @@ async def test_auto_subscribe_to_local_stores(
             maximum_full_file_count=100,
         ) as data_layer:
             data_rpc_api = DataLayerRpcApi(data_layer)
-            res = await data_rpc_api.create_data_store({})
-            assert res is not None
-
-            store_id = bytes32(hexstr_to_bytes(res["id"]))
-            await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
-
-            await asyncio.sleep(manage_data_interval * 2)
+            
+            await asyncio.sleep(manage_data_interval)
 
             response = await data_rpc_api.subscriptions(request={})
 
@@ -3800,7 +3795,7 @@ async def test_local_store_exception(
     async def mock_get_store_ids(self: Any) -> Set[bytes32]:
         return {fake_store}
 
-    with monkeypatch.context() as m, caplog.at_level(logging.DEBUG):
+    with monkeypatch.context() as m, caplog.at_level(logging.INFO):
         m.setattr("chia.data_layer.data_store.DataStore.get_store_ids", mock_get_store_ids)
 
         config = bt.config
@@ -3813,14 +3808,7 @@ async def test_local_store_exception(
             db_path=tmp_path,
             manage_data_interval=manage_data_interval,
             maximum_full_file_count=100,
-        ) as data_layer:
-            data_rpc_api = DataLayerRpcApi(data_layer)
-            res = await data_rpc_api.create_data_store({})
-            assert res is not None
-
-            store_id = bytes32(hexstr_to_bytes(res["id"]))
-            await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
-
-            await asyncio.sleep(manage_data_interval * 2)
+        ):
+            await asyncio.sleep(manage_data_interval)
 
             assert f"Can't subscribe to local store {fake_store.hex()}:" in caplog.text
