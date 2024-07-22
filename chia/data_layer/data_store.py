@@ -588,7 +588,6 @@ class DataStore:
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> TreeId[int, Optional[bytes32]]:
         if tree_id.root_hash == bytes32([0] * 32):
-            # TODO: see if we can first clean up around this two-ways-to-say-one-thing situation
             tree_id = replace(tree_id, root_hash=None)
         # TODO: optimize
 
