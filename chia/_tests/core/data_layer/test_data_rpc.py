@@ -3766,7 +3766,7 @@ async def test_auto_subscribe_to_local_stores(
             maximum_full_file_count=100,
         ) as data_layer:
             data_rpc_api = DataLayerRpcApi(data_layer)
-            
+
             await asyncio.sleep(manage_data_interval)
 
             response = await data_rpc_api.subscriptions(request={})
