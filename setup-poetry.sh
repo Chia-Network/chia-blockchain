@@ -17,7 +17,7 @@ PYTHON_COMMAND=python
 
 while getopts c:h flag; do
   case "${flag}" in
-  c) PYTHON_COMMAND=${OPTARG} ;;
+  c) PYTHON_COMMAND="${OPTARG}" ;;
   h)
     usage
     exit 0
@@ -30,7 +30,7 @@ while getopts c:h flag; do
   esac
 done
 
-$PYTHON_COMMAND -m venv .penv
+"$PYTHON_COMMAND" -m venv .penv
 .penv/bin/python -m pip install --upgrade pip setuptools wheel
 # TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
 .penv/bin/python -m pip install poetry
