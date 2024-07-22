@@ -5,8 +5,8 @@ from typing import Optional, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
-from clvm.casts import int_to_bytes
 from ecdsa import NIST256p, SigningKey
+from ecdsa.util import PRNG
 
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia.clvm.spend_sim import CostLogger, sim_and_client
@@ -21,15 +21,16 @@ from chia.util.ints import uint64
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions, solution_for_conditions
 from chia.wallet.vault.vault_drivers import (
     construct_p2_delegated_secp,
-    construct_p2_recovery_puzzle,
     construct_recovery_finish,
     construct_secp_message,
     construct_vault_merkle_tree,
     construct_vault_puzzle,
+    get_recovery_puzzle,
     get_vault_proof,
 )
 
-SECP_SK = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
+seed = b"chia_secp"
+SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
 SECP_PK = SECP_SK.verifying_key.to_string("compressed")
 
 BLS_SK = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
@@ -38,7 +39,7 @@ BLS_PK = BLS_SK.get_g1()
 TIMELOCK = uint64(1000)
 ACS = Program.to(0)
 ACS_PH = ACS.get_tree_hash()
-ENTROPY = int_to_bytes(101)
+HIDDEN_PUZZLE_HASH = Program.to("hph").get_tree_hash()
 
 
 @pytest.mark.anyio
@@ -47,9 +48,9 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         sim.pass_blocks(DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT)  # Make sure secp_verify is available
 
         # Setup puzzles
-        secp_puzzle = construct_p2_delegated_secp(SECP_PK, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, ENTROPY)
+        secp_puzzle = construct_p2_delegated_secp(SECP_PK, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, HIDDEN_PUZZLE_HASH)
         secp_puzzlehash = secp_puzzle.get_tree_hash()
-        p2_recovery_puzzle = construct_p2_recovery_puzzle(secp_puzzlehash, BLS_PK, TIMELOCK)
+        p2_recovery_puzzle = get_recovery_puzzle(secp_puzzlehash, BLS_PK, TIMELOCK)
         p2_recovery_puzzlehash = p2_recovery_puzzle.get_tree_hash()
         vault_puzzle = construct_vault_puzzle(secp_puzzlehash, p2_recovery_puzzlehash)
         vault_puzzlehash = vault_puzzle.get_tree_hash()
@@ -68,7 +69,10 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         secp_delegated_solution = solution_for_conditions(secp_delegated_puzzle)
         secp_signature = SECP_SK.sign_deterministic(
             construct_secp_message(
-                secp_delegated_puzzle.get_tree_hash(), vault_coin.name(), DEFAULT_CONSTANTS.GENESIS_CHALLENGE, ENTROPY
+                secp_delegated_puzzle.get_tree_hash(),
+                vault_coin.name(),
+                DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
+                HIDDEN_PUZZLE_HASH,
             )
         )
 
@@ -156,7 +160,7 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
                 secp_delegated_puzzle.get_tree_hash(),
                 recovery_coin.name(),
                 DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
-                ENTROPY,
+                HIDDEN_PUZZLE_HASH,
             )
         )
         secp_solution = Program.to(

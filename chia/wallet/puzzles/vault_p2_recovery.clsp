@@ -47,20 +47,20 @@
     )
   )
 
-  (list
-    (list AGG_SIG_ME BLS_PK (sha256tree recovery_conditions))
-    (list CREATE_COIN
-      (create_recovery_puzzlehash
-        P2_1_OF_N_MOD_HASH
-        FINISH_RECOVERY_MOD_HASH
-        P2_SECP_PUZZLEHASH
-        TIMELOCK
-        recovery_conditions
-      )
-      my_amount
+  (assign
+    recovery_puzzlehash
+    (create_recovery_puzzlehash
+      P2_1_OF_N_MOD_HASH
+      FINISH_RECOVERY_MOD_HASH
+      P2_SECP_PUZZLEHASH
+      TIMELOCK
+      recovery_conditions
     )
-    (list ASSERT_MY_AMOUNT my_amount)
+    (list
+      (list AGG_SIG_ME BLS_PK (sha256tree recovery_conditions))
+      (list CREATE_COIN recovery_puzzlehash my_amount (list recovery_puzzlehash))
+      (list ASSERT_MY_AMOUNT my_amount)
+    )
   )
-
 
 )

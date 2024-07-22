@@ -142,7 +142,9 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
-from chia.wallet.vault.vault_drivers import get_vault_inner_puzzle_hash
+from chia.wallet.vault.vault_drivers import get_vault_full_puzzle_hash, get_vault_inner_puzzle_hash, match_vault_puzzle
+from chia.wallet.vault.vault_root import VaultRoot
+from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -160,6 +162,7 @@ from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_protocol import MainWalletProtocol, WalletProtocol
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
+from chia.wallet.wallet_singleton_store import WalletSingletonStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 
@@ -214,6 +217,7 @@ class WalletStateManager:
     wallet_node: WalletNode
     pool_store: WalletPoolStore
     dl_store: DataLayerStore
+    singleton_store: WalletSingletonStore
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
     initial_num_public_keys: int
@@ -269,6 +273,7 @@ class WalletStateManager:
         self.dl_store = await DataLayerStore.create(self.db_wrapper)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.retry_store = await WalletRetryStore.create(self.db_wrapper)
+        self.singleton_store = await WalletSingletonStore.create(self.db_wrapper)
         self.default_cats = DEFAULT_CATS
 
         self.wallet_node = wallet_node
@@ -374,6 +379,8 @@ class WalletStateManager:
         root_bytes: bytes = bytes(observation_root)
         if len(root_bytes) == 48:
             return Wallet
+        if len(root_bytes) == 32:
+            return Vault
 
         raise ValueError(  # pragma: no cover
             f"Could not find a valid wallet type for observation_root: {root_bytes.hex()}"
@@ -835,6 +842,10 @@ class WalletStateManager:
 
         uncurried = uncurry_puzzle(puzzle)
 
+        vault_check = match_vault_puzzle(uncurried.mod, uncurried.args)
+        if vault_check:
+            return await self.handle_vault(puzzle, coin_spend, coin_state), None
+
         dao_ids = []
         wallets = self.wallets.values()
         for wallet in wallets:
@@ -1110,6 +1121,23 @@ class WalletStateManager:
     async def is_standard_wallet_tx(self, coin_state: CoinState) -> bool:
         wallet_identifier = await self.get_wallet_identifier_for_puzzle_hash(coin_state.coin.puzzle_hash)
         return wallet_identifier is not None and wallet_identifier.type == WalletType.STANDARD_WALLET
+
+    async def handle_vault(
+        self,
+        puzzle: Program,
+        coin_spend: CoinSpend,
+        coin_state: CoinState,
+    ) -> Optional[WalletIdentifier]:
+        if isinstance(self.observation_root, VaultRoot):
+            for wallet in self.wallets.values():
+                if wallet.type() == WalletType.STANDARD_WALLET:
+                    assert isinstance(wallet, Vault)
+                    # make sure we've got the singleton coin
+                    if coin_state.coin.amount % 2 == 1:
+                        # Update the vault singleton record
+                        await wallet.update_vault_singleton(puzzle, coin_spend, coin_state)
+                        return WalletIdentifier.create(wallet)
+        return None
 
     async def handle_dao_cat(
         self,
@@ -1760,6 +1788,7 @@ class WalletStateManager:
                         wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
                     elif coin_state.created_height is not None:
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
+
                         try:
                             dl_wallet = self.get_dl_wallet()
                         except ValueError:
@@ -1772,6 +1801,23 @@ class WalletStateManager:
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
 
                     if wallet_identifier is None:
+                        # Confirm tx records for txs which we submitted for coins which aren't in our wallet
+                        # Used for vault recovery spends
+                        if coin_state.spent_height is not None:
+                            all_unconfirmed = await self.tx_store.get_all_unconfirmed()
+                            tx_records_to_confirm: List[TransactionRecord] = []
+                            for out_tx_record in all_unconfirmed:
+                                if out_tx_record.spend_bundle is not None:
+                                    for tx_spend in out_tx_record.spend_bundle.coin_spends:
+                                        if tx_spend.coin == coin_state.coin:
+                                            # check for a vault spend
+                                            mod, args = tx_spend.puzzle_reveal.to_program().uncurry()
+                                            if match_vault_puzzle(mod, args):
+                                                tx_records_to_confirm.append(out_tx_record)
+
+                            if len(tx_records_to_confirm) > 0:
+                                for tx_record in tx_records_to_confirm:
+                                    await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
 
@@ -2199,7 +2245,6 @@ class WalletStateManager:
             coin_record = await self.coin_store.get_coin_record(coin.name())
             if coin_record is not None:
                 wallet_identifier = WalletIdentifier(uint32(coin_record.wallet_id), coin_record.wallet_type)
-
         return wallet_identifier
 
     async def get_wallet_identifier_for_hinted_coin(self, coin: Coin, hint: bytes32) -> Optional[WalletIdentifier]:
@@ -2337,6 +2382,17 @@ class WalletStateManager:
                 [] if additional_signing_responses is None else additional_signing_responses,
                 additional_signing_responses != [] and additional_signing_responses is not None,
             )
+
+        # Check that tx_records have additions/removals since vault txs don't have them until they're signed
+        for i, tx in enumerate(tx_records):
+            if tx.spend_bundle is not None:
+                if tx.additions == []:
+                    tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
+                if tx.removals == []:
+                    assert isinstance(tx.spend_bundle, SpendBundle)
+                    tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
+            tx_records[i] = tx
+
         if push:
             all_coins_names = []
             async with self.db_wrapper.writer_maybe_transaction():
@@ -2795,19 +2851,17 @@ class WalletStateManager:
         self,
         secp_pk: bytes,
         hidden_puzzle_hash: bytes32,
-        bls_pk: G1Element,
-        timelock: uint64,
         genesis_challenge: bytes32,
         tx_config: TXConfig,
+        bls_pk: Optional[G1Element] = None,
+        timelock: Optional[uint64] = None,
         fee: uint64 = uint64(0),
     ) -> TransactionRecord:
         """
         Returns a tx record for creating a new vault
         """
         wallet = self.main_wallet
-        vault_inner_puzzle_hash = get_vault_inner_puzzle_hash(
-            secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock
-        )
+
         # Get xch coin
         amount = uint64(1)
         coins = await wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
@@ -2816,7 +2870,15 @@ class WalletStateManager:
         origin = next(iter(coins))
         launcher_coin = Coin(origin.name(), SINGLETON_LAUNCHER_HASH, amount)
 
-        genesis_launcher_solution = Program.to([vault_inner_puzzle_hash, amount, [secp_pk, hidden_puzzle_hash]])
+        vault_inner_puzzle_hash = get_vault_inner_puzzle_hash(
+            secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock
+        )
+        vault_full_puzzle_hash = get_vault_full_puzzle_hash(launcher_coin.name(), vault_inner_puzzle_hash)
+        memos = [secp_pk, hidden_puzzle_hash]
+        if bls_pk:
+            memos.extend([bls_pk.to_bytes(), Program.to(timelock).as_atom()])
+
+        genesis_launcher_solution = Program.to([vault_full_puzzle_hash, amount, memos])
         announcement_message = genesis_launcher_solution.get_tree_hash()
 
         [tx_record] = await wallet.generate_signed_transaction(

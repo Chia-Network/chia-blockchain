@@ -81,35 +81,69 @@ class WalletSingletonStore:
                 ),
             )
 
+    async def add_eve_record(
+        self,
+        wallet_id: uint32,
+        eve_coin: Coin,
+        parent_coin_spend: CoinSpend,
+        inner_puzzle_hash: bytes32,
+        lineage_proof: LineageProof,
+        removed_height: uint32 = uint32(0),
+        pending: bool = False,
+        custom_data: Optional[bytes] = None,
+    ) -> None:
+        pending_int = 1 if pending else False
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            columns = (
+                "coin_id, coin, singleton_id, wallet_id, parent_coin_spend, inner_puzzle_hash, "
+                "pending, removed_height, lineage_proof, custom_data"
+            )
+            await conn.execute(
+                f"INSERT or REPLACE INTO singletons ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    eve_coin.name().hex(),
+                    json.dumps(eve_coin.to_json_dict()),
+                    eve_coin.name().hex(),
+                    wallet_id,
+                    bytes(parent_coin_spend),
+                    inner_puzzle_hash,
+                    pending_int,
+                    removed_height,
+                    bytes(lineage_proof),
+                    custom_data,
+                ),
+            )
+
     async def add_spend(
         self,
         wallet_id: uint32,
-        coin_state: CoinSpend,
+        coin_spend: CoinSpend,
         block_height: uint32 = uint32(0),
         pending: bool = True,
+        custom_data: Optional[bytes] = None,
     ) -> None:
         """Given a coin spend of a singleton, attempt to calculate the child coin and details
         for the new singleton record. Add the new record to the store and remove the old record
         if it exists
         """
         # get singleton_id from puzzle_reveal
-        singleton_id = get_singleton_id_from_puzzle(coin_state.puzzle_reveal)
+        singleton_id = get_singleton_id_from_puzzle(coin_spend.puzzle_reveal)
         if not singleton_id:
             raise RuntimeError("Coin to add is not a valid singleton")
 
         # get details for singleton record
         conditions = conditions_dict_for_solution(
-            coin_state.puzzle_reveal, coin_state.solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            coin_spend.puzzle_reveal, coin_spend.solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         )
 
         cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]
 
-        coin = Coin(coin_state.coin.name(), cc_cond.vars[0], uint64(int_from_bytes(cc_cond.vars[1])))
-        inner_puz = get_inner_puzzle_from_singleton(coin_state.puzzle_reveal)
+        coin = Coin(coin_spend.coin.name(), cc_cond.vars[0], uint64(int_from_bytes(cc_cond.vars[1])))
+        inner_puz = get_inner_puzzle_from_singleton(coin_spend.puzzle_reveal)
         if inner_puz is None:  # pragma: no cover
-            raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_state)
+            raise RuntimeError("Could not get inner puzzle from puzzle reveal in coin spend %s", coin_spend)
 
-        lineage_bytes = [x.as_atom() for x in coin_state.solution.to_program().first().as_iter()]
+        lineage_bytes = [x.as_atom() for x in coin_spend.solution.to_program().first().as_iter()]
         if len(lineage_bytes) == 2:
             lineage_proof = LineageProof(bytes32(lineage_bytes[0]), None, uint64(int_from_bytes(lineage_bytes[1])))
         else:
@@ -118,13 +152,13 @@ class WalletSingletonStore:
             )
         # Create and save the new singleton record
         new_record = SingletonRecord(
-            coin, singleton_id, wallet_id, coin_state, inner_puz.get_tree_hash(), pending, 0, lineage_proof, None
+            coin, singleton_id, wallet_id, coin_spend, inner_puz.get_tree_hash(), pending, 0, lineage_proof, custom_data
         )
         await self.save_singleton(new_record)
         # check if coin is in DB and mark deleted if found
-        current_records = await self.get_records_by_coin_id(coin_state.coin.name())
+        current_records = await self.get_records_by_coin_id(coin_spend.coin.name())
         if len(current_records) > 0:
-            await self.delete_singleton_by_coin_id(coin_state.coin.name(), block_height)
+            await self.delete_singleton_by_coin_id(coin_spend.coin.name(), block_height)
         return
 
     def _to_singleton_record(self, row: Row) -> SingletonRecord:

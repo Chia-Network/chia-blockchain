@@ -33,6 +33,7 @@ from chia.util.keychain import (
     mnemonic_to_seed,
 )
 from chia.util.observation_root import ObservationRoot
+from chia.wallet.vault.vault_root import VaultRoot
 
 mnemonic = (
     "rapid this oven common drive ribbon bulb urban uncover napkin kitten usage enforce uncle unveil scene "
@@ -487,8 +488,11 @@ def test_key_type_support(key_type: str) -> None:
     The purpose of this test is to make sure that whenever KeyTypes is updated, all relevant functionality is
     also updated with it.
     """
+    launcher_id = bytes32(b"1" * 32)
+    vault_root = VaultRoot(launcher_id)
     generate_test_key_for_key_type: Dict[str, Tuple[int, bytes, ObservationRoot]] = {
-        KeyTypes.G1_ELEMENT.value: (G1Element().get_fingerprint(), bytes(G1Element()), G1Element())
+        KeyTypes.G1_ELEMENT.value: (G1Element().get_fingerprint(), bytes(G1Element()), G1Element()),
+        KeyTypes.VAULT_LAUNCHER.value: (uint32(vault_root.get_fingerprint()), vault_root.launcher_id, vault_root),
     }
     obr_fingerprint, obr_bytes, obr = generate_test_key_for_key_type[key_type]
     assert KeyData(uint32(obr_fingerprint), obr_bytes, None, None, key_type).observation_root == obr

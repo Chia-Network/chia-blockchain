@@ -218,6 +218,7 @@ class Wallet:
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        **kwargs: Any,
     ) -> Program:
         assert fee >= 0
         condition_list: List[Any] = [condition.to_program() for condition in conditions]
@@ -568,31 +569,6 @@ class Wallet:
             [uint64(12381), uint64(8444), uint64(2), uint64(index)],
         )
 
-    async def gather_signing_info(self, coin_spends: list[Spend]) -> SigningInstructions:
-        pks: List[bytes] = []
-        signing_targets: List[SigningTarget] = []
-        for coin_spend in coin_spends:
-            _coin_spend = coin_spend.as_coin_spend()
-            # Get AGG_SIG conditions
-            conditions_dict = conditions_dict_for_solution(
-                _coin_spend.puzzle_reveal.to_program(),
-                _coin_spend.solution.to_program(),
-                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
-            )
-            # Create signature
-            for pk, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, _coin_spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
-            ):
-                pk_bytes = bytes(pk)
-                pks.append(pk_bytes)
-                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
-                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
-
-        return SigningInstructions(
-            await self.wallet_state_manager.key_hints_for_pubkeys(pks),
-            signing_targets,
-        )
-
     async def execute_signing_instructions(
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
     ) -> List[SigningResponse]:
@@ -741,3 +717,28 @@ class Wallet:
 
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
         raise NotImplementedError()
+
+    async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
+        pks: List[bytes] = []
+        signing_targets: List[SigningTarget] = []
+        for coin_spend in coin_spends:
+            _coin_spend = coin_spend.as_coin_spend()
+            # Get AGG_SIG conditions
+            conditions_dict = conditions_dict_for_solution(
+                _coin_spend.puzzle_reveal.to_program(),
+                _coin_spend.solution.to_program(),
+                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            )
+            # Create signature
+            for pk, msg in pkm_pairs_for_conditions_dict(
+                conditions_dict, _coin_spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
+                pk_bytes = pk.to_bytes()
+                pks.append(pk_bytes)
+                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
+                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
+
+        return SigningInstructions(
+            await self.wallet_state_manager.key_hints_for_pubkeys(pks),
+            signing_targets,
+        )

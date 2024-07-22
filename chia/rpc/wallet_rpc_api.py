@@ -119,6 +119,7 @@ from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, C
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vault.vault_drivers import get_vault_hidden_puzzle_with_index
+from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -303,6 +304,7 @@ class WalletRpcApi:
             "/execute_signing_instructions": self.execute_signing_instructions,
             # VAULT
             "/vault_create": self.vault_create,
+            "/vault_recovery": self.vault_recovery,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -4623,15 +4625,36 @@ class WalletRpcApi:
         secp_pk = bytes.fromhex(str(request.get("secp_pk")))
         hp_index = request.get("hp_index", 0)
         hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(hp_index).get_tree_hash()
-        bls_pk = G1Element.from_bytes(bytes.fromhex(str(request.get("bls_pk"))))
-        timelock = uint64(request["timelock"])
+        bls_str = request.get("bls_pk")
+        bls_pk = G1Element.from_bytes(bytes.fromhex(str(bls_str))) if bls_str else None
+        timelock_int = request.get("timelock")
+        timelock = uint64(timelock_int) if timelock_int else None
         fee = uint64(request.get("fee", 0))
         genesis_challenge = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
 
         vault_record = await self.service.wallet_state_manager.create_vault_wallet(
-            secp_pk, hidden_puzzle_hash, bls_pk, timelock, genesis_challenge, tx_config, fee=fee
+            secp_pk, hidden_puzzle_hash, genesis_challenge, tx_config, bls_pk=bls_pk, timelock=timelock, fee=fee
         )
 
         return {
             "transactions": [vault_record.to_json_dict_convenience(self.service.config)],
         }
+
+    async def vault_recovery(self, request: Dict[str, Any], tx_config: TXConfig = DEFAULT_TX_CONFIG) -> EndpointResult:
+        """
+        Initiate Vault Recovery
+        """
+        wallet_id = uint32(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=Vault)
+        secp_pk = bytes.fromhex(str(request.get("secp_pk")))
+        hp_index = request.get("hp_index", 0)
+        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(hp_index).get_tree_hash()
+        bls_str = request.get("bls_pk")
+        bls_pk = G1Element.from_bytes(bytes.fromhex(str(bls_str))) if bls_str else None
+        timelock_int = request.get("timelock")
+        timelock = uint64(timelock_int) if timelock_int else None
+        genesis_challenge = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        recovery_txs = await wallet.create_recovery_spends(
+            secp_pk, hidden_puzzle_hash, genesis_challenge, tx_config, bls_pk=bls_pk, timelock=timelock
+        )
+        return {"transactions": [tx.to_json_dict_convenience(self.service.config) for tx in recovery_txs]}

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from hashlib import sha256
+from typing import Optional
 
 import pytest
-from chia_rs import PrivateKey
+from chia_rs import G1Element, PrivateKey
 from ecdsa import NIST256p, SigningKey
+from ecdsa.util import PRNG
 
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -26,13 +28,15 @@ RECOVERY_FINISH_MOD_HASH: bytes32 = RECOVERY_FINISH_MOD.get_tree_hash()
 ACS: Program = Program.to(1)
 ACS_PH: bytes32 = ACS.get_tree_hash()
 
+# setup keys
+seed = b"chia_secp"
+secp_sk = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
+secp_pk = secp_sk.verifying_key.to_string("compressed")
+
 
 def test_secp_hidden() -> None:
     HIDDEN_PUZZLE: Program = Program.to(1)
     HIDDEN_PUZZLE_HASH: bytes32 = HIDDEN_PUZZLE.get_tree_hash()
-
-    secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
-    secp_pk = secp_sk.verifying_key.to_string("compressed")
     escape_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk, HIDDEN_PUZZLE_HASH)
     coin_id = Program.to("coin_id").get_tree_hash()
     conditions = Program.to([[51, ACS_PH, 100]])
@@ -43,10 +47,7 @@ def test_secp_hidden() -> None:
 
 def test_recovery_puzzles() -> None:
     bls_sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
-    bls_pk = bls_sk.get_g1()
-    secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
-    secp_pk = secp_sk.verifying_key.to_string("compressed")
-
+    bls_pk: Optional[G1Element] = bls_sk.get_g1()
     p2_puzzlehash = ACS_PH
     amount = 10000
     timelock = 5000
@@ -103,8 +104,6 @@ def test_recovery_puzzles() -> None:
 
 
 def test_p2_delegated_secp() -> None:
-    secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
-    secp_pk = secp_sk.verifying_key.to_string("compressed")
     secp_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk, DEFAULT_HIDDEN_PUZZLE_HASH)
 
     coin_id = Program.to("coin_id").get_tree_hash()
@@ -134,14 +133,10 @@ def test_p2_delegated_secp() -> None:
 def test_vault_root_puzzle() -> None:
     # create the secp and recovery puzzles
     # secp puzzle
-    secp_sk = SigningKey.generate(curve=NIST256p, hashfunc=sha256)
-    secp_pk = secp_sk.verifying_key.to_string("compressed")
+    bls_sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
+    bls_pk: Optional[G1Element] = bls_sk.get_g1()
     secp_puzzle = P2_DELEGATED_SECP_MOD.curry(DEFAULT_CONSTANTS.GENESIS_CHALLENGE, secp_pk, DEFAULT_HIDDEN_PUZZLE_HASH)
     secp_puzzlehash = secp_puzzle.get_tree_hash()
-
-    # recovery keys
-    bls_sk = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
-    bls_pk = bls_sk.get_g1()
 
     timelock = 5000
     amount = 10000
