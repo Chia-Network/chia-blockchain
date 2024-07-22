@@ -2,13 +2,13 @@
 
 [[package]]
 name = "aiofiles"
-version = "23.2.1"
+version = "24.1.0"
 description = "File support for asyncio."
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "aiofiles-23.2.1-py3-none-any.whl", hash = "sha256:19297512c647d4b27a2cf7c34caa7e405c0d60b5560618a29a9fe027b18b0107"},
-    {file = "aiofiles-23.2.1.tar.gz", hash = "sha256:84ec2218d8419404abcb9f0c02df3f34c6e0a68ed41072acfb1cef5cbc29051a"},
+    {file = "aiofiles-24.1.0-py3-none-any.whl", hash = "sha256:b4ec55f4195e3eb5d7abd1bf7e061763e864dd4954231fb8539a0ef8bb8260e5"},
+    {file = "aiofiles-24.1.0.tar.gz", hash = "sha256:22a075c9e5a3810f0c2e48f3008c94d68c65d763b9b03857924c99e57355166c"},
 ]
 
 [[package]]
@@ -1016,18 +1016,17 @@ dev = ["pytest"]
 
 [[package]]
 name = "clvm-tools-rs"
-version = "0.1.40"
+version = "0.1.43"
 description = "tools for working with chialisp language; compiler, repl, python and wasm bindings"
 optional = false
 python-versions = "*"
 files = [
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:742ae2667163ba365df3413a0c0394793df708043e482f1a7be775ecb6a2475d"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:1eca4f1bf8005f37666cc87c0dcd945d0d3d65ff51918f7ace86d428aab74cc6"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-macosx_11_0_x86_64.whl", hash = "sha256:7a3bdf661e4ad77f04dceb96d0f097f8a3192b7a28dc0a5a56dfa18e66617d91"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:24e3b88443e823318cbcef37161152159307e385923118c48851fcbd91e13101"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:82b4edd053f895366f0dedae6aa22c26db7fd78bad161baf4f81b76a7b824af4"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:4eba19e55054c635ac99f0ce37d6dff16f4400af065965ccee315dfebffa260f"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-win_amd64.whl", hash = "sha256:b7a9ee6000bd437a6898241574f37e225027c4fe1781ff9286cb71fd30d07a4b"},
+    {file = "clvm_tools_rs-0.1.43-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:0dc68bdc7704d502d0193a9634764fffd2d618207b4a0260dbb32938881dad6c"},
+    {file = "clvm_tools_rs-0.1.43-cp38-abi3-macosx_11_0_x86_64.whl", hash = "sha256:49f5065a64a560e9d5ffaf5d30f074cf65a1196a2d9c554724bfff646a8697cc"},
+    {file = "clvm_tools_rs-0.1.43-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cbc10526fc6abd606d337f93ca89ea52e95e390134d6d15620a3ad9d1a122ba5"},
+    {file = "clvm_tools_rs-0.1.43-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3548f9c870e20c1dcdf90820046803d3a9b487a12c0c5d0563031ae7677e64a8"},
+    {file = "clvm_tools_rs-0.1.43-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:0d905bb57c3fca1e9b227ed233974a630ac912929091287800c82fdd6a51150a"},
+    {file = "clvm_tools_rs-0.1.43-cp38-abi3-win_amd64.whl", hash = "sha256:423915b4098d38112ed8e7b8fcac1eafacb7fb2ac11cf5c371d7853a85577d4f"},
 ]
 
 [[package]]
@@ -3424,4 +3423,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "890c2c6f92869c764c4004cb1c445e5d7a504df0d97988a925cde93f47817831"
+content-hash = "e0c7919b0e3419831c55727314f1b99e84cabb6d5fa54bebcd967a8ab61b0219"

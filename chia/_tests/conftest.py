@@ -1059,6 +1059,14 @@ async def crawler_service(root_path_populated_with_config: Path, database_uri: s
 
 
 @pytest.fixture(scope="function")
+async def crawler_service_no_loop(
+    root_path_populated_with_config: Path, database_uri: str
+) -> AsyncIterator[CrawlerService]:
+    async with setup_crawler(root_path_populated_with_config, database_uri, start_crawler_loop=False) as service:
+        yield service
+
+
+@pytest.fixture(scope="function")
 async def seeder_service(root_path_populated_with_config: Path, database_uri: str) -> AsyncIterator[DNSServer]:
     async with setup_seeder(root_path_populated_with_config, database_uri) as seeder:
         yield seeder

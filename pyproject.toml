@@ -38,7 +38,7 @@ priority = "supplemental"
 
 [tool.poetry.dependencies]
 python = ">=3.8.10, <3.13"
-aiofiles = "23.2.1"  # Async IO for files
+aiofiles = "24.1.0"  # Async IO for files
 aiohttp = "3.9.5"  # HTTP server for full node rpc
 aiosqlite = "0.20.0"  # asyncio wrapper for sqlite, to store blocks
 anyio = "4.3.0"
@@ -51,7 +51,7 @@ chiavdf = "1.1.4"  # timelord and vdf verification
 click = "8.1.7"  # For the CLI
 clvm = "0.9.10"
 clvm_tools = "0.4.9"  # Currying Program.to other conveniences
-clvm_tools_rs = "0.1.40"  # Rust implementation of clvm_tools' compiler
+clvm_tools_rs = "0.1.43"  # Rust implementation of clvm_tools' compiler
 colorama = "0.4.6"  # Colorizes terminal output
 colorlog = "6.8.2"  # Adds color to logs
 concurrent_log_handler = "0.9.25"  # Concurrently log and rotate logs

@@ -152,24 +152,29 @@ def tx_endpoint(
             ):
                 raise ValueError("Relative timelocks are not currently supported in the RPC")
 
-            response: Dict[str, Any] = await func(
-                self,
-                request,
-                *args,
-                *([push] if requires_default_information else []),
-                tx_config=tx_config,
-                extra_conditions=extra_conditions,
-                **kwargs,
-            )
+            async with self.service.wallet_state_manager.new_action_scope(
+                push=request.get("push", push),
+                merge_spends=request.get("merge_spends", merge_spends),
+                sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
+            ) as action_scope:
+                response: Dict[str, Any] = await func(
+                    self,
+                    request,
+                    *args,
+                    action_scope,
+                    *([push] if requires_default_information else []),
+                    tx_config=tx_config,
+                    extra_conditions=extra_conditions,
+                    **kwargs,
+                )
 
             if func.__name__ == "create_new_wallet" and "transactions" not in response:
                 # unfortunately, this API isn't solely a tx endpoint
                 return response
 
-            tx_records: List[TransactionRecord] = [
-                TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
-            ]
-            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(tx_records)
+            unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(
+                action_scope.side_effects.transactions
+            )
 
             if request.get("CHIP-0029", False):
                 response["unsigned_transactions"] = [
@@ -184,39 +189,16 @@ def tx_endpoint(
             else:
                 response["unsigned_transactions"] = [tx.to_json_dict() for tx in unsigned_txs]
 
-            new_txs: List[TransactionRecord] = []
-            if request.get("sign", self.service.config.get("auto_sign_txs", True)):
-                new_txs, signing_responses = await self.service.wallet_state_manager.sign_transactions(
-                    tx_records, response.get("signing_responses", []), "signing_responses" in response
-                )
-                if request.get("CHIP-0029", False):
-                    response["signing_responses"] = [
-                        json_serialize_with_clvm_streamable(
-                            sr,
-                            translation_layer=(
-                                ALL_TRANSLATION_LAYERS[request["translation"]] if "translation" in request else None
-                            ),
-                        )
-                        for sr in signing_responses
-                    ]
-                else:
-                    response["signing_responses"] = [sr.to_json_dict() for sr in signing_responses]
-            else:
-                new_txs = tx_records  # pragma: no cover
-
-            if request.get("push", push):
-                new_txs = await self.service.wallet_state_manager.add_pending_transactions(
-                    new_txs, merge_spends=merge_spends, sign=False
-                )
-
             response["transactions"] = [
-                TransactionRecord.to_json_dict_convenience(tx, self.service.config) for tx in new_txs
+                TransactionRecord.to_json_dict_convenience(tx, self.service.config)
+                for tx in action_scope.side_effects.transactions
             ]
 
             # Some backwards compatibility code here because transaction information being returned was not uniform
             # until the "transactions" key was applied to all of them. Unfortunately, since .add_pending_transactions
             # now applies transformations to the transactions, we have to special case edit all of the previous
             # spots where the information was being surfaced outside of the knowledge of this wrapper.
+            new_txs = action_scope.side_effects.transactions
             if "transaction" in response:
                 if (
                     func.__name__ == "create_new_wallet"
@@ -226,14 +208,18 @@ def tx_endpoint(
                     or func.__name__ == "pw_absorb_rewards"
                 ):
                     # Theses RPCs return not "convenience" for some reason
-                    response["transaction"] = new_txs[0].to_json_dict()
+                    response["transaction"] = new_txs[-1].to_json_dict()
                 else:
                     response["transaction"] = response["transactions"][0]
             if "tx_record" in response:
                 response["tx_record"] = response["transactions"][0]
-            if "fee_transaction" in response and response["fee_transaction"] is not None:
+            if "fee_transaction" in response:
                 # Theses RPCs return not "convenience" for some reason
-                response["fee_transaction"] = new_txs[1].to_json_dict()
+                fee_transactions = [tx for tx in new_txs if tx.wallet_id == 1]
+                if len(fee_transactions) == 0:
+                    response["fee_transaction"] = None
+                else:
+                    response["fee_transaction"] = fee_transactions[0].to_json_dict()
             if "transaction_id" in response:
                 response["transaction_id"] = new_txs[0].name
             if "transaction_ids" in response:

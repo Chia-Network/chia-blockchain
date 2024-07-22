@@ -186,175 +186,60 @@ jobs:
           rm -rf ./chia-blockchain-gui/packages/gui/daemon
 
   publish:
-    name: Publish ${{ matrix.arch.name }} ${{ matrix.mode.name }} ${{ matrix.os.file-type.name }}
-    runs-on: ubuntu-latest
+    name: 📦 Publish Installers
+    uses: ./.github/workflows/reflow-publish-installer.yml
+    with:
+      concurrency-name: deb
+      chia-installer-version: ${{ needs.version.outputs.chia-installer-version }}
+      chia-dev-version: ${{ needs.version.outputs.chia-dev-version }}
+      configuration: ${{ toJSON( matrix.configuration ) }}
+    secrets: inherit
     needs:
       - version
       - build
-    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
-        os:
-          - matrix: debian
-            file-type:
-              name: DEB
-              extension: deb
-            glue-name: deb
-            artifact-platform-name: linux
-            file-arch-name:
-              arm: arm64
-              intel: amd64
-            file-suffix:
-              arm: ""
-              intel: ""
-            names:
-              cli:
-                file: chia-blockchain-cli_{0}-1_{2}.deb
-                dev-file: chia-blockchain-cli_{1}-1_{2}.deb
-                latest-dev-file: chia-blockchain-cli_{2}_latest_dev.deb
-              gui:
-                file: chia-blockchain_{0}_{2}.deb
-                dev-file: chia-blockchain_{1}_{2}.deb
-                latest-dev-file: chia-blockchain_{2}_latest_dev.deb
-        mode:
-          - name: GUI
-            matrix: gui
-            glue-name: gui
-          - name: CLI
-            matrix: cli
-            glue-name: cli
-        arch:
-          - name: ARM64
-            matrix: arm
-            artifact-name: arm
-            glue-name: arm
-          - name: Intel
-            matrix: intel
-            artifact-name: intel
-            glue-name: intel
-
-    env:
-      FILE: ${{ format(matrix.os.names[matrix.mode.matrix].file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
-      DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
-      LATEST_DEV_FILE: ${{ format(matrix.os.names[matrix.mode.matrix].latest-dev-file, needs.version.outputs.chia-installer-version, needs.version.outputs.chia-dev-version, matrix.os.file-arch-name[matrix.arch.matrix], matrix.os.file-suffix[matrix.arch.matrix]) }}
-      INSTALL_S3_URL: s3://download.chia.net/install/
-      DEV_S3_URL: s3://download.chia.net/dev/
-      LATEST_DEV_S3_URL: s3://download.chia.net/latest-dev/
-      TORRENT_S3_URL: s3://download.chia.net/torrents/
-      TRACKER_URL: udp://tracker.opentrackr.org:1337/announce
-
-    steps:
-      - uses: Chia-Network/actions/clean-workspace@main
-
-      - uses: Chia-Network/actions/setup-python@main
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - uses: chia-network/actions/create-venv@main
-        id: create-venv
-
-      - uses: chia-network/actions/activate-venv@main
-        with:
-          directories: ${{ steps.create-venv.outputs.activate-venv-directories }}
-
-      - name: Download constraints file
-        uses: actions/download-artifact@v4
-        with:
-          name: constraints-file-${{ matrix.arch.artifact-name }}
-          path: venv
-
-      - name: Install utilities
-        run: |
-          pip install --constraint venv/constraints.txt py3createtorrent
-
-      - name: Download packages
-        uses: actions/download-artifact@v4
-        with:
-          name: chia-installers-${{ matrix.os.artifact-platform-name }}-${{ matrix.os.file-type.extension }}-${{ matrix.arch.artifact-name }}
-          path: artifacts/
-
-      - name: Set Env
-        uses: Chia-Network/actions/setjobenv@main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Test for secrets access
-        id: check_secrets
-        run: |
-          unset HAS_AWS_SECRET
-          unset HAS_GLUE_SECRET
-
-          if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
-          echo HAS_AWS_SECRET=${HAS_AWS_SECRET} >> "$GITHUB_OUTPUT"
-
-          if [ -n "$GLUE_API_URL" ]; then HAS_GLUE_SECRET='true' ; fi
-          echo HAS_GLUE_SECRET=${HAS_GLUE_SECRET} >> "$GITHUB_OUTPUT"
-        env:
-          AWS_SECRET: "${{ secrets.CHIA_AWS_ACCOUNT_ID }}"
-          GLUE_API_URL: "${{ secrets.GLUE_API_URL }}"
-
-      - name: Configure AWS credentials
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.CHIA_AWS_ACCOUNT_ID }}:role/installer-upload
-          aws-region: us-west-2
-
-      - name: Create Checksums
-        run: |
-          ls artifacts/
-          sha256sum "artifacts/${FILE}" > "artifacts/${FILE}.sha256"
-
-      - name: Upload to s3
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET
-        run: |
-          ls artifacts/
-          aws s3 cp "artifacts/${FILE}" "${DEV_S3_URL}/${DEV_FILE}"
-          aws s3 cp "artifacts/${FILE}.sha256" "${LATEST_DEV_S3_URL}/${DEV_FILE}.sha256"
-
-      - name: Create torrent
-        if: env.FULL_RELEASE == 'true' && matrix.mode.matrix == 'gui'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          py3createtorrent -f -t ${TRACKER_URL} artifacts/${FILE} -o artifacts/${FILE}.torrent --webseed https://download.chia.net/install/${FILE}
-          gh release upload --repo ${{ github.repository }} $RELEASE_TAG artifacts/${FILE}.torrent
-
-      - name: Upload Dev Installer
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
-        run: |
-          aws s3 cp artifacts/${FILE} ${LATEST_DEV_S3_URL}/${LATEST_DEV_FILE}
-          aws s3 cp artifacts/${FILE}.sha256 ${LATEST_DEV_S3_URL}/${LATEST_DEV_FILE}.sha256
-
-      - name: Upload Release Files
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
-        run: |
-          aws s3 cp artifacts/${FILE} ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${FILE}.sha256 ${INSTALL_S3_URL}
-          aws s3 cp artifacts/${FILE}.torrent ${TORRENT_S3_URL}
-
-      - name: Upload release artifacts
-        if: env.RELEASE == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload \
-            --repo ${{ github.repository }} \
-            $RELEASE_TAG \
-            artifacts/${FILE}
-
-      - name: Mark installer complete
-        uses: Chia-Network/actions/github/glue@main
-        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && (env.PRE_RELEASE == 'true' || env.FULL_RELEASE == 'true')
-        env:
-          REPO_SUFFIX: ${{ env.PRE_RELEASE == 'true' && '-prerelease' || '' }}
-        with:
-          json_data: '{"chia_ref": "${{ env.RELEASE_TAG }}"}'
-          glue_url: "${{ secrets.GLUE_API_URL }}"
-          glue_project: "${{ env.RFC_REPO }}${{ env.REPO_SUFFIX }}/${{ env.RELEASE_TAG }}"
-          glue_path: "success/build-${{ matrix.os.glue-name }}-${{ matrix.arch.glue-name }}-${{ matrix.mode.glue-name }}"
+        configuration:
+          - python-version: ["3.10"]
+            os:
+              - matrix: debian
+                file-type:
+                  name: DEB
+                  extension: deb
+                glue-name: deb
+                artifact-platform-name: linux
+                file-arch-name:
+                  arm: arm64
+                  intel: amd64
+                file-suffix:
+                  arm: ""
+                  intel: ""
+                names:
+                  cli:
+                    file: chia-blockchain-cli_{0}-1_{2}.deb
+                    dev-file: chia-blockchain-cli_{1}-1_{2}.deb
+                    latest-dev-file: chia-blockchain-cli_{2}_latest_dev.deb
+                  gui:
+                    file: chia-blockchain_{0}_{2}.deb
+                    dev-file: chia-blockchain_{1}_{2}.deb
+                    latest-dev-file: chia-blockchain_{2}_latest_dev.deb
+            mode:
+              - name: GUI
+                matrix: gui
+                glue-name: gui
+              - name: CLI
+                matrix: cli
+                glue-name: cli
+            arch:
+              - name: ARM64
+                matrix: arm
+                artifact-name: arm
+                glue-name: arm
+              - name: Intel
+                matrix: intel
+                artifact-name: intel
+                glue-name: intel
 
   test:
     name: Test ${{ matrix.distribution.name }} ${{ matrix.mode.name }} ${{ matrix.arch.name }}

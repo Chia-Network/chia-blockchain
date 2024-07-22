@@ -6,7 +6,7 @@ import time
 import traceback
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from chia_rs import G1Element, G2Element
+from chia_rs import G1Element
 from typing_extensions import Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -55,6 +55,7 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -109,9 +110,11 @@ class CATWallet:
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
-    ) -> Tuple[CATWallet, List[TransactionRecord]]:
+        push: bool = True,
+    ) -> CATWallet:
         self = CATWallet()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
@@ -134,13 +137,12 @@ class CATWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
 
         try:
-            chia_tx, spend_bundle = await ALL_LIMITATIONS_PROGRAMS[
-                cat_tail_info["identifier"]
-            ].generate_issuance_bundle(
+            spend_bundle = await ALL_LIMITATIONS_PROGRAMS[cat_tail_info["identifier"]].generate_issuance_bundle(
                 self,
                 cat_tail_info,
                 amount,
                 tx_config,
+                action_scope,
                 fee,
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
@@ -183,20 +185,20 @@ class CATWallet:
             fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
-            spend_bundle=None,
+            spend_bundle=spend_bundle,
             additions=[cat_coin],
             removals=list(filter(lambda rem: rem.name() == cat_pid, spend_bundle.removals())),
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32.secret(),
+            name=spend_bundle.name(),
             memos=[],
             valid_times=ConditionValidTimes(),
         )
-        chia_tx = dataclasses.replace(chia_tx, spend_bundle=spend_bundle, name=spend_bundle.name())
-        tx_list = await self.wallet_state_manager.add_pending_transactions([chia_tx, cat_record])
-        return self, tx_list
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(cat_record)
+        return self
 
     @staticmethod
     async def get_or_create_wallet_for_cat(
@@ -562,70 +564,79 @@ class CATWallet:
         fee: uint64,
         amount_to_claim: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[TransactionRecord, Optional[AssertCoinAnnouncement]]:
+    ) -> Optional[AssertCoinAnnouncement]:
         """
         This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
         It is meant to be called in `generate_unsigned_spendbundle` and as such should be called under the
         wallet_state_manager lock
         """
         announcement: Optional[AssertCoinAnnouncement] = None
-        if fee > amount_to_claim:
-            chia_coins = await self.standard_wallet.select_coins(
-                fee,
-                tx_config.coin_selection_config,
-            )
-            origin_id = list(chia_coins)[0].name()
-            [chia_tx] = await self.standard_wallet.generate_signed_transaction(
-                uint64(0),
-                (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
-                tx_config,
-                fee=uint64(fee - amount_to_claim),
-                coins=chia_coins,
-                origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
-                negative_change_allowed=False,
-                extra_conditions=extra_conditions,
-            )
-            assert chia_tx.spend_bundle is not None
-        else:
-            chia_coins = await self.standard_wallet.select_coins(
-                fee,
-                tx_config.coin_selection_config,
-            )
-            origin_id = list(chia_coins)[0].name()
-            selected_amount = sum(c.amount for c in chia_coins)
-            [chia_tx] = await self.standard_wallet.generate_signed_transaction(
-                uint64(selected_amount + amount_to_claim - fee),
-                (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
-                tx_config,
-                coins=chia_coins,
-                negative_change_allowed=True,
-                extra_conditions=extra_conditions,
-            )
-            assert chia_tx.spend_bundle is not None
+        async with self.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+            if fee > amount_to_claim:
+                chia_coins = await self.standard_wallet.select_coins(
+                    fee,
+                    tx_config.coin_selection_config,
+                )
+                origin_id = list(chia_coins)[0].name()
+                await self.standard_wallet.generate_signed_transaction(
+                    uint64(0),
+                    (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
+                    tx_config,
+                    inner_action_scope,
+                    fee=uint64(fee - amount_to_claim),
+                    coins=chia_coins,
+                    origin_id=origin_id,  # We specify this so that we know the coin that is making the announcement
+                    negative_change_allowed=False,
+                    extra_conditions=extra_conditions,
+                )
+            else:
+                chia_coins = await self.standard_wallet.select_coins(
+                    fee,
+                    tx_config.coin_selection_config,
+                )
+                origin_id = list(chia_coins)[0].name()
+                selected_amount = sum(c.amount for c in chia_coins)
+                await self.standard_wallet.generate_signed_transaction(
+                    uint64(selected_amount + amount_to_claim - fee),
+                    (await self.standard_wallet.get_puzzle_hash(not tx_config.reuse_puzhash)),
+                    tx_config,
+                    inner_action_scope,
+                    coins=chia_coins,
+                    negative_change_allowed=True,
+                    extra_conditions=extra_conditions,
+                )
 
-            message = None
-            for spend in chia_tx.spend_bundle.coin_spends:
+        message = None
+        for tx in inner_action_scope.side_effects.transactions:
+            if tx.spend_bundle is None:
+                continue
+            for spend in tx.spend_bundle.coin_spends:
                 if spend.coin.name() == origin_id:
                     conditions = spend.puzzle_reveal.to_program().run(spend.solution.to_program()).as_python()
                     for condition in conditions:
                         if condition[0] == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
                             message = condition[1]
 
-            assert message is not None
-            announcement = AssertCoinAnnouncement(asserted_id=origin_id, asserted_msg=message)
+        assert message is not None
+        announcement = AssertCoinAnnouncement(asserted_id=origin_id, asserted_msg=message)
 
-        return chia_tx, announcement
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
+
+        return announcement
 
     async def generate_unsigned_spendbundle(
         self,
         payments: List[Payment],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         coins: Optional[Set[Coin]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
+    ) -> SpendBundle:
         if cat_discrepancy is not None:
             extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
@@ -673,7 +684,6 @@ class CATWallet:
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cat_list = []
-        chia_tx = None
         first = True
         announcement: CreateCoinAnnouncement
 
@@ -695,10 +705,11 @@ class CATWallet:
                 announcement = CreateCoinAnnouncement(std_hash(b"".join([c.name() for c in cat_coins])), coin.name())
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        chia_tx, _ = await self.create_tandem_xch_tx(
+                        await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
+                            action_scope,
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
                         innersol = self.standard_wallet.make_solution(
@@ -706,10 +717,11 @@ class CATWallet:
                             conditions=(*extra_conditions, announcement),
                         )
                     elif regular_chia_to_claim > fee:  # pragma: no cover
-                        chia_tx, xch_announcement = await self.create_tandem_xch_tx(
+                        xch_announcement = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
                             tx_config,
+                            action_scope,
                         )
                         assert xch_announcement is not None
                         innersol = self.standard_wallet.make_solution(
@@ -744,31 +756,21 @@ class CATWallet:
             spendable_cat_list.append(new_spendable_cat)
 
         cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
-        chia_spend_bundle = SpendBundle([], G2Element())
-        if chia_tx is not None and chia_tx.spend_bundle is not None:
-            chia_spend_bundle = chia_tx.spend_bundle
 
-        return (
-            SpendBundle.aggregate(
-                [
-                    cat_spend_bundle,
-                    chia_spend_bundle,
-                ]
-            ),
-            chia_tx,
-        )
+        return cat_spend_bundle
 
     async def generate_signed_transaction(
         self,
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         memos: Optional[List[List[bytes]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
-    ) -> List[TransactionRecord]:
+    ) -> None:
         # (extra_delta, tail_reveal, tail_solution)
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
         if memos is None:
@@ -784,66 +786,44 @@ class CATWallet:
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
         payment_sum = sum(p.amount for p in payments)
-        spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
+        spend_bundle = await self.generate_unsigned_spendbundle(
             payments,
             tx_config,
+            action_scope,
             fee,
             cat_discrepancy=cat_discrepancy,  # (extra_delta, tail_reveal, tail_solution)
             coins=coins,
             extra_conditions=extra_conditions,
         )
-        if chia_tx is not None:
-            other_tx_removals: Set[Coin] = {removal for removal in chia_tx.removals}
-            other_tx_additions: Set[Coin] = {removal for removal in chia_tx.additions}
-        else:
-            other_tx_removals = set()
-            other_tx_additions = set()
-        tx_list = [
-            TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=puzzle_hashes[0],
-                amount=uint64(payment_sum),
-                fee_amount=fee,
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=spend_bundle,
-                additions=list(set(spend_bundle.additions()) - other_tx_additions),
-                removals=list(set(spend_bundle.removals()) - other_tx_removals),
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
-                name=spend_bundle.name(),
-                memos=list(compute_memos(spend_bundle).items()),
-                valid_times=parse_timelock_info(extra_conditions),
-            )
-        ]
 
-        if chia_tx is not None:
-            tx_list.append(
+        async with action_scope.use() as interface:
+            other_tx_removals: Set[Coin] = {
+                removal for tx in interface.side_effects.transactions for removal in tx.removals
+            }
+            other_tx_additions: Set[Coin] = {
+                removal for tx in interface.side_effects.transactions for removal in tx.additions
+            }
+            interface.side_effects.transactions.append(
                 TransactionRecord(
-                    confirmed_at_height=chia_tx.confirmed_at_height,
-                    created_at_time=chia_tx.created_at_time,
-                    to_puzzle_hash=chia_tx.to_puzzle_hash,
-                    amount=chia_tx.amount,
-                    fee_amount=chia_tx.fee_amount,
-                    confirmed=chia_tx.confirmed,
-                    sent=chia_tx.sent,
-                    spend_bundle=None,
-                    additions=chia_tx.additions,
-                    removals=chia_tx.removals,
-                    wallet_id=chia_tx.wallet_id,
-                    sent_to=chia_tx.sent_to,
-                    trade_id=chia_tx.trade_id,
-                    type=chia_tx.type,
-                    name=chia_tx.name,
-                    memos=[],
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=puzzle_hashes[0],
+                    amount=uint64(payment_sum),
+                    fee_amount=fee,
+                    confirmed=False,
+                    sent=uint32(0),
+                    spend_bundle=spend_bundle,
+                    additions=list(set(spend_bundle.additions()) - other_tx_additions),
+                    removals=list(set(spend_bundle.removals()) - other_tx_removals),
+                    wallet_id=self.id(),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.OUTGOING_TX.value),
+                    name=spend_bundle.name(),
+                    memos=list(compute_memos(spend_bundle).items()),
                     valid_times=parse_timelock_info(extra_conditions),
                 )
             )
-
-        return tx_list
 
     async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]) -> None:
         """

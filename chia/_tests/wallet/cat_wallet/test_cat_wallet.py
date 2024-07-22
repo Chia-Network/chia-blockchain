@@ -71,20 +71,21 @@ async def test_cat_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsA
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    async with wallet_node.wallet_state_manager.lock:
-        cat_wallet, tx_records = await CATWallet.create_new_cat_wallet(
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
             {"identifier": "genesis_by_id"},
             uint64(100),
             DEFAULT_TX_CONFIG,
+            action_scope,
             fee=uint64(10),
         )
         # The next 2 lines are basically a noop, it just adds test coverage
         cat_wallet = await CATWallet.create(wallet_node.wallet_state_manager, wallet, cat_wallet.wallet_info)
         await wallet_node.wallet_state_manager.add_new_wallet(cat_wallet)
 
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
     await time_out_assert(20, cat_wallet.get_spendable_balance, 100)
@@ -138,12 +139,23 @@ async def test_cat_creation_unique_lineage_store(self_hostname: str, two_wallet_
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    async with wallet_node.wallet_state_manager.lock:
-        cat_wallet_1, _ = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet_1 = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(100),
+            DEFAULT_TX_CONFIG,
+            action_scope,
         )
-        cat_wallet_2, _ = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(200), DEFAULT_TX_CONFIG
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet_2 = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(200),
+            DEFAULT_TX_CONFIG,
+            action_scope,
         )
 
     proofs_1 = await cat_wallet_1.lineage_store.get_all_lineage_proofs()
@@ -186,9 +198,14 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
         "cat": 2,
     }
 
-    async with wallet_node.wallet_state_manager.lock:
-        cat_wallet, tx_records = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(100),
+            DEFAULT_TX_CONFIG,
+            action_scope,
         )
 
     await wallet_environments.process_pending_states(
@@ -245,15 +262,16 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-    tx_records = await cat_wallet.generate_signed_transaction(
-        [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, fee=uint64(1)
-    )
+    async with cat_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet.generate_signed_transaction(
+            [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, action_scope, fee=uint64(1)
+        )
     tx_id = None
-    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
-    for tx_record in tx_records:
-        if tx_record.wallet_id is cat_wallet.id():
-            tx_id = tx_record.name.hex()
+    for tx_record in action_scope.side_effects.transactions:
+        if tx_record.wallet_id == cat_wallet.id():
             assert tx_record.to_puzzle_hash == cat_2_hash
+        if tx_record.spend_bundle is not None:
+            tx_id = tx_record.name.hex()
     assert tx_id is not None
     memos = await api_0.get_transaction_memo({"transaction_id": tx_id})
     assert len(memos[tx_id]) == 2  # One for tx, one for change
@@ -336,8 +354,8 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     assert len(memos[tx_id]) == 2
     assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
     cat_hash = await cat_wallet.get_new_inner_hash()
-    tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-    tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
+    async with cat_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG, action_scope)
 
     await wallet_environments.process_pending_states(
         [
@@ -434,11 +452,16 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
-    async with wallet_node.wallet_state_manager.lock:
-        cat_wallet, tx_records = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(100),
+            DEFAULT_TX_CONFIG,
+            action_scope,
         )
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
     await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
@@ -451,11 +474,12 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
     assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-    tx_records = await cat_wallet.generate_signed_transaction(
-        [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG.override(reuse_puzhash=True), fee=uint64(1)
-    )
-    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
-    for tx_record in tx_records:
+    async with cat_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet.generate_signed_transaction(
+            [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG.override(reuse_puzhash=True), action_scope, fee=uint64(1)
+        )
+
+    for tx_record in action_scope.side_effects.transactions:
         if tx_record.wallet_id is cat_wallet.id():
             assert tx_record.to_puzzle_hash == cat_2_hash
             assert tx_record.spend_bundle is not None
@@ -468,7 +492,7 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
             new_puzhash = [c.puzzle_hash.hex() for c in tx_record.additions]
             assert old_puzhash in new_puzhash
 
-    await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records)
+    await time_out_assert(15, full_node_api.txs_in_mempool, True, action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet.get_pending_change_balance, 40)
 
@@ -484,10 +508,10 @@ async def test_cat_reuse_address(self_hostname: str, two_wallet_nodes: OldSimula
     await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 60)
 
     cat_hash = await cat_wallet.get_new_inner_hash()
-    tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-    tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
+    async with cat_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG, action_scope)
 
-    await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records)
+    await time_out_assert(15, full_node_api.txs_in_mempool, True, action_scope.side_effects.transactions)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -531,9 +555,14 @@ async def test_get_wallet_for_asset_id(
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
-    async with wallet_node.wallet_state_manager.lock:
-        cat_wallet, _ = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(100),
+            DEFAULT_TX_CONFIG,
+            action_scope,
         )
 
     for _ in range(1, num_blocks):
@@ -585,11 +614,16 @@ async def test_cat_doesnt_see_eve(self_hostname: str, two_wallet_nodes: OldSimul
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
-    async with wallet_node.wallet_state_manager.lock:
-        cat_wallet, tx_records = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(100),
+            DEFAULT_TX_CONFIG,
+            action_scope,
         )
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
     await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
@@ -602,11 +636,11 @@ async def test_cat_doesnt_see_eve(self_hostname: str, two_wallet_nodes: OldSimul
     assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-    tx_records = await cat_wallet.generate_signed_transaction(
-        [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, fee=uint64(1)
-    )
-    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
-    await full_node_api.process_transaction_records(records=tx_records)
+    async with cat_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet.generate_signed_transaction(
+            [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, action_scope, fee=uint64(1)
+        )
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(30, wallet.get_confirmed_balance, funds - 101)
     await time_out_assert(30, wallet.get_unconfirmed_balance, funds - 101)
@@ -618,11 +652,11 @@ async def test_cat_doesnt_see_eve(self_hostname: str, two_wallet_nodes: OldSimul
     await time_out_assert(20, cat_wallet_2.get_unconfirmed_balance, 60)
 
     cc2_ph = await cat_wallet_2.get_new_cat_puzzle_hash()
-    [tx_record] = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
-        uint64(10), cc2_ph, DEFAULT_TX_CONFIG
-    )
-    [tx_record] = await wallet.wallet_state_manager.add_pending_transactions([tx_record])
-    await full_node_api.process_transaction_records(records=[tx_record])
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
+            uint64(10), cc2_ph, DEFAULT_TX_CONFIG, action_scope
+        )
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     id = cat_wallet_2.id()
     wsm = cat_wallet_2.wallet_state_manager
@@ -675,15 +709,16 @@ async def test_cat_spend_multiple(
 
     await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
 
-    async with wallet_node_0.wallet_state_manager.lock:
-        cat_wallet_0, tx_records = await CATWallet.create_new_cat_wallet(
+    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet_0 = await CATWallet.create_new_cat_wallet(
             wallet_node_0.wallet_state_manager,
             wallet_0,
             {"identifier": "genesis_by_id"},
             uint64(100),
             DEFAULT_TX_CONFIG,
+            action_scope,
         )
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet_0.get_confirmed_balance, 100)
     await time_out_assert(20, cat_wallet_0.get_unconfirmed_balance, 100)
@@ -701,11 +736,11 @@ async def test_cat_spend_multiple(
     cat_1_hash = await cat_wallet_1.get_new_inner_hash()
     cat_2_hash = await cat_wallet_2.get_new_inner_hash()
 
-    tx_records = await cat_wallet_0.generate_signed_transaction(
-        [uint64(60), uint64(20)], [cat_1_hash, cat_2_hash], DEFAULT_TX_CONFIG
-    )
-    tx_records = await wallet_0.wallet_state_manager.add_pending_transactions(tx_records)
-    await full_node_api.process_transaction_records(records=tx_records)
+    async with cat_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet_0.generate_signed_transaction(
+            [uint64(60), uint64(20)], [cat_1_hash, cat_2_hash], DEFAULT_TX_CONFIG, action_scope
+        )
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet_0.get_confirmed_balance, 20)
     await time_out_assert(20, cat_wallet_0.get_unconfirmed_balance, 20)
@@ -718,13 +753,15 @@ async def test_cat_spend_multiple(
 
     cat_hash = await cat_wallet_0.get_new_inner_hash()
 
-    tx_records = await cat_wallet_1.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG)
-    tx_records = await wallet_1.wallet_state_manager.add_pending_transactions(tx_records)
+    async with cat_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet_1.generate_signed_transaction([uint64(15)], [cat_hash], DEFAULT_TX_CONFIG, action_scope)
 
-    tx_records_2 = await cat_wallet_2.generate_signed_transaction([uint64(20)], [cat_hash], DEFAULT_TX_CONFIG)
-    tx_records_2 = await wallet_2.wallet_state_manager.add_pending_transactions(tx_records_2)
+    async with cat_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope_2:
+        await cat_wallet_2.generate_signed_transaction([uint64(20)], [cat_hash], DEFAULT_TX_CONFIG, action_scope_2)
 
-    await full_node_api.process_transaction_records(records=[*tx_records, *tx_records_2])
+    await full_node_api.process_transaction_records(
+        records=[*action_scope.side_effects.transactions, *action_scope_2.side_effects.transactions]
+    )
 
     await time_out_assert(20, cat_wallet_0.get_confirmed_balance, 55)
     await time_out_assert(20, cat_wallet_0.get_unconfirmed_balance, 55)
@@ -737,16 +774,21 @@ async def test_cat_spend_multiple(
 
     txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
     # Test with Memo
-    tx_records_3 = await cat_wallet_1.generate_signed_transaction(
-        [uint64(30)], [cat_hash], DEFAULT_TX_CONFIG, memos=[[b"Markus Walburg"]]
-    )
-    with pytest.raises(ValueError):
+    async with cat_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
         await cat_wallet_1.generate_signed_transaction(
-            [uint64(30)], [cat_hash], DEFAULT_TX_CONFIG, memos=[[b"too"], [b"many"], [b"memos"]]
+            [uint64(30)], [cat_hash], DEFAULT_TX_CONFIG, action_scope, memos=[[b"Markus Walburg"]]
         )
+    with pytest.raises(ValueError):
+        async with cat_wallet_1.wallet_state_manager.new_action_scope(push=False) as failed_action_scope:
+            await cat_wallet_1.generate_signed_transaction(
+                [uint64(30)],
+                [cat_hash],
+                DEFAULT_TX_CONFIG,
+                failed_action_scope,
+                memos=[[b"too"], [b"many"], [b"memos"]],
+            )
 
-    tx_records_3 = await wallet_1.wallet_state_manager.add_pending_transactions(tx_records_3)
-    await time_out_assert(15, full_node_api.txs_in_mempool, True, tx_records_3)
+    await time_out_assert(15, full_node_api.txs_in_mempool, True, action_scope.side_effects.transactions)
     txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
     for tx in txs:
         if tx.amount == 30:
@@ -790,11 +832,16 @@ async def test_cat_max_amount_send(
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
-    async with wallet_node.wallet_state_manager.lock:
-        cat_wallet, tx_records = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100000), DEFAULT_TX_CONFIG
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(100000),
+            DEFAULT_TX_CONFIG,
+            action_scope,
         )
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet.get_confirmed_balance, 100000)
     await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100000)
@@ -809,11 +856,11 @@ async def test_cat_max_amount_send(
         amounts.append(uint64(i))
         puzzle_hashes.append(cat_2_hash)
     spent_coint = (await cat_wallet.get_cat_spendable_coins())[0].coin
-    tx_records = await cat_wallet.generate_signed_transaction(
-        amounts, puzzle_hashes, DEFAULT_TX_CONFIG, coins={spent_coint}
-    )
-    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
-    await full_node_api.process_transaction_records(records=tx_records)
+    async with cat_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet.generate_signed_transaction(
+            amounts, puzzle_hashes, DEFAULT_TX_CONFIG, action_scope, coins={spent_coint}
+        )
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await asyncio.sleep(2)
 
@@ -834,20 +881,23 @@ async def test_cat_max_amount_send(
     max_sent_amount = await cat_wallet.get_max_send_amount()
 
     # 1) Generate transaction that is under the limit
-    [transaction_record] = await cat_wallet.generate_signed_transaction(
-        [uint64(max_sent_amount - 1)], [ph], DEFAULT_TX_CONFIG
-    )
-    assert transaction_record.amount == uint64(max_sent_amount - 1)
+    async with cat_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        await cat_wallet.generate_signed_transaction(
+            [uint64(max_sent_amount - 1)], [ph], DEFAULT_TX_CONFIG, action_scope
+        )
+    assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount - 1)
 
     # 2) Generate transaction that is equal to limit
-    [transaction_record] = await cat_wallet.generate_signed_transaction(
-        [uint64(max_sent_amount)], [ph], DEFAULT_TX_CONFIG
-    )
-    assert transaction_record.amount == uint64(max_sent_amount)
+    async with cat_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        await cat_wallet.generate_signed_transaction([uint64(max_sent_amount)], [ph], DEFAULT_TX_CONFIG, action_scope)
+    assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount)
 
     # 3) Generate transaction that is greater than limit
     with pytest.raises(ValueError):
-        await cat_wallet.generate_signed_transaction([uint64(max_sent_amount + 1)], [ph], DEFAULT_TX_CONFIG)
+        async with cat_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            await cat_wallet.generate_signed_transaction(
+                [uint64(max_sent_amount + 1)], [ph], DEFAULT_TX_CONFIG, action_scope
+            )
 
 
 @pytest.mark.parametrize("trusted", [True, False])
@@ -887,24 +937,28 @@ async def test_cat_hint(
 
     await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
-    async with wallet_node.wallet_state_manager.lock:
-        cat_wallet, tx_records = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(100),
+            DEFAULT_TX_CONFIG,
+            action_scope,
         )
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
     await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
     assert cat_wallet.cat_info.limitations_program_hash is not None
 
     cat_2_hash = await wallet2.get_new_puzzlehash()
-    tx_records = await cat_wallet.generate_signed_transaction(
-        [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, memos=[[cat_2_hash]]
-    )
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet.generate_signed_transaction(
+            [uint64(60)], [cat_2_hash], DEFAULT_TX_CONFIG, action_scope, memos=[[cat_2_hash]]
+        )
 
-    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
-
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet.get_confirmed_balance, 40)
     await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 40)
@@ -926,13 +980,12 @@ async def test_cat_hint(
     }
 
     # Then we send another transaction
-    tx_records = await cat_wallet.generate_signed_transaction(
-        [uint64(10)], [cat_2_hash], DEFAULT_TX_CONFIG, memos=[[cat_2_hash]]
-    )
+    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet.generate_signed_transaction(
+            [uint64(10)], [cat_2_hash], DEFAULT_TX_CONFIG, action_scope, memos=[[cat_2_hash]]
+        )
 
-    tx_records = await wallet.wallet_state_manager.add_pending_transactions(tx_records)
-
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet.get_confirmed_balance, 30)
     await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 30)
@@ -947,10 +1000,10 @@ async def test_cat_hint(
     await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 70)
 
     cat_hash = await cat_wallet.get_new_inner_hash()
-    tx_records = await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash], DEFAULT_TX_CONFIG)
-    tx_records = await wallet2.wallet_state_manager.add_pending_transactions(tx_records)
+    async with cat_wallet_2.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash], DEFAULT_TX_CONFIG, action_scope)
 
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await time_out_assert(20, cat_wallet.get_confirmed_balance, 35)
     await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 35)
