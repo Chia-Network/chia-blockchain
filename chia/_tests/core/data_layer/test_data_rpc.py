@@ -5,6 +5,7 @@ import contextlib
 import copy
 import enum
 import json
+import logging
 import os
 import random
 import sqlite3
@@ -15,7 +16,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, Tuple, cast
-import logging
+
 import anyio
 import pytest
 
@@ -3788,7 +3789,7 @@ async def test_local_store_exception(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     tmp_path: Path,
     monkeypatch: Any,
-    caplog: pytest.LogCaptureFixture
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
