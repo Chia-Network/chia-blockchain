@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import time
 from dataclasses import dataclass
@@ -256,7 +255,7 @@ class Vault(Wallet):
                     CreatePuzzleAnnouncement(
                         Program.to([spend.coin.name(), puzzle_to_assert.get_tree_hash()]).get_tree_hash(),
                     ).to_program(),
-                    AssertCoinAnnouncement(asserted_id=spend.coin.name(), asserted_msg=b"$").to_program(),
+                    AssertCoinAnnouncement(asserted_id=spend.coin.name(), asserted_msg=b"").to_program(),
                 ]
             )
 
@@ -624,7 +623,6 @@ class Vault(Wallet):
         if not coin_states:
             raise ValueError(f"No coin found for launcher id: {self.launcher_id}.")
         coin_state: CoinState = coin_states[0]
-        # parent_state: CoinState = (await wallet_node.get_coin_state([coin_state.coin.parent_coin_info], peer))[0]
 
         assert coin_state.spent_height is not None
         launcher_spend = await fetch_coin_spend(uint32(coin_state.spent_height), coin_state.coin, peer)
@@ -676,7 +674,7 @@ class Vault(Wallet):
             lineage_proof,
             uint32(coin_state.spent_height) if coin_state.spent_height else uint32(0),
             pending=False,
-            custom_data=bytes(json.dumps(vault_info.to_json_dict()), "utf-8"),
+            custom_data=vault_info.stream_to_bytes(),
         )
 
     async def update_vault_singleton(
@@ -762,12 +760,5 @@ class Vault(Wallet):
         self._vault_info = vault_info
 
     async def update_vault_store(self, vault_info: VaultInfo, coin_spend: CoinSpend) -> None:
-        custom_data = bytes(
-            json.dumps(
-                {
-                    "vault_info": vault_info.to_json_dict(),
-                }
-            ),
-            "utf-8",
-        )
+        custom_data = vault_info.stream_to_bytes()
         await self.wallet_state_manager.singleton_store.add_spend(self.id(), coin_spend, custom_data=custom_data)

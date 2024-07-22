@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from hashlib import sha256
 from typing import Awaitable, Callable, List
 
@@ -15,7 +14,7 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
-from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
+from chia.wallet.vault.vault_info import VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
 
@@ -182,11 +181,10 @@ async def test_vault_creation(
     assert record is not None
 
     assert isinstance(record.custom_data, bytes)
-    custom_data = json.loads(record.custom_data)
-    vault_info = VaultInfo.from_json_dict(custom_data["vault_info"])
+    custom_data = record.custom_data
+    vault_info = VaultInfo.from_bytes(custom_data)
     assert vault_info == wallet.vault_info
-    recovery_info = RecoveryInfo.from_json_dict(custom_data["vault_info"]["recovery_info"])
-    assert recovery_info == wallet.vault_info.recovery_info
+    assert vault_info.recovery_info == wallet.vault_info.recovery_info
 
     # test make_solution
     coin = (await wallet.select_coins(uint64(100), DEFAULT_COIN_SELECTION_CONFIG)).pop()

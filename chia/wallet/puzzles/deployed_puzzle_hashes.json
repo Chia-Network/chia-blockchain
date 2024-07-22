@@ -52,7 +52,7 @@
   "p2_singleton": "40f828d8dd55603f4ff9fbf6b73271e904e69406982f4fbefae2c8dcceaf9834",
   "p2_singleton_aggregator": "f79a31fcfe3736cc75720617b4cdcb4376b4b8f8f71108617710612b909a4924",
   "p2_singleton_or_delayed_puzhash": "adb656e0211e2ab4f42069a4c5efc80dc907e7062be08bf1628c8e5b6d94d25b",
-  "p2_singleton_via_delegated_puzzle_safe": "ca336579834fad16c1b56946f4ad697aa7c37975836332178320e242b482bebd",
+  "p2_singleton_via_delegated_puzzle_safe": "20f2e0c7e3ccc1dc035f23fb70d4cbeb32b232615a916d56bc7d04d1d15b3121",
   "p2_singleton_via_delegated_puzzle_w_aggregator": "9590eaa169e45b655a31d3c06bbd355a3e2b2e3e410d3829748ce08ab249c39e",
   "pool_member_innerpuz": "a8490702e333ddd831a3ac9c22d0fa26d2bfeaf2d33608deb22f0e0123eb0494",
   "pool_waitingroom_innerpuz": "a317541a765bf8375e1c6e7c13503d0d2cbf56cacad5182befe947e78e2c0307",
@@ -65,7 +65,7 @@
   "std_parent_morpher": "8c3f1dc2e46c0d7ec4c2cbd007e23c0368ff8f80c5bc0101647a5c27626ebce6",
   "test_generator_deserialize": "52add794fc76e89512e4a063c383418bda084c8a78c74055abe80179e4a7832c",
   "test_multiple_generator_input_arguments": "156dafbddc3e1d3bfe1f2a84e48e5e46b287b8358bf65c3c091c93e855fbfc5b",
-  "vault_p2_recovery": "59d20b29c583990dca222583cf6fa6b03189841b18ad866e1271aeeec9774828",
+  "vault_p2_recovery": "751f07d363747c2d1c9fd8a2ac7ee3aca0c03a806f3f7553259642365ec8e56c",
   "vault_recovery_finish": "14cb5fba485853fee53316849e52948916cc5893657632f431e367a889fd37c7",
   "viral_backdoor": "00848115554ea674131f89f311707a959ad3f4647482648f3fe91ba289131f51"
 }

@@ -47,17 +47,14 @@
     )
   )
 
-  (let
-    (
-      (recovery_puzzlehash
-        (create_recovery_puzzlehash
-          P2_1_OF_N_MOD_HASH
-          FINISH_RECOVERY_MOD_HASH
-          P2_SECP_PUZZLEHASH
-          TIMELOCK
-          recovery_conditions
-        )
-      )
+  (assign
+    recovery_puzzlehash
+    (create_recovery_puzzlehash
+      P2_1_OF_N_MOD_HASH
+      FINISH_RECOVERY_MOD_HASH
+      P2_SECP_PUZZLEHASH
+      TIMELOCK
+      recovery_conditions
     )
     (list
       (list AGG_SIG_ME BLS_PK (sha256tree recovery_conditions))
