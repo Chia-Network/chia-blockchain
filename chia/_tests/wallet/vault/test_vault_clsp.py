@@ -37,7 +37,7 @@ secp_pk = secp_sk.public_key().public_bytes(Encoding.X962, PublicFormat.Compress
 
 
 def sign_message(private_key: ec.EllipticCurvePrivateKey, message: bytes) -> bytes:
-    der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))  # type: ignore[call-arg]
+    der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
     r, s = decode_dss_signature(der_sig)
     return r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
 
