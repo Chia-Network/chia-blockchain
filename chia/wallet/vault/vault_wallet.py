@@ -385,7 +385,9 @@ class Vault(Wallet):
             fingerprint: int = int.from_bytes(target.fingerprint, "big")
             if fingerprint not in sk_lookup:
                 raise ValueError(f"Pubkey {fingerprint} not found")
-            der_sig = sk_lookup[fingerprint].sign(target.message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
+            der_sig = sk_lookup[fingerprint].sign(
+                target.message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True)  # type: ignore[call-arg]
+            )
             r, s = decode_dss_signature(der_sig)
             sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
             responses.append(
