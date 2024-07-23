@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from hashlib import sha256
 from typing import Awaitable, Callable, List
 
 import pytest
-from ecdsa import NIST256p, SigningKey
-from ecdsa.util import PRNG
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -21,9 +21,9 @@ from chia.wallet.vault.vault_wallet import Vault
 
 async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: bool) -> None:
     env = wallet_environments.environments[0]
-    seed = b"chia_secp"
-    SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
-    SECP_PK = SECP_SK.verifying_key.to_string("compressed")
+    seed = 0x1A62C9636D1C9DB2E7D564D0C11603BF456AAD25AA7B12BDFD762B4E38E7EDC6
+    SECP_SK = ec.derive_private_key(seed, ec.SECP256R1(), default_backend())
+    SECP_PK = SECP_SK.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
 
     # Temporary hack so execute_signing_instructions can access the key
     env.wallet_state_manager.config["test_sk"] = SECP_SK
@@ -216,9 +216,9 @@ async def test_vault_recovery(
     await setup_function(wallet_environments, with_recovery)
     env = wallet_environments.environments[0]
     assert isinstance(env.xch_wallet, Vault)
-    recovery_seed = b"recovery_chia_secp"
-    RECOVERY_SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(recovery_seed), hashfunc=sha256)
-    RECOVERY_SECP_PK = RECOVERY_SECP_SK.verifying_key.to_string("compressed")
+    recovery_seed = 0x6D836489B057E59FF0E16CE2D8F876C454697B76549E11D93F8102C4140B2DC5
+    RECOVERY_SECP_SK = ec.derive_private_key(recovery_seed, ec.SECP256R1(), default_backend())
+    RECOVERY_SECP_PK = RECOVERY_SECP_SK.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
     client = wallet_environments.environments[1].rpc_client
     fingerprint = (await client.get_public_keys())[0]
     bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
