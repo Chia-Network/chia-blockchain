@@ -358,6 +358,7 @@ async def test_vault_recovery(
             amount, recipient_ph, DEFAULT_TX_CONFIG, action_scope, memos=[recipient_ph]
         )
 
+    # Test we can push the transaction separately
     await wallet_environments.environments[0].rpc_client.push_transactions(
         action_scope.side_effects.transactions, sign=True
     )

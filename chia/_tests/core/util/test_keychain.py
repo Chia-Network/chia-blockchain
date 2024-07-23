@@ -335,14 +335,14 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
         (
             (
                 _24keyinfo.fingerprint,
-                G1Element(),
+                bytes(G1Element()),
                 None,
                 KeyDataSecrets(_24keyinfo.mnemonic.split(), _24keyinfo.entropy, _24keyinfo.private_key),
                 KeyTypes.G1_ELEMENT.value,
             ),
             "public_key",
         ),
-        ((_24keyinfo.fingerprint, G1Element(), None, None, KeyTypes.G1_ELEMENT.value), "fingerprint"),
+        ((_24keyinfo.fingerprint, bytes(G1Element()), None, None, KeyTypes.G1_ELEMENT.value), "fingerprint"),
     ],
 )
 def test_key_data_post_init(

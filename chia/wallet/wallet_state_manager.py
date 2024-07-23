@@ -1821,7 +1821,7 @@ class WalletStateManager:
                     if wallet_identifier is None:
                         # Confirm tx records for txs which we submitted for coins which aren't in our wallet
                         # Used for vault recovery spends
-                        if coin_state.spent_height is not None:
+                        if coin_state.created_height is not None and coin_state.spent_height is not None:
                             all_unconfirmed = await self.tx_store.get_all_unconfirmed()
                             tx_records_to_confirm: List[TransactionRecord] = []
                             for out_tx_record in all_unconfirmed:
@@ -2396,15 +2396,15 @@ class WalletStateManager:
                 additional_signing_responses != [] and additional_signing_responses is not None,
             )
 
-        # Check that tx_records have additions/removals since vault txs don't have them until they're signed
-        for i, tx in enumerate(tx_records):
-            if tx.spend_bundle is not None:
-                if tx.additions == []:
-                    tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
-                if tx.removals == []:
-                    assert isinstance(tx.spend_bundle, SpendBundle)
-                    tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
-            tx_records[i] = tx
+            # Check that tx_records have additions/removals since vault txs don't have them until they're signed
+            for i, tx in enumerate(tx_records):
+                if tx.spend_bundle is not None:
+                    if tx.additions == []:
+                        tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
+                    if tx.removals == []:
+                        assert isinstance(tx.spend_bundle, SpendBundle)
+                        tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
+                tx_records[i] = tx
 
         if push:
             all_coins_names = []
