@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import functools
 import json
 import logging
 import os
@@ -124,7 +125,9 @@ class DataLayer:
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     subscription_update_concurrency: int = 5
-    client_timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=45, sock_connect=5)
+    client_timeout: aiohttp.ClientTimeout = dataclasses.field(
+        default_factory=functools.partial(aiohttp.ClientTimeout, total=45, sock_connect=5)
+    )
 
     @property
     def server(self) -> ChiaServer:
