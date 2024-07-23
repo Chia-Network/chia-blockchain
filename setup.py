@@ -22,7 +22,7 @@ dependencies = [
     "colorama==0.4.6",  # Colorizes terminal output
     "colorlog==6.8.2",  # Adds color to logs
     "concurrent-log-handler==0.9.25",  # Concurrently log and rotate logs
-    "cryptography==42.0.5",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==43.0.0",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.14.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "importlib-resources==6.4.0",
     "keyring==25.1.0",  # Store keys in MacOS Keychain, Windows Credential Locker
@@ -38,7 +38,6 @@ dependencies = [
     "packaging==24.0",
     "psutil==5.9.4",
     "hsms==0.3.1",
-    "ecdsa==0.19.0",  # For SECP
 ]
 
 upnp_dependencies = [

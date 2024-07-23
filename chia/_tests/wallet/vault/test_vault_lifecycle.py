@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from hashlib import sha256
 from typing import Optional, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
-from ecdsa import NIST256p, SigningKey
-from ecdsa.util import PRNG
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia.clvm.spend_sim import CostLogger, sim_and_client
@@ -29,9 +31,9 @@ from chia.wallet.vault.vault_drivers import (
     get_vault_proof,
 )
 
-seed = b"chia_secp"
-SECP_SK = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
-SECP_PK = SECP_SK.verifying_key.to_string("compressed")
+seed = 0x1A62C9636D1C9DB2E7D564D0C11603BF456AAD25AA7B12BDFD762B4E38E7EDC6
+SECP_SK = ec.derive_private_key(seed, ec.SECP256R1(), default_backend())
+SECP_PK = SECP_SK.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
 
 BLS_SK = PrivateKey.from_bytes(secret_exponent_for_index(1).to_bytes(32, "big"))
 BLS_PK = BLS_SK.get_g1()
@@ -40,6 +42,12 @@ TIMELOCK = uint64(1000)
 ACS = Program.to(0)
 ACS_PH = ACS.get_tree_hash()
 HIDDEN_PUZZLE_HASH = Program.to("hph").get_tree_hash()
+
+
+def sign_message(private_key: ec.EllipticCurvePrivateKey, message: bytes) -> bytes:
+    der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
+    r, s = decode_dss_signature(der_sig)
+    return r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
 
 
 @pytest.mark.anyio
@@ -67,13 +75,14 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         secp_conditions = Program.to([[51, ACS_PH, amount], [51, vault_puzzlehash, vault_coin.amount - amount]])
         secp_delegated_puzzle = puzzle_for_conditions(secp_conditions)
         secp_delegated_solution = solution_for_conditions(secp_delegated_puzzle)
-        secp_signature = SECP_SK.sign_deterministic(
+        secp_signature = sign_message(
+            SECP_SK,
             construct_secp_message(
                 secp_delegated_puzzle.get_tree_hash(),
                 vault_coin.name(),
                 DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
                 HIDDEN_PUZZLE_HASH,
-            )
+            ),
         )
 
         secp_solution = Program.to(
@@ -155,13 +164,14 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         secp_conditions = Program.to([[51, ACS_PH, recovery_coin.amount]])
         secp_delegated_puzzle = puzzle_for_conditions(secp_conditions)
         secp_delegated_solution = solution_for_conditions(secp_delegated_puzzle)
-        secp_signature = SECP_SK.sign_deterministic(
+        secp_signature = sign_message(
+            SECP_SK,
             construct_secp_message(
                 secp_delegated_puzzle.get_tree_hash(),
                 recovery_coin.name(),
                 DEFAULT_CONSTANTS.GENESIS_CHALLENGE,
                 HIDDEN_PUZZLE_HASH,
-            )
+            ),
         )
         secp_solution = Program.to(
             [
