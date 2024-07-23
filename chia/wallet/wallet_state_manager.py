@@ -1825,13 +1825,8 @@ class WalletStateManager:
                             all_unconfirmed = await self.tx_store.get_all_unconfirmed()
                             tx_records_to_confirm: List[TransactionRecord] = []
                             for out_tx_record in all_unconfirmed:
-                                if out_tx_record.spend_bundle is not None:
-                                    for tx_spend in out_tx_record.spend_bundle.coin_spends:
-                                        if tx_spend.coin == coin_state.coin:
-                                            # check for a vault spend
-                                            mod, args = tx_spend.puzzle_reveal.to_program().uncurry()
-                                            if match_vault_puzzle(mod, args):
-                                                tx_records_to_confirm.append(out_tx_record)
+                                if coin_state.coin in out_tx_record.removals:
+                                    tx_records_to_confirm.append(out_tx_record)
 
                             if len(tx_records_to_confirm) > 0:
                                 for tx_record in tx_records_to_confirm:
@@ -2939,3 +2934,4 @@ class WalletStateManager:
                     valid_times=ConditionValidTimes(),
                 )
             )
+            await self.add_interested_puzzle_hashes([launcher_coin.name()], [self.main_wallet.id()])

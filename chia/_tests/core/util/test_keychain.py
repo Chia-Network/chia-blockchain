@@ -290,7 +290,7 @@ def test_key_data_generate(label: Optional[str]) -> None:
 def test_key_data_creation(label: str, key_info: KeyInfo, get_item: str, from_method: Callable[..., KeyData]) -> None:
     key_data = from_method(getattr(key_info, get_item), label)
     assert key_data.fingerprint == key_info.fingerprint
-    assert key_data.public_key == key_info.public_key
+    assert key_data.public_key == bytes(key_info.public_key)
     assert key_data.mnemonic == key_info.mnemonic.split()
     assert key_data.mnemonic_str() == key_info.mnemonic
     assert key_data.entropy == key_info.entropy

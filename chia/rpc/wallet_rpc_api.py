@@ -4642,7 +4642,6 @@ class WalletRpcApi:
         action_scope: WalletActionScope,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-        push: bool = False,
     ) -> EndpointResult:
         """
         Create a new vault
@@ -4668,7 +4667,6 @@ class WalletRpcApi:
             timelock=timelock,
             fee=fee,
         )
-
         return {
             "transactions": None,  # tx_endpoint will take care of this
         }

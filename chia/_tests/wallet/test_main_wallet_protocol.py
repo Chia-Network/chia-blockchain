@@ -268,7 +268,7 @@ async def test_main_wallet(
             )
         ]
     )
-    async with main_wallet.wallet_state_manager.new_action_scope() as action_scope:
+    async with main_wallet.wallet_state_manager.new_action_scope(push=True, sign=True) as action_scope:
         await main_wallet.generate_signed_transaction(
             uint64(1_750_000_000_001),
             ph,
