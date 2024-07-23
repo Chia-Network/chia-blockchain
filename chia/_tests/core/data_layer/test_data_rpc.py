@@ -165,7 +165,7 @@ async def farm_block_check_singleton(
     await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(10, check_singleton_confirmed, True, data_layer, store_id)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet, timeout=10)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet, timeout=20)
 
 
 async def is_transaction_confirmed(api: WalletRpcApi, tx_id: bytes32) -> bool:

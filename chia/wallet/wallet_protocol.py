@@ -25,9 +25,9 @@ from chia.wallet.signer_protocol import (
     Spend,
     SumHint,
 )
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
@@ -105,6 +105,7 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         amount: uint64,
         puzzle_hash: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
@@ -112,7 +113,7 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
-    ) -> List[TransactionRecord]: ...
+    ) -> None: ...
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program: ...
 
@@ -142,8 +143,9 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         self,
         fee: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord: ...
+    ) -> None: ...
 
     def make_solution(
         self,

@@ -169,7 +169,7 @@ async def setup_full_node(
 
 @asynccontextmanager
 async def setup_crawler(
-    root_path_populated_with_config: Path, database_uri: str
+    root_path_populated_with_config: Path, database_uri: str, start_crawler_loop: bool = True
 ) -> AsyncGenerator[CrawlerService, None]:
     create_all_ssl(
         root_path=root_path_populated_with_config,
@@ -193,6 +193,7 @@ async def setup_crawler(
         config,
         updated_constants,
         connect_to_daemon=False,
+        start_crawler_loop=start_crawler_loop,
     )
     async with service.manage():
         if not service_config["crawler"]["start_rpc_server"]:  # otherwise the loops don't work.

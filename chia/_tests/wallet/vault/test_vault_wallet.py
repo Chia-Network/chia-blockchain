@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
-from typing import Awaitable, Callable, List
+from typing import Awaitable, Callable
 
 import pytest
 from ecdsa import NIST256p, SigningKey
@@ -12,7 +12,6 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_info import VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
@@ -110,14 +109,15 @@ async def test_vault_creation(
     coins_to_create = 2
     funding_amount = uint64(1000000000)
     funding_wallet = wallet_environments.environments[1].xch_wallet
-    for _ in range(coins_to_create):
-        funding_tx = await funding_wallet.generate_signed_transaction(
-            funding_amount,
-            p2_singleton_puzzle_hash,
-            DEFAULT_TX_CONFIG,
-            memos=[wallet.vault_info.pubkey],
-        )
-        await funding_wallet.wallet_state_manager.add_pending_transactions(funding_tx)
+    async with funding_wallet.wallet_state_manager.new_action_scope() as action_scope:
+        for _ in range(coins_to_create):
+            await funding_wallet.generate_signed_transaction(
+                funding_amount,
+                p2_singleton_puzzle_hash,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+                memos=[wallet.vault_info.pubkey],
+            )
 
     await wallet_environments.process_pending_states(
         [
@@ -148,11 +148,14 @@ async def test_vault_creation(
     fee = uint64(100)
     balance_delta = 1011000099
 
-    unsigned_txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
-        amount, recipient_ph, DEFAULT_TX_CONFIG, primaries=primaries, fee=fee, memos=[recipient_ph]
-    )
+    async with wallet.wallet_state_manager.new_action_scope(push=False, sign=False) as action_scope:
+        await wallet.generate_signed_transaction(
+            amount, recipient_ph, DEFAULT_TX_CONFIG, action_scope, primaries=primaries, fee=fee, memos=[recipient_ph]
+        )
 
-    await wallet_environments.environments[0].rpc_client.push_transactions(unsigned_txs, sign=True)
+    await wallet_environments.environments[0].rpc_client.push_transactions(
+        action_scope.side_effects.transactions, sign=True
+    )
     vault_eve_id = wallet.vault_info.coin.name()
 
     await wallet_environments.process_pending_states(
@@ -260,11 +263,14 @@ async def test_vault_recovery(
     if spent_recovery:
         amount = uint64(10000)
         recipient_ph = await funding_wallet.get_new_puzzlehash()
-        unsigned_txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
-            amount, recipient_ph, DEFAULT_TX_CONFIG, memos=[recipient_ph]
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False, sign=False) as action_scope:
+            await wallet.generate_signed_transaction(
+                amount, recipient_ph, DEFAULT_TX_CONFIG, action_scope, memos=[recipient_ph]
+            )
 
-        await wallet_environments.environments[0].rpc_client.push_transactions(unsigned_txs, sign=True)
+        await wallet_environments.environments[0].rpc_client.push_transactions(
+            action_scope.side_effects.transactions, sign=True
+        )
 
         await wallet_environments.process_pending_states(
             [
@@ -351,11 +357,14 @@ async def test_vault_recovery(
     recipient_ph = await funding_wallet.get_new_puzzlehash()
     amount = uint64(200)
 
-    unsigned_spend: List[TransactionRecord] = await wallet.generate_signed_transaction(
-        amount, recipient_ph, DEFAULT_TX_CONFIG, memos=[recipient_ph]
-    )
+    async with wallet.wallet_state_manager.new_action_scope(push=False, sign=False) as action_scope:
+        await wallet.generate_signed_transaction(
+            amount, recipient_ph, DEFAULT_TX_CONFIG, action_scope, memos=[recipient_ph]
+        )
 
-    await wallet_environments.environments[0].rpc_client.push_transactions(unsigned_spend, sign=True)
+    await wallet_environments.environments[0].rpc_client.push_transactions(
+        action_scope.side_effects.transactions, sign=True
+    )
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(

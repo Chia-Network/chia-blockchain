@@ -24,7 +24,6 @@ from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
@@ -160,9 +159,7 @@ async def test_sync_no_farmer(
 class TestFullNodeBlockCompression:
     @pytest.mark.anyio
     @pytest.mark.parametrize("tx_size", [3000000000000])
-    async def test_block_compression(
-        self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, self_hostname, consensus_mode
-    ):
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, self_hostname):
         nodes, wallets, bt = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -188,12 +185,14 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send a transaction to mempool
-        [tr] = await wallet.generate_signed_transaction(
-            tx_size,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                tx_size,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -217,22 +216,17 @@ class TestFullNodeBlockCompression:
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        template = detect_potential_template_generator(uint32(5), program)
-        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert template is None
-        else:
-            assert template is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         # Send another tx
-        [tr] = await wallet.generate_signed_transaction(
-            20000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                20000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -252,14 +246,10 @@ class TestFullNodeBlockCompression:
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        assert detect_potential_template_generator(uint32(6), program) is None
         num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
-        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert num_blocks == 0
-        else:
-            assert num_blocks > 0
+        # since the hard fork, we don't use this compression mechanism
+        # anymore, we use CLVM backrefs in the encoding instead
+        assert num_blocks == 0
 
         # Farm two empty blocks
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -270,37 +260,28 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send another 2 tx
-        [tr] = await wallet.generate_signed_transaction(
-            30000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                30000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
             tr.spend_bundle,
             tr.name,
         )
-        [tr] = await wallet.generate_signed_transaction(
-            40000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
-        await time_out_assert(
-            10,
-            full_node_2.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.name,
-        )
-
-        [tr] = await wallet.generate_signed_transaction(
-            50000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                40000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -308,12 +289,29 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
-        [tr] = await wallet.generate_signed_transaction(
-            3000000000000,
-            ph,
-            DEFAULT_TX_CONFIG,
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                50000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
         )
-        [tr] = await wallet.wallet_state_manager.add_pending_transactions([tr])
+
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                3000000000000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -333,21 +331,20 @@ class TestFullNodeBlockCompression:
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        assert detect_potential_template_generator(uint32(9), program) is None
         num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
-        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert num_blocks == 0
-        else:
-            assert num_blocks > 0
+        # since the hard fork, we don't use this compression mechanism
+        # anymore, we use CLVM backrefs in the encoding instead
+        assert num_blocks == 0
 
         # Creates a standard_transaction and an anyone-can-spend tx
-        [tr] = await wallet.generate_signed_transaction(
-            30000,
-            Program.to(1).get_tree_hash(),
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            await wallet.generate_signed_transaction(
+                30000,
+                Program.to(1).get_tree_hash(),
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         extra_spend = SpendBundle(
             [
                 make_spend(
@@ -389,11 +386,14 @@ class TestFullNodeBlockCompression:
         assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
         # Make a standard transaction and an anyone-can-spend transaction
-        [tr] = await wallet.generate_signed_transaction(
-            30000,
-            Program.to(1).get_tree_hash(),
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            await wallet.generate_signed_transaction(
+                30000,
+                Program.to(1).get_tree_hash(),
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         extra_spend = SpendBundle(
             [
                 make_spend(
@@ -429,13 +429,6 @@ class TestFullNodeBlockCompression:
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        template = detect_potential_template_generator(uint32(11), program)
-        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert template is None
-        else:
-            assert template is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         height = full_node_1.full_node.blockchain.get_peak().height
@@ -444,13 +437,6 @@ class TestFullNodeBlockCompression:
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
 
-        template = full_node_1.full_node.full_node_store.previous_generator
-        if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert template is None
-        else:
-            assert template is not None
         if test_reorgs:
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
@@ -476,11 +462,6 @@ class TestFullNodeBlockCompression:
                         assert results is not None
                         for result in results:
                             assert result.error is None
-
-            # Test revert previous_generator
-            for block in reog_blocks:
-                await full_node_1.full_node.add_block(block)
-            assert full_node_1.full_node.full_node_store.previous_generator is None
 
 
 class TestFullNodeProtocol:

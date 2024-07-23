@@ -9,6 +9,7 @@ updates:
       interval: "weekly"
       day: "tuesday"
     open-pull-requests-limit: 10
+    rebase-strategy: auto
     labels:
       - dependencies
       - go
@@ -25,6 +26,7 @@ updates:
       interval: "weekly"
       day: "tuesday"
     open-pull-requests-limit: 10
+    rebase-strategy: disabled
     labels:
       - dependencies
       - python
@@ -37,6 +39,7 @@ updates:
       interval: "weekly"
       day: "tuesday"
     open-pull-requests-limit: 10
+    rebase-strategy: auto
     labels:
       - dependencies
       - github_actions
@@ -49,6 +52,7 @@ updates:
       interval: "weekly"
       day: "tuesday"
     open-pull-requests-limit: 10
+    rebase-strategy: auto
     labels:
       - dependencies
       - javascript
@@ -61,6 +65,7 @@ updates:
       interval: "weekly"
       day: "tuesday"
     open-pull-requests-limit: 10
+    rebase-strategy: auto
     labels:
       - dependencies
       - rust
