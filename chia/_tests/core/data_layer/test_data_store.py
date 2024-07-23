@@ -1357,9 +1357,8 @@ async def test_server_http_ban(
         filename: str,
         proxy_url: str,
         server_info: ServerInfo,
-        timeout: int,
+        timeout: aiohttp.ClientTimeout,
         log: logging.Logger,
-        connect_timeout: int,
     ) -> None:
         if error:
             raise aiohttp.ClientConnectionError()
@@ -1374,11 +1373,10 @@ async def test_server_http_ban(
             root_hashes=[bytes32.random(seeded_random)],
             server_info=sinfo,
             client_foldername=tmp_path,
-            timeout=15,
+            timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
             log=log,
             proxy_url="",
             downloader=None,
-            connect_timeout=5,
         )
 
     assert success is False
@@ -1398,11 +1396,10 @@ async def test_server_http_ban(
             root_hashes=[bytes32.random(seeded_random)],
             server_info=sinfo,
             client_foldername=tmp_path,
-            timeout=15,
+            timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
             log=log,
             proxy_url="",
             downloader=None,
-            connect_timeout=5,
         )
 
     subscriptions = await data_store.get_subscriptions()
@@ -1906,11 +1903,10 @@ async def test_insert_from_delta_file_correct_file_exists(
         root_hashes=root_hashes,
         server_info=sinfo,
         client_foldername=tmp_path,
-        timeout=15,
+        timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
         log=log,
         proxy_url="",
         downloader=None,
-        connect_timeout=5,
     )
     assert success
 
@@ -1966,11 +1962,10 @@ async def test_insert_from_delta_file_incorrect_file_exists(
         root_hashes=[incorrect_root_hash],
         server_info=sinfo,
         client_foldername=tmp_path,
-        timeout=15,
+        timeout=aiohttp.ClientTimeout(total=15, sock_connect=5),
         log=log,
         proxy_url="",
         downloader=None,
-        connect_timeout=5,
     )
     assert not success
 
