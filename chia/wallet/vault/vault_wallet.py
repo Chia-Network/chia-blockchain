@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from chia_rs import G1Element, G2Element
-from ecdsa.keys import SigningKey
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 from typing_extensions import Unpack
 
 from chia.protocols.wallet_protocol import CoinState
@@ -378,8 +380,9 @@ class Vault(Wallet):
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
     ) -> List[SigningResponse]:
         root_pubkey = self.wallet_state_manager.observation_root
-        sk: SigningKey = self.wallet_state_manager.config["test_sk"]  # Temporary access to private key
-        sk_lookup: Dict[int, SigningKey] = {root_pubkey.get_fingerprint(): sk}
+        # Temporary access to private key
+        sk: ec.EllipticCurvePrivateKey = self.wallet_state_manager.config["test_sk"]
+        sk_lookup: Dict[int, ec.EllipticCurvePrivateKey] = {root_pubkey.get_fingerprint(): sk}
         responses: List[SigningResponse] = []
 
         # We don't need to expand path and sum hints since vault signer always uses the same keys
@@ -388,9 +391,12 @@ class Vault(Wallet):
             fingerprint: int = int.from_bytes(target.fingerprint, "big")
             if fingerprint not in sk_lookup:
                 raise ValueError(f"Pubkey {fingerprint} not found")
+            der_sig = sk_lookup[fingerprint].sign(target.message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
+            r, s = decode_dss_signature(der_sig)
+            sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
             responses.append(
                 SigningResponse(
-                    sk_lookup[fingerprint].sign_deterministic(target.message),
+                    sig,
                     target.hook,
                 )
             )

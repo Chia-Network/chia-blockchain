@@ -55,7 +55,7 @@ clvm_tools_rs = "0.1.43"  # Rust implementation of clvm_tools' compiler
 colorama = "0.4.6"  # Colorizes terminal output
 colorlog = "6.8.2"  # Adds color to logs
 concurrent_log_handler = "0.9.25"  # Concurrently log and rotate logs
-cryptography = "42.0.8"  # Python cryptography library for TLS - keyring conflict
+cryptography = "^43.0.0"  # Python cryptography library for TLS - keyring conflict
 dnslib = "0.9.24"  # dns lib
 dnspython = "2.6.1"  # Query DNS seeds
 filelock = "3.15.4"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
@@ -98,7 +98,6 @@ pytest-mock = { version = "3.14.0", optional = true }
 pytest-monitor = { version = "1.6.6", platform = "linux", optional = true }
 pytest-xdist = { version = "3.6.1", optional = true }
 types-aiofiles = { version = "23.2.0.20240311", optional = true }
-types-cryptography = { version = "3.3.23.2", optional = true }
 types-pyyaml = { version = "6.0.12.20240311", optional = true }
 types-setuptools = { version = "70.0.0.20240524", optional = true }
 lxml = { version = "5.2.2", optional = true }

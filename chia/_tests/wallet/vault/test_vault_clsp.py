@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from hashlib import sha256
 from typing import Optional
 
 import pytest
 from chia_rs import G1Element, PrivateKey
-from ecdsa import NIST256p, SigningKey
-from ecdsa.util import PRNG
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -29,9 +31,15 @@ ACS: Program = Program.to(1)
 ACS_PH: bytes32 = ACS.get_tree_hash()
 
 # setup keys
-seed = b"chia_secp"
-secp_sk = SigningKey.generate(curve=NIST256p, entropy=PRNG(seed), hashfunc=sha256)
-secp_pk = secp_sk.verifying_key.to_string("compressed")
+seed = 0x1A62C9636D1C9DB2E7D564D0C11603BF456AAD25AA7B12BDFD762B4E38E7EDC6
+secp_sk = ec.derive_private_key(seed, ec.SECP256R1(), default_backend())
+secp_pk = secp_sk.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
+
+
+def sign_message(private_key: ec.EllipticCurvePrivateKey, message: bytes) -> bytes:
+    der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
+    r, s = decode_dss_signature(der_sig)
+    return r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
 
 
 def test_secp_hidden() -> None:
@@ -92,11 +100,12 @@ def test_recovery_puzzles() -> None:
     escape_proof = Program.to((proof[0], proof[1][0]))
     delegated_puzzle = ACS
     delegated_solution = Program.to([[51, ACS_PH, amount]])
-    signed_delegated_puzzle = secp_sk.sign_deterministic(
-        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + DEFAULT_HIDDEN_PUZZLE_HASH
+    sig = sign_message(
+        secp_sk,
+        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + DEFAULT_HIDDEN_PUZZLE_HASH,
     )
     secp_solution = Program.to(
-        [delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
+        [delegated_puzzle, delegated_solution, sig, coin_id, DEFAULT_CONSTANTS.GENESIS_CHALLENGE]
     )
     escape_solution = Program.to([escape_proof, escape_puzzle, secp_solution])
     escape_conds = conditions_dict_for_solution(recovery_puzzle, escape_solution, INFINITE_COST)
@@ -109,17 +118,18 @@ def test_p2_delegated_secp() -> None:
     coin_id = Program.to("coin_id").get_tree_hash()
     delegated_puzzle = ACS
     delegated_solution = Program.to([[51, ACS_PH, 1000]])
-    signed_delegated_puzzle = secp_sk.sign_deterministic(
-        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + DEFAULT_HIDDEN_PUZZLE_HASH
+    sig = sign_message(
+        secp_sk,
+        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + DEFAULT_HIDDEN_PUZZLE_HASH,
     )
 
-    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id])
+    secp_solution = Program.to([delegated_puzzle, delegated_solution, sig, coin_id])
     conds = secp_puzzle.run(secp_solution)
 
     assert conds.at("rfrf").as_atom() == ACS_PH
 
     # test that a bad secp sig fails
-    sig_bytes = bytearray(signed_delegated_puzzle)
+    sig_bytes = bytearray(sig)
     sig_bytes[0] ^= (sig_bytes[0] + 1) % 256
     bad_signature = bytes(sig_bytes)
 
@@ -155,10 +165,11 @@ def test_vault_root_puzzle() -> None:
     # secp spend path
     delegated_puzzle = ACS
     delegated_solution = Program.to([[51, ACS_PH, amount]])
-    signed_delegated_puzzle = secp_sk.sign_deterministic(
-        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + DEFAULT_HIDDEN_PUZZLE_HASH
+    sig = sign_message(
+        secp_sk,
+        delegated_puzzle.get_tree_hash() + coin_id + DEFAULT_CONSTANTS.GENESIS_CHALLENGE + DEFAULT_HIDDEN_PUZZLE_HASH,
     )
-    secp_solution = Program.to([delegated_puzzle, delegated_solution, signed_delegated_puzzle, coin_id])
+    secp_solution = Program.to([delegated_puzzle, delegated_solution, sig, coin_id])
     proof = vault_merkle_tree.generate_proof(secp_puzzlehash)
     secp_proof = Program.to((proof[0], proof[1][0]))
     vault_solution = Program.to([secp_proof, secp_puzzle, secp_solution])
