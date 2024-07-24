@@ -4672,6 +4672,8 @@ class WalletRpcApi:
         """
         Initiate Vault Recovery
         """
+        if request.fee != 0:
+            raise ValueError("Recovery endpoint cannot add fees because it assumes your vault is currently inacessible")
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=Vault)
         hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(request.hp_index).get_tree_hash()
         genesis_challenge = self.service.wallet_state_manager.constants.GENESIS_CHALLENGE
