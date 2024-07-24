@@ -2163,10 +2163,31 @@ class FullNode:
             sub_slot_start_iters = uint128(0)
         else:
             ss_res = self.full_node_store.get_sub_slot(unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash)
-            if ss_res is None:
-                self.log.warning(f"Do not have sub slot {unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash}")
-                return None
-            _, _, sub_slot_start_iters = ss_res
+            sub_slot_start_iters = None
+            if ss_res is not None:
+                sub_slot_start_iters = ss_res[2]
+            else:
+                # check the prev slot
+                peak = self.blockchain.get_peak()
+                assert peak is not None
+                current_eos_iters = peak.ip_sub_slot_total_iters(self.blockchain.constants)
+                number_of_slots = 0
+                if peak.finished_challenge_slot_hashes is not None:
+                    number_of_slots = len(peak.finished_challenge_slot_hashes)
+                curr = prev_b
+                assert curr is not None
+                while not curr.first_in_sub_slot:
+                    curr = self.blockchain.block_record(curr.prev_hash)
+                assert curr.finished_challenge_slot_hashes is not None
+                for slot_hash in reversed(curr.finished_challenge_slot_hashes):
+                    if slot_hash == unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash:
+                        assert len(self.full_node_store.finished_sub_slots) >= 1
+                        sub_slot_start_iters = uint128(current_eos_iters - sub_slot_iters * number_of_slots)
+                        break
+                    number_of_slots += 1
+        if sub_slot_start_iters is None:
+            self.log.warning(f"Do not have sub slot {unfinished_block.reward_chain_block.pos_ss_cc_challenge_hash}")
+            return None
         sp_total_iters = uint128(
             sub_slot_start_iters
             + calculate_sp_iters(

@@ -113,12 +113,14 @@ class TestNewPeak:
                 == new_peak.reward_chain_block.get_hash()
             )
 
+    @pytest.mark.parametrize("skip_slot", [0, 1, 2, 3, 10])
     @pytest.mark.anyio
     async def test_timelord_new_peak_unfinished_orphaned(
         self,
         one_node: Tuple[List[FullNodeService], List[FullNodeSimulator], BlockTools],
         timelord: Tuple[TimelordAPI, ChiaServer],
         default_1000_blocks: List[FullBlock],
+        skip_slot: int,
     ) -> None:
         [full_node_service], _, bt = one_node
         full_node = full_node_service._node
@@ -142,7 +144,10 @@ class TestNewPeak:
                 # make two new blocks on tip, block_2 has higher total iterations
                 block_1 = bt.get_consecutive_blocks(1, default_1000_blocks)[-1]
                 block_2 = bt.get_consecutive_blocks(
-                    1, default_1000_blocks, min_signage_point=block_1.reward_chain_block.signage_point_index
+                    1,
+                    default_1000_blocks,
+                    min_signage_point=block_1.reward_chain_block.signage_point_index,
+                    skip_slots=skip_slot,
                 )[-1]
 
                 # make sure block_2 has higher iterations then block_1
