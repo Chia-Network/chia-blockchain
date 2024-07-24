@@ -40,11 +40,12 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
     res = await client.vault_create(
         VaultCreate(
             secp_pk=SECP_PK,
-            tx_config=wallet_environments.tx_config,
             hp_index=hidden_puzzle_index,
             bls_pk=bls_pk,
             timelock=timelock,
-        )
+            push=True,
+        ),
+        tx_config=wallet_environments.tx_config,
     )
 
     all_removals = [coin for tx in res.transactions for coin in tx.removals]
@@ -302,10 +303,10 @@ async def test_vault_recovery(
                 wallet_id=wallet.id(),
                 secp_pk=RECOVERY_SECP_PK,
                 hp_index=uint32(0),
-                tx_config=DEFAULT_TX_CONFIG,
                 bls_pk=bls_pk,
                 timelock=timelock,
-            )
+            ),
+            tx_config=wallet_environments.tx_config,
         )
     ).transactions
 

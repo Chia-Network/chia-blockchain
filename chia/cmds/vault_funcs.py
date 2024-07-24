@@ -42,12 +42,12 @@ async def create_vault(
                 VaultCreate(
                     secp_pk=bytes.fromhex(public_key),
                     hp_index=uint32(hidden_puzzle_index),
-                    tx_config=tx_config,
                     bls_pk=G1Element.from_bytes(bytes.fromhex(recovery_public_key)) if recovery_public_key else None,
                     timelock=uint64(timelock) if timelock else None,
                     fee=fee,
                     push=True,
-                )
+                ),
+                tx_config=tx_config,
             )
             print("Successfully created a Vault wallet")
         except Exception as e:
@@ -84,11 +84,11 @@ async def recover_vault(
                 VaultRecovery(
                     wallet_id=uint32(wallet_id),
                     secp_pk=bytes.fromhex(public_key),
-                    tx_config=tx_config,
                     hp_index=uint32(hidden_puzzle_index),
                     bls_pk=G1Element.from_bytes(bytes.fromhex(recovery_public_key)) if recovery_public_key else None,
                     timelock=uint64(timelock) if timelock else None,
-                )
+                ),
+                tx_config=tx_config,
             )
             # TODO: do not rely on ordering of transactions here
             with open(initiate_file, "w") as f:

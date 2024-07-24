@@ -1706,11 +1706,17 @@ class WalletRpcClient(RpcClient):
     async def vault_create(
         self,
         args: VaultCreate,
+        tx_config: TXConfig,
     ) -> VaultCreateResponse:
-        return VaultCreateResponse.from_json_dict(await self.fetch("vault_create", args.to_json_dict()))
+        return VaultCreateResponse.from_json_dict(
+            await self.fetch("vault_create", {**args.to_json_dict(), **tx_config.to_json_dict()})
+        )
 
     async def vault_recovery(
         self,
         args: VaultRecovery,
+        tx_config: TXConfig,
     ) -> VaultRecoveryResponse:
-        return VaultRecoveryResponse.from_json_dict(await self.fetch("vault_recovery", args.to_json_dict()))
+        return VaultRecoveryResponse.from_json_dict(
+            await self.fetch("vault_recovery", {**args.to_json_dict(), **tx_config.to_json_dict()})
+        )

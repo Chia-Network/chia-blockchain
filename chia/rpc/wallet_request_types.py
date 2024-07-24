@@ -21,7 +21,6 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
-from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
@@ -94,7 +93,6 @@ class ExecuteSigningInstructionsResponse(Streamable):
 @streamable
 @dataclass(frozen=True, kw_only=True)
 class TransactionEndpointRequest(Streamable):
-    tx_config: TXConfig
     fee: uint64 = uint64(0)
     push: Optional[bool] = None
 
