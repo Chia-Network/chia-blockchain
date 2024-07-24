@@ -38,7 +38,13 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
         timelock = uint64(10)
     hidden_puzzle_index = uint32(0)
     res = await client.vault_create(
-        VaultCreate(SECP_PK, wallet_environments.tx_config, hidden_puzzle_index, bls_pk=bls_pk, timelock=timelock)
+        VaultCreate(
+            secp_pk=SECP_PK,
+            tx_config=wallet_environments.tx_config,
+            hp_index=hidden_puzzle_index,
+            bls_pk=bls_pk,
+            timelock=timelock,
+        )
     )
 
     all_removals = [coin for tx in res.transactions for coin in tx.removals]

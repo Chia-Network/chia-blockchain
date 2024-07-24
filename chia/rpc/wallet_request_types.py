@@ -92,6 +92,14 @@ class ExecuteSigningInstructionsResponse(Streamable):
 
 
 @streamable
+@dataclass(frozen=True, kw_only=True)
+class TransactionEndpointRequest(Streamable):
+    tx_config: TXConfig
+    fee: uint64 = uint64(0)
+    push: Optional[bool] = None
+
+
+@streamable
 @dataclass(frozen=True)
 class TransactionEndpointResponse(Streamable):
     unsigned_transactions: List[UnsignedTransaction]
@@ -99,13 +107,10 @@ class TransactionEndpointResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True)
-class VaultCreate(Streamable):
+@dataclass(frozen=True, kw_only=True)
+class VaultCreate(TransactionEndpointRequest):
     secp_pk: bytes
-    tx_config: TXConfig
     hp_index: uint32 = uint32(0)
-    fee: uint64 = uint64(0)
-    push: Optional[bool] = None
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
 
@@ -117,14 +122,11 @@ class VaultCreateResponse(TransactionEndpointResponse):
 
 
 @streamable
-@dataclass(frozen=True)
-class VaultRecovery(Streamable):
+@dataclass(frozen=True, kw_only=True)
+class VaultRecovery(TransactionEndpointRequest):
     wallet_id: uint32
     secp_pk: bytes
-    tx_config: TXConfig
     hp_index: uint32 = uint32(0)
-    fee: uint64 = uint64(0)
-    push: Optional[bool] = None
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
 

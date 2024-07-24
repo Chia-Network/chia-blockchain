@@ -40,12 +40,12 @@ async def create_vault(
         try:
             await wallet_client.vault_create(
                 VaultCreate(
-                    bytes.fromhex(public_key),
-                    uint32(hidden_puzzle_index),
-                    tx_config,
-                    G1Element.from_bytes(bytes.fromhex(recovery_public_key)) if recovery_public_key else None,
-                    uint64(timelock) if timelock else None,
-                    fee,
+                    secp_pk=bytes.fromhex(public_key),
+                    hp_index=uint32(hidden_puzzle_index),
+                    tx_config=tx_config,
+                    bls_pk=G1Element.from_bytes(bytes.fromhex(recovery_public_key)) if recovery_public_key else None,
+                    timelock=uint64(timelock) if timelock else None,
+                    fee=fee,
                     push=True,
                 )
             )
@@ -82,12 +82,12 @@ async def recover_vault(
         try:
             response = await wallet_client.vault_recovery(
                 VaultRecovery(
-                    uint32(wallet_id),
-                    bytes.fromhex(public_key),
-                    tx_config,
-                    uint32(hidden_puzzle_index),
-                    G1Element.from_bytes(bytes.fromhex(recovery_public_key)) if recovery_public_key else None,
-                    uint64(timelock) if timelock else None,
+                    wallet_id=uint32(wallet_id),
+                    secp_pk=bytes.fromhex(public_key),
+                    tx_config=tx_config,
+                    hp_index=uint32(hidden_puzzle_index),
+                    bls_pk=G1Element.from_bytes(bytes.fromhex(recovery_public_key)) if recovery_public_key else None,
+                    timelock=uint64(timelock) if timelock else None,
                 )
             )
             # TODO: do not rely on ordering of transactions here
