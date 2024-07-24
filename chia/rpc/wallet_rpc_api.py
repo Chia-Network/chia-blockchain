@@ -31,6 +31,8 @@ from chia.rpc.wallet_request_types import (
     GetNotificationsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    VaultCreate,
+    VaultCreateResponse,
 )
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -4636,40 +4638,31 @@ class WalletRpcApi:
     # VAULT
     ##########################################################################################
     @tx_endpoint(push=False)
+    @marshal
     async def vault_create(
         self,
-        request: Dict[str, Any],
+        request: VaultCreate,
         action_scope: WalletActionScope,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> VaultCreateResponse:
         """
         Create a new vault
         """
-        assert self.service.wallet_state_manager
-        secp_pk = bytes.fromhex(str(request.get("secp_pk")))
-        hp_index = request.get("hp_index", 0)
-        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(hp_index).get_tree_hash()
-        bls_str = request.get("bls_pk")
-        bls_pk = G1Element.from_bytes(bytes.fromhex(str(bls_str))) if bls_str else None
-        timelock_int = request.get("timelock")
-        timelock = uint64(timelock_int) if timelock_int else None
-        fee = uint64(request.get("fee", 0))
-        genesis_challenge = DEFAULT_CONSTANTS.GENESIS_CHALLENGE
+        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(request.hp_index).get_tree_hash()
+        genesis_challenge = self.service.wallet_state_manager.constants.GENESIS_CHALLENGE
 
         await self.service.wallet_state_manager.create_vault_wallet(
-            secp_pk,
+            request.secp_pk,
             hidden_puzzle_hash,
             genesis_challenge,
             tx_config,
             action_scope,
-            bls_pk=bls_pk,
-            timelock=timelock,
-            fee=fee,
+            bls_pk=request.bls_pk,
+            timelock=request.timelock,
+            fee=request.fee,
         )
-        return {
-            "transactions": None,  # tx_endpoint will take care of this
-        }
+        return VaultCreateResponse([], [])  # tx_endpoint will take care of filling this out
 
     async def vault_recovery(self, request: Dict[str, Any], tx_config: TXConfig = DEFAULT_TX_CONFIG) -> EndpointResult:
         """

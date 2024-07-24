@@ -3,9 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
+from chia_rs import G1Element
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
@@ -93,6 +95,22 @@ class ExecuteSigningInstructionsResponse(Streamable):
 class TransactionEndpointResponse(Streamable):
     unsigned_transactions: List[UnsignedTransaction]
     transactions: List[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class VaultCreate(Streamable):
+    secp_pk: bytes
+    hp_index: uint32 = uint32(0)
+    fee: uint64 = uint64(0)
+    bls_pk: Optional[G1Element] = None
+    timelock: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VaultCreateResponse(TransactionEndpointResponse):
+    pass
 
 
 # TODO: The section below needs corresponding request types
