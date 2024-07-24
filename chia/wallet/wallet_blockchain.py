@@ -79,8 +79,7 @@ class WalletBlockchain(BlockchainInterface):
                 self.add_block_record(record)
                 if record.is_transaction_block:
                     assert record.timestamp is not None
-                    if record.timestamp > latest_timestamp:
-                        latest_timestamp = record.timestamp
+                    latest_timestamp = max(latest_timestamp, record.timestamp)
 
             self._sub_slot_iters = records[-1].sub_slot_iters
             self._difficulty = uint64(records[-1].weight - records[-2].weight)
@@ -99,8 +98,8 @@ class WalletBlockchain(BlockchainInterface):
             and block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None
         ):
             assert block.finished_sub_slots[0].challenge_chain.new_difficulty is not None  # They both change together
-            sub_slot_iters = uint64(block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters)
-            difficulty = uint64(block.finished_sub_slots[0].challenge_chain.new_difficulty)
+            sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+            difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
         else:
             sub_slot_iters = self._sub_slot_iters
             difficulty = self._difficulty
@@ -164,7 +163,7 @@ class WalletBlockchain(BlockchainInterface):
         if timestamp is not None:
             self._latest_timestamp = timestamp
         elif block.foliage_transaction_block is not None:
-            self._latest_timestamp = uint64(block.foliage_transaction_block.timestamp)
+            self._latest_timestamp = block.foliage_transaction_block.timestamp
         log.info(f"Peak set to: {self._peak.height} timestamp: {self._latest_timestamp}")
 
     async def get_peak_block(self) -> Optional[HeaderBlock]:

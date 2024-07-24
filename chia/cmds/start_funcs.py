@@ -31,7 +31,9 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     return process
 
 
-async def create_start_daemon_connection(root_path: Path, config: Dict[str, Any]) -> Optional[DaemonProxy]:
+async def create_start_daemon_connection(
+    root_path: Path, config: Dict[str, Any], *, skip_keyring: bool
+) -> Optional[DaemonProxy]:
     connection = await connect_to_daemon_and_validate(root_path, config)
     if connection is None:
         print("Starting daemon")
@@ -44,24 +46,29 @@ async def create_start_daemon_connection(root_path: Path, config: Dict[str, Any]
         # it prints "daemon: listening"
         connection = await connect_to_daemon_and_validate(root_path, config)
     if connection:
-        passphrase = None
-        if await connection.is_keyring_locked():
-            passphrase = Keychain.get_cached_master_passphrase()
-            if passphrase is None or not Keychain.master_passphrase_is_valid(passphrase):
-                with ThreadPoolExecutor(max_workers=1, thread_name_prefix="get_current_passphrase") as executor:
-                    passphrase = await asyncio.get_running_loop().run_in_executor(executor, get_current_passphrase)
+        if skip_keyring:
+            print("Skipping to unlock keyring")
+        else:
+            passphrase = None
+            if await connection.is_keyring_locked():
+                passphrase = Keychain.get_cached_master_passphrase()
+                if passphrase is None or not Keychain.master_passphrase_is_valid(passphrase):
+                    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="get_current_passphrase") as executor:
+                        passphrase = await asyncio.get_running_loop().run_in_executor(executor, get_current_passphrase)
 
-        if passphrase:
-            print("Unlocking daemon keyring")
-            await connection.unlock_keyring(passphrase)
+            if passphrase:
+                print("Unlocking daemon keyring")
+                await connection.unlock_keyring(passphrase)
 
         return connection
     return None
 
 
-async def async_start(root_path: Path, config: Dict[str, Any], group: tuple[str, ...], restart: bool) -> None:
+async def async_start(
+    root_path: Path, config: Dict[str, Any], group: tuple[str, ...], restart: bool, *, skip_keyring: bool
+) -> None:
     try:
-        daemon = await create_start_daemon_connection(root_path, config)
+        daemon = await create_start_daemon_connection(root_path, config, skip_keyring=skip_keyring)
     except KeychainMaxUnlockAttempts:
         print("Failed to unlock keyring")
         return None

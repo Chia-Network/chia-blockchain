@@ -6,12 +6,13 @@ from typing import Any, List, Optional, Set, Union
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.ints import uint64
-from chia.util.misc import VersionedBlob
+from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import MOD
@@ -121,11 +122,17 @@ def create_merkle_solution(
 
 
 def match_clawback_puzzle(
-    uncurried: UncurriedPuzzle, inner_puzzle: Program, inner_solution: Program
+    uncurried: UncurriedPuzzle,
+    inner_puzzle: Union[Program, SerializedProgram],
+    inner_solution: Union[Program, SerializedProgram],
 ) -> Optional[ClawbackMetadata]:
     # Check if the inner puzzle is a P2 puzzle
     if MOD != uncurried.mod:
         return None
+    if not isinstance(inner_puzzle, SerializedProgram):
+        inner_puzzle = SerializedProgram.from_program(inner_puzzle)
+    if not isinstance(inner_solution, SerializedProgram):
+        inner_solution = SerializedProgram.from_program(inner_solution)
     # Fetch Remark condition
     conditions = conditions_for_solution(
         inner_puzzle,

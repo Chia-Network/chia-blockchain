@@ -26,8 +26,8 @@ from chia.protocols.harvester_protocol import (
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
+from chia.util.batches import to_batches
 from chia.util.ints import int16, uint32, uint64
-from chia.util.misc import to_batches
 
 log = logging.getLogger(__name__)
 
@@ -52,8 +52,7 @@ def _convert_plot_info_list(plot_infos: List[PlotInfo]) -> List[Plot]:
 
 
 class PayloadType(Protocol):
-    def __init__(self, identifier: PlotSyncIdentifier, *args: object) -> None:
-        ...
+    def __init__(self, identifier: PlotSyncIdentifier, *args: object) -> None: ...
 
     def __bytes__(self) -> bytes:
         pass

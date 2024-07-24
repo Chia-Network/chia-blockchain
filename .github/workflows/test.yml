@@ -3,24 +3,73 @@ name: 🧪 test
 on:
   push:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-    - long_lived/**
-    - main
-    - release/**
+      - long_lived/**
+      - main
+      - release/**
     tags:
-    - '**'
+      - "**"
   pull_request:
     paths-ignore:
-    - '**.md'
+      - "**.md"
     branches:
-    - '**'
-  workflow_dispatch: null
+      - "**"
+  workflow_dispatch:
+    inputs:
+      build-job-matrix-arguments:
+        description: "extra arguments for build-job-matrix.py"
+        default: ""
+        required: false
+        type: string
+      per:
+        description: "individual job scope"
+        default: "directory"
+        required: false
+        type: choice
+        options:
+          - directory
+          - file
+      only:
+        description: "only run this job"
+        default: ""
+        required: false
+        type: string
+      duplicates:
+        description: "times to run each job"
+        default: 1
+        required: false
+        type: number
+      run-linux:
+        description: "run Linux tests"
+        default: true
+        required: false
+        type: boolean
+      run-macos-intel:
+        description: "run macOS-intel tests"
+        default: true
+        required: false
+        type: boolean
+      run-macos-arm:
+        description: "run macOS-arm tests"
+        default: true
+        required: false
+        type: boolean
+      run-windows:
+        description: "run Windows tests"
+        default: true
+        required: false
+        type: boolean
+      full-python-matrix:
+        description: "run full Python version matrix"
+        default: false
+        required: false
+        type: boolean
   schedule:
-    - cron: '0 13 * * *'
+    - cron: "0 13 * * *"
 
 concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}--${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -35,33 +84,61 @@ jobs:
       - name: Setup Python environment
         uses: Chia-Network/actions/setup-python@main
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Generate matrix configuration
         id: configure
         run: |
-          python tests/build-job-matrix.py --per directory --verbose > matrix.json
+          python chia/_tests/build-job-matrix.py --per directory --verbose ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
-          echo matrix_mode=${{ ( github.event_name == 'schedule' ) && 'all' || ( github.event_name == 'workflow_dispatch' ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && github.ref == 'refs/heads/main' ) && 'main' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') ) && 'all' || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') ) && 'all' || 'main' }} >> "$GITHUB_OUTPUT"
+          echo matrix_mode=${{
+            ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' )
+            && 'limited'
+            || (
+              ( github.event_name == 'schedule' || inputs.full-python-matrix )
+              || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') )
+              || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') )
+            )
+            && 'all'
+            || 'main'
+          }} >> "$GITHUB_OUTPUT"
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
-  macos:
+  macos-intel:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-intel
+    uses: ./.github/workflows/test-single.yml
+    needs: configure
+    with:
+      emoji: 🍎
+      matrix: macos-intel
+      name: macOS Intel
+      file_name: macos
+      concurrency-name: macos-intel
+      configuration: ${{ needs.configure.outputs.configuration }}
+      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
+      runs-on: macos-12
+      arch: intel
+  macos-arm:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
       emoji: 🍎
       matrix: macos
-      name: macOS
-      file_name: macos
-      concurrency_name: macos
+      name: macOS ARM
+      file_name: macos-arm
+      concurrency-name: macos-arm
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: macos-latest
+      runs-on: macos-14
+      arch: arm
+      collect-junit: false
   ubuntu:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-linux
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -69,11 +146,14 @@ jobs:
       matrix: ubuntu
       name: Ubuntu
       file_name: ubuntu
-      concurrency_name: ubuntu
+      concurrency-name: ubuntu
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
+      arch: intel
+      collect-junit: false
   windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.run-windows
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -81,16 +161,19 @@ jobs:
       matrix: windows
       name: Windows
       file_name: windows
-      concurrency_name: windows
+      concurrency-name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-latest
+      arch: intel
+      collect-junit: false
 
   coverage:
     name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
-      - macos
+      - macos-intel
+      - macos-arm
       - ubuntu
       - windows
     strategy:
@@ -102,11 +185,11 @@ jobs:
             name: Ubuntu
             runs-on: ubuntu-latest
         python:
-          - name: '3.10'
-            action: '3.10'
-            apt: '3.10'
-            install_sh: '3.10'
-            matrix: '3.10'
+          - name: "3.10"
+            action: "3.10"
+            apt: "3.10"
+            install_sh: "3.10"
+            matrix: "3.10"
 
     steps:
       - uses: actions/checkout@v4
@@ -119,6 +202,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Results
+        if: false
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
@@ -126,6 +210,7 @@ jobs:
           path: junit-data
 
       - name: Format JUnit data and prepare results
+        if: false
         run: |
           sudo snap install yq
           ls junit-data/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite.testcase |= sort_by(.+@classname, .+@name)' --inplace {}
@@ -136,18 +221,11 @@ jobs:
           ls junit-results/*.xml | xargs --max-procs=10 --replace={} yq eval '.testsuites.testsuite |= sort_by(.+@name) | .testsuites.testsuite[].testcase |= sort_by(.+@classname, .+@name)' --inplace {}
 
       - name: Publish formatted JUnit data
+        if: false
         uses: actions/upload-artifact@v4
         with:
           name: junit-data
           path: junit-data/*
-          if-no-files-found: error
-
-      - name: Publish JUnit results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: junit-results
-          path: junit-results/*
           if-no-files-found: error
 
       - name: Download Coverage
@@ -169,6 +247,20 @@ jobs:
 
       - uses: chia-network/actions/activate-venv@main
 
+      - name: Add time out assert results to workflow summary
+        if: always() && false
+        run: |
+          python -m chia._tests.process_junit --limit 50 --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> "$GITHUB_STEP_SUMMARY"
+          python -m chia._tests.process_junit            --type time_out_assert --xml junit-results/junit.xml --markdown --link-prefix ${{ github.event.repository.html_url }}/blob/${{ github.sha }}/ --link-line-separator \#L >> junit-results/time_out_assert.md
+
+      - name: Publish JUnit results
+        if: always() && false
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results
+          path: junit-results/*
+          if-no-files-found: error
+
       - name: Coverage Processing
         run: |
           coverage combine --rcfile=.coveragerc --data-file=coverage-reports/.coverage coverage-data/
@@ -184,20 +276,26 @@ jobs:
         if: always()
         run: |
           set -o pipefail
-          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/**/*' --show-missing | tee coverage-reports/coverage-chia-stdout
+          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/**/*' --omit='chia/_tests/**/*' --show-missing | tee coverage-reports/coverage-chia-stdout
 
-      - name: Coverage report (tests/)
+      - name: Coverage report (chia/_tests/)
         if: always()
         run: |
           set -o pipefail
-          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
+          coverage report --rcfile=.coveragerc --data-file=coverage-reports/.coverage --include='chia/_tests/**/*' --show-missing | tee coverage-reports/coverage-tests-stdout
+
+      - name: Identify parent commit
+        id: parent-commit
+        run: |
+          echo hash=$(git rev-parse HEAD~1) >> "$GITHUB_OUTPUT"
 
       - name: Coverage report (diff)
         if: (github.base_ref != '' || github.event.before != '') && always()
         env:
-          compare-branch: ${{ github.base_ref == '' && github.event.before || format('origin/{0}', github.base_ref) }}
+          compare-branch: ${{ github.base_ref == '' && steps.parent-commit.hash || format('origin/{0}', github.base_ref) }}
         run: |
-          diff-cover --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
+          set -o pipefail
+          diff-cover --config-file=.diffcover.toml --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout
           COV_STATUS="${PIPESTATUS[0]}"
           echo "COV_STATUS=$COV_STATUS" >> "$GITHUB_ENV"
           if [[ $COV_STATUS != '0' && "$GITHUB_BASE_REF" != '' ]]; then

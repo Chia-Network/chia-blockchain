@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, fields, replace
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union, cast, final, get_type_hints
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union, final, get_type_hints
 
 from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
@@ -11,7 +11,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
@@ -19,13 +19,11 @@ _T_Condition = TypeVar("_T_Condition", bound="Condition")
 
 class Condition(Streamable, ABC):
     @abstractmethod
-    def to_program(self) -> Program:
-        ...
+    def to_program(self) -> Program: ...
 
     @classmethod
     @abstractmethod
-    def from_program(cls: Type[_T_Condition], program: Program) -> _T_Condition:
-        ...
+    def from_program(cls: Type[_T_Condition], program: Program) -> _T_Condition: ...
 
 
 @final
@@ -243,9 +241,11 @@ class CreateCoin(Condition):
         return cls(
             bytes32(program.at("rf").as_atom()),
             uint64(program.at("rrf").as_int()),
-            None
-            if potential_memos == Program.to(None)
-            else [memo.as_atom() for memo in potential_memos.at("f").as_iter()],
+            (
+                None
+                if potential_memos == Program.to(None)
+                else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
+            ),
         )
 
 
@@ -401,6 +401,48 @@ class CreatePuzzleAnnouncement(Condition):
         return cls(
             program.at("rf").as_atom(),
             puzzle_hash,
+        )
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class SendMessage(Condition):
+    mode: uint8
+    msg: bytes
+    args: Program
+
+    def to_program(self) -> Program:
+        condition: Program = Program.to([ConditionOpcode.SEND_MESSAGE, self.mode, self.msg, self.args])
+        return condition
+
+    @classmethod
+    def from_program(cls, program: Program) -> SendMessage:
+        return cls(
+            uint8(program.at("rf").as_int()),
+            program.at("rrf").as_atom(),
+            program.at("rrrf"),
+        )
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class ReceiveMessage(Condition):
+    mode: uint8
+    msg: bytes
+    args: Program
+
+    def to_program(self) -> Program:
+        condition: Program = Program.to([ConditionOpcode.RECEIVE_MESSAGE, self.mode, self.msg, self.args])
+        return condition
+
+    @classmethod
+    def from_program(cls, program: Program) -> ReceiveMessage:
+        return cls(
+            uint8(program.at("rf").as_int()),
+            program.at("rrf").as_atom(),
+            program.at("rrrf"),
         )
 
 
@@ -733,8 +775,7 @@ class UnknownCondition(Condition):
     args: List[Program]
 
     def to_program(self) -> Program:
-        # TODO: Remove cast when we have proper hinting for this
-        return cast(Program, self.opcode.cons(Program.to(self.args)))
+        return self.opcode.cons(Program.to(self.args))
 
     @classmethod
     def from_program(cls, program: Program) -> UnknownCondition:
@@ -1063,6 +1104,8 @@ CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.value: AssertCoinAnnouncement,
     ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT.value: CreatePuzzleAnnouncement,
     ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT.value: AssertPuzzleAnnouncement,
+    ConditionOpcode.SEND_MESSAGE.value: SendMessage,
+    ConditionOpcode.RECEIVE_MESSAGE.value: ReceiveMessage,
     ConditionOpcode.ASSERT_CONCURRENT_SPEND.value: AssertConcurrentSpend,
     ConditionOpcode.ASSERT_CONCURRENT_PUZZLE.value: AssertConcurrentPuzzle,
     ConditionOpcode.ASSERT_MY_COIN_ID.value: AssertMyCoinID,
@@ -1101,6 +1144,8 @@ CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.value: AssertAnnouncement,
     ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT.value: CreateAnnouncement,
     ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT.value: AssertAnnouncement,
+    ConditionOpcode.SEND_MESSAGE.value: SendMessage,
+    ConditionOpcode.RECEIVE_MESSAGE.value: ReceiveMessage,
     ConditionOpcode.ASSERT_CONCURRENT_SPEND.value: AssertConcurrentSpend,
     ConditionOpcode.ASSERT_CONCURRENT_PUZZLE.value: AssertConcurrentPuzzle,
     ConditionOpcode.ASSERT_MY_COIN_ID.value: AssertMyCoinID,

@@ -7,10 +7,10 @@ from contextlib import contextmanager
 from subprocess import check_call
 from typing import Iterator
 
+from chia._tests.util.blockchain import persistent_blocks
 from chia.simulator.block_tools import create_block_tools_async, test_constants
 from chia.simulator.keyring import TempKeyring
 from chia.util.keyring_wrapper import KeyringWrapper
-from tests.util.blockchain import persistent_blocks
 
 
 @contextmanager
@@ -28,7 +28,7 @@ def enable_profiler(profile: bool, name: str) -> Iterator[None]:
     check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot", output_file + ".profile"])
     with open(output_file + ".png", "w+") as f:
         check_call(["dot", "-T", "png", output_file + ".dot"], stdout=f)
-    print("  output written to: %s.png" % output_file)
+    print(f"  output written to: {output_file}.png")
 
 
 async def run_test_chain_benchmark() -> None:

@@ -3,8 +3,6 @@ from __future__ import annotations
 import dataclasses
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 
-from chia_rs import CoinSpend as RustCoinSpend
-from chia_rs import Program as RustProgram
 from chia_rs import fast_forward_singleton
 
 from chia.consensus.condition_costs import ConditionCost
@@ -46,9 +44,9 @@ class DedupCoinSpend:
 @dataclasses.dataclass(frozen=True)
 class UnspentLineageInfo:
     coin_id: bytes32
-    coin_amount: int
+    coin_amount: uint64
     parent_id: bytes32
-    parent_amount: int
+    parent_amount: uint64
     parent_parent_id: bytes32
 
 
@@ -117,13 +115,8 @@ def perform_the_fast_forward(
     # These hold because puzzle hash is not expected to change
     assert new_coin.name() == unspent_lineage_info.coin_id
     assert new_parent.name() == unspent_lineage_info.parent_id
-    rust_coin_spend = RustCoinSpend(
-        coin=spend_data.coin_spend.coin,
-        puzzle_reveal=RustProgram.from_bytes(bytes(spend_data.coin_spend.puzzle_reveal)),
-        solution=RustProgram.from_bytes(bytes(spend_data.coin_spend.solution)),
-    )
     new_solution = SerializedProgram.from_bytes(
-        fast_forward_singleton(spend=rust_coin_spend, new_coin=new_coin, new_parent=new_parent)
+        fast_forward_singleton(spend=spend_data.coin_spend, new_coin=new_coin, new_parent=new_parent)
     )
     singleton_child = None
     patched_additions = []
@@ -340,16 +333,16 @@ class EligibleCoinSpends:
         )
         # We need to run the new spend bundle to make sure it remains valid
         generator = simple_solution_generator(new_sb)
-        assert mempool_item.npc_result.conds is not None
         new_npc_result = get_name_puzzle_conditions(
             generator=generator,
-            max_cost=mempool_item.npc_result.conds.cost,
+            max_cost=mempool_item.conds.cost,
             mempool_mode=True,
             height=height,
             constants=constants,
         )
         if new_npc_result.error is not None:
             raise ValueError("Mempool item became invalid after singleton fast forward.")
+        assert new_npc_result.conds is not None
         # Update bundle_coin_spends using the collected data
         for coin_id in replaced_coin_ids:
             mempool_item.bundle_coin_spends.pop(coin_id, None)
@@ -361,4 +354,4 @@ class EligibleCoinSpends:
         # change. Still, it's good form to update the spend bundle with the
         # new coin spends
         mempool_item.spend_bundle = new_sb
-        mempool_item.npc_result = new_npc_result
+        mempool_item.conds = new_npc_result.conds

@@ -256,6 +256,7 @@ class WalletDBReader:
             except Exception as e:
                 errors.append(f"Exception while trying to access wallet {main_wallet_id} from users_wallets: {e}")
 
+            max_id: Optional[int] = None
             max_id_row = await execute_fetchone(reader, "SELECT MAX(id) FROM users_wallets")
             if max_id_row is None:
                 errors.append("Error fetching max wallet ID from table users_wallets. No wallets ?!?")
@@ -263,6 +264,9 @@ class WalletDBReader:
                 cursor = await reader.execute("""SELECT * FROM users_wallets""")
                 rows = await cursor.fetchall()
                 max_id = max_id_row[0]
+
+            assert max_id is not None
+
             errors.extend(check_for_gaps([r[0] for r in rows], main_wallet_id, max_id, data_type_plural="Wallet IDs"))
 
             if self.verbose:

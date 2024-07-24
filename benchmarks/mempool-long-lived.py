@@ -11,7 +11,7 @@ from clvm.casts import int_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -44,7 +44,7 @@ class BenchBlockRecord:
         return self.timestamp is not None
 
 
-IDENTITY_PUZZLE = Program.to(1)
+IDENTITY_PUZZLE = SerializedProgram.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
 
@@ -62,7 +62,7 @@ def make_spend_bundle(coin: Coin, height: int) -> SpendBundle:
             int_to_bytes(coin.amount // 2 - height * 10),
         ],
     ]
-    spend = CoinSpend(coin, IDENTITY_PUZZLE, Program.to(conditions))
+    spend = CoinSpend(coin, IDENTITY_PUZZLE, SerializedProgram.to(conditions))
     return SpendBundle([spend], G2Element())
 
 
@@ -106,7 +106,7 @@ async def run_mempool_benchmark() -> None:
 
         # add 10 transactions to the mempool
         for i in range(10):
-            coin = Coin(make_hash(height * 10 + i), IDENTITY_PUZZLE_HASH, height * 100000 + i * 100)
+            coin = Coin(make_hash(height * 10 + i), IDENTITY_PUZZLE_HASH, uint64(height * 100000 + i * 100))
             sb = make_spend_bundle(coin, height)
             # make this coin available via get_coin_record, which is called
             # by mempool_manager
@@ -114,9 +114,9 @@ async def run_mempool_benchmark() -> None:
                 coin.name(): CoinRecord(coin, uint32(height // 2), uint32(0), False, uint64(timestamp // 2))
             }
             spend_bundle_id = sb.name()
-            npc = await mempool.pre_validate_spendbundle(sb, None, spend_bundle_id)
-            assert npc is not None
-            await mempool.add_spend_bundle(sb, npc, spend_bundle_id, uint32(height))
+            sbc = await mempool.pre_validate_spendbundle(sb, None, spend_bundle_id)
+            assert sbc is not None
+            await mempool.add_spend_bundle(sb, sbc, spend_bundle_id, uint32(height))
 
         if height % 100 == 0:
             print(

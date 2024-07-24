@@ -5,19 +5,19 @@ import functools
 import json
 import time
 from dataclasses import replace
-from decimal import Decimal
 from pprint import pprint
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 import aiohttp
 
 from chia.cmds.cmds_util import (
+    cli_confirm,
     get_any_service_client,
     get_wallet_client,
     transaction_status_msg,
     transaction_submitted_msg,
 )
-from chia.cmds.units import units
+from chia.cmds.param_types import CliAddress
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
@@ -27,13 +27,14 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
 from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 
 
@@ -61,10 +62,9 @@ async def create_pool_args(pool_url: str) -> Dict[str, Any]:
 
 
 async def create(
-    wallet_rpc_port: Optional[int], fingerprint: int, pool_url: Optional[str], state: str, fee: Decimal, prompt: bool
+    wallet_rpc_port: Optional[int], fingerprint: int, pool_url: Optional[str], state: str, fee: uint64, *, prompt: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
-        fee_mojos = uint64(int(fee * units["chia"]))
         target_puzzle_hash: Optional[bytes32]
         # Could use initial_pool_state_from_dict to simplify
         if state == "SELF_POOLING":
@@ -88,35 +88,28 @@ async def create(
         pool_msg = f" and join pool: {pool_url}" if pool_url else ""
         print(f"Will create a plot NFT{pool_msg}.")
         if prompt:
-            user_input: str = input("Confirm [n]/y: ")
-        else:
-            user_input = "yes"
+            cli_confirm("Confirm (y/n): ", "Aborting.")
 
-        if user_input.lower() == "y" or user_input.lower() == "yes":
-            try:
-                tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
-                    target_puzzle_hash,
-                    pool_url,
-                    relative_lock_height,
-                    "localhost:5000",
-                    "new",
-                    state,
-                    fee_mojos,
-                )
-                start = time.time()
-                while time.time() - start < 10:
-                    await asyncio.sleep(0.1)
-                    tx = await wallet_client.get_transaction(1, tx_record.name)
-                    if len(tx.sent_to) > 0:
-                        print(transaction_submitted_msg(tx))
-                        print(transaction_status_msg(fingerprint, tx_record.name))
-                        return None
-            except Exception as e:
-                print(
-                    f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer"
-                )
-            return
-        print("Aborting.")
+        try:
+            tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
+                target_puzzle_hash,
+                pool_url,
+                relative_lock_height,
+                "localhost:5000",
+                "new",
+                state,
+                fee,
+            )
+            start = time.time()
+            while time.time() - start < 10:
+                await asyncio.sleep(0.1)
+                tx = await wallet_client.get_transaction(tx_record.name)
+                if len(tx.sent_to) > 0:
+                    print(transaction_submitted_msg(tx))
+                    print(transaction_status_msg(fingerprint, tx_record.name))
+                    return None
+        except Exception as e:
+            print(f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer")
 
 
 async def pprint_pool_wallet_state(
@@ -241,8 +234,7 @@ async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_pass
             await pprint_all_pool_wallet_state(wallet_client, summaries_response, address_prefix, pool_state_dict)
 
 
-async def get_login_link(launcher_id_str: str) -> None:
-    launcher_id: bytes32 = bytes32.from_hexstr(launcher_id_str)
+async def get_login_link(launcher_id: bytes32) -> None:
     async with get_any_service_client(FarmerRpcClient) as (farmer_client, _):
         login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
         if login_link is None:
@@ -261,26 +253,20 @@ async def submit_tx_with_confirmation(
 ) -> None:
     print(message)
     if prompt:
-        user_input: str = input("Confirm [n]/y: ")
-    else:
-        user_input = "yes"
-
-    if user_input.lower() == "y" or user_input.lower() == "yes":
-        try:
-            result = await func()
-            tx_record: TransactionRecord = result["transaction"]
-            start = time.time()
-            while time.time() - start < 10:
-                await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(1, tx_record.name)
-                if len(tx.sent_to) > 0:
-                    print(transaction_submitted_msg(tx))
-                    print(transaction_status_msg(fingerprint, tx_record.name))
-                    return None
-        except Exception as e:
-            print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
-        return
-    print("Aborting.")
+        cli_confirm("Confirm (y/n): ", "Aborting.")
+    try:
+        result = await func()
+        tx_record: TransactionRecord = result["transaction"]
+        start = time.time()
+        while time.time() - start < 10:
+            await asyncio.sleep(0.1)
+            tx = await wallet_client.get_transaction(tx_record.name)
+            if len(tx.sent_to) > 0:
+                print(transaction_submitted_msg(tx))
+                print(transaction_status_msg(fingerprint, tx_record.name))
+                return None
+    except Exception as e:
+        print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
 
 
 async def join_pool(
@@ -288,13 +274,12 @@ async def join_pool(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     pool_url: str,
-    fee: Decimal,
+    fee: uint64,
     wallet_id: int,
     prompt: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         enforce_https = config["full_node"]["selected_network"] == "mainnet"
-        fee_mojos = uint64(int(fee * units["chia"]))
 
         if enforce_https and not pool_url.startswith("https://"):
             print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
@@ -328,19 +313,18 @@ async def join_pool(
             hexstr_to_bytes(json_dict["target_puzzle_hash"]),
             pool_url,
             json_dict["relative_lock_height"],
-            fee_mojos,
+            fee,
         )
 
         await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
 
 
 async def self_pool(
-    *, wallet_rpc_port: Optional[int], fingerprint: int, fee: Decimal, wallet_id: int, prompt: bool
+    *, wallet_rpc_port: Optional[int], fingerprint: int, fee: uint64, wallet_id: int, prompt: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
-        fee_mojos = uint64(int(fee * units["chia"]))
         msg = f"Will start self-farming with Plot NFT on wallet id {wallet_id} fingerprint {fingerprint}."
-        func = functools.partial(wallet_client.pw_self_pool, wallet_id, fee_mojos)
+        func = functools.partial(wallet_client.pw_self_pool, wallet_id, fee)
         await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
 
 
@@ -357,26 +341,21 @@ async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_i
         )
 
 
-async def claim_cmd(*, wallet_rpc_port: Optional[int], fingerprint: int, fee: Decimal, wallet_id: int) -> None:
+async def claim_cmd(*, wallet_rpc_port: Optional[int], fingerprint: int, fee: uint64, wallet_id: int) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
-        fee_mojos = uint64(int(fee * units["chia"]))
         msg = f"\nWill claim rewards for wallet ID: {wallet_id}."
         func = functools.partial(
             wallet_client.pw_absorb_rewards,
             wallet_id,
-            fee_mojos,
+            fee,
         )
         await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, wallet_id)
 
 
-async def change_payout_instructions(launcher_id: str, address: str) -> None:
+async def change_payout_instructions(launcher_id: str, address: CliAddress) -> None:
     new_pool_configs: List[PoolWalletConfig] = []
     id_found = False
-    try:
-        puzzle_hash = decode_puzzle_hash(address)
-    except ValueError:
-        print(f"Invalid Address: {address}")
-        return
+    puzzle_hash = address.validate_address_type_get_ph(AddressType.XCH)
 
     old_configs: List[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
     for pool_config in old_configs:

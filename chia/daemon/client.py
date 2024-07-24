@@ -97,6 +97,12 @@ class DaemonProxy:
         response = await self._get(request)
         return response
 
+    async def get_network_info(self) -> WsRpcMessage:
+        data: Dict[str, Any] = {}
+        request = self.format_request("get_network_info", data)
+        response = await self._get(request)
+        return response
+
     async def start_service(self, service_name: str) -> WsRpcMessage:
         data = {"service": service_name}
         request = self.format_request("start_service", data)

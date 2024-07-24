@@ -14,7 +14,7 @@ from aiohttp.web import WebSocketResponse
 from packaging.version import Version
 from typing_extensions import Protocol, final
 
-from chia.cmds.init_funcs import chia_full_version_str
+from chia import __version__
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -22,7 +22,7 @@ from chia.protocols.protocol_timing import (
     CONSENSUS_ERROR_BAN_SECONDS,
     INTERNAL_PROTOCOL_ERROR_BAN_SECONDS,
 )
-from chia.protocols.shared_protocol import Capability, Error, Handshake
+from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
 from chia.server.api_protocol import ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -57,8 +57,7 @@ class ConnectionClosedCallbackProtocol(Protocol):
         connection: WSChiaConnection,
         ban_time: int,
         closed_connection: bool = ...,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 @final
@@ -189,22 +188,21 @@ class WSChiaConnection:
     async def perform_handshake(
         self,
         network_id: str,
-        protocol_version: str,
         server_port: int,
         local_type: NodeType,
     ) -> None:
-        outbound_handshake = make_msg(
-            ProtocolMessageTypes.handshake,
-            Handshake(
-                network_id,
-                protocol_version,
-                chia_full_version_str(),
-                uint16(server_port),
-                uint8(local_type.value),
-                self.local_capabilities_for_handshake,
-            ),
-        )
         if self.is_outbound:
+            outbound_handshake = make_msg(
+                ProtocolMessageTypes.handshake,
+                Handshake(
+                    network_id,
+                    protocol_version[local_type],
+                    __version__,
+                    uint16(server_port),
+                    uint8(local_type.value),
+                    self.local_capabilities_for_handshake,
+                ),
+            )
             await self._send_message(outbound_handshake)
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
@@ -222,6 +220,17 @@ class WSChiaConnection:
 
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            if (
+                local_type in [NodeType.FARMER, NodeType.HARVESTER]
+                and inbound_handshake.protocol_version != protocol_version[local_type]
+            ):
+                self.log.warning(
+                    f"protocol version mismatch: "
+                    f"local_type={local_type} "
+                    f"incoming={inbound_handshake.protocol_version} "
+                    f"our={protocol_version[local_type]}"
+                )
 
             self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
@@ -250,11 +259,36 @@ class WSChiaConnection:
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            remote_node_type = NodeType(inbound_handshake.node_type)
+
+            if (
+                remote_node_type in [NodeType.FARMER, NodeType.HARVESTER]
+                and inbound_handshake.protocol_version != protocol_version[remote_node_type]
+            ):
+                self.log.warning(
+                    f"protocol version mismatch: "
+                    f"remote_type={remote_node_type} "
+                    f"incoming={inbound_handshake.protocol_version} "
+                    f"our={protocol_version[remote_node_type]}"
+                )
+
+            outbound_handshake = make_msg(
+                ProtocolMessageTypes.handshake,
+                Handshake(
+                    network_id,
+                    protocol_version[remote_node_type],
+                    __version__,
+                    uint16(server_port),
+                    uint8(local_type.value),
+                    self.local_capabilities_for_handshake,
+                ),
+            )
             await self._send_message(outbound_handshake)
             self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = NodeType(inbound_handshake.node_type)
+            self.connection_type = remote_node_type
             # "1" means capability is enabled
             self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 
@@ -551,9 +585,7 @@ class WSChiaConnection:
         if self.is_outbound:
             self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**15 - 1) else uint16(0)
         else:
-            self.request_nonce = (
-                uint16(self.request_nonce + 1) if self.request_nonce != (2**16 - 1) else uint16(2**15)
-            )
+            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**16 - 1) else uint16(2**15)
 
         message = Message(message_no_id.type, request_id, message_no_id.data)
         assert message.id is not None
@@ -619,15 +651,7 @@ class WSChiaConnection:
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Message]:
-        try:
-            message: WSMessage = await self.ws.receive(30)
-        except asyncio.TimeoutError:
-            # self.ws._closed if we didn't receive a ping / pong
-            if self.ws.closed:
-                asyncio.create_task(self.close())
-                await asyncio.sleep(3)
-                return None
-            return None
+        message: WSMessage = await self.ws.receive()
 
         if self.connection_type is not None:
             connection_type_str = NodeType(self.connection_type).name.lower()
