@@ -35,6 +35,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -68,6 +69,7 @@ class AnyoneCanSpend(Wallet):
         amount: uint64,
         puzzle_hash: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
@@ -75,7 +77,7 @@ class AnyoneCanSpend(Wallet):
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
-    ) -> List[TransactionRecord]:
+    ) -> None:
         condition_list: List[Payment] = [] if primaries is None else primaries
         condition_list.append(Payment(puzzle_hash, amount, [] if memos is None else memos))
         non_change_amount: int = (
@@ -102,27 +104,28 @@ class AnyoneCanSpend(Wallet):
         )
 
         now = uint64(int(time.time()))
-        return [
-            TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=now,
-                to_puzzle_hash=puzzle_hash,
-                amount=uint64(non_change_amount),
-                fee_amount=uint64(fee),
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=spend_bundle,
-                additions=spend_bundle.additions(),
-                removals=spend_bundle.removals(),
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
-                name=spend_bundle.name(),
-                memos=list(compute_memos(spend_bundle).items()),
-                valid_times=parse_timelock_info(extra_conditions),
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=now,
+                    to_puzzle_hash=puzzle_hash,
+                    amount=uint64(non_change_amount),
+                    fee_amount=uint64(fee),
+                    confirmed=False,
+                    sent=uint32(0),
+                    spend_bundle=spend_bundle,
+                    additions=spend_bundle.additions(),
+                    removals=spend_bundle.removals(),
+                    wallet_id=self.id(),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.OUTGOING_TX.value),
+                    name=spend_bundle.name(),
+                    memos=list(compute_memos(spend_bundle).items()),
+                    valid_times=parse_timelock_info(extra_conditions),
+                )
             )
-        ]
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:  # pragma: no cover
         raise ValueError("This won't work")
@@ -265,15 +268,16 @@ async def test_main_wallet(
             )
         ]
     )
-    txs: List[TransactionRecord] = await main_wallet.generate_signed_transaction(
-        uint64(1_750_000_000_001),
-        ph,
-        wallet_environments.tx_config,
-        fee=uint64(2),
-        primaries=[Payment(ph, uint64(3))],
-        extra_conditions=(CreateCoin(ph, uint64(4)),),
-    )
-    await main_wallet.wallet_state_manager.add_pending_transactions(txs)
+    async with main_wallet.wallet_state_manager.new_action_scope(push=True, sign=True) as action_scope:
+        await main_wallet.generate_signed_transaction(
+            uint64(1_750_000_000_001),
+            ph,
+            wallet_environments.tx_config,
+            action_scope,
+            fee=uint64(2),
+            primaries=[Payment(ph, uint64(3))],
+            extra_conditions=(CreateCoin(ph, uint64(4)),),
+        )
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -302,8 +306,8 @@ async def test_main_wallet(
     )
 
     # Miscellaneous checks
-    assert [coin.puzzle_hash for tx in txs for coin in tx.removals] == [
+    assert [coin.puzzle_hash for tx in action_scope.side_effects.transactions for coin in tx.removals] == [
         (await main_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)).get_tree_hash()
-        for tx in txs
+        for tx in action_scope.side_effects.transactions
         for coin in tx.removals
     ]

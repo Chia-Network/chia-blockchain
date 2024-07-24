@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from chia_rs import ENABLE_FIXED_DIV
 from clvm.EvalError import EvalError
 from clvm.operators import KEYWORD_TO_ATOM
 from clvm_tools.binutils import assemble, disassemble
@@ -108,3 +109,20 @@ def test_uncurry_args_garbage():
     # there's garbage at the end of the args list
     plus = Program.to(assemble("(2 (q . 1) (c (q . 1) (q . 1) (q . 0x1337)))"))
     assert plus.uncurry() == (plus, Program.to(0))
+
+
+def test_run() -> None:
+    div = Program.to(assemble("(/ 2 5)"))
+    ret = div.run([10, 5])
+    assert ret.atom == bytes([2])
+
+    ret = div.run([10, -5])
+    assert ret.atom == bytes([0xFE])
+
+    with pytest.raises(ValueError, match="div operator with negative operands is deprecated"):
+        cost, ret = div.run_with_flags(100000, 0, [10, -5])
+
+    cost, ret = div.run_with_flags(100000, ENABLE_FIXED_DIV, [10, -5])
+    assert cost == 1107
+    print(ret)
+    assert ret.atom == bytes([0xFE])

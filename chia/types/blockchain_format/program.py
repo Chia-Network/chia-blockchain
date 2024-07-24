@@ -3,7 +3,18 @@ from __future__ import annotations
 import io
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
 
-from chia_rs import ALLOW_BACKREFS, run_chia_program, tree_hash
+from chia_rs import (
+    AGG_SIG_ARGS,
+    ALLOW_BACKREFS,
+    DISALLOW_INFINITY_G1,
+    ENABLE_BLS_OPS_OUTSIDE_GUARD,
+    ENABLE_FIXED_DIV,
+    ENABLE_MESSAGE_CONDITIONS,
+    ENABLE_SOFTFORK_CONDITION,
+    MEMPOOL_MODE,
+    run_chia_program,
+    tree_hash,
+)
 from clvm.casts import int_from_bytes
 from clvm.CLVMObject import CLVMStorage
 from clvm.EvalError import EvalError
@@ -129,11 +140,25 @@ class Program(SExp):
         return cost, Program.to(r)
 
     def run_with_cost(self, max_cost: int, args: Any) -> Tuple[int, Program]:
-        return self._run(max_cost, 0, args)
+        # when running puzzles in the wallet, default to enabling all soft-forks
+        # as well as enabling mempool-mode (i.e. strict mode)
+        default_flags = (
+            ENABLE_SOFTFORK_CONDITION
+            | ENABLE_BLS_OPS_OUTSIDE_GUARD
+            | ENABLE_FIXED_DIV
+            | AGG_SIG_ARGS
+            | ENABLE_MESSAGE_CONDITIONS
+            | DISALLOW_INFINITY_G1
+            | MEMPOOL_MODE
+        )
+        return self._run(max_cost, default_flags, args)
 
     def run(self, args: Any) -> Program:
         cost, r = self.run_with_cost(INFINITE_COST, args)
         return r
+
+    def run_with_flags(self, max_cost: int, flags: int, args: Any) -> Tuple[int, Program]:
+        return self._run(max_cost, flags, args)
 
     # Replicates the curry function from clvm_tools, taking advantage of *args
     # being a list.  We iterate through args in reverse building the code to

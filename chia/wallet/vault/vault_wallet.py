@@ -73,6 +73,7 @@ from chia.wallet.vault.vault_drivers import (
 from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
 
@@ -126,6 +127,7 @@ class Vault(Wallet):
         amount: uint64,
         puzzle_hash: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
@@ -133,7 +135,7 @@ class Vault(Wallet):
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
-    ) -> List[TransactionRecord]:
+    ) -> None:
         """
         Creates Un-signed transactions to be passed into signer.
         """
@@ -147,6 +149,7 @@ class Vault(Wallet):
             amount,
             puzzle_hash,
             tx_config,
+            action_scope,
             fee=fee,
             coins=coins,
             primaries_input=primaries,
@@ -156,32 +159,35 @@ class Vault(Wallet):
         )
         spend_bundle = SpendBundle(coin_spends, G2Element())
 
-        tx_record = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzzle_hash,
-            amount=uint64(non_change_amount),
-            fee_amount=fee,
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=[],
-            removals=[],
-            wallet_id=self.id(),
-            sent_to=[],
-            memos=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=spend_bundle.name(),
-            valid_times=parse_timelock_info(tuple()),
-        )
-        return [tx_record]
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=puzzle_hash,
+                    amount=uint64(non_change_amount),
+                    fee_amount=fee,
+                    confirmed=False,
+                    sent=uint32(0),
+                    spend_bundle=spend_bundle,
+                    additions=[],
+                    removals=[],
+                    wallet_id=self.id(),
+                    sent_to=[],
+                    memos=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.OUTGOING_TX.value),
+                    name=spend_bundle.name(),
+                    valid_times=parse_timelock_info(tuple()),
+                )
+            )
 
     async def _generate_unsigned_transaction(
         self,
         amount: uint64,
         newpuzzlehash: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
         coins: Optional[Set[Coin]] = None,
