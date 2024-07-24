@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from chia_rs import G1Element
+from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
@@ -24,6 +26,15 @@ from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamab
 from chia.wallet.vc_wallet.vc_store import VCRecord
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
+_T_KW_Dataclass = TypeVar("_T_KW_Dataclass")
+
+
+@dataclass_transform(frozen_default=True, kw_only_default=True)
+def kw_only_dataclass(cls: Type[Any]) -> Type[Any]:
+    if sys.version_info < (3, 10):
+        return dataclass(frozen=True)(cls)
+    else:
+        return dataclass(frozen=True, kw_only=True)(cls)
 
 
 @streamable
@@ -91,7 +102,7 @@ class ExecuteSigningInstructionsResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True, kw_only=True)
+@kw_only_dataclass
 class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: Optional[bool] = None
@@ -105,7 +116,7 @@ class TransactionEndpointResponse(Streamable):
 
 
 @streamable
-@dataclass(frozen=True, kw_only=True)
+@kw_only_dataclass
 class VaultCreate(TransactionEndpointRequest):
     secp_pk: bytes
     hp_index: uint32 = uint32(0)
@@ -120,7 +131,7 @@ class VaultCreateResponse(TransactionEndpointResponse):
 
 
 @streamable
-@dataclass(frozen=True, kw_only=True)
+@kw_only_dataclass
 class VaultRecovery(TransactionEndpointRequest):
     wallet_id: uint32
     secp_pk: bytes
