@@ -113,6 +113,23 @@ class VaultCreateResponse(TransactionEndpointResponse):
     pass
 
 
+@streamable
+@dataclass(frozen=True)
+class VaultRecovery(Streamable):
+    wallet_id: uint32
+    secp_pk: bytes
+    hp_index: uint32 = uint32(0)
+    fee: uint64 = uint64(0)
+    bls_pk: Optional[G1Element] = None
+    timelock: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VaultRecoveryResponse(TransactionEndpointResponse):
+    pass
+
+
 # TODO: The section below needs corresponding request types
 # TODO: The section below should be added to the API (currently only for client)
 @streamable
