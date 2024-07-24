@@ -10,7 +10,7 @@ SCRIPT_DIRECTORY=$(
 ENV_DIRECTORY="$1"
 shift
 
-# shellcheck disable=SC1091
+# shellcheck disable=SC1090,SC1091
 . "${SCRIPT_DIRECTORY}/${ENV_DIRECTORY}/bin/activate"
 
 "$@"
