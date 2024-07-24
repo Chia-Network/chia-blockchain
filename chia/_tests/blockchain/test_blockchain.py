@@ -3632,6 +3632,7 @@ async def test_reorg_new_ref(empty_blockchain: Blockchain, bt: BlockTools) -> No
         elif i == 19:
             # same height as peak decide by iterations
             peak = b.get_peak()
+            assert peak is not None
             # same height as peak should be ADDED_AS_ORPHAN if  block.total_iters >= peak.total_iters
             assert block.total_iters < peak.total_iters
             expected = AddBlockResult.NEW_PEAK
