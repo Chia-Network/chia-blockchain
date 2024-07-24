@@ -591,8 +591,8 @@ class DataStore:
             tree_id = replace(tree_id, root_hash=None)
         # TODO: optimize
 
-        if isinstance(tree_id.generation, TreeId.Unspecified):
-            if isinstance(tree_id.root_hash, TreeId.Unspecified):
+        if tree_id.generation is TreeId.unspecified:
+            if tree_id.root_hash is TreeId.unspecified:
                 generation = await self.get_tree_generation(store_id=tree_id.store_id)
             else:
                 # TODO: can this be more direct
@@ -602,7 +602,7 @@ class DataStore:
 
             tree_id = replace(tree_id, generation=generation)
 
-        if isinstance(tree_id.root_hash, TreeId.Unspecified):
+        if tree_id.root_hash is TreeId.unspecified:
             root = await self.get_tree_root(tree_id=tree_id)
             tree_id = replace(tree_id, root_hash=root.node_hash)
 
@@ -615,7 +615,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             # TODO: feels dirty having this loop with _resolve_tree_id, but maybe
             #       breaking it like this here is ok
-            if isinstance(tree_id.generation, TreeId.Unspecified):
+            if tree_id.generation is TreeId.unspecified:
                 tree_id = await self._resolve_tree_id(tree_id=tree_id)
 
             cursor = await reader.execute(
@@ -884,7 +884,7 @@ class DataStore:
                 if not e.args[0].startswith("unable to find root: "):
                     raise
                 # TODO: not cool
-                assert not isinstance(tree_id.root_hash, TreeId.Unspecified)
+                assert tree_id.root_hash is not TreeId.unspecified
                 return KeysValuesCompressed({}, {}, {}, tree_id.root_hash)
             # avoid accidental usage
             del tree_id
@@ -936,7 +936,7 @@ class DataStore:
                 if not e.args[0].startswith("unable to find root: "):
                     raise
                 # TODO: not cool
-                assert not isinstance(tree_id.root_hash, TreeId.Unspecified)
+                assert tree_id.root_hash is not TreeId.unspecified
                 return KeysPaginationData(0, 0, [], tree_id.root_hash)
             # avoid accidental usage
             del tree_id
@@ -1688,7 +1688,6 @@ class DataStore:
                 # assert latest_local_root is not None
                 # assert latest_local_root.node_hash is not None
                 # TODO: can we do something nicer? or maybe this isn't even right
-                assert not isinstance(latest_local_tree_id.root_hash, TreeId.Unspecified)
                 assert latest_local_tree_id.root_hash is not None
                 new_root_hash = await self.batch_upsert(
                     hash=latest_local_tree_id.root_hash,
