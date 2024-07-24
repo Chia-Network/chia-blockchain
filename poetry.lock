@@ -3466,11 +3466,11 @@ url = "https://pypi.chia.net/simple"
 reference = "chia"
 
 [extras]
-dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "lxml", "mypy", "pre-commit", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pyupgrade", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "big-o", "black", "build", "coverage", "diff-cover", "flake8", "isort", "lxml", "mypy", "pre-commit", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "pyupgrade", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools"]
 legacy-keyring = ["keyrings.cryptfile"]
 upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "4e6de9615458a53d34143a602e06bc4d3da61be64f8fa22244bc697c593a3356"
+content-hash = "4ce99fa0865404d13441cd4995d36f9809870d08253f70340a08a29dbd1a175a"
