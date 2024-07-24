@@ -111,7 +111,7 @@ pyupgrade = { version = "3.15.2", optional = true }
 
 
 [tool.poetry.extras]
-dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "pyupgrade", "lxml"]
+dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "pyupgrade", "lxml"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]
 
