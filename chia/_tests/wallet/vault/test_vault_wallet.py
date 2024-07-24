@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import Awaitable, Callable
 
 import pytest
+from chia_rs import G1Element
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
+from chia.rpc.wallet_request_types import VaultCreate, VaultRecovery
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
@@ -32,15 +34,17 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
     timelock = None
     if with_recovery:
         bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
-        bls_pk = bytes.fromhex(bls_pk_hex)
+        bls_pk = G1Element.from_bytes(bytes.fromhex(bls_pk_hex))
         timelock = uint64(10)
     hidden_puzzle_index = uint32(0)
     res = await client.vault_create(
-        SECP_PK, hidden_puzzle_index, bls_pk=bls_pk, timelock=timelock, tx_config=DEFAULT_TX_CONFIG
+        VaultCreate(SECP_PK, wallet_environments.tx_config, hidden_puzzle_index, bls_pk=bls_pk, timelock=timelock)
     )
 
-    all_removals = [coin for tx in res for coin in tx.removals]
-    eve_coin = [item for tx in res for item in tx.additions if item not in all_removals and item.amount == 1][0]
+    all_removals = [coin for tx in res.transactions for coin in tx.removals]
+    eve_coin = [
+        item for tx in res.transactions for item in tx.additions if item not in all_removals and item.amount == 1
+    ][0]
     launcher_id = eve_coin.parent_coin_info
     vault_root = VaultRoot.from_bytes(launcher_id)
     await wallet_environments.process_pending_states(
@@ -221,7 +225,7 @@ async def test_vault_recovery(
     client = wallet_environments.environments[1].rpc_client
     fingerprint = (await client.get_public_keys())[0]
     bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
-    bls_pk = bytes.fromhex(bls_pk_hex)
+    bls_pk = G1Element.from_bytes(bytes.fromhex(bls_pk_hex))
     timelock = uint64(10)
 
     wallet: Vault = env.xch_wallet
@@ -286,14 +290,18 @@ async def test_vault_recovery(
             ],
         )
 
-    [initiate_tx, finish_tx] = await env.rpc_client.vault_recovery(
-        wallet_id=wallet.id(),
-        secp_pk=RECOVERY_SECP_PK,
-        hp_index=uint32(0),
-        tx_config=DEFAULT_TX_CONFIG,
-        bls_pk=bls_pk,
-        timelock=timelock,
-    )
+    [initiate_tx, finish_tx] = (
+        await env.rpc_client.vault_recovery(
+            VaultRecovery(
+                wallet_id=wallet.id(),
+                secp_pk=RECOVERY_SECP_PK,
+                hp_index=uint32(0),
+                tx_config=DEFAULT_TX_CONFIG,
+                bls_pk=bls_pk,
+                timelock=timelock,
+            )
+        )
+    ).transactions
 
     await wallet_environments.environments[1].rpc_client.push_transactions([initiate_tx], sign=True)
 

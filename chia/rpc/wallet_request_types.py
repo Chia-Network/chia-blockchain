@@ -21,6 +21,7 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
@@ -101,8 +102,10 @@ class TransactionEndpointResponse(Streamable):
 @dataclass(frozen=True)
 class VaultCreate(Streamable):
     secp_pk: bytes
+    tx_config: TXConfig
     hp_index: uint32 = uint32(0)
     fee: uint64 = uint64(0)
+    push: Optional[bool] = None
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
 
@@ -118,8 +121,10 @@ class VaultCreateResponse(TransactionEndpointResponse):
 class VaultRecovery(Streamable):
     wallet_id: uint32
     secp_pk: bytes
+    tx_config: TXConfig
     hp_index: uint32 = uint32(0)
     fee: uint64 = uint64(0)
+    push: Optional[bool] = None
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
 
