@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import functools
 import json
 import logging
 import os
@@ -124,6 +125,9 @@ class DataLayer:
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     subscription_update_concurrency: int = 5
+    client_timeout: aiohttp.ClientTimeout = dataclasses.field(
+        default_factory=functools.partial(aiohttp.ClientTimeout, total=45, sock_connect=5)
+    )
 
     @property
     def server(self) -> ChiaServer:
@@ -185,6 +189,9 @@ class DataLayer:
             maximum_full_file_count=config.get("maximum_full_file_count", 1),
             subscription_update_concurrency=config.get("subscription_update_concurrency", 5),
             unsubscribe_data_queue=[],
+            client_timeout=aiohttp.ClientTimeout(
+                total=config.get("client_timeout", 45), sock_connect=config.get("connect_timeout", 5)
+            ),
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -586,7 +593,6 @@ class DataLayer:
                 max_generation=singleton_record.generation,
             )
             try:
-                timeout = self.config.get("client_timeout", 15)
                 proxy_url = self.config.get("proxy_url", None)
                 success = await insert_from_delta_file(
                     self.data_store,
@@ -595,7 +601,7 @@ class DataLayer:
                     [record.root for record in reversed(to_download)],
                     server_info,
                     self.server_files_location,
-                    timeout,
+                    self.client_timeout,
                     self.log,
                     proxy_url,
                     await self.get_downloader(store_id, url),

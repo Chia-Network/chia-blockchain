@@ -615,7 +615,8 @@ data_layer:
   # The location where the server files will be stored.
   server_files_location: "data_layer/db/server_files_location_CHALLENGE"
   # The timeout for the client to download a file from a server
-  client_timeout: 15
+  client_timeout: 45
+  connect_timeout: 5
   # If you need use a proxy for download data you can use this setting sample
   # proxy_url: http://localhost:8888
 
