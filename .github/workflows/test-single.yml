@@ -20,7 +20,7 @@ on:
       file_name:
         required: true
         type: string
-      concurrency_name:
+      concurrency-name:
         required: true
         type: string
       configuration:
@@ -42,7 +42,7 @@ on:
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency-name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 defaults:

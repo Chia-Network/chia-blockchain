@@ -214,8 +214,9 @@ class Crawler:
         # Sometimes, the daemon connection + state changed callback isn't up and ready
         # by the time we get to the first _state_changed call, so this just ensures it's there before moving on
         while self.state_changed_callback is None:
-            self.log.info("Waiting for state changed callback...")
+            self.log.warning("Waiting for state changed callback...")
             await asyncio.sleep(0.1)
+        self.log.warning("  - Got state changed callback...")
         assert self.crawl_store is not None
         t_start = time.time()
         total_nodes = 0
@@ -223,6 +224,7 @@ class Crawler:
         try:
             while not self._shut_down:
                 peers_to_crawl = await self.crawl_store.get_peers_to_crawl(25000, 250000)
+                self.log.warning(f"Crawling {len(peers_to_crawl)} peers...")
                 tasks = set()
                 for peer in peers_to_crawl:
                     if peer.port == self.other_peers_port:

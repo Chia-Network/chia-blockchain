@@ -117,7 +117,7 @@ jobs:
       matrix: macos-intel
       name: macOS Intel
       file_name: macos
-      concurrency_name: macos-intel
+      concurrency-name: macos-intel
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-12
@@ -131,7 +131,7 @@ jobs:
       matrix: macos
       name: macOS ARM
       file_name: macos-arm
-      concurrency_name: macos-arm
+      concurrency-name: macos-arm
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-14
@@ -146,7 +146,7 @@ jobs:
       matrix: ubuntu
       name: Ubuntu
       file_name: ubuntu
-      concurrency_name: ubuntu
+      concurrency-name: ubuntu
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
@@ -161,7 +161,7 @@ jobs:
       matrix: windows
       name: Windows
       file_name: windows
-      concurrency_name: windows
+      concurrency-name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-latest
