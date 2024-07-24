@@ -4,19 +4,19 @@ import pathlib
 import sys
 from typing import Any, Dict, Optional
 
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.farmer.farmer import Farmer
 from chia.farmer.farmer_api import FarmerAPI
 from chia.rpc.farmer_rpc_api import FarmerRpcApi
 from chia.server.outbound_message import NodeType
+from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.aliases import FarmerService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
-from chia.util.misc import SignalHandlers
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -37,7 +37,7 @@ def create_farmer_service(
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     update_testnet_overrides(network_id, overrides)
-    updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
     farmer = Farmer(
         root_path, service_config, config_pool, consensus_constants=updated_constants, local_keychain=keychain

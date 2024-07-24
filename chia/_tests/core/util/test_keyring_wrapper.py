@@ -7,6 +7,7 @@ import pytest
 
 from chia.simulator.keyring import TempKeyring
 from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelError, KeychainLabelExists, KeychainLabelInvalid
+from chia.util.file_keyring import Key
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 
 log = logging.getLogger(__name__)
@@ -199,71 +200,74 @@ class TestKeyringWrapper:
         )
 
     # When: using a new empty keyring
-    def test_get_passphrase(self, empty_temp_file_keyring: TempKeyring):
+    def test_get_key(self, empty_temp_file_keyring: TempKeyring):
         """
-        Simple passphrase setting and retrieval
+        Simple key setting and retrieval
         """
-        # Expect: passphrase lookup should return None
-        assert KeyringWrapper.get_shared_instance().get_passphrase("service-abc", "user-xyz") is None
+        # Expect: key lookup should return None
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") is None
 
-        # When: setting a passphrase
-        KeyringWrapper.get_shared_instance().set_passphrase("service-abc", "user-xyz", b"super secret passphrase".hex())
-
-        # Expect: passphrase lookup should succeed
-        assert (
-            KeyringWrapper.get_shared_instance().get_passphrase("service-abc", "user-xyz")
-            == b"super secret passphrase".hex()
+        # When: setting a key
+        KeyringWrapper.get_shared_instance().keyring.set_key(
+            "service-abc", "user-xyz", Key(b"super secret key", {"foo": "bar"})
         )
 
-        # Expect: non-existent passphrase lookup should fail
-        assert (
-            KeyringWrapper.get_shared_instance().get_passphrase("service-123", "some non-existent passphrase") is None
+        # Expect: key lookup should succeed
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-abc", "user-xyz") == Key(
+            b"super secret key", {"foo": "bar"}
         )
+
+        # Expect: non-existent key lookup should fail
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-123", "some non-existent key") is None
 
     # When: using a new empty keyring
-    def test_set_passphrase_overwrite(self, empty_temp_file_keyring: TempKeyring):
+    def test_set_key_overwrite(self, empty_temp_file_keyring: TempKeyring):
         """
-        Overwriting a previously-set passphrase should work
+        Overwriting a previously-set key should work
         """
-        # When: initially setting the passphrase
-        KeyringWrapper.get_shared_instance().set_passphrase("service-xyz", "user-123", b"initial passphrase".hex())
+        # When: initially setting the key
+        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"initial key"))
 
-        # Expect: passphrase lookup should succeed
-        assert (
-            KeyringWrapper.get_shared_instance().get_passphrase("service-xyz", "user-123")
-            == b"initial passphrase".hex()
-        )
+        # Expect: key lookup should succeed
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123") == Key(b"initial key")
 
-        # When: updating the same passphrase
-        KeyringWrapper.get_shared_instance().set_passphrase("service-xyz", "user-123", b"updated passphrase".hex())
+        # When: updating the same key
+        KeyringWrapper.get_shared_instance().keyring.set_key("service-xyz", "user-123", Key(b"updated key"))
 
-        # Expect: the updated passphrase should be retrieved
-        assert (
-            KeyringWrapper.get_shared_instance().get_passphrase("service-xyz", "user-123")
-            == b"updated passphrase".hex()
-        )
+        # Expect: the updated key should be retrieved
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("service-xyz", "user-123") == Key(b"updated key")
 
     # When: using a new empty keyring
-    def test_delete_passphrase(self, empty_temp_file_keyring: TempKeyring):
+    def test_delete_key(self, empty_temp_file_keyring: TempKeyring):
         """
-        Deleting a non-existent passphrase should fail gracefully (no exceptions)
+        Deleting a non-existent key should fail gracefully (no exceptions)
         """
-        # Expect: deleting a non-existent passphrase should fail gracefully
-        KeyringWrapper.get_shared_instance().delete_passphrase("some service", "some user")
+        # Expect: deleting a non-existent key should fail gracefully
+        KeyringWrapper.get_shared_instance().keyring.delete_key("some service", "some user")
 
-        # When: setting a passphrase
-        KeyringWrapper.get_shared_instance().set_passphrase("some service", "some user", b"500p3r 53cr37".hex())
+        # When: setting a key
+        KeyringWrapper.get_shared_instance().keyring.set_key("some service", "some user", Key(b"500p3r 53cr37"))
 
-        # Expect: passphrase retrieval should succeed
-        assert (
-            KeyringWrapper.get_shared_instance().get_passphrase("some service", "some user") == b"500p3r 53cr37".hex()
+        # Expect: key retrieval should succeed
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") == Key(
+            b"500p3r 53cr37"
         )
 
-        # When: deleting the passphrase
-        KeyringWrapper.get_shared_instance().delete_passphrase("some service", "some user")
+        # When: deleting the key
+        KeyringWrapper.get_shared_instance().keyring.delete_key("some service", "some user")
 
-        # Expect: passphrase retrieval should fail gracefully
-        assert KeyringWrapper.get_shared_instance().get_passphrase("some service", "some user") is None
+        # Expect: key retrieval should fail gracefully
+        assert KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") is None
+
+        # Check that metadata is properly deleted
+        from chia.cmds.passphrase_funcs import obtain_current_passphrase
+
+        passphrase = obtain_current_passphrase(use_passphrase_cache=True)
+        assert KeyringWrapper.get_shared_instance().keyring.cached_file_content.get_decrypted_data_dict(passphrase) == {
+            "keys": {},
+            "labels": {},
+            "metadata": {},
+        }
 
     def test_emoji_master_passphrase(self, empty_temp_file_keyring: TempKeyring):
         """
@@ -379,49 +383,49 @@ class TestKeyringWrapper:
     def test_get_label(self, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         # label lookup for 1, 2, 3 should return None
-        assert keyring_wrapper.get_label(1) is None
-        assert keyring_wrapper.get_label(2) is None
-        assert keyring_wrapper.get_label(3) is None
+        assert keyring_wrapper.keyring.get_label(1) is None
+        assert keyring_wrapper.keyring.get_label(2) is None
+        assert keyring_wrapper.keyring.get_label(3) is None
 
         # Set and validate a label for 1
-        keyring_wrapper.set_label(1, "one")
-        assert keyring_wrapper.get_label(1) == "one"
+        keyring_wrapper.keyring.set_label(1, "one")
+        assert keyring_wrapper.keyring.get_label(1) == "one"
 
         # Set and validate a label for 3
-        keyring_wrapper.set_label(3, "three")
+        keyring_wrapper.keyring.set_label(3, "three")
 
         # And validate all match the expected values
-        assert keyring_wrapper.get_label(1) == "one"
-        assert keyring_wrapper.get_label(2) is None
-        assert keyring_wrapper.get_label(3) == "three"
+        assert keyring_wrapper.keyring.get_label(1) == "one"
+        assert keyring_wrapper.keyring.get_label(2) is None
+        assert keyring_wrapper.keyring.get_label(3) == "three"
 
     def test_set_label(self, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         # Set and validate a label for 1
-        keyring_wrapper.set_label(1, "one")
-        assert keyring_wrapper.get_label(1) == "one"
+        keyring_wrapper.keyring.set_label(1, "one")
+        assert keyring_wrapper.keyring.get_label(1) == "one"
 
         # Set and validate a label for 2
-        keyring_wrapper.set_label(2, "two")
-        assert keyring_wrapper.get_label(2) == "two"
+        keyring_wrapper.keyring.set_label(2, "two")
+        assert keyring_wrapper.keyring.get_label(2) == "two"
 
         # Change the label of 2
-        keyring_wrapper.set_label(2, "two!")
-        assert keyring_wrapper.get_label(2) == "two!"
+        keyring_wrapper.keyring.set_label(2, "two!")
+        assert keyring_wrapper.keyring.get_label(2) == "two!"
         # 1 should still have the same label
-        assert keyring_wrapper.get_label(1) == "one"
+        assert keyring_wrapper.keyring.get_label(1) == "one"
 
         # Change the label of 2 again
-        keyring_wrapper.set_label(2, "two!!")
-        assert keyring_wrapper.get_label(2) == "two!!"
+        keyring_wrapper.keyring.set_label(2, "two!!")
+        assert keyring_wrapper.keyring.get_label(2) == "two!!"
         # 1 should still have the same label
-        assert keyring_wrapper.get_label(1) == "one"
+        assert keyring_wrapper.keyring.get_label(1) == "one"
 
         # Change the label of 1
-        keyring_wrapper.set_label(1, "one!")
-        assert keyring_wrapper.get_label(1) == "one!"
+        keyring_wrapper.keyring.set_label(1, "one!")
+        assert keyring_wrapper.keyring.get_label(1) == "one!"
         # 2 should still have the same label
-        assert keyring_wrapper.get_label(2) == "two!!"
+        assert keyring_wrapper.keyring.get_label(2) == "two!!"
 
     @pytest.mark.parametrize(
         "label",
@@ -433,8 +437,8 @@ class TestKeyringWrapper:
     )
     def test_set_special_labels(self, label: str, empty_temp_file_keyring: TempKeyring):
         keyring_wrapper = KeyringWrapper.get_shared_instance()
-        keyring_wrapper.set_label(1, label)
-        assert keyring_wrapper.get_label(1) == label
+        keyring_wrapper.keyring.set_label(1, label)
+        assert keyring_wrapper.keyring.get_label(1) == label
 
     @pytest.mark.parametrize(
         "label, exception, message",
@@ -456,9 +460,9 @@ class TestKeyringWrapper:
         self, label: str, exception: Type[KeychainLabelError], message: str, empty_temp_file_keyring: TempKeyring
     ) -> None:
         keyring_wrapper = KeyringWrapper.get_shared_instance()
-        keyring_wrapper.set_label(1, "one")
+        keyring_wrapper.keyring.set_label(1, "one")
         with pytest.raises(exception, match=message) as e:
-            keyring_wrapper.set_label(1, label)
+            keyring_wrapper.keyring.set_label(1, label)
         assert e.value.label == label
         if isinstance(e.value, KeychainLabelExists):
             assert e.value.label == "one"
@@ -467,20 +471,20 @@ class TestKeyringWrapper:
     def test_delete_label(self, empty_temp_file_keyring: TempKeyring) -> None:
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         # Set labels for 1,2 and validate them
-        keyring_wrapper.set_label(1, "one")
-        keyring_wrapper.set_label(2, "two")
-        assert keyring_wrapper.get_label(1) == "one"
-        assert keyring_wrapper.get_label(2) == "two"
+        keyring_wrapper.keyring.set_label(1, "one")
+        keyring_wrapper.keyring.set_label(2, "two")
+        assert keyring_wrapper.keyring.get_label(1) == "one"
+        assert keyring_wrapper.keyring.get_label(2) == "two"
         # Remove the label of 1
-        keyring_wrapper.delete_label(1)
-        assert keyring_wrapper.get_label(1) is None
-        assert keyring_wrapper.get_label(2) == "two"
+        keyring_wrapper.keyring.delete_label(1)
+        assert keyring_wrapper.keyring.get_label(1) is None
+        assert keyring_wrapper.keyring.get_label(2) == "two"
         # Remove the label of 2
-        keyring_wrapper.delete_label(2)
-        assert keyring_wrapper.get_label(1) is None
-        assert keyring_wrapper.get_label(2) is None
+        keyring_wrapper.keyring.delete_label(2)
+        assert keyring_wrapper.keyring.get_label(1) is None
+        assert keyring_wrapper.keyring.get_label(2) is None
         # Make sure the deletion fails for 0-2
         for i in range(3):
             with pytest.raises(KeychainFingerprintNotFound) as e:
-                keyring_wrapper.delete_label(i)
+                keyring_wrapper.keyring.delete_label(i)
             assert e.value.fingerprint == i

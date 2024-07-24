@@ -4,11 +4,12 @@ import contextlib
 import functools
 import os
 import pathlib
+import shutil
 import subprocess
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional, Union, overload
 
-from chia.data_layer.data_layer_util import NodeType, Side, Status
+from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -28,7 +29,7 @@ else:
 
 async def general_insert(
     data_store: DataStore,
-    tree_id: bytes32,
+    store_id: bytes32,
     key: bytes,
     value: bytes,
     reference_node_hash: bytes32,
@@ -37,7 +38,7 @@ async def general_insert(
     insert_result = await data_store.insert(
         key=key,
         value=value,
-        tree_id=tree_id,
+        store_id=store_id,
         reference_node_hash=reference_node_hash,
         side=side,
         status=Status.COMMITTED,
@@ -47,25 +48,23 @@ async def general_insert(
 
 @dataclass(frozen=True)
 class Example:
-    expected: Program
+    expected: Node
     terminal_nodes: List[bytes32]
 
 
-async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
-    expected = Program.to(
-        (
-            (
-                (b"\x00", b"\x10\x00"),
-                (b"\x01", b"\x11\x01"),
-            ),
-            (
-                (b"\x02", b"\x12\x02"),
-                (b"\x03", b"\x13\x03"),
-            ),
+async def add_0123_example(data_store: DataStore, store_id: bytes32) -> Example:
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+            right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
+        ),
+        right=InternalNode.from_child_nodes(
+            left=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+            right=TerminalNode.from_key_value(key=b"\x03", value=b"\x13\x03"),
         ),
     )
 
-    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
+    insert = functools.partial(general_insert, data_store=data_store, store_id=store_id)
 
     c_hash = await insert(key=b"\x02", value=b"\x12\x02", reference_node_hash=None, side=None)
     b_hash = await insert(key=b"\x01", value=b"\x11\x01", reference_node_hash=c_hash, side=Side.LEFT)
@@ -75,33 +74,31 @@ async def add_0123_example(data_store: DataStore, tree_id: bytes32) -> Example:
     return Example(expected=expected, terminal_nodes=[a_hash, b_hash, c_hash, d_hash])
 
 
-async def add_01234567_example(data_store: DataStore, tree_id: bytes32) -> Example:
-    expected = Program.to(
-        (
-            (
-                (
-                    (b"\x00", b"\x10\x00"),
-                    (b"\x01", b"\x11\x01"),
-                ),
-                (
-                    (b"\x02", b"\x12\x02"),
-                    (b"\x03", b"\x13\x03"),
-                ),
+async def add_01234567_example(data_store: DataStore, store_id: bytes32) -> Example:
+    expected = InternalNode.from_child_nodes(
+        left=InternalNode.from_child_nodes(
+            InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x00", value=b"\x10\x00"),
+                right=TerminalNode.from_key_value(key=b"\x01", value=b"\x11\x01"),
             ),
-            (
-                (
-                    (b"\x04", b"\x14\x04"),
-                    (b"\x05", b"\x15\x05"),
-                ),
-                (
-                    (b"\x06", b"\x16\x06"),
-                    (b"\x07", b"\x17\x07"),
-                ),
+            InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x02", value=b"\x12\x02"),
+                right=TerminalNode.from_key_value(key=b"\x03", value=b"\x13\x03"),
+            ),
+        ),
+        right=InternalNode.from_child_nodes(
+            InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x04", value=b"\x14\x04"),
+                right=TerminalNode.from_key_value(key=b"\x05", value=b"\x15\x05"),
+            ),
+            InternalNode.from_child_nodes(
+                left=TerminalNode.from_key_value(key=b"\x06", value=b"\x16\x06"),
+                right=TerminalNode.from_key_value(key=b"\x07", value=b"\x17\x07"),
             ),
         ),
     )
 
-    insert = functools.partial(general_insert, data_store=data_store, tree_id=tree_id)
+    insert = functools.partial(general_insert, data_store=data_store, store_id=store_id)
 
     g_hash = await insert(key=b"\x06", value=b"\x16\x06", reference_node_hash=None, side=None)
 
@@ -141,8 +138,11 @@ class ChiaRoot:
         if "SYSTEMROOT" in os.environ:
             kwargs["env"]["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
 
+        chia_executable = shutil.which("chia")
+        if chia_executable is None:
+            chia_executable = "chia"
         modified_args: List[Union[str, os_PathLike_str]] = [
-            self.scripts_path.joinpath("chia"),
+            self.scripts_path.joinpath(chia_executable),
             "--root-path",
             self.path,
             *args,
@@ -155,7 +155,10 @@ class ChiaRoot:
         kwargs["stdout"] = stdout
         kwargs["stderr"] = stderr
 
-        return subprocess.run(*final_args, **kwargs)
+        try:
+            return subprocess.run(*final_args, **kwargs)
+        except OSError as e:
+            raise Exception(f"failed to run:\n    {final_args}\n    {kwargs}") from e
 
     def read_log(self) -> str:
         return self.path.joinpath("log", "debug.log").read_text(encoding="utf-8")

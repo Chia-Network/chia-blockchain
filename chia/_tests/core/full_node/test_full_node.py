@@ -24,7 +24,6 @@ from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.pot_iterations import is_overflow_block
-from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
@@ -34,7 +33,7 @@ from chia.protocols import full_node_protocol as fnp
 from chia.protocols import timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, capabilities
+from chia.protocols.shared_protocol import Capability, default_capabilities
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
@@ -60,11 +59,11 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.batches import to_batches
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
-from chia.util.misc import to_batches
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -127,13 +126,21 @@ async def test_sync_no_farmer(
 
     # full node 1 has the complete chain
     for block_batch in to_batches(blocks, 64):
-        await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_1.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     target_peak = full_node_1.full_node.blockchain.get_peak()
 
     # full node 2 is behind by 800 blocks
     for block_batch in to_batches(blocks[:-800], 64):
-        await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_2.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     # connect the nodes and wait for node 2 to sync up to node 1
     await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -152,9 +159,7 @@ async def test_sync_no_farmer(
 class TestFullNodeBlockCompression:
     @pytest.mark.anyio
     @pytest.mark.parametrize("tx_size", [3000000000000])
-    async def test_block_compression(
-        self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, self_hostname, consensus_mode
-    ):
+    async def test_block_compression(self, setup_two_nodes_and_wallet, empty_blockchain, tx_size, self_hostname):
         nodes, wallets, bt = setup_two_nodes_and_wallet
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -180,12 +185,14 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send a transaction to mempool
-        [tr] = await wallet.generate_signed_transaction(
-            tx_size,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                tx_size,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -209,22 +216,17 @@ class TestFullNodeBlockCompression:
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        template = detect_potential_template_generator(uint32(5), program)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert template is None
-        else:
-            assert template is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         # Send another tx
-        [tr] = await wallet.generate_signed_transaction(
-            20000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                20000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -244,14 +246,10 @@ class TestFullNodeBlockCompression:
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        assert detect_potential_template_generator(uint32(6), program) is None
         num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert num_blocks == 0
-        else:
-            assert num_blocks > 0
+        # since the hard fork, we don't use this compression mechanism
+        # anymore, we use CLVM backrefs in the encoding instead
+        assert num_blocks == 0
 
         # Farm two empty blocks
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -262,37 +260,28 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send another 2 tx
-        [tr] = await wallet.generate_signed_transaction(
-            30000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                30000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
             tr.spend_bundle,
             tr.name,
         )
-        [tr] = await wallet.generate_signed_transaction(
-            40000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
-        await time_out_assert(
-            10,
-            full_node_2.full_node.mempool_manager.get_spendbundle,
-            tr.spend_bundle,
-            tr.name,
-        )
-
-        [tr] = await wallet.generate_signed_transaction(
-            50000,
-            ph,
-            DEFAULT_TX_CONFIG,
-        )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                40000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -300,12 +289,29 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
-        [tr] = await wallet.generate_signed_transaction(
-            3000000000000,
-            ph,
-            DEFAULT_TX_CONFIG,
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                50000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
+        await time_out_assert(
+            10,
+            full_node_2.full_node.mempool_manager.get_spendbundle,
+            tr.spend_bundle,
+            tr.name,
         )
-        await wallet.wallet_state_manager.add_pending_transactions([tr])
+
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                3000000000000,
+                ph,
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -325,21 +331,20 @@ class TestFullNodeBlockCompression:
         # Confirm generator is compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        assert detect_potential_template_generator(uint32(9), program) is None
         num_blocks = len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert num_blocks == 0
-        else:
-            assert num_blocks > 0
+        # since the hard fork, we don't use this compression mechanism
+        # anymore, we use CLVM backrefs in the encoding instead
+        assert num_blocks == 0
 
         # Creates a standard_transaction and an anyone-can-spend tx
-        [tr] = await wallet.generate_signed_transaction(
-            30000,
-            Program.to(1).get_tree_hash(),
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            await wallet.generate_signed_transaction(
+                30000,
+                Program.to(1).get_tree_hash(),
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         extra_spend = SpendBundle(
             [
                 make_spend(
@@ -381,11 +386,14 @@ class TestFullNodeBlockCompression:
         assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
         # Make a standard transaction and an anyone-can-spend transaction
-        [tr] = await wallet.generate_signed_transaction(
-            30000,
-            Program.to(1).get_tree_hash(),
-            DEFAULT_TX_CONFIG,
-        )
+        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            await wallet.generate_signed_transaction(
+                30000,
+                Program.to(1).get_tree_hash(),
+                DEFAULT_TX_CONFIG,
+                action_scope,
+            )
+        [tr] = action_scope.side_effects.transactions
         extra_spend = SpendBundle(
             [
                 make_spend(
@@ -403,7 +411,7 @@ class TestFullNodeBlockCompression:
             additions=new_spend_bundle.additions(),
             removals=new_spend_bundle.removals(),
         )
-        await wallet.wallet_state_manager.add_pending_transactions([new_tr])
+        [new_tr] = await wallet.wallet_state_manager.add_pending_transactions([new_tr])
         await time_out_assert(
             10,
             full_node_2.full_node.mempool_manager.get_spendbundle,
@@ -421,13 +429,6 @@ class TestFullNodeBlockCompression:
         # Confirm generator is not compressed
         program: Optional[SerializedProgram] = (await full_node_1.get_all_full_blocks())[-1].transactions_generator
         assert program is not None
-        template = detect_potential_template_generator(uint32(11), program)
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert template is None
-        else:
-            assert template is not None
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         height = full_node_1.full_node.blockchain.get_peak().height
@@ -436,13 +437,6 @@ class TestFullNodeBlockCompression:
         all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
 
-        template = full_node_1.full_node.full_node_store.previous_generator
-        if consensus_mode == ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork we don't use this compression mechanism
-            # anymore, we use CLVM backrefs in the encoding instead
-            assert template is None
-        else:
-            assert template is not None
         if test_reorgs:
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
@@ -468,11 +462,6 @@ class TestFullNodeBlockCompression:
                         assert results is not None
                         for result in results:
                             assert result.error is None
-
-            # Test revert previous_generator
-            for block in reog_blocks:
-                await full_node_1.full_node.add_block(block)
-            assert full_node_1.full_node.full_node_store.previous_generator is None
 
 
 class TestFullNodeProtocol:
@@ -961,7 +950,9 @@ class TestFullNodeProtocol:
         new_transaction = fnp.NewTransaction(bytes32.random(seeded_random), uint64(10000000), uint64(1))
         await full_node_1.new_transaction(new_transaction, fake_peer)
         assert full_node_1.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
-        assert full_node_2.full_node.mempool_manager.mempool.at_full_capacity(10000000 * group_size)
+        await time_out_assert(
+            30, full_node_2.full_node.mempool_manager.mempool.at_full_capacity, True, 10000000 * group_size
+        )
 
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
@@ -2176,9 +2167,9 @@ class TestFullNodeProtocol:
         argnames=["custom_capabilities", "expect_success"],
         argvalues=[
             # standard
-            [capabilities, True],
+            [default_capabilities[NodeType.FULL_NODE], True],
             # an additional enabled but unknown capability
-            [[*capabilities, (uint16(max(Capability) + 1), "1")], True],
+            [[*default_capabilities[NodeType.FULL_NODE], (uint16(max(Capability) + 1), "1")], True],
             # no capability, not even Chia mainnet
             # TODO: shouldn't we fail without Capability.BASE?
             [[], True],
@@ -2293,7 +2284,11 @@ async def test_long_reorg(
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        await node.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await node.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     peak = node.full_node.blockchain.get_peak()
     chain_1_height = peak.height
@@ -2383,14 +2378,22 @@ async def test_long_reorg_nodes(
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        await full_node_1.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_1.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     # full node 2 has the reorg-chain
     for block_batch in to_batches(reorg_blocks[:-1], 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"reorg chain: {b.height:4} weight: {b.weight}")
-        await full_node_2.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_2.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     await connect_and_get_peer(full_node_1.full_node.server, full_node_2.full_node.server, self_hostname)
 
@@ -2425,7 +2428,11 @@ async def test_long_reorg_nodes(
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        await full_node_3.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 8884), None)
+        success, change, err = await full_node_3.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     print("connecting node 3")
     await connect_and_get_peer(full_node_3.full_node.server, full_node_1.full_node.server, self_hostname)

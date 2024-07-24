@@ -500,8 +500,8 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
 
         # Now let's launch the VC
         vc: VerifiedCredential
-        dpuz, coin_spends, vc = VerifiedCredential.launch(
-            vc_fund_coin,
+        dpuzs, coin_spends, vc = VerifiedCredential.launch(
+            [vc_fund_coin],
             launcher_id,
             ACS_PH,
             [bytes32([0] * 32)],
@@ -514,7 +514,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                         make_spend(
                             vc_fund_coin,
                             RUN_PUZ_PUZ,
-                            dpuz,
+                            dpuzs[0],
                         ),
                         *coin_spends,
                     ],

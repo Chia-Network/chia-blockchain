@@ -7,9 +7,17 @@ import subprocess
 import sys
 import tempfile
 
+# TODO: publish wheels for these
 excepted_packages = {
     "dnslib",  # pure python
+    "chialisp_loader",
+    "chialisp_puzzles",
+    "chia_base",
 }
+
+
+here = pathlib.Path(__file__).parent
+project_root = here.parent
 
 
 def excepted(path: pathlib.Path) -> bool:
@@ -25,14 +33,10 @@ def main() -> int:
         print(f"Working in: {directory_string}")
         print()
         directory_path = pathlib.Path(directory_string)
+        artifact_directory_path = directory_path.joinpath("artifacts")
+        artifact_directory_path.mkdir()
 
         extras = ["upnp"]
-        package_path_string = os.fspath(pathlib.Path(__file__).parent.parent)
-
-        if len(extras) > 0:
-            package_and_extras = f"{package_path_string}[{','.join(extras)}]"
-        else:
-            package_and_extras = package_path_string
 
         print("Downloading packages for Python version:")
         lines = [
@@ -45,6 +49,33 @@ def main() -> int:
             print(f"    {line}")
         print(flush=True)
 
+        requirements_path = directory_path.joinpath("exported_requirements.txt")
+
+        if sys.platform == "win32":
+            poetry_path = pathlib.Path(".penv/Scripts/poetry")
+        else:
+            poetry_path = pathlib.Path(".penv/bin/poetry")
+
+        poetry_path = project_root.joinpath(poetry_path)
+
+        subprocess.run(
+            [
+                os.fspath(poetry_path),
+                "export",
+                "--format",
+                "requirements.txt",
+                "--output",
+                os.fspath(requirements_path),
+                "--without-hashes",
+                "--no-ansi",
+                "--no-interaction",
+                *(f"--extras={extra}" for extra in extras),
+            ],
+            check=True,
+        )
+
+        env = {key: value for key, value in os.environ.items() if key != "PIP_REQUIRE_VIRTUALENV"}
+
         subprocess.run(
             [
                 sys.executable,
@@ -52,17 +83,19 @@ def main() -> int:
                 "pip",
                 "download",
                 "--dest",
-                os.fspath(directory_path),
+                os.fspath(artifact_directory_path),
                 "--extra-index",
                 "https://pypi.chia.net/simple/",
-                package_and_extras,
+                "--requirement",
+                os.fspath(requirements_path),
             ],
+            env=env,
             check=True,
         )
 
         failed_artifacts = []
 
-        for artifact in directory_path.iterdir():
+        for artifact in artifact_directory_path.iterdir():
             if artifact.suffix == ".whl":
                 # everything being a wheel is the target
                 continue

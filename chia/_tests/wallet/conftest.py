@@ -126,7 +126,10 @@ async def wallet_environments(
     else:  # pragma: no cover
         config_overrides = {}
     async with setup_simulators_and_wallets_service(
-        1, request.param["num_environments"], blockchain_constants
+        1,
+        request.param["num_environments"],
+        blockchain_constants,
+        initial_num_public_keys=config_overrides.get("initial_num_public_keys", 5),
     ) as wallet_nodes_services:
         full_node, wallet_services, bt = wallet_nodes_services
 
@@ -162,10 +165,11 @@ async def wallet_environments(
 
             wallet_states: List[WalletState] = []
             for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
-                await full_node[0]._api.farm_blocks_to_wallet(
-                    count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
-                )
-                await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
+                if blocks_needed > 0:
+                    await full_node[0]._api.farm_blocks_to_wallet(
+                        count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
+                    )
+                    await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
                 wallet_states.append(
                     WalletState(
                         Balance(

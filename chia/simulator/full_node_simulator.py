@@ -174,7 +174,7 @@ class FullNodeSimulator(FullNodeAPI):
                     )
                 )
                 assert pre_validation_results is not None
-                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
+                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0], self.full_node._bls_cache)
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
@@ -208,7 +208,6 @@ class FullNodeSimulator(FullNodeAPI):
                 block_list_input=current_blocks,
                 guarantee_transaction_block=True,
                 current_time=current_time,
-                previous_generator=self.full_node.full_node_store.previous_generator,
             )
         await self.full_node.add_block(more[-1])
         return more[-1]
@@ -225,7 +224,7 @@ class FullNodeSimulator(FullNodeAPI):
                     )
                 )
                 assert pre_validation_results is not None
-                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0])
+                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0], self.full_node._bls_cache)
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
@@ -475,6 +474,32 @@ class FullNodeSimulator(FullNodeAPI):
 
                 await asyncio.sleep(backoff)
 
+    async def wait_bundle_ids_in_mempool(
+        self,
+        bundle_ids: Collection[bytes32],
+        timeout: Union[None, float] = 5,
+    ) -> None:
+        """Wait until the ids of specific spend bundles have entered the mempool.
+
+        Arguments:
+            records: The bundle ids to wait for.
+        """
+        with anyio.fail_after(delay=adjusted_timeout(timeout)):
+            ids_to_check: Set[bytes32] = set(bundle_ids)
+
+            for backoff in backoff_times():
+                found = set()
+                for spend_bundle_name in ids_to_check:
+                    tx = self.full_node.mempool_manager.get_spendbundle(spend_bundle_name)
+                    if tx is not None:
+                        found.add(spend_bundle_name)
+                ids_to_check = ids_to_check.difference(found)
+
+                if len(ids_to_check) == 0:
+                    return
+
+                await asyncio.sleep(backoff)
+
     async def wait_transaction_records_marked_as_in_mempool(
         self,
         record_ids: Collection[bytes32],
@@ -657,15 +682,15 @@ class FullNodeSimulator(FullNodeAPI):
                 outputs_group = [output for _, output in zip(range(per_transaction_record_group), outputs_iterator)]
 
                 if len(outputs_group) > 0:
-                    async with wallet.wallet_state_manager.lock:
-                        [tx] = await wallet.generate_signed_transaction(
+                    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+                        await wallet.generate_signed_transaction(
                             amount=outputs_group[0].amount,
                             puzzle_hash=outputs_group[0].puzzle_hash,
                             tx_config=DEFAULT_TX_CONFIG,
+                            action_scope=action_scope,
                             primaries=outputs_group[1:],
                         )
-                    await wallet.wallet_state_manager.add_pending_transactions([tx])
-                    transaction_records.append(tx)
+                    transaction_records.extend(action_scope.side_effects.transactions)
                 else:
                     break
 
@@ -689,13 +714,15 @@ class FullNodeSimulator(FullNodeAPI):
     async def self_is_synced(self) -> bool:
         return await self.full_node.synced()
 
-    async def wallet_is_synced(self, wallet_node: WalletNode) -> bool:
+    async def wallet_is_synced(self, wallet_node: WalletNode, peak_height: Optional[uint32] = None) -> bool:
         if not self.self_is_synced():
             # Depending on races, may not be covered every time
             return False  # pragma: no cover
         if not await wallet_node.wallet_state_manager.synced():
             return False
         wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
+        if peak_height is not None:
+            return wallet_height >= peak_height
         full_node_height = self.full_node.blockchain.get_peak_height()
         return wallet_height == full_node_height
 
@@ -703,24 +730,31 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         wallet_node: WalletNode,
         timeout: Optional[float] = 5,
+        peak_height: Optional[uint32] = None,
     ) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff_time in backoff_times():
-                if await self.wallet_is_synced(wallet_node=wallet_node):
+                if await self.wallet_is_synced(wallet_node=wallet_node, peak_height=peak_height):
                     break
                 await asyncio.sleep(backoff_time)
 
-    async def wallets_are_synced(self, wallet_nodes: List[WalletNode]) -> bool:
-        return all([await self.wallet_is_synced(wallet_node=wallet_node) for wallet_node in wallet_nodes])
+    async def wallets_are_synced(self, wallet_nodes: List[WalletNode], peak_height: Optional[uint32] = None) -> bool:
+        return all(
+            [
+                await self.wallet_is_synced(wallet_node=wallet_node, peak_height=peak_height)
+                for wallet_node in wallet_nodes
+            ]
+        )
 
     async def wait_for_wallets_synced(
         self,
         wallet_nodes: List[WalletNode],
         timeout: Optional[float] = 5,
+        peak_height: Optional[uint32] = None,
     ) -> None:
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff_time in backoff_times():
-                if await self.wallets_are_synced(wallet_nodes=wallet_nodes):
+                if await self.wallets_are_synced(wallet_nodes=wallet_nodes, peak_height=peak_height):
                     break
                 await asyncio.sleep(backoff_time)
 

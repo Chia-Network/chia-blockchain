@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
@@ -23,8 +22,8 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
@@ -152,6 +151,9 @@ class FullNodeRpcApi:
 
         if change in ("block", "signage_point"):
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
+
+        if change == "unfinished_block":
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "unfinished_block_info"))
 
         return payloads
 
@@ -830,7 +832,7 @@ class FullNodeRpcApi:
             raise ValueError("No coin_name in request")
 
         coin_name: bytes32 = bytes32.from_hexstr(request["coin_name"])
-        items: List[MempoolItem] = self.service.mempool_manager.mempool.get_items_by_coin_id(coin_name)
+        items = self.service.mempool_manager.mempool.get_items_by_coin_id(coin_name)
 
         return {"mempool_items": [item.to_json_dict() for item in items]}
 
@@ -865,12 +867,10 @@ class FullNodeRpcApi:
         if "spend_bundle" in request:
             spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
             spend_name = spend_bundle.name()
-            npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
+            conds: SpendBundleConditions = await self.service.mempool_manager.pre_validate_spendbundle(
                 spend_bundle, None, spend_name
             )
-            if npc_result.error is not None:
-                raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
-            cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
+            cost = conds.cost
         elif "cost" in request:
             cost = request["cost"]
         else:

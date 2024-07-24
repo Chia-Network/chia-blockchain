@@ -8,21 +8,14 @@ import anyio
 import pytest
 
 from chia._tests.util.misc import RecordingWebServer
+from chia._tests.util.split_managers import SplitAsyncManager, SplitManager, split_async_manager, split_manager
+from chia._tests.wallet.test_singleton_lifecycle_fast import satisfies_hint
+from chia.cmds.cmds_util import format_bytes, format_minutes, validate_directory_writable
 from chia.types.blockchain_format.program import Program
+from chia.types.transaction_queue_entry import ValuedEvent
+from chia.util.batches import to_batches
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint64
-from chia.util.misc import (
-    SplitAsyncManager,
-    SplitManager,
-    ValuedEvent,
-    format_bytes,
-    format_minutes,
-    satisfies_hint,
-    split_async_manager,
-    split_manager,
-    to_batches,
-    validate_directory_writable,
-)
 from chia.util.timing import adjusted_timeout, backoff_times
 
 T = TypeVar("T")
@@ -325,10 +318,7 @@ async def wait_for_valued_event_waiters(
 ) -> None:
     with anyio.fail_after(delay=adjusted_timeout(timeout)):
         for delay in backoff_times():
-            # ignoring the type since i'm hacking into the private attribute
-            # hopefully this is ok for testing and if it becomes invalid we
-            # will end up with an exception and can adjust then
-            if len(event._event._waiters) >= count:  # type: ignore[attr-defined]
+            if len(event._event._waiters) >= count:
                 return
             await anyio.sleep(delay)
 

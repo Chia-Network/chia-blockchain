@@ -94,7 +94,7 @@ async def test_basics(softfork_height: int, bt: BlockTools) -> None:
     assert spend_info.puzzle == coin_spend.puzzle_reveal
     assert spend_info.solution == coin_spend.solution
 
-    if softfork_height >= bt.constants.HARD_FORK_FIX_HEIGHT:
+    if softfork_height >= bt.constants.HARD_FORK_HEIGHT:
         clvm_cost = 27360
     else:
         clvm_cost = 404560
@@ -298,7 +298,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
         parent, puzzle, amount_program, _ = spend.as_iter()
         parent_coin_info = parent.as_atom()
         puzzle_hash = puzzle.get_tree_hash()
-        amount = amount_program.as_int()
+        amount = uint64(amount_program.as_int())
         coin = Coin(parent_coin_info=parent_coin_info, puzzle_hash=puzzle_hash, amount=amount)
         spent_coins.append(coin)
 

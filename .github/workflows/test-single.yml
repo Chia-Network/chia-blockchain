@@ -20,7 +20,7 @@ on:
       file_name:
         required: true
         type: string
-      concurrency_name:
+      concurrency-name:
         required: true
         type: string
       configuration:
@@ -32,10 +32,17 @@ on:
       runs-on:
         required: true
         type: string
+      arch:
+        required: true
+        type: string
+      collect-junit:
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency-name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 defaults:
@@ -57,6 +64,8 @@ jobs:
             name: ${{ inputs.name }}
             file_name: ${{ inputs.file_name }}
             runs-on: ${{ inputs.runs-on }}
+        arch:
+          - matrix: ${{ inputs.arch }}
         python:
           - name: "3.8"
             file_name: "3.8"
@@ -105,6 +114,10 @@ jobs:
               matrix: macos
             python:
               matrix: "3.8"
+          - arch:
+              matrix: arm
+            configuration:
+              install_timelord: true
           - os:
               matrix: windows
             configuration:
@@ -162,22 +175,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Get pip cache dir
-        id: pip-cache
-        shell: bash
-        run: |
-          echo "dir=$(pip cache dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        env:
-          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
-        with:
-          # Note that new runners may break this https://github.com/actions/cache/issues/292
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+      - uses: chia-network/actions/cache-pip@main
 
       - name: Cache test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots
@@ -200,11 +198,6 @@ jobs:
           mkdir "${GITHUB_WORKSPACE}/.chia"
           mv "${GITHUB_WORKSPACE}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/"* "${GITHUB_WORKSPACE}/.chia"
 
-      - name: Install boost (macOS)
-        if: matrix.os.matrix == 'macos'
-        run: |
-          brew install boost
-
       - uses: ./.github/actions/install
         with:
           python-version: ${{ matrix.python.install_sh }}
@@ -220,14 +213,40 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
-      - name: Verify source and installed tests match
+      - name: Verify source and installed tests collect and match
         run: |
           echo '==== collecting source tests ===='
-          pytest --collect-only -qq --import-mode=prepend chia/_tests/ | sed -n 's;^\(chia/_tests/.*\);\1;p' | sort | tee source_tests
+          if pytest --collect-only -qq --import-mode=prepend chia/_tests/ > source_tests_raw
+          then
+            cat source_tests_raw | sed -n 's;^\(chia/_tests/.*\);\1;p' | sort > source_tests
+          else
+            echo '    ==== source test collection failure'
+            cat source_tests_raw
+            exit 1
+          fi
+
           echo '==== collecting installed tests ===='
-          pytest --collect-only -qq --import-mode=append --pyargs chia._tests | sed -n 's;^venv/.*/\(chia/_tests/.*\);\1;p' | sort | tee installed_tests
+          if pytest --collect-only -qq --import-mode=append --pyargs chia._tests > installed_tests_raw
+          then
+            cat installed_tests_raw | sed -n 's;^\.venv/.*/\(chia/_tests/.*\);\1;p' | sort > installed_tests
+          else
+            echo '    ==== installed test collection failure'
+            cat installed_tests_raw
+            exit 1
+          fi
+
+          echo '==== collected tests ===='
+          for mode in source installed
+          do
+            echo "::group::collected ${mode} tests"
+            cat ${mode}_tests
+            echo '::endgroup::'
+          done
+
           echo '==== diffing collected tests ===='
-          diff --unified source_tests installed_tests
+          echo "::group::collected tests diff"
+          diff --unified source_tests installed_tests; DIFF_EXIT_CODE=$?
+          echo '::endgroup::'
 
       - name: Move chia/ so we test the installed code
         run: |
@@ -244,6 +263,7 @@ jobs:
           mv notchia/ chia/
 
       - name: Publish JUnit results
+        if: inputs.collect-junit
         uses: actions/upload-artifact@v4
         with:
           name: junit-data-${{ env.JOB_FILE_NAME }}

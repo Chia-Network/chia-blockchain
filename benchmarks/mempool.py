@@ -18,8 +18,8 @@ from chia.types.coin_record import CoinRecord
 from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
+from chia.util.batches import to_batches
 from chia.util.ints import uint32, uint64
-from chia.util.misc import to_batches
 
 NUM_ITERS = 200
 NUM_PEERS = 5
@@ -40,7 +40,7 @@ def enable_profiler(profile: bool, name: str) -> Iterator[None]:
     check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot", output_file + ".profile"])
     with open(output_file + ".png", "w+") as f:
         check_call(["dot", "-T", "png", output_file + ".dot"], stdout=f)
-    print("  output written to: %s.png" % output_file)
+    print(f"  output written to: {output_file}.png")
 
 
 def make_hash(height: int) -> bytes32:
@@ -177,9 +177,9 @@ async def run_mempool_benchmark() -> None:
                 spend_bundle_id = tx.name()
                 npc = await mempool.pre_validate_spendbundle(tx, None, spend_bundle_id)
                 assert npc is not None
-                _, status, error = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
-                assert status == MempoolInclusionStatus.SUCCESS
-                assert error is None
+                info = await mempool.add_spend_bundle(tx, npc, spend_bundle_id, height)
+                assert info.status == MempoolInclusionStatus.SUCCESS
+                assert info.error is None
 
         suffix = "st" if single_threaded else "mt"
 

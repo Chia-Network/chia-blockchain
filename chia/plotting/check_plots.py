@@ -23,10 +23,10 @@ from chia.plotting.util import (
 )
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
+from chia.util.cpu import available_logical_cores
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain
-from chia.util.misc import available_logical_cores
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 
 log = logging.getLogger(__name__)

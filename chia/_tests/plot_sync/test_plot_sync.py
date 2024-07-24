@@ -14,6 +14,7 @@ from chia_rs import G1Element
 from chia._tests.plot_sync.util import start_harvester_service
 from chia._tests.plotting.test_plot_manager import Directory, MockPlotInfo
 from chia._tests.plotting.util import get_test_plots
+from chia._tests.util.split_managers import SplitAsyncManager, split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.farmer.farmer import Farmer
 from chia.harvester.harvester import Harvester
@@ -30,7 +31,6 @@ from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64
-from chia.util.misc import SplitAsyncManager, split_async_manager
 from chia.util.streamable import _T_Streamable
 
 

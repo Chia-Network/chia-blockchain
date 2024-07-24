@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 def get_chiapos_install_info() -> Optional[Dict[str, Any]]:
-    chiapos_version: str = importlib.metadata.version("chiapos")
+    chiapos_version = importlib.metadata.version("chiapos")
     return {"display_name": "Chia Proof of Space", "version": chiapos_version, "installed": True}
 
 

@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 from random import Random
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import anyio
 from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, AugSchemeMPL, G1Element, G2Element, PrivateKey, solution_generator
@@ -24,7 +24,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.condition_costs import ConditionCost
-from chia.consensus.constants import ConsensusConstants
+from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.full_block_to_block_record import block_to_block_record
@@ -38,12 +38,7 @@ from chia.consensus.pot_iterations import (
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
-from chia.full_node.bundle_tools import (
-    best_solution_generator_from_template,
-    detect_potential_template_generator,
-    simple_solution_generator,
-    simple_solution_generator_backrefs,
-)
+from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.signage_point import SignagePoint
 from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
@@ -92,7 +87,7 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator, CompressorArg
+from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
@@ -107,7 +102,7 @@ from chia.util.config import (
 )
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.ssl_check import fix_ssl
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -128,12 +123,11 @@ DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
     "chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles"
 )
 
-test_constants = dataclasses.replace(
-    DEFAULT_CONSTANTS,
-    MIN_PLOT_SIZE=18,
+test_constants = DEFAULT_CONSTANTS.replace(
+    MIN_PLOT_SIZE=uint8(18),
     MIN_BLOCKS_PER_CHALLENGE_BLOCK=uint8(12),
     DIFFICULTY_STARTING=uint64(2**10),
-    DISCRIMINANT_SIZE_BITS=16,
+    DISCRIMINANT_SIZE_BITS=uint16(16),
     SUB_EPOCH_BLOCKS=uint32(170),
     WEIGHT_PROOF_THRESHOLD=uint8(2),
     WEIGHT_PROOF_RECENT_BLOCKS=uint32(380),
@@ -145,16 +139,12 @@ test_constants = dataclasses.replace(
     # create_prev_sub_epoch_segments() to have access to all the blocks it needs
     # from the cache
     BLOCKS_CACHE_SIZE=uint32(340 * 3),  # Coordinate with the above values
-    SUB_SLOT_TIME_TARGET=600,  # The target number of seconds per slot, mainnet 600
+    SUB_SLOT_TIME_TARGET=uint16(600),  # The target number of seconds per slot, mainnet 600
     SUB_SLOT_ITERS_STARTING=uint64(2**10),  # Must be a multiple of 64
-    NUMBER_ZERO_BITS_PLOT_FILTER=1,  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_PLOT_FILTER=uint8(1),  # H(plot signature of the challenge) must start with these many zeroes
     # Allows creating blockchains with timestamps up to 10 days in the future, for testing
-    MAX_FUTURE_TIME2=3600 * 24 * 10,
-    MEMPOOL_BLOCK_BUFFER=6,
-    # we deliberately make this different from HARD_FORK_HEIGHT in the
-    # tests, to ensure they operate independently (which they need to do for
-    # testnet10)
-    HARD_FORK_FIX_HEIGHT=uint32(5496100),
+    MAX_FUTURE_TIME2=uint32(3600 * 24 * 10),
+    MEMPOOL_BLOCK_BUFFER=uint8(6),
 )
 
 
@@ -169,7 +159,7 @@ def compute_additions_unchecked(sb: SpendBundle) -> List[Coin]:
             if op != ConditionOpcode.CREATE_COIN.value:
                 continue
             puzzle_hash = next(atoms).as_atom()
-            amount = next(atoms).as_int()
+            amount = uint64(next(atoms).as_int())
             ret.append(Coin(parent_id, puzzle_hash, amount))
     return ret
 
@@ -274,7 +264,7 @@ class BlockTools:
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
-        updated_constants = constants.replace_str_to_bytes(**overrides)
+        updated_constants = replace_str_to_bytes(constants, **overrides)
         self.constants = updated_constants
 
         self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
@@ -327,10 +317,8 @@ class BlockTools:
                 await keychain_proxy.delete_all_keys()
                 self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
                 self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-                self.farmer_master_sk = await keychain_proxy.add_private_key(
-                    bytes_to_mnemonic(self.farmer_master_sk_entropy)
-                )
-                self.pool_master_sk = await keychain_proxy.add_private_key(
+                self.farmer_master_sk = await keychain_proxy.add_key(bytes_to_mnemonic(self.farmer_master_sk_entropy))
+                self.pool_master_sk = await keychain_proxy.add_key(
                     bytes_to_mnemonic(self.pool_master_sk_entropy),
                 )
             else:
@@ -372,7 +360,7 @@ class BlockTools:
     def change_config(self, new_config: Dict[str, Any]) -> None:
         self._config = new_config
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
-        updated_constants = self.constants.replace_str_to_bytes(**overrides)
+        updated_constants = replace_str_to_bytes(self.constants, **overrides)
         self.constants = updated_constants
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
@@ -596,7 +584,8 @@ class BlockTools:
         normalized_to_identity_cc_sp: bool = False,
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
-        previous_generator: Optional[Union[CompressorArg, List[uint32]]] = None,
+        # TODO: rename this to block_refs
+        previous_generator: Optional[List[uint32]] = None,
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
         dummy_block_references: bool = False,
@@ -809,16 +798,9 @@ class BlockTools:
                                 block_generator = simple_solution_generator_backrefs(transaction_data)
                                 previous_generator = None
                             else:
-                                if type(previous_generator) is CompressorArg:
-                                    block_generator = best_solution_generator_from_template(
-                                        previous_generator, transaction_data
-                                    )
-                                else:
-                                    block_generator = simple_solution_generator(transaction_data)
-                                    if type(previous_generator) is list:
-                                        block_generator = BlockGenerator(
-                                            block_generator.program, [], previous_generator
-                                        )
+                                block_generator = simple_solution_generator(transaction_data)
+                            if previous_generator is not None:
+                                block_generator = BlockGenerator(block_generator.program, [], previous_generator)
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -902,11 +884,6 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
-                            compressor_arg = detect_potential_template_generator(
-                                full_block.height, full_block.transactions_generator
-                            )
-                            if compressor_arg is not None:
-                                previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
 
@@ -1143,16 +1120,9 @@ class BlockTools:
                                 block_generator = simple_solution_generator_backrefs(transaction_data)
                                 previous_generator = None
                             else:
-                                if previous_generator is not None and type(previous_generator) is CompressorArg:
-                                    block_generator = best_solution_generator_from_template(
-                                        previous_generator, transaction_data
-                                    )
-                                else:
-                                    block_generator = simple_solution_generator(transaction_data)
-                                    if type(previous_generator) is list:
-                                        block_generator = BlockGenerator(
-                                            block_generator.program, [], previous_generator
-                                        )
+                                block_generator = simple_solution_generator(transaction_data)
+                            if previous_generator is not None:
+                                block_generator = BlockGenerator(block_generator.program, [], previous_generator)
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
@@ -1239,11 +1209,6 @@ class BlockTools:
 
                         if full_block.transactions_generator is not None:
                             tx_block_heights.append(full_block.height)
-                            compressor_arg = detect_potential_template_generator(
-                                full_block.height, full_block.transactions_generator
-                            )
-                            if compressor_arg is not None:
-                                previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
                         self.log.info(f"Created block {block_record.height} ov=True, iters {block_record.total_iters}")
@@ -1934,22 +1899,22 @@ def compute_cost_table() -> List[int]:
 CONDITION_COSTS = compute_cost_table()
 
 
-def conditions_cost(conds: Program, hard_fork: bool) -> uint64:
+def conditions_cost(conds: Program) -> uint64:
     condition_cost = 0
     for cond in conds.as_iter():
         condition = cond.first().as_atom()
-        if condition in [ConditionOpcode.AGG_SIG_UNSAFE, ConditionOpcode.AGG_SIG_ME]:
-            condition_cost += ConditionCost.AGG_SIG.value
-        elif condition == ConditionOpcode.CREATE_COIN:
+        if condition == ConditionOpcode.CREATE_COIN:
             condition_cost += ConditionCost.CREATE_COIN.value
         # after the 2.0 hard fork, two byte conditions (with no leading 0)
         # have costs. Account for that.
-        elif hard_fork and len(condition) == 2 and condition[0] != 0:
+        elif len(condition) == 2 and condition[0] != 0:
             condition_cost += CONDITION_COSTS[condition[1]]
-        elif hard_fork and condition == ConditionOpcode.SOFTFORK.value:
+        elif condition == ConditionOpcode.SOFTFORK.value:
             arg = cond.rest().first().as_int()
             condition_cost += arg * 10000
-        elif hard_fork and condition in [
+        elif condition in [
+            ConditionOpcode.AGG_SIG_UNSAFE,
+            ConditionOpcode.AGG_SIG_ME,
             ConditionOpcode.AGG_SIG_PARENT,
             ConditionOpcode.AGG_SIG_PUZZLE,
             ConditionOpcode.AGG_SIG_AMOUNT,
@@ -1972,8 +1937,7 @@ def compute_fee_test(additions: Sequence[Coin], removals: Sequence[Coin]) -> uin
     ret = removal_amount - addition_amount
     # in order to allow creating blocks that mint coins, clamp the fee
     # to 0, if it ends up being negative
-    if ret < 0:
-        ret = 0
+    ret = max(ret, 0)
     return uint64(ret)
 
 
@@ -1985,7 +1949,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
     condition_cost = 0
     clvm_cost = 0
 
-    if height >= constants.HARD_FORK_FIX_HEIGHT:
+    if height >= constants.HARD_FORK_HEIGHT:
         blocks = [bytes(g) for g in generator.generator_refs]
         cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
@@ -1998,7 +1962,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
 
             cost, result = puzzle._run(INFINITE_COST, MEMPOOL_MODE, solution)
             clvm_cost += cost
-            condition_cost += conditions_cost(result, height >= constants.HARD_FORK_HEIGHT)
+            condition_cost += conditions_cost(result)
 
     else:
         block_program_args = SerializedProgram.to([[bytes(g) for g in generator.generator_refs]])
@@ -2008,7 +1972,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
             # each condition item is:
             # (parent-coin-id puzzle-hash amount conditions)
             conditions = res.at("rrrf")
-            condition_cost += conditions_cost(conditions, height >= constants.HARD_FORK_HEIGHT)
+            condition_cost += conditions_cost(conditions)
 
     size_cost = len(bytes(generator.program)) * constants.COST_PER_BYTE
 

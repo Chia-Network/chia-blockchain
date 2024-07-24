@@ -13,6 +13,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.util.errors import Err, ValidationError
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 CoinSpend = chia_rs.CoinSpend
@@ -29,11 +30,14 @@ def make_spend(
         pr = puzzle_reveal
     elif isinstance(puzzle_reveal, Program):
         pr = SerializedProgram.from_program(puzzle_reveal)
-
+    else:
+        raise ValueError("Only [SerializedProgram, Program] supported for puzzle reveal")
     if isinstance(solution, SerializedProgram):
         sol = solution
     elif isinstance(solution, Program):
         sol = SerializedProgram.from_program(solution)
+    else:
+        raise ValueError("Only [SerializedProgram, Program] supported for solution")
 
     return CoinSpend(coin, pr, sol)
 
@@ -75,8 +79,8 @@ def compute_additions_with_cost(
             continue
         cost += ConditionCost.CREATE_COIN.value
         puzzle_hash = next(atoms).as_atom()
-        amount = next(atoms).as_int()
-        ret.append(Coin(parent_id, puzzle_hash, amount))
+        amount = uint64(next(atoms).as_int())
+        ret.append(Coin(parent_id, puzzle_hash, uint64(amount)))
 
     return ret, cost
 

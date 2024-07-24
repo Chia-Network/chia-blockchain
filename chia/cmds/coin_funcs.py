@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import sys
-from decimal import Decimal
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
-from chia.cmds.units import units
+from chia.cmds.param_types import CliAmount
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -22,10 +21,10 @@ async def async_list(
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,
-    max_coin_amount: str,
-    min_coin_amount: str,
-    excluded_amounts: Sequence[str],
-    excluded_coin_ids: Sequence[str],
+    max_coin_amount: CliAmount,
+    min_coin_amount: CliAmount,
+    excluded_amounts: Sequence[CliAmount],
+    excluded_coin_ids: Sequence[bytes32],
     show_unconfirmed: bool,
     paginate: Optional[bool],
 ) -> None:
@@ -104,9 +103,9 @@ def print_coins(
         print("Press q to quit, or c to continue")
         while True:
             entered_key = sys.stdin.read(1)
-            if entered_key == "q":
+            if entered_key.lower() == "q":
                 return None
-            elif entered_key == "c":
+            elif entered_key.lower() == "c":
                 break
 
 
@@ -115,19 +114,17 @@ async def async_combine(
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,
-    fee: Decimal,
-    max_coin_amount: str,
-    min_coin_amount: str,
-    excluded_amounts: Sequence[str],
-    # TODO: [add TXConfig args] add excluded_coin_ids
+    fee: uint64,
+    max_coin_amount: CliAmount,
+    min_coin_amount: CliAmount,
+    excluded_amounts: Sequence[CliAmount],
     number_of_coins: int,
-    target_coin_amount: Decimal,
-    target_coin_ids_str: Sequence[str],
+    target_coin_amount: CliAmount,
+    target_coin_ids: Sequence[bytes32],
     largest_first: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
-        target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in target_coin_ids_str]
-        final_fee = uint64(int(fee * units["chia"]))
         if number_of_coins > 500:
             raise ValueError(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
         try:
@@ -135,24 +132,23 @@ async def async_combine(
             mojo_per_unit = get_mojo_per_unit(wallet_type)
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
-            return
+            return []
         if not await wallet_client.get_synced():
             print("Wallet not synced. Please wait.")
-            return
+            return []
         is_xch: bool = wallet_type == WalletType.STANDARD_WALLET  # this lets us know if we are directly combining Chia
-
         tx_config = CMDTXConfigLoader(
             max_coin_amount=max_coin_amount,
             min_coin_amount=min_coin_amount,
-            excluded_coin_amounts=[*excluded_amounts, str(target_coin_amount)],  # dont reuse coins of same amount.
+            excluded_coin_amounts=[*excluded_amounts, target_coin_amount],  # dont reuse coins of same amount.
             # TODO: [add TXConfig args] add excluded_coin_ids
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
-        final_target_coin_amount = uint64(int(target_coin_amount * mojo_per_unit))
+        final_target_coin_amount = target_coin_amount.convert_amount(mojo_per_unit)
 
         if final_target_coin_amount != 0:  # if we have a set target, just use standard coin selection.
             removals: List[Coin] = await wallet_client.select_coins(
-                amount=(final_target_coin_amount + final_fee) if is_xch else final_target_coin_amount,
+                amount=(final_target_coin_amount + fee) if is_xch else final_target_coin_amount,
                 wallet_id=wallet_id,
                 coin_selection_config=tx_config.coin_selection_config,
             )
@@ -165,10 +161,10 @@ async def async_combine(
                 conf_coins = [cr for cr in conf_coins if cr.name in target_coin_ids]
             if len(conf_coins) == 0:
                 print("No coins to combine.")
-                return
+                return []
             if len(conf_coins) == 1:
                 print("Only one coin found, you need at least two coins to combine.")
-                return
+                return []
             if largest_first:
                 conf_coins.sort(key=lambda r: r.coin.amount, reverse=True)
             else:
@@ -179,17 +175,20 @@ async def async_combine(
         print(f"Combining {len(removals)} coins.")
         cli_confirm("Would you like to Continue? (y/n): ")
         total_amount: uint128 = uint128(sum(coin.amount for coin in removals))
-        if is_xch and total_amount - final_fee <= 0:
+        if is_xch and total_amount - fee <= 0:
             print("Total amount is less than 0 after fee, exiting.")
-            return
+            return []
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, False))
-        additions = [{"amount": (total_amount - final_fee) if is_xch else total_amount, "puzzle_hash": target_ph}]
-        transaction: TransactionRecord = await wallet_client.send_transaction_multi(
-            wallet_id, additions, tx_config, removals, final_fee
-        )
+        additions = [{"amount": (total_amount - fee) if is_xch else total_amount, "puzzle_hash": target_ph}]
+        transaction: TransactionRecord = (
+            await wallet_client.send_transaction_multi(wallet_id, additions, tx_config, removals, fee, push=push)
+        ).transaction
         tx_id = transaction.name.hex()
-        print(f"Transaction sent: {tx_id}")
-        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+        if push:
+            print(f"Transaction sent: {tx_id}")
+            print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+
+        return [transaction]
 
 
 async def async_split(
@@ -197,32 +196,32 @@ async def async_split(
     wallet_rpc_port: Optional[int],
     fingerprint: Optional[int],
     wallet_id: int,
-    fee: Decimal,
+    fee: uint64,
     number_of_coins: int,
-    amount_per_coin: Decimal,
+    amount_per_coin: CliAmount,
     target_coin_id_str: str,
     # TODO: [add TXConfig args]
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
-        final_fee = uint64(int(fee * units["chia"]))
         target_coin_id: bytes32 = bytes32.from_hexstr(target_coin_id_str)
         if number_of_coins > 500:
             print(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
-            return
+            return []
         try:
             wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
             mojo_per_unit = get_mojo_per_unit(wallet_type)
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
-            return
+            return []
         if not await wallet_client.get_synced():
             print("Wallet not synced. Please wait.")
-            return
+            return []
         is_xch: bool = wallet_type == WalletType.STANDARD_WALLET  # this lets us know if we are directly spitting Chia
-        final_amount_per_coin = uint64(int(amount_per_coin * mojo_per_unit))
+        final_amount_per_coin = amount_per_coin.convert_amount(mojo_per_unit)
         total_amount = final_amount_per_coin * number_of_coins
         if is_xch:
-            total_amount += final_fee
+            total_amount += fee
         # get full coin record from name, and validate information about it.
         removal_coin_record: CoinRecord = (await wallet_client.get_coin_records_by_names([target_coin_id]))[0]
         if removal_coin_record.coin.amount < total_amount:
@@ -231,7 +230,7 @@ async def async_split(
                 f"is less than the total amount of the split: {total_amount / mojo_per_unit}, exiting."
             )
             print("Try using a smaller fee or amount.")
-            return
+            return []
         additions: List[Dict[str, Union[uint64, bytes32]]] = []
         for i in range(number_of_coins):  # for readability.
             # we always use new addresses
@@ -242,18 +241,22 @@ async def async_split(
             # TODO: [add TXConfig args]
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
-        transaction: TransactionRecord = await wallet_client.send_transaction_multi(
-            wallet_id, additions, tx_config, [removal_coin_record.coin], final_fee
-        )
+        transaction: TransactionRecord = (
+            await wallet_client.send_transaction_multi(
+                wallet_id, additions, tx_config, [removal_coin_record.coin], fee, push=push
+            )
+        ).transaction
         tx_id = transaction.name.hex()
-        print(f"Transaction sent: {tx_id}")
-        print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+        if push:
+            print(f"Transaction sent: {tx_id}")
+            print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
         dust_threshold = config.get("xch_spam_amount", 1000000)  # min amount per coin in mojo
         spam_filter_after_n_txs = config.get("spam_filter_after_n_txs", 200)  # how many txs to wait before filtering
         if final_amount_per_coin < dust_threshold and wallet_type == WalletType.STANDARD_WALLET:
             print(
-                f"WARNING: The amount per coin: {amount_per_coin} is less than the dust threshold: "
-                f"{dust_threshold / mojo_per_unit}. Some or all of the Coins "
+                f"WARNING: The amount per coin: {amount_per_coin.amount} is less than the dust threshold: "
+                f"{dust_threshold / (1 if amount_per_coin.mojos else mojo_per_unit)}. Some or all of the Coins "
                 f"{'will' if number_of_coins > spam_filter_after_n_txs else 'may'} not show up in your wallet unless "
                 f"you decrease the dust limit to below {final_amount_per_coin} mojos or disable it by setting it to 0."
             )
+        return [transaction]

@@ -52,16 +52,18 @@ async def mint_cr_cat(
     CAT_AMOUNT_0 = uint64(100)
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
-    tx = await client_0.create_signed_transaction(
-        [
-            {
-                "puzzle_hash": cat_puzzle.get_tree_hash(),
-                "amount": CAT_AMOUNT_0,
-            }
-        ],
-        DEFAULT_TX_CONFIG,
-        wallet_id=1,
-    )
+    tx = (
+        await client_0.create_signed_transactions(
+            [
+                {
+                    "puzzle_hash": cat_puzzle.get_tree_hash(),
+                    "amount": CAT_AMOUNT_0,
+                }
+            ],
+            DEFAULT_TX_CONFIG,
+            wallet_id=1,
+        )
+    ).signed_tx
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 
@@ -115,7 +117,7 @@ async def mint_cr_cat(
         {
             "num_environments": 2,
             "config_overrides": {"automatically_add_unknown_cats": True},
-            "blocks_needed": [1, 1],
+            "blocks_needed": [2, 1],
         }
     ],
     indirect=True,
@@ -147,28 +149,39 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    did_id: bytes32 = bytes32.from_hexstr(
-        (await DIDWallet.create_new_did_wallet(wallet_node_0.wallet_state_manager, wallet_0, uint64(1))).get_my_DID()
-    )
+    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        did_id: bytes32 = bytes32.from_hexstr(
+            (
+                await DIDWallet.create_new_did_wallet(
+                    wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+                )
+            ).get_my_DID()
+        )
 
     # Mint a VC
-    vc_record, _ = await client_0.vc_mint(
-        did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
-    )
+    vc_record = (
+        await client_0.vc_mint(
+            did_id,
+            wallet_environments.tx_config,
+            target_address=await wallet_0.get_new_puzzlehash(),
+            fee=uint64(1_750_000_000_000),
+        )
+    ).vc_record
 
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {
-                        "unconfirmed_wallet_balance": -202,  # 200 for VC mint fee, 1 for VC singleton, 1 for DID mint
+                        # 1_750_000_000_000 for VC mint fee, 1 for VC singleton, 1 for DID mint
+                        "unconfirmed_wallet_balance": -1_750_000_000_002,
                         # I'm not sure incrementing pending_coin_removal_count here by 3 is the spirit of this number
                         # One existing coin has been removed and two ephemeral coins have been removed
                         # Does pending_coin_removal_count attempt to show the number of current pending removals
                         # Or does it intend to just mean all pending removals that we should eventually get states for?
-                        "pending_coin_removal_count": 4,  # 3 for VC mint, 1 for DID mint
-                        "<=#spendable_balance": -202,
-                        "<=#max_send_amount": -202,
+                        "pending_coin_removal_count": 5,  # 4 for VC mint, 1 for DID mint
+                        "<=#spendable_balance": -1_750_000_000_002,
+                        "<=#max_send_amount": -1_750_000_000_002,
                         "set_remainder": True,
                     },
                     "did": {"init": True, "set_remainder": True},
@@ -185,8 +198,9 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                 },
                 post_block_balance_updates={
                     "xch": {
-                        "confirmed_wallet_balance": -202,  # 200 for VC mint fee, 1 for VC singleton, 1 for DID mint
-                        "pending_coin_removal_count": -4,  # 3 for VC mint, 1 for DID mint
+                        # 1_750_000_000_000 for VC mint fee, 1 for VC singleton, 1 for DID mint
+                        "confirmed_wallet_balance": -1_750_000_000_002,
+                        "pending_coin_removal_count": -5,  # 3 for VC mint, 1 for DID mint
                         "set_remainder": True,
                     },
                     "did": {
@@ -335,15 +349,16 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert await wallet_node_0.wallet_state_manager.get_wallet_for_asset_id(cr_cat_wallet_0.get_asset_id()) is not None
     wallet_1_ph = await wallet_1.get_new_puzzlehash()
     wallet_1_addr = encode_puzzle_hash(wallet_1_ph, "txch")
-    tx = await client_0.cat_spend(
-        cr_cat_wallet_0.id(),
-        wallet_environments.tx_config,
-        uint64(90),
-        wallet_1_addr,
-        uint64(2000000000),
-        memos=["hey"],
-    )
-    await wallet_node_0.wallet_state_manager.add_pending_transactions([tx])
+    txs = (
+        await client_0.cat_spend(
+            cr_cat_wallet_0.id(),
+            wallet_environments.tx_config,
+            uint64(90),
+            wallet_1_addr,
+            uint64(2000000000),
+            memos=["hey"],
+        )
+    ).transactions
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -362,6 +377,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "unconfirmed_wallet_balance": -90,
                         "spendable_balance": -100,
                         "max_send_amount": -100,
+                        "pending_change": 10,
                         "pending_coin_removal_count": 1,
                     },
                 },
@@ -378,6 +394,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "confirmed_wallet_balance": -90,
                         "spendable_balance": 10,
                         "max_send_amount": 10,
+                        "pending_change": -10,
                         "pending_coin_removal_count": -1,
                     },
                 },
@@ -404,7 +421,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         ]
     )
     assert await wallet_node_1.wallet_state_manager.wallets[env_1.dealias_wallet_id("crcat")].match_hinted_coin(
-        next(c for c in tx.additions if c.amount == 90), wallet_1_ph
+        next(c for tx in txs for c in tx.additions if c.amount == 90), wallet_1_ph
     )
     pending_tx = await client_1.get_transactions(
         env_1.dealias_wallet_id("crcat"),
@@ -467,6 +484,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     },
                     "crcat": {
                         "unconfirmed_wallet_balance": 90,
+                        "pending_change": 90,
                         "pending_coin_removal_count": 1,
                     },
                 },
@@ -483,6 +501,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "confirmed_wallet_balance": 90,
                         "spendable_balance": 90,
                         "max_send_amount": 90,
+                        "pending_change": -90,
                         "unspent_coin_count": 1,
                         "pending_coin_removal_count": -1,
                     },
@@ -506,15 +525,17 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
         )
 
     # Test melting a CRCAT
-    tx = await client_1.cat_spend(
-        env_1.dealias_wallet_id("crcat"),
-        wallet_environments.tx_config,
-        uint64(20),
-        wallet_1_addr,
-        uint64(0),
-        cat_discrepancy=(-50, Program.to(None), Program.to(None)),
-    )
-    await wallet_node_1.wallet_state_manager.add_pending_transactions([tx])
+    tx = (
+        await client_1.cat_spend(
+            env_1.dealias_wallet_id("crcat"),
+            wallet_environments.tx_config,
+            uint64(20),
+            wallet_1_addr,
+            uint64(0),
+            cat_discrepancy=(-50, Program.to(None), Program.to(None)),
+        )
+    ).transaction
+    [tx] = await wallet_node_1.wallet_state_manager.add_pending_transactions([tx])
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(),
@@ -534,6 +555,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "unconfirmed_wallet_balance": -50,
                         "spendable_balance": -90,
                         "max_send_amount": -90,
+                        "pending_change": 40,
                         "pending_coin_removal_count": 1,
                     },
                 },
@@ -550,6 +572,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "confirmed_wallet_balance": -50,  # should go straight to confirmed because we sent to ourselves
                         "spendable_balance": 40,
                         "max_send_amount": 40,
+                        "pending_change": -40,
                         "pending_coin_removal_count": -1,
                         "unspent_coin_count": 1,
                     },
@@ -632,14 +655,17 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     }
 
     # Generate DID as an "authorized provider"
-    did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-        wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
-    )
+    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+        )
     did_id: bytes32 = bytes32.from_hexstr(did_wallet.get_my_DID())
 
-    vc_record, _ = await client_0.vc_mint(
-        did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
-    )
+    vc_record = (
+        await client_0.vc_mint(
+            did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+        )
+    ).vc_record
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -662,16 +688,19 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
 
     # Test a negative case real quick (mostly unrelated)
     with pytest.raises(ValueError, match="at the same time"):
-        await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
-            new_vc_record.vc.launcher_id,
-            wallet_environments.tx_config,
-            new_proof_hash=bytes32([0] * 32),
-            self_revoke=True,
-        )
+        async with wallet_node_0.wallet_state_manager.new_action_scope(push=False) as action_scope:
+            await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
+                new_vc_record.vc.launcher_id,
+                wallet_environments.tx_config,
+                action_scope,
+                new_proof_hash=bytes32([0] * 32),
+                self_revoke=True,
+            )
 
     # Send the DID to oblivion
-    txs = await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config)
-    await did_wallet.wallet_state_manager.add_pending_transactions(txs)
+    async with did_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, wallet_environments.tx_config, action_scope)
+
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(

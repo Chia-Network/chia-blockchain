@@ -25,13 +25,13 @@ from typing import (
     cast,
 )
 
-from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.signal_handlers import SignalHandlers
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
@@ -39,11 +39,11 @@ from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
-from chia.util.misc import SignalHandlers
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
-from ..protocols.shared_protocol import capabilities
+from ..protocols.shared_protocol import default_capabilities
+from ..util.chia_version import chia_short_version
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -105,7 +105,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
 
         self._log = logging.getLogger(service_name)
         self._log.info(f"Starting service {self._service_name} ...")
-        self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
+        self._log.info(f"chia-blockchain version: {chia_short_version()}")
 
         self.service_config = self.config[service_name]
 
@@ -117,7 +117,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         if node_type == NodeType.WALLET:
             inbound_rlp = self.service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
-        capabilities_to_use: List[Tuple[uint16, str]] = capabilities
+        capabilities_to_use: List[Tuple[uint16, str]] = default_capabilities[node_type]
         if override_capabilities is not None:
             capabilities_to_use = override_capabilities
 
@@ -173,6 +173,11 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                     resolved_peers[unresolved] = resolved
 
                 if any(connection.peer_info == resolved for connection in self._server.all_connections.values()):
+                    continue
+                if any(
+                    connection.peer_info.host == resolved.host and connection.peer_server_port == resolved.port
+                    for connection in self._server.all_connections.values()
+                ):
                     continue
 
                 if not await self._server.start_client(resolved, None):

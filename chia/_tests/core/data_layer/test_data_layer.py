@@ -75,8 +75,8 @@ async def test_plugin_requests_use_custom_headers(
     )
 
     async with data_layer.manage():
-        await data_layer.get_downloader(tree_id=bytes32([0] * 32), url="")
-        await data_layer.get_uploaders(tree_id=bytes32([0] * 32))
+        await data_layer.get_downloader(store_id=bytes32([0] * 32), url="")
+        await data_layer.get_uploaders(store_id=bytes32([0] * 32))
         await data_layer.check_plugins()
 
     header_values = {request.headers.get(header_key) for request in recording_web_server.requests}

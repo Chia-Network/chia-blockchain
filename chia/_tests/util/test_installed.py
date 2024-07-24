@@ -17,4 +17,4 @@ def test_chia_installed() -> None:
     and testing the installed code checks for that.  A next step would be to install
     using the actual wheel file we are going to publish.
     """
-    assert "venv" in pathlib.Path(chia.__file__).parts
+    assert ".venv" in pathlib.Path(chia.__file__).parts

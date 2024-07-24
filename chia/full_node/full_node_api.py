@@ -7,21 +7,18 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, cast
 
 import anyio
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element, MerkleSet
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
-from chia.full_node.bundle_tools import (
-    best_solution_generator_from_template,
-    simple_solution_generator,
-    simple_solution_generator_backrefs,
-)
+from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
+from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
@@ -30,6 +27,7 @@ from chia.full_node.tx_processing_queue import TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import (
     CoinState,
     PuzzleSolutionResponse,
@@ -60,12 +58,13 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request
+from chia.util.batches import to_batches
+from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
-from chia.util.merkle_set import MerkleSet
 
 if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode
@@ -856,16 +855,7 @@ class FullNodeAPI:
                         if peak.height >= self.full_node.constants.HARD_FORK_HEIGHT:
                             block_generator = simple_solution_generator_backrefs(spend_bundle)
                         else:
-                            if self.full_node.full_node_store.previous_generator is not None:
-                                self.log.info(
-                                    f"Using previous generator for height "
-                                    f"{self.full_node.full_node_store.previous_generator}"
-                                )
-                                block_generator = best_solution_generator_from_template(
-                                    self.full_node.full_node_store.previous_generator, spend_bundle
-                                )
-                            else:
-                                block_generator = simple_solution_generator(spend_bundle)
+                            block_generator = simple_solution_generator(spend_bundle)
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -1256,11 +1246,13 @@ class FullNodeAPI:
             response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, None)
         else:
             # Create addition Merkle set
-            addition_merkle_set = MerkleSet()
             # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+            leafs: List[bytes32] = []
             for puzzle, coins in puzzlehash_coins_map.items():
-                addition_merkle_set.add_already_hashed(puzzle)
-                addition_merkle_set.add_already_hashed(hash_coin_ids([c.name() for c in coins]))
+                leafs.append(puzzle)
+                leafs.append(hash_coin_ids([c.name() for c in coins]))
+
+            addition_merkle_set = MerkleSet(leafs)
 
             for puzzle_hash in request.puzzle_hashes:
                 # This is a proof of inclusion if it's in (result==True), or exclusion of it's not in
@@ -1326,9 +1318,10 @@ class FullNodeAPI:
             response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
         else:
             assert block.transactions_generator
-            removal_merkle_set = MerkleSet()
+            leafs: List[bytes32] = []
             for removed_name, removed_coin in all_removals_dict.items():
-                removal_merkle_set.add_already_hashed(removed_name)
+                leafs.append(removed_name)
+            removal_merkle_set = MerkleSet(leafs)
             assert removal_merkle_set.get_root() == block.foliage_transaction_block.removals_root
             for coin_name in request.coin_names:
                 result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
@@ -1569,12 +1562,8 @@ class FullNodeAPI:
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
         trusted = self.is_trusted(peer)
-        if trusted:
-            max_subscriptions = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
-            max_items = self.full_node.config.get("trusted_max_subscribe_response_items", 500000)
-        else:
-            max_subscriptions = self.full_node.config.get("max_subscribe_items", 200000)
-            max_items = self.full_node.config.get("max_subscribe_response_items", 100000)
+        max_items = self.max_subscribe_response_items(peer)
+        max_subscriptions = self.max_subscriptions(peer)
 
         # the returned puzzle hashes are the ones we ended up subscribing to.
         # It will have filtered duplicates and ones exceeding the subscription
@@ -1596,14 +1585,9 @@ class FullNodeAPI:
         )
         max_items -= len(states)
 
-        hint_coin_ids: Set[bytes32] = set()
-        if max_items > 0:
-            for puzzle_hash in puzzle_hashes:
-                ph_hint_coins = await self.full_node.hint_store.get_coin_ids(puzzle_hash, max_items=max_items)
-                hint_coin_ids.update(ph_hint_coins)
-                max_items -= len(ph_hint_coins)
-                if max_items <= 0:
-                    break
+        hint_coin_ids = await self.full_node.hint_store.get_coin_ids_multi(
+            cast(Set[bytes], puzzle_hashes), max_items=max_items
+        )
 
         hint_states: List[CoinState] = []
         if len(hint_coin_ids) > 0:
@@ -1640,12 +1624,8 @@ class FullNodeAPI:
     async def register_interest_in_coin(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
-        if self.is_trusted(peer):
-            max_subscriptions = self.full_node.config.get("trusted_max_subscribe_items", 2000000)
-            max_items = self.full_node.config.get("trusted_max_subscribe_response_items", 500000)
-        else:
-            max_subscriptions = self.full_node.config.get("max_subscribe_items", 200000)
-            max_items = self.full_node.config.get("max_subscribe_response_items", 100000)
+        max_items = self.max_subscribe_response_items(peer)
+        max_subscriptions = self.max_subscriptions(peer)
 
         # TODO: apparently we have tests that expect to receive a
         # RespondToCoinUpdates even when subscribing to the same coin multiple
@@ -1723,6 +1703,267 @@ class FullNodeAPI:
         response = RespondFeeEstimates(FeeEstimateGroup(error=None, estimates=fee_estimates))
         msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, response)
         return msg
+
+    @api_request(
+        peer_required=True,
+        reply_types=[ProtocolMessageTypes.respond_remove_puzzle_subscriptions],
+    )
+    async def request_remove_puzzle_subscriptions(
+        self, request: wallet_protocol.RequestRemovePuzzleSubscriptions, peer: WSChiaConnection
+    ) -> Message:
+        peer_id = peer.peer_node_id
+        subs = self.full_node.subscriptions
+
+        if request.puzzle_hashes is None:
+            removed = list(subs.puzzle_subscriptions(peer_id))
+            subs.clear_puzzle_subscriptions(peer_id)
+        else:
+            removed = list(subs.remove_puzzle_subscriptions(peer_id, request.puzzle_hashes))
+
+        response = wallet_protocol.RespondRemovePuzzleSubscriptions(removed)
+        msg = make_msg(ProtocolMessageTypes.respond_remove_puzzle_subscriptions, response)
+        return msg
+
+    @api_request(
+        peer_required=True,
+        reply_types=[ProtocolMessageTypes.respond_remove_coin_subscriptions],
+    )
+    async def request_remove_coin_subscriptions(
+        self, request: wallet_protocol.RequestRemoveCoinSubscriptions, peer: WSChiaConnection
+    ) -> Message:
+        peer_id = peer.peer_node_id
+        subs = self.full_node.subscriptions
+
+        if request.coin_ids is None:
+            removed = list(subs.coin_subscriptions(peer_id))
+            subs.clear_coin_subscriptions(peer_id)
+        else:
+            removed = list(subs.remove_coin_subscriptions(peer_id, request.coin_ids))
+
+        response = wallet_protocol.RespondRemoveCoinSubscriptions(removed)
+        msg = make_msg(ProtocolMessageTypes.respond_remove_coin_subscriptions, response)
+        return msg
+
+    @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_puzzle_state])
+    async def request_puzzle_state(
+        self, request: wallet_protocol.RequestPuzzleState, peer: WSChiaConnection
+    ) -> Message:
+        max_items = self.max_subscribe_response_items(peer)
+        max_subscriptions = self.max_subscriptions(peer)
+        subs = self.full_node.subscriptions
+
+        request_puzzle_hashes = list(dict.fromkeys(request.puzzle_hashes))
+
+        # This is a limit imposed by `batch_coin_states_by_puzzle_hashes`, due to the SQLite variable limit.
+        # It can be increased in the future, and this protocol should be written and tested in a way that
+        # this increase would not break the API.
+        count = CoinStore.MAX_PUZZLE_HASH_BATCH_SIZE
+        puzzle_hashes = request_puzzle_hashes[:count]
+
+        previous_header_hash = (
+            self.full_node.blockchain.height_to_hash(request.previous_height)
+            if request.previous_height is not None
+            else self.full_node.blockchain.constants.GENESIS_CHALLENGE
+        )
+        assert previous_header_hash is not None
+
+        if request.header_hash != previous_header_hash:
+            rejection = wallet_protocol.RejectPuzzleState(uint8(wallet_protocol.RejectStateReason.REORG))
+            msg = make_msg(ProtocolMessageTypes.reject_puzzle_state, rejection)
+            return msg
+
+        # Check if the request would exceed the subscription limit now.
+        def check_subscription_limit() -> Optional[Message]:
+            new_subscription_count = len(puzzle_hashes) + subs.peer_subscription_count(peer.peer_node_id)
+
+            if request.subscribe_when_finished and new_subscription_count > max_subscriptions:
+                rejection = wallet_protocol.RejectPuzzleState(
+                    uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+                )
+                msg = make_msg(ProtocolMessageTypes.reject_puzzle_state, rejection)
+                return msg
+
+            return None
+
+        sub_rejection = check_subscription_limit()
+        if sub_rejection is not None:
+            return sub_rejection
+
+        min_height = uint32((request.previous_height + 1) if request.previous_height is not None else 0)
+
+        (coin_states, next_min_height) = await self.full_node.coin_store.batch_coin_states_by_puzzle_hashes(
+            puzzle_hashes,
+            min_height=min_height,
+            include_spent=request.filters.include_spent,
+            include_unspent=request.filters.include_unspent,
+            include_hinted=request.filters.include_hinted,
+            min_amount=request.filters.min_amount,
+            max_items=max_items,
+        )
+        is_done = next_min_height is None
+
+        peak_height = self.full_node.blockchain.get_peak_height()
+        assert peak_height is not None
+
+        height = uint32(next_min_height - 1) if next_min_height is not None else peak_height
+        header_hash = self.full_node.blockchain.height_to_hash(height)
+        assert header_hash is not None
+
+        # Check if the request would exceed the subscription limit.
+        # We do this again since we've crossed an `await` point, to prevent a race condition.
+        sub_rejection = check_subscription_limit()
+        if sub_rejection is not None:
+            return sub_rejection
+
+        if is_done and request.subscribe_when_finished:
+            subs.add_puzzle_subscriptions(peer.peer_node_id, puzzle_hashes, max_subscriptions)
+            await self.mempool_updates_for_puzzle_hashes(peer, set(puzzle_hashes), request.filters.include_hinted)
+
+        response = wallet_protocol.RespondPuzzleState(puzzle_hashes, height, header_hash, is_done, coin_states)
+        msg = make_msg(ProtocolMessageTypes.respond_puzzle_state, response)
+        return msg
+
+    @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_coin_state])
+    async def request_coin_state(self, request: wallet_protocol.RequestCoinState, peer: WSChiaConnection) -> Message:
+        max_items = self.max_subscribe_response_items(peer)
+        max_subscriptions = self.max_subscriptions(peer)
+        subs = self.full_node.subscriptions
+
+        request_coin_ids = list(dict.fromkeys(request.coin_ids))
+        coin_ids = request_coin_ids[:max_items]
+
+        previous_header_hash = (
+            self.full_node.blockchain.height_to_hash(request.previous_height)
+            if request.previous_height is not None
+            else self.full_node.blockchain.constants.GENESIS_CHALLENGE
+        )
+        assert previous_header_hash is not None
+
+        if request.header_hash != previous_header_hash:
+            rejection = wallet_protocol.RejectCoinState(uint8(wallet_protocol.RejectStateReason.REORG))
+            msg = make_msg(ProtocolMessageTypes.reject_coin_state, rejection)
+            return msg
+
+        # Check if the request would exceed the subscription limit now.
+        def check_subscription_limit() -> Optional[Message]:
+            new_subscription_count = len(coin_ids) + subs.peer_subscription_count(peer.peer_node_id)
+
+            if request.subscribe and new_subscription_count > max_subscriptions:
+                rejection = wallet_protocol.RejectCoinState(
+                    uint8(wallet_protocol.RejectStateReason.EXCEEDED_SUBSCRIPTION_LIMIT)
+                )
+                msg = make_msg(ProtocolMessageTypes.reject_coin_state, rejection)
+                return msg
+
+            return None
+
+        sub_rejection = check_subscription_limit()
+        if sub_rejection is not None:
+            return sub_rejection
+
+        min_height = uint32(request.previous_height + 1 if request.previous_height is not None else 0)
+
+        coin_states = await self.full_node.coin_store.get_coin_states_by_ids(
+            True, coin_ids, min_height=min_height, max_items=max_items
+        )
+
+        # Check if the request would exceed the subscription limit.
+        # We do this again since we've crossed an `await` point, to prevent a race condition.
+        sub_rejection = check_subscription_limit()
+        if sub_rejection is not None:
+            return sub_rejection
+
+        if request.subscribe:
+            subs.add_coin_subscriptions(peer.peer_node_id, coin_ids, max_subscriptions)
+            await self.mempool_updates_for_coin_ids(peer, set(coin_ids))
+
+        response = wallet_protocol.RespondCoinState(coin_ids, coin_states)
+        msg = make_msg(ProtocolMessageTypes.respond_coin_state, response)
+        return msg
+
+    @api_request(reply_types=[ProtocolMessageTypes.respond_cost_info])
+    async def request_cost_info(self, _request: wallet_protocol.RequestCostInfo) -> Optional[Message]:
+        mempool_manager = self.full_node.mempool_manager
+        response = wallet_protocol.RespondCostInfo(
+            max_transaction_cost=mempool_manager.max_tx_clvm_cost,
+            max_block_cost=mempool_manager.max_block_clvm_cost,
+            max_mempool_cost=uint64(mempool_manager.mempool_max_total_cost),
+            mempool_cost=uint64(mempool_manager.mempool._total_cost),
+            mempool_fee=uint64(mempool_manager.mempool._total_fee),
+            bump_fee_per_cost=uint8(mempool_manager.nonzero_fee_minimum_fpc),
+        )
+        msg = make_msg(ProtocolMessageTypes.respond_cost_info, response)
+        return msg
+
+    async def mempool_updates_for_puzzle_hashes(
+        self, peer: WSChiaConnection, puzzle_hashes: Set[bytes32], include_hints: bool
+    ) -> None:
+        if Capability.MEMPOOL_UPDATES not in peer.peer_capabilities:
+            return
+
+        start_time = time.monotonic()
+
+        async with self.full_node.db_wrapper.reader() as conn:
+            transaction_ids = set(
+                self.full_node.mempool_manager.mempool.items_with_puzzle_hashes(puzzle_hashes, include_hints)
+            )
+
+            hinted_coin_ids: Set[bytes32] = set()
+
+            for batch in to_batches(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
+                hints_db: Tuple[bytes, ...] = tuple(batch.entries)
+                cursor = await conn.execute(
+                    f"SELECT coin_id from hints INDEXED BY hint_index "
+                    f'WHERE hint IN ({"?," * (len(batch.entries) - 1)}?)',
+                    hints_db,
+                )
+                for row in await cursor.fetchall():
+                    hinted_coin_ids.add(bytes32(row[0]))
+                await cursor.close()
+
+            transaction_ids |= set(self.full_node.mempool_manager.mempool.items_with_coin_ids(hinted_coin_ids))
+
+        if len(transaction_ids) > 0:
+            message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))
+            await peer.send_message(make_msg(ProtocolMessageTypes.mempool_items_added, message))
+
+        total_time = time.monotonic() - start_time
+
+        self.log.log(
+            logging.DEBUG if total_time < 2.0 else logging.WARNING,
+            f"Sending initial mempool items to peer {peer.peer_node_id} took {total_time:.4f}s",
+        )
+
+    async def mempool_updates_for_coin_ids(self, peer: WSChiaConnection, coin_ids: Set[bytes32]) -> None:
+        if Capability.MEMPOOL_UPDATES not in peer.peer_capabilities:
+            return
+
+        start_time = time.monotonic()
+
+        transaction_ids = self.full_node.mempool_manager.mempool.items_with_coin_ids(coin_ids)
+
+        if len(transaction_ids) > 0:
+            message = wallet_protocol.MempoolItemsAdded(list(transaction_ids))
+            await peer.send_message(make_msg(ProtocolMessageTypes.mempool_items_added, message))
+
+        total_time = time.monotonic() - start_time
+
+        self.log.log(
+            logging.DEBUG if total_time < 2.0 else logging.WARNING,
+            f"Sending initial mempool items to peer {peer.peer_node_id} took {total_time:.4f}s",
+        )
+
+    def max_subscriptions(self, peer: WSChiaConnection) -> int:
+        if self.is_trusted(peer):
+            return cast(int, self.full_node.config.get("trusted_max_subscribe_items", 2000000))
+        else:
+            return cast(int, self.full_node.config.get("max_subscribe_items", 200000))
+
+    def max_subscribe_response_items(self, peer: WSChiaConnection) -> int:
+        if self.is_trusted(peer):
+            return cast(int, self.full_node.config.get("trusted_max_subscribe_response_items", 500000))
+        else:
+            return cast(int, self.full_node.config.get("max_subscribe_response_items", 100000))
 
     def is_trusted(self, peer: WSChiaConnection) -> bool:
         return self.server.is_trusted_peer(peer, self.full_node.config.get("trusted_peers", {}))

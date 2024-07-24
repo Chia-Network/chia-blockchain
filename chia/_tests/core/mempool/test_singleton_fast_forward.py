@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
-from more_itertools import partition
 
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from chia._tests.core.mempool.test_mempool_manager import (
@@ -47,14 +46,15 @@ async def test_process_fast_forward_spends_nothing_to_do() -> None:
     async def get_unspent_lineage_info_for_puzzle_hash(_: bytes32) -> Optional[UnspentLineageInfo]:
         assert False  # pragma: no cover
 
-    conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH]]
-    sb = spend_bundle_from_conditions(conditions, TEST_COIN)
+    sk = AugSchemeMPL.key_gen(b"b" * 32)
+    g1 = sk.get_g1()
+    sig = AugSchemeMPL.sign(sk, b"foobar", g1)
+    conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"]]
+    sb = spend_bundle_from_conditions(conditions, TEST_COIN, sig)
     item = mempool_item_from_spendbundle(sb)
     # This coin is not eligible for fast forward
     assert item.bundle_coin_spends[TEST_COIN_ID].eligible_for_fast_forward is False
-    internal_mempool_item = InternalMempoolItem(
-        sb, item.npc_result, item.height_added_to_mempool, item.bundle_coin_spends
-    )
+    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
     await eligible_coin_spends.process_fast_forward_spends(
@@ -85,9 +85,7 @@ async def test_process_fast_forward_spends_unknown_ff() -> None:
     item = mempool_item_from_spendbundle(sb)
     # The coin is eligible for fast forward
     assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
-    internal_mempool_item = InternalMempoolItem(
-        sb, item.npc_result, item.height_added_to_mempool, item.bundle_coin_spends
-    )
+    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     eligible_coin_spends = EligibleCoinSpends()
     # We have no fast forward records yet, so we'll process this coin for the
     # first time here, but the DB lookup will return None
@@ -129,9 +127,7 @@ async def test_process_fast_forward_spends_latest_unspent() -> None:
     sb = spend_bundle_from_conditions(conditions, test_coin)
     item = mempool_item_from_spendbundle(sb)
     assert item.bundle_coin_spends[test_coin.name()].eligible_for_fast_forward is True
-    internal_mempool_item = InternalMempoolItem(
-        sb, item.npc_result, item.height_added_to_mempool, item.bundle_coin_spends
-    )
+    internal_mempool_item = InternalMempoolItem(sb, item.conds, item.height_added_to_mempool, item.bundle_coin_spends)
     original_version = dataclasses.replace(internal_mempool_item)
     eligible_coin_spends = EligibleCoinSpends()
     await eligible_coin_spends.process_fast_forward_spends(
@@ -252,16 +248,19 @@ async def make_and_send_spend_bundle(
     sim_client: SimClient,
     coin_spends: List[CoinSpend],
     is_eligible_for_ff: bool = True,
+    *,
     is_launcher_coin: bool = False,
     signing_puzzle: Optional[Program] = None,
     signing_coin: Optional[Coin] = None,
+    aggsig: G2Element = G2Element(),
 ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
     if is_launcher_coin or not is_eligible_for_ff:
         assert signing_puzzle is not None
         assert signing_coin is not None
         signature = sign_delegated_puz(signing_puzzle, signing_coin)
+        signature += aggsig
     else:
-        signature = G2Element()
+        signature = aggsig
     spend_bundle = SpendBundle(coin_spends, signature)
     status, error = await sim_client.push_tx(spend_bundle)
     if error is None:
@@ -271,10 +270,11 @@ async def make_and_send_spend_bundle(
 
 async def get_singleton_and_remaining_coins(sim: SpendSim) -> Tuple[Coin, List[Coin]]:
     coins = await sim.all_non_reward_coins()
-    singletons, remaining_coins = partition(lambda coin: coin.amount % 2 == 0, coins)
-    singletons_list = list(singletons)
-    assert len(singletons_list) == 1
-    return singletons_list[0], list(remaining_coins)
+    singletons = [coin for coin in coins if coin.amount & 1]
+    assert len(singletons) == 1
+    singleton = singletons[0]
+    coins.remove(singleton)
+    return singleton, coins
 
 
 def make_singleton_coin_spend(
@@ -403,8 +403,12 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
         # Let's spend this first version, to create a bigger singleton child
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
         inner_puzzle_hash = inner_puzzle.get_tree_hash()
-        inner_conditions = [
-            [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+
+        sk = AugSchemeMPL.key_gen(b"1" * 32)
+        g1 = sk.get_g1()
+        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
+        inner_conditions: List[List[Any]] = [
+            [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
             [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_CHILD_AMOUNT],
         ]
         singleton_coin_spend, singleton_signing_puzzle = make_singleton_coin_spend(
@@ -423,6 +427,7 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
             is_eligible_for_ff,
             signing_puzzle=singleton_signing_puzzle,
             signing_coin=singleton,
+            aggsig=sig,
         )
         unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
@@ -448,6 +453,7 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
             is_eligible_for_ff,
             signing_puzzle=singleton_signing_puzzle,
             signing_coin=singleton,
+            aggsig=sig,
         )
         if is_eligible_for_ff:
             # Instead of rejecting this as double spend, we perform a fast forward,
@@ -492,8 +498,11 @@ async def test_singleton_fast_forward_same_block() -> None:
         # Let's spend this first version, to create a bigger singleton child
         singleton_puzzle_hash = eve_coin_spend.coin.puzzle_hash
         inner_puzzle_hash = inner_puzzle.get_tree_hash()
-        inner_conditions = [
-            [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH],
+        sk = AugSchemeMPL.key_gen(b"9" * 32)
+        g1 = sk.get_g1()
+        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
+        inner_conditions: List[List[Any]] = [
+            [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
             [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_CHILD_AMOUNT],
         ]
         singleton_coin_spend, _ = make_singleton_coin_spend(eve_coin_spend, singleton, inner_puzzle, inner_conditions)
@@ -503,7 +512,7 @@ async def test_singleton_fast_forward_same_block() -> None:
             Program.to([[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, remaining_coin.amount - diff_to_balance]])
         )
         remaining_coin_spend = CoinSpend(remaining_coin, IDENTITY_PUZZLE, remaining_spend_solution)
-        await make_and_send_spend_bundle(sim, sim_client, [remaining_coin_spend, singleton_coin_spend])
+        await make_and_send_spend_bundle(sim, sim_client, [remaining_coin_spend, singleton_coin_spend], aggsig=sig)
         unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
             singleton_puzzle_hash
         )
@@ -519,19 +528,23 @@ async def test_singleton_fast_forward_same_block() -> None:
         # Now let's send 3 arbitrary spends of the already spent singleton in
         # one block. They should all properly fast forward
         random_amounts = [21, 17, 11]
-        signature = G2Element()
+
+        sk = AugSchemeMPL.key_gen(b"a" * 32)
+        g1 = sk.get_g1()
+        sig = AugSchemeMPL.sign(sk, b"foobar", g1)
         for i in range(3):
             # This cost adjustment allows us to maintain the order of spends due to fee per
             # cost and amounts dynamics
             cost_factor = (i + 1) * 5
-            inner_conditions = [
-                [ConditionOpcode.AGG_SIG_UNSAFE, G1Element(), IDENTITY_PUZZLE_HASH] for _ in range(cost_factor)
-            ]
+            inner_conditions = [[ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"] for _ in range(cost_factor)]
+            aggsig = G2Element()
+            for _ in range(cost_factor):
+                aggsig += sig
             inner_conditions.append([ConditionOpcode.CREATE_COIN, inner_puzzle_hash, random_amounts[i]])
             singleton_coin_spend, _ = make_singleton_coin_spend(
                 eve_coin_spend, singleton, inner_puzzle, inner_conditions
             )
-            status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend], signature))
+            status, error = await sim_client.push_tx(SpendBundle([singleton_coin_spend], aggsig))
             assert error is None
             assert status == MempoolInclusionStatus.SUCCESS
 

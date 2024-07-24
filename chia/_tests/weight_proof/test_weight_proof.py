@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import Dict, List, Optional, Tuple
 
 import pytest
@@ -19,7 +18,7 @@ from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.block_cache import BlockCache
 from chia.util.generator_tools import get_block_header
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 
 
 async def load_blocks_dont_validate(
@@ -37,7 +36,7 @@ async def load_blocks_dont_validate(
     for block in blocks:
         if block.height > 0:
             assert prev_block is not None
-            difficulty = block.reward_chain_block.weight - prev_block.weight
+            difficulty = uint64(block.reward_chain_block.weight - prev_block.weight)
 
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             assert block.reward_chain_block.signage_point_index == 0
@@ -478,7 +477,7 @@ class TestWeightProof:
 
 @pytest.mark.parametrize("height,expected", [(0, 3), (5496000, 2), (10542000, 1), (15592000, 0), (20643000, 0)])
 def test_calculate_prefix_bits_clamp_zero(height: uint32, expected: int) -> None:
-    constants = dataclasses.replace(DEFAULT_CONSTANTS, NUMBER_ZERO_BITS_PLOT_FILTER=3)
+    constants = DEFAULT_CONSTANTS.replace(NUMBER_ZERO_BITS_PLOT_FILTER=uint8(3))
     assert calculate_prefix_bits(constants, height) == expected
 
 
