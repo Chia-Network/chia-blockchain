@@ -6,7 +6,7 @@ $env_directory = $args[0]
 $command = $args[1]
 $parameters = [System.Collections.ArrayList]$args
 $parameters.RemoveAt(0)
-$parameters.RemoveAt(1)
+$parameters.RemoveAt(0)
 
 & $script_directory/$env_directory/Scripts/Activate.ps1
 & $command @parameters
