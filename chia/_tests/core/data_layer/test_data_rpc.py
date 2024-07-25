@@ -3727,8 +3727,8 @@ async def test_unsubmitted_batch_db_migration(
         assert keys == {"keys": ["0x30303031", "0x30303030"]}
 
 
-@pytest.mark.parametrize(argnames="auto_subscribe_to_local_stores", argvalues=[True, False])
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@boolean_datacases(name="auto_subscribe_to_local_stores", false="do not auto subscribe", true="auto subscribe")
 @pytest.mark.anyio
 async def test_auto_subscribe_to_local_stores(
     self_hostname: str,

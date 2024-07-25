@@ -884,7 +884,7 @@ class DataLayer:
                 store_id = record.launcher_id
                 if store_id not in subscription_store_ids:
                     try:
-                        # subscription = await self.subscribe(store_id, [])
+                        # don't actually subscribe, just add to the list
                         subscriptions.insert(0, Subscription(store_id=store_id, servers_info=[]))
                     except Exception as e:
                         self.log.info(
