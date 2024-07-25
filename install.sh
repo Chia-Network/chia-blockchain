@@ -170,8 +170,6 @@ fi
 
 ./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
 .penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
-# TODO: Decide if this is needed or should be handled automatically in some way
-.penv/bin/pip install "poetry-dynamic-versioning[plugin]"
 # shellcheck disable=SC2086
 .penv/bin/poetry install ${EXTRAS}
 ln -s -f .venv venv
