@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from dataclasses import MISSING, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from chia_rs import G1Element
@@ -35,6 +35,10 @@ def kw_only_dataclass(cls: Type[Any]) -> Type[Any]:
         return dataclass(frozen=True)(cls)
     else:
         return dataclass(frozen=True, kw_only=True)(cls)
+
+
+def default_raise() -> Any:  # pragma: no cover
+    raise RuntimeError("This should be impossible to hit and is just for < 3.10 compatibility")
 
 
 @streamable
@@ -102,7 +106,7 @@ class ExecuteSigningInstructionsResponse(Streamable):
 
 
 # When inheriting from this class you must set any non default arguments with:
-# field(default=MISSING) # type: ignore[assignment]
+# field(default_factory=default_raise)
 # (this is for < 3.10 compatibility)
 @streamable
 @kw_only_dataclass
@@ -121,7 +125,7 @@ class TransactionEndpointResponse(Streamable):
 @streamable
 @kw_only_dataclass
 class VaultCreate(TransactionEndpointRequest):
-    secp_pk: bytes = field(default=MISSING, default_factory=MISSING)  # type: ignore[call-overload]
+    secp_pk: bytes = field(default_factory=default_raise)
     hp_index: uint32 = uint32(0)
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
@@ -136,8 +140,8 @@ class VaultCreateResponse(TransactionEndpointResponse):
 @streamable
 @kw_only_dataclass
 class VaultRecovery(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default=MISSING, default_factory=MISSING)  # type: ignore[call-overload]
-    secp_pk: bytes = field(default=MISSING, default_factory=MISSING)  # type: ignore[call-overload]
+    wallet_id: uint32 = field(default_factory=default_raise)
+    secp_pk: bytes = field(default_factory=default_raise)
     hp_index: uint32 = uint32(0)
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
