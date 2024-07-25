@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
+from dataclasses import MISSING, dataclass, field
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from chia_rs import G1Element
@@ -101,6 +101,9 @@ class ExecuteSigningInstructionsResponse(Streamable):
     signing_responses: List[SigningResponse]
 
 
+# When inheriting from this class you must set any non default arguments with:
+# field(default=MISSING) # type: ignore[assignment]
+# (this is for < 3.10 compatibility)
 @streamable
 @kw_only_dataclass
 class TransactionEndpointRequest(Streamable):
@@ -118,7 +121,7 @@ class TransactionEndpointResponse(Streamable):
 @streamable
 @kw_only_dataclass
 class VaultCreate(TransactionEndpointRequest):
-    secp_pk: bytes
+    secp_pk: bytes = field(default=MISSING)  # type: ignore[assignment]
     hp_index: uint32 = uint32(0)
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
@@ -133,8 +136,8 @@ class VaultCreateResponse(TransactionEndpointResponse):
 @streamable
 @kw_only_dataclass
 class VaultRecovery(TransactionEndpointRequest):
-    wallet_id: uint32
-    secp_pk: bytes
+    wallet_id: uint32 = field(default=MISSING)  # type: ignore[assignment]
+    secp_pk: bytes = field(default=MISSING)  # type: ignore[assignment]
     hp_index: uint32 = uint32(0)
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
