@@ -34,7 +34,7 @@ _T_KW_Dataclass = TypeVar("_T_KW_Dataclass")
 @dataclass_transform(frozen_default=True, kw_only_default=True)
 def kw_only_dataclass(cls: Type[Any]) -> Type[Any]:
     if sys.version_info < (3, 10):
-        return dataclass(frozen=True)(cls)
+        return dataclass(frozen=True)(cls)  # pragma: no cover
     else:
         return dataclass(frozen=True, kw_only=True)(cls)
 
