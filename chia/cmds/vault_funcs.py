@@ -8,7 +8,7 @@ from chia_rs import G1Element
 from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client
 from chia.cmds.param_types import CliAmount
 from chia.cmds.units import units
-from chia.rpc.wallet_rpc_types import VaultCreate, VaultRecovery
+from chia.rpc.wallet_request_types import VaultCreate, VaultRecovery
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 
