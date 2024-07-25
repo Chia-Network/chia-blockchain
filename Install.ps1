@@ -104,8 +104,6 @@ foreach ($extra in $extras)
 
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
 .penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
-# TODO: Decide if this is needed or should be handled automatically in some way
-.penv/Scripts/pip install "poetry-dynamic-versioning[plugin]"
 .penv/Scripts/poetry install @extras_cli
 
 if ($i)
