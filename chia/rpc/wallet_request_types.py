@@ -121,7 +121,7 @@ class TransactionEndpointResponse(Streamable):
 @streamable
 @kw_only_dataclass
 class VaultCreate(TransactionEndpointRequest):
-    secp_pk: bytes = field(default=MISSING)  # type: ignore[assignment]
+    secp_pk: bytes = field(default=MISSING, default_factory=MISSING)  # type: ignore[call-overload]
     hp_index: uint32 = uint32(0)
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
@@ -136,8 +136,8 @@ class VaultCreateResponse(TransactionEndpointResponse):
 @streamable
 @kw_only_dataclass
 class VaultRecovery(TransactionEndpointRequest):
-    wallet_id: uint32 = field(default=MISSING)  # type: ignore[assignment]
-    secp_pk: bytes = field(default=MISSING)  # type: ignore[assignment]
+    wallet_id: uint32 = field(default=MISSING, default_factory=MISSING)  # type: ignore[call-overload]
+    secp_pk: bytes = field(default=MISSING, default_factory=MISSING)  # type: ignore[call-overload]
     hp_index: uint32 = uint32(0)
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
