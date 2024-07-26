@@ -127,15 +127,17 @@ async def test_wait_transaction_records_entered_mempool(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        [tx] = await wallet.generate_signed_transaction(
-            amount=uint64(tx_amount),
-            puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            tx_config=DEFAULT_TX_CONFIG,
-            coins={coin},
-        )
-        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                amount=uint64(tx_amount),
+                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                tx_config=DEFAULT_TX_CONFIG,
+                action_scope=action_scope,
+                coins={coin},
+            )
 
-        await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+        [tx] = action_scope.side_effects.transactions
+        await full_node_api.wait_transaction_records_entered_mempool(records=action_scope.side_effects.transactions)
         assert tx.spend_bundle is not None
         assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
 
@@ -162,15 +164,16 @@ async def test_process_transaction_records(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        [tx] = await wallet.generate_signed_transaction(
-            amount=uint64(tx_amount),
-            puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            tx_config=DEFAULT_TX_CONFIG,
-            coins={coin},
-        )
-        [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
+        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            await wallet.generate_signed_transaction(
+                amount=uint64(tx_amount),
+                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                tx_config=DEFAULT_TX_CONFIG,
+                action_scope=action_scope,
+                coins={coin},
+            )
 
-        await full_node_api.process_transaction_records(records=[tx])
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
         assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
 
 

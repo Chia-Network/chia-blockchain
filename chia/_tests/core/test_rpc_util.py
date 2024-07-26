@@ -81,7 +81,7 @@ async def test_clvm_streamable_marshalling() -> None:
     assert await test_rpc_endpoint(
         None,
         {
-            "sub": "ff81ff80",
+            "sub": "ffff83717578818180",
             "CHIP-0029": True,
         },
-    ) == {"sub": "ff81ff80"}
+    ) == {"sub": "ffff83717578818180"}

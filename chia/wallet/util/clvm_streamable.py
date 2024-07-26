@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import functools
+from types import MappingProxyType
 from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar, Union, get_args, get_type_hints
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
@@ -27,6 +28,7 @@ def clvm_streamable(cls: Type[Streamable]) -> Type[Streamable]:
     hints = get_type_hints(cls)
     # no way to hint that wrapped_cls is a dataclass here but @streamable checks that
     for field in dataclasses.fields(wrapped_cls):  # type: ignore[arg-type]
+        field.metadata = MappingProxyType({"key": field.name, **field.metadata})
         if is_type_Tuple(hints[field.name]):
             raise ValueError("@clvm_streamable does not support tuples")
 
