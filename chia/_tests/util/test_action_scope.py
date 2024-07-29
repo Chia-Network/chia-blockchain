@@ -24,7 +24,7 @@ class TestSideEffects:
 @final
 @dataclass
 class TestConfig:
-    foo: str = "bar"
+    test_foo: str = "test_foo"
 
 
 async def default_async_callback(interface: StateInterface[TestSideEffects]) -> None:
@@ -44,7 +44,7 @@ def test_set_callback() -> None:
 @pytest.fixture(name="action_scope")
 async def action_scope_fixture() -> AsyncIterator[ActionScope[TestSideEffects, TestConfig]]:
     async with ActionScope.new_scope(TestSideEffects, TestConfig()) as scope:
-        assert scope.config == TestConfig(foo="bar")
+        assert scope.config == TestConfig(test_foo="test_foo")
         yield scope
 
 
