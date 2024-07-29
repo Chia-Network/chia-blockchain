@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 
-from chia_rs import fast_forward_singleton, get_name_puzzle_conditions
+from chia_rs import fast_forward_singleton, get_conditions_from_spendbundle
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants
@@ -335,11 +335,10 @@ class EligibleCoinSpends:
         # generator = simple_solution_generator(new_sb)
         assert mempool_item.npc_result.conds is not None
         try:
-            new_sbc_result = get_name_puzzle_conditions(
+            new_sbc_result = get_conditions_from_spendbundle(
                 new_sb,
                 mempool_item.npc_result.conds.cost,
                 constants,
-                True,
                 height,
             )
         except TypeError as e:
