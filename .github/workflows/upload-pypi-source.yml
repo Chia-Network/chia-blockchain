@@ -136,6 +136,9 @@ jobs:
             command: |
               python3 -m chia._tests.util.build_network_protocol_files
               git diff --exit-code
+          - name: poetry
+            command: |
+              .penv/bin/poetry check
 
     steps:
       - uses: chia-network/actions/clean-workspace@main
