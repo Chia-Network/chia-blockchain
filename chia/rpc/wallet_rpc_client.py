@@ -42,6 +42,10 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactions,
     SubmitTransactionsResponse,
     TakeOfferResponse,
+    VaultCreate,
+    VaultCreateResponse,
+    VaultRecovery,
+    VaultRecoveryResponse,
     VCMintResponse,
     VCRevokeResponse,
     VCSpendResponse,
@@ -1701,45 +1705,18 @@ class WalletRpcClient(RpcClient):
 
     async def vault_create(
         self,
-        secp_pk: bytes,
-        hp_index: uint32,
+        args: VaultCreate,
         tx_config: TXConfig,
-        bls_pk: Optional[bytes] = None,
-        timelock: Optional[uint64] = None,
-        fee: uint64 = uint64(0),
-        push: bool = True,
-    ) -> List[TransactionRecord]:
-        response = await self.fetch(
-            "vault_create",
-            {
-                "secp_pk": secp_pk.hex(),
-                "hp_index": hp_index,
-                "bls_pk": bls_pk.hex() if bls_pk else None,
-                "timelock": timelock,
-                "fee": fee,
-                "push": push,
-                **tx_config.to_json_dict(),
-            },
+    ) -> VaultCreateResponse:
+        return VaultCreateResponse.from_json_dict(
+            await self.fetch("vault_create", {**args.to_json_dict(), **tx_config.to_json_dict()})
         )
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def vault_recovery(
         self,
-        wallet_id: uint32,
-        secp_pk: bytes,
-        hp_index: uint32,
+        args: VaultRecovery,
         tx_config: TXConfig,
-        bls_pk: Optional[bytes] = None,
-        timelock: Optional[uint64] = None,
-    ) -> List[TransactionRecord]:
-        response = await self.fetch(
-            "vault_recovery",
-            {
-                "wallet_id": wallet_id,
-                "secp_pk": secp_pk.hex(),
-                "hp_index": hp_index,
-                "bls_pk": bls_pk.hex() if bls_pk else None,
-                "timelock": timelock,
-            },
+    ) -> VaultRecoveryResponse:
+        return VaultRecoveryResponse.from_json_dict(
+            await self.fetch("vault_recovery", {**args.to_json_dict(), **tx_config.to_json_dict()})
         )
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
