@@ -414,6 +414,7 @@ class Vault(Wallet):
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        action_scope: Optional[WalletActionScope] = None,
         **kwargs: Any,
     ) -> Program:
         assert fee >= 0

@@ -152,6 +152,7 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        action_scope: Optional[WalletActionScope] = None,
     ) -> Program: ...
 
     async def get_puzzle(self, new: bool) -> Program: ...
