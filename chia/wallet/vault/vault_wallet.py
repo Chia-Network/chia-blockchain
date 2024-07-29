@@ -238,15 +238,18 @@ class Vault(Wallet):
         delegated_solution = solution_for_conditions(conditions)
 
         p2_singleton_spends: List[CoinSpend] = []
-        for coin in coins:
-            if not p2_singleton_spends:
-                p2_solution = Program.to(
-                    [self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin.name()]
-                )
-            else:
-                p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
+        async with action_scope.use() as interface:
+            for coin in coins:
+                if not p2_singleton_spends:
+                    p2_solution = Program.to(
+                        [self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin.name()]
+                    )
+                else:
+                    p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
+                interface.side_effects.solutions.append(p2_solution)
+                interface.side_effects.coin_ids.append(coin.name())
 
-            p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
+                p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
         next_puzzle_hash = (
             self.vault_info.coin.puzzle_hash if tx_config.reuse_puzhash else (await self.get_new_vault_puzzlehash())

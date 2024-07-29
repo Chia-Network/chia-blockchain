@@ -4,6 +4,8 @@ import contextlib
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast
 
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.action_scope import ActionScope
 from chia.wallet.signer_protocol import SigningResponse
@@ -19,6 +21,8 @@ class WalletSideEffects:
     transactions: List[TransactionRecord] = field(default_factory=list)
     signing_responses: List[SigningResponse] = field(default_factory=list)
     extra_spends: List[SpendBundle] = field(default_factory=list)
+    solutions: List[Program] = field(default_factory=list)
+    coin_ids: List[bytes32] = field(default_factory=list)
 
     def __bytes__(self) -> bytes:
         blob = b""
@@ -34,6 +38,13 @@ class WalletSideEffects:
         for sb in self.extra_spends:
             sb_bytes = bytes(sb)
             blob += len(sb_bytes).to_bytes(4, "big") + sb_bytes
+        blob += len(self.solutions).to_bytes(4, "big")
+        for sol in self.solutions:
+            sol_bytes = bytes(sol)
+            blob += len(sol_bytes).to_bytes(4, "big") + sol_bytes
+        blob += len(self.coin_ids).to_bytes(4, "big")
+        for coin_id in self.coin_ids:
+            blob += len(coin_id).to_bytes(4, "big") + bytes(coin_id)
         return blob
 
     @classmethod
@@ -61,6 +72,21 @@ class WalletSideEffects:
                 blob = blob[4:]
                 instance.extra_spends.append(SpendBundle.from_bytes(blob[:len_prefix]))
                 blob = blob[len_prefix:]
+            sol_len_prefix = int.from_bytes(blob[:4], "big")
+            blob = blob[4:]
+            for _ in range(0, sol_len_prefix):
+                len_prefix = int.from_bytes(blob[:4], "big")
+                blob = blob[4:]
+                instance.solutions.append(Program.from_bytes(blob[:len_prefix]))
+                blob = blob[len_prefix:]
+            coin_id_len_prefix = int.from_bytes(blob[:4], "big")
+            blob = blob[4:]
+            for _ in range(0, coin_id_len_prefix):
+                len_prefix = int.from_bytes(blob[:4], "big")
+                blob = blob[4:]
+                coin_id_bytes = blob[:len_prefix]
+                blob = blob[len_prefix:]
+                instance.coin_ids.append(bytes32(coin_id_bytes))
 
         return instance
 
