@@ -583,10 +583,10 @@ async def test_get_version(one_wallet_and_one_simulator_services, self_hostname)
     nodes, _, bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
     async with FullNodeRpcClient.create_as_context(
-            self_hostname,
-            full_node_service_1.rpc_server.listen_port,
-            full_node_service_1.root_path,
-            full_node_service_1.config,
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
     ) as client:
         version = await client.fetch("get_version", {})
         assert version == {
