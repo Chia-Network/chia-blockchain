@@ -298,7 +298,7 @@ class DAOCATWallet:
                     )
                 ]
                 message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
-                inner_solution = self.standard_wallet.make_solution(
+                inner_solution = await self.standard_wallet.make_solution(
                     primaries=primaries,
                     conditions=(CreatePuzzleAnnouncement(message),),
                 )
@@ -321,7 +321,7 @@ class DAOCATWallet:
                         )
                     )
                 message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
-                inner_solution = self.standard_wallet.make_solution(
+                inner_solution = await self.standard_wallet.make_solution(
                     primaries=primaries,
                     conditions=(CreatePuzzleAnnouncement(message),),
                 )
@@ -423,7 +423,7 @@ class DAOCATWallet:
                 ),
             ]
             total_amt += coin.amount
-            inner_solution = self.standard_wallet.make_solution(
+            inner_solution = await self.standard_wallet.make_solution(
                 primaries=primaries,
             )
             # Create the solution using only the values needed for exiting the lockup mode (my_id = 0)

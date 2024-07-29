@@ -96,7 +96,7 @@ class AnyoneCanSpend(Wallet):
                 make_spend(
                     coin,
                     ACS,
-                    self.make_solution(condition_list, extra_conditions, fee) if i == 0 else Program.to([]),
+                    (await self.make_solution(condition_list, extra_conditions, fee) if i == 0 else Program.to([])),
                 )
                 for i, coin in enumerate(coins)
             ],
@@ -164,7 +164,7 @@ class AnyoneCanSpend(Wallet):
     async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:  # pragma: no cover
         return None
 
-    def make_solution(
+    async def make_solution(
         self,
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),

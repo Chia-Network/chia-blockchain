@@ -147,7 +147,7 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> None: ...
 
-    def make_solution(
+    async def make_solution(
         self,
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),

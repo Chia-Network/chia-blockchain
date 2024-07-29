@@ -578,7 +578,7 @@ class DIDWallet:
         assert uncurried is not None
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[
                 Payment(
                     puzzle_hash=new_inner_puzzle.get_tree_hash(),
@@ -694,7 +694,7 @@ class DIDWallet:
             launcher_id=self.did_info.origin_coin.name(),
             metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
@@ -783,7 +783,7 @@ class DIDWallet:
                 launcher_id=self.did_info.origin_coin.name(),
                 metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[Payment(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
             conditions=extra_conditions,
         )
@@ -918,7 +918,7 @@ class DIDWallet:
         assert uncurried is not None
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[
                 Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
                 Payment(innermessage, uint64(0)),
@@ -1313,7 +1313,7 @@ class DIDWallet:
         assert uncurried is not None
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
             conditions=extra_conditions,
         )

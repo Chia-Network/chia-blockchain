@@ -1033,7 +1033,7 @@ class WalletStateManager:
                 # Remove the clawback hint since it is unnecessary for the XCH coin
                 memos: List[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
-                inner_solution: Program = self.main_wallet.make_solution(
+                inner_solution: Program = await self.main_wallet.make_solution(
                     primaries=[
                         Payment(
                             derivation_record.puzzle_hash,

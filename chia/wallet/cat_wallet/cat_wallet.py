@@ -711,7 +711,7 @@ class CATWallet:
                             action_scope,
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
-                        innersol = self.standard_wallet.make_solution(
+                        innersol = await self.standard_wallet.make_solution(
                             primaries=primaries,
                             conditions=(*extra_conditions, announcement),
                         )
@@ -723,7 +723,7 @@ class CATWallet:
                             action_scope,
                         )
                         assert xch_announcement is not None
-                        innersol = self.standard_wallet.make_solution(
+                        innersol = await self.standard_wallet.make_solution(
                             primaries=primaries,
                             conditions=(*extra_conditions, xch_announcement, announcement),
                         )
@@ -731,12 +731,12 @@ class CATWallet:
                         # TODO: what about when they are equal?
                         raise Exception("Equality not handled")
                 else:
-                    innersol = self.standard_wallet.make_solution(
+                    innersol = await self.standard_wallet.make_solution(
                         primaries=primaries,
                         conditions=(*extra_conditions, announcement),
                     )
             else:
-                innersol = self.standard_wallet.make_solution(
+                innersol = await self.standard_wallet.make_solution(
                     primaries=[], conditions=(announcement.corresponding_assertion(),)
                 )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
