@@ -141,3 +141,12 @@ class TransactionRecordOld(Streamable):
 @dataclass(frozen=True)
 class TransactionRecord(TransactionRecordOld):
     valid_times: ConditionValidTimes
+
+
+@streamable
+@dataclass(frozen=True)
+class LightTransactionRecord(Streamable):
+    name: bytes32
+    type: uint32
+    additions: List[Coin]
+    removals: List[Coin]
