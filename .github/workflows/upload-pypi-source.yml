@@ -202,8 +202,7 @@ jobs:
 
       - name: Build source distribution
         run: |
-          # TODO: let poetry do this?
-          python -m build --sdist --outdir dist .
+          python -m build --outdir dist .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
