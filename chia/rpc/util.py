@@ -102,8 +102,6 @@ def wrap_http_handler(f) -> Callable:
 def tx_endpoint(
     push: bool = False,
     merge_spends: bool = True,
-    # The purpose of this is in case endpoints need to raise based on certain non default values
-    requires_default_information: bool = False,
 ) -> Callable[[RpcEndpoint], RpcEndpoint]:
     def _inner(func: RpcEndpoint) -> RpcEndpoint:
         async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
@@ -162,7 +160,6 @@ def tx_endpoint(
                     request,
                     *args,
                     action_scope,
-                    *([push] if requires_default_information else []),
                     tx_config=tx_config,
                     extra_conditions=extra_conditions,
                     **kwargs,
