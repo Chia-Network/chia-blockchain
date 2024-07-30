@@ -711,7 +711,7 @@ class NFTWallet:
                 ),
             )
 
-        innersol: Program = self.standard_wallet.make_solution(
+        innersol: Program = await self.standard_wallet.make_solution(
             primaries=payments,
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin_name)) if fee > 0 else extra_conditions,
         )
@@ -1394,7 +1394,7 @@ class NFTWallet:
         if len(xch_coins) > 1:
             xch_extra_conditions += (CreateCoinAnnouncement(message),)
 
-        solution: Program = self.standard_wallet.make_solution(
+        solution: Program = await self.standard_wallet.make_solution(
             primaries=[xch_payment],
             fee=fee,
             conditions=xch_extra_conditions,
@@ -1407,14 +1407,14 @@ class NFTWallet:
 
         for xch_coin in xch_coins_iter:
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(xch_coin.puzzle_hash)
-            solution = self.standard_wallet.make_solution(
+            solution = await self.standard_wallet.make_solution(
                 primaries=[], conditions=(AssertCoinAnnouncement(primary_announcement_hash),)
             )
             xch_spends.append(make_spend(xch_coin, puzzle, solution))
         xch_spend = SpendBundle(xch_spends, G2Element())
 
         # Create the DID spend using the announcements collected when making the intermediate launcher coins
-        did_p2_solution = self.standard_wallet.make_solution(
+        did_p2_solution = await self.standard_wallet.make_solution(
             primaries=primaries,
             conditions=(
                 *extra_conditions,
@@ -1652,7 +1652,7 @@ class NFTWallet:
                 extra_conditions += tuple(AssertCoinAnnouncement(ann) for ann in coin_announcements)
                 extra_conditions += tuple(AssertPuzzleAnnouncement(ann) for ann in puzzle_assertions)
 
-                solution: Program = self.standard_wallet.make_solution(
+                solution: Program = await self.standard_wallet.make_solution(
                     primaries=[xch_payment] + primaries,
                     fee=fee,
                     conditions=extra_conditions,
@@ -1660,7 +1660,7 @@ class NFTWallet:
                 primary_announcement = AssertCoinAnnouncement(asserted_id=xch_coin.name(), asserted_msg=message)
                 first = False
             else:
-                solution = self.standard_wallet.make_solution(primaries=[], conditions=(primary_announcement,))
+                solution = await self.standard_wallet.make_solution(primaries=[], conditions=(primary_announcement,))
             xch_spends.append(make_spend(xch_coin, puzzle, solution))
 
         # Collect up all the coin spends and sign them

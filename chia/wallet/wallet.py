@@ -214,11 +214,12 @@ class Wallet:
         puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
         return puzhash
 
-    def make_solution(
+    async def make_solution(
         self,
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        action_scope: Optional[WalletActionScope] = None,
         **kwargs: Any,
     ) -> Program:
         assert fee >= 0
@@ -357,7 +358,7 @@ class Wallet:
                     message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
                 message: bytes32 = std_hash(b"".join(message_list))
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                solution: Program = self.make_solution(
+                solution: Program = await self.make_solution(
                     primaries=primaries,
                     fee=fee,
                     conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
@@ -379,7 +380,7 @@ class Wallet:
             if coin.name() == origin_id:
                 continue
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = self.make_solution(primaries=[], conditions=(primary_announcement,))
+            solution = await self.make_solution(primaries=[], conditions=(primary_announcement,))
             solution = decorator_manager.solve(puzzle, [], solution)
             spends.append(
                 make_spend(

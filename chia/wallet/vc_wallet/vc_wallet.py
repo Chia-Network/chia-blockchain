@@ -299,7 +299,7 @@ class VCWallet:
         else:
             magic_condition = vc_record.vc.standard_magic_condition()
         extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
-        innersol: Program = self.standard_wallet.make_solution(
+        innersol: Program = await self.standard_wallet.make_solution(
             primaries=primaries,
             conditions=extra_conditions,
         )
