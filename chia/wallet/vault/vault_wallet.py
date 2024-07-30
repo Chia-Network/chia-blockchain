@@ -409,11 +409,12 @@ class Vault(Wallet):
     async def sum_hint_for_pubkey(self, pk: bytes) -> Optional[SumHint]:
         return None
 
-    def make_solution(
+    async def make_solution(
         self,
         primaries: List[Payment],
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        action_scope: Optional[WalletActionScope] = None,
         **kwargs: Any,
     ) -> Program:
         assert fee >= 0

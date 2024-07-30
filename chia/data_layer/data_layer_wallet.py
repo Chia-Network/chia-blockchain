@@ -542,7 +542,7 @@ class DataLayerWallet:
                     ],
                 ),
             )
-        inner_sol: Program = self.standard_wallet.make_solution(
+        inner_sol: Program = await self.standard_wallet.make_solution(
             primaries=primaries,
             conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if fee > 0 else extra_conditions,
         )
@@ -753,7 +753,7 @@ class DataLayerWallet:
         parent_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
         new_puzhash: bytes32 = await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
         excess_fee: int = fee - mirror_coin.amount
-        inner_sol: Program = self.standard_wallet.make_solution(
+        inner_sol: Program = await self.standard_wallet.make_solution(
             primaries=[Payment(new_puzhash, uint64(mirror_coin.amount - fee))] if excess_fee < 0 else [],
             conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if excess_fee > 0 else extra_conditions,
         )

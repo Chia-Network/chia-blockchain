@@ -1271,7 +1271,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                     coin=new_coin,
                     limitations_program_hash=ACS_TAIL_HASH,
                     inner_puzzle=await cat_wallet.inner_puzzle_for_cat_puzhash(new_coin.puzzle_hash),
-                    inner_solution=wallet.make_solution(
+                    inner_solution=await wallet.make_solution(
                         primaries=[Payment(wallet_ph, uint64(tx_amount), [wallet_ph])],
                         conditions=(
                             UnknownCondition(

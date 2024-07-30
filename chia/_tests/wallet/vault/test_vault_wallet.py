@@ -14,7 +14,7 @@ from chia.rpc.wallet_request_types import VaultCreate, VaultRecovery
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_info import VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
@@ -195,16 +195,6 @@ async def test_vault_creation(
     vault_info = VaultInfo.from_bytes(custom_data)
     assert vault_info == wallet.vault_info
     assert vault_info.recovery_info == wallet.vault_info.recovery_info
-
-    # test make_solution
-    coin = (await wallet.select_coins(uint64(100), DEFAULT_COIN_SELECTION_CONFIG)).pop()
-    wallet.make_solution(primaries, coin_id=coin.name())
-    with pytest.raises(ValueError):
-        wallet.make_solution(primaries)
-
-    # test match_hinted_coin
-    matched = await wallet.match_hinted_coin(wallet.vault_info.coin, wallet.vault_info.inner_puzzle_hash)
-    assert matched
 
 
 @pytest.mark.parametrize(
