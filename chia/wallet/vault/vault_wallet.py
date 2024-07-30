@@ -26,6 +26,7 @@ from chia.wallet.conditions import (
     Condition,
     CreateCoin,
     CreatePuzzleAnnouncement,
+    parse_conditions_non_consensus,
     parse_timelock_info,
 )
 from chia.wallet.derivation_record import DerivationRecord
@@ -235,21 +236,20 @@ class Vault(Wallet):
             )
         # create the p2_singleton spends
         delegated_puzzle = puzzle_for_conditions(conditions)
-        delegated_solution = solution_for_conditions(conditions)
 
         p2_singleton_spends: List[CoinSpend] = []
-        async with action_scope.use() as interface:
-            for coin in coins:
-                if not p2_singleton_spends:
-                    p2_solution = Program.to(
-                        [self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin.name()]
-                    )
-                else:
-                    p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
-                interface.side_effects.solutions.append(p2_solution)
-                interface.side_effects.coin_ids.append(coin.name())
+        for coin in coins:
+            if not p2_singleton_spends:
+                p2_solution = await self.make_solution(
+                    primaries,
+                    tuple(parse_conditions_non_consensus(conditions)),
+                    action_scope=action_scope,
+                    coin_id=coin.name(),
+                )
+            else:
+                p2_solution = await self.make_solution(primaries, action_scope=action_scope, coin_id=coin.name())
 
-                p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
+            p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
         next_puzzle_hash = (
             self.vault_info.coin.puzzle_hash if tx_config.reuse_puzhash else (await self.get_new_vault_puzzlehash())
@@ -424,8 +424,19 @@ class Vault(Wallet):
         coin_id = kwargs.get("coin_id")
         if coin_id is None:
             raise ValueError("Vault p2_singleton solutions require a coin id")
-        p2_singleton_solution: Program = Program.to([self.vault_info.inner_puzzle_hash, coin_id])
-        return p2_singleton_solution
+        if conditions:
+            condition_progs = [cond.to_program() for cond in conditions]
+            delegated_puzzle = puzzle_for_conditions(condition_progs)
+            delegated_solution = solution_for_conditions(condition_progs)
+            p2_solution = Program.to([self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin_id])
+        else:
+            p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin_id])
+
+        if action_scope:
+            async with action_scope.use() as interface:
+                interface.side_effects.solutions.append(p2_solution)
+                interface.side_effects.coin_ids.append(coin_id)
+        return p2_solution
 
     async def get_puzzle(self, new: bool) -> Program:
         if new:
