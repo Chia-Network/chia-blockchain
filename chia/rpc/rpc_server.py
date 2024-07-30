@@ -242,8 +242,8 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             "/close_connection": self.close_connection,
             "/stop_node": self.stop_node,
             "/get_routes": self.get_routes,
-            "/healthz": self.healthz,
             "/get_version": self.get_version,
+            "/healthz": self.healthz,
         }
 
     async def get_routes(self, request: Dict[str, Any]) -> EndpointResult:
