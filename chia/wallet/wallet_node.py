@@ -271,7 +271,9 @@ class WalletNode:
 
         return key
 
-    async def get_key(self, fingerprint: Optional[int], private: bool = True) -> Optional[Union[PrivateKey, G1Element]]:
+    async def get_key(
+        self, fingerprint: Optional[int], private: bool = True, find_a_default: bool = True
+    ) -> Optional[Union[PrivateKey, G1Element]]:
         """
         Attempt to get the private key for the given fingerprint. If the fingerprint is None,
         get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
@@ -279,7 +281,7 @@ class WalletNode:
         """
         key: Optional[Union[PrivateKey, G1Element]] = await self.get_key_for_fingerprint(fingerprint, private=private)
 
-        if key is None and fingerprint is not None:
+        if key is None and fingerprint is not None and find_a_default:
             key = await self.get_key_for_fingerprint(None, private=private)
             if key is not None:
                 if isinstance(key, PrivateKey):
@@ -413,15 +415,19 @@ class WalletNode:
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
         self.synced_peers = set()
-        private_key = await self.get_key(fingerprint, private=True)
+        public_key = None
+        private_key = await self.get_key(fingerprint, private=True, find_a_default=False)
         if private_key is None:
-            public_key = await self.get_key(fingerprint, private=False)
-        else:
-            assert isinstance(private_key, PrivateKey)
-            public_key = private_key.get_g1()
+            public_key = await self.get_key(fingerprint, private=False, find_a_default=False)
+
         if public_key is None:
-            self.log_out()
-            return False
+            private_key = await self.get_key(None, private=True, find_a_default=True)
+            if private_key is not None:
+                assert isinstance(private_key, PrivateKey)
+                public_key = private_key.get_g1()
+            else:
+                self.log_out()
+                return False
         assert isinstance(public_key, G1Element)
         # override with private key fetched in case it's different from what was passed
         if fingerprint is None:
