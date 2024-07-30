@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence
 
 import click
 
 from chia.cmds import options
+from chia.cmds.cmds_util import tx_out_cmd
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.transaction_record import TransactionRecord
 
 
 @click.group("vault", help="Manage your vault")
@@ -88,6 +90,7 @@ def vault_cmd(ctx: click.Context) -> None:
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def vault_create_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -101,10 +104,11 @@ def vault_create_cmd(
     max_coin_amount: CliAmount,
     coins_to_exclude: Sequence[bytes32],
     reuse: bool,
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .vault_funcs import create_vault
 
-    asyncio.run(
+    return asyncio.run(
         create_vault(
             wallet_rpc_port,
             fingerprint,
@@ -118,6 +122,7 @@ def vault_create_cmd(
             max_coin_amount=max_coin_amount,
             excluded_coin_ids=coins_to_exclude,
             reuse_puzhash=True if reuse else None,
+            push=push,
         )
     )
 
