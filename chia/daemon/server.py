@@ -113,7 +113,8 @@ else:
     application_path = os.path.dirname(__file__)
 
     def executable_for_service(service_name: str) -> str:
-        return shutil.which(service_name)
+        cmd_to_exec = shutil.which(service_name)
+        return cmd_to_exec if cmd_to_exec is not None else service_name
 
 
 async def ping() -> Dict[str, Any]:

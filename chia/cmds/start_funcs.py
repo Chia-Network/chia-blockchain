@@ -24,6 +24,9 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
 
     path_helper: Path = Path(sys.argv[0])
     cmd_to_execute = shutil.which(cmd=path_helper.name, path=path_helper.parent)
+    if cmd_to_execute is None:
+        cmd_to_execute = sys.argv[0]
+
     process = subprocess.Popen(
         [cmd_to_execute, "run_daemon", "--wait-for-unlock"],
         encoding="utf-8",
