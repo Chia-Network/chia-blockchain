@@ -301,6 +301,7 @@ class VCWallet:
         extra_conditions = (*extra_conditions, UnknownCondition.from_program(magic_condition))
         innersol: Program = await self.standard_wallet.make_solution(
             primaries=primaries,
+            action_scope=action_scope,
             conditions=extra_conditions,
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)

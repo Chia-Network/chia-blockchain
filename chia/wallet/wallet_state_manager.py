@@ -1041,6 +1041,7 @@ class WalletStateManager:
                             memos,  # Forward memo of the first coin
                         )
                     ],
+                    action_scope=action_scope,
                     conditions=(
                         extra_conditions
                         if len(coin_spends) > 0 or fee == 0
