@@ -84,9 +84,8 @@ def test_vault_recovery(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
         str(tmp_path / "recovery_finish.json"),
     ]
     assert_list = [
-        "Initiate Recovery transaction written to:",
+        "Writing transactions to file ",
         "recovery_init.json",
-        "Finish Recovery transaction written to:",
         "recovery_finish.json",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args + [FINGERPRINT_ARG, WALLET_ID_ARG], assert_list)

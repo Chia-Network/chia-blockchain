@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import json
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence
 
 from chia_rs import G1Element
 
-from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client
+from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client, write_transactions_to_file
 from chia.cmds.param_types import CliAmount
 from chia.cmds.units import units
 from chia.rpc.wallet_request_types import VaultCreate, VaultRecovery
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
+from chia.wallet.transaction_record import TransactionRecord
 
 
 async def create_vault(
@@ -26,7 +26,8 @@ async def create_vault(
     max_coin_amount: CliAmount,
     excluded_coin_ids: Sequence[bytes32],
     reuse_puzhash: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         assert hidden_puzzle_index >= 0
         tx_config = CMDTXConfigLoader(
@@ -38,20 +39,22 @@ async def create_vault(
         if timelock is not None:
             assert timelock > 0
         try:
-            await wallet_client.vault_create(
+            res = await wallet_client.vault_create(
                 VaultCreate(
                     secp_pk=bytes.fromhex(public_key),
                     hp_index=uint32(hidden_puzzle_index),
                     bls_pk=G1Element.from_bytes(bytes.fromhex(recovery_public_key)) if recovery_public_key else None,
                     timelock=uint64(timelock) if timelock else None,
                     fee=fee,
-                    push=True,
+                    push=push,
                 ),
                 tx_config=tx_config,
             )
             print("Successfully created a Vault wallet")
+            return res.transactions
         except Exception as e:
             print(f"Failed to create a new Vault: {e}")
+            return []
 
 
 async def recover_vault(
@@ -91,11 +94,7 @@ async def recover_vault(
                 tx_config=tx_config,
             )
             # TODO: do not rely on ordering of transactions here
-            with open(initiate_file, "w") as f:
-                json.dump(response.transactions[0].to_json_dict(), f, indent=4)
-            print(f"Initiate Recovery transaction written to: {initiate_file}")
-            with open(finish_file, "w") as f:
-                json.dump(response.transactions[1].to_json_dict(), f, indent=4)
-            print(f"Finish Recovery transaction written to: {finish_file}")
+            write_transactions_to_file(response.transactions[0:1], initiate_file)
+            write_transactions_to_file(response.transactions[1:2], finish_file)
         except Exception as e:
             print(f"Error creating recovery transactions: {e}")
