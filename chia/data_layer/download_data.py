@@ -186,7 +186,7 @@ async def download_file(
     server_info: ServerInfo,
     proxy_url: str,
     downloader: Optional[PluginRemote],
-    timeout: int,
+    timeout: aiohttp.ClientTimeout,
     client_foldername: Path,
     timestamp: int,
     log: logging.Logger,
