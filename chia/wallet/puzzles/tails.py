@@ -122,7 +122,8 @@ class GenesisById(LimitationsProgram):
             Program.to([51, 0, -113, tail, []]),
             (
                 await wallet.standard_wallet.make_solution(
-                    primaries=[Payment(inner_tree_hash, amount, [inner_tree_hash])]
+                    primaries=[Payment(inner_tree_hash, amount, [inner_tree_hash])],
+                    action_scope=action_scope,
                 )
             ),
         )
@@ -308,6 +309,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
             (
                 await wallet.standard_wallet.make_solution(
                     primaries=[payment],
+                    action_scope=action_scope,
                 )
             ),
         )
