@@ -236,7 +236,7 @@ async def insert_from_delta_file(
     root_hashes: List[bytes32],
     server_info: ServerInfo,
     client_foldername: Path,
-    timeout: int,
+    timeout: aiohttp.ClientTimeout,
     log: logging.Logger,
     proxy_url: str,
     downloader: Optional[PluginRemote],
@@ -350,7 +350,7 @@ async def http_download(
     filename: str,
     proxy_url: str,
     server_info: ServerInfo,
-    timeout: int,
+    timeout: aiohttp.ClientTimeout,
     log: logging.Logger,
 ) -> None:
     """
@@ -360,7 +360,10 @@ async def http_download(
     async with aiohttp.ClientSession() as session:
         headers = {"accept-encoding": "gzip"}
         async with session.get(
-            server_info.url + "/" + filename, headers=headers, timeout=timeout, proxy=proxy_url
+            server_info.url + "/" + filename,
+            headers=headers,
+            timeout=timeout,
+            proxy=proxy_url,
         ) as resp:
             resp.raise_for_status()
             size = int(resp.headers.get("content-length", 0))

@@ -54,6 +54,7 @@ from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
+from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
@@ -258,6 +259,7 @@ class Wallet:
         amount: uint64,
         newpuzzlehash: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
         coins: Optional[Set[Coin]] = None,
@@ -394,6 +396,7 @@ class Wallet:
         amount: uint64,
         puzzle_hash: bytes32,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
         primaries: Optional[List[Payment]] = None,
@@ -401,7 +404,7 @@ class Wallet:
         puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
-    ) -> List[TransactionRecord]:
+    ) -> None:
         origin_id: Optional[bytes32] = kwargs.get("origin_id", None)
         negative_change_allowed: bool = kwargs.get("negative_change_allowed", False)
         """
@@ -419,6 +422,7 @@ class Wallet:
             amount,
             puzzle_hash,
             tx_config,
+            action_scope,
             fee,
             origin_id,
             coins,
@@ -442,45 +446,46 @@ class Wallet:
         else:
             assert output_amount == input_amount
 
-        return [
-            TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=now,
-                to_puzzle_hash=puzzle_hash,
-                amount=uint64(non_change_amount),
-                fee_amount=uint64(fee),
-                confirmed=False,
-                sent=uint32(0),
-                spend_bundle=spend_bundle,
-                additions=add_list,
-                removals=rem_list,
-                wallet_id=self.id(),
-                sent_to=[],
-                trade_id=None,
-                type=uint32(TransactionType.OUTGOING_TX.value),
-                name=spend_bundle.name(),
-                memos=list(compute_memos(spend_bundle).items()),
-                valid_times=parse_timelock_info(extra_conditions),
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=now,
+                    to_puzzle_hash=puzzle_hash,
+                    amount=uint64(non_change_amount),
+                    fee_amount=uint64(fee),
+                    confirmed=False,
+                    sent=uint32(0),
+                    spend_bundle=spend_bundle,
+                    additions=add_list,
+                    removals=rem_list,
+                    wallet_id=self.id(),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.OUTGOING_TX.value),
+                    name=spend_bundle.name(),
+                    memos=list(compute_memos(spend_bundle).items()),
+                    valid_times=parse_timelock_info(extra_conditions),
+                )
             )
-        ]
 
     async def create_tandem_xch_tx(
         self,
         fee: uint64,
         tx_config: TXConfig,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> TransactionRecord:
+    ) -> None:
         chia_coins = await self.select_coins(fee, tx_config.coin_selection_config)
-        [chia_tx] = await self.generate_signed_transaction(
+        await self.generate_signed_transaction(
             uint64(0),
             (await self.get_puzzle_hash(not tx_config.reuse_puzhash)),
             tx_config,
+            action_scope,
             fee=fee,
             coins=chia_coins,
             extra_conditions=extra_conditions,
         )
-        assert chia_tx.spend_bundle is not None
-        return chia_tx
 
     async def get_coins_to_offer(
         self,

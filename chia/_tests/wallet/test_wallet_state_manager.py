@@ -120,18 +120,29 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
             uint64(2_000_000_000_000), coin_selection_config=wallet_environments.tx_config.coin_selection_config
         )
     )
-    [tx1] = await wsm.main_wallet.generate_signed_transaction(
-        uint64(0),
-        bytes32([0] * 32),
-        wallet_environments.tx_config,
-        coins={coins[0]},
-    )
-    [tx2] = await wsm.main_wallet.generate_signed_transaction(
-        uint64(0),
-        bytes32([0] * 32),
-        wallet_environments.tx_config,
-        coins={coins[1]},
-    )
+
+    async with wsm.new_action_scope(
+        push=False,
+        merge_spends=False,
+        sign=False,
+        extra_spends=[],
+    ) as action_scope:
+        await wsm.main_wallet.generate_signed_transaction(
+            uint64(0),
+            bytes32([0] * 32),
+            wallet_environments.tx_config,
+            action_scope,
+            coins={coins[0]},
+        )
+        await wsm.main_wallet.generate_signed_transaction(
+            uint64(0),
+            bytes32([0] * 32),
+            wallet_environments.tx_config,
+            action_scope,
+            coins={coins[1]},
+        )
+
+    created_txs = action_scope.side_effects.transactions
 
     def flatten_spend_bundles(txs: List[TransactionRecord]) -> List[SpendBundle]:
         return [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
@@ -140,14 +151,8 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
         len(await wsm.tx_store.get_all_transactions_for_wallet(wsm.main_wallet.id(), type=TransactionType.OUTGOING_TX))
         == 0
     )
-    new_txs = await wsm.add_pending_transactions(
-        [tx1, tx2],
-        push=False,
-        merge_spends=False,
-        sign=False,
-        extra_spends=[],
-    )
-    bundles = flatten_spend_bundles(new_txs)
+
+    bundles = flatten_spend_bundles(created_txs)
     assert len(bundles) == 2
     for bundle in bundles:
         assert bundle.aggregated_signature == G2Element()
@@ -157,12 +162,12 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     )
 
     extra_coin_spend = make_spend(
-        Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), Program.to(1), Program.to([None])
+        Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), Program.to(1), Program.to([])
     )
     extra_spend = SpendBundle([extra_coin_spend], G2Element())
 
     new_txs = await wsm.add_pending_transactions(
-        [tx1, tx2],
+        created_txs,
         push=False,
         merge_spends=False,
         sign=False,
@@ -179,7 +184,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     assert extra_coin_spend in [spend for bundle in bundles for spend in bundle.coin_spends]
 
     new_txs = await wsm.add_pending_transactions(
-        [tx1, tx2],
+        created_txs,
         push=False,
         merge_spends=True,
         sign=False,
@@ -195,7 +200,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     )
     assert extra_coin_spend in [spend for bundle in bundles for spend in bundle.coin_spends]
 
-    [tx1, tx2] = await wsm.add_pending_transactions([tx1, tx2], push=True, merge_spends=True, sign=True)
+    new_txs = await wsm.add_pending_transactions(created_txs, push=True, merge_spends=True, sign=True)
     bundles = flatten_spend_bundles(new_txs)
     assert len(bundles) == 1
     assert (
@@ -203,4 +208,4 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
         == 2
     )
 
-    await wallet_environments.full_node.wait_transaction_records_entered_mempool([tx1, tx2])
+    await wallet_environments.full_node.wait_transaction_records_entered_mempool(new_txs)

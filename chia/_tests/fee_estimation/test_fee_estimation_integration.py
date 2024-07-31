@@ -11,7 +11,6 @@ from chia._tests.core.mempool.test_mempool_manager import (
     instantiate_mempool_manager,
     zero_calls_get_coin_records,
 )
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import (
     EmptyFeeMempoolInfo,
@@ -47,7 +46,7 @@ def make_mempoolitem() -> MempoolItem:
     mempool_item = MempoolItem(
         spend_bundle,
         fee,
-        NPCResult(None, conds),
+        conds,
         spend_bundle.name(),
         uint32(block_height),
     )

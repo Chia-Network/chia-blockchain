@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import functools
 import json
 import logging
 import os
@@ -51,8 +52,10 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     SyncStatus,
     TerminalNode,
+    Unspecified,
     UnsubscribeData,
     leaf_hash,
+    unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
@@ -122,6 +125,9 @@ class DataLayer:
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     subscription_update_concurrency: int = 5
+    client_timeout: aiohttp.ClientTimeout = dataclasses.field(
+        default_factory=functools.partial(aiohttp.ClientTimeout, total=45, sock_connect=5)
+    )
     group_files_by_store: bool = False
 
     @property
@@ -184,6 +190,9 @@ class DataLayer:
             maximum_full_file_count=config.get("maximum_full_file_count", 1),
             subscription_update_concurrency=config.get("subscription_update_concurrency", 5),
             unsubscribe_data_queue=[],
+            client_timeout=aiohttp.ClientTimeout(
+                total=config.get("client_timeout", 45), sock_connect=config.get("connect_timeout", 5)
+            ),
             group_files_by_store=config.get("group_files_by_store", False),
         )
 
@@ -386,7 +395,7 @@ class DataLayer:
         self,
         store_id: bytes32,
         key: bytes,
-        root_hash: Optional[bytes32] = None,
+        root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
 
@@ -394,7 +403,9 @@ class DataLayer:
             node = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
             return node.hash
 
-    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None) -> bytes:
+    async def get_value(
+        self, store_id: bytes32, key: bytes, root_hash: Union[bytes32, Unspecified] = unspecified
+    ) -> bytes:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
@@ -402,7 +413,11 @@ class DataLayer:
             res = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
             return res.value
 
-    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
+    async def get_keys_values(
+        self,
+        store_id: bytes32,
+        root_hash: Union[bytes32, Unspecified],
+    ) -> List[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_keys_values(store_id, root_hash)
@@ -413,7 +428,7 @@ class DataLayer:
     async def get_keys_values_paginated(
         self,
         store_id: bytes32,
-        root_hash: Optional[bytes32],
+        root_hash: Union[bytes32, Unspecified],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysValuesPaginationData:
@@ -424,7 +439,7 @@ class DataLayer:
         res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
         return res
 
-    async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
+    async def get_keys(self, store_id: bytes32, root_hash: Union[bytes32, Unspecified]) -> List[bytes]:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_keys(store_id, root_hash)
@@ -433,7 +448,7 @@ class DataLayer:
     async def get_keys_paginated(
         self,
         store_id: bytes32,
-        root_hash: Optional[bytes32],
+        root_hash: Union[bytes32, Unspecified],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysPaginationData:
@@ -580,7 +595,6 @@ class DataLayer:
                 max_generation=singleton_record.generation,
             )
             try:
-                timeout = self.config.get("client_timeout", 15)
                 proxy_url = self.config.get("proxy_url", None)
                 success = await insert_from_delta_file(
                     self.data_store,
@@ -589,7 +603,7 @@ class DataLayer:
                     [record.root for record in reversed(to_download)],
                     server_info,
                     self.server_files_location,
-                    timeout,
+                    self.client_timeout,
                     self.log,
                     proxy_url,
                     await self.get_downloader(store_id, url),
@@ -847,7 +861,13 @@ class DataLayer:
         return await self.data_store.get_kv_diff(store_id, hash_1, hash_2)
 
     async def get_kv_diff_paginated(
-        self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32, page: int, max_page_size: Optional[int] = None
+        self,
+        store_id: bytes32,
+        # NOTE: empty is expressed as zeros
+        hash_1: bytes32,
+        hash_2: bytes32,
+        page: int,
+        max_page_size: Optional[int] = None,
     ) -> KVDiffPaginationData:
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024

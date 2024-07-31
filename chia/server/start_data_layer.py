@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, cast
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.data_layer.data_layer_util import PluginRemote
+from chia.data_layer.util.plugin import load_plugin_configurations
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -100,19 +101,24 @@ async def async_main() -> int:
     )
 
     plugins_config = config["data_layer"].get("plugins", {})
+    service_dir = DEFAULT_ROOT_PATH / SERVICE_NAME
 
     old_uploaders = config["data_layer"].get("uploaders", [])
     new_uploaders = plugins_config.get("uploaders", [])
+    conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders", log)
     uploaders: List[PluginRemote] = [
         *(PluginRemote(url=url) for url in old_uploaders),
         *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
+        *conf_file_uploaders,
     ]
 
     old_downloaders = config["data_layer"].get("downloaders", [])
     new_downloaders = plugins_config.get("downloaders", [])
+    conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders", log)
     downloaders: List[PluginRemote] = [
         *(PluginRemote(url=url) for url in old_downloaders),
         *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),
+        *conf_file_uploaders,
     ]
 
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config, downloaders, uploaders)
