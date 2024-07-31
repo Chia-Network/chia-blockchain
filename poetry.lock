@@ -1234,14 +1234,13 @@ files = [
 
 [[package]]
 name = "dnslib"
-version = "0.9.24"
+version = "0.9.25"
 description = "Simple library to encode/decode DNS wire-format packets"
 optional = false
 python-versions = "*"
 files = [
-    {file = "dnslib-0.9.24-py2-none-any.whl", hash = "sha256:4f26c55603ce9f961b84404f19ff03b3ca4a051eafb2b1e141ef9b96485467c6"},
-    {file = "dnslib-0.9.24-py3-none-any.whl", hash = "sha256:39327e695f871574198b76ef506d9691d762b5344e0d66f5f78fefe1df99e7fd"},
-    {file = "dnslib-0.9.24.tar.gz", hash = "sha256:ef167868a30d4ce7c90b921279d7ecfb986be8ebc530f3e6050a2ecb68707c76"},
+    {file = "dnslib-0.9.25-py3-none-any.whl", hash = "sha256:013699e4740ebfb6908060b6216c6b932ba3a2747bc10526796887c0ffb4922d"},
+    {file = "dnslib-0.9.25.tar.gz", hash = "sha256:687df2086e28086cb32b947dafa4c0a4e613f1429baa3be61d8b94e69418b4ef"},
 ]
 
 [[package]]
@@ -3419,4 +3418,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "e9c3e6986a1fda70530e81f02eadf87e6c85de8718d92e40bb8b6d7fcd4e5090"
+content-hash = "eefd1d6f7dd5d7d8a0dc4e58b0caa8d987b18b69d358e221af0f9d03a9a7c112"
