@@ -55,7 +55,12 @@ async def test_daemon(
 
 @pytest.mark.anyio
 def test_launch_start_daemon(tmp_path: Path) -> None:
-    sys.argv[0] = "chia"
+    sys.argv[0] = "not-exist"
+    with pytest.raises(FileNotFoundError):
+        launch_start_daemon(tmp_path)
+
+    helper: Path = Path(sys.executable)
+    sys.argv[0] = str(helper.parent) + "/chia"
     process = launch_start_daemon(tmp_path)
     assert process is not None
     process.kill()
