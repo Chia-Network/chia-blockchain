@@ -5,6 +5,7 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from time import monotonic
 from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from chia_rs import AugSchemeMPL, Coin, G2Element
@@ -494,6 +495,7 @@ class Mempool:
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
+        bundle_creation_start = monotonic()
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
         skipped_items = 0
@@ -575,4 +577,10 @@ class Mempool:
         )
         aggregated_signature = AugSchemeMPL.aggregate(sigs)
         agg = SpendBundle(coin_spends, aggregated_signature)
+        bundle_creation_end = monotonic()
+        duration = bundle_creation_end - bundle_creation_start
+        log.log(
+            logging.INFO if duration < 1 else logging.WARNING,
+            f"create_bundle_from_mempool_items took {duration:0.4f} seconds",
+        )
         return agg, additions
