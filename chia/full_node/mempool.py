@@ -229,10 +229,9 @@ class Mempool:
     # TODO: move "process_mempool_items()" into this class in order to do this a
     # bit more efficiently
     def items_by_feerate(self) -> Iterator[MempoolItem]:
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT * FROM tx ORDER BY fee_per_cost DESC, seq ASC")
-            for row in cursor:
-                yield self._row_to_item(row)
+        cursor = self._db_conn.execute("SELECT * FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        for row in cursor:
+            yield self._row_to_item(row)
 
     def size(self) -> int:
         with self._db_conn:
