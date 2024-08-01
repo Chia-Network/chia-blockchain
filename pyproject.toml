@@ -61,7 +61,7 @@ dnspython = "2.6.1"  # Query DNS seeds
 filelock = "3.15.4"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
 keyring = "25.2.1"  # Store keys in MacOS Keychain, Windows Credential Locker
 packaging = "24.0"
-pip = "24.0"
+pip = "24.2"
 psutil = [
     {version="5.9.4", markers="platform_machine!='aarch64'"},
     {version="5.9.4", markers="platform_machine=='aarch64'", source="chia"},

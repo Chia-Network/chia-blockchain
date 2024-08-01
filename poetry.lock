@@ -2191,13 +2191,13 @@ files = [
 
 [[package]]
 name = "pip"
-version = "24.0"
+version = "24.2"
 description = "The PyPA recommended tool for installing Python packages."
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "pip-24.0-py3-none-any.whl", hash = "sha256:ba0d021a166865d2265246961bec0152ff124de910c5cc39f1156ce3fa7c69dc"},
-    {file = "pip-24.0.tar.gz", hash = "sha256:ea9bd1a847e8c5774a5777bb398c19e80bcd4e2aa16a4b301b718fe6f593aba2"},
+    {file = "pip-24.2-py3-none-any.whl", hash = "sha256:2cd581cf58ab7fcfca4ce8efa6dcacd0de5bf8d0a3eb9ec927e07405f4d9e2a2"},
+    {file = "pip-24.2.tar.gz", hash = "sha256:5b5e490b5e9cb275c879595064adce9ebd31b854e3e803740b72f9ccf34a45b8"},
 ]
 
 [[package]]
@@ -3418,4 +3418,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "eefd1d6f7dd5d7d8a0dc4e58b0caa8d987b18b69d358e221af0f9d03a9a7c112"
+content-hash = "50f99eb1b806859632dafa4047018221bfc86d3b325cda2fc8f9c77707923074"
