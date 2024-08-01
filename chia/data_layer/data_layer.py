@@ -52,10 +52,9 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     SyncStatus,
     TerminalNode,
-    Unspecified,
+    TreeId,
     UnsubscribeData,
     leaf_hash,
-    unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
@@ -167,7 +166,7 @@ class DataLayer:
         name: Optional[str] = None,
     ) -> DataLayer:
         if name == "":
-            # TODO: If no code depends on "" counting as 'unspecified' then we do not
+            # TODO: If no code depends on "" counting as 'TreeId.unspecified' then we do not
             #       need this.
             name = None
 
@@ -348,7 +347,7 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
         enable_batch_autoinsert: Optional[bool] = None,
-    ) -> bytes32:
+    ) -> TreeId[int, Optional[bytes32]]:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
@@ -364,16 +363,11 @@ class DataLayer:
             t1 = time.monotonic()
             if enable_batch_autoinsert is None:
                 enable_batch_autoinsert = self.config.get("enable_batch_autoinsert", True)
-            batch_hash = await self.data_store.insert_batch(store_id, changelist, status, enable_batch_autoinsert)
+            new_tree_id = await self.data_store.insert_batch(store_id, changelist, status, enable_batch_autoinsert)
             t2 = time.monotonic()
             self.log.info(f"Data store batch update process time: {t2 - t1}.")
-            # todo return empty node hash from get_tree_root
-            if batch_hash is not None:
-                node_hash = batch_hash
-            else:
-                node_hash = self.none_bytes  # todo change
 
-            return node_hash
+            return new_tree_id
 
     async def publish_update(
         self,
@@ -393,32 +387,40 @@ class DataLayer:
         self,
         store_id: bytes32,
         key: bytes,
-        root_hash: Union[bytes32, Unspecified] = unspecified,
+        root_hash: Union[bytes32, TreeId.Unspecified] = TreeId.unspecified,
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
-            node = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
+            node = await self.data_store.get_node_by_key(
+                key=key,
+                tree_id=TreeId.create(store_id=store_id, root_hash=root_hash),
+            )
             return node.hash
 
     async def get_value(
-        self, store_id: bytes32, key: bytes, root_hash: Union[bytes32, Unspecified] = unspecified
+        self, store_id: bytes32, key: bytes, root_hash: Union[bytes32, TreeId.Unspecified] = TreeId.unspecified
     ) -> bytes:
         await self._update_confirmation_status(store_id=store_id)
 
         async with self.data_store.transaction():
             # this either returns the node or raises an exception
-            res = await self.data_store.get_node_by_key(store_id=store_id, key=key, root_hash=root_hash)
+            res = await self.data_store.get_node_by_key(
+                key=key,
+                tree_id=TreeId.create(store_id=store_id, root_hash=root_hash),
+            )
             return res.value
 
     async def get_keys_values(
         self,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified],
+        root_hash: Union[bytes32, TreeId.Unspecified],
     ) -> List[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
-        res = await self.data_store.get_keys_values(store_id, root_hash)
+        res = await self.data_store.get_keys_values(
+            tree_id=TreeId.create(store_id=store_id, root_hash=root_hash),
+        )
         if res is None:
             self.log.error("Failed to fetch keys values")
         return res
@@ -426,7 +428,7 @@ class DataLayer:
     async def get_keys_values_paginated(
         self,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified],
+        root_hash: Union[bytes32, TreeId.Unspecified],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysValuesPaginationData:
@@ -434,19 +436,25 @@ class DataLayer:
 
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024
-        res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
+        res = await self.data_store.get_keys_values_paginated(
+            tree_id=TreeId.create(store_id=store_id, root_hash=root_hash),
+            page=page,
+            max_page_size=max_page_size,
+        )
         return res
 
-    async def get_keys(self, store_id: bytes32, root_hash: Union[bytes32, Unspecified]) -> List[bytes]:
+    async def get_keys(self, store_id: bytes32, root_hash: Union[bytes32, TreeId.Unspecified]) -> List[bytes]:
         await self._update_confirmation_status(store_id=store_id)
 
-        res = await self.data_store.get_keys(store_id, root_hash)
+        res = await self.data_store.get_keys(
+            tree_id=TreeId.create(store_id=store_id, root_hash=root_hash),
+        )
         return res
 
     async def get_keys_paginated(
         self,
         store_id: bytes32,
-        root_hash: Union[bytes32, Unspecified],
+        root_hash: Union[bytes32, TreeId.Unspecified],
         page: int,
         max_page_size: Optional[int] = None,
     ) -> KeysPaginationData:
@@ -454,13 +462,17 @@ class DataLayer:
 
         if max_page_size is None:
             max_page_size = 40 * 1024 * 1024
-        res = await self.data_store.get_keys_paginated(store_id, page, max_page_size, root_hash)
+        res = await self.data_store.get_keys_paginated(
+            tree_id=TreeId.create(store_id=store_id, root_hash=root_hash),
+            page=page,
+            max_page_size=max_page_size,
+        )
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
-        res = await self.data_store.get_ancestors(node_hash=node_hash, store_id=store_id)
+        res = await self.data_store.get_ancestors(node_hash=node_hash, tree_id=TreeId.create(store_id=store_id))
         if res is None:
             self.log.error("Failed to get ancestors")
         return res
@@ -474,7 +486,7 @@ class DataLayer:
     async def get_local_root(self, store_id: bytes32) -> Optional[bytes32]:
         await self._update_confirmation_status(store_id=store_id)
 
-        res = await self.data_store.get_tree_root(store_id=store_id)
+        res = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         if res is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
             return None
@@ -495,7 +507,7 @@ class DataLayer:
     async def _update_confirmation_status(self, store_id: bytes32) -> None:
         async with self.data_store.transaction():
             try:
-                root = await self.data_store.get_tree_root(store_id=store_id)
+                root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
             except Exception:
                 root = None
             singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
@@ -545,7 +557,9 @@ class DataLayer:
                     and pending_root.status == Status.PENDING
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
-                    await self.data_store.build_ancestor_table_for_latest_root(store_id=store_id)
+                    await self.data_store.build_ancestor_table_for_latest_root(
+                        tree_id=TreeId.create(store_id=store_id),
+                    )
             await self.data_store.clear_pending_roots(store_id=store_id)
 
     async def fetch_and_validate(self, store_id: bytes32) -> None:
@@ -569,7 +583,7 @@ class DataLayer:
         for server_info in servers_info:
             url = server_info.url
 
-            root = await self.data_store.get_tree_root(store_id=store_id)
+            root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
             if root.generation > singleton_record.generation:
                 self.log.info(
                     "Fetch data: local DL store is ahead of chain generation. "
@@ -641,13 +655,15 @@ class DataLayer:
             return
         await self._update_confirmation_status(store_id=store_id)
 
-        root = await self.data_store.get_tree_root(store_id=store_id)
+        root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         latest_generation = root.generation
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         foldername = self.server_files_location
 
         for generation in range(full_tree_first_publish_generation - 1, 0, -1):
-            root = await self.data_store.get_tree_root(store_id=store_id, generation=generation)
+            root = await self.data_store.get_tree_root(
+                tree_id=TreeId.create(store_id=store_id, generation=generation),
+            )
             file_exists = delete_full_file_if_exists(foldername, store_id, root)
             if not file_exists:
                 break
@@ -660,14 +676,16 @@ class DataLayer:
             return
         await self._update_confirmation_status(store_id=store_id)
 
-        root = await self.data_store.get_tree_root(store_id=store_id)
+        root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         latest_generation = root.generation
         # Don't store full tree files before this generation.
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
         # We iterate back and write the missing files, until we find the files already written.
-        root = await self.data_store.get_tree_root(store_id=store_id, generation=publish_generation)
+        root = await self.data_store.get_tree_root(
+            tree_id=TreeId.create(store_id=store_id, generation=publish_generation)
+        )
         while publish_generation > 0:
             write_file_result = await write_files_for_root(
                 self.data_store,
@@ -713,10 +731,10 @@ class DataLayer:
                     os.remove(write_file_result.full_tree)
                 os.remove(write_file_result.diff_tree)
             publish_generation -= 1
-            root = await self.data_store.get_tree_root(store_id=store_id, generation=publish_generation)
+            root = await self.data_store.get_tree_root(TreeId.create(store_id=store_id, generation=publish_generation))
 
     async def add_missing_files(self, store_id: bytes32, overwrite: bool, foldername: Optional[Path]) -> None:
-        root = await self.data_store.get_tree_root(store_id=store_id)
+        root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         latest_generation = root.generation
         full_tree_first_publish_generation = max(0, latest_generation - self.maximum_full_file_count + 1)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
@@ -727,7 +745,7 @@ class DataLayer:
         server_files_location = foldername if foldername is not None else self.server_files_location
         files = []
         for generation in range(1, max_generation + 1):
-            root = await self.data_store.get_tree_root(store_id=store_id, generation=generation)
+            root = await self.data_store.get_tree_root(TreeId.create(store_id=store_id, generation=generation))
             res = await write_files_for_root(
                 self.data_store,
                 store_id,
@@ -970,18 +988,22 @@ class DataLayer:
                 )
 
                 if len(changelist) > 0:
-                    new_root_hash = await self.batch_insert(
+                    new_tree_id = await self.batch_insert(
                         store_id=offer_store.store_id,
                         changelist=changelist,
                         enable_batch_autoinsert=False,
                     )
                 else:
-                    existing_root = await self.get_root(store_id=offer_store.store_id)
-                    if existing_root is None:
+                    existing_singleton = await self.get_root(store_id=offer_store.store_id)
+                    if existing_singleton is None:
                         raise Exception(f"store id not available: {offer_store.store_id.hex()}")
-                    new_root_hash = existing_root.root
+                    new_tree_id = TreeId(
+                        store_id=offer_store.store_id,
+                        generation=existing_singleton.generation,
+                        root_hash=existing_singleton.root,
+                    )
 
-                if new_root_hash is None:
+                if new_tree_id.root_hash is None:
                     raise Exception("only inserts are supported so a None root hash should not be possible")
 
                 proofs: List[Proof] = []
@@ -989,12 +1011,11 @@ class DataLayer:
                     node_hash = await self.get_key_value_hash(
                         store_id=offer_store.store_id,
                         key=entry.key,
-                        root_hash=new_root_hash,
+                        root_hash=new_tree_id.root_hash,
                     )
                     proof_of_inclusion = await self.data_store.get_proof_of_inclusion_by_hash(
                         node_hash=node_hash,
-                        store_id=offer_store.store_id,
-                        root_hash=new_root_hash,
+                        tree_id=TreeId.create(store_id=offer_store.store_id, root_hash=new_tree_id.root_hash),
                     )
                     proof = Proof(
                         key=entry.key,
@@ -1176,7 +1197,7 @@ class DataLayer:
 
         if not await self.data_store.store_id_exists(store_id=store_id):
             raise Exception(f"No store id stored in the local database for {store_id}")
-        root = await self.data_store.get_tree_root(store_id=store_id)
+        root = await self.data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
         singleton_record = await self.wallet_rpc.dl_latest_singleton(store_id, True)
         if singleton_record is None:
             raise Exception(f"No singleton found for {store_id}")

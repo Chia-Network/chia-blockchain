@@ -22,10 +22,9 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     TakeOfferRequest,
     TakeOfferResponse,
-    Unspecified,
+    TreeId,
     VerifyOfferResponse,
     VerifyProofResponse,
-    unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.rpc.data_layer_rpc_util import marshal
@@ -163,13 +162,13 @@ class DataLayerRpcApi:
     async def get_value(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
-        # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
+        # NOTE: being outside the rpc, this retains the none-means-TreeId.unspecified semantics
         root_hash: Optional[str] = request.get("root_hash")
-        resolved_root_hash: Union[bytes32, Unspecified]
+        resolved_root_hash: Union[bytes32, TreeId.Unspecified]
         if root_hash is not None:
             resolved_root_hash = bytes32.from_hexstr(root_hash)
         else:
-            resolved_root_hash = unspecified
+            resolved_root_hash = TreeId.unspecified
         if self.service is None:
             raise Exception("Data layer not created")
         value = await self.service.get_value(store_id=store_id, key=key, root_hash=resolved_root_hash)
@@ -180,15 +179,15 @@ class DataLayerRpcApi:
 
     async def get_keys(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
-        # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
+        # NOTE: being outside the rpc, this retains the none-means-TreeId.unspecified semantics
         root_hash: Optional[str] = request.get("root_hash")
         page = request.get("page", None)
         max_page_size = request.get("max_page_size", None)
-        resolved_root_hash: Union[bytes32, Unspecified]
+        resolved_root_hash: Union[bytes32, TreeId.Unspecified]
         if root_hash is not None:
             resolved_root_hash = bytes32.from_hexstr(root_hash)
         else:
-            resolved_root_hash = unspecified
+            resolved_root_hash = TreeId.unspecified
         if self.service is None:
             raise Exception("Data layer not created")
 
@@ -199,7 +198,7 @@ class DataLayerRpcApi:
             keys = keys_paginated.keys
 
         # NOTE: here we do support zeros as the empty root
-        if keys == [] and resolved_root_hash is not unspecified and resolved_root_hash != bytes32([0] * 32):
+        if keys == [] and resolved_root_hash is not TreeId.unspecified and resolved_root_hash != bytes32([0] * 32):
             raise Exception(f"Can't find keys for {resolved_root_hash}")
 
         response: EndpointResult = {"keys": [f"0x{key.hex()}" for key in keys]}
@@ -217,15 +216,15 @@ class DataLayerRpcApi:
 
     async def get_keys_values(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
-        # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
+        # NOTE: being outside the rpc, this retains the none-means-TreeId.unspecified semantics
         root_hash: Optional[str] = request.get("root_hash")
         page = request.get("page", None)
         max_page_size = request.get("max_page_size", None)
-        resolved_root_hash: Union[bytes32, Unspecified]
+        resolved_root_hash: Union[bytes32, TreeId.Unspecified]
         if root_hash is not None:
             resolved_root_hash = bytes32.from_hexstr(root_hash)
         else:
-            resolved_root_hash = unspecified
+            resolved_root_hash = TreeId.unspecified
         if self.service is None:
             raise Exception("Data layer not created")
 
@@ -239,7 +238,7 @@ class DataLayerRpcApi:
 
         json_nodes = [recurse_jsonify(dataclasses.asdict(node)) for node in keys_values]
         # NOTE: here we do support zeros as the empty root
-        if not json_nodes and resolved_root_hash is not unspecified and resolved_root_hash != bytes32([0] * 32):
+        if not json_nodes and resolved_root_hash is not TreeId.unspecified and resolved_root_hash != bytes32([0] * 32):
             raise Exception(f"Can't find keys and values for {resolved_root_hash}")
 
         response: EndpointResult = {"keys_values": json_nodes}
@@ -603,9 +602,13 @@ class DataLayerRpcApi:
 
         all_proofs: List[HashOnlyProof] = []
         for key in request.keys:
-            node = await self.service.data_store.get_node_by_key(store_id=request.store_id, key=key)
+            node = await self.service.data_store.get_node_by_key(
+                tree_id=TreeId.create(store_id=request.store_id), key=key
+            )
             pi = await self.service.data_store.get_proof_of_inclusion_by_hash(
-                store_id=request.store_id, node_hash=node.hash, use_optimized=True
+                tree_id=TreeId.create(store_id=request.store_id),
+                node_hash=node.hash,
+                use_optimized=True,
             )
 
             proof = HashOnlyProof.from_key_value(

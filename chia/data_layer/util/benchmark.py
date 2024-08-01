@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from chia.data_layer.data_layer_util import Side, TerminalNode, leaf_hash
+from chia.data_layer.data_layer_util import Side, TerminalNode, TreeId, leaf_hash
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -38,7 +38,9 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
                 key = i.to_bytes(4, byteorder="big")
                 value = (2 * i).to_bytes(4, byteorder="big")
                 seed = leaf_hash(key=key, value=value)
-                reference_node_hash: Optional[bytes32] = await data_store.get_terminal_node_for_seed(store_id, seed)
+                reference_node_hash: Optional[bytes32] = await data_store.get_terminal_node_for_seed(
+                    tree_id=TreeId.create(store_id=store_id), seed=seed
+                )
                 side: Optional[Side] = data_store.get_side_for_seed(seed)
 
                 if i == 0:
@@ -97,7 +99,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
             print(f"Average autoinsert time: {autoinsert_time / autoinsert_count}")
             print(f"Average delete time: {delete_time / delete_count}")
             print(f"Total time for {num_nodes} operations: {insert_time + autoinsert_time + delete_time}")
-            root = await data_store.get_tree_root(store_id=store_id)
+            root = await data_store.get_tree_root(tree_id=TreeId.create(store_id=store_id))
             print(f"Root hash: {root.node_hash}")
 
 
