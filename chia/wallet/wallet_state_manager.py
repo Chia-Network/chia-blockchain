@@ -803,10 +803,7 @@ class WalletStateManager:
 
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
 
-        puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        solution = Program.from_bytes(bytes(coin_spend.solution))
-
-        uncurried = uncurry_puzzle(puzzle)
+        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
 
         dao_ids = []
         wallets = self.wallets.values()
@@ -814,7 +811,9 @@ class WalletStateManager:
             if wallet.type() == WalletType.DAO.value:
                 assert isinstance(wallet, DAOWallet)
                 dao_ids.append(wallet.dao_info.treasury_id)
-        funding_puzzle_check = match_funding_puzzle(uncurried, solution, coin_state.coin, dao_ids)
+        funding_puzzle_check = match_funding_puzzle(
+            uncurried, coin_spend.solution.to_program(), coin_state.coin, dao_ids
+        )
         if funding_puzzle_check:
             return await self.get_dao_wallet_from_coinspend_hint(coin_spend, coin_state), None
 
@@ -887,8 +886,7 @@ class WalletStateManager:
             return await self.handle_did(did_data, parent_coin_state, coin_state, coin_spend, peer), did_data
 
         # Check if the coin is clawback
-        solution = coin_spend.solution.to_program()
-        clawback_coin_data = match_clawback_puzzle(uncurried, puzzle, solution)
+        clawback_coin_data = match_clawback_puzzle(uncurried, coin_spend.puzzle_reveal, coin_spend.solution)
         if clawback_coin_data is not None:
             return await self.handle_clawback(clawback_coin_data, coin_state, coin_spend, peer), clawback_coin_data
 
@@ -1167,7 +1165,7 @@ class WalletStateManager:
             is_crcat: bool = False
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # Check if it is a CRCAT
-                if CRCAT.is_cr_cat(uncurry_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))):
+                if CRCAT.is_cr_cat(uncurry_puzzle(coin_spend.puzzle_reveal)):
                     is_crcat = True
                 else:
                     return None  # pragma: no cover
@@ -1370,8 +1368,7 @@ class WalletStateManager:
             )
             assert did_coin is not None and len(did_coin) == 1 and did_coin[0].spent_height is not None
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
-            puzzle = Program.from_bytes(bytes(did_spend.puzzle_reveal))
-            uncurried = uncurry_puzzle(puzzle)
+            uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             if did_curried_args is not None:
                 p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
@@ -1884,10 +1881,10 @@ class WalletStateManager:
                                             # if there is a child coin that is not owned by the wallet.
                                             coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                                             # Check if the parent coin is a Clawback coin
-                                            puzzle: Program = coin_spend.puzzle_reveal.to_program()
-                                            solution: Program = coin_spend.solution.to_program()
-                                            uncurried = uncurry_puzzle(puzzle)
-                                            clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+                                            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
+                                            clawback_metadata = match_clawback_puzzle(
+                                                uncurried, coin_spend.puzzle_reveal, coin_spend.solution
+                                            )
                                         if clawback_metadata is not None:
                                             # Add the Clawback coin as the interested coin for the sender
                                             await self.add_interested_coin_ids([coin.name()])
