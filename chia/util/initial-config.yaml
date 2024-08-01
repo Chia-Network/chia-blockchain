@@ -651,6 +651,8 @@ data_layer:
     uploaders: []
     downloaders: []
   maximum_full_file_count: 1
+  # Enable to store all .DAT files grouped by store id
+  group_files_by_store: False
 
 simulator:
   # Should the simulator farm a block whenever a transaction is in mempool
