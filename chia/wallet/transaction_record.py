@@ -150,3 +150,4 @@ class LightTransactionRecord(Streamable):
     type: uint32
     additions: List[Coin]
     removals: List[Coin]
+    spend_bundle: Optional[SpendBundle]

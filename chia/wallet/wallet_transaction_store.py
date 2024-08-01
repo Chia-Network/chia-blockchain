@@ -14,9 +14,9 @@ from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import (
+    LightTransactionRecord,
     TransactionRecord,
     TransactionRecordOld,
-    LightTransactionRecord,
     minimum_send_attempts,
 )
 from chia.wallet.transaction_sorting import SortKey
@@ -292,10 +292,7 @@ class WalletTransactionStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall("SELECT transaction_record from transaction_record WHERE confirmed=0")
         records = [TransactionRecordOld.from_bytes(row[0]) for row in rows]
-        self.unconfirmed_txs = [
-            get_light_transaction_record(rec)
-            for rec in records
-        ]
+        self.unconfirmed_txs = [get_light_transaction_record(rec) for rec in records]
 
     async def get_unconfirmed_for_wallet(self, wallet_id: int) -> List[TransactionRecord]:
         """
@@ -491,4 +488,6 @@ class WalletTransactionStore:
 
 
 def get_light_transaction_record(rec: TransactionRecordOld) -> LightTransactionRecord:
-    return LightTransactionRecord(name=rec.name, additions=rec.additions, removals=rec.removals, type=rec.type)
+    return LightTransactionRecord(
+        name=rec.name, additions=rec.additions, removals=rec.removals, type=rec.type, spend_bundle=rec.spend_bundle
+    )
