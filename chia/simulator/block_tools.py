@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import dataclasses
 import logging
 import os
 import random
@@ -584,8 +583,7 @@ class BlockTools:
         normalized_to_identity_cc_sp: bool = False,
         normalized_to_identity_cc_ip: bool = False,
         current_time: bool = False,
-        # TODO: rename this to block_refs
-        previous_generator: Optional[List[uint32]] = None,
+        block_refs: List[uint32] = [],
         genesis_timestamp: Optional[uint64] = None,
         force_plot_id: Optional[bytes32] = None,
         dummy_block_references: bool = False,
@@ -768,7 +766,7 @@ class BlockTools:
                         removals = None
                         if transaction_data_included:
                             transaction_data = None
-                            previous_generator = None
+                            block_refs = []
                         if transaction_data is not None:
                             additions = compute_additions_unchecked(transaction_data)
                             removals = transaction_data.removals()
@@ -796,11 +794,9 @@ class BlockTools:
                         if transaction_data is not None:
                             if start_height >= constants.HARD_FORK_HEIGHT:
                                 block_generator = simple_solution_generator_backrefs(transaction_data)
-                                previous_generator = None
+                                block_refs = []
                             else:
                                 block_generator = simple_solution_generator(transaction_data)
-                            if previous_generator is not None:
-                                block_generator = BlockGenerator(block_generator.program, [], previous_generator)
 
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
@@ -810,20 +806,16 @@ class BlockTools:
                         if dummy_block_references:
                             if block_generator is None:
                                 program = SerializedProgram.from_bytes(solution_generator([]))
-                                block_generator = BlockGenerator(program, [], [])
+                                block_generator = BlockGenerator(program, [])
 
                             if len(tx_block_heights) > 4:
-                                block_refs = [
-                                    tx_block_heights[1],
-                                    tx_block_heights[len(tx_block_heights) // 2],
-                                    tx_block_heights[-2],
-                                ]
-                            else:
-                                block_refs = []
-                            block_generator = dataclasses.replace(
-                                block_generator, block_height_list=block_generator.block_height_list + block_refs
-                            )
-
+                                block_refs.extend(
+                                    [
+                                        tx_block_heights[1],
+                                        tx_block_heights[len(tx_block_heights) // 2],
+                                        tx_block_heights[-2],
+                                    ]
+                                )
                         (
                             full_block,
                             block_record,
@@ -857,10 +849,11 @@ class BlockTools:
                             seed,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            block_refs=block_refs,
                         )
                         if block_record.is_transaction_block:
                             transaction_data_included = True
-                            previous_generator = None
+                            block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
                         elif guarantee_transaction_block:
@@ -1118,11 +1111,9 @@ class BlockTools:
                         if transaction_data is not None:
                             if start_height >= constants.HARD_FORK_HEIGHT:
                                 block_generator = simple_solution_generator_backrefs(transaction_data)
-                                previous_generator = None
+                                block_refs = []
                             else:
                                 block_generator = simple_solution_generator(transaction_data)
-                            if previous_generator is not None:
-                                block_generator = BlockGenerator(block_generator.program, [], previous_generator)
                             aggregate_signature = transaction_data.aggregated_signature
                         else:
                             block_generator = None
@@ -1131,19 +1122,16 @@ class BlockTools:
                         if dummy_block_references:
                             if block_generator is None:
                                 program = SerializedProgram.from_bytes(solution_generator([]))
-                                block_generator = BlockGenerator(program, [], [])
+                                block_generator = BlockGenerator(program, [])
 
                             if len(tx_block_heights) > 4:
-                                block_refs = [
-                                    tx_block_heights[1],
-                                    tx_block_heights[len(tx_block_heights) // 2],
-                                    tx_block_heights[-2],
-                                ]
-                            else:
-                                block_refs = []
-                            block_generator = dataclasses.replace(
-                                block_generator, block_height_list=block_generator.block_height_list + block_refs
-                            )
+                                block_refs.extend(
+                                    [
+                                        tx_block_heights[1],
+                                        tx_block_heights[len(tx_block_heights) // 2],
+                                        tx_block_heights[-2],
+                                    ]
+                                )
 
                         (
                             full_block,
@@ -1180,11 +1168,12 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                             normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
                             current_time=current_time,
+                            block_refs=block_refs,
                         )
 
                         if block_record.is_transaction_block:
                             transaction_data_included = True
-                            previous_generator = None
+                            block_refs = []
                             keep_going_until_tx_block = False
                             assert full_block.foliage_transaction_block is not None
                         elif guarantee_transaction_block:
@@ -1804,6 +1793,7 @@ def get_full_block_and_block_record(
     prev_block: BlockRecord,
     seed: bytes = b"",
     *,
+    block_refs: List[uint32] = [],
     overflow_cc_challenge: Optional[bytes32] = None,
     overflow_rc_challenge: Optional[bytes32] = None,
     normalized_to_identity_cc_ip: bool = False,

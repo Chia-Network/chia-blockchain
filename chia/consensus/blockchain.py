@@ -1073,7 +1073,7 @@ class Blockchain(BlockchainInterface):
             assert len(ref_list) == 0
             return None
         if len(ref_list) == 0:
-            return BlockGenerator(block.transactions_generator, [], [])
+            return BlockGenerator(block.transactions_generator, [])
 
         result: List[SerializedProgram] = []
         previous_br = await self.get_block_record_from_db(block.prev_header_hash)
@@ -1120,4 +1120,4 @@ class Blockchain(BlockchainInterface):
                     [gen] = await self.block_store.get_generators_at([ref_height])
                     result.append(gen)
         assert len(result) == len(ref_list)
-        return BlockGenerator(block.transactions_generator, result, [])
+        return BlockGenerator(block.transactions_generator, result)
