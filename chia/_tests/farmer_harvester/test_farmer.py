@@ -6,12 +6,14 @@ from dataclasses import dataclass
 from time import time
 from types import TracebackType
 from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
+from unittest.mock import ANY
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from pytest_mock import MockerFixture
 from yarl import URL
 
+from chia import __version__
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -85,9 +87,11 @@ class IncrementPoolStatsCase:
 class DummyHarvesterPeer:
     return_invalid_response: bool
     peer_node_id: bytes32 = std_hash(b"1")
+    version: str
 
-    def __init__(self, return_valid_response: bool):
-        self.return_invalid_response = return_valid_response
+    def __init__(self, return_invalid_response: bool = False, version: str = "1.0.0"):
+        self.return_invalid_response = return_invalid_response
+        self.version = version
 
     async def send_message(self, arg1: Any) -> None:
         pass
@@ -1202,3 +1206,59 @@ async def test_farmer_pool_info_config_update(
     assert len(config["pool"]["pool_list"]) == 1
     assert config["pool"]["pool_list"][0]["p2_singleton_puzzle_hash"] == p2_singleton_puzzle_hash.hex()
     assert config["pool"]["pool_list"][0]["pool_url"] == case.expected_pool_url_in_config
+
+
+@dataclass
+class PartialSubmitHeaderCase(DataCase):
+    _id: str
+    harvester_peer: DummyHarvesterPeer
+    expected_headers: Dict[str, str]
+    marks: Marks = ()
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+
+@datacases(
+    PartialSubmitHeaderCase(
+        "additional version headers",
+        harvester_peer=DummyHarvesterPeer(
+            version="1.2.3.asdf42",
+        ),
+        expected_headers={
+            "User-Agent": f"Chia Blockchain v.{__version__}",
+            "chia-farmer-version": __version__,
+            "chia-harvester-version": "1.2.3.asdf42",
+        },
+    ),
+)
+@pytest.mark.anyio
+async def test_farmer_additional_headers_on_partial_submit(
+    mocker: MockerFixture,
+    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    case: PartialSubmitHeaderCase,
+) -> None:
+    _, farmer_service, _ = farmer_one_harvester
+    assert farmer_service.rpc_server is not None
+    farmer_api = farmer_service._api
+
+    sp, pos, new_pos = create_valid_pos(farmer_api.farmer)
+    assert pos.pool_contract_puzzle_hash is not None
+
+    assert (
+        verify_and_get_quality_string(
+            pos, DEFAULT_CONSTANTS, sp.challenge_hash, sp.challenge_chain_sp, height=uint32(1)
+        )
+        is not None
+    )
+
+    mock_http_post = mocker.patch(
+        "aiohttp.ClientSession.post",
+        return_value=DummyPoolResponse(True, 200, new_difficulty=123),
+    )
+
+    peer = cast(WSChiaConnection, case.harvester_peer)
+    await farmer_api.new_proof_of_space(new_pos, peer)
+
+    mock_http_post.assert_called_once_with(ANY, json=ANY, ssl=ANY, headers=case.expected_headers)
