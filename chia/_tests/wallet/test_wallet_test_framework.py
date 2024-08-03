@@ -9,6 +9,7 @@ from chia._tests.environments.wallet import (
     WalletTestFramework,
 )
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.vault.vault_wallet import Vault
 
 
 @pytest.mark.parametrize(
@@ -270,3 +271,31 @@ async def test_balance_checking(
         }
     )
     await env_0.check_balances()
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [1, 1],
+            "as_vault": True,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_vault_param(wallet_environments: WalletTestFramework) -> None:
+    env_0: WalletEnvironment = wallet_environments.environments[0]
+    env_1: WalletEnvironment = wallet_environments.environments[1]
+    vault_0 = env_0.xch_wallet
+    vault_1 = env_1.xch_wallet
+
+    assert isinstance(vault_0, Vault)
+    assert isinstance(vault_1, Vault)
+
+    vault_0_bal = await vault_0.get_confirmed_balance()
+    vault_1_bal = await vault_1.get_confirmed_balance()
+
+    assert vault_0_bal == 2000000000000
+    assert vault_1_bal == 2000000000000
