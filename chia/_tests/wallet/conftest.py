@@ -112,6 +112,10 @@ def trusted_full_node(request: Any) -> bool:
 def tx_config(request: Any) -> TXConfig:
     return replace(DEFAULT_TX_CONFIG, reuse_puzhash=request.param)
 
+@pytest.fixture(scope="function", params=[True, False])
+def as_vault(request: Any) -> bool:
+    as_vault: bool = request.param
+    return as_vault
 
 # This fixture automatically creates 4 parametrized tests trusted/untrusted x reuse/new derivations
 # These parameterizations can be skipped by manually specifying "trusted" or "reuse puzhash" to the fixture
@@ -122,6 +126,7 @@ async def wallet_environments(
     blockchain_constants: ConsensusConstants,
     consensus_mode: ConsensusMode,
     request: pytest.FixtureRequest,
+    as_vault: bool,
 ) -> AsyncIterator[WalletTestFramework]:
     if "trusted" in request.param:
         if request.param["trusted"] != trusted_full_node:
@@ -134,7 +139,8 @@ async def wallet_environments(
         config_overrides: Dict[str, Any] = request.param["config_overrides"]
     else:  # pragma: no cover
         config_overrides = {}
-    as_vault = request.param["as_vault"] if "as_vault" in request.param else False
+    if (("as_vault" not in request.param) or (not request.param["as_vault"])) and as_vault:
+        pytest.skip("Vault tests not requested")
     if as_vault and (consensus_mode != ConsensusMode.HARD_FORK_2_0):
         pytest.skip("Skipping vault tests for consensus modes other than HARD_FORK_2_0")
     async with setup_simulators_and_wallets_service(

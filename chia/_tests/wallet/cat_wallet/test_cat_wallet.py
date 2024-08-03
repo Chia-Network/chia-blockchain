@@ -166,13 +166,14 @@ async def test_cat_creation_unique_lineage_store(self_hostname: str, two_wallet_
     assert cat_wallet_1.lineage_store.table_name != cat_wallet_2.lineage_store.table_name
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
 @pytest.mark.parametrize(
     "wallet_environments",
     [
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
+            "as_vault": True,
         }
     ],
     indirect=True,
