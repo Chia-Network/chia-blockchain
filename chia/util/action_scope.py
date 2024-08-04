@@ -96,7 +96,7 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
     When the action is closed, the state is still available and can be committed elsewhere or discarded.
 
     Utilizes a "resource manager" to hold the state in order to take advantage of rollbacks and prevent concurrent tasks
-    from interferring with each other.
+    from interfering with each other.
     """
 
     _resource_manager: ResourceManager
