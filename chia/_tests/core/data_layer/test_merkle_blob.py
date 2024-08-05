@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import struct
 from dataclasses import dataclass
+from random import Random
 from typing import Dict, Generic, List, Type, TypeVar, final
 
 import pytest
@@ -188,6 +190,79 @@ def test_merkle_blob_two_leafs_loads() -> None:
 
     assert merkle_blob.get_lineage(TreeIndex(0)) == [root]
     assert merkle_blob.get_lineage(root.left) == [left_leaf, root]
+
+
+def generate_kvid(seed: int) -> KVId:
+    seed_bytes = seed.to_bytes(8, byteorder="big")
+    hash_obj = hashlib.sha256(seed_bytes)
+    hash_int = int.from_bytes(hash_obj.digest()[:8], byteorder="big")
+    return KVId(hash_int)
+
+
+def test_insert_delete_loads_all_keys() -> None:
+    merkle_blob = MerkleBlob(blob=bytearray())
+    num_keys = 200000
+    extra_keys = 100000
+    max_height = 25
+    keys_values: Set[KVId] = set()
+
+    random = Random()
+    random.seed(100, version=2)
+
+    for key in range(num_keys):
+        if (key + 1) % 10 == 0:
+            kv_id = random.choice(list(keys_values))
+            keys_values.remove(kv_id)
+            merkle_blob.delete(kv_id)
+        else:
+            kv_id = generate_kvid(key)
+            hash = bytes(range(key, data_size))
+            merkle_blob.insert(kv_id, hash)
+            key_index = merkle_blob.kv_to_index[kv_id]
+            lineage = merkle_blob.get_lineage(TreeIndex(key_index))
+            assert len(lineage) <= max_height
+            keys_values.add(kv_id)
+
+    assert set(merkle_blob.get_keys_values_indexes().keys()) == keys_values
+
+    merkle_blob_2 = MerkleBlob(blob=merkle_blob.blob)
+    for key in range(num_keys, extra_keys):
+        kv_id = generate_kvid(key)
+        hash = bytes(range(key, data_size))
+        merkle_blob_2.insert(kv_id, hash)
+        key_index = merkle_blob_2.kv_to_index[kv_id]
+        lineage = merkle_blob_2.get_lineage(TreeIndex(key_index))
+        assert len(lineage) <= max_height
+        keys_values.add(kv_id)
+    assert set(merkle_blob_2.get_keys_values_indexes().keys()) == keys_values
+
+
+def test_small_insert_deletes() -> None:
+    merkle_blob = MerkleBlob(blob=bytearray())
+    num_repeats = 100
+    max_inserts = 25
+    seed = 0
+
+    random = Random()
+    random.seed(100, version=2)
+
+    for repeats in range(num_repeats):
+        for num_inserts in range(max_inserts):
+            keys_values: List[KVId] = []
+            for inserts in range(num_inserts):
+                seed += 1
+                kv_id = generate_kvid(seed)
+                hash = bytes(range(seed, data_size))
+                merkle_blob.insert(kv_id, hash)
+                keys_values.append(kv_id)
+
+            random.shuffle(keys_values)
+            remaining_keys_values = set(keys_values)
+            for kv_id in keys_values:
+                merkle_blob.delete(kv_id)
+                remaining_keys_values.remove(kv_id)
+                assert set(merkle_blob.get_keys_values_indexes().keys()) == remaining_keys_values
+            assert remaining_keys_values == set()
 
 
 @pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(-1), TreeIndex(1), TreeIndex(null_parent)])
