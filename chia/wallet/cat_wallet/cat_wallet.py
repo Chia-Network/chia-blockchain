@@ -54,6 +54,7 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -165,12 +166,18 @@ class CATWallet:
         non_ephemeral_coins: List[Coin] = not_ephemeral_additions(spend_bundle)
         cat_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
-        for c in non_ephemeral_coins:
-            wallet_identifier = await puzzle_store.get_wallet_identifier_for_puzzle_hash(c.puzzle_hash)
+        for coin in non_ephemeral_coins:
+            wallet_identifier = await puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
             if wallet_identifier is None:
-                raise ValueError("Internal Error")
-            if wallet_identifier.id == self.id():
-                cat_coin = c
+                if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+                    if self.match_hinted_coin(
+                        coin, self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle_hash()
+                    ):
+                        cat_coin = coin
+                else:
+                    raise ValueError("Internal Error")
+            if wallet_identifier and wallet_identifier.id == self.id():
+                cat_coin = coin
 
         if cat_coin is None:
             raise ValueError("Internal Error, unable to generate new CAT coin")
@@ -538,6 +545,8 @@ class CATWallet:
         return coins
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
+        if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+            return self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle()
         record: Optional[DerivationRecord] = (
             await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
         )
@@ -799,6 +808,8 @@ class CATWallet:
         )
 
         async with action_scope.use() as interface:
+            if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+                interface.set_callback(self.wallet_state_manager.main_wallet.vault_spend_callback)
             other_tx_removals: Set[Coin] = {
                 removal for tx in interface.side_effects.transactions for removal in tx.removals
             }
@@ -876,7 +887,18 @@ class CATWallet:
         )
 
     def handle_own_derivation(self) -> bool:
+        if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+            return True
         return False
 
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
-        raise NotImplementedError()
+        p2_singleton_puzzle_hash = self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle_hash()
+        record = DerivationRecord(
+            uint32(index),
+            p2_singleton_puzzle_hash,
+            self.wallet_state_manager.main_wallet.vault_info.pubkey,
+            self.type(),
+            self.id(),
+            False,
+        )
+        return [record]

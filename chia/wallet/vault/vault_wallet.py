@@ -109,8 +109,12 @@ class Vault(Wallet):
         return self
 
     async def get_new_puzzle(self) -> Program:
+        return self.get_p2_singleton_puzzle()
+
+    async def get_new_vault_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(dr.index).get_tree_hash()
+        next_index = dr.index
+        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(next_index).get_tree_hash()
         puzzle = get_vault_inner_puzzle(
             self.vault_info.pubkey,
             self.wallet_state_manager.constants.GENESIS_CHALLENGE,
@@ -121,7 +125,7 @@ class Vault(Wallet):
         return puzzle
 
     async def get_new_vault_puzzlehash(self) -> bytes32:
-        puzzle = await self.get_new_puzzle()
+        puzzle = await self.get_new_vault_puzzle()
         return puzzle.get_tree_hash()
 
     async def generate_signed_transaction(
@@ -225,7 +229,7 @@ class Vault(Wallet):
         selected_amount = sum(coin.amount for coin in coins)
         assert selected_amount >= amount
 
-        conditions = [primary.as_condition() for primary in primaries]
+        conditions = []
         conditions.append(Payment(newpuzzlehash, amount, memos if memos else []).as_condition())
         p2_singleton_puzzle = get_p2_singleton_puzzle(self.launcher_id)
         p2_singleton_puzhash = p2_singleton_puzzle.get_tree_hash()
@@ -242,12 +246,14 @@ class Vault(Wallet):
             if not p2_singleton_spends:
                 p2_solution = await self.make_solution(
                     primaries,
-                    tuple(parse_conditions_non_consensus(conditions)),
                     action_scope=action_scope,
+                    conditions=tuple(parse_conditions_non_consensus(conditions)),
                     coin_id=coin.name(),
                 )
             else:
-                p2_solution = await self.make_solution(primaries, action_scope=action_scope, coin_id=coin.name())
+                p2_solution = await self.make_solution(
+                    primaries, action_scope=action_scope, coin_id=coin.name(), is_secondary_coin=True
+                )
 
             p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
@@ -263,12 +269,12 @@ class Vault(Wallet):
         p2_singleton_sols = interface.side_effects.solutions
         p2_singleton_coins = interface.side_effects.coin_ids
 
-        for sol, coin_id in zip(p2_singleton_sols, p2_singleton_coins):
-            puzzle_to_assert = sol.at("rf")
+        for p2_solution, coin_id in zip(p2_singleton_sols, p2_singleton_coins):
+            puzzle_to_announce = p2_solution.at("rf")
             vault_conditions.extend(
                 [
                     CreatePuzzleAnnouncement(
-                        Program.to([coin_id, puzzle_to_assert.get_tree_hash()]).get_tree_hash(),
+                        Program.to([coin_id, puzzle_to_announce.get_tree_hash()]).get_tree_hash(),
                     ).to_program(),
                     AssertCoinAnnouncement(asserted_id=coin_id, asserted_msg=b"").to_program(),
                 ]
@@ -426,19 +432,33 @@ class Vault(Wallet):
         coin_id = kwargs.get("coin_id")
         if coin_id is None:
             raise ValueError("Vault p2_singleton solutions require a coin id")
-        if conditions:
-            condition_progs = [cond.to_program() for cond in conditions]
+
+        if kwargs.get("is_secondary_coin"):
+            p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin_id])
+        else:
+            condition_progs = [primary.as_condition() for primary in primaries]
+            for cond in conditions:
+                condition_progs.append(cond.to_program())
             delegated_puzzle = puzzle_for_conditions(condition_progs)
             delegated_solution = solution_for_conditions(condition_progs)
             p2_solution = Program.to([self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin_id])
-        else:
-            p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin_id])
 
-        if action_scope:
-            async with action_scope.use() as interface:
-                interface.side_effects.solutions.append(p2_solution)
-                interface.side_effects.coin_ids.append(coin_id)
+        async with action_scope.use() as interface:
+            interface.side_effects.solutions.append(p2_solution)
+            interface.side_effects.coin_ids.append(coin_id)
         return p2_solution
+
+    def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:
+        delegated_solution = solution.at("rrf")
+        old_conditions = delegated_solution.at("fr")
+        new_conditions = []
+        for cond in old_conditions.as_iter():
+            new_conditions.append(cond)
+        new_conditions.append(condition)
+        new_delegated_puz = puzzle_for_conditions(new_conditions)
+        new_delegated_sol = solution_for_conditions(new_conditions)
+        new_solution = solution.replace(rf=new_delegated_puz, rrf=new_delegated_sol)
+        return new_solution
 
     async def get_puzzle(self, new: bool) -> Program:
         if new:
@@ -473,6 +493,9 @@ class Vault(Wallet):
 
     def handle_own_derivation(self) -> bool:
         return True
+
+    def get_p2_singleton_puzzle(self) -> Program:
+        return get_p2_singleton_puzzle(self.launcher_id)
 
     def get_p2_singleton_puzzle_hash(self) -> bytes32:
         return get_p2_singleton_puzzle_hash(self.launcher_id)

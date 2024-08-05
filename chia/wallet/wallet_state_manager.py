@@ -1217,7 +1217,11 @@ class WalletStateManager:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             return None
         else:
-            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+            if isinstance(self.observation_root, G1Element):
+                our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+            else:
+                our_inner_puzzle = self.main_wallet.get_p2_singleton_puzzle()
+                assert our_inner_puzzle.get_tree_hash() == derivation_record.puzzle_hash
             asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
             is_crcat: bool = False

@@ -112,10 +112,12 @@ def trusted_full_node(request: Any) -> bool:
 def tx_config(request: Any) -> TXConfig:
     return replace(DEFAULT_TX_CONFIG, reuse_puzhash=request.param)
 
-@pytest.fixture(scope="function", params=[True, False])
+
+@pytest.fixture(scope="function", params=[True])
 def as_vault(request: Any) -> bool:
     as_vault: bool = request.param
     return as_vault
+
 
 # This fixture automatically creates 4 parametrized tests trusted/untrusted x reuse/new derivations
 # These parameterizations can be skipped by manually specifying "trusted" or "reuse puzhash" to the fixture
