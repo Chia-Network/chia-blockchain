@@ -1084,7 +1084,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_nft_for_cat, tx_config, action_scope, driver_dict, fee=maker_fee
+            offer_nft_for_cat, action_scope, driver_dict, fee=maker_fee
         )
     assert success is True
     assert error is None
@@ -1103,7 +1103,6 @@ async def test_nft_offer_nft0_and_xch_for_cat(
         trade_take = await trade_manager_taker.respond_to_offer(
             maker_offer,
             peer,
-            tx_config,
             action_scope,
             fee=taker_fee,
         )
@@ -1174,7 +1173,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
 
     async with trade_manager_maker.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
-            offer_multi_cats_for_nft, tx_config, action_scope, driver_dict_to_buy, fee=maker_fee
+            offer_multi_cats_for_nft, action_scope, driver_dict_to_buy, fee=maker_fee
         )
     assert success is True
     assert error is None
@@ -1189,9 +1188,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
-        trade_take = await trade_manager_taker.respond_to_offer(
-            maker_offer, peer, tx_config, action_scope, fee=taker_fee
-        )
+        trade_take = await trade_manager_taker.respond_to_offer(maker_offer, peer, action_scope, fee=taker_fee)
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     # check balances: taker wallet down an NFT, up cats
