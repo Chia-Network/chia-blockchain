@@ -89,7 +89,9 @@ class MerkleBlob:
         if isinstance(node, RawInternalMerkleNode):
             new_left = left if left is not None else node.left
             new_right = right if right is not None else node.right
-            new_node = RawInternalMerkleNode(new_parent, new_left, new_right, new_hash, node.index)
+            new_node: RawMerkleNodeProtocol = RawInternalMerkleNode(
+                new_parent, new_left, new_right, new_hash, node.index
+            )
         else:
             assert isinstance(node, RawLeafMerkleNode)
             new_key_value = key_value if key_value is not None else node.key_value
@@ -261,6 +263,9 @@ class RawMerkleNodeProtocol(Protocol):
 
     @property
     def parent(self) -> TreeIndex: ...
+
+    @property
+    def hash(self) -> bytes: ...
 
 
 @final
