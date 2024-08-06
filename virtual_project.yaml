@@ -4,7 +4,6 @@ exclude_paths:
 ignore:
   packages:
     - chia-blockchain
-    - obsolete
     - development
     - cmds
     - wallet
@@ -24,7 +23,6 @@ ignore:
     - harvester
     - network
     - pooling
-    - todo
   files:
     - chia/cmds/cmds_util.py
   edges:
@@ -45,7 +43,7 @@ ignore:
     - chips -> full_node
     - service -> chia-blockchain
     - cmds -> chia-blockchain
-    - chia\util\async_pool.py (concurrency) -> chia\util\log_exceptions.py (service)
+    - chia/util/async_pool.py (concurrency) -> chia/util/log_exceptions.py (service)
     - chia/cmds/plotnft_funcs.py (pooling) -> chia/cmds/wallet_funcs.py (wallet)
     - chia/cmds/plotnft_funcs.py (pooling) -> chia/rpc/farmer_rpc_client.py (farmer)
     - chia/cmds/plotnft_funcs.py (pooling) -> chia/rpc/wallet_rpc_client.py (wallet)
