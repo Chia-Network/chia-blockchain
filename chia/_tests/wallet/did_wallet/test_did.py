@@ -827,9 +827,7 @@ class TestDIDWallet:
         async with wallet.wallet_state_manager.new_action_scope(
             DEFAULT_TX_CONFIG.override(excluded_coin_ids=[coin_id]), push=True
         ) as action_scope:
-            await wallet.generate_signed_transaction(
-                odd_amount, ph1, DEFAULT_TX_CONFIG.override(excluded_coin_ids=[coin_id]), action_scope, fee
-            )
+            await wallet.generate_signed_transaction(odd_amount, ph1, action_scope, fee)
         await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_2, timeout=15)
 
