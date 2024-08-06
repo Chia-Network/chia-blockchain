@@ -415,11 +415,7 @@ class CRCATWallet(CATWallet):
             cat_coins = list(
                 await self.select_coins(
                     uint64(starting_amount),
-                    action_scope.config.tx_config.override(
-                        reuse_puzhash=(
-                            True if add_authorizations_to_cr_cats else action_scope.config.tx_config.reuse_puzhash
-                        )
-                    ).coin_selection_config,
+                    action_scope.config.tx_config.coin_selection_config,
                 )
             )
         else:
@@ -451,7 +447,11 @@ class CRCATWallet(CATWallet):
             if origin_crcat_record is None:
                 raise RuntimeError("A CR-CAT coin was selected that we don't have a record for")  # pragma: no cover
             origin_crcat = self.coin_record_to_crcat(origin_crcat_record)
-            if action_scope.config.tx_config.reuse_puzhash:
+            if action_scope.config.tx_config.override(
+                reuse_puzhash=(
+                    True if not add_authorizations_to_cr_cats else action_scope.config.tx_config.reuse_puzhash
+                )
+            ).reuse_puzhash:
                 change_puzhash = origin_crcat.inner_puzzle_hash
                 for payment in payments:
                     if change_puzhash == payment.puzzle_hash and change == payment.amount:
