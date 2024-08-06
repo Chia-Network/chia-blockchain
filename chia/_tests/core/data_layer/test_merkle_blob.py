@@ -4,7 +4,7 @@ import hashlib
 import struct
 from dataclasses import dataclass
 from random import Random
-from typing import Dict, Generic, List, Type, TypeVar, final
+from typing import Dict, Generic, List, Set, Type, TypeVar, final
 
 import pytest
 

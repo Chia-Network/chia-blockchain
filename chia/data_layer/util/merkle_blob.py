@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import astuple, dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, ClassVar, Dict, List, NewType, Protocol, Type, TypeVar, cast, final
+from typing import TYPE_CHECKING, ClassVar, Dict, List, NewType, Optional, Protocol, Type, TypeVar, cast, final
 
 from chia.data_layer.data_layer_util import internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -42,11 +42,11 @@ class MerkleBlob:
     blob: bytearray
     kv_to_index: Dict[KVId, TreeIndex] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.kv_to_index = self.get_keys_values_indexes()
 
-    def get_new_index(self):
-        return len(self.blob) // spacing
+    def get_new_index(self) -> TreeIndex:
+        return TreeIndex(len(self.blob) // spacing)
 
     def get_raw_node(self, index: TreeIndex) -> RawMerkleNodeProtocol:
         if index < 0 or null_parent <= index:
@@ -136,8 +136,8 @@ class MerkleBlob:
     def insert(self, key_value: KVId, hash: bytes) -> None:
         if len(self.blob) == 0:
             self.blob.extend(
-                NodeMetadata(type=NodeType.leaf, dirty=False).pack() +
-                pack_raw_node(RawLeafMerkleNode(null_parent, key_value, hash, TreeIndex(0)))
+                NodeMetadata(type=NodeType.leaf, dirty=False).pack()
+                + pack_raw_node(RawLeafMerkleNode(null_parent, key_value, hash, TreeIndex(0)))
             )
             self.kv_to_index[key_value] = TreeIndex(0)
             return
@@ -149,8 +149,8 @@ class MerkleBlob:
         if len(self.kv_to_index) == 1:
             self.blob.clear()
             self.blob.extend(
-                NodeMetadata(type=NodeType.internal, dirty=False).pack() +
-                pack_raw_node(
+                NodeMetadata(type=NodeType.internal, dirty=False).pack()
+                + pack_raw_node(
                     RawInternalMerkleNode(
                         null_parent,
                         TreeIndex(1),
@@ -171,12 +171,12 @@ class MerkleBlob:
         new_internal_node_index = TreeIndex(self.get_new_index() + 1)
 
         self.blob.extend(
-            NodeMetadata(type=NodeType.leaf, dirty=False).pack() +
-            pack_raw_node(RawLeafMerkleNode(new_internal_node_index, key_value, hash, new_leaf_index))
+            NodeMetadata(type=NodeType.leaf, dirty=False).pack()
+            + pack_raw_node(RawLeafMerkleNode(new_internal_node_index, key_value, hash, new_leaf_index))
         )
         self.blob.extend(
-            NodeMetadata(type=NodeType.internal, dirty=False).pack() +
-            pack_raw_node(
+            NodeMetadata(type=NodeType.internal, dirty=False).pack()
+            + pack_raw_node(
                 RawInternalMerkleNode(
                     old_leaf.parent,
                     old_leaf.index,
@@ -225,7 +225,7 @@ class MerkleBlob:
             else:
                 assert isinstance(sibling, RawInternalMerkleNode)
                 node_type = NodeType.internal
-            self.blob[: spacing] = NodeMetadata(type=node_type, dirty=False).pack() + pack_raw_node(sibling)
+            self.blob[:spacing] = NodeMetadata(type=node_type, dirty=False).pack() + pack_raw_node(sibling)
             self.update_entry(TreeIndex(0), parent=null_parent)
             if node_type == NodeType.leaf:
                 self.kv_to_index[sibling.key_value] = TreeIndex(0)
