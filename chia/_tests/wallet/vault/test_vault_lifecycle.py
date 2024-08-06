@@ -96,7 +96,10 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
 
         proof = get_vault_proof(vault_merkle_tree, secp_puzzlehash)
         vault_solution_secp = Program.to([proof, secp_puzzle, secp_solution])
-        vault_spendbundle = SpendBundle([make_spend(vault_coin, vault_puzzle, vault_solution_secp)], G2Element())
+        vault_spendbundle = cost_logger.add_cost(
+            "Standard spend w/ 1 extra CC",
+            SpendBundle([make_spend(vault_coin, vault_puzzle, vault_solution_secp)], G2Element()),
+        )
 
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(vault_spendbundle)
         assert result[0] == MempoolInclusionStatus.SUCCESS
@@ -111,14 +114,17 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         recovery_solution = Program.to([vault_coin.amount, recovery_conditions])
         recovery_proof = get_vault_proof(vault_merkle_tree, p2_recovery_puzzlehash)
         vault_solution_recovery = Program.to([recovery_proof, p2_recovery_puzzle, recovery_solution])
-        vault_spendbundle = SpendBundle(
-            [make_spend(vault_coin, vault_puzzle, vault_solution_recovery)],
-            AugSchemeMPL.sign(
-                BLS_SK,
-                (
-                    recovery_conditions.get_tree_hash()
-                    + vault_coin.name()
-                    + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
+        vault_spendbundle = cost_logger.add_cost(
+            "Recovery initiation",
+            SpendBundle(
+                [make_spend(vault_coin, vault_puzzle, vault_solution_recovery)],
+                AugSchemeMPL.sign(
+                    BLS_SK,
+                    (
+                        recovery_conditions.get_tree_hash()
+                        + vault_coin.name()
+                        + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
+                    ),
                 ),
             ),
         )
@@ -141,7 +147,9 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         proof = get_vault_proof(recovery_merkle_tree, recovery_finish_puzzlehash)
         recovery_finish_solution = Program.to([])
         recovery_solution = Program.to([proof, recovery_finish_puzzle, recovery_finish_solution])
-        finish_spendbundle = SpendBundle([make_spend(recovery_coin, recovery_puzzle, recovery_solution)], G2Element())
+        finish_spendbundle = cost_logger.add_cost(
+            "Finish recovery", SpendBundle([make_spend(recovery_coin, recovery_puzzle, recovery_solution)], G2Element())
+        )
 
         result = await client.push_tx(finish_spendbundle)
         assert result[1] == Err.ASSERT_SECONDS_RELATIVE_FAILED
@@ -184,6 +192,8 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
         )
 
         recovery_solution = Program.to([proof, secp_puzzle, secp_solution])
-        escape_spendbundle = SpendBundle([make_spend(recovery_coin, recovery_puzzle, recovery_solution)], G2Element())
+        escape_spendbundle = cost_logger.add_cost(
+            "Escape recovery", SpendBundle([make_spend(recovery_coin, recovery_puzzle, recovery_solution)], G2Element())
+        )
         result = await client.push_tx(escape_spendbundle)
         assert result[0] == MempoolInclusionStatus.SUCCESS
