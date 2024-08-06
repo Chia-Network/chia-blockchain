@@ -15,6 +15,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Generic, List,
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
 
+from chia import __version__
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_for_server
@@ -243,6 +244,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             "/close_connection": self.close_connection,
             "/stop_node": self.stop_node,
             "/get_routes": self.get_routes,
+            "/get_version": self.get_version,
             "/healthz": self.healthz,
         }
 
@@ -301,6 +303,11 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def healthz(self, request: Dict[str, Any]) -> EndpointResult:
         return {
             "success": True,
+        }
+
+    async def get_version(self, request: Dict[str, Any]) -> EndpointResult:
+        return {
+            "version": __version__,
         }
 
     async def ws_api(self, message: WsRpcMessage) -> Optional[Dict[str, object]]:
@@ -366,7 +373,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                 log.debug("Received binary data")
             else:
                 if msg.type == WSMsgType.ERROR:
-                    log.error("Error during receive %s" % ws.exception())
+                    log.error("Error during receive %s", ws.exception())
                 elif msg.type == WSMsgType.CLOSED:
                     pass
 

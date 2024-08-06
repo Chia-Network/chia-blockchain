@@ -17,6 +17,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import bech32_decode, bech32_encode, convertbits
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint64
+from chia.util.streamable import parse_rust
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,
@@ -74,7 +75,7 @@ class NotarizedPayment(Payment):
         return cls(puzzle_hash, amount, memos, nonce)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Offer:
     requested_payments: Dict[
         Optional[bytes32], List[NotarizedPayment]
@@ -84,10 +85,10 @@ class Offer:
 
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
-    _additions: Dict[Coin, List[Coin]] = field(init=False)
+    _additions: Dict[Coin, List[Coin]] = field(init=False, repr=False)
     _hints: Dict[bytes32, bytes32] = field(init=False)
-    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False)
-    _final_spend_bundle: Optional[SpendBundle] = field(init=False)
+    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False, repr=False)
+    _final_spend_bundle: Optional[SpendBundle] = field(init=False, repr=False)
     _conditions: Optional[Dict[Coin, List[Condition]]] = field(init=False)
 
     @staticmethod
@@ -227,7 +228,7 @@ class Offer:
         for parent_spend in self._bundle.coin_spends:
             coins_for_this_spend: List[Coin] = []
 
-            parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal.to_program())
+            parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
             parent_solution: Program = parent_spend.solution.to_program()
             additions: List[Coin] = self._additions[parent_spend.coin]
 
@@ -294,7 +295,7 @@ class Offer:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
         offered_amounts: Dict[Optional[bytes32], int] = {}
         for asset_id, coins in offered_coins.items():
-            offered_amounts[asset_id] = uint64(sum([c.amount for c in coins]))
+            offered_amounts[asset_id] = uint64(sum(c.amount for c in coins))
         return offered_amounts
 
     def get_requested_payments(self) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
@@ -303,7 +304,7 @@ class Offer:
     def get_requested_amounts(self) -> Dict[Optional[bytes32], int]:
         requested_amounts: Dict[Optional[bytes32], int] = {}
         for asset_id, coins in self.get_requested_payments().items():
-            requested_amounts[asset_id] = uint64(sum([c.amount for c in coins]))
+            requested_amounts[asset_id] = uint64(sum(c.amount for c in coins))
         return requested_amounts
 
     def arbitrage(self) -> Dict[Optional[bytes32], int]:
@@ -366,7 +367,7 @@ class Offer:
 
         # Then we gather anything else as unknown
         sum_of_additions_so_far: int = sum(pending_dict.values())
-        unknown: int = sum([c.amount for c in non_ephemeral_removals]) - sum_of_additions_so_far
+        unknown: int = sum(c.amount for c in non_ephemeral_removals) - sum_of_additions_so_far
         if unknown > 0:
             pending_dict["unknown"] = unknown
 
@@ -618,7 +619,7 @@ class Offer:
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: List[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
-            driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal.to_program()))
+            driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
             if driver is not None:
                 asset_id = create_asset_id(driver)
                 assert asset_id is not None
@@ -685,12 +686,12 @@ class Offer:
     # We basically hijack the SpendBundle versions for most of it
     @classmethod
     def parse(cls, f: BinaryIO) -> Offer:
-        parsed_bundle = SpendBundle.parse(f)
+        parsed_bundle = parse_rust(f, SpendBundle)
         return cls.from_bytes(bytes(parsed_bundle))
 
     def stream(self, f: BinaryIO) -> None:
-        as_spend_bundle = SpendBundle.from_bytes(bytes(self))
-        as_spend_bundle.stream(f)
+        spend_bundle_bytes = self.to_spend_bundle().to_bytes()
+        f.write(spend_bundle_bytes)
 
     def __bytes__(self) -> bytes:
         return bytes(self.to_spend_bundle())

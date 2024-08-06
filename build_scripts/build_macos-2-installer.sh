@@ -17,6 +17,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Installing npm utilities"
 cd npm_macos || exit 1
 npm ci
+NPM_PATH="$(pwd)/node_modules/.bin"
 cd .. || exit 1
 
 echo "Create dist/"
@@ -66,8 +67,14 @@ else
   echo "Not on ci or no secrets so not signing"
   export CSC_IDENTITY_AUTO_DISCOVERY=false
 fi
-echo npx electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11" --config ../../../build_scripts/electron-builder.json
-npx electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME" --config.mac.minimumSystemVersion="11" --config ../../../build_scripts/electron-builder.json
+echo "${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
+  --config.productName="$PRODUCT_NAME" \
+  --config.mac.minimumSystemVersion="11" \
+  --config ../../../build_scripts/electron-builder.json
+"${NPM_PATH}/electron-builder" build --mac "${OPT_ARCH}" \
+  --config.productName="$PRODUCT_NAME" \
+  --config.mac.minimumSystemVersion="11" \
+  --config ../../../build_scripts/electron-builder.json
 LAST_EXIT_CODE=$?
 ls -l dist/mac*/chia.app/Contents/Resources/app.asar
 
@@ -83,12 +90,14 @@ mv dist/* ../../../build_scripts/dist/
 cd ../../../build_scripts || exit 1
 
 mkdir final_installer
-DMG_NAME="chia-${CHIA_INSTALLER_VERSION}.dmg"
+ORIGINAL_DMG_NAME="chia-${CHIA_INSTALLER_VERSION}.dmg"
 if [ "$(arch)" = "arm64" ]; then
-  mv dist/"${DMG_NAME}" dist/chia-"${CHIA_INSTALLER_VERSION}"-arm64.dmg
-  DMG_NAME=chia-${CHIA_INSTALLER_VERSION}-arm64.dmg
+  DMG_NAME=Chia-${CHIA_INSTALLER_VERSION}-arm64.dmg
+else
+  # NOTE: when coded, this changes the case to Chia
+  DMG_NAME=Chia-${CHIA_INSTALLER_VERSION}.dmg
 fi
-mv dist/"$DMG_NAME" final_installer/
+mv dist/"$ORIGINAL_DMG_NAME" final_installer/"$DMG_NAME"
 
 ls -lh final_installer
 

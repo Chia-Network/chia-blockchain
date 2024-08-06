@@ -21,9 +21,18 @@ jobs:
     name: Trigger building a new `main` tag for the chia-docker image
     runs-on: ubuntu-latest
     steps:
-      - uses: Chia-Network/actions/github/jwt@main
-
       - name: Trigger docker main workflow via github-glue
-        run: |
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/start
-          curl -s -XPOST -H "Authorization: Bearer ${{ env.JWT_TOKEN }}" --data '{}' ${{ secrets.GLUE_API_URL }}/api/v1/docker-build-main/${{ github.sha }}/success/build-main
+        uses: Chia-Network/actions/github/glue@main
+        with:
+          json_data: "{}"
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "docker-build-main/${{ github.sha }}"
+          glue_path: "start"
+
+      - name: Trigger docker main success via github-glue
+        uses: Chia-Network/actions/github/glue@main
+        with:
+          json_data: "{}"
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "docker-build-main/${{ github.sha }}"
+          glue_path: "success/build-main"
