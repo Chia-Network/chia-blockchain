@@ -505,17 +505,17 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.34.143"
+version = "1.34.155"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.34.143-py3-none-any.whl", hash = "sha256:0d16832f23e6bd3ae94e35ea8e625529850bfad9baccd426de96ad8f445d8e03"},
-    {file = "boto3-1.34.143.tar.gz", hash = "sha256:b590ce80c65149194def43ebf0ea1cf0533945502507837389a8d22e3ecbcf05"},
+    {file = "boto3-1.34.155-py3-none-any.whl", hash = "sha256:445239ea2ba7f4084ddbd71f721c14d0a6d08e06f6ba51b5403a16b6544b3f1e"},
+    {file = "boto3-1.34.155.tar.gz", hash = "sha256:e8d2e128c74e84199edccdc3a6b4b1c6fb36d6fdb5688eb92931827f02c6fa5b"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.143,<1.35.0"
+botocore = ">=1.34.155,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -524,13 +524,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.143"
+version = "1.34.155"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.34.143-py3-none-any.whl", hash = "sha256:094aea179e8aaa1bc957ad49cc27d93b189dd3a1f3075d8b0ca7c445a2a88430"},
-    {file = "botocore-1.34.143.tar.gz", hash = "sha256:059f032ec05733a836e04e869c5a15534420102f93116f3bc9a5b759b0651caf"},
+    {file = "botocore-1.34.155-py3-none-any.whl", hash = "sha256:f2696c11bb0cad627d42512937befd2e3f966aedd15de00d90ee13cf7a16b328"},
+    {file = "botocore-1.34.155.tar.gz", hash = "sha256:3aa88abfef23909f68d3e6679a3d4b4bb3c6288a6cfbf9e253aa68dac8edad64"},
 ]
 
 [package.dependencies]
@@ -542,7 +542,7 @@ urllib3 = [
 ]
 
 [package.extras]
-crt = ["awscrt (==0.20.11)"]
+crt = ["awscrt (==0.21.2)"]
 
 [[package]]
 name = "build"
@@ -3418,4 +3418,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "7588d144481bc13c3ea7eaf6b8b58fbd1c4f4e670a468b1298e5d45897f0485e"
+content-hash = "1591a90122220ce92ce73794b88d616da31f465ab61b9123a0cffcfeb7a8bd49"
