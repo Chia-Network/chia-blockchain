@@ -91,6 +91,7 @@ class MerkleBlob:
             new_right = right if right is not None else node.right
             new_node = RawInternalMerkleNode(new_parent, new_left, new_right, new_hash, node.index)
         else:
+            assert isinstance(node, RawLeafMerkleNode)
             new_key_value = key_value if key_value is not None else node.key_value
             new_node = RawLeafMerkleNode(new_parent, new_key_value, new_hash, node.index)
             if new_key_value != node.key_value:
@@ -109,6 +110,7 @@ class MerkleBlob:
             for bit in range(8):
                 if isinstance(node, RawLeafMerkleNode):
                     return node
+                assert isinstance(node, RawInternalMerkleNode)
                 if byte & (1 << bit):
                     node = self.get_raw_node(node.left)
                 else:
@@ -128,6 +130,7 @@ class MerkleBlob:
             if isinstance(node, RawLeafMerkleNode):
                 kv_to_index[node.key_value] = node_index
             else:
+                assert isinstance(node, RawInternalMerkleNode)
                 queue.append(node.left)
                 queue.append(node.right)
 
@@ -144,7 +147,7 @@ class MerkleBlob:
 
         seed = std_hash(key_value.to_bytes(8, byteorder="big"))
         old_leaf = self.get_random_leaf_node(bytes(seed))
-        internal_node_hash = internal_hash(old_leaf.hash, hash)
+        internal_node_hash = internal_hash(bytes32(old_leaf.hash), bytes32(hash))
 
         if len(self.kv_to_index) == 1:
             self.blob.clear()
@@ -192,6 +195,7 @@ class MerkleBlob:
 
         self.update_entry(old_leaf.index, parent=new_internal_node_index)
         old_parent = self.get_raw_node(old_parent_index)
+        assert isinstance(old_parent, RawInternalMerkleNode)
         if old_leaf.index == old_parent.left:
             self.update_entry(old_parent.index, left=new_internal_node_index)
         else:
@@ -211,6 +215,7 @@ class MerkleBlob:
             return
         parent = self.get_raw_node(parent_index)
 
+        assert isinstance(parent, RawInternalMerkleNode)
         if parent.left == leaf_index:
             sibling_index = parent.right
         else:
@@ -227,14 +232,16 @@ class MerkleBlob:
                 node_type = NodeType.internal
             self.blob[:spacing] = NodeMetadata(type=node_type, dirty=False).pack() + pack_raw_node(sibling)
             self.update_entry(TreeIndex(0), parent=null_parent)
-            if node_type == NodeType.leaf:
+            if isinstance(sibling, RawLeafMerkleNode):
                 self.kv_to_index[sibling.key_value] = TreeIndex(0)
             else:
+                assert isinstance(sibling, RawInternalMerkleNode)
                 for son_index in (sibling.left, sibling.right):
                     self.update_entry(son_index, parent=TreeIndex(0))
             return
 
         grandparent = self.get_raw_node(grandparent_index)
+        assert isinstance(grandparent, RawInternalMerkleNode)
         self.update_entry(sibling_index, parent=grandparent_index)
         if grandparent.left == parent_index:
             self.update_entry(grandparent_index, left=sibling_index)
