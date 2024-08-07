@@ -226,7 +226,7 @@ class Offer:
         for parent_spend in self._bundle.coin_spends:
             coins_for_this_spend: List[Coin] = []
 
-            parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal.to_program())
+            parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
             parent_solution: Program = parent_spend.solution.to_program()
             additions: List[Coin] = self._additions[parent_spend.coin]
 
@@ -617,7 +617,7 @@ class Offer:
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: List[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
-            driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal.to_program()))
+            driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
             if driver is not None:
                 asset_id = create_asset_id(driver)
                 assert asset_id is not None

@@ -126,7 +126,6 @@ class Vault(Wallet):
         self,
         amount: uint64,
         puzzle_hash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
@@ -148,7 +147,6 @@ class Vault(Wallet):
         coin_spends = await self._generate_unsigned_transaction(
             amount,
             puzzle_hash,
-            tx_config,
             action_scope,
             fee=fee,
             coins=coins,
@@ -186,7 +184,6 @@ class Vault(Wallet):
         self,
         amount: uint64,
         newpuzzlehash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
@@ -216,7 +213,7 @@ class Vault(Wallet):
                 )
             coins = await self.select_coins(
                 uint64(total_amount),
-                tx_config.coin_selection_config,
+                action_scope.config.tx_config.coin_selection_config,
             )
         assert len(coins) > 0
         selected_amount = sum(coin.amount for coin in coins)
@@ -249,7 +246,9 @@ class Vault(Wallet):
             p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
         next_puzzle_hash = (
-            self.vault_info.coin.puzzle_hash if tx_config.reuse_puzhash else (await self.get_new_vault_puzzlehash())
+            self.vault_info.coin.puzzle_hash
+            if action_scope.config.tx_config.reuse_puzhash
+            else (await self.get_new_vault_puzzlehash())
         )
         vault_conditions: List[Program] = []
         recreate_vault_condition = CreateCoin(

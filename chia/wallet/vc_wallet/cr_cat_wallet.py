@@ -41,7 +41,6 @@ from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import (
@@ -84,7 +83,6 @@ class CRCATWallet(CATWallet):
         wallet: MainWalletProtocol,
         cat_tail_info: Dict[str, Any],
         amount: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         name: Optional[str] = None,
@@ -399,7 +397,6 @@ class CRCATWallet(CATWallet):
     async def _generate_unsigned_spendbundle(
         self,
         payments: List[Payment],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
@@ -413,13 +410,11 @@ class CRCATWallet(CATWallet):
             extra_delta, tail_reveal, tail_solution = 0, Program.to([]), Program.to([])
         payment_amount: int = sum(p.amount for p in payments)
         starting_amount: int = payment_amount - extra_delta
-        if not add_authorizations_to_cr_cats:
-            tx_config = tx_config.override(reuse_puzhash=True)
         if coins is None:
             cat_coins = list(
                 await self.select_coins(
                     uint64(starting_amount),
-                    tx_config.coin_selection_config,
+                    action_scope.config.tx_config.coin_selection_config,
                 )
             )
         else:
@@ -451,7 +446,11 @@ class CRCATWallet(CATWallet):
             if origin_crcat_record is None:
                 raise RuntimeError("A CR-CAT coin was selected that we don't have a record for")  # pragma: no cover
             origin_crcat = self.coin_record_to_crcat(origin_crcat_record)
-            if tx_config.reuse_puzhash:
+            if action_scope.config.tx_config.override(
+                reuse_puzhash=(
+                    True if not add_authorizations_to_cr_cats else action_scope.config.tx_config.reuse_puzhash
+                )
+            ).reuse_puzhash:
                 change_puzhash = origin_crcat.inner_puzzle_hash
                 for payment in payments:
                     if change_puzhash == payment.puzzle_hash and change == payment.amount:
@@ -513,7 +512,6 @@ class CRCATWallet(CATWallet):
                         await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
-                            tx_config,
                             action_scope,
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
@@ -525,7 +523,6 @@ class CRCATWallet(CATWallet):
                         xch_announcement = await self.create_tandem_xch_tx(
                             fee,
                             uint64(regular_chia_to_claim),
-                            tx_config,
                             action_scope,
                         )
                         assert xch_announcement is not None
@@ -586,7 +583,6 @@ class CRCATWallet(CATWallet):
         if add_authorizations_to_cr_cats:
             await vc_wallet.generate_signed_transaction(
                 vc.launcher_id,
-                tx_config,
                 action_scope,
                 extra_conditions=(
                     *expected_announcements,
@@ -601,7 +597,6 @@ class CRCATWallet(CATWallet):
         self,
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
@@ -638,7 +633,6 @@ class CRCATWallet(CATWallet):
 
         spend_bundle = await self._generate_unsigned_spendbundle(
             payments,
-            tx_config,
             action_scope,
             fee,
             cat_discrepancy=cat_discrepancy,  # (extra_delta, tail_reveal, tail_solution)
@@ -682,7 +676,6 @@ class CRCATWallet(CATWallet):
     async def claim_pending_approval_balance(
         self,
         min_amount_to_claim: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
@@ -701,7 +694,7 @@ class CRCATWallet(CATWallet):
                 max_coin_amount = uint64(self.wallet_state_manager.constants.MAX_COIN_AMOUNT)
             coins = await select_coins(
                 await self.get_pending_approval_balance(),
-                tx_config.coin_selection_config,
+                action_scope.config.tx_config.coin_selection_config,
                 list(crcat_records),
                 {},
                 self.log,
@@ -712,7 +705,7 @@ class CRCATWallet(CATWallet):
         if fee > 0:
             chia_coins = await self.standard_wallet.select_coins(
                 fee,
-                tx_config.coin_selection_config,
+                action_scope.config.tx_config.coin_selection_config,
             )
         else:
             chia_coins = set()
@@ -764,7 +757,6 @@ class CRCATWallet(CATWallet):
             await self.create_tandem_xch_tx(
                 fee,
                 uint64(0),
-                tx_config,
                 action_scope,
                 extra_conditions=tuple(expected_announcements),
             )
@@ -772,7 +764,6 @@ class CRCATWallet(CATWallet):
         # Make the VC TX
         await vc_wallet.generate_signed_transaction(
             vc.launcher_id,
-            tx_config,
             action_scope,
             extra_conditions=(
                 *extra_conditions,

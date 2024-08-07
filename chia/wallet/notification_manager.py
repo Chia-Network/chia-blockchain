@@ -17,7 +17,6 @@ from chia.wallet.conditions import AssertCoinAnnouncement, Condition
 from chia.wallet.notification_store import Notification, NotificationStore
 from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.notifications import construct_notification
-from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 
@@ -86,13 +85,12 @@ class NotificationManager:
         target: bytes32,
         msg: bytes,
         amount: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> None:
         coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(
-            uint64(amount + fee), tx_config.coin_selection_config
+            uint64(amount + fee), action_scope.config.tx_config.coin_selection_config
         )
         origin_coin: bytes32 = next(iter(coins)).name()
         notification_puzzle: Program = construct_notification(target, amount)
@@ -107,7 +105,6 @@ class NotificationManager:
         await self.wallet_state_manager.main_wallet.generate_signed_transaction(
             amount,
             notification_hash,
-            tx_config,
             action_scope,
             fee,
             coins=coins,

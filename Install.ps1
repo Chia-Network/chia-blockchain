@@ -104,8 +104,6 @@ foreach ($extra in $extras)
 
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
 .penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
-# TODO: Decide if this is needed or should be handled automatically in some way
-.penv/Scripts/pip install "poetry-dynamic-versioning[plugin]"
 .penv/Scripts/poetry install @extras_cli
 
 if ($i)
@@ -131,7 +129,7 @@ Write-Output "For assistance join us on Discord in the #support chat channel:"
 Write-Output "https://discord.gg/chia"
 Write-Output ""
 Write-Output "Try the Quick Start Guide to running chia-blockchain:"
-Write-Output "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
+Write-Output "https://docs.chia.net/introduction"
 Write-Output ""
 Write-Output "To install the GUI run '.\.venv\scripts\Activate.ps1' then '.\Install-gui.ps1'."
 Write-Output ""

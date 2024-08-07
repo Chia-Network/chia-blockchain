@@ -311,7 +311,7 @@ class CRCAT:
 
     @classmethod
     def get_current_from_coin_spend(cls: Type[_T_CRCAT], spend: CoinSpend) -> CRCAT:  # pragma: no cover
-        uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal.to_program())
+        uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal)
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
         lineage_proof = LineageProof.from_program(
@@ -611,7 +611,7 @@ class CRCATSpend:
 
     @classmethod
     def from_coin_spend(cls, spend: CoinSpend) -> CRCATSpend:  # pragma: no cover
-        inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
+        inner_puzzle: Program = CRCAT.get_inner_puzzle(uncurry_puzzle(spend.puzzle_reveal))
         inner_solution: Program = CRCAT.get_inner_solution(spend.solution.to_program())
         inner_conditions: Program = inner_puzzle.run(inner_solution)
         return cls(

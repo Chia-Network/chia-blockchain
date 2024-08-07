@@ -212,11 +212,10 @@ class TestSimulation:
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 uint64(10),
                 await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                DEFAULT_TX_CONFIG,
                 action_scope,
                 uint64(0),
             )
@@ -389,11 +388,10 @@ class TestSimulation:
 
         # repeating just to try to expose any flakiness
         for coin in coins:
-            async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
                     amount=uint64(tx_amount),
                     puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                    tx_config=DEFAULT_TX_CONFIG,
                     action_scope=action_scope,
                     coins={coin},
                 )
@@ -436,12 +434,13 @@ class TestSimulation:
         # repeating just to try to expose any flakiness
         for repeat in range(repeats):
             coins = [next(coins_iter) for _ in range(tx_per_repeat)]
-            async with wallet.wallet_state_manager.new_action_scope(push=True, merge_spends=False) as action_scope:
+            async with wallet.wallet_state_manager.new_action_scope(
+                DEFAULT_TX_CONFIG, push=True, merge_spends=False
+            ) as action_scope:
                 for coin in coins:
                     await wallet.generate_signed_transaction(
                         amount=uint64(tx_amount),
                         puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                        tx_config=DEFAULT_TX_CONFIG,
                         action_scope=action_scope,
                         coins={coin},
                     )
