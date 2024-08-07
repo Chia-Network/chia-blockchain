@@ -427,13 +427,12 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
-    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
             {"identifier": "genesis_by_id"},
             uint64(100),
-            DEFAULT_TX_CONFIG,
             action_scope,
         )
     await full_node_api.wait_transaction_records_entered_mempool(action_scope.side_effects.transactions)
@@ -477,11 +476,10 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     await generate_funds(full_node_api, env.wallet_1)
 
     fee_amount = 100
-    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
             amount=uint64(5),
             puzzle_hash=bytes32([0] * 32),
-            tx_config=DEFAULT_TX_CONFIG,
             action_scope=action_scope,
             fee=uint64(fee_amount),
         )
