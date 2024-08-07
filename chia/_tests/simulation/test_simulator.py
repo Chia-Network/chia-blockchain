@@ -127,11 +127,10 @@ async def test_wait_transaction_records_entered_mempool(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 amount=uint64(tx_amount),
                 puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                tx_config=DEFAULT_TX_CONFIG,
                 action_scope=action_scope,
                 coins={coin},
             )
@@ -164,11 +163,10 @@ async def test_process_transaction_records(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 amount=uint64(tx_amount),
                 puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                tx_config=DEFAULT_TX_CONFIG,
                 action_scope=action_scope,
                 coins={coin},
             )

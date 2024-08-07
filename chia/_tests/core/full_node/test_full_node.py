@@ -185,11 +185,10 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send a transaction to mempool
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 tx_size,
                 ph,
-                DEFAULT_TX_CONFIG,
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
@@ -219,11 +218,10 @@ class TestFullNodeBlockCompression:
         assert len((await full_node_1.get_all_full_blocks())[-1].transactions_generator_ref_list) == 0
 
         # Send another tx
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 20000,
                 ph,
-                DEFAULT_TX_CONFIG,
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
@@ -260,11 +258,10 @@ class TestFullNodeBlockCompression:
         await full_node_1.wait_for_wallet_synced(wallet_node=wallet_node_1, timeout=30)
 
         # Send another 2 tx
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 30000,
                 ph,
-                DEFAULT_TX_CONFIG,
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
@@ -274,11 +271,10 @@ class TestFullNodeBlockCompression:
             tr.spend_bundle,
             tr.name,
         )
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 40000,
                 ph,
-                DEFAULT_TX_CONFIG,
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
@@ -289,11 +285,10 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 50000,
                 ph,
-                DEFAULT_TX_CONFIG,
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
@@ -304,11 +299,10 @@ class TestFullNodeBlockCompression:
             tr.name,
         )
 
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 3000000000000,
                 ph,
-                DEFAULT_TX_CONFIG,
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
@@ -337,11 +331,10 @@ class TestFullNodeBlockCompression:
         assert num_blocks == 0
 
         # Creates a standard_transaction and an anyone-can-spend tx
-        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
             await wallet.generate_signed_transaction(
                 30000,
                 Program.to(1).get_tree_hash(),
-                DEFAULT_TX_CONFIG,
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
@@ -386,11 +379,10 @@ class TestFullNodeBlockCompression:
         assert len(all_blocks[-1].transactions_generator_ref_list) == 0
 
         # Make a standard transaction and an anyone-can-spend transaction
-        async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
             await wallet.generate_signed_transaction(
                 30000,
                 Program.to(1).get_tree_hash(),
-                DEFAULT_TX_CONFIG,
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
