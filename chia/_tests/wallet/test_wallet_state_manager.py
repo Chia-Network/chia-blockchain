@@ -115,12 +115,6 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     env = wallet_environments.environments[0]
     wsm = env.wallet_state_manager
 
-    coins = list(
-        await wsm.main_wallet.select_coins(
-            uint64(2_000_000_000_000), coin_selection_config=wallet_environments.tx_config.coin_selection_config
-        )
-    )
-
     async with wsm.new_action_scope(
         wallet_environments.tx_config,
         push=False,
@@ -128,6 +122,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
         sign=False,
         extra_spends=[],
     ) as action_scope:
+        coins = list(await wsm.main_wallet.select_coins(uint64(2_000_000_000_000), action_scope))
         await wsm.main_wallet.generate_signed_transaction(
             uint64(0),
             bytes32([0] * 32),

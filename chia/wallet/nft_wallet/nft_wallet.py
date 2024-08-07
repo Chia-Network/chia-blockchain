@@ -52,7 +52,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -349,9 +348,7 @@ class NFTWallet:
             percentage = uint16(percentage)
         except ValueError:
             raise ValueError("Percentage must be lower than 655%")
-        coins = await self.standard_wallet.select_coins(
-            uint64(amount + fee), action_scope.config.tx_config.coin_selection_config
-        )
+        coins = await self.standard_wallet.select_coins(uint64(amount + fee), action_scope)
         if coins is None:
             return None
         origin = coins.copy().pop()
@@ -1235,9 +1232,7 @@ class NFTWallet:
         assert isinstance(fee, uint64)
         total_amount = len(metadata_list) + fee
         if xch_coins is None:
-            xch_coins = await self.standard_wallet.select_coins(
-                uint64(total_amount), action_scope.config.tx_config.coin_selection_config
-            )
+            xch_coins = await self.standard_wallet.select_coins(uint64(total_amount), action_scope)
         assert len(xch_coins) > 0
 
         # set the chunk size for the spend bundle we're going to create
@@ -1496,9 +1491,7 @@ class NFTWallet:
         assert isinstance(fee, uint64)
         total_amount = len(metadata_list) + fee
         if xch_coins is None:
-            xch_coins = await self.standard_wallet.select_coins(
-                uint64(total_amount), action_scope.config.tx_config.coin_selection_config
-            )
+            xch_coins = await self.standard_wallet.select_coins(uint64(total_amount), action_scope)
         assert len(xch_coins) > 0
 
         funding_coin = xch_coins.copy().pop()
@@ -1676,7 +1669,7 @@ class NFTWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         raise RuntimeError("NFTWallet does not support select_coins()")
 

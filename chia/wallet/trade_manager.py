@@ -311,18 +311,15 @@ class TradeManager:
                     )
                 else:
                     announcement_conditions = tuple()
+                async with action_scope.use() as interface:
+                    interface.side_effects.selected_coins.append(coin)
                 # This should probably not switch on whether or not we're spending a XCH but it has to for now
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     assert isinstance(wallet, Wallet)
                     if fee_to_pay > coin.amount:
                         selected_coins: Set[Coin] = await wallet.select_coins(
                             uint64(fee_to_pay - coin.amount),
-                            action_scope.config.tx_config.coin_selection_config.override(
-                                excluded_coin_ids=[
-                                    *action_scope.config.tx_config.coin_selection_config.excluded_coin_ids,
-                                    coin.name(),
-                                ],
-                            ),
+                            action_scope,
                         )
                         selected_coins.add(coin)
                     else:
@@ -562,7 +559,7 @@ class TradeManager:
                         coins_to_offer[id] = await wallet.get_coins_to_offer(
                             asset_id=asset_id,
                             amount=uint64(amount_to_select),
-                            coin_selection_config=action_scope.config.tx_config.coin_selection_config,
+                            action_scope=action_scope,
                         )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
