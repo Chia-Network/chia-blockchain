@@ -581,7 +581,7 @@ async def test_nft_mint_from_did_multiple_xch(
     ]
 
     # Grab two coins for testing that we can create a bulk minting with more than 1 xch coin
-    async with wallet_maker.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
         xch_coins_1 = await wallet_maker.select_coins(amount=10000, action_scope=action_scope)
         xch_coins_2 = await wallet_maker.select_coins(
             amount=10000,

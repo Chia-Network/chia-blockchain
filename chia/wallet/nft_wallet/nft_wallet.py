@@ -845,9 +845,7 @@ class NFTWallet:
                     coin_amount_needed: int = abs(amount) + royalty_amount + fee
                 else:
                     coin_amount_needed = abs(amount) + royalty_amount
-                offered_coins: Set[Coin] = await wallet.get_coins_to_offer(
-                    asset, coin_amount_needed, action_scope.config.tx_config.coin_selection_config
-                )
+                offered_coins: Set[Coin] = await wallet.get_coins_to_offer(asset, coin_amount_needed, action_scope)
                 if len(offered_coins) == 0:
                     raise ValueError(f"Did not have asset ID {asset.hex() if asset is not None else 'XCH'} to offer")
                 offered_coins_by_asset[asset] = offered_coins
