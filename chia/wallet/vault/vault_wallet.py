@@ -18,6 +18,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
+from chia.util.action_scope import StateInterface
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.coin_selection import select_coins
@@ -26,6 +27,7 @@ from chia.wallet.conditions import (
     Condition,
     CreateCoin,
     CreatePuzzleAnnouncement,
+    parse_conditions_non_consensus,
     parse_timelock_info,
 )
 from chia.wallet.derivation_record import DerivationRecord
@@ -73,7 +75,7 @@ from chia.wallet.vault.vault_drivers import (
 from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_action_scope import WalletActionScope, WalletSideEffects
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
 
@@ -160,6 +162,7 @@ class Vault(Wallet):
         spend_bundle = SpendBundle(coin_spends, G2Element())
 
         async with action_scope.use() as interface:
+            interface.set_callback(self.vault_spend_callback)
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
@@ -233,37 +236,41 @@ class Vault(Wallet):
                     p2_singleton_puzhash, uint64(selected_amount - total_amount), memos=[p2_singleton_puzhash]
                 ).as_condition()
             )
-        # create the p2_singleton spends
-        delegated_puzzle = puzzle_for_conditions(conditions)
-        delegated_solution = solution_for_conditions(conditions)
 
         p2_singleton_spends: List[CoinSpend] = []
         for coin in coins:
             if not p2_singleton_spends:
-                p2_solution = Program.to(
-                    [self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin.name()]
+                p2_solution = await self.make_solution(
+                    primaries,
+                    tuple(parse_conditions_non_consensus(conditions)),
+                    action_scope=action_scope,
+                    coin_id=coin.name(),
                 )
             else:
-                p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
+                p2_solution = await self.make_solution(primaries, action_scope=action_scope, coin_id=coin.name())
 
             p2_singleton_spends.append(make_spend(coin, p2_singleton_puzzle, p2_solution))
 
-        next_puzzle_hash = (
-            self.vault_info.coin.puzzle_hash if tx_config.reuse_puzhash else (await self.get_new_vault_puzzlehash())
-        )
+        return p2_singleton_spends
+
+    async def vault_spend_callback(self, interface: StateInterface[WalletSideEffects]) -> None:
+        next_puzzle_hash = await self.get_new_vault_puzzlehash()
         vault_conditions: List[Program] = []
         recreate_vault_condition = CreateCoin(
             next_puzzle_hash, uint64(self.vault_info.coin.amount), memos=[next_puzzle_hash]
         ).to_program()
         vault_conditions.append(recreate_vault_condition)
-        for i, spend in enumerate(p2_singleton_spends):
-            puzzle_to_assert = delegated_puzzle if i == 0 else Program.to(0)
+        p2_singleton_sols = interface.side_effects.solutions
+        p2_singleton_coins = interface.side_effects.coin_ids
+
+        for sol, coin_id in zip(p2_singleton_sols, p2_singleton_coins):
+            puzzle_to_assert = sol.at("rf")
             vault_conditions.extend(
                 [
                     CreatePuzzleAnnouncement(
-                        Program.to([spend.coin.name(), puzzle_to_assert.get_tree_hash()]).get_tree_hash(),
+                        Program.to([coin_id, puzzle_to_assert.get_tree_hash()]).get_tree_hash(),
                     ).to_program(),
-                    AssertCoinAnnouncement(asserted_id=spend.coin.name(), asserted_msg=b"").to_program(),
+                    AssertCoinAnnouncement(asserted_id=coin_id, asserted_msg=b"").to_program(),
                 ]
             )
 
@@ -310,10 +317,8 @@ class Vault(Wallet):
             vault_inner_solution,
         )
 
-        vault_spend = make_spend(self.vault_info.coin, full_puzzle, full_solution)
-        all_spends = [*p2_singleton_spends, vault_spend]
-
-        return all_spends
+        vault_spend = SpendBundle([make_spend(self.vault_info.coin, full_puzzle, full_solution)], G2Element())
+        interface.side_effects.extra_spends.append(vault_spend)
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         raise NotImplementedError("vault wallet")
@@ -421,8 +426,19 @@ class Vault(Wallet):
         coin_id = kwargs.get("coin_id")
         if coin_id is None:
             raise ValueError("Vault p2_singleton solutions require a coin id")
-        p2_singleton_solution: Program = Program.to([self.vault_info.inner_puzzle_hash, coin_id])
-        return p2_singleton_solution
+        if conditions:
+            condition_progs = [cond.to_program() for cond in conditions]
+            delegated_puzzle = puzzle_for_conditions(condition_progs)
+            delegated_solution = solution_for_conditions(condition_progs)
+            p2_solution = Program.to([self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin_id])
+        else:
+            p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin_id])
+
+        if action_scope:
+            async with action_scope.use() as interface:
+                interface.side_effects.solutions.append(p2_solution)
+                interface.side_effects.coin_ids.append(coin_id)
+        return p2_solution
 
     async def get_puzzle(self, new: bool) -> Program:
         if new:
