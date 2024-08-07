@@ -519,6 +519,7 @@ class CRCATWallet(CATWallet):
                         )
                         innersol = await self.standard_wallet.make_solution(
                             primaries=primaries,
+                            action_scope=action_scope,
                             conditions=(*extra_conditions, announcement),
                         )
                     elif regular_chia_to_claim > fee:
@@ -531,6 +532,7 @@ class CRCATWallet(CATWallet):
                         assert xch_announcement is not None
                         innersol = await self.standard_wallet.make_solution(
                             primaries=primaries,
+                            action_scope=action_scope,
                             conditions=(*extra_conditions, xch_announcement, announcement),
                         )
                     else:
@@ -539,11 +541,13 @@ class CRCATWallet(CATWallet):
                 else:
                     innersol = await self.standard_wallet.make_solution(
                         primaries=primaries,
+                        action_scope=action_scope,
                         conditions=(*extra_conditions, announcement),
                     )
             else:
                 innersol = await self.standard_wallet.make_solution(
                     primaries=[],
+                    action_scope=action_scope,
                     conditions=(announcement.corresponding_assertion(),),
                 )
             inner_derivation_record = (

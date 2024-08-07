@@ -217,9 +217,9 @@ class Wallet:
     async def make_solution(
         self,
         primaries: List[Payment],
+        action_scope: WalletActionScope,
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
-        action_scope: Optional[WalletActionScope] = None,
         **kwargs: Any,
     ) -> Program:
         assert fee >= 0
@@ -360,6 +360,7 @@ class Wallet:
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 solution: Program = await self.make_solution(
                     primaries=primaries,
+                    action_scope=action_scope,
                     fee=fee,
                     conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
                 )
@@ -380,7 +381,9 @@ class Wallet:
             if coin.name() == origin_id:
                 continue
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = await self.make_solution(primaries=[], conditions=(primary_announcement,))
+            solution = await self.make_solution(
+                primaries=[], action_scope=action_scope, conditions=(primary_announcement,)
+            )
             solution = decorator_manager.solve(puzzle, [], solution)
             spends.append(
                 make_spend(
