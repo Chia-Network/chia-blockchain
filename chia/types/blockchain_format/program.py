@@ -4,13 +4,11 @@ import io
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
 
 from chia_rs import (
-    AGG_SIG_ARGS,
     ALLOW_BACKREFS,
     DISALLOW_INFINITY_G1,
     ENABLE_BLS_OPS_OUTSIDE_GUARD,
     ENABLE_FIXED_DIV,
     ENABLE_MESSAGE_CONDITIONS,
-    ENABLE_SOFTFORK_CONDITION,
     MEMPOOL_MODE,
     run_chia_program,
     tree_hash,
