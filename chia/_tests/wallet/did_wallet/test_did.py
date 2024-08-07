@@ -812,7 +812,7 @@ class TestDIDWallet:
         assert decode_puzzle_hash(response["p2_address"]).hex() == response["hints"][0]
 
         # Test non-singleton coin
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             coin = (await wallet.select_coins(uint64(1), action_scope)).pop()
         assert coin.amount % 2 == 1
         coin_id = coin.name()
@@ -821,7 +821,7 @@ class TestDIDWallet:
 
         # Test multiple odd coins
         odd_amount = uint64(1)
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             async with action_scope.use() as interface:
                 interface.side_effects.selected_coins.append(coin)
             coin_1 = (await wallet.select_coins(odd_amount, action_scope)).pop()
