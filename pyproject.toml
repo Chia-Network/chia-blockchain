@@ -81,7 +81,7 @@ hsms = "0.3.1"
 aiohttp_cors = { version = "0.7.0", optional = true }
 black = { version = "24.4.2", optional = true }
 build = { version = "1.2.1", optional = true }
-coverage = { version = "7.5.3", optional = true }
+coverage = { version = "7.6.1", optional = true }
 diff-cover = { version = "9.0.0", optional = true }
 flake8 = { version = "7.0.0", optional = true }
 isort = { version = "5.13.2", optional = true }
