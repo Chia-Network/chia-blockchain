@@ -419,7 +419,7 @@ class WalletNode:
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
         self.synced_peers = set()
-        public_key = None
+        observation_root = None
         private_key = await self.get_key(fingerprint, private=True, find_a_default=False)
         if private_key is None:
             observation_root = await self.get_key(fingerprint, private=False, find_a_default=False)
@@ -427,7 +427,7 @@ class WalletNode:
             assert isinstance(private_key, PrivateKey)
             observation_root = private_key.get_g1()
 
-        if public_key is None:
+        if observation_root is None:
             private_key = await self.get_key(None, private=True, find_a_default=True)
             if private_key is not None:
                 assert isinstance(private_key, PrivateKey)
@@ -435,8 +435,8 @@ class WalletNode:
             else:
                 self.log_out()
                 return False
-        assert isinstance(observation_root, G1Element)
         # override with private key fetched in case it's different from what was passed
+        assert isinstance(observation_root, ObservationRoot)
         if fingerprint is None:
             fingerprint = observation_root.get_fingerprint()
         if self.config.get("enable_profiler", False):
