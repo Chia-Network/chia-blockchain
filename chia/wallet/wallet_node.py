@@ -419,6 +419,9 @@ class WalletNode:
         private_key = await self.get_key(fingerprint, private=True, find_a_default=False)
         if private_key is None:
             public_key = await self.get_key(fingerprint, private=False, find_a_default=False)
+        else:
+            assert isinstance(private_key, PrivateKey)
+            public_key = private_key.get_g1()
 
         if public_key is None:
             private_key = await self.get_key(None, private=True, find_a_default=True)
