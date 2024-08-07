@@ -9,6 +9,7 @@ from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import TXConfig
 
 if TYPE_CHECKING:
     # Avoid a circular import here
@@ -45,6 +46,7 @@ class WalletActionConfig:
     sign: Optional[bool]
     additional_signing_responses: List[SigningResponse]
     extra_spends: List[SpendBundle]
+    tx_config: TXConfig
 
 
 WalletActionScope = ActionScope[WalletSideEffects, WalletActionConfig]
@@ -53,6 +55,7 @@ WalletActionScope = ActionScope[WalletSideEffects, WalletActionConfig]
 @contextlib.asynccontextmanager
 async def new_wallet_action_scope(
     wallet_state_manager: WalletStateManager,
+    tx_config: TXConfig,
     push: bool = False,
     merge_spends: bool = True,
     sign: Optional[bool] = None,
@@ -60,7 +63,8 @@ async def new_wallet_action_scope(
     extra_spends: List[SpendBundle] = [],
 ) -> AsyncIterator[WalletActionScope]:
     async with ActionScope.new_scope(
-        WalletSideEffects, WalletActionConfig(push, merge_spends, sign, additional_signing_responses, extra_spends)
+        WalletSideEffects,
+        WalletActionConfig(push, merge_spends, sign, additional_signing_responses, extra_spends, tx_config),
     ) as self:
         self = cast(WalletActionScope, self)
         async with self.use() as interface:
