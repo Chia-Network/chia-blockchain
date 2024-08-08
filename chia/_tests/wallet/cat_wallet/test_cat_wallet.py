@@ -484,56 +484,62 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     await env_1.check_balances()
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "reuse_puzhash": True,  # irrelevant
+            "trusted": True,  # irrelevant
+        }
+    ],
+    indirect=True,
+)
 @pytest.mark.anyio
-async def test_get_wallet_for_asset_id(
-    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool
-) -> None:
-    num_blocks = 3
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node, server_2 = wallets[0]
-    wallet = wallet_node.wallet_state_manager.main_wallet
+async def test_get_wallet_for_asset_id(wallet_environments: WalletTestFramework) -> None:
+    wsm = wallet_environments.environments[0].wallet_state_manager
+    wallet = wallet_environments.environments[0].xch_wallet
 
-    ph = await wallet.get_new_puzzlehash()
-    if trusted:
-        wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-    else:
-        wallet_node.config["trusted_peers"] = {}
-    await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    wallet_environments.environments[0].wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
 
-    for _ in range(num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
-    )
-
-    await time_out_assert(20, wallet.get_confirmed_balance, funds)
-
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wsm.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager,
+            wsm,
             wallet,
             {"identifier": "genesis_by_id"},
             uint64(100),
             action_scope,
         )
 
-    for _ in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                },
+            ),
+        ]
+    )
 
     asset_id = cat_wallet.get_asset_id()
     assert cat_wallet.cat_info.my_tail is not None
     await cat_wallet.set_tail_program(bytes(cat_wallet.cat_info.my_tail).hex())
-    assert await wallet_node.wallet_state_manager.get_wallet_for_asset_id(asset_id) == cat_wallet
+    assert await wsm.get_wallet_for_asset_id(asset_id) == cat_wallet
 
     # Test that the a default CAT will initialize correctly
     asset = DEFAULT_CATS[next(iter(DEFAULT_CATS))]
     asset_id = asset["asset_id"]
-    cat_wallet_2 = await CATWallet.get_or_create_wallet_for_cat(wallet_node.wallet_state_manager, wallet, asset_id)
+    cat_wallet_2 = await CATWallet.get_or_create_wallet_for_cat(wsm, wallet, asset_id)
     assert cat_wallet_2.get_name() == asset["name"]
     await cat_wallet_2.set_name("Test Name")
     assert cat_wallet_2.get_name() == "Test Name"
