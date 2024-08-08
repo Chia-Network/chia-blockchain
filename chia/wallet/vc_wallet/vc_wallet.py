@@ -431,7 +431,7 @@ class VCWallet:
         other_spends: List[CoinSpend] = []
         spends_to_fix: Dict[bytes32, CoinSpend] = {}
         for spend in offer.to_valid_spend().coin_spends:
-            if CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal.to_program()))[0]:
+            if CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal))[0]:
                 crcat_spend: CRCATSpend = CRCATSpend.from_coin_spend(spend)
                 if crcat_spend.incomplete:
                     crcat_spends.append(crcat_spend)

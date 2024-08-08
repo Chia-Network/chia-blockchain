@@ -34,7 +34,7 @@ from chia.rpc.wallet_request_types import (
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -61,6 +61,7 @@ from chia.wallet.conditions import (
     Condition,
     CreateCoinAnnouncement,
     CreatePuzzleAnnouncement,
+    parse_conditions_non_consensus,
 )
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import (
@@ -616,21 +617,68 @@ class WalletRpcApi:
         await self.service.push_tx(SpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
         return {}
 
-    async def push_transactions(self, request: Dict[str, Any]) -> EndpointResult:
-        txs: List[TransactionRecord] = []
-        for transaction_hexstr_or_json in request["transactions"]:
-            if isinstance(transaction_hexstr_or_json, str):
-                tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr_or_json))
-                txs.append(tx)
-            else:
-                try:
-                    tx = TransactionRecord.from_json_dict_convenience(transaction_hexstr_or_json)
-                except AttributeError:
-                    tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
-                txs.append(tx)
+    @tx_endpoint(push=True)
+    async def push_transactions(
+        self,
+        request: Dict[str, Any],
+        action_scope: WalletActionScope,
+        tx_config: TXConfig = DEFAULT_TX_CONFIG,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        if not action_scope.config.push:
+            raise ValueError("Cannot push transactions if push is False")
+        async with action_scope.use() as interface:
+            for transaction_hexstr_or_json in request["transactions"]:
+                if isinstance(transaction_hexstr_or_json, str):
+                    tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr_or_json))
+                    interface.side_effects.transactions.append(tx)
+                else:
+                    try:
+                        tx = TransactionRecord.from_json_dict_convenience(transaction_hexstr_or_json)
+                    except AttributeError:
+                        tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
+                    interface.side_effects.transactions.append(tx)
 
-        async with self.service.wallet_state_manager.lock:
-            await self.service.wallet_state_manager.add_pending_transactions(txs, sign=request.get("sign", False))
+            if request.get("fee", 0) != 0:
+                all_conditions_and_origins = [
+                    (condition, cs.coin.name())
+                    for tx in interface.side_effects.transactions
+                    if tx.spend_bundle is not None
+                    for cs in tx.spend_bundle.coin_spends
+                    for condition in cs.puzzle_reveal.run_with_cost(INFINITE_COST, cs.solution)[1].as_iter()
+                ]
+                create_coin_announcement = next(
+                    condition
+                    for condition in parse_conditions_non_consensus(
+                        [con for con, coin in all_conditions_and_origins], abstractions=False
+                    )
+                    if isinstance(condition, CreateCoinAnnouncement)
+                )
+                announcement_origin = next(
+                    coin
+                    for condition, coin in all_conditions_and_origins
+                    if condition == create_coin_announcement.to_program()
+                )
+                async with self.service.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+                    await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
+                        uint64(request["fee"]),
+                        dataclasses.replace(
+                            tx_config,
+                            excluded_coin_ids=[
+                                *tx_config.excluded_coin_ids,
+                                *(c.name() for tx in interface.side_effects.transactions for c in tx.removals),
+                            ],
+                        ),
+                        inner_action_scope,
+                        (
+                            *extra_conditions,
+                            CreateCoinAnnouncement(
+                                create_coin_announcement.msg, announcement_origin
+                            ).corresponding_assertion(),
+                        ),
+                    )
+
+                interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
 
         return {}
 
@@ -694,12 +742,11 @@ class WalletRpcApi:
             response["fingerprint"] = self.service.logged_in_fingerprint
         return response
 
-    @tx_endpoint(push=True, requires_default_information=True)
+    @tx_endpoint(push=True)
     async def create_new_wallet(
         self,
         request: Dict[str, Any],
         action_scope: WalletActionScope,
-        push: bool = True,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
@@ -715,7 +762,7 @@ class WalletRpcApi:
             name = request.get("name", None)
             if request["mode"] == "new":
                 if request.get("test", False):
-                    if not push:
+                    if not action_scope.config.push:
                         raise ValueError("Test CAT minting must be pushed automatically")  # pragma: no cover
                     async with self.service.wallet_state_manager.lock:
                         cat_wallet = await CATWallet.create_new_cat_wallet(
@@ -1825,16 +1872,15 @@ class WalletRpcApi:
         else:
             return {"wallet_id": wallet.id(), "name": (wallet.get_name())}
 
-    @tx_endpoint(push=False, requires_default_information=True)
+    @tx_endpoint(push=False)
     async def create_offer_for_ids(
         self,
         request: Dict[str, Any],
         action_scope: WalletActionScope,
-        push: bool = False,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
-        if push:
+        if action_scope.config.push:
             raise ValueError("Cannot push an incomplete spend")  # pragma: no cover
 
         offer: Dict[str, int] = request["offer"]
@@ -2281,8 +2327,7 @@ class WalletRpcApi:
         # Get coin state
         peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id, request.get("latest", True))
-        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        uncurried = uncurry_puzzle(full_puzzle)
+        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
@@ -2306,7 +2351,7 @@ class WalletRpcApi:
             "num_verification": num_verification.as_int(),
             "metadata": did_program_to_metadata(metadata),
             "launcher_id": launcher_id.hex(),
-            "full_puzzle": full_puzzle,
+            "full_puzzle": coin_spend.puzzle_reveal,
             "solution": coin_spend.solution.to_program().as_python(),
             "hints": hints,
         }
@@ -2329,8 +2374,7 @@ class WalletRpcApi:
         # Get coin state
         peer = self.service.get_full_node_peer()
         coin_spend, coin_state = await self.get_latest_singleton_coin_spend(peer, coin_id)
-        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        uncurried = uncurry_puzzle(full_puzzle)
+        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if curried_args is None:
             return {"success": False, "error": "The coin is not a DID."}
@@ -3617,16 +3661,15 @@ class WalletRpcApi:
             {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
         )
 
-    @tx_endpoint(push=False, requires_default_information=True)
+    @tx_endpoint(push=False)
     async def nft_mint_bulk(
         self,
         request: Dict[str, Any],
         action_scope: WalletActionScope,
-        push: bool = False,
         tx_config: TXConfig = DEFAULT_TX_CONFIG,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> EndpointResult:
-        if push:
+        if action_scope.config.push:
             raise ValueError("Automatic pushing of nft minting transactions not yet available")  # pragma: no cover
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")

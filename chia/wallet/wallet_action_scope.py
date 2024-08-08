@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast
+from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast, final
 
 from chia.types.spend_bundle import SpendBundle
 from chia.util.action_scope import ActionScope
@@ -65,7 +65,17 @@ class WalletSideEffects:
         return instance
 
 
-WalletActionScope = ActionScope[WalletSideEffects]
+@final
+@dataclass(frozen=True)
+class WalletActionConfig:
+    push: bool
+    merge_spends: bool
+    sign: Optional[bool]
+    additional_signing_responses: List[SigningResponse]
+    extra_spends: List[SpendBundle]
+
+
+WalletActionScope = ActionScope[WalletSideEffects, WalletActionConfig]
 
 
 @contextlib.asynccontextmanager
@@ -77,7 +87,9 @@ async def new_wallet_action_scope(
     additional_signing_responses: List[SigningResponse] = [],
     extra_spends: List[SpendBundle] = [],
 ) -> AsyncIterator[WalletActionScope]:
-    async with ActionScope.new_scope(WalletSideEffects) as self:
+    async with ActionScope.new_scope(
+        WalletSideEffects, WalletActionConfig(push, merge_spends, sign, additional_signing_responses, extra_spends)
+    ) as self:
         self = cast(WalletActionScope, self)
         async with self.use() as interface:
             interface.side_effects.signing_responses = additional_signing_responses.copy()

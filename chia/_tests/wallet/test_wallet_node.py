@@ -720,3 +720,34 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     with pytest.raises(PeerRequestException):
         await wallet_node.get_coin_state([], wallet_node.get_full_node_peer())
+
+
+@pytest.mark.anyio
+@pytest.mark.standard_block_tools
+async def test_start_with_multiple_key_types(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+
+    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+        wallet_node._close()
+        await wallet_node._await_closed(shutting_down=False)
+        await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
+
+    initial_sk = wallet_node.wallet_state_manager.private_key
+
+    pk: G1Element = await wallet_node.keychain_proxy.add_key(
+        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        None,
+        private=False,
+    )
+    fingerprint_pk: int = pk.get_fingerprint()
+
+    await restart_with_fingerprint(fingerprint_pk)
+    assert wallet_node.wallet_state_manager.private_key is None
+    assert wallet_node.wallet_state_manager.root_pubkey == G1Element()
+
+    await wallet_node.keychain_proxy.delete_key_by_fingerprint(fingerprint_pk)
+
+    await restart_with_fingerprint(fingerprint_pk)
+    assert wallet_node.wallet_state_manager.private_key == initial_sk

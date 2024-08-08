@@ -804,7 +804,7 @@ class TestDIDWallet:
         response = await api_0.did_get_info({"coin_id": did_wallet_1.did_info.origin_coin.name().hex()})
         assert response["did_id"] == encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value)
         assert response["launcher_id"] == did_wallet_1.did_info.origin_coin.name().hex()
-        assert response["full_puzzle"] == create_singleton_puzzle(
+        assert response["full_puzzle"].to_program() == create_singleton_puzzle(
             did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
         )
         assert response["metadata"]["twitter"] == "twitter"
