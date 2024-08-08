@@ -22,7 +22,6 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     if sys.platform == "win32":
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
 
-    print(f"launch_start_daemon sys.argv[0]: {sys.argv[0]}")
     path_helper: Path = Path(sys.argv[0])
     cmd_to_execute = None
     if len(path_helper.suffix) == 0:
@@ -31,7 +30,7 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     if cmd_to_execute is None:
         cmd_to_execute = sys.argv[0]
 
-    print(f"launch_start_daemon cmd_to_execute: {cmd_to_execute}")
+    print(f"Starting daemon: {cmd_to_execute} run_daemon --wait-for-unlock", flush=True)
     process = subprocess.Popen(
         [cmd_to_execute, "run_daemon", "--wait-for-unlock"],
         encoding="utf-8",
