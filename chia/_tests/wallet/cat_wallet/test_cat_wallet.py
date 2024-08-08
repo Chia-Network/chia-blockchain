@@ -43,33 +43,23 @@ def check_wallets(node: WalletNode) -> int:
     return len(node.wallet_state_manager.wallets.keys())
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [1, 1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes([ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.anyio
-async def test_cat_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
-    num_blocks = 3
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node, server_2 = wallets[0]
-    wallet = wallet_node.wallet_state_manager.main_wallet
-
+async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
+    full_node_api = wallet_environments.full_node_api
+    wallet_node = wallet_environments.environments[0].node
+    wallet = wallet_environments.environments[0].xch_wallet
     ph = await wallet.get_new_puzzlehash()
-    if trusted:
-        wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-    else:
-        wallet_node.config["trusted_peers"] = {}
-
-    await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    for _ in range(num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
-    )
-
-    await time_out_assert(20, wallet.get_confirmed_balance, funds)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
