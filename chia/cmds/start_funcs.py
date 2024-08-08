@@ -23,7 +23,11 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
 
     path_helper: Path = Path(sys.argv[0])
-    cmd_to_execute = shutil.which(cmd=path_helper.name, path=path_helper.parent)
+    if not path_helper.suffix and not path_helper.is_absolute():
+        cmd_to_execute = shutil.which(cmd=path_helper.name, path=path_helper.parent)
+    else:
+        cmd_to_execute = str(path_helper)
+
     if cmd_to_execute is None:
         cmd_to_execute = sys.argv[0]
 
