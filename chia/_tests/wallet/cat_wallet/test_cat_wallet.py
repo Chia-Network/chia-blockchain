@@ -191,40 +191,35 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "reuse_puzhash": True,  # irrelevant
+            "trusted": True,  # irrelevant
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes([ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.anyio
-async def test_cat_creation_unique_lineage_store(self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets) -> None:
-    num_blocks = 3
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node, wallet_server = wallets[0]
-    wallet = wallet_node.wallet_state_manager.main_wallet
-    ph = await wallet.get_new_puzzlehash()
-    wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+async def test_cat_creation_unique_lineage_store(wallet_environments: WalletTestFramework) -> None:
+    wsm = wallet_environments.environments[0].wallet_state_manager
+    wallet = wallet_environments.environments[0].xch_wallet
 
-    await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    for _ in range(num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
-    )
-
-    await time_out_assert(20, wallet.get_confirmed_balance, funds)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wsm.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet_1 = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager,
+            wsm,
             wallet,
             {"identifier": "genesis_by_id"},
             uint64(100),
             action_scope,
         )
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wsm.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet_2 = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager,
+            wsm,
             wallet,
             {"identifier": "genesis_by_id"},
             uint64(200),
