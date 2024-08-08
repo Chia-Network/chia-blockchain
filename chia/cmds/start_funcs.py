@@ -24,8 +24,8 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
 
     print(f"launch_start_daemon sys.argv[0]: {sys.argv[0]}")
     path_helper: Path = Path(sys.argv[0])
-    print(f"launch_start_daemon path_helper: {str(path_helper)}")
-    cmd_to_execute = shutil.which(cmd=path_helper.name, path=path_helper.parent)
+    if len(path_helper.suffix) == 0:
+        cmd_to_execute = shutil.which(cmd=path_helper.name, path=path_helper.parent)
     print(f"launch_start_daemon cmd_to_execute: {cmd_to_execute}")
     if cmd_to_execute is None:
         cmd_to_execute = sys.argv[0]
