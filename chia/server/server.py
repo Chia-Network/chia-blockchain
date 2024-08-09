@@ -497,7 +497,8 @@ class ChiaServer:
                 asyncio.create_task(connection.close())
             return True
         except client_exceptions.ClientConnectorError as e:
-            self.log.info(f"{e}")
+            log_function = self.log.error if self.log.name in [ 'harvester_server', 'farmer_server' ] else self.log.info
+            log_function(f"{e}")
         except ProtocolError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
