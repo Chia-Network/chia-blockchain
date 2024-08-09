@@ -721,11 +721,12 @@ class FullNodeSimulator(FullNodeAPI):
             return False  # pragma: no cover
         if not await wallet_node.wallet_state_manager.synced():
             return False
+        all_states_retried = await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry() == []
         wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
         if peak_height is not None:
-            return wallet_height >= peak_height
+            return wallet_height >= peak_height and all_states_retried
         full_node_height = self.full_node.blockchain.get_peak_height()
-        return wallet_height == full_node_height
+        return wallet_height == full_node_height and all_states_retried
 
     async def wait_for_wallet_synced(
         self,
