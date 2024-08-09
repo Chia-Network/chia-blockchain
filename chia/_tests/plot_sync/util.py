@@ -30,6 +30,9 @@ class WSChiaConnectionDummy:
     def get_peer_logging(self) -> PeerInfo:
         return self.peer_info
 
+    def get_version(self) -> str:
+        return "Dummy-1.0.0"
+
 
 def get_dummy_connection(node_type: NodeType, peer_id: bytes32) -> WSChiaConnectionDummy:
     return WSChiaConnectionDummy(node_type, peer_id)
