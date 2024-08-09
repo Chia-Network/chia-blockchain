@@ -1864,7 +1864,7 @@ class WalletStateManager:
 
                             additions = [state.coin for state in children]
                             if len(children) > 0:
-                                fee = 0
+                                fee = coin_state.coin.amount
 
                                 to_puzzle_hash = None
                                 coin_spend: Optional[CoinSpend] = None
@@ -1872,6 +1872,7 @@ class WalletStateManager:
                                 # Find coin that doesn't belong to us
                                 amount = 0
                                 for coin in additions:
+                                    fee = uint64(fee - coin.amount)
                                     derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
                                         coin.puzzle_hash
                                     )
