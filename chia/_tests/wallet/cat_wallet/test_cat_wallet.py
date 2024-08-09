@@ -7,19 +7,16 @@ import pytest
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
-from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
-from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -1444,45 +1441,33 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
     )
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "config_overrides": {"automatically_add_unknown_cats": True},
+        },
+    ],
+    indirect=True,
+)
 @pytest.mark.anyio
-async def test_cat_change_detection(
-    self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, trusted: bool
-) -> None:
-    num_blocks = 1
-    full_nodes, wallets, bt = one_wallet_and_one_simulator_services
-    full_node_api = full_nodes[0]._api
-    full_node_server = full_node_api.full_node.server
-    wallet_service_0 = wallets[0]
-    wallet_node_0 = wallet_service_0._node
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+async def test_cat_change_detection(wallet_environments: WalletTestFramework) -> None:
+    full_node_api = wallet_environments.full_node
+    env = wallet_environments.environments[0]
+    wsm = env.wallet_state_manager
+    wallet = env.xch_wallet
 
-    assert wallet_service_0.rpc_server is not None
-
-    client_0 = await WalletRpcClient.create(
-        bt.config["self_hostname"],
-        wallet_service_0.rpc_server.listen_port,
-        wallet_service_0.root_path,
-        wallet_service_0.config,
-    )
-    wallet_node_0.config["automatically_add_unknown_cats"] = True
-
-    if trusted:
-        wallet_node_0.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_0.config["trusted_peers"] = {}
-
-    await wallet_node_0.server.start_client(PeerInfo(self_hostname, uint16(full_node_server.get_port())), None)
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
 
     # Mint CAT to ourselves, immediately spend it to an unhinted puzzle hash that we have manually added to the DB
     # We should pick up this coin as balance even though it is unhinted because it is "change"
-    pubkey_unhardened = master_pk_to_wallet_pk_unhardened(
-        wallet_node_0.wallet_state_manager.root_pubkey, uint32(100000000)
-    )
+    pubkey_unhardened = master_pk_to_wallet_pk_unhardened(wsm.root_pubkey, uint32(100000000))
     inner_puzhash = puzzle_hash_for_pk(pubkey_unhardened)
     puzzlehash_unhardened = construct_cat_puzzle(
         CAT_MOD, Program.to(None).get_tree_hash(), inner_puzhash
@@ -1491,8 +1476,8 @@ async def test_cat_change_detection(
         uint32(0), puzzlehash_unhardened, pubkey_unhardened, WalletType.CAT, uint32(2), False
     )
     # Insert the derivation record before the wallet exists so that it is not subscribed to
-    await wallet_node_0.wallet_state_manager.puzzle_store.add_derivation_paths([change_derivation])
-    our_puzzle = await wallet_0.get_new_puzzle()
+    await wsm.puzzle_store.add_derivation_paths([change_derivation])
+    our_puzzle = await wallet.get_new_puzzle()
     cat_puzzle = construct_cat_puzzle(
         CAT_MOD,
         Program.to(None).get_tree_hash(),
@@ -1502,13 +1487,18 @@ async def test_cat_change_detection(
     cat_amount_0 = uint64(100)
     cat_amount_1 = uint64(5)
 
-    tx = (await client_0.send_transaction(1, cat_amount_0, addr, DEFAULT_TX_CONFIG)).transaction
+    tx = (await env.rpc_client.send_transaction(1, cat_amount_0, addr, wallet_environments.tx_config)).transaction
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={"xch": {"set_remainder": True}},
+                post_block_balance_updates={"xch": {"set_remainder": True}},
+            )
+        ]
+    )
 
     # Do the eve spend back to our wallet and add the CR layer
     cat_coin = next(c for c in spend_bundle.additions() if c.amount == cat_amount_0)
@@ -1517,7 +1507,7 @@ async def test_cat_change_detection(
         construct_cat_puzzle(CAT_MOD, Program.to(None).get_tree_hash(), our_puzzle).get_tree_hash(),
         cat_amount_0,
     )
-    eve_spend, _ = await wallet_node_0.wallet_state_manager.sign_bundle(
+    eve_spend, _ = await wsm.sign_bundle(
         [
             make_spend(
                 cat_coin,
@@ -1568,14 +1558,26 @@ async def test_cat_change_detection(
             ),
         ],
     )
-    await client_0.push_tx(eve_spend)
+    await env.rpc_client.push_tx(eve_spend)
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, eve_spend.name())
-    await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    "cat": {
+                        "init": True,
+                        "confirmed_wallet_balance": 5,
+                        "unconfirmed_wallet_balance": 5,
+                        "spendable_balance": 5,
+                        "max_send_amount": 5,
+                        "unspent_coin_count": 1,
+                    }
+                },
+            )
+        ]
+    )
 
-    await time_out_assert(20, check_wallets, 2, wallet_node_0)
-    cat_wallet = wallet_node_0.wallet_state_manager.wallets[uint32(2)]
-    await time_out_assert(20, cat_wallet.get_confirmed_balance, cat_amount_1)
     assert not full_node_api.full_node.subscriptions.has_puzzle_subscription(puzzlehash_unhardened)
 
 
