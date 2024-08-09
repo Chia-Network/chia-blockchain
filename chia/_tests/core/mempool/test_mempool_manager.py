@@ -507,7 +507,7 @@ async def test_duplicate_output() -> None:
 async def test_block_cost_exceeds_max() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_records)
     conditions = []
-    for i in range(2400):
+    for i in range(3800):
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i])
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="BLOCK_COST_EXCEEDS_MAX"):
@@ -578,7 +578,7 @@ async def test_same_sb_twice_with_eligible_coin() -> None:
     sb = SpendBundle.aggregate([sb1, sb2])
     sb_name = sb.name()
     result = await add_spendbundle(mempool_manager, sb, sb_name)
-    expected_cost = uint64(10268283)
+    expected_cost = uint64(6600088)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
     assert mempool_manager.get_spendbundle(sb_name) == sb
     result = await add_spendbundle(mempool_manager, sb, sb_name)
@@ -611,7 +611,7 @@ async def test_sb_twice_with_eligible_coin_and_different_spends_order() -> None:
     assert mempool_manager.get_spendbundle(sb_name) is None
     assert mempool_manager.get_spendbundle(reordered_sb_name) is None
     result = await add_spendbundle(mempool_manager, sb, sb_name)
-    expected_cost = uint64(13091510)
+    expected_cost = uint64(7800132)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
     assert mempool_manager.get_spendbundle(sb_name) == sb
     assert mempool_manager.get_spendbundle(reordered_sb_name) is None
@@ -1050,7 +1050,7 @@ async def test_create_bundle_from_mempool_on_max_cost(num_skipped_items: int, ca
         g1 = sk.get_g1()
         sig = AugSchemeMPL.sign(sk, IDENTITY_PUZZLE_HASH, g1)
         aggsig = G2Element()
-        for _ in range(169):
+        for _ in range(318):
             conditions.append([ConditionOpcode.AGG_SIG_UNSAFE, g1, IDENTITY_PUZZLE_HASH])
             aggsig += sig
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, coin.amount - 10_000_000])

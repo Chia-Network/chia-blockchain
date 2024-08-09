@@ -268,7 +268,6 @@ class SpendSim:
                     get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                     item_inclusion_filter=item_inclusion_filter,
                 )
-
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle
