@@ -60,7 +60,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -269,7 +269,6 @@ class Wallet:
         self,
         amount: uint64,
         newpuzzlehash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
@@ -306,7 +305,7 @@ class Wallet:
                 )
             coins = await self.select_coins(
                 uint64(total_amount),
-                tx_config.coin_selection_config,
+                action_scope.config.tx_config.coin_selection_config,
             )
 
         assert len(coins) > 0
@@ -343,7 +342,7 @@ class Wallet:
                     target_primary.append(Payment(newpuzzlehash, amount, memos))
 
                 if change > 0:
-                    if tx_config.reuse_puzhash:
+                    if action_scope.config.tx_config.reuse_puzhash:
                         change_puzzle_hash: bytes32 = coin.puzzle_hash
                         for primary in primaries:
                             if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
@@ -411,7 +410,6 @@ class Wallet:
         self,
         amount: uint64,
         puzzle_hash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
@@ -439,7 +437,6 @@ class Wallet:
         transaction = await self._generate_unsigned_transaction(
             amount,
             puzzle_hash,
-            tx_config,
             action_scope,
             fee,
             origin_id,
@@ -490,15 +487,13 @@ class Wallet:
     async def create_tandem_xch_tx(
         self,
         fee: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> None:
-        chia_coins = await self.select_coins(fee, tx_config.coin_selection_config)
+        chia_coins = await self.select_coins(fee, action_scope.config.tx_config.coin_selection_config)
         await self.generate_signed_transaction(
             uint64(0),
-            (await self.get_puzzle_hash(not tx_config.reuse_puzhash)),
-            tx_config,
+            (await self.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
             action_scope,
             fee=fee,
             coins=chia_coins,

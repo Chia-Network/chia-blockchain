@@ -372,10 +372,12 @@ class KeychainProxy(DaemonProxy):
                             break
                     else:
                         raise KeychainKeyNotFound(fingerprint)
-                if private:
-                    key = selected_key.private_key if selected_key.secrets is not None else None
-                else:
+                if private and selected_key.secrets is not None:
+                    key = selected_key.private_key
+                elif not private:
                     key = selected_key.observation_root
+                else:
+                    return None
         else:
             response, success = await self.get_response_for_request(
                 "get_key_for_fingerprint", {"fingerprint": fingerprint, "private": private}

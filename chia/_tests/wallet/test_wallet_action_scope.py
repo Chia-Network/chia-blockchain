@@ -11,6 +11,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_action_scope import WalletSideEffects
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -55,6 +56,7 @@ MockWalletStateManager.new_action_scope = WalletStateManager.new_action_scope  #
 async def test_wallet_action_scope() -> None:
     wsm = MockWalletStateManager()
     async with wsm.new_action_scope(  # type: ignore[attr-defined]
+        DEFAULT_TX_CONFIG,
         push=True,
         merge_spends=False,
         sign=True,
@@ -71,7 +73,7 @@ async def test_wallet_action_scope() -> None:
     assert wsm.most_recent_call == ([STD_TX], True, False, True, [], [])
 
     async with wsm.new_action_scope(  # type: ignore[attr-defined]
-        push=False, merge_spends=True, sign=True, additional_signing_responses=[], extra_spends=[]
+        DEFAULT_TX_CONFIG, push=False, merge_spends=True, sign=True, additional_signing_responses=[], extra_spends=[]
     ) as action_scope:
         async with action_scope.use() as interface:
             interface.side_effects.transactions = []

@@ -332,12 +332,14 @@ async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_i
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
         pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(wallet_id)
         print(
-            {
-                "pool_wallet_info": pool_wallet_info,
-                "unconfirmed_transactions": [
-                    {"sent_to": tx.sent_to, "transaction_id": tx.name.hex()} for tx in unconfirmed_transactions
-                ],
-            }
+            json.dumps(
+                {
+                    "pool_wallet_info": pool_wallet_info.to_json_dict(),
+                    "unconfirmed_transactions": [
+                        {"sent_to": tx.sent_to, "transaction_id": tx.name.hex()} for tx in unconfirmed_transactions
+                    ],
+                }
+            )
         )
 
 

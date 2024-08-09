@@ -120,11 +120,12 @@ async def test_vault_creation(
     funding_amount = uint64(1000000000)
     funding_wallet = wallet_environments.environments[1].xch_wallet
     for _ in range(coins_to_create):
-        async with funding_wallet.wallet_state_manager.new_action_scope(push=True, sign=True) as action_scope:
+        async with funding_wallet.wallet_state_manager.new_action_scope(
+            DEFAULT_TX_CONFIG, push=True, sign=True
+        ) as action_scope:
             await funding_wallet.generate_signed_transaction(
                 funding_amount,
                 p2_singleton_puzzle_hash,
-                DEFAULT_TX_CONFIG,
                 action_scope,
                 memos=[wallet.vault_info.pubkey],
             )
@@ -158,9 +159,9 @@ async def test_vault_creation(
     fee = uint64(100)
     balance_delta = 1011000099
 
-    async with wallet.wallet_state_manager.new_action_scope(push=True, sign=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True, sign=True) as action_scope:
         await wallet.generate_signed_transaction(
-            amount, recipient_ph, DEFAULT_TX_CONFIG, action_scope, primaries=primaries, fee=fee, memos=[recipient_ph]
+            amount, recipient_ph, action_scope, primaries=primaries, fee=fee, memos=[recipient_ph]
         )
 
     vault_eve_id = wallet.vault_info.coin.name()
@@ -260,10 +261,10 @@ async def test_vault_recovery(
     if spent_recovery:
         amount = uint64(10000)
         recipient_ph = await funding_wallet.get_new_puzzlehash()
-        async with wallet.wallet_state_manager.new_action_scope(push=False, sign=False) as action_scope:
-            await wallet.generate_signed_transaction(
-                amount, recipient_ph, DEFAULT_TX_CONFIG, action_scope, memos=[recipient_ph]
-            )
+        async with wallet.wallet_state_manager.new_action_scope(
+            DEFAULT_TX_CONFIG, push=False, sign=False
+        ) as action_scope:
+            await wallet.generate_signed_transaction(amount, recipient_ph, action_scope, memos=[recipient_ph])
 
         await wallet_environments.environments[0].rpc_client.push_transactions(
             action_scope.side_effects.transactions, sign=True
@@ -358,10 +359,8 @@ async def test_vault_recovery(
     recipient_ph = await funding_wallet.get_new_puzzlehash()
     amount = uint64(200)
 
-    async with wallet.wallet_state_manager.new_action_scope(push=False, sign=False) as action_scope:
-        await wallet.generate_signed_transaction(
-            amount, recipient_ph, DEFAULT_TX_CONFIG, action_scope, memos=[recipient_ph]
-        )
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False, sign=False) as action_scope:
+        await wallet.generate_signed_transaction(amount, recipient_ph, action_scope, memos=[recipient_ph])
 
     # Test we can push the transaction separately
     await wallet_environments.environments[0].rpc_client.push_transactions(

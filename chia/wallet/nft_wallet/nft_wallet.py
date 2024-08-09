@@ -52,7 +52,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -299,7 +299,6 @@ class NFTWallet:
     async def get_did_approval_info(
         self,
         nft_ids: List[bytes32],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         did_id: Optional[bytes32] = None,
     ) -> bytes32:
@@ -318,7 +317,7 @@ class NFTWallet:
                 if bytes32.fromhex(wallet.get_my_DID()) == did_id:
                     self.log.debug("Creating announcement from DID for nft_ids: %s", nft_ids)
                     await wallet.create_message_spend(
-                        tx_config, action_scope, extra_conditions=(CreatePuzzleAnnouncement(id) for id in nft_ids)
+                        action_scope, extra_conditions=(CreatePuzzleAnnouncement(id) for id in nft_ids)
                     )
                     did_inner_hash = wallet.did_info.current_inner.get_tree_hash()
                     break
@@ -329,7 +328,6 @@ class NFTWallet:
     async def generate_new_nft(
         self,
         metadata: Program,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         target_puzzle_hash: Optional[bytes32] = None,
         royalty_puzzle_hash: Optional[bytes32] = None,
@@ -350,7 +348,9 @@ class NFTWallet:
             percentage = uint16(percentage)
         except ValueError:
             raise ValueError("Percentage must be lower than 655%")
-        coins = await self.standard_wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
+        coins = await self.standard_wallet.select_coins(
+            uint64(amount + fee), action_scope.config.tx_config.coin_selection_config
+        )
         if coins is None:
             return None
         origin = coins.copy().pop()
@@ -359,7 +359,7 @@ class NFTWallet:
         launcher_coin = Coin(origin.name(), nft_puzzles.LAUNCHER_PUZZLE_HASH, uint64(amount))
         self.log.debug("Generating NFT with launcher coin %s and metadata: %s", launcher_coin, metadata)
 
-        p2_inner_puzzle = await self.standard_wallet.get_puzzle(new=not tx_config.reuse_puzhash)
+        p2_inner_puzzle = await self.standard_wallet.get_puzzle(new=not action_scope.config.tx_config.reuse_puzhash)
         if not target_puzzle_hash:
             target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
         self.log.debug("Attempt to generate a new NFT to %s", target_puzzle_hash.hex())
@@ -391,7 +391,6 @@ class NFTWallet:
         await self.standard_wallet.generate_signed_transaction(
             uint64(amount),
             nft_puzzles.LAUNCHER_PUZZLE_HASH,
-            tx_config,
             action_scope,
             fee,
             coins,
@@ -417,7 +416,7 @@ class NFTWallet:
         did_inner_hash = b""
         if did_id is not None:
             if did_id != b"":
-                did_inner_hash = await self.get_did_approval_info([launcher_coin.name()], tx_config, action_scope)
+                did_inner_hash = await self.get_did_approval_info([launcher_coin.name()], action_scope)
         nft_coin = NFTCoinInfo(
             nft_id=launcher_coin.name(),
             coin=eve_coin,
@@ -430,7 +429,6 @@ class NFTWallet:
         await self.generate_signed_transaction(
             [uint64(eve_coin.amount)],
             [target_puzzle_hash],
-            tx_config,
             action_scope,
             nft_coin=nft_coin,
             new_owner=did_id,
@@ -445,7 +443,6 @@ class NFTWallet:
         nft_coin_info: NFTCoinInfo,
         key: str,
         uri: str,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -462,7 +459,6 @@ class NFTWallet:
         await self.generate_signed_transaction(
             [uint64(nft_coin_info.coin.amount)],
             [puzzle_hash],
-            tx_config,
             action_scope,
             fee,
             {nft_coin_info.coin},
@@ -573,7 +569,6 @@ class NFTWallet:
         self,
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
@@ -602,7 +597,6 @@ class NFTWallet:
         payment_sum = sum(p.amount for p in payments)
         unsigned_spend_bundle = await self.generate_unsigned_spendbundle(
             payments,
-            tx_config,
             action_scope,
             fee,
             coins=coins,
@@ -647,7 +641,6 @@ class NFTWallet:
     async def generate_unsigned_spendbundle(
         self,
         payments: List[Payment],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
@@ -671,7 +664,6 @@ class NFTWallet:
         if fee > 0:
             await self.standard_wallet.create_tandem_xch_tx(
                 fee,
-                tx_config,
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
@@ -753,7 +745,6 @@ class NFTWallet:
         wallet_state_manager: Any,
         offer_dict: Dict[Optional[bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64,
         extra_conditions: Tuple[Condition, ...],
@@ -831,7 +822,9 @@ class NFTWallet:
                 royalty_payments[asset] = payment_list
 
         # Generate the requested_payments to be notarized
-        p2_ph = await wallet_state_manager.main_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
+        p2_ph = await wallet_state_manager.main_wallet.get_puzzle_hash(
+            new=not action_scope.config.tx_config.reuse_puzhash
+        )
         requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
         for asset, amount in offer_dict.items():
             if amount > 0:
@@ -855,7 +848,7 @@ class NFTWallet:
                 else:
                     coin_amount_needed = abs(amount) + royalty_amount
                 offered_coins: Set[Coin] = await wallet.get_coins_to_offer(
-                    asset, coin_amount_needed, tx_config.coin_selection_config
+                    asset, coin_amount_needed, action_scope.config.tx_config.coin_selection_config
                 )
                 if len(offered_coins) == 0:
                     raise ValueError(f"Did not have asset ID {asset.hex() if asset is not None else 'XCH'} to offer")
@@ -901,14 +894,15 @@ class NFTWallet:
                     wallet = await wallet_state_manager.get_wallet_for_asset_id(asset.hex())
 
                 # First, sending all the coins to the OFFER_MOD
-                async with wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+                async with wallet_state_manager.new_action_scope(
+                    action_scope.config.tx_config, push=False
+                ) as inner_action_scope:
                     if wallet.type() == WalletType.STANDARD_WALLET:
                         payments = royalty_payments[asset] if asset in royalty_payments else []
                         payment_sum = sum(p.amount for _, p in payments)
                         await wallet.generate_signed_transaction(
                             abs(amount),
                             OFFER_MOD_HASH,
-                            tx_config,
                             inner_action_scope,
                             primaries=[Payment(OFFER_MOD_HASH, uint64(payment_sum))] if payment_sum > 0 else [],
                             fee=fee,
@@ -920,7 +914,6 @@ class NFTWallet:
                         await wallet.generate_signed_transaction(
                             [abs(amount)],
                             [OFFER_MOD_HASH],
-                            tx_config,
                             inner_action_scope,
                             fee=fee_left_to_pay,
                             coins=offered_coins_by_asset[asset],
@@ -936,7 +929,6 @@ class NFTWallet:
                         await wallet.generate_signed_transaction(
                             [abs(amount), sum(p.amount for _, p in payments)],
                             [OFFER_MOD_HASH, OFFER_MOD_HASH],
-                            tx_config,
                             inner_action_scope,
                             fee=fee_left_to_pay,
                             coins=offered_coins_by_asset[asset],
@@ -1062,7 +1054,6 @@ class NFTWallet:
         self,
         nft_list: List[NFTCoinInfo],
         did_id: bytes,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         announcement_ids: List[bytes32] = [],
@@ -1074,7 +1065,7 @@ class NFTWallet:
         for nft_coin_info in nft_list:
             nft_ids.append(nft_coin_info.nft_id)
         if did_id != b"" and len(announcement_ids) > 0:
-            await self.get_did_approval_info(announcement_ids, tx_config, action_scope, bytes32(did_id))
+            await self.get_did_approval_info(announcement_ids, action_scope, bytes32(did_id))
 
         for _, wallet in self.wallet_state_manager.wallets.items():
             if wallet.type() == WalletType.DECENTRALIZED_ID:
@@ -1094,7 +1085,6 @@ class NFTWallet:
             await self.generate_signed_transaction(
                 [uint64(nft_coin_info.coin.amount)],
                 puzzle_hashes_to_sign,
-                tx_config,
                 action_scope,
                 fee,
                 {nft_coin_info.coin},
@@ -1108,7 +1098,6 @@ class NFTWallet:
         self,
         nft_list: List[NFTCoinInfo],
         puzzle_hash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -1123,7 +1112,6 @@ class NFTWallet:
             await self.generate_signed_transaction(
                 [uint64(nft_coin_info.coin.amount)],
                 [puzzle_hash],
-                tx_config,
                 action_scope,
                 coins={nft_coin_info.coin},
                 fee=fee,
@@ -1137,7 +1125,6 @@ class NFTWallet:
         self,
         nft_coin_info: NFTCoinInfo,
         did_id: bytes,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -1149,12 +1136,11 @@ class NFTWallet:
         puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
         did_inner_hash = b""
         if did_id != b"":
-            did_inner_hash = await self.get_did_approval_info([nft_id], tx_config, action_scope, bytes32(did_id))
+            did_inner_hash = await self.get_did_approval_info([nft_id], action_scope, bytes32(did_id))
 
         await self.generate_signed_transaction(
             [uint64(nft_coin_info.coin.amount)],
             puzzle_hashes_to_sign,
-            tx_config,
             action_scope,
             fee,
             {nft_coin_info.coin},
@@ -1169,7 +1155,6 @@ class NFTWallet:
     async def mint_from_did(
         self,
         metadata_list: List[Dict[str, Any]],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         target_list: Optional[List[bytes32]] = [],
         mint_number_start: Optional[int] = 1,
@@ -1249,7 +1234,9 @@ class NFTWallet:
         assert isinstance(fee, uint64)
         total_amount = len(metadata_list) + fee
         if xch_coins is None:
-            xch_coins = await self.standard_wallet.select_coins(uint64(total_amount), tx_config.coin_selection_config)
+            xch_coins = await self.standard_wallet.select_coins(
+                uint64(total_amount), action_scope.config.tx_config.coin_selection_config
+            )
         assert len(xch_coins) > 0
 
         # set the chunk size for the spend bundle we're going to create
@@ -1347,11 +1334,12 @@ class NFTWallet:
                 target_ph = target_list[mint_number - mint_number_start]
             else:
                 target_ph = p2_inner_ph
-            async with self.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+            async with self.wallet_state_manager.new_action_scope(
+                action_scope.config.tx_config, push=False
+            ) as inner_action_scope:
                 await self.generate_signed_transaction(
                     [uint64(eve_coin.amount)],
                     [target_ph],
-                    tx_config,
                     inner_action_scope,
                     nft_coin=nft_coin,
                     new_owner=b"",
@@ -1474,7 +1462,6 @@ class NFTWallet:
     async def mint_from_xch(
         self,
         metadata_list: List[Dict[str, Any]],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         target_list: Optional[List[bytes32]] = [],
         mint_number_start: Optional[int] = 1,
@@ -1508,7 +1495,9 @@ class NFTWallet:
         assert isinstance(fee, uint64)
         total_amount = len(metadata_list) + fee
         if xch_coins is None:
-            xch_coins = await self.standard_wallet.select_coins(uint64(total_amount), tx_config.coin_selection_config)
+            xch_coins = await self.standard_wallet.select_coins(
+                uint64(total_amount), action_scope.config.tx_config.coin_selection_config
+            )
         assert len(xch_coins) > 0
 
         funding_coin = xch_coins.copy().pop()
@@ -1604,11 +1593,12 @@ class NFTWallet:
                 target_ph = target_list[mint_number - mint_number_start]
             else:
                 target_ph = p2_inner_ph
-            async with self.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+            async with self.wallet_state_manager.new_action_scope(
+                action_scope.config.tx_config, push=False
+            ) as inner_action_scope:
                 await self.generate_signed_transaction(
                     [uint64(eve_coin.amount)],
                     [target_ph],
-                    tx_config,
                     inner_action_scope,
                     nft_coin=nft_coin,
                     new_owner=b"",
