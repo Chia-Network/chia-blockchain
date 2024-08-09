@@ -25,3 +25,4 @@ exclude_also =
   if TYPE_CHECKING:
   ^ *@pytest.mark.skip($|\()
   benchmark_runner: BenchmarkRunner
+  else:\s*(#\[^\n]*)?\n(\s+#[^\n]*\n)?\s+assert False
