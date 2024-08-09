@@ -4,11 +4,6 @@ import logging
 from typing import Dict, List, Optional
 
 from chia_rs import (
-    ALLOW_BACKREFS,
-    DISALLOW_INFINITY_G1,
-    ENABLE_BLS_OPS_OUTSIDE_GUARD,
-    ENABLE_FIXED_DIV,
-    ENABLE_MESSAGE_CONDITIONS,
     MEMPOOL_MODE,
     get_flags_for_height_and_constants,
 )
