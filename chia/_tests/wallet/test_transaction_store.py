@@ -16,7 +16,11 @@ from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord, TransactionRecordOld, minimum_send_attempts
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.wallet_transaction_store import WalletTransactionStore, filter_ok_mempool_status
+from chia.wallet.wallet_transaction_store import (
+    WalletTransactionStore,
+    filter_ok_mempool_status,
+    get_light_transaction_record,
+)
 
 module_seeded_random = random.Random()
 module_seeded_random.seed(a=0, version=2)
@@ -252,8 +256,8 @@ async def test_get_all_unconfirmed(seeded_random: random.Random) -> None:
         )
         await store.add_transaction_record(tr1)
         await store.add_transaction_record(tr2)
-
-        assert await store.get_all_unconfirmed() == [tr1]
+        all_unconfirmed = await store.get_all_unconfirmed()
+        assert all_unconfirmed == [get_light_transaction_record(tr1)]
 
 
 @pytest.mark.anyio

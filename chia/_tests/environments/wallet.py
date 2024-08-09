@@ -15,7 +15,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_record import LightTransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.wallet import Wallet
@@ -247,9 +247,9 @@ class WalletEnvironment:
 
     async def wait_for_transactions_to_settle(
         self, full_node_api: FullNodeSimulator, _exclude_from_mempool_check: List[bytes32] = []
-    ) -> List[TransactionRecord]:
+    ) -> List[LightTransactionRecord]:
         # Gather all pending transactions
-        pending_txs: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
+        pending_txs: List[LightTransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
         # Filter clawback txs
         pending_txs = [
             tx
@@ -293,7 +293,7 @@ class WalletTestFramework:
                     )
                 puzzle_hash_indexes.append(ph_indexes)
 
-        pending_txs: List[List[TransactionRecord]] = []
+        pending_txs: List[List[LightTransactionRecord]] = []
 
         # Check balances prior to block
         try:
@@ -345,7 +345,9 @@ class WalletTestFramework:
             try:
                 await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
             except TimeoutError:  # pragma: no cover
-                unconfirmed: List[TransactionRecord] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
+                unconfirmed: List[LightTransactionRecord] = (
+                    await env.wallet_state_manager.tx_store.get_all_unconfirmed()
+                )
                 raise TimeoutError(
                     f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
                 )

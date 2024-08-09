@@ -26,7 +26,7 @@ from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.payment import Payment
-from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_record import LightTransactionRecord, TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
@@ -444,7 +444,7 @@ class FullNodeSimulator(FullNodeAPI):
 
     async def wait_transaction_records_entered_mempool(
         self,
-        records: Collection[TransactionRecord],
+        records: Collection[Union[TransactionRecord, LightTransactionRecord]],
         timeout: Union[None, float] = 5,
     ) -> None:
         """Wait until the transaction records have entered the mempool.  Transaction
@@ -624,7 +624,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def check_transactions_confirmed(
         self,
         wallet_state_manager: WalletStateManager,
-        transactions: List[TransactionRecord],
+        transactions: Union[List[TransactionRecord], List[LightTransactionRecord]],
         timeout: Optional[float] = 5,
     ) -> None:
         transactions_left: Set[bytes32] = {tx.name for tx in transactions}
