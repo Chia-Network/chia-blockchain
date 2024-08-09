@@ -1,3 +1,5 @@
+# Package: full_node
+
 from __future__ import annotations
 
 from chia_rs import solution_generator, solution_generator_backrefs

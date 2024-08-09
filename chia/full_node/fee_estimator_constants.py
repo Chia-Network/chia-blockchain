@@ -1,3 +1,5 @@
+# Package: full_node
+
 # https://github.com/bitcoin/bitcoin/blob/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy/fees.h
 from __future__ import annotations
 

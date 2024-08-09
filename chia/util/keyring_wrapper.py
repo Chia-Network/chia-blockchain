@@ -1,3 +1,5 @@
+# Package: chia-blockchain
+
 from __future__ import annotations
 
 from pathlib import Path

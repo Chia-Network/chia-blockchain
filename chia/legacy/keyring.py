@@ -1,3 +1,5 @@
+# Package: chia-blockchain
+
 """
 Provides a helper to access the legacy keyring which was supported up to version 1.6.1 of chia-blockchain. To use this
 helper it's required to install the `legacy_keyring` extra dependency which can be done via the install-option `-l`.

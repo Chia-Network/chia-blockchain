@@ -1,3 +1,5 @@
+# Package: full_node
+
 from __future__ import annotations
 
 from dataclasses import dataclass
