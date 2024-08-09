@@ -28,7 +28,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate, FeeRateV2
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle_conditions import SpendConditions, SpendBundleConditions
+from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.ints import uint32, uint64
 
 

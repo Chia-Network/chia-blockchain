@@ -4,7 +4,7 @@ from typing import List
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle_conditions import SpendConditions, SpendBundleConditions
+from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
