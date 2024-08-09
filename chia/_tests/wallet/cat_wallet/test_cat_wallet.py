@@ -7,12 +7,11 @@ import pytest
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
-from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWalletsServices
+from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -1197,72 +1196,131 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework) -> 
             )
 
 
-@pytest.mark.parametrize("trusted", [True, False])
-@pytest.mark.parametrize("autodiscovery", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [1, 1],
+            "config_overrides": {"automatically_add_unknown_cats": True},
+        },
+        {
+            "num_environments": 2,
+            "blocks_needed": [1, 1],
+            "config_overrides": {"automatically_add_unknown_cats": False},
+        },
+    ],
+    indirect=True,
+)
 @pytest.mark.anyio
-async def test_cat_hint(
-    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool, autodiscovery: bool
-) -> None:
-    num_blocks = 3
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node, server_2 = wallets[0]
-    wallet_node_2, server_3 = wallets[1]
-    wallet = wallet_node.wallet_state_manager.main_wallet
-    wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
+    # Setup
+    env_1: WalletEnvironment = wallet_environments.environments[0]
+    env_2: WalletEnvironment = wallet_environments.environments[1]
+    wallet_node_1 = env_1.node
+    wallet_node_2 = env_2.node
+    wallet_1 = env_1.xch_wallet
+    wallet_2 = env_2.xch_wallet
 
-    ph = await wallet.get_new_puzzlehash()
-    if trusted:
-        wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-        wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
-    else:
-        wallet_node.config["trusted_peers"] = {}
-        wallet_node_2.config["trusted_peers"] = {}
-    wallet_node.config["automatically_add_unknown_cats"] = autodiscovery
-    wallet_node_2.config["automatically_add_unknown_cats"] = autodiscovery
-    await server_2.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_3.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    env_1.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+    env_2.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
 
-    for _ in range(num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
+    autodiscovery = wallet_node_1.config["automatically_add_unknown_cats"]
 
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks + 1)
-    )
-
-    await time_out_assert(20, wallet.get_confirmed_balance, funds)
-
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager,
-            wallet,
+            wallet_node_1.wallet_state_manager,
+            wallet_1,
             {"identifier": "genesis_by_id"},
             uint64(100),
             action_scope,
         )
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
-    await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
-    await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {
+                        "confirmed_wallet_balance": 100,
+                        "unconfirmed_wallet_balance": 0,
+                        "spendable_balance": 100,
+                        "max_send_amount": 100,
+                        "pending_change": -100,
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={},
+            ),
+        ]
+    )
+
     assert cat_wallet.cat_info.limitations_program_hash is not None
 
-    cat_2_hash = await wallet2.get_new_puzzlehash()
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    cat_2_hash = await wallet_2.get_new_puzzlehash()
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], action_scope, memos=[[cat_2_hash]])
 
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-
-    await time_out_assert(20, cat_wallet.get_confirmed_balance, 40)
-    await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 40)
-
-    if autodiscovery:
-        # Autodiscovery enabled: test that wallet was created at this point
-        await time_out_assert(20, check_wallets, 2, wallet_node_2)
-    else:
-        # Autodiscovery disabled: test that no wallet was created
-        await time_out_assert(20, check_wallets, 1, wallet_node_2)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "unconfirmed_wallet_balance": -60,
+                        "spendable_balance": -100,
+                        "max_send_amount": -100,
+                        "pending_change": 40,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": -60,
+                        "spendable_balance": 40,
+                        "max_send_amount": 40,
+                        "pending_change": -40,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates=(
+                    {
+                        "cat": {
+                            "init": True,
+                            "confirmed_wallet_balance": 60,
+                            "unconfirmed_wallet_balance": 60,
+                            "spendable_balance": 60,
+                            "max_send_amount": 60,
+                            "pending_change": 0,
+                            "unspent_coin_count": 1,
+                            "pending_coin_removal_count": 0,
+                        },
+                    }
+                    if autodiscovery
+                    else {}
+                ),
+            ),
+        ]
+    )
 
     # Then we update the wallet's default CATs
     wallet_node_2.wallet_state_manager.default_cats = {
@@ -1274,31 +1332,116 @@ async def test_cat_hint(
     }
 
     # Then we send another transaction
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await cat_wallet.generate_signed_transaction([uint64(10)], [cat_2_hash], action_scope, memos=[[cat_2_hash]])
 
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "unconfirmed_wallet_balance": -10,
+                        "spendable_balance": -40,
+                        "max_send_amount": -40,
+                        "pending_change": 30,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": -10,
+                        "spendable_balance": 30,
+                        "max_send_amount": 30,
+                        "pending_change": -30,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates=(
+                    {
+                        "cat": {
+                            "confirmed_wallet_balance": 10,
+                            "unconfirmed_wallet_balance": 10,
+                            "spendable_balance": 10,
+                            "max_send_amount": 10,
+                            "pending_change": 0,
+                            "unspent_coin_count": 1,
+                            "pending_coin_removal_count": 0,
+                        },
+                    }
+                    if autodiscovery
+                    else {
+                        "cat": {
+                            "init": True,
+                            "confirmed_wallet_balance": 70,
+                            "unconfirmed_wallet_balance": 70,
+                            "spendable_balance": 70,
+                            "max_send_amount": 70,
+                            "pending_change": 0,
+                            "unspent_coin_count": 2,
+                            "pending_coin_removal_count": 0,
+                        }
+                    }
+                ),
+            ),
+        ]
+    )
 
-    await time_out_assert(20, cat_wallet.get_confirmed_balance, 30)
-    await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 30)
-
-    # Now we check that another wallet WAS created, even if autodiscovery was disabled
-    await time_out_assert(20, check_wallets, 2, wallet_node_2)
     cat_wallet_2 = wallet_node_2.wallet_state_manager.wallets[uint32(2)]
     assert isinstance(cat_wallet_2, CATWallet)
 
-    # Previous balance + balance that triggered creation in case of disabled autodiscovery
-    await time_out_assert(30, cat_wallet_2.get_confirmed_balance, 70)
-    await time_out_assert(30, cat_wallet_2.get_unconfirmed_balance, 70)
-
     cat_hash = await cat_wallet.get_new_inner_hash()
-    async with cat_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with cat_wallet_2.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await cat_wallet_2.generate_signed_transaction([uint64(5)], [cat_hash], action_scope)
 
-    await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-
-    await time_out_assert(20, cat_wallet.get_confirmed_balance, 35)
-    await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 35)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {},
+                },
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": 5,
+                        "unconfirmed_wallet_balance": 5,
+                        "spendable_balance": 5,
+                        "max_send_amount": 5,
+                        "pending_change": 0,
+                        "unspent_coin_count": 1,
+                        "pending_coin_removal_count": 0,
+                    },
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "unconfirmed_wallet_balance": -5,
+                        "<=#spendable_balance": -5,
+                        "<=#max_send_amount": -5,
+                        ">=#pending_change": 1,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": -5,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+        ]
+    )
 
 
 @pytest.mark.parametrize("trusted", [True, False])
