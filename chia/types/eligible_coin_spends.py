@@ -7,7 +7,6 @@ from chia_rs import fast_forward_singleton, get_conditions_from_spendbundle
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -333,18 +332,17 @@ class EligibleCoinSpends:
         )
         # We need to run the new spend bundle to make sure it remains valid
         # generator = simple_solution_generator(new_sb)
-        assert mempool_item.npc_result.conds is not None
+        assert mempool_item.conds is not None
         try:
             new_sbc_result = get_conditions_from_spendbundle(
                 new_sb,
-                mempool_item.npc_result.conds.cost,
+                mempool_item.conds.cost,
                 constants,
                 height,
             )
         except TypeError as e:
             error = Err(e.args[0])
             raise ValueError(f"Mempool item became invalid after singleton fast forward with error {error}.")
-        new_npc_result = NPCResult(None, new_sbc_result)
         # Update bundle_coin_spends using the collected data
         for coin_id in replaced_coin_ids:
             mempool_item.bundle_coin_spends.pop(coin_id, None)
@@ -356,4 +354,4 @@ class EligibleCoinSpends:
         # change. Still, it's good form to update the spend bundle with the
         # new coin spends
         mempool_item.spend_bundle = new_sb
-        mempool_item.conds = new_npc_result.conds
+        mempool_item.conds = new_sbc_result
