@@ -14,8 +14,8 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
 from chia.util.errors import Err
+from chia.util.ints import uint32, uint64
 
 
 @dataclasses.dataclass(frozen=True)
