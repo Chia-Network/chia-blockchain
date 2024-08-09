@@ -38,10 +38,7 @@ log = logging.getLogger(__name__)
 
 
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = ENABLE_BLS_OPS_OUTSIDE_GUARD | ENABLE_FIXED_DIV | ALLOW_BACKREFS
-
-    if height >= constants.SOFT_FORK4_HEIGHT:
-        flags = flags | ENABLE_MESSAGE_CONDITIONS
+    flags = ENABLE_BLS_OPS_OUTSIDE_GUARD | ENABLE_FIXED_DIV | ALLOW_BACKREFS | ENABLE_MESSAGE_CONDITIONS
 
     if height >= constants.SOFT_FORK5_HEIGHT:
         flags = flags | DISALLOW_INFINITY_G1

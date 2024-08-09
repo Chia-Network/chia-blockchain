@@ -130,12 +130,9 @@ def create_chia_directory(
     # get fork heights then write back to config
     if "HARD_FORK_HEIGHT" not in sim_config:  # this meh code is done so that we also write to the config file.
         sim_config["HARD_FORK_HEIGHT"] = 0
-    if "SOFT_FORK4_HEIGHT" not in sim_config:
-        sim_config["SOFT_FORK4_HEIGHT"] = 0
     if "SOFT_FORK5_HEIGHT" not in sim_config:
         sim_config["SOFT_FORK5_HEIGHT"] = 0
     simulator_consts["HARD_FORK_HEIGHT"] = sim_config["HARD_FORK_HEIGHT"]
-    simulator_consts["SOFT_FORK4_HEIGHT"] = sim_config["SOFT_FORK4_HEIGHT"]
     simulator_consts["SOFT_FORK5_HEIGHT"] = sim_config["SOFT_FORK5_HEIGHT"]
 
     # save config and return the config

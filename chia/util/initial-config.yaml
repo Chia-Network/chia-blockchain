@@ -37,7 +37,6 @@ network_overrides: &network_overrides
       SUB_SLOT_ITERS_STARTING: 67108864
       # Forks activated from the beginning on this network
       HARD_FORK_HEIGHT: 0
-      SOFT_FORK4_HEIGHT: 641500
       SOFT_FORK5_HEIGHT: 1340000
       PLOT_FILTER_128_HEIGHT: 6029568
       PLOT_FILTER_64_HEIGHT: 11075328
@@ -674,5 +673,4 @@ simulator:
 
   # Fork Settings
   HARD_FORK_HEIGHT: 0
-  SOFT_FORK4_HEIGHT: 0
   SOFT_FORK5_HEIGHT: 0

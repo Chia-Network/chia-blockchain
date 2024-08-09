@@ -374,11 +374,6 @@ class TestConditions:
         pre-v2-softfork, and rejects more than the announcement limit afterward.
         """
 
-        if condition1.startswith("(66") and consensus_mode < ConsensusMode.SOFT_FORK_4:
-            # The message conditions aren't enabled until Soft-fork 3, so there
-            # won't be any errors unless it's activated
-            expect_err = None
-
         blocks = await initial_blocks(bt)
         coin = blocks[-2].get_included_reward_coins()[0]
         coin_announcement = AssertCoinAnnouncement(asserted_id=coin.name(), asserted_msg=b"test")
@@ -456,9 +451,6 @@ class TestConditions:
         blocks = await initial_blocks(bt)
         coin = blocks[-2].get_included_reward_coins()[0]
         conditions = Program.to(assemble("(" + conds.format(coin="0x" + coin.name().hex()) + ")"))
-        # before the softfork has activated, it's all allowed
-        if consensus_mode < ConsensusMode.SOFT_FORK_4:
-            expected = None
 
         await check_conditions(bt, conditions, expected_err=expected)
 
