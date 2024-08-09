@@ -28,7 +28,7 @@ from chia.simulator.wallet_tools import WalletTool
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate, FeeRateV2
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
+from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.ints import uint32, uint64
 
 
@@ -41,7 +41,7 @@ def make_mempoolitem() -> MempoolItem:
     block_height = 1
 
     fee = uint64(10000000)
-    spends: List[Spend] = []
+    spends: List[SpendConditions] = []
     conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], cost, 0, 0)
     mempool_item = MempoolItem(
         spend_bundle,

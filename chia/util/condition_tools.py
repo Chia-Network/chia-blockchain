@@ -12,7 +12,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
+from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
@@ -75,15 +75,15 @@ def agg_sig_additional_data(agg_sig_data: bytes) -> Dict[ConditionOpcode, bytes]
 def make_aggsig_final_message(
     opcode: ConditionOpcode,
     msg: bytes,
-    spend: Union[Coin, Spend],
+    spend_conditions: Union[Coin, SpendConditions],
     agg_sig_additional_data: Dict[ConditionOpcode, bytes],
 ) -> bytes:
-    if isinstance(spend, Coin):
-        coin = spend
-    elif isinstance(spend, Spend):
-        coin = Coin(spend.parent_id, spend.puzzle_hash, uint64(spend.coin_amount))
+    if isinstance(spend_conditions, Coin):
+        coin = spend_conditions
+    elif isinstance(spend_conditions, SpendConditions):
+        coin = Coin(spend_conditions.parent_id, spend_conditions.puzzle_hash, uint64(spend_conditions.coin_amount))
     else:
-        raise ValueError(f"Expected Coin or Spend, got {type(spend)}")  # pragma: no cover
+        raise ValueError(f"Expected Coin or Spend, got {type(spend_conditions)}")  # pragma: no cover
 
     COIN_TO_ADDENDUM_F_LOOKUP: Dict[ConditionOpcode, Callable[[Coin], bytes]] = {
         ConditionOpcode.AGG_SIG_PARENT: lambda coin: coin.parent_coin_info,

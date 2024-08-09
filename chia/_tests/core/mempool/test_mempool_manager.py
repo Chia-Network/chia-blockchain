@@ -46,7 +46,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
+from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
@@ -191,7 +191,7 @@ def make_test_conds(
 ) -> SpendBundleConditions:
     return SpendBundleConditions(
         [
-            Spend(
+            SpendConditions(
                 spend_id,
                 IDENTITY_PUZZLE_HASH,
                 IDENTITY_PUZZLE_HASH,
