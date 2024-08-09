@@ -1050,7 +1050,7 @@ class FullNode:
         peak_hash: bytes32,
         summaries: List[SubEpochSummary],
     ) -> None:
-        buffer_size = 4
+        buffer_size = 10
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
         peers_with_peak: List[WSChiaConnection] = self.get_peers_with_peak(peak_hash)
         fork_point_height = await check_fork_next_block(
@@ -1067,6 +1067,9 @@ class FullNode:
         ) -> None:
             start_height, end_height = 0, 0
             new_peers_with_peak: List[WSChiaConnection] = peers_with_peak[:]
+            in_flight_reqs: asyncio.Queue[
+                Tuple[WSChiaConnection, RequestBlocks, asyncio.Task[Optional[RespondBlocks]]]
+            ] = asyncio.Queue(maxsize=buffer_size)
             try:
                 # block request ranges are *inclusive*, this requires some
                 # gymnastics of this range (+1 to make it exclusive, like normal
@@ -1075,27 +1078,76 @@ class FullNode:
                     end_height = min(target_peak_sb_height, start_height + batch_size - 1)
                     request = RequestBlocks(uint32(start_height), uint32(end_height), True)
                     fetched = False
+                    while in_flight_reqs.full():
+                        # the queue contains tasks, so we wait for the task
+                        # returned by get_nowait()
+                        peer, req, task = in_flight_reqs.get_nowait()
+                        response = await task
+                        if response is None:
+                            # self.log.info(f"got None response from {peer.peer_info}")
+                            await peer.close()
+                            # retry this batch from another peer!
+                            for p in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
+                                if p.closed:
+                                    continue
+                                if p == peer:
+                                    continue
+                                response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)
+                                break
+                        if response is None:
+                            self.log.error(f"failed fetching {req.start_height} to {req.end_height} from peers")
+                            return
+
+                        if isinstance(response, RespondBlocks):
+                            # self.log.info(f"received blocks [{response.start_height}, {response.end_height}]")
+                            await batch_queue.put((peer, response.blocks))
+                            fetched = True
+                        if fetched is False:
+                            self.log.error(f"failed fetching {start_height} to {end_height} from peers")
+                            return
+
+                    # if the in-flight request queue is not full, keep
+                    # sending more requests
                     for peer in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
                         if peer.closed:
                             continue
-                        response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)
+                        in_flight_reqs.put_nowait(
+                            (
+                                peer,
+                                request,
+                                asyncio.create_task(peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)),
+                            )
+                        )
+                        # self.log.info(
+                        #    f"requesting blocks [{start_height}, {end_height}]"
+                        #    f" from {peer.peer_info} "
+                        #    f" (in-flight: {in_flight_reqs.qsize()})"
+                        # )
+                        break
+                    if self.sync_store.peers_changed.is_set():
+                        new_peers_with_peak = self.get_peers_with_peak(peak_hash)
+                        self.sync_store.peers_changed.clear()
+            except Exception:
+                self.log.exception(f"fetching {start_height} to {end_height} from peer")
+            finally:
+                try:
+                    # always drain the queue of outstanding requests and handle
+                    # them before exiting
+                    while True:
+                        # this throws when the queue is empty
+                        entry = in_flight_reqs.get_nowait()
+                        peer, _, task = entry
+                        response = await task
                         if response is None:
                             await peer.close()
                         elif isinstance(response, RespondBlocks):
                             await batch_queue.put((peer, response.blocks))
-                            fetched = True
-                            break
-                    if fetched is False:
-                        self.log.error(f"failed fetching {start_height} to {end_height} from peers")
-                        return
-                    if self.sync_store.peers_changed.is_set():
-                        new_peers_with_peak = self.get_peers_with_peak(peak_hash)
-                        self.sync_store.peers_changed.clear()
-            except Exception as e:
-                self.log.error(f"Exception fetching {start_height} to {end_height} from peer {e}")
-            finally:
-                # finished signal with None
-                await batch_queue.put(None)
+                except asyncio.QueueEmpty:
+                    # we expect to get here
+                    pass
+                finally:
+                    # finished signal with None
+                    await batch_queue.put(None)
 
         async def validate_block_batches(
             inner_batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
