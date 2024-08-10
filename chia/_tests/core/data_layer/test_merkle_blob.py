@@ -272,7 +272,7 @@ def test_small_insert_deletes() -> None:
 
 
 def test_proof_of_inclusion_merkle_blob() -> None:
-    num_repeats = 50
+    num_repeats = 10
     num_inserts = 10000
     num_deletes = 1000
     seed = 0
@@ -296,7 +296,6 @@ def test_proof_of_inclusion_merkle_blob() -> None:
             merkle_blob.delete(kv_id)
         keys_values = keys_values[num_deletes:]
 
-        return
         merkle_blob.calculate_lazy_hashes()
         for kv_id in keys_values:
             proof_of_inclusion = merkle_blob.get_proof_of_inclusion(kv_id)

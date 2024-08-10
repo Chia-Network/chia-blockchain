@@ -103,8 +103,8 @@ class MerkleBlob:
             return bytes32(node.hash)
 
         assert isinstance(node, RawInternalMerkleNode)
-        left_hash = calculate_lazy_hashes(node.left)
-        right_hash = calculate_lazy_hashes(node.right)
+        left_hash = self.calculate_lazy_hashes(node.left)
+        right_hash = self.calculate_lazy_hashes(node.right)
         internal_node_hash = internal_hash(left_hash, right_hash)
         self.update_entry(index, hash=internal_node_hash)
         self.update_metadata(index, dirty=False)
@@ -120,7 +120,7 @@ class MerkleBlob:
 
         parents = self.get_lineage(index)
         layers: List[ProofOfInclusionLayer] = []
-        for parent in parents:
+        for parent in parents[1:]:
             assert isinstance(parent, RawInternalMerkleNode)
             sibling_index = parent.get_sibling_index(index)
             sibling = self.get_raw_node(sibling_index)
