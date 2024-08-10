@@ -126,13 +126,13 @@ class MerkleBlob:
             sibling = self.get_raw_node(sibling_index)
             layer = ProofOfInclusionLayer(
                 other_hash_side=parent.get_sibling_side(index),
-                other_hash=sibling.hash,
-                combined_hash=parent.hash,
+                other_hash=bytes32(sibling.hash),
+                combined_hash=bytes32(parent.hash),
             )
             layers.append(layer)
             index = parent.index
 
-        return ProofOfInclusion(node_hash=node.hash, layers=layers)
+        return ProofOfInclusion(node_hash=bytes32(node.hash), layers=layers)
 
     def get_lineage(self, index: TreeIndex) -> List[RawMerkleNodeProtocol]:
         node = self.get_raw_node(index=index)
