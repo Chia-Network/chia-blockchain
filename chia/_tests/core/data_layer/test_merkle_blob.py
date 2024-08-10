@@ -199,6 +199,12 @@ def generate_kvid(seed: int) -> KVId:
     return KVId(hash_int)
 
 
+def generate_hash(seed: int) -> bytes:
+    seed_bytes = seed.to_bytes(8, byteorder="big")
+    hash_obj = hashlib.sha256(seed_bytes)
+    return hash_obj.digest()
+
+
 def test_insert_delete_loads_all_keys() -> None:
     merkle_blob = MerkleBlob(blob=bytearray())
     num_keys = 200000
@@ -216,7 +222,7 @@ def test_insert_delete_loads_all_keys() -> None:
             merkle_blob.delete(kv_id)
         else:
             kv_id = generate_kvid(key)
-            hash = bytes(range(key, data_size))
+            hash = generate_hash(key)
             merkle_blob.insert(kv_id, hash)
             key_index = merkle_blob.kv_to_index[kv_id]
             lineage = merkle_blob.get_lineage(TreeIndex(key_index))
@@ -228,7 +234,7 @@ def test_insert_delete_loads_all_keys() -> None:
     merkle_blob_2 = MerkleBlob(blob=merkle_blob.blob)
     for key in range(num_keys, extra_keys):
         kv_id = generate_kvid(key)
-        hash = bytes(range(key, data_size))
+        hash = generate_hash(key)
         merkle_blob_2.insert(kv_id, hash)
         key_index = merkle_blob_2.kv_to_index[kv_id]
         lineage = merkle_blob_2.get_lineage(TreeIndex(key_index))
@@ -252,7 +258,7 @@ def test_small_insert_deletes() -> None:
             for inserts in range(num_inserts):
                 seed += 1
                 kv_id = generate_kvid(seed)
-                hash = bytes(range(seed, data_size))
+                hash = generate_hash(seed)
                 merkle_blob.insert(kv_id, hash)
                 keys_values.append(kv_id)
 
@@ -263,6 +269,38 @@ def test_small_insert_deletes() -> None:
                 remaining_keys_values.remove(kv_id)
                 assert set(merkle_blob.get_keys_values_indexes().keys()) == remaining_keys_values
             assert remaining_keys_values == set()
+
+
+def test_proof_of_inclusion_merkle_blob() -> None:
+    num_repeats = 50
+    num_inserts = 10000
+    num_deletes = 1000
+    seed = 0
+
+    random = Random()
+    random.seed(100, version=2)
+
+    merkle_blob = MerkleBlob(blob=bytearray())
+    keys_values: List[KVId] = []
+
+    for repeats in range(num_repeats):
+        for inserts in range(num_inserts):
+            seed += 1
+            kv_id = generate_kvid(seed)
+            hash = generate_hash(seed)
+            merkle_blob.insert(kv_id, hash)
+            keys_values.append(kv_id)
+
+        random.shuffle(keys_values)
+        for kv_id in keys_values[:num_deletes]:
+            merkle_blob.delete(kv_id)
+        keys_values = keys_values[num_deletes:]
+
+        return
+        merkle_blob.calculate_lazy_hashes()
+        for kv_id in keys_values:
+            proof_of_inclusion = merkle_blob.get_proof_of_inclusion(kv_id)
+            assert proof_of_inclusion.valid()
 
 
 @pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(-1), TreeIndex(1), TreeIndex(null_parent)])

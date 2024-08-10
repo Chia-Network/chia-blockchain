@@ -5,7 +5,7 @@ from dataclasses import astuple, dataclass, field
 from enum import IntEnum
 from typing import TYPE_CHECKING, ClassVar, Dict, List, NewType, Optional, Protocol, Type, TypeVar, cast, final
 
-from chia.data_layer.data_layer_util import internal_hash
+from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
@@ -65,6 +65,74 @@ class MerkleBlob:
             data=self.blob[data_start:end],
             index=index,
         )
+
+    def get_metadata(self, index: TreeIndex) -> NodeMetadata:
+        if index < 0 or null_parent <= index:
+            raise InvalidIndexError(index=index)
+
+        metadata_start = index * spacing
+        data_start = metadata_start + metadata_size
+
+        if data_start > len(self.blob):
+            raise InvalidIndexError(index=index)
+
+        return NodeMetadata.unpack(self.blob[metadata_start:data_start])
+
+    def update_metadata(self, index: TreeIndex, type: Optional[NodeType] = None, dirty: Optional[bool] = None) -> None:
+        metadata = self.get_metadata(index)
+        new_type = type if type is not None else metadata.type
+        new_dirty = dirty if dirty is not None else metadata.dirty
+
+        metadata_start = index * spacing
+        data_start = metadata_start + metadata_size
+        self.blob[metadata_start:data_start] = NodeMetadata(type=new_type, dirty=new_dirty).pack()
+
+    def mark_lineage_as_dirty(self, index: TreeIndex) -> None:
+        while index != null_parent:
+            metadata = self.get_metadata(index)
+            if metadata.dirty:
+                break
+            self.update_metadata(index, dirty=True)
+            node = self.get_raw_node(index=index)
+            index = node.parent
+
+    def calculate_lazy_hashes(self, index: TreeIndex = TreeIndex(0)) -> bytes32:
+        metadata = self.get_metadata(index)
+        node = self.get_raw_node(index)
+        if not metadata.dirty:
+            return bytes32(node.hash)
+
+        assert isinstance(node, RawInternalMerkleNode)
+        left_hash = calculate_lazy_hashes(node.left)
+        right_hash = calculate_lazy_hashes(node.right)
+        internal_node_hash = internal_hash(left_hash, right_hash)
+        self.update_entry(index, hash=internal_node_hash)
+        self.update_metadata(index, dirty=False)
+        return internal_node_hash
+
+    def get_proof_of_inclusion(self, kvID: KVId) -> ProofOfInclusion:
+        if kvID not in self.kv_to_index:
+            raise Exception(f"Key {kvID} not present in the store")
+
+        index = self.kv_to_index[kvID]
+        node = self.get_raw_node(index)
+        assert isinstance(node, RawLeafMerkleNode)
+
+        parents = self.get_lineage(index)
+        layers: List[ProofOfInclusionLayer] = []
+        for parent in parents:
+            assert isinstance(parent, RawInternalMerkleNode)
+            sibling_index = parent.get_sibling_index(index)
+            sibling = self.get_raw_node(sibling_index)
+            layer = ProofOfInclusionLayer(
+                other_hash_side=parent.get_sibling_side(index),
+                other_hash=sibling.hash,
+                combined_hash=parent.hash,
+            )
+            layers.append(layer)
+            index = parent.index
+
+        return ProofOfInclusion(node_hash=node.hash, layers=layers)
 
     def get_lineage(self, index: TreeIndex) -> List[RawMerkleNodeProtocol]:
         node = self.get_raw_node(index=index)
@@ -203,6 +271,7 @@ class MerkleBlob:
         else:
             assert old_leaf.index == old_parent.right
             self.update_entry(old_parent.index, right=new_internal_node_index)
+        self.mark_lineage_as_dirty(old_parent_index)
         self.kv_to_index[key_value] = new_leaf_index
 
     def delete(self, key_value: KVId) -> None:
@@ -218,11 +287,7 @@ class MerkleBlob:
         parent = self.get_raw_node(parent_index)
 
         assert isinstance(parent, RawInternalMerkleNode)
-        if parent.left == leaf_index:
-            sibling_index = parent.right
-        else:
-            assert parent.right == leaf_index
-            sibling_index = parent.left
+        sibling_index = parent.get_sibling_index(leaf_index)
 
         grandparent_index = parent.parent
         if grandparent_index == null_parent:
@@ -250,6 +315,7 @@ class MerkleBlob:
         else:
             assert grandparent.right == parent_index
             self.update_entry(grandparent_index, right=sibling_index)
+        self.mark_lineage_as_dirty(grandparent_index)
 
 
 class RawMerkleNodeProtocol(Protocol):
@@ -320,6 +386,18 @@ class RawInternalMerkleNode:
     hash: bytes
     # TODO: this feels like a bit of a violation being aware of your location
     index: TreeIndex
+
+    def get_sibling_index(self, index: TreeIndex) -> TreeIndex:
+        if self.left == index:
+            return self.right
+        assert self.right == index
+        return self.left
+
+    def get_sibling_side(self, index: TreeIndex) -> Side:
+        if self.left == index:
+            return Side.RIGHT
+        assert self.right == index
+        return Side.LEFT
 
 
 @final
