@@ -932,6 +932,7 @@ class DAOWallet:
             proposed_puzzle_reveal=proposed_puzzle,
             launcher_coin=launcher_coin,
             vote_amount=vote_amount,
+            action_scope=action_scope,
         )
 
         full_spend = SpendBundle.aggregate([eve_spend, launcher_sb])
@@ -968,6 +969,7 @@ class DAOWallet:
         proposed_puzzle_reveal: Program,
         launcher_coin: Coin,
         vote_amount: uint64,
+        action_scope: WalletActionScope,
     ) -> SpendBundle:
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
         cat_tail = cat_wallet.cat_info.limitations_program_hash
@@ -977,7 +979,7 @@ class DAOWallet:
         assert dao_cat_wallet is not None
 
         dao_cat_spend = await dao_cat_wallet.create_vote_spend(
-            vote_amount, launcher_coin.name(), True, proposal_puzzle=dao_proposal_puzzle
+            vote_amount, launcher_coin.name(), True, action_scope, proposal_puzzle=dao_proposal_puzzle
         )
         vote_amounts = []
         vote_coins = []
@@ -1057,7 +1059,11 @@ class DAOWallet:
             vote_amount = await dao_cat_wallet.get_votable_balance(proposal_id)
         assert vote_amount is not None
         dao_cat_spend = await dao_cat_wallet.create_vote_spend(
-            vote_amount, proposal_id, is_yes_vote, proposal_puzzle=proposal_info.current_innerpuz
+            vote_amount,
+            proposal_id,
+            is_yes_vote,
+            action_scope=action_scope,
+            proposal_puzzle=proposal_info.current_innerpuz,
         )
         vote_amounts = []
         vote_coins = []

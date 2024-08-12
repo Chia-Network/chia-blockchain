@@ -708,6 +708,7 @@ class CATWallet:
                         )
                         innersol = await self.standard_wallet.make_solution(
                             primaries=primaries,
+                            action_scope=action_scope,
                             conditions=(*extra_conditions, announcement),
                         )
                     elif regular_chia_to_claim > fee:  # pragma: no cover
@@ -719,6 +720,7 @@ class CATWallet:
                         assert xch_announcement is not None
                         innersol = await self.standard_wallet.make_solution(
                             primaries=primaries,
+                            action_scope=action_scope,
                             conditions=(*extra_conditions, xch_announcement, announcement),
                         )
                     else:
@@ -727,11 +729,12 @@ class CATWallet:
                 else:
                     innersol = await self.standard_wallet.make_solution(
                         primaries=primaries,
+                        action_scope=action_scope,
                         conditions=(*extra_conditions, announcement),
                     )
             else:
                 innersol = await self.standard_wallet.make_solution(
-                    primaries=[], conditions=(announcement.corresponding_assertion(),)
+                    primaries=[], action_scope=action_scope, conditions=(announcement.corresponding_assertion(),)
                 )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)

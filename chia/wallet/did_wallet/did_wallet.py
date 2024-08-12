@@ -584,6 +584,7 @@ class DIDWallet:
                     memos=[p2_puzzle.get_tree_hash()],
                 )
             ],
+            action_scope=action_scope,
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
         innersol: Program = Program.to([1, p2_solution])
@@ -692,6 +693,7 @@ class DIDWallet:
         )
         p2_solution = await self.standard_wallet.make_solution(
             primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
+            action_scope=action_scope,
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
         # Need to include backup list reveal here, even we are don't recover
@@ -779,6 +781,7 @@ class DIDWallet:
             )
         p2_solution = await self.standard_wallet.make_solution(
             primaries=[Payment(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
+            action_scope=action_scope,
             conditions=extra_conditions,
         )
         # innerpuz solution is (mode p2_solution)
@@ -916,6 +919,7 @@ class DIDWallet:
                 Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
                 Payment(innermessage, uint64(0)),
             ],
+            action_scope=action_scope,
             conditions=extra_conditions,
         )
         innersol = Program.to([1, p2_solution])
@@ -1267,7 +1271,12 @@ class DIDWallet:
             metadata=self.did_info.metadata,
         )
         await self.save_info(did_info)
-        eve_spend = await self.generate_eve_spend(eve_coin, did_full_puz, did_inner)
+        eve_spend = await self.generate_eve_spend(
+            eve_coin,
+            did_full_puz,
+            did_inner,
+            action_scope,
+        )
         full_spend = SpendBundle.aggregate([eve_spend, launcher_sb])
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
@@ -1299,6 +1308,7 @@ class DIDWallet:
         coin: Coin,
         full_puzzle: Program,
         innerpuz: Program,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ):
         assert self.did_info.origin_coin is not None
@@ -1308,6 +1318,7 @@ class DIDWallet:
         # innerpuz solution is (mode p2_solution)
         p2_solution = await self.standard_wallet.make_solution(
             primaries=[Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
+            action_scope=action_scope,
             conditions=extra_conditions,
         )
         innersol = Program.to([1, p2_solution])
