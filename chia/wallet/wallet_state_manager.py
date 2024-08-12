@@ -803,10 +803,7 @@ class WalletStateManager:
 
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
 
-        puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        solution = Program.from_bytes(bytes(coin_spend.solution))
-
-        uncurried = uncurry_puzzle(puzzle)
+        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
 
         dao_ids = []
         wallets = self.wallets.values()
@@ -814,7 +811,9 @@ class WalletStateManager:
             if wallet.type() == WalletType.DAO.value:
                 assert isinstance(wallet, DAOWallet)
                 dao_ids.append(wallet.dao_info.treasury_id)
-        funding_puzzle_check = match_funding_puzzle(uncurried, solution, coin_state.coin, dao_ids)
+        funding_puzzle_check = match_funding_puzzle(
+            uncurried, coin_spend.solution.to_program(), coin_state.coin, dao_ids
+        )
         if funding_puzzle_check:
             return await self.get_dao_wallet_from_coinspend_hint(coin_spend, coin_state), None
 
@@ -887,8 +886,7 @@ class WalletStateManager:
             return await self.handle_did(did_data, parent_coin_state, coin_state, coin_spend, peer), did_data
 
         # Check if the coin is clawback
-        solution = coin_spend.solution.to_program()
-        clawback_coin_data = match_clawback_puzzle(uncurried, puzzle, solution)
+        clawback_coin_data = match_clawback_puzzle(uncurried, coin_spend.puzzle_reveal, coin_spend.solution)
         if clawback_coin_data is not None:
             return await self.handle_clawback(clawback_coin_data, coin_state, coin_spend, peer), clawback_coin_data
 
@@ -927,7 +925,7 @@ class WalletStateManager:
                 stop=tx_config.coin_selection_config.max_coin_amount,
             ),
         )
-        async with self.new_action_scope(push=True) as action_scope:
+        async with self.new_action_scope(tx_config, push=True) as action_scope:
             for coin in unspent_coins.records:
                 try:
                     metadata: MetadataTypes = coin.parsed_metadata()
@@ -937,30 +935,33 @@ class WalletStateManager:
                         if current_timestamp - coin_timestamp >= metadata.time_lock:
                             clawback_coins[coin.coin] = metadata
                             if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
-                                await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config, action_scope)
+                                await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
                                 async with action_scope.use() as interface:
-                                    tx_config = dataclasses.replace(
-                                        tx_config,
-                                        excluded_coin_ids=[
-                                            *tx_config.excluded_coin_ids,
-                                            *(
-                                                c.name()
-                                                for tx in interface.side_effects.transactions
-                                                for c in tx.removals
-                                            ),
-                                        ],
+                                    # TODO: editing this is not ideal, action scopes should know what coins are spent
+                                    action_scope._config = dataclasses.replace(
+                                        action_scope._config,
+                                        tx_config=dataclasses.replace(
+                                            action_scope._config.tx_config,
+                                            excluded_coin_ids=[
+                                                *action_scope.config.tx_config.excluded_coin_ids,
+                                                *(
+                                                    c.name()
+                                                    for tx in interface.side_effects.transactions
+                                                    for c in tx.removals
+                                                ),
+                                            ],
+                                        ),
                                     )
                                 clawback_coins = {}
                 except Exception as e:
                     self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
             if len(clawback_coins) > 0:
-                await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config, action_scope)
+                await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
 
     async def spend_clawback_coins(
         self,
         clawback_coins: Dict[Coin, ClawbackMetadata],
         fee: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         force: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -1019,10 +1020,9 @@ class WalletStateManager:
             return
         spend_bundle: SpendBundle = SpendBundle(coin_spends, G2Element())
         if fee > 0:
-            async with self.new_action_scope(push=False) as inner_action_scope:
+            async with self.new_action_scope(action_scope.config.tx_config, push=False) as inner_action_scope:
                 await self.main_wallet.create_tandem_xch_tx(
                     fee,
-                    tx_config,
                     inner_action_scope,
                     extra_conditions=(
                         AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
@@ -1167,7 +1167,7 @@ class WalletStateManager:
             is_crcat: bool = False
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # Check if it is a CRCAT
-                if CRCAT.is_cr_cat(uncurry_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))):
+                if CRCAT.is_cr_cat(uncurry_puzzle(coin_spend.puzzle_reveal)):
                     is_crcat = True
                 else:
                     return None  # pragma: no cover
@@ -1370,8 +1370,7 @@ class WalletStateManager:
             )
             assert did_coin is not None and len(did_coin) == 1 and did_coin[0].spent_height is not None
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
-            puzzle = Program.from_bytes(bytes(did_spend.puzzle_reveal))
-            uncurried = uncurry_puzzle(puzzle)
+            uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             if did_curried_args is not None:
                 p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
@@ -1884,10 +1883,10 @@ class WalletStateManager:
                                             # if there is a child coin that is not owned by the wallet.
                                             coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                                             # Check if the parent coin is a Clawback coin
-                                            puzzle: Program = coin_spend.puzzle_reveal.to_program()
-                                            solution: Program = coin_spend.solution.to_program()
-                                            uncurried = uncurry_puzzle(puzzle)
-                                            clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+                                            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
+                                            clawback_metadata = match_clawback_puzzle(
+                                                uncurried, coin_spend.puzzle_reveal, coin_spend.solution
+                                            )
                                         if clawback_metadata is not None:
                                             # Add the Clawback coin as the interested coin for the sender
                                             await self.add_interested_coin_ids([coin.name()])
@@ -2788,6 +2787,7 @@ class WalletStateManager:
     @contextlib.asynccontextmanager
     async def new_action_scope(
         self,
+        tx_config: TXConfig,
         push: bool = False,
         merge_spends: bool = True,
         sign: Optional[bool] = None,
@@ -2796,6 +2796,7 @@ class WalletStateManager:
     ) -> AsyncIterator[WalletActionScope]:
         async with new_wallet_action_scope(
             self,
+            tx_config,
             push=push,
             merge_spends=merge_spends,
             sign=sign,

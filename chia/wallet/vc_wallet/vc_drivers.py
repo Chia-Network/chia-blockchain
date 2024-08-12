@@ -566,10 +566,9 @@ class VerifiedCredential(Streamable):
 
         # BEGIN CODE
         parent_coin: Coin = parent_spend.coin
-        puzzle: Program = parent_spend.puzzle_reveal.to_program()
         solution: Program = parent_spend.solution.to_program()
 
-        singleton: UncurriedPuzzle = uncurry_puzzle(puzzle)
+        singleton: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
         launcher_id: bytes32 = bytes32(singleton.args.at("frf").as_atom())
         layer_below_singleton: Program = singleton.args.at("rf")
         singleton_lineage_proof: LineageProof = LineageProof(

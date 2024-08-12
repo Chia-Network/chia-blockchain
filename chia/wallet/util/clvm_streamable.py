@@ -132,7 +132,7 @@ def json_deserialize_with_clvm_streamable(
                 new_streamable_fields.append(
                     dataclasses.replace(
                         old_field,
-                        convert_function=functools.partial(
+                        convert_function=functools.partial(  # type: ignore[type-var]
                             json_deserialize_with_clvm_streamable,
                             streamable_type=old_field.type,
                             translation_layer=translation_layer,

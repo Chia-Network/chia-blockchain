@@ -363,7 +363,6 @@ class DAOCATWallet:
     async def enter_dao_cat_voting_mode(
         self,
         amount: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -382,7 +381,6 @@ class DAOCATWallet:
         txs: List[TransactionRecord] = await cat_wallet.generate_signed_transaction(
             [amount],
             [lockup_puzzle.get_tree_hash()],
-            tx_config,
             action_scope,
             fee=fee,
             extra_conditions=extra_conditions,
@@ -396,7 +394,6 @@ class DAOCATWallet:
     async def exit_vote_state(
         self,
         coins: List[LockedCoinInfo],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -408,7 +405,7 @@ class DAOCATWallet:
         spent_coins = []
         for lci in coins:
             coin = lci.coin
-            if tx_config.reuse_puzhash:  # pragma: no cover
+            if action_scope.config.tx_config.reuse_puzhash:  # pragma: no cover
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=False)
             else:
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
@@ -458,7 +455,6 @@ class DAOCATWallet:
         if fee > 0:  # pragma: no cover
             await self.standard_wallet.create_tandem_xch_tx(
                 fee,
-                tx_config,
                 action_scope,
             )
 
@@ -500,7 +496,6 @@ class DAOCATWallet:
     async def remove_active_proposal(
         self,
         proposal_id_list: List[bytes32],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
     ) -> SpendBundle:
@@ -563,7 +558,7 @@ class DAOCATWallet:
         spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
         if fee > 0:  # pragma: no cover
-            await self.standard_wallet.create_tandem_xch_tx(fee, tx_config=tx_config, action_scope=action_scope)
+            await self.standard_wallet.create_tandem_xch_tx(fee, action_scope=action_scope)
 
         return spend_bundle
 
