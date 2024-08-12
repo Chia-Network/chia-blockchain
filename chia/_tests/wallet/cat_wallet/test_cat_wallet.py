@@ -138,7 +138,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
         ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32(32 * b"1"), None)
     )
 
-    # The commented out sections here are due to a peculiarity with how the creation method creates an incoming TX
+    # The "set_remainder" sections here are due to a peculiarity with how the creation method creates an incoming TX
     # The creation method is for testing purposes only so we're not going to bother fixing it for any real reason
     await wallet_environments.process_pending_states(
         [
@@ -154,12 +154,10 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                     },
                     "cat": {
                         "confirmed_wallet_balance": -test_amount,
-                        "unconfirmed_wallet_balance": -test_amount,  # 0 is correct
                         "spendable_balance": -test_amount,
                         "max_send_amount": -test_amount,
-                        # "pending_change": test_amount,
-                        # "pending_coin_removal_count": 1,
                         "unspent_coin_count": -1,
+                        "set_remainder": True,
                     },
                 },
                 post_block_balance_updates={
@@ -173,12 +171,10 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                     },
                     "cat": {
                         "confirmed_wallet_balance": test_amount,
-                        "unconfirmed_wallet_balance": test_amount,  # 0 is correct
                         "spendable_balance": test_amount,
                         "max_send_amount": test_amount,
-                        # "pending_change": -test_amount,
-                        # "pending_coin_removal_count": -1,
                         "unspent_coin_count": 1,
+                        "set_remainder": True,
                     },
                 },
             ),
