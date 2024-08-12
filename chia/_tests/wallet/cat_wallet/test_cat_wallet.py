@@ -58,15 +58,16 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
         "xch": 1,
         "cat": 2,
     }
-
+    test_amount = 100
+    test_fee = 10
     async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
             wsm,
             wallet,
             {"identifier": "genesis_by_id"},
-            uint64(100),
+            uint64(test_amount),
             action_scope,
-            fee=uint64(10),
+            fee=uint64(test_fee),
         )
         # The next 2 lines are basically a noop, it just adds test coverage
         cat_wallet = await CATWallet.create(wsm, wallet, cat_wallet.wallet_info)
@@ -78,25 +79,25 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                 pre_block_balance_updates={
                     "xch": {
                         "confirmed_wallet_balance": 0,
-                        "unconfirmed_wallet_balance": -100 + -10,
-                        "<=#spendable_balance": -100 + -10,
-                        "<=#max_send_amount": -100 + -10,
+                        "unconfirmed_wallet_balance": -test_amount + -test_fee,
+                        "<=#spendable_balance": -test_amount + -test_fee,
+                        "<=#max_send_amount": -test_amount + -test_fee,
                         ">=#pending_change": 1,  # any amount increase
                         "pending_coin_removal_count": 1,
                     },
                     "cat": {
                         "init": True,
                         "confirmed_wallet_balance": 0,
-                        "unconfirmed_wallet_balance": 100,
+                        "unconfirmed_wallet_balance": test_amount,
                         "spendable_balance": 0,
                         "max_send_amount": 0,
-                        "pending_change": 100,
+                        "pending_change": test_amount,
                         "pending_coin_removal_count": 1,
                     },
                 },
                 post_block_balance_updates={
                     "xch": {
-                        "confirmed_wallet_balance": -100 + -10,
+                        "confirmed_wallet_balance": -test_amount + -test_fee,
                         "unconfirmed_wallet_balance": 0,
                         ">=#spendable_balance": 0,
                         ">=#max_send_amount": 0,
@@ -104,11 +105,11 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": -1,
                     },
                     "cat": {
-                        "confirmed_wallet_balance": 100,
+                        "confirmed_wallet_balance": test_amount,
                         "unconfirmed_wallet_balance": 0,
-                        "spendable_balance": 100,
-                        "max_send_amount": 100,
-                        "pending_change": -100,
+                        "spendable_balance": test_amount,
+                        "max_send_amount": test_amount,
+                        "pending_change": -test_amount,
                         "pending_coin_removal_count": -1,
                         "unspent_coin_count": 1,
                     },
@@ -144,7 +145,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {
-                        "confirmed_wallet_balance": 100 + 10,
+                        "confirmed_wallet_balance": test_amount + test_fee,
                         "unconfirmed_wallet_balance": 0,
                         "<=#spendable_balance": 1,
                         "<=#max_send_amount": 1,
@@ -152,18 +153,18 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": 1,
                     },
                     "cat": {
-                        "confirmed_wallet_balance": -100,
-                        "unconfirmed_wallet_balance": -100,  # 0 is correct
-                        "spendable_balance": -100,
-                        "max_send_amount": -100,
-                        # "pending_change": 100,
+                        "confirmed_wallet_balance": -test_amount,
+                        "unconfirmed_wallet_balance": -test_amount,  # 0 is correct
+                        "spendable_balance": -test_amount,
+                        "max_send_amount": -test_amount,
+                        # "pending_change": test_amount,
                         # "pending_coin_removal_count": 1,
                         "unspent_coin_count": -1,
                     },
                 },
                 post_block_balance_updates={
                     "xch": {
-                        "confirmed_wallet_balance": -100 + -10,
+                        "confirmed_wallet_balance": -test_amount + -test_fee,
                         "unconfirmed_wallet_balance": 0,
                         ">=#spendable_balance": 0,
                         ">=#max_send_amount": 0,
@@ -171,11 +172,11 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": -1,
                     },
                     "cat": {
-                        "confirmed_wallet_balance": 100,
-                        "unconfirmed_wallet_balance": 100,  # 0 is correct
-                        "spendable_balance": 100,
-                        "max_send_amount": 100,
-                        # "pending_change": -100,
+                        "confirmed_wallet_balance": test_amount,
+                        "unconfirmed_wallet_balance": test_amount,  # 0 is correct
+                        "spendable_balance": test_amount,
+                        "max_send_amount": test_amount,
+                        # "pending_change": -test_amount,
                         # "pending_coin_removal_count": -1,
                         "unspent_coin_count": 1,
                     },
