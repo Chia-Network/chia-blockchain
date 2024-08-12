@@ -51,6 +51,7 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import MempoolRemoveInfo
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.mempool_manager import MempoolManager, NewPeakItem
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
@@ -70,6 +71,7 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.pool_target import PoolTarget
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
@@ -118,6 +120,19 @@ class WalletUpdate:
     peak: Peak
     coin_records: List[CoinRecord]
     hints: Dict[bytes32, bytes32]
+
+
+def run_clvm(generator_bytes: bytes, max_cost: int, height: uint32, constants_bytes: bytes) -> bytes:
+    generator = SerializedProgram.from_bytes(generator_bytes)
+    constants = ConsensusConstants.from_bytes(constants_bytes)
+    npc_result = get_name_puzzle_conditions(
+        BlockGenerator(generator, []),
+        max_cost,
+        mempool_mode=False,
+        height=height,
+        constants=constants,
+    )
+    return bytes(npc_result)
 
 
 @final
@@ -1091,7 +1106,7 @@ class FullNode:
         # seems to refer to the first diverging block
 
         async def fetch_block_batches(
-            batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
+            output_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
             start_height, end_height = 0, 0
             new_peers_with_peak: List[WSChiaConnection] = peers_with_peak[:]
@@ -1110,7 +1125,7 @@ class FullNode:
                         if response is None:
                             await peer.close()
                         elif isinstance(response, RespondBlocks):
-                            await batch_queue.put((peer, response.blocks))
+                            await output_queue.put((peer, response.blocks))
                             fetched = True
                             break
                     if fetched is False:
@@ -1123,10 +1138,45 @@ class FullNode:
                 self.log.error(f"Exception fetching {start_height} to {end_height} from peer {e}")
             finally:
                 # finished signal with None
-                await batch_queue.put(None)
+                await output_queue.put(None)
 
-        async def validate_block_batches(
-            inner_batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
+        async def execute_block_batches(
+            input_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]],
+            output_queue: asyncio.Queue[
+                Optional[Tuple[WSChiaConnection, List[FullBlock], Dict[uint32, Awaitable[bytes]]]]
+            ],
+        ) -> None:
+            while True:
+                res: Optional[Tuple[WSChiaConnection, List[FullBlock]]] = await input_queue.get()
+                if res is None:
+                    self.log.debug("done fetching blocks")
+                    break
+                peer, blocks = res
+                npc_results: Dict[uint32, Awaitable[bytes]] = {}
+
+                # by only pre-validating blocks that have empty ref lists, we
+                # keep it really simple and parallelizable
+                for block in blocks:
+                    if (
+                        block.transactions_generator_ref_list != []
+                        or block.transactions_generator is None
+                        or block.transactions_info is None
+                    ):
+                        continue
+                    npc_results[block.height] = asyncio.get_running_loop().run_in_executor(
+                        self.blockchain.pool,
+                        run_clvm,
+                        bytes(block.transactions_generator),
+                        min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
+                        block.height,
+                        bytes(self.constants),
+                    )
+                await output_queue.put((peer, blocks, npc_results))
+
+        async def ingest_block_batches(
+            input_queue: asyncio.Queue[
+                Optional[Tuple[WSChiaConnection, List[FullBlock], Dict[uint32, Awaitable[bytes]]]]
+            ],
         ) -> None:
             fork_info: Optional[ForkInfo] = None
             if fork_point_height == 0:
@@ -1144,11 +1194,14 @@ class FullNode:
             block_rate_time = time.monotonic()
             block_rate_height = -1
             while True:
-                res: Optional[Tuple[WSChiaConnection, List[FullBlock]]] = await inner_batch_queue.get()
+                res: Optional[Tuple[WSChiaConnection, List[FullBlock], Dict[uint32, Awaitable[bytes]]]] = (
+                    await input_queue.get()
+                )
                 if res is None:
                     self.log.debug("done fetching blocks")
                     return None
-                peer, blocks = res
+                npc_futures: Dict[uint32, Awaitable[bytes]]
+                peer, blocks, npc_futures = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
 
@@ -1177,12 +1230,25 @@ class FullNode:
                             assert fork_hash is not None
                             fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
+                npc_results = {}
+                height: uint32
+                fut: Awaitable[bytes]
+                for height, fut in npc_futures.items():
+                    result: NPCResult
+                    result = NPCResult.from_bytes(await fut)
+                    if result.error is not None:
+                        self.log.error(f"Invalid block from peer: {peer.peer_info} {Err(result.error)}")
+                        await peer.close(600)
+                        raise ConsensusError(Err(result.error))
+                    npc_results[height] = result
+
                 success, state_change_summary, err = await self.add_block_batch(
                     blocks,
                     peer.get_peer_logging(),
                     fork_info,
                     cs,
                     summaries,
+                    npc_results,
                 )
                 if success is False:
                     await peer.close(600)
@@ -1193,7 +1259,11 @@ class FullNode:
                     block_rate_time = now
                     block_rate_height = end_height
 
-                self.log.info(f"Added blocks {start_height} to {end_height} ({block_rate} blocks/s)")
+                self.log.info(
+                    f"Added blocks {start_height} to {end_height}"
+                    f" ({block_rate} blocks/s)"
+                    f" (pre-validated: {int(len(npc_results)/len(blocks)*100)}%)"
+                )
                 peak = self.blockchain.get_peak()
                 if state_change_summary is not None:
                     assert peak is not None
@@ -1214,14 +1284,24 @@ class FullNode:
         batch_queue_input: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]] = asyncio.Queue(
             maxsize=buffer_size
         )
+        validated_queue: asyncio.Queue[
+            Optional[Tuple[WSChiaConnection, List[FullBlock], Dict[uint32, Awaitable[bytes]]]]
+        ] = asyncio.Queue(maxsize=buffer_size)
+        # the fetch task puts blocks in the batch_queue_input
         fetch_task = asyncio.Task(fetch_block_batches(batch_queue_input))
-        validate_task = asyncio.Task(validate_block_batches(batch_queue_input))
+        # the execute_task pulls blocks from batch_queue_input and pushes
+        # validated block batches onto validated_queue
+        execute_task = asyncio.Task(execute_block_batches(batch_queue_input, validated_queue))
+        # ingest_task pulls validated blocks from validated_queue and adds them
+        # to the blockchain object
+        ingest_task = asyncio.Task(ingest_block_batches(validated_queue))
         try:
             with log_exceptions(log=self.log, message="sync from fork point failed"):
-                await asyncio.gather(fetch_task, validate_task)
+                await asyncio.gather(fetch_task, execute_task, ingest_task)
         except Exception:
-            assert validate_task.done()
-            fetch_task.cancel()  # no need to cancel validate_task, if we end up here validate_task is already done
+            assert ingest_task.done()
+            fetch_task.cancel()  # no need to cancel ingest_task, if we end up here ingest_task is already done
+            execute_task.cancel()
 
     def get_peers_with_peak(self, peak_hash: bytes32) -> List[WSChiaConnection]:
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
@@ -1284,6 +1364,7 @@ class FullNode:
         fork_info: Optional[ForkInfo],
         cs: ChainState,  # in-out parameter
         wp_summaries: Optional[List[SubEpochSummary]] = None,
+        npc_results: Dict[uint32, NPCResult] = {},
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
@@ -1299,6 +1380,7 @@ class FullNode:
             peer_info,
             cs,
             wp_summaries,
+            npc_results,
         )
         if err is not None:
             return False, None, err
@@ -1373,6 +1455,7 @@ class FullNode:
         peer_info: PeerInfo,
         cs: ChainState,  # in-out parameter
         wp_summaries: Optional[List[SubEpochSummary]] = None,
+        npc_results: Dict[uint32, NPCResult] = {},
     ) -> Tuple[List[PreValidationResult], Optional[Err]]:
         pre_validate_start = time.monotonic()
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
@@ -1384,7 +1467,7 @@ class FullNode:
             self.blockchain,
             blocks_to_validate,
             self.blockchain.pool,
-            {},
+            npc_results,
             cs,
             wp_summaries=wp_summaries,
             validate_signatures=True,
