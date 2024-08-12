@@ -91,7 +91,7 @@ ConvertFunctionType = Callable[[object], object]
 @dataclasses.dataclass(frozen=True)
 class Field:
     name: str
-    type: Type[object]
+    type: Type[Streamable]
     has_default: bool
     stream_function: StreamFunctionType
     parse_function: ParseFunctionType
