@@ -32,7 +32,7 @@ async def general_insert(
     store_id: bytes32,
     key: bytes,
     value: bytes,
-    reference_node_hash: bytes32,
+    reference_node_hash: Optional[bytes32],
     side: Optional[Side],
 ) -> bytes32:
     insert_result = await data_store.insert(
