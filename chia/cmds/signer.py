@@ -183,7 +183,7 @@ class SPOut(QrCodeDisplay, _SPTranslation):
                 print(byte_serialize_clvm_streamable(output, translation_layer=translation_layer).hex())
         if self.output_format == "file":
             if len(self.output_file) == 0:
-                print("--output-format=file specifed without any --output-file")
+                print("--output-format=file specified without any --output-file")
                 return
             elif len(self.output_file) != len(outputs):
                 print(
