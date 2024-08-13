@@ -644,7 +644,7 @@ class FullNodeSimulator(FullNodeAPI):
         amounts: List[uint64],
         wallet: Wallet,
         per_transaction_record_group: int = 50,
-        timeout: Union[None, float] = 15,
+        timeout: Union[None, float] = 30,
     ) -> Set[Coin]:
         """Create coins with the requested amount.  This is useful when you need a
         bunch of coins for a test and don't need to farm that many.
