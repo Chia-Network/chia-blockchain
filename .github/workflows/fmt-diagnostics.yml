@@ -68,10 +68,7 @@ jobs:
             ls -l "${diag}"
             for prefix in Runner_ Worker_
             do
-              ls -1t ${diag}/${prefix}*.log > logs
-              log=$(head -n 1 logs)
-              echo ${log}
-              cp ${log} artifacts/
+              cp ${diag}/${prefix}*.log artifacts/
             done
           else
             echo "No diagnostics directory found at ${diag}"
