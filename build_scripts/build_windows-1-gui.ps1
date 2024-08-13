@@ -4,13 +4,7 @@ $ErrorActionPreference = "Stop"
 
 git status
 
-Write-Output "   ---"
-Write-Output "Setup npm packager"
-Write-Output "   ---"
-Set-Location -Path ".\npm_windows" -PassThru
-npm ci
-
-Set-Location -Path "..\..\" -PassThru
+Set-Location -Path "..\" -PassThru
 git submodule update --init chia-blockchain-gui
 
 Set-Location -Path ".\chia-blockchain-gui" -PassThru
@@ -20,8 +14,8 @@ Write-Output "Build GUI npm modules"
 Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 
-Write-Output "lerna clean -y"
-npx lerna clean -y
+Write-Output "npx lerna clean -y"
+npx lerna clean -y # Removes packages/*/node_modules
 Write-Output "npm ci"
 npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663

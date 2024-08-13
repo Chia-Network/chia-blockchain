@@ -156,8 +156,7 @@ class Formatter:
                     continue
                 elif ch == b"(":
                     self.paren_level += 1
-                    if self.paren_level > max_paren_level:
-                        max_paren_level = self.paren_level
+                    max_paren_level = max(max_paren_level, self.paren_level)
 
                     if should_reset_indent:
                         self.reset_indent(line_indent + i)

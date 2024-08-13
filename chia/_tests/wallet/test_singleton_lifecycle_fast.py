@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast, get_args, get_origin
 
 from chia_rs import G1Element, G2Element
 from clvm_tools import binutils
@@ -16,7 +16,6 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
-from chia.util.misc import satisfies_hint
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
@@ -38,6 +37,41 @@ POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00
 
 MAX_BLOCK_COST_CLVM = int(1e18)
 
+T = TypeVar("T")
+
+
+def satisfies_hint(obj: T, type_hint: Type[T]) -> bool:
+    """
+    Check if an object satisfies a type hint.
+    This is a simplified version of `isinstance` that also handles generic types.
+    """
+    # Start from the initial type hint
+    object_hint_pairs = [(obj, type_hint)]
+    while len(object_hint_pairs) > 0:
+        obj, type_hint = object_hint_pairs.pop()
+        origin = get_origin(type_hint)
+        args = get_args(type_hint)
+        if origin:
+            # Handle generic types
+            if not isinstance(obj, origin):
+                return False
+            if len(args) > 0:
+                # Tuple[T, ...] gets handled just like List[T]
+                if origin is list or (origin is tuple and args[-1] is Ellipsis):
+                    object_hint_pairs.extend((item, args[0]) for item in obj)
+                elif origin is tuple:
+                    object_hint_pairs.extend((item, arg) for item, arg in zip(obj, args))
+                elif origin is dict:
+                    object_hint_pairs.extend((k, args[0]) for k in obj.keys())
+                    object_hint_pairs.extend((v, args[1]) for v in obj.values())
+                else:
+                    raise NotImplementedError(f"Type {origin} is not yet supported")
+        else:
+            # Handle concrete types
+            if type(obj) is not type_hint:
+                return False
+    return True
+
 
 class PuzzleDB:
     def __init__(self) -> None:
@@ -48,9 +82,6 @@ class PuzzleDB:
 
     def puzzle_for_hash(self, puzzle_hash: bytes32) -> Optional[Program]:
         return self._db.get(puzzle_hash)
-
-
-T = TypeVar("T")
 
 
 def from_kwargs(kwargs: Dict[str, Any], key: str, type_info: Type[T]) -> T:
@@ -141,7 +172,7 @@ def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], 
     pool_member_spend_type = from_kwargs(kwargs, "pool_member_spend_type", str)
     allowable = ["to-waiting-room", "claim-p2-nft"]
     if pool_member_spend_type not in allowable:
-        raise ValueError("`pool_member_spend_type` must be one of %s for POOL_MEMBER puzzle" % "/".join(allowable))
+        raise ValueError(f"`pool_member_spend_type` must be one of {'/'.join(allowable)} for POOL_MEMBER puzzle")
     to_waiting_room = pool_member_spend_type == "to-waiting-room"
     if to_waiting_room:
         key_value_list = from_kwargs(kwargs, "key_value_list", Program)
@@ -159,7 +190,7 @@ def solve_pool_waiting_room(
     pool_leaving_spend_type = from_kwargs(kwargs, "pool_leaving_spend_type", str)
     allowable = ["exit-waiting-room", "claim-p2-nft"]
     if pool_leaving_spend_type not in allowable:
-        raise ValueError("`pool_leaving_spend_type` must be one of %s for POOL_MEMBER puzzle" % "/".join(allowable))
+        raise ValueError(f"`pool_leaving_spend_type` must be one of {'/'.join(allowable)} for POOL_MEMBER puzzle")
     exit_waiting_room = pool_leaving_spend_type == "exit-waiting-room"
     if exit_waiting_room:
         key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, str]])
@@ -176,7 +207,7 @@ def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program],
     p2_singleton_spend_type = from_kwargs(kwargs, "p2_singleton_spend_type", str)
     allowable = ["claim-p2-nft", "delayed-spend"]
     if p2_singleton_spend_type not in allowable:
-        raise ValueError("`p2_singleton_spend_type` must be one of %s for P2_SINGLETON puzzle" % "/".join(allowable))
+        raise ValueError(f"`p2_singleton_spend_type` must be one of {'/'.join(allowable)} for P2_SINGLETON puzzle")
     claim_p2_nft = p2_singleton_spend_type == "claim-p2-nft"
     if claim_p2_nft:
         singleton_inner_puzzle_hash = from_kwargs(kwargs, "singleton_inner_puzzle_hash", bytes32)
@@ -263,7 +294,7 @@ def adaptor_for_singleton_inner_puzzle(puzzle: Program) -> Program:
     puzzle to work as a singleton inner puzzle.
     """
     # this is pretty slow and lame
-    program = binutils.assemble("(a (q . %s) 3)" % binutils.disassemble(puzzle))
+    program = binutils.assemble(f"(a (q . {binutils.disassemble(puzzle)}) 3)")
     return Program.to(program)
 
 

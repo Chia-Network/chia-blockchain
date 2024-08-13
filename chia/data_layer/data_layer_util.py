@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
-from enum import IntEnum
+from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
-# TODO: remove or formalize this
-import aiosqlite as aiosqlite
+import aiosqlite
 from typing_extensions import final
 
 from chia.data_layer.data_layer_errors import ProofIntegrityError
@@ -86,7 +85,11 @@ async def _debug_dump(db: DBWrapper2, description: str = "") -> None:
                 print(f"        {dict(row)}")
 
 
-async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
+async def _dot_dump(
+    data_store: DataStore,
+    store_id: bytes32,
+    root_hash: bytes32,
+) -> str:
     terminal_nodes = await data_store.get_keys_values(store_id=store_id, root_hash=root_hash)
     internal_nodes = await data_store.get_internal_nodes(store_id=store_id, root_hash=root_hash)
 
@@ -323,6 +326,19 @@ class InternalNode:
 
         # TODO: real exception considerations
         raise Exception("provided hash not present")
+
+
+class Unspecified(Enum):
+    # not beautiful, improve when a better way is known
+    # https://github.com/python/typing/issues/236#issuecomment-229515556
+
+    instance = None
+
+    def __repr__(self) -> str:
+        return "Unspecified"
+
+
+unspecified = Unspecified.instance
 
 
 @dataclass(frozen=True)
@@ -751,7 +767,7 @@ class PluginRemote:
     def unmarshal(cls, marshalled: Dict[str, Any]) -> PluginRemote:
         return cls(
             url=marshalled["url"],
-            headers=marshalled["headers"],
+            headers=marshalled.get("headers", {}),
         )
 
 

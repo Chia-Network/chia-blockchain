@@ -24,11 +24,11 @@ from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import Self, api_request
+from chia.util.batches import to_batches
 from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
-from chia.util.misc import to_batches
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.wallet_node import Balance, WalletNode
@@ -640,8 +640,9 @@ async def test_transaction_send_cache(
     )
 
     # Generate the transaction
-    [tx] = await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), DEFAULT_TX_CONFIG)
-    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), action_scope)
+    [tx] = action_scope.side_effects.transactions
 
     # Make sure it is sent to the peer
     await wallet_node._resend_queue()
@@ -719,3 +720,67 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     with pytest.raises(PeerRequestException):
         await wallet_node.get_coin_state([], wallet_node.get_full_node_peer())
+
+
+@pytest.mark.anyio
+@pytest.mark.standard_block_tools
+async def test_start_with_multiple_key_types(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+
+    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+        wallet_node._close()
+        await wallet_node._await_closed(shutting_down=False)
+        await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
+
+    initial_sk = wallet_node.wallet_state_manager.private_key
+
+    pk: G1Element = await wallet_node.keychain_proxy.add_key(
+        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        None,
+        private=False,
+    )
+    fingerprint_pk: int = pk.get_fingerprint()
+
+    await restart_with_fingerprint(fingerprint_pk)
+    assert wallet_node.wallet_state_manager.private_key is None
+    assert wallet_node.wallet_state_manager.root_pubkey == G1Element()
+
+    await wallet_node.keychain_proxy.delete_key_by_fingerprint(fingerprint_pk)
+
+    await restart_with_fingerprint(fingerprint_pk)
+    assert wallet_node.wallet_state_manager.private_key == initial_sk
+
+
+@pytest.mark.anyio
+@pytest.mark.standard_block_tools
+async def test_start_with_multiple_keys(
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+) -> None:
+    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+
+    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+        wallet_node._close()
+        await wallet_node._await_closed(shutting_down=False)
+        await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
+
+    initial_sk = wallet_node.wallet_state_manager.private_key
+
+    sk_2: PrivateKey = await wallet_node.keychain_proxy.add_key(
+        (
+            "cup smoke miss park baby say island tomorrow segment lava bitter easily settle gift "
+            "renew arrive kangaroo dilemma organ skin design salt history awesome"
+        ),
+        None,
+        private=True,
+    )
+    fingerprint_2: int = sk_2.get_g1().get_fingerprint()
+
+    await restart_with_fingerprint(fingerprint_2)
+    assert wallet_node.wallet_state_manager.private_key == sk_2
+
+    await wallet_node.keychain_proxy.delete_key_by_fingerprint(fingerprint_2)
+
+    await restart_with_fingerprint(fingerprint_2)
+    assert wallet_node.wallet_state_manager.private_key == initial_sk

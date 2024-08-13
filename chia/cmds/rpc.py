@@ -110,9 +110,7 @@ def status_cmd(json_output: bool) -> None:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
 
     def print_row(c0: str, c1: str) -> None:
-        c0 = "{:<12}".format(f"{c0}")
-        c1 = "{:<9}".format(f"{c1}")
-        print(f"│ {c0} │ {c1} │")
+        print(f"│ {c0:<12} │ {c1:<9} │")
 
     status_data = {}
     for service in services:

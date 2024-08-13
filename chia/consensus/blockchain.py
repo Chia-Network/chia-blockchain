@@ -13,6 +13,8 @@ from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
+from chia_rs import BLSCache
+
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -45,13 +47,12 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.cached_bls import BLSCache
+from chia.util.cpu import available_logical_cores
 from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
-from chia.util.misc import available_logical_cores
 from chia.util.priority_mutex import PriorityMutex
 from chia.util.setproctitle import getproctitle, setproctitle
 
@@ -539,8 +540,11 @@ class Blockchain(BlockchainInterface):
             return [], None
 
         if peak is not None:
-            if block_record.weight <= peak.weight:
+            if block_record.weight < peak.weight:
                 # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
+                return [], None
+            if block_record.weight == peak.weight and peak.total_iters <= block_record.total_iters:
+                # this is an equal weight block but our peak has lower iterations, so we dont change the coin set
                 return [], None
 
             if block_record.prev_hash != peak.header_hash:
@@ -1069,7 +1073,7 @@ class Blockchain(BlockchainInterface):
             assert len(ref_list) == 0
             return None
         if len(ref_list) == 0:
-            return BlockGenerator(block.transactions_generator, [], [])
+            return BlockGenerator(block.transactions_generator, [])
 
         result: List[SerializedProgram] = []
         previous_br = await self.get_block_record_from_db(block.prev_header_hash)
@@ -1116,4 +1120,4 @@ class Blockchain(BlockchainInterface):
                     [gen] = await self.block_store.get_generators_at([ref_height])
                     result.append(gen)
         assert len(result) == len(ref_list)
-        return BlockGenerator(block.transactions_generator, result, [])
+        return BlockGenerator(block.transactions_generator, result)
