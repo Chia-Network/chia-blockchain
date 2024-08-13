@@ -3046,13 +3046,13 @@ files = [
 
 [[package]]
 name = "types-setuptools"
-version = "70.0.0.20240524"
+version = "71.1.0.20240813"
 description = "Typing stubs for setuptools"
 optional = true
 python-versions = ">=3.8"
 files = [
-    {file = "types-setuptools-70.0.0.20240524.tar.gz", hash = "sha256:e31fee7b9d15ef53980526579ac6089b3ae51a005a281acf97178e90ac71aff6"},
-    {file = "types_setuptools-70.0.0.20240524-py3-none-any.whl", hash = "sha256:8f5379b9948682d72a9ab531fbe52932e84c4f38deda570255f9bae3edd766bc"},
+    {file = "types-setuptools-71.1.0.20240813.tar.gz", hash = "sha256:94ff4f0af18c7c24ac88932bcb0f5655fb7187a001b7c61e53a1bfdaf9877b54"},
+    {file = "types_setuptools-71.1.0.20240813-py3-none-any.whl", hash = "sha256:d9d9ba2936f5d3b47b59ae9bf65942a60063ac1d6bbee180a8a79fbb43f22ce5"},
 ]
 
 [[package]]
@@ -3438,4 +3438,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "96b95db816b626a96b446b0a1da1dee5d05429b05a3bf393701be1b75b7c43d8"
+content-hash = "8dbbe0d0f503b75ac3bb9f020df7ac9fd0cfeb2c43cfb2c423dbc008618b8104"
