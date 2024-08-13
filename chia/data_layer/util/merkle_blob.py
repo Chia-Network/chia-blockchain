@@ -41,12 +41,20 @@ class NodeType(IntEnum):
 class MerkleBlob:
     blob: bytearray
     kv_to_index: Dict[KVId, TreeIndex] = field(default_factory=dict)
+    free_indexes: List[TreeIndex] = field(default_factory=list)
+    last_allocated_index: TreeIndex = TreeIndex(0)
 
     def __post_init__(self) -> None:
         self.kv_to_index = self.get_keys_values_indexes()
+        self.last_allocated_index = TreeIndex(len(self.blob) // spacing)
+        self.free_indexes = self.get_free_indexes()
 
     def get_new_index(self) -> TreeIndex:
-        return TreeIndex(len(self.blob) // spacing)
+        if len(self.free_indexes) == 0:
+            self.last_allocated_index += 1
+            return self.last_allocated_index - 1
+
+        return self.free_indexes.pop()
 
     def get_raw_node(self, index: TreeIndex) -> RawMerkleNodeProtocol:
         if index < 0 or null_parent <= index:
@@ -195,7 +203,7 @@ class MerkleBlob:
         kv_to_index: Dict[KVId, TreeIndex] = {}
         queue: List[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
-            node_index = queue.pop(0)
+            node_index = queue.pop()
             node = self.get_raw_node(node_index)
             if isinstance(node, RawLeafMerkleNode):
                 kv_to_index[node.key_value] = node_index
@@ -206,6 +214,33 @@ class MerkleBlob:
 
         return kv_to_index
 
+    def get_free_indexes(self) -> List[TreeIndex]:
+        if len(self.blob) == 0:
+            return []
+
+        free_indexes: Set[TreeIndex] = set(range(self.last_allocated_index))
+        queue: List[TreeIndex] = [TreeIndex(0)]
+        while len(queue) > 0:
+            node_index = queue.pop()
+            node = self.get_raw_node(node_index)
+            assert node_index in free_indexes
+            free_indexes.remove(node_index)
+            if isinstance(node, RawInternalMerkleNode):
+                queue.append(node.left)
+                queue.append(node.right)
+
+        return list(free_indexes)
+
+    def insert_entry_to_blob(self, index: TreeIndex, entry: bytes) -> None:
+        extend_index = TreeIndex(len(self.blob) // spacing)
+        assert index <= extend_index
+        if index == extend_index:
+            self.blob.extend(entry)
+        else:
+            start_index = index * spacing
+            end_index = (index + 1) * spacing
+            self.blob[start_index:end_index] = entry
+
     def insert(self, key_value: KVId, hash: bytes) -> None:
         if len(self.blob) == 0:
             self.blob.extend(
@@ -213,6 +248,8 @@ class MerkleBlob:
                 + pack_raw_node(RawLeafMerkleNode(null_parent, key_value, hash, TreeIndex(0)))
             )
             self.kv_to_index[key_value] = TreeIndex(0)
+            self.free_indexes = []
+            self.last_allocated_index = TreeIndex(1)
             return
 
         seed = std_hash(key_value.to_bytes(8, byteorder="big"))
@@ -238,16 +275,19 @@ class MerkleBlob:
             for index, leaf in enumerate([leaf_1, leaf_2], start=1):
                 self.blob.extend(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(leaf))
                 self.kv_to_index[leaf.key_value] = TreeIndex(index)
+            self.free_indexes = []
+            self.last_allocated_index = TreeIndex(3)
             return
 
         new_leaf_index = self.get_new_index()
-        new_internal_node_index = TreeIndex(self.get_new_index() + 1)
-
-        self.blob.extend(
+        new_internal_node_index = self.get_new_index()
+        self.insert_entry_to_blob(
+            new_leaf_index,
             NodeMetadata(type=NodeType.leaf, dirty=False).pack()
             + pack_raw_node(RawLeafMerkleNode(new_internal_node_index, key_value, hash, new_leaf_index))
         )
-        self.blob.extend(
+        self.insert_entry_to_blob(
+            new_internal_node_index,
             NodeMetadata(type=NodeType.internal, dirty=False).pack()
             + pack_raw_node(
                 RawInternalMerkleNode(
@@ -282,10 +322,13 @@ class MerkleBlob:
 
         parent_index = leaf.parent
         if parent_index == null_parent:
+            self.free_indexes = []
+            self.last_allocated_index = TreeIndex(0)
             self.blob.clear()
             return
-        parent = self.get_raw_node(parent_index)
 
+        self.free_indexes.append(leaf_index)
+        parent = self.get_raw_node(parent_index)
         assert isinstance(parent, RawInternalMerkleNode)
         sibling_index = parent.get_sibling_index(leaf_index)
 
@@ -307,8 +350,10 @@ class MerkleBlob:
                     self.update_entry(son_index, parent=TreeIndex(0))
             return
 
+        self.free_indexes.append(parent_index)
         grandparent = self.get_raw_node(grandparent_index)
         assert isinstance(grandparent, RawInternalMerkleNode)
+
         self.update_entry(sibling_index, parent=grandparent_index)
         if grandparent.left == parent_index:
             self.update_entry(grandparent_index, left=sibling_index)

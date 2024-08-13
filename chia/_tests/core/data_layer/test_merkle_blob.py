@@ -214,12 +214,15 @@ def test_insert_delete_loads_all_keys() -> None:
 
     random = Random()
     random.seed(100, version=2)
+    expected_num_entries = 0
+    current_num_entries = 0
 
     for key in range(num_keys):
         if (key + 1) % 10 == 0:
             kv_id = random.choice(list(keys_values))
             keys_values.remove(kv_id)
             merkle_blob.delete(kv_id)
+            current_num_entries -= 2
         else:
             kv_id = generate_kvid(key)
             hash = generate_hash(key)
@@ -228,6 +231,13 @@ def test_insert_delete_loads_all_keys() -> None:
             lineage = merkle_blob.get_lineage(TreeIndex(key_index))
             assert len(lineage) <= max_height
             keys_values.add(kv_id)
+            if key == 0:
+                current_num_entries = 1
+            else:
+                current_num_entries += 2
+
+        expected_num_entries = max(expected_num_entries, current_num_entries)
+        assert len(merkle_blob.blob) // spacing == expected_num_entries
 
     assert set(merkle_blob.get_keys_values_indexes().keys()) == keys_values
 
@@ -304,7 +314,8 @@ def test_proof_of_inclusion_merkle_blob() -> None:
 
 @pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(-1), TreeIndex(1), TreeIndex(null_parent)])
 def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
-    merkle_blob = MerkleBlob(blob=bytearray([0] * spacing))
+    merkle_blob = MerkleBlob(blob=bytearray())
+    merkle_blob.insert(KVId(0x1415161718191A1B), bytes(range(12, data_size)))
 
     with pytest.raises(InvalidIndexError):
         merkle_blob.get_raw_node(index)
