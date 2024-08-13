@@ -287,6 +287,11 @@ class WalletNode:
         self, fingerprint: Optional[int], private: bool
     ) -> Optional[Union[SecretInfo[Any], ObservationRoot]]: ...
 
+    @overload
+    async def get_key(
+        self, fingerprint: Optional[int], private: bool, find_a_default: bool
+    ) -> Optional[Union[SecretInfo[Any], ObservationRoot]]: ...
+
     async def get_key(
         self, fingerprint: Optional[int], private: bool = True, find_a_default: bool = True
     ) -> Optional[Union[SecretInfo[Any], ObservationRoot]]:

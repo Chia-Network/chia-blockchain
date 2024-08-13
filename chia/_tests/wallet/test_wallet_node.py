@@ -750,7 +750,7 @@ async def test_start_with_multiple_keys(
 
     initial_sk = wallet_node.wallet_state_manager.private_key
 
-    sk_2: PrivateKey = (
+    sk_2 = (
         await wallet_node.keychain_proxy.add_key(
             (
                 "cup smoke miss park baby say island tomorrow segment lava bitter easily settle gift "
@@ -760,7 +760,7 @@ async def test_start_with_multiple_keys(
             private=True,
         )
     )[0]
-    fingerprint_2: int = sk_2.get_g1().get_fingerprint()
+    fingerprint_2: int = sk_2.public_key().get_fingerprint()
 
     await restart_with_fingerprint(fingerprint_2)
     assert wallet_node.wallet_state_manager.private_key == sk_2

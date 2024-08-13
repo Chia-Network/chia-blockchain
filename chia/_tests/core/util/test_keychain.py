@@ -321,9 +321,9 @@ def test_key_data_without_secrets(key_info: KeyInfo) -> None:
 @pytest.mark.parametrize(
     "input_data, data_type",
     [
-        ((mnemonic.split()[:-1], _24keyinfo.entropy, _24keyinfo.private_key), "mnemonic"),
-        ((mnemonic.split(), KeyDataSecrets.generate().entropy, _24keyinfo.private_key), "entropy"),
-        ((mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().secret_info_bytes), "private_key"),
+        ((_24keyinfo.mnemonic.split()[:-1], _24keyinfo.entropy, _24keyinfo.private_key), "mnemonic"),
+        ((_24keyinfo.mnemonic.split(), KeyDataSecrets.generate().entropy, _24keyinfo.private_key), "entropy"),
+        ((_24keyinfo.mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().secret_info_bytes), "private_key"),
     ],
 )
 def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, bytes], data_type: str) -> None:
@@ -339,7 +339,7 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, bytes], 
                 _24keyinfo.fingerprint,
                 bytes(G1Element()),
                 None,
-                KeyDataSecrets(_24keyinfo.mnemonic.split(), _24keyinfo.entropy, _24keyinfo.private_key),
+                KeyDataSecrets(_24keyinfo.mnemonic.split(), _24keyinfo.entropy, bytes(_24keyinfo.private_key)),
                 KeyTypes.G1_ELEMENT.value,
             ),
             "public_key",
