@@ -36,7 +36,7 @@ def test_puzzle_info() -> None:
     assert puzzle_info == PuzzleInfo(capitalize_bytes)
 
     obj: Union[PuzzleInfo, Solver]
-    for obj in (puzzle_info, solver):  # type: ignore
+    for obj in (puzzle_info, solver):
         assert obj["string"] == "hello"
         assert obj["bytes"] == bytes.fromhex("cafef00d")
         assert obj["int"] == 123

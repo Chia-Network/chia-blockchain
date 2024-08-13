@@ -64,8 +64,7 @@ def to_sp(sexp: bytes) -> SerializedProgram:
 
 def block_generator() -> BlockGenerator:
     generator_list = [to_sp(FIRST_GENERATOR), to_sp(SECOND_GENERATOR)]
-    generator_heights = [uint32(0), uint32(1)]
-    return BlockGenerator(to_sp(COMPILED_GENERATOR_CODE), generator_list, generator_heights)
+    return BlockGenerator(to_sp(COMPILED_GENERATOR_CODE), generator_list)
 
 
 EXPECTED_ABBREVIATED_COST = 108379

@@ -10,6 +10,7 @@ from time import sleep
 
 from chia._tests.core.util.test_lockfile import wait_for_enough_files_in_directory
 from chia.simulator.keyring import TempKeyring
+from chia.util.file_keyring import Key
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.util.timing import adjusted_timeout
 
@@ -40,9 +41,9 @@ def dummy_set_passphrase(service, user, passphrase, keyring_path, index):
             sleep(0.1)
         assert started
 
-        KeyringWrapper.get_shared_instance().set_passphrase(service=service, user=user, passphrase=passphrase)
+        KeyringWrapper.get_shared_instance().keyring.set_key(service=service, user=user, key=passphrase)
 
-        found_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service, user)
+        found_passphrase = KeyringWrapper.get_shared_instance().keyring.get_key(service, user)
         if found_passphrase != passphrase:
             log.error(
                 f"[pid:{os.getpid()}] error: didn't get expected passphrase: "
@@ -64,7 +65,7 @@ class TestFileKeyringSynchronization:
         num_workers = 10
         keyring_path = str(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         passphrase_list = [
-            ("test-service", f"test-user-{index}", f"passphrase {index}", keyring_path, index)
+            ("test-service", f"test-user-{index}", Key(f"passphrase {index}".encode()), keyring_path, index)
             for index in range(num_workers)
         ]
 
@@ -100,5 +101,5 @@ class TestFileKeyringSynchronization:
         # Expect: parent process should be able to find all passphrases that were set by the child processes
         for item in passphrase_list:
             expected_passphrase = item[2]
-            actual_passphrase = KeyringWrapper.get_shared_instance().get_passphrase(service=item[0], user=item[1])
+            actual_passphrase = KeyringWrapper.get_shared_instance().keyring.get_key(service=item[0], user=item[1])
             assert expected_passphrase == actual_passphrase

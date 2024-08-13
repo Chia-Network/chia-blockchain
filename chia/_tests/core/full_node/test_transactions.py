@@ -83,10 +83,9 @@ class TestTransactions:
         await time_out_assert(20, peak_height, num_blocks, full_node_api_1)
         await time_out_assert(20, peak_height, num_blocks, full_node_api_2)
 
-        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-            10, ph1, DEFAULT_TX_CONFIG, 0
-        )
-        [tx] = await wallet_0.wallet_state_manager.add_pending_transactions([tx])
+        async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, ph1, action_scope, 0)
+        [tx] = action_scope.side_effects.transactions
 
         await time_out_assert(
             10,
@@ -154,10 +153,11 @@ class TestTransactions:
         )
         await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        [tx] = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-            10, bytes32.random(seeded_random), DEFAULT_TX_CONFIG, 0
-        )
-        [tx] = await wallet_0.wallet_state_manager.add_pending_transactions([tx])
+        async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+                10, bytes32.random(seeded_random), action_scope, 0
+            )
+        [tx] = action_scope.side_effects.transactions
 
         await time_out_assert(
             10,

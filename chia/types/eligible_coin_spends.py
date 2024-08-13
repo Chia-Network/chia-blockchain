@@ -333,16 +333,16 @@ class EligibleCoinSpends:
         )
         # We need to run the new spend bundle to make sure it remains valid
         generator = simple_solution_generator(new_sb)
-        assert mempool_item.npc_result.conds is not None
         new_npc_result = get_name_puzzle_conditions(
             generator=generator,
-            max_cost=mempool_item.npc_result.conds.cost,
+            max_cost=mempool_item.conds.cost,
             mempool_mode=True,
             height=height,
             constants=constants,
         )
         if new_npc_result.error is not None:
             raise ValueError("Mempool item became invalid after singleton fast forward.")
+        assert new_npc_result.conds is not None
         # Update bundle_coin_spends using the collected data
         for coin_id in replaced_coin_ids:
             mempool_item.bundle_coin_spends.pop(coin_id, None)
@@ -354,4 +354,4 @@ class EligibleCoinSpends:
         # change. Still, it's good form to update the spend bundle with the
         # new coin spends
         mempool_item.spend_bundle = new_sb
-        mempool_item.npc_result = new_npc_result
+        mempool_item.conds = new_npc_result.conds
