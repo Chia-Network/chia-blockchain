@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import astuple, dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, ClassVar, Dict, List, NewType, Optional, Protocol, Type, TypeVar, cast, final
+from typing import TYPE_CHECKING, ClassVar, Dict, List, NewType, Optional, Protocol, Set, Type, TypeVar, cast, final
 
 from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -51,8 +51,8 @@ class MerkleBlob:
 
     def get_new_index(self) -> TreeIndex:
         if len(self.free_indexes) == 0:
-            self.last_allocated_index += 1
-            return self.last_allocated_index - 1
+            self.last_allocated_index = TreeIndex(self.last_allocated_index + 1)
+            return TreeIndex(self.last_allocated_index - 1)
 
         return self.free_indexes.pop()
 
@@ -284,7 +284,7 @@ class MerkleBlob:
         self.insert_entry_to_blob(
             new_leaf_index,
             NodeMetadata(type=NodeType.leaf, dirty=False).pack()
-            + pack_raw_node(RawLeafMerkleNode(new_internal_node_index, key_value, hash, new_leaf_index))
+            + pack_raw_node(RawLeafMerkleNode(new_internal_node_index, key_value, hash, new_leaf_index)),
         )
         self.insert_entry_to_blob(
             new_internal_node_index,
@@ -297,7 +297,7 @@ class MerkleBlob:
                     internal_node_hash,
                     new_internal_node_index,
                 )
-            )
+            ),
         )
 
         old_parent_index = old_leaf.parent
