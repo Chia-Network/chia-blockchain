@@ -16,7 +16,6 @@ from typing import (
     Union,
     get_args,
     get_type_hints,
-    overload,
 )
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
@@ -113,16 +112,13 @@ def is_compound_type(typ: Any) -> bool:
 
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
 #       useful for now
-@overload
-def is_clvm_streamable(v: Type[object]) -> TypeGuard[Type[Streamable]]: ...
-@overload
-def is_clvm_streamable(v: object) -> TypeGuard[Streamable]: ...
+def is_clvm_streamable_type(v: Type[object]) -> TypeGuard[Type[Streamable]]:
+    return issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
 
 
-def is_clvm_streamable(v: Union[object, Type[object]]) -> bool:
-    if isinstance(v, type):
-        return issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
-
+# TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
+#       useful for now
+def is_clvm_streamable(v: object) -> TypeGuard[Streamable]:
     return isinstance(v, Streamable) and hasattr(v, "_clvm_streamable")
 
 
@@ -141,7 +137,7 @@ def json_deserialize_with_clvm_streamable(
         for old_field in old_streamable_fields:
             if is_compound_type(old_field.type):
                 inner_type = get_args(old_field.type)[0]
-                if is_clvm_streamable(inner_type):
+                if is_clvm_streamable_type(inner_type):
                     new_streamable_fields.append(
                         dataclasses.replace(
                             old_field,
@@ -157,7 +153,7 @@ def json_deserialize_with_clvm_streamable(
                     )
                 else:
                     new_streamable_fields.append(old_field)
-            elif is_clvm_streamable(old_field.type):
+            elif is_clvm_streamable_type(old_field.type):
                 new_streamable_fields.append(
                     dataclasses.replace(
                         old_field,
