@@ -186,6 +186,16 @@ async def pre_validate_blocks_multiprocessing(
     recent_blocks: Dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
     num_blocks_seen = 0
+
+    # keep track on what was in cache
+    block_record_was_present: List[bool] = []
+    block_hashes: List[bytes32] = []
+    for block in blocks:
+        header_hash = block.header_hash
+        block_hashes.append(header_hash)
+        block_record_was_present.append(block_records.contains_block(header_hash))
+
+    # load blocks to cache
     if blocks[0].height > 0:
         curr = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
         if curr is None:
@@ -201,19 +211,14 @@ async def pre_validate_blocks_multiprocessing(
                 assert curr.finished_challenge_slot_hashes is not None
                 num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
             recent_blocks[header_hash] = curr
+            block_records.add_block_record(curr)
             if curr.is_transaction_block:
                 num_blocks_seen += 1
             header_hash = curr.prev_hash
             curr = await block_records.get_block_record_from_db(curr.prev_hash)
             assert curr is not None
+        block_records.add_block_record(curr)
         recent_blocks[header_hash] = curr
-    block_record_was_present = []
-
-    block_hashes: List[bytes32] = []
-    for block in blocks:
-        header_hash = block.header_hash
-        block_hashes.append(header_hash)
-        block_record_was_present.append(block_records.contains_block(header_hash))
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
@@ -221,27 +226,11 @@ async def pre_validate_blocks_multiprocessing(
             if prev_b is None:
                 prev_b = await block_records.get_block_record_from_db(block.prev_header_hash)
             assert prev_b is not None
-
             # the call to block_to_block_record() requires the previous
             # block is in the cache
             # and make_sub_epoch_summary() requires all blocks until we find one
             # that includes a sub_epoch_summary
             curr = prev_b
-            block_records.add_block_record(curr)
-            counter = 0
-            # TODO: It would probably be better to make
-            # get_next_sub_slot_iters_and_difficulty() async and able to pull
-            # from the database rather than trying to predict which blocks it
-            # may need in the cache
-            while (
-                curr.sub_epoch_summary_included is None
-                or counter < 3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
-            ):
-                curr = await block_records.get_block_record_from_db(curr.prev_hash)
-                if curr is None:
-                    break
-                block_records.add_block_record(curr)
-                counter += 1
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
@@ -257,8 +246,8 @@ async def pre_validate_blocks_multiprocessing(
             block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=block.height
         )
         if q_str is None:
-            for i, block_i in enumerate(blocks):
-                if not block_record_was_present[i] and block_records.contains_block(block_hashes[i]):
+            for i, was_cached in enumerate(block_record_was_present):
+                if not was_cached and block_records.contains_block(block_hashes[i]):
                     block_records.remove_block_record(block_hashes[i])
             return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False, uint32(0))]
 
@@ -297,6 +286,7 @@ async def pre_validate_blocks_multiprocessing(
         diff_ssis.append((difficulty, sub_slot_iters))
 
     block_dict: Dict[bytes32, FullBlock] = {}
+    # revert cache back
     for i, block in enumerate(blocks):
         block_dict[block_hashes[i]] = block
         if not block_record_was_present[i]:
