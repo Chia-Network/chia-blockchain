@@ -378,7 +378,7 @@ class Farmer:
             )
         )
         signature: G2Element = AugSchemeMPL.sign(authentication_sk, message)
-        get_farmer_params = {
+        get_farmer_params: dict[str, Union[str, int]] = {
             "launcher_id": pool_config.launcher_id.hex(),
             "authentication_token": authentication_token,
             "signature": bytes(signature).hex(),
