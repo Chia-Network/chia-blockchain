@@ -73,7 +73,7 @@ def json_serialize_with_clvm_streamable(
 ) -> Union[str, Dict[str, Any]]:
     if next_recursion_step is None:
         next_recursion_step = recurse_jsonify
-    if hasattr(streamable, "_clvm_streamable"):
+    if is_clvm_streamable(type(streamable)):
         # If we are using clvm_serde, we stop JSON serialization at this point and instead return the clvm blob
         return byte_serialize_clvm_streamable(streamable, translation_layer=translation_layer).hex()
     else:
@@ -131,7 +131,7 @@ def json_deserialize_with_clvm_streamable(
         for old_field in old_streamable_fields:
             if is_compound_type(old_field.type):
                 inner_type = get_args(old_field.type)[0]
-                if hasattr(inner_type, "_clvm_streamable"):
+                if is_clvm_streamable(inner_type):
                     new_streamable_fields.append(
                         dataclasses.replace(
                             old_field,
