@@ -3,7 +3,20 @@ from __future__ import annotations
 import dataclasses
 import functools
 from types import MappingProxyType
-from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar, Union, get_args, get_type_hints
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Type,
+    TypeGuard,
+    TypeVar,
+    Union,
+    get_args,
+    get_type_hints,
+)
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
 
@@ -97,6 +110,12 @@ def is_compound_type(typ: Any) -> bool:
     return is_type_SpecificOptional(typ) or is_type_Tuple(typ) or is_type_List(typ)
 
 
+# TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
+#       useful for now
+def is_clvm_streamable(cls: Type[object]) -> TypeGuard[Type[Streamable]]:
+    return issubclass(cls, Streamable) and hasattr(cls, "_clvm_streamable")
+
+
 def json_deserialize_with_clvm_streamable(
     json_dict: Union[str, Dict[str, Any]],
     streamable_type: Type[_T_Streamable],
@@ -128,7 +147,7 @@ def json_deserialize_with_clvm_streamable(
                     )
                 else:
                     new_streamable_fields.append(old_field)
-            elif hasattr(old_field.type, "_clvm_streamable"):
+            elif is_clvm_streamable(old_field.type):
                 new_streamable_fields.append(
                     dataclasses.replace(
                         old_field,
