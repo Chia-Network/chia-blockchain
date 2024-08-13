@@ -16,6 +16,7 @@ from typing import (
     Union,
     get_args,
     get_type_hints,
+    overload,
 )
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
@@ -66,14 +67,14 @@ def byte_serialize_clvm_streamable(
 
 
 def json_serialize_with_clvm_streamable(
-    streamable: Any,
+    streamable: object,
     next_recursion_step: Optional[Callable[..., Dict[str, Any]]] = None,
     translation_layer: Optional[TranslationLayer] = None,
     **next_recursion_env: Any,
 ) -> Union[str, Dict[str, Any]]:
     if next_recursion_step is None:
         next_recursion_step = recurse_jsonify
-    if is_clvm_streamable(type(streamable)):
+    if is_clvm_streamable(streamable):
         # If we are using clvm_serde, we stop JSON serialization at this point and instead return the clvm blob
         return byte_serialize_clvm_streamable(streamable, translation_layer=translation_layer).hex()
     else:
@@ -112,8 +113,17 @@ def is_compound_type(typ: Any) -> bool:
 
 # TODO: this is more than _just_ a Streamable, but it is also a Streamable and that's
 #       useful for now
-def is_clvm_streamable(cls: Type[object]) -> TypeGuard[Type[Streamable]]:
-    return issubclass(cls, Streamable) and hasattr(cls, "_clvm_streamable")
+@overload
+def is_clvm_streamable(v: Type[object]) -> TypeGuard[Type[Streamable]]: ...
+@overload
+def is_clvm_streamable(v: object) -> TypeGuard[Streamable]: ...
+
+
+def is_clvm_streamable(v: Union[object, Type[object]]) -> bool:
+    if isinstance(v, type):
+        return issubclass(v, Streamable) and hasattr(v, "_clvm_streamable")
+
+    return isinstance(v, Streamable) and hasattr(v, "_clvm_streamable")
 
 
 def json_deserialize_with_clvm_streamable(
