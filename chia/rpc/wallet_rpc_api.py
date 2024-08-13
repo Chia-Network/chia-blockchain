@@ -975,9 +975,9 @@ class WalletRpcApi:
                     if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
 
-                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.get_master_private_key(), uint32(max_pwi + 1)
-                    )
+                    master_sk = self.service.wallet_state_manager.get_master_private_key()
+                    assert isinstance(master_sk, PrivateKey), "Pooling only works with BLS keys at this time"
+                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(master_sk, uint32(max_pwi + 1))
                     owner_pk: G1Element = owner_sk.get_g1()
 
                     initial_target_state = initial_pool_state_from_dict(

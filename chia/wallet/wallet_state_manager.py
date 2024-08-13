@@ -60,6 +60,7 @@ from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.observation_root import ObservationRoot
 from chia.util.path import path_from_root
+from chia.util.secret_info import SecretInfo
 from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
@@ -202,7 +203,7 @@ class WalletStateManager:
 
     main_wallet: MainWalletProtocol
     wallets: Dict[uint32, WalletProtocol[Any]]
-    private_key: Optional[PrivateKey]
+    private_key: Optional[SecretInfo[Any]]
     observation_root: ObservationRoot
 
     trade_manager: TradeManager
@@ -225,7 +226,7 @@ class WalletStateManager:
 
     @staticmethod
     async def create(
-        private_key: Optional[PrivateKey],
+        private_key: Optional[SecretInfo[Any]],
         config: Dict[str, Any],
         db_path: Path,
         constants: ConsensusConstants,
@@ -293,7 +294,7 @@ class WalletStateManager:
             else:
                 self.observation_root = observation_root
         else:
-            calculated_root_public_key: G1Element = private_key.get_g1()
+            calculated_root_public_key: ObservationRoot = private_key.public_key()
             if observation_root is not None:
                 assert observation_root == calculated_root_public_key
             self.observation_root = calculated_root_public_key
@@ -392,13 +393,17 @@ class WalletStateManager:
             raise ValueError("Public key derivation is not supported for non-G1Element keys")
         return master_pk_to_wallet_pk_unhardened(self.observation_root, index)
 
-    async def get_private_key(self, puzzle_hash: bytes32) -> PrivateKey:
+    async def get_private_key(self, puzzle_hash: bytes32) -> SecretInfo[Any]:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
         if record is None:
             raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
+        sk = self.get_master_private_key()
+        # This will need to work when other key types are derivable but for now we will just sanitize and move on
+        assert isinstance(sk, PrivateKey)
         if record.hardened:
-            return master_sk_to_wallet_sk(self.get_master_private_key(), record.index)
-        return master_sk_to_wallet_sk_unhardened(self.get_master_private_key(), record.index)
+            return master_sk_to_wallet_sk(sk, record.index)
+
+        return master_sk_to_wallet_sk_unhardened(sk, record.index)
 
     async def get_public_key(self, puzzle_hash: bytes32) -> bytes:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
@@ -410,7 +415,7 @@ class WalletStateManager:
             pk_bytes = bytes(record._pubkey)
         return pk_bytes
 
-    def get_master_private_key(self) -> PrivateKey:
+    def get_master_private_key(self) -> SecretInfo[Any]:
         if self.private_key is None:  # pragma: no cover
             raise ValueError("Wallet is currently in observer mode and access to private key is denied")
 
@@ -485,16 +490,18 @@ class WalletStateManager:
             hardened_keys: Dict[int, G1Element] = {}
             unhardened_keys: Dict[int, G1Element] = {}
 
-            if self.private_key is not None:
-                # Hardened
-                intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
-                for index in range(start_index, last_index):
-                    hardened_keys[index] = _derive_path(intermediate_sk, [index]).get_g1()
-
             # This function shoul work for other types of observation roots too
             # However to generalize this function beyond pubkeys is beyond the scope of current work
             # So we're just going to sanitize and move on
             assert isinstance(self.observation_root, G1Element)
+            if self.private_key is not None:
+                assert isinstance(self.private_key, PrivateKey)
+
+            if self.private_key is not None:
+                # Hardened
+                intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
+                for index in range(start_index, last_index):
+                    hardened_keys[index] = _derive_path(intermediate_sk, [index]).public_key()
 
             # Unhardened
             intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.observation_root)

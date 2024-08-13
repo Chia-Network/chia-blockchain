@@ -20,6 +20,7 @@ from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.observation_root import ObservationRoot
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -314,7 +315,7 @@ class Vault(Wallet):
 
         return all_spends
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_for_pk(self, pubkey: ObservationRoot) -> Program:
         raise NotImplementedError("vault wallet")
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
@@ -438,7 +439,7 @@ class Vault(Wallet):
             )
             return puzzle
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+    def puzzle_hash_for_pk(self, pubkey: ObservationRoot) -> bytes32:
         raise ValueError("This won't work")
 
     def require_derivation_paths(self) -> bool:
