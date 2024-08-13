@@ -106,11 +106,6 @@ def create_fields(cls: Type[DataclassInstance]) -> StreamableFields:
     hints = get_type_hints(cls)
     fields = []
     for field in dataclasses.fields(cls):
-        # ok_types = (Streamable, bytes, int, str, bool, list, tuple, type(None))
-        # ok_hint = Union[Type[Streamable], Type[bytes], Type[int], Type[str], Type[bool], Type[None]]
-        # hint: ok_hint = hints[field.name]
-        # assert issubclass(hint, ok_types)
-        # reveal_type(hint)
         hint = hints[field.name]
         fields.append(
             Field(
