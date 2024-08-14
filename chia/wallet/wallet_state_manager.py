@@ -925,7 +925,7 @@ class WalletStateManager:
                 stop=tx_config.coin_selection_config.max_coin_amount,
             ),
         )
-        async with self.new_action_scope(push=True) as action_scope:
+        async with self.new_action_scope(tx_config, push=True) as action_scope:
             for coin in unspent_coins.records:
                 try:
                     metadata: MetadataTypes = coin.parsed_metadata()
@@ -935,30 +935,33 @@ class WalletStateManager:
                         if current_timestamp - coin_timestamp >= metadata.time_lock:
                             clawback_coins[coin.coin] = metadata
                             if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
-                                await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config, action_scope)
+                                await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
                                 async with action_scope.use() as interface:
-                                    tx_config = dataclasses.replace(
-                                        tx_config,
-                                        excluded_coin_ids=[
-                                            *tx_config.excluded_coin_ids,
-                                            *(
-                                                c.name()
-                                                for tx in interface.side_effects.transactions
-                                                for c in tx.removals
-                                            ),
-                                        ],
+                                    # TODO: editing this is not ideal, action scopes should know what coins are spent
+                                    action_scope._config = dataclasses.replace(
+                                        action_scope._config,
+                                        tx_config=dataclasses.replace(
+                                            action_scope._config.tx_config,
+                                            excluded_coin_ids=[
+                                                *action_scope.config.tx_config.excluded_coin_ids,
+                                                *(
+                                                    c.name()
+                                                    for tx in interface.side_effects.transactions
+                                                    for c in tx.removals
+                                                ),
+                                            ],
+                                        ),
                                     )
                                 clawback_coins = {}
                 except Exception as e:
                     self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
             if len(clawback_coins) > 0:
-                await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config, action_scope)
+                await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
 
     async def spend_clawback_coins(
         self,
         clawback_coins: Dict[Coin, ClawbackMetadata],
         fee: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         force: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -1017,10 +1020,9 @@ class WalletStateManager:
             return
         spend_bundle: SpendBundle = SpendBundle(coin_spends, G2Element())
         if fee > 0:
-            async with self.new_action_scope(push=False) as inner_action_scope:
+            async with self.new_action_scope(action_scope.config.tx_config, push=False) as inner_action_scope:
                 await self.main_wallet.create_tandem_xch_tx(
                     fee,
-                    tx_config,
                     inner_action_scope,
                     extra_conditions=(
                         AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
@@ -2785,6 +2787,7 @@ class WalletStateManager:
     @contextlib.asynccontextmanager
     async def new_action_scope(
         self,
+        tx_config: TXConfig,
         push: bool = False,
         merge_spends: bool = True,
         sign: Optional[bool] = None,
@@ -2793,6 +2796,7 @@ class WalletStateManager:
     ) -> AsyncIterator[WalletActionScope]:
         async with new_wallet_action_scope(
             self,
+            tx_config,
             push=push,
             merge_spends=merge_spends,
             sign=sign,

@@ -37,7 +37,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
@@ -163,7 +163,6 @@ class VCWallet:
     async def launch_new_vc(
         self,
         provider_did: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         inner_puzzle_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
@@ -185,11 +184,17 @@ class VCWallet:
         if not found_did:
             raise ValueError(f"You don't own the DID {provider_did.hex()}")  # pragma: no cover
         # Mint VC
-        coins = list(await self.standard_wallet.select_coins(uint64(1 + fee), tx_config.coin_selection_config))
+        coins = list(
+            await self.standard_wallet.select_coins(
+                uint64(1 + fee), action_scope.config.tx_config.coin_selection_config
+            )
+        )
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
         if inner_puzzle_hash is None:  # pragma: no cover
-            inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
+            inner_puzzle_hash = await self.standard_wallet.get_puzzle_hash(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
         dpuzs, coin_spends, vc = VerifiedCredential.launch(
             coins,
             provider_did,
@@ -235,7 +240,6 @@ class VCWallet:
     async def generate_signed_transaction(
         self,
         vc_id: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         new_inner_puzhash: Optional[bytes32] = None,
@@ -272,7 +276,6 @@ class VCWallet:
             coin_name = vc_record.vc.coin.name()
             await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
                 fee,
-                tx_config,
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
@@ -312,7 +315,7 @@ class VCWallet:
                     assert isinstance(wallet, DIDWallet)
                     if bytes32.fromhex(wallet.get_my_DID()) == vc_record.vc.proof_provider:
                         self.log.debug("Creating announcement from DID for vc: %s", vc_id.hex())
-                        await wallet.create_message_spend(tx_config, action_scope, extra_conditions=(did_announcement,))
+                        await wallet.create_message_spend(action_scope, extra_conditions=(did_announcement,))
                         break
             else:
                 raise ValueError(
@@ -349,7 +352,6 @@ class VCWallet:
         self,
         parent_id: bytes32,
         peer: WSChiaConnection,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -374,7 +376,6 @@ class VCWallet:
         else:
             await self.generate_signed_transaction(
                 vc.launcher_id,
-                tx_config,
                 action_scope,
                 fee,
                 self_revoke=True,
@@ -390,7 +391,9 @@ class VCWallet:
         coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
         if fee > 0:
-            coins.update(await self.standard_wallet.select_coins(fee, tx_config.coin_selection_config))
+            coins.update(
+                await self.standard_wallet.select_coins(fee, action_scope.config.tx_config.coin_selection_config)
+            )
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
         sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = SerializedProgram.to(sorted_coin_list).get_tree_hash()
@@ -398,13 +401,12 @@ class VCWallet:
 
         if fee > 0:
             await self.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                fee, tx_config, action_scope, extra_conditions=(vc_announcement,)
+                fee, action_scope, extra_conditions=(vc_announcement,)
             )
 
         # Assemble final bundle
         expected_did_announcement, vc_spend = vc.activate_backdoor(provider_inner_puzhash, announcement_nonce=nonce)
         await did_wallet.create_message_spend(
-            tx_config,
             action_scope,
             extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
         )
@@ -412,7 +414,7 @@ class VCWallet:
             interface.side_effects.extra_spends.append(SpendBundle([vc_spend], G2Element()))
 
     async def add_vc_authorization(
-        self, offer: Offer, solver: Solver, tx_config: TXConfig, action_scope: WalletActionScope
+        self, offer: Offer, solver: Solver, action_scope: WalletActionScope
     ) -> Tuple[Offer, Solver]:
         """
         This method takes an existing offer and adds a VC authorization spend to it where it can/is willing.
@@ -537,11 +539,12 @@ class VCWallet:
             else:
                 raise ValueError("Wallet cannot verify all spends in specified offer")  # pragma: no cover
 
-        async with self.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+        async with self.wallet_state_manager.new_action_scope(
+            action_scope.config.tx_config, push=False
+        ) as inner_action_scope:
             for launcher_id, vc in vcs.items():
                 await self.generate_signed_transaction(
                     launcher_id,
-                    tx_config,
                     inner_action_scope,
                     extra_conditions=(
                         *announcements_to_assert[launcher_id],
