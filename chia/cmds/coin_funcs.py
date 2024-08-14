@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import sys
+import time
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
@@ -12,6 +14,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64, uint128
+from chia.util.timing import backoff_times
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -236,6 +239,16 @@ async def async_split(
             # we always use new addresses
             target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, new_address=True))
             additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
+
+        deadline = time.monotonic() + 5
+        for delay in backoff_times(time_to_final=0.1):
+            synced = await wallet_client.get_synced()
+            if synced:
+                break
+            if time.monotonic() > deadline:
+                # just letting the rpc request failure fall out itself
+                break
+            await asyncio.sleep(delay)
 
         tx_config = CMDTXConfigLoader(
             # TODO: [add TXConfig args]
