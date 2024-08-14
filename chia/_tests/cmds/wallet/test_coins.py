@@ -208,7 +208,6 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_wallets": [(None,)],
-        "get_synced": [()],
         "get_coin_records_by_names": [([target_coin_id], True, None, None)],
         "get_next_address": [(1, True) for i in range(10)],
         "send_transaction_multi": [
