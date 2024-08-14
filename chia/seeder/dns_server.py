@@ -17,10 +17,10 @@ import aiosqlite
 from dnslib import AAAA, EDNS0, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, DNSQuestion, DNSRecord
 
 from chia.seeder.crawl_store import CrawlStore
+from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.misc import SignalHandlers
 from chia.util.path import path_from_root
 
 SERVICE_NAME = "seeder"

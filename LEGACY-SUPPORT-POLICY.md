@@ -1,6 +1,6 @@
 # Legacy Software and Operating System Support Policy
 
-It is the official policy of the Chia Blockchain project to end software support when the original maintainer of the software deems it End of Life (EOL) or stops providing support.  The most relevant targets of this policy are Python, Node.js, and operating systems.
+It is the official policy of the Chia Blockchain project to end software support when the original maintainer of the software deems it End of Life (EOL) or stops providing support. The most relevant targets of this policy are Python, Node.js, and operating systems.
 
 ## Long-term Support Conflicts
 

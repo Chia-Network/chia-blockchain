@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -21,8 +22,17 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     if sys.platform == "win32":
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
 
+    path_helper: Path = Path(sys.argv[0])
+    cmd_to_execute = None
+    if len(path_helper.suffix) == 0:
+        cmd_to_execute = shutil.which(cmd=path_helper.name, path=path_helper.parent)
+
+    if cmd_to_execute is None:
+        cmd_to_execute = sys.argv[0]
+
+    print(f"Starting daemon: {cmd_to_execute} run_daemon --wait-for-unlock", flush=True)
     process = subprocess.Popen(
-        [sys.argv[0], "run_daemon", "--wait-for-unlock"],
+        [cmd_to_execute, "run_daemon", "--wait-for-unlock"],
         encoding="utf-8",
         stdout=subprocess.PIPE,
         creationflags=creationflags,
@@ -36,7 +46,7 @@ async def create_start_daemon_connection(
 ) -> Optional[DaemonProxy]:
     connection = await connect_to_daemon_and_validate(root_path, config)
     if connection is None:
-        print("Starting daemon")
+        print("Starting daemon", flush=True)
         # launch a daemon
         process = launch_start_daemon(root_path)
         # give the daemon a chance to start up

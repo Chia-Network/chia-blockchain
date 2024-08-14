@@ -208,7 +208,6 @@ class FullNodeSimulator(FullNodeAPI):
                 block_list_input=current_blocks,
                 guarantee_transaction_block=True,
                 current_time=current_time,
-                previous_generator=self.full_node.full_node_store.previous_generator,
             )
         await self.full_node.add_block(more[-1])
         return more[-1]
@@ -683,15 +682,16 @@ class FullNodeSimulator(FullNodeAPI):
                 outputs_group = [output for _, output in zip(range(per_transaction_record_group), outputs_iterator)]
 
                 if len(outputs_group) > 0:
-                    async with wallet.wallet_state_manager.lock:
-                        [tx] = await wallet.generate_signed_transaction(
+                    async with wallet.wallet_state_manager.new_action_scope(
+                        DEFAULT_TX_CONFIG, push=True
+                    ) as action_scope:
+                        await wallet.generate_signed_transaction(
                             amount=outputs_group[0].amount,
                             puzzle_hash=outputs_group[0].puzzle_hash,
-                            tx_config=DEFAULT_TX_CONFIG,
+                            action_scope=action_scope,
                             primaries=outputs_group[1:],
                         )
-                    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
-                    transaction_records.append(tx)
+                    transaction_records.extend(action_scope.side_effects.transactions)
                 else:
                     break
 
@@ -721,11 +721,12 @@ class FullNodeSimulator(FullNodeAPI):
             return False  # pragma: no cover
         if not await wallet_node.wallet_state_manager.synced():
             return False
+        all_states_retried = await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry() == []
         wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
         if peak_height is not None:
-            return wallet_height >= peak_height
+            return wallet_height >= peak_height and all_states_retried
         full_node_height = self.full_node.blockchain.get_peak_height()
-        return wallet_height == full_node_height
+        return wallet_height == full_node_height and all_states_retried
 
     async def wait_for_wallet_synced(
         self,

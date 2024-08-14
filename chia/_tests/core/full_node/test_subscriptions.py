@@ -1,10 +1,34 @@
 from __future__ import annotations
 
-from chia.full_node.subscriptions import PeerSubscriptions
+from chia_rs import AugSchemeMPL, Coin, CoinSpend, Program
+from chia_rs.sized_ints import uint32, uint64
+
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
+from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.spend_bundle import SpendBundle
+
+IDENTITY_PUZZLE = Program.to(1)
+IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
+
+OTHER_PUZZLE = Program.to(2)
+OTHER_PUZZLE_HASH = OTHER_PUZZLE.get_tree_hash()
+
+HINT_PUZZLE = Program.to(3)
+HINT_PUZZLE_HASH = HINT_PUZZLE.get_tree_hash()
+
+IDENTITY_COIN = Coin(bytes32(b"0" * 32), IDENTITY_PUZZLE_HASH, uint64(1000))
+OTHER_COIN = Coin(bytes32(b"3" * 32), OTHER_PUZZLE_HASH, uint64(1000))
+
+EMPTY_SIGNATURE = AugSchemeMPL.aggregate([])
 
 peer1 = bytes32(b"1" * 32)
 peer2 = bytes32(b"2" * 32)
+peer3 = bytes32(b"3" * 32)
+peer4 = bytes32(b"4" * 32)
 
 coin1 = bytes32(b"a" * 32)
 coin2 = bytes32(b"b" * 32)
@@ -420,3 +444,49 @@ def test_clear_subscriptions() -> None:
 
     subs.clear_puzzle_subscriptions(peer1)
     assert subs.peer_subscription_count(peer1) == 0
+
+
+def test_peers_for_spent_coin() -> None:
+    subs = PeerSubscriptions()
+
+    subs.add_puzzle_subscriptions(peer1, [IDENTITY_PUZZLE_HASH], 1)
+    subs.add_puzzle_subscriptions(peer2, [HINT_PUZZLE_HASH], 1)
+    subs.add_coin_subscriptions(peer3, [IDENTITY_COIN.name()], 1)
+    subs.add_coin_subscriptions(peer4, [OTHER_COIN.name()], 1)
+
+    coin_spends = [CoinSpend(IDENTITY_COIN, IDENTITY_PUZZLE, Program.to([]))]
+
+    spend_bundle = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
+    generator = simple_solution_generator(spend_bundle)
+    npc_result = get_name_puzzle_conditions(
+        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0), constants=DEFAULT_CONSTANTS
+    )
+    assert npc_result.conds is not None
+
+    peers = peers_for_spend_bundle(subs, npc_result.conds, {HINT_PUZZLE_HASH})
+    assert peers == {peer1, peer2, peer3}
+
+
+def test_peers_for_created_coin() -> None:
+    subs = PeerSubscriptions()
+
+    new_coin = Coin(IDENTITY_COIN.name(), OTHER_PUZZLE_HASH, uint64(1000))
+
+    subs.add_puzzle_subscriptions(peer1, [OTHER_PUZZLE_HASH], 1)
+    subs.add_puzzle_subscriptions(peer2, [HINT_PUZZLE_HASH], 1)
+    subs.add_coin_subscriptions(peer3, [new_coin.name()], 1)
+    subs.add_coin_subscriptions(peer4, [OTHER_COIN.name()], 1)
+
+    coin_spends = [
+        CoinSpend(IDENTITY_COIN, IDENTITY_PUZZLE, Program.to([[51, OTHER_PUZZLE_HASH, 1000, [HINT_PUZZLE_HASH]]]))
+    ]
+
+    spend_bundle = SpendBundle(coin_spends, AugSchemeMPL.aggregate([]))
+    generator = simple_solution_generator(spend_bundle)
+    npc_result = get_name_puzzle_conditions(
+        generator=generator, max_cost=INFINITE_COST, mempool_mode=True, height=uint32(0), constants=DEFAULT_CONSTANTS
+    )
+    assert npc_result.conds is not None
+
+    peers = peers_for_spend_bundle(subs, npc_result.conds, set())
+    assert peers == {peer1, peer2, peer3}

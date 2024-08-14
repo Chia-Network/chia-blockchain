@@ -5,3 +5,10 @@ overrides:
       singleQuote: false
       experimentalTernaries: true
       useTabs: false
+  - files: ["*.md"]
+    options:
+      singleQuote: false
+  - files: ["*.js", "*.jsx", "*.ts", "*.tsx", "*.cjs", "*.mjs"]
+    options:
+      printWidth: 120
+      singleQuote: true
