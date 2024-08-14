@@ -218,7 +218,7 @@ class MerkleBlob:
         if len(self.blob) == 0:
             return []
 
-        free_indexes: Set[TreeIndex] = set(TreeIndex(i) for i in range(int(self.last_allocated_index)))
+        free_indexes: Set[TreeIndex] = {TreeIndex(i) for i in range(int(self.last_allocated_index))}
         queue: List[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
             node_index = queue.pop()
