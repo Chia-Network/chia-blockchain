@@ -218,7 +218,7 @@ class MerkleBlob:
         if len(self.blob) == 0:
             return []
 
-        free_indexes: Set[TreeIndex] = set(range(self.last_allocated_index))
+        free_indexes: Set[TreeIndex] = set(range(int(self.last_allocated_index)))
         queue: List[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
             node_index = queue.pop()
@@ -348,6 +348,7 @@ class MerkleBlob:
                 assert isinstance(sibling, RawInternalMerkleNode)
                 for son_index in (sibling.left, sibling.right):
                     self.update_entry(son_index, parent=TreeIndex(0))
+            self.free_indexes.append(sibling_index)
             return
 
         self.free_indexes.append(parent_index)

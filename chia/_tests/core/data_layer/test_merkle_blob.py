@@ -218,11 +218,16 @@ def test_insert_delete_loads_all_keys() -> None:
     current_num_entries = 0
 
     for key in range(num_keys):
-        if (key + 1) % 10 == 0:
+        [op_type] = random.choices(["insert", "delete"], [0.7, 0.3], k=1)
+        if op_type == "delete" and len(keys_values) > 0:
             kv_id = random.choice(list(keys_values))
             keys_values.remove(kv_id)
             merkle_blob.delete(kv_id)
-            current_num_entries -= 2
+            if current_num_entries == 1:
+                current_num_entries = 0
+                expected_num_entries = 0
+            else:
+                current_num_entries -= 2
         else:
             kv_id = generate_kvid(key)
             hash = generate_hash(key)
@@ -231,7 +236,7 @@ def test_insert_delete_loads_all_keys() -> None:
             lineage = merkle_blob.get_lineage(TreeIndex(key_index))
             assert len(lineage) <= max_height
             keys_values.add(kv_id)
-            if key == 0:
+            if current_num_entries == 0:
                 current_num_entries = 1
             else:
                 current_num_entries += 2
