@@ -412,7 +412,7 @@ class Keychain:
                 key_type=KeyTypes.G1_ELEMENT.value,
             )
         elif key.metadata.get("type", KeyTypes.G1_ELEMENT.value) == KeyTypes.VAULT_LAUNCHER.value:
-            observation_root = G1Element.from_bytes(str_bytes)
+            observation_root = VaultRoot.from_bytes(str_bytes)
             fingerprint = observation_root.get_fingerprint()
             return KeyData(
                 fingerprint=uint32(fingerprint),
@@ -503,7 +503,7 @@ class Keychain:
             index = self._get_free_private_key_index()
             key = KeyTypes.parse_secret_info_from_seed(seed, key_type)
             pk = key.public_key()
-            key_data = Key(bytes(pk) + entropy)
+            key_data = Key(bytes(pk) + entropy, metadata={"type": key_type.value})
             fingerprint = pk.get_fingerprint()
         else:
             index = self._get_free_private_key_index()
@@ -514,7 +514,7 @@ class Keychain:
             else:
                 pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
             key = KeyTypes.parse_observation_root(pk_bytes, key_type)
-            key_data = Key(pk_bytes)
+            key_data = Key(pk_bytes, metadata={"type": key_type.value})
             fingerprint = key.get_fingerprint()
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:

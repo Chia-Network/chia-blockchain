@@ -444,10 +444,13 @@ class WalletRpcApi:
                 },
             }
             if isinstance(sk, PrivateKey):
-                response["private_key"] = {
-                    "farmer_pk": bytes(master_sk_to_farmer_sk(sk).get_g1()).hex(),
-                    "pool_pk": bytes(master_sk_to_pool_sk(sk).get_g1()).hex(),
-                }
+                response["private_key"].update(
+                    {
+                        "farmer_pk": bytes(master_sk_to_farmer_sk(sk).get_g1()).hex(),
+                        "pool_pk": bytes(master_sk_to_pool_sk(sk).get_g1()).hex(),
+                    }
+                )
+            return response
         return {"success": False, "private_key": {"fingerprint": fingerprint}}
 
     async def generate_mnemonic(self, request: Dict[str, Any]) -> EndpointResult:

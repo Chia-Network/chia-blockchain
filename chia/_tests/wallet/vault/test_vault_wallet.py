@@ -13,6 +13,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia.rpc.wallet_request_types import VaultCreate, VaultRecovery
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
+from chia.util.keychain import KeyTypes
 from chia.wallet.payment import Payment
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_info import VaultInfo
@@ -86,7 +87,9 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
             ),
         ]
     )
-    await env.node.keychain_proxy.add_key(launcher_id.hex(), label="vault", private=False)
+    await env.node.keychain_proxy.add_key(
+        launcher_id.hex(), label="vault", private=False, key_type=KeyTypes.VAULT_LAUNCHER
+    )
     await env.restart(vault_root.get_fingerprint())
     await wallet_environments.full_node.wait_for_wallet_synced(env.node, 20)
 

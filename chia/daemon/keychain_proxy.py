@@ -187,7 +187,7 @@ class KeychainProxy(DaemonProxy):
     ) -> Tuple[SecretInfo[Any], KeyTypes]: ...
 
     @overload
-    def add_key(
+    async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True], key_type: KeyTypes
     ) -> Tuple[SecretInfo[Any], KeyTypes]: ...
 
@@ -197,13 +197,11 @@ class KeychainProxy(DaemonProxy):
     ) -> Tuple[ObservationRoot, KeyTypes]: ...
 
     @overload
-    def add_key(
+    async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False], key_type: KeyTypes
     ) -> Tuple[ObservationRoot, KeyTypes]: ...
 
-    # Mypy doesn't seem to think the implementation handles a coupld of the cases above. As far as I can see, it does
-    # and I can't figure out why mypy thinks it doesn't -Quex
-    async def add_key(  # type: ignore[misc]
+    async def add_key(
         self,
         mnemonic_or_pk: str,
         label: Optional[str] = None,
@@ -214,10 +212,10 @@ class KeychainProxy(DaemonProxy):
         Forwards to Keychain.add_key()
         """
         if self.use_local_keychain():
-            key, key_type = self.keychain.add_key(mnemonic_or_pk, label, private)
+            key, key_type = self.keychain.add_key(mnemonic_or_pk, label, private, key_type)
         else:
             response, success = await self.get_response_for_request(
-                "add_key", {"mnemonic_or_pk": mnemonic_or_pk, "label": label, "private": private}
+                "add_key", {"mnemonic_or_pk": mnemonic_or_pk, "label": label, "private": private, "key_type": key_type}
             )
             if success:
                 key_type = KeyTypes(response["data"]["key_type"])
