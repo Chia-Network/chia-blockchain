@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import multiprocessing.context
@@ -143,6 +144,7 @@ from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
 from chia.wallet.vc_wallet.vc_store import VCStore
 from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_action_scope import WalletActionScope, new_wallet_action_scope
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -373,6 +375,16 @@ class WalletStateManager:
         if record.hardened:
             return master_sk_to_wallet_sk(self.get_master_private_key(), record.index)
         return master_sk_to_wallet_sk_unhardened(self.get_master_private_key(), record.index)
+
+    async def get_public_key(self, puzzle_hash: bytes32) -> bytes:
+        record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
+        if record is None:
+            raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
+        if isinstance(record._pubkey, bytes):
+            pk_bytes = record._pubkey
+        else:
+            pk_bytes = bytes(record._pubkey)
+        return pk_bytes
 
     def get_master_private_key(self) -> PrivateKey:
         if self.private_key is None:  # pragma: no cover
@@ -791,10 +803,7 @@ class WalletStateManager:
 
         coin_spend = await fetch_coin_spend_for_coin_state(parent_coin_state, peer)
 
-        puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        solution = Program.from_bytes(bytes(coin_spend.solution))
-
-        uncurried = uncurry_puzzle(puzzle)
+        uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
 
         dao_ids = []
         wallets = self.wallets.values()
@@ -802,7 +811,9 @@ class WalletStateManager:
             if wallet.type() == WalletType.DAO.value:
                 assert isinstance(wallet, DAOWallet)
                 dao_ids.append(wallet.dao_info.treasury_id)
-        funding_puzzle_check = match_funding_puzzle(uncurried, solution, coin_state.coin, dao_ids)
+        funding_puzzle_check = match_funding_puzzle(
+            uncurried, coin_spend.solution.to_program(), coin_state.coin, dao_ids
+        )
         if funding_puzzle_check:
             return await self.get_dao_wallet_from_coinspend_hint(coin_spend, coin_state), None
 
@@ -875,8 +886,7 @@ class WalletStateManager:
             return await self.handle_did(did_data, parent_coin_state, coin_state, coin_spend, peer), did_data
 
         # Check if the coin is clawback
-        solution = coin_spend.solution.to_program()
-        clawback_coin_data = match_clawback_puzzle(uncurried, puzzle, solution)
+        clawback_coin_data = match_clawback_puzzle(uncurried, coin_spend.puzzle_reveal, coin_spend.solution)
         if clawback_coin_data is not None:
             return await self.handle_clawback(clawback_coin_data, coin_state, coin_spend, peer), clawback_coin_data
 
@@ -915,41 +925,47 @@ class WalletStateManager:
                 stop=tx_config.coin_selection_config.max_coin_amount,
             ),
         )
-        all_txs: List[TransactionRecord] = []
-        for coin in unspent_coins.records:
-            try:
-                metadata: MetadataTypes = coin.parsed_metadata()
-                assert isinstance(metadata, ClawbackMetadata)
-                if await metadata.is_recipient(self.puzzle_store):
-                    coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
-                    if current_timestamp - coin_timestamp >= metadata.time_lock:
-                        clawback_coins[coin.coin] = metadata
-                        if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
-                            txs = await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config)
-                            all_txs.extend(txs)
-                            tx_config = dataclasses.replace(
-                                tx_config,
-                                excluded_coin_ids=[
-                                    *tx_config.excluded_coin_ids,
-                                    *(c.name() for tx in txs for c in tx.removals),
-                                ],
-                            )
-                            clawback_coins = {}
-            except Exception as e:
-                self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
-        if len(clawback_coins) > 0:
-            all_txs.extend(await self.spend_clawback_coins(clawback_coins, tx_fee, tx_config))
-
-        await self.add_pending_transactions(all_txs)
+        async with self.new_action_scope(tx_config, push=True) as action_scope:
+            for coin in unspent_coins.records:
+                try:
+                    metadata: MetadataTypes = coin.parsed_metadata()
+                    assert isinstance(metadata, ClawbackMetadata)
+                    if await metadata.is_recipient(self.puzzle_store):
+                        coin_timestamp = await self.wallet_node.get_timestamp_for_height(coin.confirmed_block_height)
+                        if current_timestamp - coin_timestamp >= metadata.time_lock:
+                            clawback_coins[coin.coin] = metadata
+                            if len(clawback_coins) >= self.config.get("auto_claim", {}).get("batch_size", 50):
+                                await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
+                                async with action_scope.use() as interface:
+                                    # TODO: editing this is not ideal, action scopes should know what coins are spent
+                                    action_scope._config = dataclasses.replace(
+                                        action_scope._config,
+                                        tx_config=dataclasses.replace(
+                                            action_scope._config.tx_config,
+                                            excluded_coin_ids=[
+                                                *action_scope.config.tx_config.excluded_coin_ids,
+                                                *(
+                                                    c.name()
+                                                    for tx in interface.side_effects.transactions
+                                                    for c in tx.removals
+                                                ),
+                                            ],
+                                        ),
+                                    )
+                                clawback_coins = {}
+                except Exception as e:
+                    self.log.error(f"Failed to claim clawback coin {coin.coin.name().hex()}: %s", e)
+            if len(clawback_coins) > 0:
+                await self.spend_clawback_coins(clawback_coins, tx_fee, action_scope)
 
     async def spend_clawback_coins(
         self,
         clawback_coins: Dict[Coin, ClawbackMetadata],
         fee: uint64,
-        tx_config: TXConfig,
+        action_scope: WalletActionScope,
         force: bool = False,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> List[TransactionRecord]:
+    ) -> None:
         assert len(clawback_coins) > 0
         coin_spends: List[CoinSpend] = []
         message: bytes32 = std_hash(b"".join([c.name() for c in clawback_coins.keys()]))
@@ -1001,20 +1017,34 @@ class WalletStateManager:
             except Exception as e:
                 self.log.error(f"Failed to create clawback spend bundle for {coin.name().hex()}: {e}")
         if len(coin_spends) == 0:
-            return []
+            return
         spend_bundle: SpendBundle = SpendBundle(coin_spends, G2Element())
-        tx_list: List[TransactionRecord] = []
         if fee > 0:
-            chia_tx = await self.main_wallet.create_tandem_xch_tx(
-                fee,
-                tx_config,
-                extra_conditions=(
-                    AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
-                ),
+            async with self.new_action_scope(action_scope.config.tx_config, push=False) as inner_action_scope:
+                await self.main_wallet.create_tandem_xch_tx(
+                    fee,
+                    inner_action_scope,
+                    extra_conditions=(
+                        AssertCoinAnnouncement(asserted_id=coin_spends[0].coin.name(), asserted_msg=message),
+                    ),
+                )
+            async with action_scope.use() as interface:
+                # This should not be looked to for best practice. Ideally, the two spend bundles can exist separately on
+                # each tx record until they are pushed. This is not very supported behavior at the moment so to avoid
+                # any potential backwards compatibility issues, we're moving the spend bundle from this TX to the main
+                interface.side_effects.transactions.extend(
+                    [dataclasses.replace(tx, spend_bundle=None) for tx in inner_action_scope.side_effects.transactions]
+                )
+            spend_bundle = SpendBundle.aggregate(
+                [
+                    spend_bundle,
+                    *(
+                        tx.spend_bundle
+                        for tx in inner_action_scope.side_effects.transactions
+                        if tx.spend_bundle is not None
+                    ),
+                ]
             )
-            assert chia_tx.spend_bundle is not None
-            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
-            tx_list.append(dataclasses.replace(chia_tx, spend_bundle=None))
         assert derivation_record is not None
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -1035,8 +1065,8 @@ class WalletStateManager:
             memos=list(compute_memos(spend_bundle).items()),
             valid_times=parse_timelock_info(extra_conditions),
         )
-        tx_list.append(tx_record)
-        return tx_list
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(tx_record)
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
         xch_spam_amount = self.config.get("xch_spam_amount", 1000000)
@@ -1137,7 +1167,7 @@ class WalletStateManager:
             is_crcat: bool = False
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 # Check if it is a CRCAT
-                if CRCAT.is_cr_cat(uncurry_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))):
+                if CRCAT.is_cr_cat(uncurry_puzzle(coin_spend.puzzle_reveal)):
                     is_crcat = True
                 else:
                     return None  # pragma: no cover
@@ -1340,8 +1370,7 @@ class WalletStateManager:
             )
             assert did_coin is not None and len(did_coin) == 1 and did_coin[0].spent_height is not None
             did_spend = await fetch_coin_spend_for_coin_state(did_coin[0], peer)
-            puzzle = Program.from_bytes(bytes(did_spend.puzzle_reveal))
-            uncurried = uncurry_puzzle(puzzle)
+            uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             if did_curried_args is not None:
                 p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
@@ -1854,10 +1883,10 @@ class WalletStateManager:
                                             # if there is a child coin that is not owned by the wallet.
                                             coin_spend = await fetch_coin_spend_for_coin_state(coin_state, peer)
                                             # Check if the parent coin is a Clawback coin
-                                            puzzle: Program = coin_spend.puzzle_reveal.to_program()
-                                            solution: Program = coin_spend.solution.to_program()
-                                            uncurried = uncurry_puzzle(puzzle)
-                                            clawback_metadata = match_clawback_puzzle(uncurried, puzzle, solution)
+                                            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
+                                            clawback_metadata = match_clawback_puzzle(
+                                                uncurried, coin_spend.puzzle_reveal, coin_spend.solution
+                                            )
                                         if clawback_metadata is not None:
                                             # Add the Clawback coin as the interested coin for the sender
                                             await self.add_interested_coin_ids([coin.name()])
@@ -2254,9 +2283,11 @@ class WalletStateManager:
     async def add_pending_transactions(
         self,
         tx_records: List[TransactionRecord],
+        push: bool = True,
         merge_spends: bool = True,
         sign: Optional[bool] = None,
-        additional_signing_responses: List[SigningResponse] = [],
+        additional_signing_responses: Optional[List[SigningResponse]] = None,
+        extra_spends: Optional[List[SpendBundle]] = None,
     ) -> List[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2267,6 +2298,8 @@ class WalletStateManager:
         agg_spend: SpendBundle = SpendBundle.aggregate(
             [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
         )
+        if extra_spends is not None:
+            agg_spend = SpendBundle.aggregate([agg_spend, *extra_spends])
         actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
         if merge_spends and actual_spend_involved:
             tx_records = [
@@ -2277,27 +2310,39 @@ class WalletStateManager:
                 )
                 for i, tx in enumerate(tx_records)
             ]
+        elif extra_spends is not None and extra_spends != []:
+            extra_spends.extend([] if tx_records[0].spend_bundle is None else [tx_records[0].spend_bundle])
+            extra_spend_bundle = SpendBundle.aggregate(extra_spends)
+            tx_records = [
+                dataclasses.replace(
+                    tx,
+                    spend_bundle=extra_spend_bundle if i == 0 else tx.spend_bundle,
+                    name=extra_spend_bundle.name() if i == 0 else bytes32.secret(),
+                )
+                for i, tx in enumerate(tx_records)
+            ]
         if sign:
             tx_records, _ = await self.sign_transactions(
                 tx_records,
-                additional_signing_responses,
-                additional_signing_responses != [],
+                [] if additional_signing_responses is None else additional_signing_responses,
+                additional_signing_responses != [] and additional_signing_responses is not None,
             )
-        all_coins_names = []
-        async with self.db_wrapper.writer_maybe_transaction():
-            for tx_record in tx_records:
-                # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-                await self.tx_store.add_transaction_record(tx_record)
-                all_coins_names.extend([coin.name() for coin in tx_record.additions])
-                all_coins_names.extend([coin.name() for coin in tx_record.removals])
+        if push:
+            all_coins_names = []
+            async with self.db_wrapper.writer_maybe_transaction():
+                for tx_record in tx_records:
+                    # Wallet node will use this queue to retry sending this transaction until full nodes receives it
+                    await self.tx_store.add_transaction_record(tx_record)
+                    all_coins_names.extend([coin.name() for coin in tx_record.additions])
+                    all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
-        await self.add_interested_coin_ids(all_coins_names)
+            await self.add_interested_coin_ids(all_coins_names)
 
-        if actual_spend_involved:
-            self.tx_pending_changed()
-        for wallet_id in {tx.wallet_id for tx in tx_records}:
-            self.state_changed("pending_transaction", wallet_id)
-        await self.wallet_node.update_ui()
+            if actual_spend_involved:
+                self.tx_pending_changed()
+            for wallet_id in {tx.wallet_id for tx in tx_records}:
+                self.state_changed("pending_transaction", wallet_id)
+            await self.wallet_node.update_ui()
 
         return tx_records
 
@@ -2738,3 +2783,24 @@ class WalletStateManager:
         for bundle in bundles:
             await self.wallet_node.push_tx(bundle)
         return [bundle.name() for bundle in bundles]
+
+    @contextlib.asynccontextmanager
+    async def new_action_scope(
+        self,
+        tx_config: TXConfig,
+        push: bool = False,
+        merge_spends: bool = True,
+        sign: Optional[bool] = None,
+        additional_signing_responses: List[SigningResponse] = [],
+        extra_spends: List[SpendBundle] = [],
+    ) -> AsyncIterator[WalletActionScope]:
+        async with new_wallet_action_scope(
+            self,
+            tx_config,
+            push=push,
+            merge_spends=merge_spends,
+            sign=sign,
+            additional_signing_responses=additional_signing_responses,
+            extra_spends=extra_spends,
+        ) as action_scope:
+            yield action_scope

@@ -148,6 +148,8 @@ async def wallet_environments(
                     **config_overrides,
                 }
                 service._node.wallet_state_manager.config = service._node.config
+                # Shorten the 10 seconds default value
+                service._node.coin_state_retry_seconds = 2
                 await service._node.server.start_client(
                     PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
                 )
@@ -165,10 +167,11 @@ async def wallet_environments(
 
             wallet_states: List[WalletState] = []
             for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
-                await full_node[0]._api.farm_blocks_to_wallet(
-                    count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
-                )
-                await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
+                if blocks_needed > 0:
+                    await full_node[0]._api.farm_blocks_to_wallet(
+                        count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
+                    )
+                    await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
                 wallet_states.append(
                     WalletState(
                         Balance(

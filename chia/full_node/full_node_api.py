@@ -17,11 +17,7 @@ from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
-from chia.full_node.bundle_tools import (
-    best_solution_generator_from_template,
-    simple_solution_generator,
-    simple_solution_generator_backrefs,
-)
+from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
@@ -859,16 +855,7 @@ class FullNodeAPI:
                         if peak.height >= self.full_node.constants.HARD_FORK_HEIGHT:
                             block_generator = simple_solution_generator_backrefs(spend_bundle)
                         else:
-                            if self.full_node.full_node_store.previous_generator is not None:
-                                self.log.info(
-                                    f"Using previous generator for height "
-                                    f"{self.full_node.full_node_store.previous_generator}"
-                                )
-                                block_generator = best_solution_generator_from_template(
-                                    self.full_node.full_node_store.previous_generator, spend_bundle
-                                )
-                            else:
-                                block_generator = simple_solution_generator(spend_bundle)
+                            block_generator = simple_solution_generator(spend_bundle)
 
             def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:

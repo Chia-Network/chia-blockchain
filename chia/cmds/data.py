@@ -3,15 +3,16 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Union
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, TypeVar, Union
 
 import click
 
 from chia.cmds import options
+from chia.cmds.param_types import Bytes32ParamType
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 
 _T = TypeVar("_T")
-
 
 FC = TypeVar("FC", bound=Union[Callable[..., Any], click.Command])
 
@@ -79,7 +80,7 @@ def create_data_store_id_option() -> Callable[[FC], FC]:
         "-store",
         "--id",
         help="The hexadecimal store id.",
-        type=str,
+        type=Bytes32ParamType(),
         required=True,
     )
 
@@ -106,14 +107,12 @@ def create_rpc_port_option() -> Callable[[FC], FC]:
     )
 
 
-def create_fee_option() -> Callable[[FC], FC]:
+def create_root_hash_option() -> Callable[[FC], FC]:
     return click.option(
-        "-m",
-        "--fee",
-        help="Set the fees for the transaction, in XCH",
-        type=str,
-        default=None,
-        show_default=True,
+        "-r",
+        "--root_hash",
+        help="The hexadecimal root hash",
+        type=Bytes32ParamType(),
         required=False,
     )
 
@@ -137,14 +136,17 @@ def create_max_page_size_option() -> Callable[[FC], FC]:
     )
 
 
+# Functions with this mark in this file are not being ported to @tx_out_cmd due to API peculiarities
+# They will therefore not work with observer-only functionality
+# NOTE: tx_endpoint  (This creates wallet transactions and should be parametrized by relevant options)
 @data_cmd.command("create_data_store", help="Create a new data store")
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @click.option("--verbose", is_flag=True, help="Enable verbose output.")
 @options.create_fingerprint()
 def create_data_store(
     data_rpc_port: int,
-    fee: Optional[str],
+    fee: Optional[uint64],
     verbose: bool,
     fingerprint: Optional[int],
 ) -> None:
@@ -156,13 +158,13 @@ def create_data_store(
 @data_cmd.command("get_value", help="Get the value for a given key and store")
 @create_data_store_id_option()
 @create_key_option()
-@click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
+@create_root_hash_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
 def get_value(
-    id: str,
+    id: bytes32,
     key_string: str,
-    root_hash: Optional[str],
+    root_hash: Optional[bytes32],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -171,18 +173,19 @@ def get_value(
     run(get_value_cmd(data_rpc_port, id, key_string, root_hash, fingerprint=fingerprint))
 
 
+# NOTE: tx_endpoint
 @data_cmd.command("update_data_store", help="Update a store by providing the changelist operations")
 @create_data_store_id_option()
 @create_changelist_option()
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @options.create_fingerprint()
 @click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
 def update_data_store(
-    id: str,
+    id: bytes32,
     changelist_string: str,
     data_rpc_port: int,
-    fee: str,
+    fee: Optional[uint64],
     fingerprint: Optional[int],
     submit: bool,
 ) -> None:
@@ -203,13 +206,13 @@ def update_data_store(
 @data_cmd.command("update_multiple_stores", help="Update multiple stores by providing the changelist operations")
 @create_store_updates_option()
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @options.create_fingerprint()
 @click.option("--submit/--no-submit", default=True, help="Submit the result on chain")
 def update_multiple_stores(
     store_updates_string: str,
     data_rpc_port: int,
-    fee: str,
+    fee: uint64,
     fingerprint: Optional[int],
     submit: bool,
 ) -> None:
@@ -229,12 +232,12 @@ def update_multiple_stores(
 @data_cmd.command("submit_pending_root", help="Submit on chain a locally stored batch")
 @create_data_store_id_option()
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @options.create_fingerprint()
 def submit_pending_root(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
-    fee: str,
+    fee: uint64,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import submit_pending_root_cmd
@@ -251,11 +254,11 @@ def submit_pending_root(
 
 @data_cmd.command("submit_all_pending_roots", help="Submit on chain all locally stored batches")
 @create_rpc_port_option()
-@create_fee_option()
+@options.create_fee()
 @options.create_fingerprint()
 def submit_all_pending_roots(
     data_rpc_port: int,
-    fee: str,
+    fee: uint64,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import submit_all_pending_roots_cmd
@@ -271,14 +274,14 @@ def submit_all_pending_roots(
 
 @data_cmd.command("get_keys", help="Get all keys for a given store")
 @create_data_store_id_option()
-@click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
+@create_root_hash_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
 @create_page_option()
 @create_max_page_size_option()
 def get_keys(
-    id: str,
-    root_hash: Optional[str],
+    id: bytes32,
+    root_hash: Optional[bytes32],
     data_rpc_port: int,
     fingerprint: Optional[int],
     page: Optional[int],
@@ -291,14 +294,14 @@ def get_keys(
 
 @data_cmd.command("get_keys_values", help="Get all keys and values for a given store")
 @create_data_store_id_option()
-@click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
+@create_root_hash_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
 @create_page_option()
 @create_max_page_size_option()
 def get_keys_values(
-    id: str,
-    root_hash: Optional[str],
+    id: bytes32,
+    root_hash: Optional[bytes32],
     data_rpc_port: int,
     fingerprint: Optional[int],
     page: Optional[int],
@@ -318,7 +321,7 @@ def get_keys_values(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def get_root(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -340,7 +343,7 @@ def get_root(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def subscribe(
-    id: str,
+    id: bytes32,
     urls: List[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
@@ -356,7 +359,7 @@ def subscribe(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def remove_subscription(
-    id: str,
+    id: bytes32,
     urls: List[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
@@ -372,7 +375,7 @@ def remove_subscription(
 @options.create_fingerprint()
 @click.option("--retain", is_flag=True, help="Retain .dat files")
 def unsubscribe(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
     fingerprint: Optional[int],
     retain: bool,
@@ -386,16 +389,16 @@ def unsubscribe(
     "get_kv_diff", help="Get the inserted and deleted keys and values between an initial and a final hash"
 )
 @create_data_store_id_option()
-@click.option("-hash_1", "--hash_1", help="Initial hash", type=str)
-@click.option("-hash_2", "--hash_2", help="Final hash", type=str)
+@click.option("-hash_1", "--hash_1", help="Initial hash", type=Bytes32ParamType(), required=True)
+@click.option("-hash_2", "--hash_2", help="Final hash", type=Bytes32ParamType(), required=True)
 @create_rpc_port_option()
 @options.create_fingerprint()
 @create_page_option()
 @create_max_page_size_option()
 def get_kv_diff(
-    id: str,
-    hash_1: str,
-    hash_2: str,
+    id: bytes32,
+    hash_1: bytes32,
+    hash_2: bytes32,
     data_rpc_port: int,
     fingerprint: Optional[int],
     page: Optional[int],
@@ -421,7 +424,7 @@ def get_kv_diff(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def get_root_history(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -450,7 +453,7 @@ def get_root_history(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def add_missing_files(
-    ids: List[str],
+    ids: Sequence[bytes32],
     overwrite: bool,
     directory: Optional[str],
     data_rpc_port: int,
@@ -461,7 +464,7 @@ def add_missing_files(
     run(
         add_missing_files_cmd(
             rpc_port=data_rpc_port,
-            ids=ids if ids else None,
+            ids=list(ids) if ids else None,
             overwrite=overwrite,
             foldername=None if directory is None else Path(directory),
             fingerprint=fingerprint,
@@ -469,8 +472,9 @@ def add_missing_files(
     )
 
 
+# NOTE: tx_endpoint
 @data_cmd.command("add_mirror", help="Publish mirror urls on chain")
-@click.option("-i", "--id", help="Store id", type=str, required=True)
+@create_data_store_id_option()
 @click.option(
     "-a", "--amount", help="Amount to spend for this mirror, in mojos", type=int, default=0, show_default=True
 )
@@ -482,14 +486,14 @@ def add_missing_files(
     type=str,
     multiple=True,
 )
-@create_fee_option()
+@options.create_fee()
 @create_rpc_port_option()
 @options.create_fingerprint()
 def add_mirror(
-    id: str,
+    id: bytes32,
     amount: int,
     urls: List[str],
-    fee: Optional[str],
+    fee: Optional[uint64],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -507,14 +511,15 @@ def add_mirror(
     )
 
 
+# NOTE: tx_endpoint
 @data_cmd.command("delete_mirror", help="Delete an owned mirror by its coin id")
-@click.option("-c", "--coin_id", help="Coin id", type=str, required=True)
-@create_fee_option()
+@click.option("-c", "--coin_id", help="Coin id", type=Bytes32ParamType(), required=True)
+@options.create_fee()
 @create_rpc_port_option()
 @options.create_fingerprint()
 def delete_mirror(
-    coin_id: str,
-    fee: Optional[str],
+    coin_id: bytes32,
+    fee: Optional[uint64],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -531,11 +536,11 @@ def delete_mirror(
 
 
 @data_cmd.command("get_mirrors", help="Get a list of all mirrors for a given store")
-@click.option("-i", "--id", help="Store id", type=str, required=True)
+@create_data_store_id_option()
 @create_rpc_port_option()
 @options.create_fingerprint()
 def get_mirrors(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -589,7 +594,7 @@ def get_owned_stores(
 @create_rpc_port_option()
 @options.create_fingerprint()
 def get_sync_status(
-    id: str,
+    id: bytes32,
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -617,25 +622,23 @@ def check_plugins(
     "clear_pending_roots",
     help="Clear pending roots that will not be published, associated data may not be recoverable",
 )
-@click.option("-i", "--id", "id_str", help="Store ID", type=str, required=True)
+@create_data_store_id_option()
 @click.confirmation_option(
     prompt="Associated data may not be recoverable.\nAre you sure you want to remove the pending roots?",
 )
 @create_rpc_port_option()
 @options.create_fingerprint()
 def clear_pending_roots(
-    id_str: str,
+    id: bytes32,
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import clear_pending_roots
 
-    store_id = bytes32.from_hexstr(id_str)
-
     run(
         clear_pending_roots(
             rpc_port=data_rpc_port,
-            store_id=store_id,
+            store_id=id,
             fingerprint=fingerprint,
         )
     )
@@ -670,16 +673,14 @@ def wallet_log_in(
 @create_key_option(multiple=True)
 @options.create_fingerprint()
 def get_proof(
-    id: str,
+    id: bytes32,
     key_strings: List[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
     from chia.cmds.data_funcs import get_proof_cmd
 
-    store_id = bytes32.from_hexstr(id)
-
-    run(get_proof_cmd(rpc_port=data_rpc_port, store_id=store_id, fingerprint=fingerprint, key_strings=key_strings))
+    run(get_proof_cmd(rpc_port=data_rpc_port, store_id=id, fingerprint=fingerprint, key_strings=key_strings))
 
 
 @data_cmd.command(

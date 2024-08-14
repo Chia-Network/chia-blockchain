@@ -15,6 +15,8 @@ from chia._tests.connection_utils import add_dummy_connection, connect_and_get_p
 from chia._tests.core.mempool.test_mempool_manager import (
     IDENTITY_PUZZLE_HASH,
     TEST_COIN,
+    assert_sb_in_pool,
+    assert_sb_not_in_pool,
     make_test_coins,
     mempool_item_from_spendbundle,
     mk_item,
@@ -98,12 +100,14 @@ def generate_test_spend_bundle(
     return transaction
 
 
-def make_item(idx: int, cost: uint64 = uint64(80), assert_height: uint32 = uint32(100)) -> MempoolItem:
+def make_item(
+    idx: int, cost: uint64 = uint64(80), assert_height: uint32 = uint32(100), fee: uint64 = uint64(0)
+) -> MempoolItem:
     spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
         SpendBundle([], G2Element()),
-        uint64(0),
-        NPCResult(None, SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0)),
+        fee,
+        SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0),
         spend_bundle_name,
         uint32(0),
         assert_height,
@@ -586,12 +590,6 @@ class TestMempoolManager:
         assert sb2 is None
         assert status == MempoolInclusionStatus.PENDING
 
-    def assert_sb_in_pool(self, node: FullNodeSimulator, sb: SpendBundle) -> None:
-        assert sb == node.full_node.mempool_manager.get_spendbundle(sb.name())
-
-    def assert_sb_not_in_pool(self, node: FullNodeSimulator, sb: SpendBundle) -> None:
-        assert node.full_node.mempool_manager.get_spendbundle(sb.name()) is None
-
     @pytest.mark.anyio
     async def test_double_spend_with_higher_fee(
         self, one_node_one_block: Tuple[FullNodeSimulator, ChiaServer, BlockTools], wallet_a: WalletTool
@@ -622,15 +620,15 @@ class TestMempoolManager:
         sb1_2 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=uint64(1))
 
         # Fee increase is insufficient, the old spendbundle must stay
-        self.assert_sb_in_pool(full_node_1, sb1_1)
-        self.assert_sb_not_in_pool(full_node_1, sb1_2)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb1_1)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1_2)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb1_3 = await gen_and_send_sb(full_node_1, wallet_a, coin1, fee=MEMPOOL_MIN_FEE_INCREASE)
 
         # Fee increase is sufficiently high, sb1_1 gets replaced with sb1_3
-        self.assert_sb_not_in_pool(full_node_1, sb1_1)
-        self.assert_sb_in_pool(full_node_1, sb1_3)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1_1)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb1_3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb2 = generate_test_spend_bundle(wallet_a, coin2, fee=MEMPOOL_MIN_FEE_INCREASE)
@@ -639,8 +637,8 @@ class TestMempoolManager:
 
         # Aggregated spendbundle sb12 replaces sb1_3 since it spends a superset
         # of coins spent in sb1_3
-        self.assert_sb_in_pool(full_node_1, sb12)
-        self.assert_sb_not_in_pool(full_node_1, sb1_3)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb12)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1_3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb3 = generate_test_spend_bundle(wallet_a, coin3, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
@@ -649,20 +647,20 @@ class TestMempoolManager:
 
         # sb23 must not replace existing sb12 as the former does not spend all
         # coins that are spent in the latter (specifically, coin1)
-        self.assert_sb_in_pool(full_node_1, sb12)
-        self.assert_sb_not_in_pool(full_node_1, sb23)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb12)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb23)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         await send_sb(full_node_1, sb3)
         # Adding non-conflicting sb3 should succeed
-        self.assert_sb_in_pool(full_node_1, sb3)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_1 = generate_test_spend_bundle(wallet_a, coin4, fee=MEMPOOL_MIN_FEE_INCREASE)
         sb1234_1 = SpendBundle.aggregate([sb12, sb3, sb4_1])
         await send_sb(full_node_1, sb1234_1)
         # sb1234_1 should not be in pool as it decreases total fees per cost
-        self.assert_sb_not_in_pool(full_node_1, sb1234_1)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb1234_1)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
         sb4_2 = generate_test_spend_bundle(wallet_a, coin4, fee=uint64(MEMPOOL_MIN_FEE_INCREASE * 2))
@@ -670,9 +668,9 @@ class TestMempoolManager:
         await send_sb(full_node_1, sb1234_2)
         # sb1234_2 has a higher fee per cost than its conflicts and should get
         # into mempool
-        self.assert_sb_in_pool(full_node_1, sb1234_2)
-        self.assert_sb_not_in_pool(full_node_1, sb12)
-        self.assert_sb_not_in_pool(full_node_1, sb3)
+        assert_sb_in_pool(full_node_1.full_node.mempool_manager, sb1234_2)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb12)
+        assert_sb_not_in_pool(full_node_1.full_node.mempool_manager, sb3)
         invariant_check_mempool(full_node_1.full_node.mempool_manager.mempool)
 
     @pytest.mark.anyio
@@ -701,7 +699,7 @@ class TestMempoolManager:
 
         sb: SpendBundle = generate_test_spend_bundle(wallet_a, coin1)
         assert sb.aggregated_signature != G2Element.generator()
-        sb = dataclasses.replace(sb, aggregated_signature=G2Element.generator())
+        sb = sb.replace(aggregated_signature=G2Element.generator())
         res: Optional[Message] = await send_sb(full_node_1, sb)
         assert res is not None
         ack: TransactionAck = TransactionAck.from_bytes(res.data)
@@ -2182,7 +2180,7 @@ def generator_condition_tester(
     prg = f"(q ((0x0101010101010101010101010101010101010101010101010101010101010101 {'(q ' if quote else ''} {conditions} {')' if quote else ''} {coin_amount} (() (q . ())))))"  # noqa
     print(f"program: {prg}")
     program = SerializedProgram.from_bytes(binutils.assemble(prg).as_bin())
-    generator = BlockGenerator(program, [], [])
+    generator = BlockGenerator(program, [])
     print(f"len: {len(bytes(program))}")
     npc_result: NPCResult = get_name_puzzle_conditions(
         generator, max_cost, mempool_mode=mempool_mode, height=height, constants=test_constants
@@ -2202,15 +2200,15 @@ class TestGeneratorConditions:
         assert npc_result.conds.spends[0].seconds_relative == 50
 
     @pytest.mark.parametrize(
-        "mempool,operand,expected",
+        "mempool,operand",
         [
-            (True, -1, Err.GENERATOR_RUNTIME_ERROR.value),
-            (False, -1, Err.GENERATOR_RUNTIME_ERROR.value),
-            (True, 1, None),
-            (False, 1, None),
+            (True, -1),
+            (False, -1),
+            (True, 1),
+            (False, 1),
         ],
     )
-    def test_div(self, mempool: bool, operand: int, expected: Optional[int], softfork_height: uint32) -> None:
+    def test_div(self, mempool: bool, operand: int, softfork_height: uint32) -> None:
         # op_div is disallowed on negative numbers in the mempool, and after the
         # softfork
         npc_result = generator_condition_tester(
@@ -2220,11 +2218,8 @@ class TestGeneratorConditions:
             height=softfork_height,
         )
 
-        # with the 2.0 hard fork, division with negative numbers is allowed
-        if operand < 0 and softfork_height >= test_constants.HARD_FORK_HEIGHT:
-            expected = None
-
-        assert npc_result.error == expected
+        # after the 2.0 hard fork, division with negative numbers is allowed
+        assert npc_result.error is None
 
     def test_invalid_condition_list_terminator(self, softfork_height: uint32) -> None:
         # note how the list of conditions isn't correctly terminated with a
@@ -2367,17 +2362,7 @@ class TestGeneratorConditions:
         else:
             generator_base_cost = 20512
 
-        if softfork_height < test_constants.HARD_FORK_HEIGHT and condition in [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-        ]:
-            expected_cost = 0
-        else:
-            expected_cost = ConditionCost.AGG_SIG.value
+        expected_cost = ConditionCost.AGG_SIG.value
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
@@ -2422,40 +2407,11 @@ class TestGeneratorConditions:
     ) -> None:
         pubkey = "0x" + bytes(G1Element.generator()).hex()
 
-        new_condition = condition in [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-        ]
-
-        hard_fork_activated = softfork_height >= test_constants.HARD_FORK_HEIGHT
-
-        expected_error = None
-
         # in mempool mode, we don't allow extra arguments
         if mempool and extra_arg != "":
             expected_error = Err.INVALID_CONDITION.value
-
-        # the original AGG_SIG_* conditions had a quirk (fixed in the hard fork)
-        # where they always required exactly two arguments, regardless of
-        # mempool or not. After the hard fork, they behave like all other
-        # conditions
-        if not new_condition and not hard_fork_activated and extra_arg != "":
-            expected_error = Err.INVALID_CONDITION.value
-
-        # except before the hard fork has activated, new conditions are just
-        # unknown
-        if new_condition and not hard_fork_activated:
+        else:
             expected_error = None
-
-        # before the hard fork activates, the new conditions are unknown and
-        # fail in mempool mode, regardless of whether they have extra arguments
-        # or not
-        if new_condition and not hard_fork_activated and mempool:
-            expected_error = Err.INVALID_CONDITION.value
 
         # this max cost is exactly enough for the AGG_SIG condition
         npc_result = generator_condition_tester(
@@ -2481,7 +2437,7 @@ class TestGeneratorConditions:
                 f'(q ((0x0101010101010101010101010101010101010101010101010101010101010101 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ())))(0x0101010101010101010101010101010101010101010101010101010101010102 (q (51 "{puzzle_hash}" 10)) 123 (() (q . ()))) ))'  # noqa
             ).as_bin()
         )
-        generator = BlockGenerator(program, [], [])
+        generator = BlockGenerator(program, [])
         npc_result: NPCResult = get_name_puzzle_conditions(
             generator, MAX_BLOCK_COST_CLVM, mempool_mode=False, height=softfork_height, constants=test_constants
         )
@@ -2569,10 +2525,6 @@ class TestGeneratorConditions:
         # in mempool all unknown conditions are always a failure
         if mempool:
             expect_error = Err.INVALID_CONDITION.value
-        # the SOFTFORK condition is only activated with the hard fork, so
-        # before then there are no errors
-        elif softfork_height < test_constants.HARD_FORK_HEIGHT:
-            expect_error = None
 
         assert npc_result.error == expect_error
 
@@ -2589,13 +2541,6 @@ class TestGeneratorConditions:
     ) -> None:
         npc_result = generator_condition_tester(condition, mempool_mode=mempool, height=softfork_height)
         print(npc_result)
-
-        # the message conditions are only activated with soft fork 4, so
-        # before then there are no errors.
-        # In mempool mode, the message conditions activated immediately.
-        if softfork_height < test_constants.SOFT_FORK4_HEIGHT and not mempool:
-            expect_error = None
-
         assert npc_result.error == expect_error
 
 
@@ -3232,6 +3177,4 @@ def test_get_puzzle_and_solution_for_coin_failure() -> None:
     with pytest.raises(
         ValueError, match=f"Failed to get puzzle and solution for coin {TEST_COIN}, error: \\('coin not found', '80'\\)"
     ):
-        get_puzzle_and_solution_for_coin(
-            BlockGenerator(SerializedProgram.to(None), [], []), TEST_COIN, 0, test_constants
-        )
+        get_puzzle_and_solution_for_coin(BlockGenerator(SerializedProgram.to(None), []), TEST_COIN, 0, test_constants)

@@ -3,12 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.generator_tools import additions_for_npc
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
 
@@ -27,7 +26,7 @@ class BundleCoinSpend:
 class MempoolItem:
     spend_bundle: SpendBundle
     fee: uint64
-    npc_result: NPCResult
+    conds: SpendBundleConditions
     spend_bundle_name: bytes32
     height_added_to_mempool: uint32
 
@@ -39,7 +38,8 @@ class MempoolItem:
     assert_before_height: Optional[uint32] = None
     assert_before_seconds: Optional[uint64] = None
 
-    # Map of coin ID to coin spend data between the bundle and its NPCResult
+    # Map of coin ID to coin spend data between the bundle and its
+    # SpendBundleConditions
     bundle_coin_spends: Dict[bytes32, BundleCoinSpend] = field(default_factory=dict)
 
     def __lt__(self, other: MempoolItem) -> bool:
@@ -58,11 +58,16 @@ class MempoolItem:
 
     @property
     def cost(self) -> uint64:
-        return uint64(0 if self.npc_result.conds is None else self.npc_result.conds.cost)
+        return uint64(0 if self.conds is None else self.conds.cost)
 
     @property
     def additions(self) -> List[Coin]:
-        return additions_for_npc(self.npc_result)
+        additions: List[Coin] = []
+        for spend in self.conds.spends:
+            for puzzle_hash, amount, _ in spend.create_coin:
+                coin = Coin(spend.coin_id, puzzle_hash, uint64(amount))
+                additions.append(coin)
+        return additions
 
     @property
     def removals(self) -> List[Coin]:
@@ -72,7 +77,7 @@ class MempoolItem:
         return {
             "spend_bundle": recurse_jsonify(self.spend_bundle),
             "fee": recurse_jsonify(self.fee),
-            "npc_result": recurse_jsonify(self.npc_result),
+            "npc_result": {"Error": None, "conds": recurse_jsonify(self.conds)},
             "cost": recurse_jsonify(self.cost),
             "spend_bundle_name": recurse_jsonify(self.spend_bundle_name),
             "additions": recurse_jsonify(self.additions),

@@ -31,14 +31,13 @@ def create_full_node_crawler_service(
     config: Dict[str, Any],
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
+    start_crawler_loop: bool = True,
 ) -> CrawlerService:
     service_config = config[SERVICE_NAME]
     crawler_config = service_config["crawler"]
 
     crawler = Crawler(
-        service_config,
-        root_path=root_path,
-        constants=consensus_constants,
+        service_config, root_path=root_path, constants=consensus_constants, start_crawler_loop=start_crawler_loop
     )
     api = CrawlerAPI(crawler)
 

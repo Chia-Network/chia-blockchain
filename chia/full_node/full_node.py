@@ -44,7 +44,6 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
-from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult, UnfinishedBlockEntry
@@ -1103,6 +1102,9 @@ class FullNode:
         ) -> None:
             fork_info: Optional[ForkInfo] = None
 
+            block_rate = 0
+            block_rate_time = time.monotonic()
+            block_rate_height = -1
             while True:
                 res: Optional[Tuple[WSChiaConnection, List[FullBlock]]] = await inner_batch_queue.get()
                 if res is None:
@@ -1111,6 +1113,9 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
+
+                if block_rate_height == -1:
+                    block_rate_height = start_height
 
                 # in case we're validating a reorg fork (i.e. not extending the
                 # main chain), we need to record the coin set from that fork in
@@ -1143,7 +1148,13 @@ class FullNode:
                 if success is False:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
-                self.log.info(f"Added blocks {start_height} to {end_height}")
+                if end_height - block_rate_height > 100:
+                    now = time.monotonic()
+                    block_rate = int((end_height - block_rate_height) // (now - block_rate_time))
+                    block_rate_time = now
+                    block_rate_height = end_height
+
+                self.log.info(f"Added blocks {start_height} to {end_height} ({block_rate} blocks/s)")
                 peak = self.blockchain.get_peak()
                 if state_change_summary is not None:
                     assert peak is not None
@@ -1479,12 +1490,6 @@ class FullNode:
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
 
-        if (
-            self.full_node_store.previous_generator is not None
-            and state_change_summary.fork_height < self.full_node_store.previous_generator.block_height
-        ):
-            self.full_node_store.previous_generator = None
-
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
             state_change_summary,
             self.subscriptions.has_coin_subscription,
@@ -1548,13 +1553,6 @@ class FullNode:
         # Update the mempool (returns successful pending transactions added to the mempool)
         spent_coins: List[bytes32] = [coin_id for coin_id, _ in state_change_summary.removals]
         mempool_new_peak_result = await self.mempool_manager.new_peak(self.blockchain.get_tx_peak(), spent_coins)
-
-        # Check if we detected a spent transaction, to load up our generator cache
-        if block.transactions_generator is not None and self.full_node_store.previous_generator is None:
-            generator_arg = detect_potential_template_generator(block.height, block.transactions_generator)
-            if generator_arg:
-                self.log.info(f"Saving previous generator for height {block.height}")
-                self.full_node_store.previous_generator = generator_arg
 
         return PeakPostProcessingResult(
             mempool_new_peak_result.items,
@@ -2350,6 +2348,7 @@ class FullNode:
             except Exception:
                 self.mempool_manager.remove_seen(spend_name)
                 raise
+
             async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.low):
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
@@ -2400,8 +2399,7 @@ class FullNode:
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE, current_peer.peer_node_id)
 
-        conds = mempool_item.npc_result.conds
-        assert conds is not None
+        conds = mempool_item.conds
 
         all_peers = {
             peer_id
@@ -2457,7 +2455,7 @@ class FullNode:
 
         for removal_info in mempool_removals:
             for internal_mempool_item in removal_info.items:
-                conds = internal_mempool_item.npc_result.conds
+                conds = internal_mempool_item.conds
                 assert conds is not None
 
                 hints_for_removals = await self.hint_store.get_hints([bytes32(spend.coin_id) for spend in conds.spends])
@@ -2797,7 +2795,15 @@ class FullNode:
                 broadcast_list: List[timelord_protocol.RequestCompactProofOfTime] = []
 
                 self.log.info("Getting random heights for bluebox to compact")
-                heights = await self.block_store.get_random_not_compactified(target_uncompact_proofs)
+
+                if self._server is None:
+                    self.log.info("Not broadcasting uncompact blocks, no server found")
+                    await asyncio.sleep(uncompact_interval_scan)
+                    continue
+                connected_timelords = self.server.get_connections(NodeType.TIMELORD)
+
+                total_target_uncompact_proofs = target_uncompact_proofs * max(1, len(connected_timelords))
+                heights = await self.block_store.get_random_not_compactified(total_target_uncompact_proofs)
                 self.log.info("Heights found for bluebox to compact: [%s]", ", ".join(map(str, heights)))
 
                 for h in heights:
@@ -2870,17 +2876,29 @@ class FullNode:
                                 )
                             )
 
-                if len(broadcast_list) > target_uncompact_proofs:
-                    broadcast_list = broadcast_list[:target_uncompact_proofs]
+                broadcast_list_chunks: List[List[timelord_protocol.RequestCompactProofOfTime]] = []
+                for index in range(0, len(broadcast_list), target_uncompact_proofs):
+                    broadcast_list_chunks.append(broadcast_list[index : index + target_uncompact_proofs])
+                if len(broadcast_list_chunks) == 0:
+                    self.log.info("Did not find any uncompact blocks.")
+                    await asyncio.sleep(uncompact_interval_scan)
+                    continue
                 if self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
+                    await asyncio.sleep(uncompact_interval_scan)
                     continue
                 if self._server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
-                    msgs = []
-                    for new_pot in broadcast_list:
-                        msg = make_msg(ProtocolMessageTypes.request_compact_proof_of_time, new_pot)
-                        msgs.append(msg)
-                    await self.server.send_to_all(msgs, NodeType.TIMELORD)
+                    connected_timelords = self.server.get_connections(NodeType.TIMELORD)
+                    chunk_index = 0
+                    for connection in connected_timelords:
+                        peer_node_id = connection.peer_node_id
+                        msgs = []
+                        broadcast_list = broadcast_list_chunks[chunk_index]
+                        chunk_index = (chunk_index + 1) % len(broadcast_list_chunks)
+                        for new_pot in broadcast_list:
+                            msg = make_msg(ProtocolMessageTypes.request_compact_proof_of_time, new_pot)
+                            msgs.append(msg)
+                        await self.server.send_to_specific(msgs, peer_node_id)
                 await asyncio.sleep(uncompact_interval_scan)
         except Exception as e:
             error_stack = traceback.format_exc()
