@@ -203,7 +203,7 @@ farmer:
     - host: *self_hostname
       port: 8444
 
-  pool_public_keys: []
+  pool_public_keys: !!set {}
 
   # Replace this with a real receive address
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg

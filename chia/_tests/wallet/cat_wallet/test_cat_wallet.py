@@ -1234,7 +1234,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
     assert isinstance(cat_wallet, CATWallet)
 
     # Let's test that continuing to melt this CAT results in the correct balance changes
-    async with wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
         for _ in range(0, 5):
             tx_amount -= 1
             new_coin = (await cat_wallet.get_cat_spendable_coins())[0].coin
