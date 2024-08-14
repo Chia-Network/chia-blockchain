@@ -438,10 +438,11 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 2 * 1_750_000_000_000
 
             # Claim 2 * 1.75, and farm a new 1.75
-            absorb_tx: TransactionRecord = (await client.pw_absorb_rewards(2, uint64(fee)))["transaction"]
-            await full_node_api.wait_transaction_records_entered_mempool(records=[absorb_tx])
+            absorb_txs: List[TransactionRecord] = (await client.pw_absorb_rewards(2, uint64(fee)))["transactions"]
+            await full_node_api.wait_transaction_records_entered_mempool(records=absorb_txs)
             await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+            await full_node_api.check_transactions_confirmed(wallet_node.wallet_state_manager, absorb_txs)
             new_status: PoolWalletInfo = (await client.pw_status(2))[0]
             assert status.current == new_status.current
             assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
@@ -449,9 +450,9 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 1 * 1_750_000_000_000
 
             # Claim another 1.75
-            absorb_tx1: TransactionRecord = (await client.pw_absorb_rewards(2, uint64(fee)))["transaction"]
+            absorb_txs1: List[TransactionRecord] = (await client.pw_absorb_rewards(2, uint64(fee)))["transactions"]
 
-            await full_node_api.wait_transaction_records_entered_mempool(records=[absorb_tx1])
+            await full_node_api.wait_transaction_records_entered_mempool(records=absorb_txs1)
 
             await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)

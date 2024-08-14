@@ -48,7 +48,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -76,7 +76,6 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: MainWalletProtocol,
         amount: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         backups_ids: List[bytes32] = [],
         num_of_backup_ids_needed: uint64 = None,
@@ -141,7 +140,7 @@ class DIDWallet:
             raise ValueError("Not enough balance")
 
         try:
-            await self.generate_new_decentralised_id(amount, tx_config, action_scope, fee, extra_conditions)
+            await self.generate_new_decentralised_id(amount, action_scope, fee, extra_conditions)
         except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
@@ -370,7 +369,7 @@ class DIDWallet:
                 )
             )[0]
             coin_spend = await fetch_coin_spend_for_coin_state(parent_state, peer)
-            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal.to_program())
+            uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             assert did_curried_args is not None
             p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
@@ -565,7 +564,6 @@ class DIDWallet:
 
     async def create_update_spend(
         self,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -636,7 +634,6 @@ class DIDWallet:
             coin_name = coin.name()
             await self.standard_wallet.create_tandem_xch_tx(
                 fee,
-                tx_config,
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
@@ -669,7 +666,6 @@ class DIDWallet:
         new_puzhash: bytes32,
         fee: uint64,
         with_recovery: bool,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> None:
@@ -731,7 +727,6 @@ class DIDWallet:
             coin_name = coin.name()
             await self.standard_wallet.create_tandem_xch_tx(
                 fee,
-                tx_config,
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
@@ -762,7 +757,6 @@ class DIDWallet:
     # The message spend can tests\wallet\rpc\test_wallet_rpc.py send messages and also change your innerpuz
     async def create_message_spend(
         self,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> None:
@@ -771,7 +765,7 @@ class DIDWallet:
         coin = await self.get_coin()
         innerpuz: Program = self.did_info.current_inner
         # Quote message puzzle & solution
-        if tx_config.reuse_puzhash:
+        if action_scope.config.tx_config.reuse_puzhash:
             new_innerpuzzle_hash = innerpuz.get_tree_hash()
             uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
             assert uncurried is not None
@@ -836,7 +830,7 @@ class DIDWallet:
             interface.side_effects.transactions.append(tx)
 
     # This is used to cash out, or update the id_list
-    async def create_exit_spend(self, puzhash: bytes32, tx_config: TXConfig, action_scope: WalletActionScope) -> None:
+    async def create_exit_spend(self, puzhash: bytes32, action_scope: WalletActionScope) -> None:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
@@ -897,14 +891,13 @@ class DIDWallet:
         recovering_coin_name: bytes32,
         newpuz: bytes32,
         pubkey: G1Element,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> Tuple[SpendBundle, str]:
         """
         Create an attestment
         TODO:
-            1. We should use/respect `tx_config` (reuse_puzhash and co)
+            1. We should use/respect `action_scope.config.tx_config` (reuse_puzhash and co)
             2. We should take a fee as it's a requirement for every transaction function to do so
         :param recovering_coin_name: Coin ID of the DID
         :param newpuz: New puzzle hash
@@ -1209,7 +1202,6 @@ class DIDWallet:
     async def generate_new_decentralised_id(
         self,
         amount: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -1218,7 +1210,9 @@ class DIDWallet:
         This must be called under the wallet state manager lock
         """
 
-        coins = await self.standard_wallet.select_coins(uint64(amount + fee), tx_config.coin_selection_config)
+        coins = await self.standard_wallet.select_coins(
+            uint64(amount + fee), action_scope.config.tx_config.coin_selection_config
+        )
 
         origin = coins.copy().pop()
         genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
@@ -1234,7 +1228,6 @@ class DIDWallet:
         await self.standard_wallet.generate_signed_transaction(
             amount=amount,
             puzzle_hash=genesis_launcher_puz.get_tree_hash(),
-            tx_config=tx_config,
             action_scope=action_scope,
             fee=fee,
             coins=coins,

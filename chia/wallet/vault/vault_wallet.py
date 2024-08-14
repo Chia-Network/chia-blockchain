@@ -132,7 +132,6 @@ class Vault(Wallet):
         self,
         amount: uint64,
         puzzle_hash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
@@ -154,7 +153,6 @@ class Vault(Wallet):
         coin_spends = await self._generate_unsigned_transaction(
             amount,
             puzzle_hash,
-            tx_config,
             action_scope,
             fee=fee,
             coins=coins,
@@ -193,7 +191,6 @@ class Vault(Wallet):
         self,
         amount: uint64,
         newpuzzlehash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
@@ -223,7 +220,7 @@ class Vault(Wallet):
                 )
             coins = await self.select_coins(
                 uint64(total_amount),
-                tx_config.coin_selection_config,
+                action_scope.config.tx_config.coin_selection_config,
             )
         assert len(coins) > 0
         selected_amount = sum(coin.amount for coin in coins)

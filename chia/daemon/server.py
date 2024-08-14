@@ -5,6 +5,7 @@ import dataclasses
 import json
 import logging
 import os
+import shutil
 import signal
 import ssl
 import subprocess
@@ -112,7 +113,8 @@ else:
     application_path = os.path.dirname(__file__)
 
     def executable_for_service(service_name: str) -> str:
-        return service_name
+        cmd_to_exec = shutil.which(service_name)
+        return cmd_to_exec if cmd_to_exec is not None else service_name
 
 
 async def ping() -> Dict[str, Any]:

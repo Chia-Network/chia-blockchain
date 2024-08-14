@@ -16,6 +16,7 @@ async def validate_get_routes(client: RpcClient, api: RpcApiProtocol) -> None:
         "/close_connection",
         "/stop_node",
         "/get_routes",
+        "/get_version",
         "/healthz",
     ]
     assert len(routes_api) > 0

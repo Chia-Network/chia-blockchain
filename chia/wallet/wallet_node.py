@@ -273,7 +273,7 @@ class WalletNode:
         return key
 
     async def get_key(
-        self, fingerprint: Optional[int], private: bool = True
+        self, fingerprint: Optional[int], private: bool = True, find_a_default: bool = True
     ) -> Optional[Union[PrivateKey, ObservationRoot]]:
         """
         Attempt to get the private key for the given fingerprint. If the fingerprint is None,
@@ -284,12 +284,14 @@ class WalletNode:
             fingerprint, private=private
         )
 
-        if fingerprint is None and key is not None:
-            if isinstance(key, PrivateKey):
-                fp = key.get_g1().get_fingerprint()
-            else:
-                fp = key.get_fingerprint()
-            self.log.info(f"Using first key found (fingerprint: {fp})")
+        if key is None and fingerprint is not None and find_a_default:
+            key = await self.get_key_for_fingerprint(None, private=private)
+            if key is not None:
+                if isinstance(key, PrivateKey):
+                    fp = key.get_g1().get_fingerprint()
+                else:
+                    fp = key.get_fingerprint()
+                self.log.info(f"Using first key found (fingerprint: {fp})")
 
         return key
 
@@ -417,17 +419,24 @@ class WalletNode:
         multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
         self.synced_peers = set()
-        private_key = await self.get_key(fingerprint, private=True)
+        observation_root = None
+        private_key = await self.get_key(fingerprint, private=True, find_a_default=False)
         if private_key is None:
-            observation_root = await self.get_key(fingerprint, private=False)
+            observation_root = await self.get_key(fingerprint, private=False, find_a_default=False)
         else:
             assert isinstance(private_key, PrivateKey)
             observation_root = private_key.get_g1()
+
         if observation_root is None:
-            self.log_out()
-            return False
-        assert not isinstance(observation_root, PrivateKey)
+            private_key = await self.get_key(None, private=True, find_a_default=True)
+            if private_key is not None:
+                assert isinstance(private_key, PrivateKey)
+                observation_root = private_key.get_g1()
+            else:
+                self.log_out()
+                return False
         # override with private key fetched in case it's different from what was passed
+        assert isinstance(observation_root, ObservationRoot)
         if fingerprint is None:
             fingerprint = observation_root.get_fingerprint()
         if self.config.get("enable_profiler", False):

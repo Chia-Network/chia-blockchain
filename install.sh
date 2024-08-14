@@ -170,8 +170,6 @@ fi
 
 ./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
 .penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
-# TODO: Decide if this is needed or should be handled automatically in some way
-.penv/bin/pip install "poetry-dynamic-versioning[plugin]"
 # shellcheck disable=SC2086
 .penv/bin/poetry install ${EXTRAS}
 ln -s -f .venv venv
@@ -199,7 +197,7 @@ echo "For assistance join us on Discord in the #support chat channel:"
 echo "https://discord.gg/chia"
 echo ""
 echo "Try the Quick Start Guide to running chia-blockchain:"
-echo "https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide"
+echo "https://docs.chia.net/introduction"
 echo ""
 echo "To install the GUI run '. ./activate' then 'sh install-gui.sh'."
 echo ""

@@ -127,11 +127,10 @@ async def test_wait_transaction_records_entered_mempool(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 amount=uint64(tx_amount),
                 puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                tx_config=DEFAULT_TX_CONFIG,
                 action_scope=action_scope,
                 coins={coin},
             )
@@ -164,11 +163,10 @@ async def test_process_transaction_records(
 
     # repeating just to try to expose any flakiness
     for coin in coins:
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 amount=uint64(tx_amount),
                 puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                tx_config=DEFAULT_TX_CONFIG,
                 action_scope=action_scope,
                 coins={coin},
             )
@@ -199,7 +197,7 @@ async def test_create_coins_with_amounts(
     await full_node_api.farm_rewards_to_wallet(amount=sum(amounts), wallet=wallet)
     # Get some more coins.  The creator helper doesn't get you all the coins you
     # need yet.
-    await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet)
+    await full_node_api.farm_blocks_to_wallet(count=2, wallet=wallet, timeout=30)
     coins = await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
     assert sorted(coin.amount for coin in coins) == sorted(amounts)
 

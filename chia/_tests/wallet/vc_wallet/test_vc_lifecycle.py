@@ -526,7 +526,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(coin_spends[1])
-            assert VerifiedCredential.is_vc(uncurry_puzzle(coin_spends[1].puzzle_reveal.to_program()))[0]
+            assert VerifiedCredential.is_vc(uncurry_puzzle(coin_spends[1].puzzle_reveal))[0]
         assert vc.construct_puzzle().get_tree_hash() == vc.coin.puzzle_hash
         assert len(await client.get_coin_records_by_puzzle_hashes([vc.coin.puzzle_hash], include_spent_coins=False)) > 0
 
@@ -585,7 +585,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         await sim.farm_block()
         if test_syncing:
             vc = VerifiedCredential.get_next_from_coin_spend(update_spend)
-            assert VerifiedCredential.is_vc(uncurry_puzzle(update_spend.puzzle_reveal.to_program()))[0]
+            assert VerifiedCredential.is_vc(uncurry_puzzle(update_spend.puzzle_reveal))[0]
 
         # Now lets farm a funds for some CR-CATs
         await sim.farm_block(RUN_PUZ_PUZ_PH)
@@ -749,9 +749,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             if error is None:
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
                 if test_syncing:
-                    assert all(
-                        CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal.to_program()))[0] for spend in cr_cat_spends
-                    )
+                    assert all(CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal))[0] for spend in cr_cat_spends)
                     new_crcats = [crcat for spend in cr_cat_spends for crcat in CRCAT.get_next_from_coin_spend(spend)]
                     vc = VerifiedCredential.get_next_from_coin_spend(auth_spend)
                 else:

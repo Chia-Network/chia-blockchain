@@ -33,7 +33,6 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_info import WalletInfo
@@ -68,7 +67,6 @@ class AnyoneCanSpend(Wallet):
         self,
         amount: uint64,
         puzzle_hash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
@@ -86,7 +84,7 @@ class AnyoneCanSpend(Wallet):
             + fee
         )
 
-        coins = await self.select_coins(uint64(non_change_amount), tx_config.coin_selection_config)
+        coins = await self.select_coins(uint64(non_change_amount), action_scope.config.tx_config.coin_selection_config)
         total_amount = sum(c.amount for c in coins)
 
         condition_list.append(Payment(ACS_PH, uint64(total_amount - non_change_amount)))
@@ -273,11 +271,12 @@ async def test_main_wallet(
             )
         ]
     )
-    async with main_wallet.wallet_state_manager.new_action_scope(push=True, sign=True) as action_scope:
+    async with main_wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True, sign=True
+    ) as action_scope:
         await main_wallet.generate_signed_transaction(
             uint64(1_750_000_000_001),
             ph,
-            wallet_environments.tx_config,
             action_scope,
             fee=uint64(2),
             primaries=[Payment(ph, uint64(3))],

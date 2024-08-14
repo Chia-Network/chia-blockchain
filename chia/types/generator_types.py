@@ -20,6 +20,3 @@ class GeneratorBlockCacheInterface:
 class BlockGenerator(Streamable):
     program: SerializedProgram
     generator_refs: List[SerializedProgram]
-
-    # the heights are only used when creating new blocks, never when validating
-    block_height_list: List[uint32]
