@@ -270,7 +270,7 @@ class KeyDataSecrets(Streamable):
             secret_info_bytes=bytes(
                 PUBLIC_TYPES_TO_PRIVATE_TYPES[KEY_TYPES_TO_TYPES[key_type]].from_seed(mnemonic_to_seed(mnemonic))
             ),
-            key_type=key_type,
+            key_type=key_type.value,
         )
 
     @classmethod
@@ -399,7 +399,7 @@ class Keychain:
             pk_bytes: bytes = str_bytes[: G1Element.SIZE]
             observation_root: ObservationRoot = G1Element.from_bytes(pk_bytes)
             fingerprint = observation_root.get_fingerprint()
-            if len(str_bytes) == G1Element.SIZE + 32:
+            if len(str_bytes) > G1Element.SIZE:
                 entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
             else:
                 entropy = None

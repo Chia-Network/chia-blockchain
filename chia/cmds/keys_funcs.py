@@ -186,11 +186,11 @@ def show_keys(
             key["pool_pk"] = None
 
         if isinstance(key_data.observation_root, G1Element):
-            assert isinstance(key_data, PrivateKey)
             if non_observer_derivation:
                 if sk is None:
                     first_wallet_pk: Optional[G1Element] = None
                 else:
+                    assert isinstance(sk, PrivateKey)
                     first_wallet_pk = master_sk_to_wallet_sk(sk, uint32(0)).public_key()
             else:
                 first_wallet_pk = master_pk_to_wallet_pk_unhardened(key_data.observation_root, uint32(0))
@@ -750,9 +750,13 @@ def derive_child_key(
             # TODO: Add coverage when vault wallet exists
             print("Cannot currently derive from non-BLS keys")
             return
-        assert isinstance(key_data.private_key, PrivateKey)
+        if key_data.secrets is not None:
+            assert isinstance(key_data.private_key, PrivateKey)
         current_pk: G1Element = key_data.observation_root
-        current_sk: Optional[PrivateKey] = key_data.private_key if key_data.secrets is not None else None
+        # mypy can't figure out the semantics here
+        current_sk: Optional[PrivateKey] = (
+            key_data.private_key if key_data.secrets is not None else None  # type: ignore[assignment]
+        )
     else:
         assert private_key is not None
         current_pk = private_key.get_g1()

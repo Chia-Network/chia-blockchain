@@ -329,7 +329,7 @@ def search_cmd(
     if fingerprint is None and filename is not None:
         sk = resolve_derivation_master_key(filename)
 
-    if not isinstance(sk, PrivateKey):
+    if sk is not None and not isinstance(sk, PrivateKey):
         print("Cannot derive from non-BLS keys")
         return
 
@@ -384,7 +384,7 @@ def wallet_address_cmd(
     if fingerprint is None and filename is not None:
         sk = resolve_derivation_master_key(filename)
 
-    if not isinstance(sk, PrivateKey):
+    if sk is not None and not isinstance(sk, PrivateKey):
         print("Cannot derive from non-BLS keys")
         return
 
@@ -459,7 +459,7 @@ def child_key_cmd(
     if fingerprint is None and filename is not None:
         sk = resolve_derivation_master_key(filename)
 
-    if not isinstance(sk, PrivateKey):
+    if sk is not None and not isinstance(sk, PrivateKey):
         print("Cannot derive from non-BLS keys")
         return
 
