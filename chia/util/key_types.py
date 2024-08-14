@@ -57,7 +57,7 @@ class Secp256r1PrivateKey:
     def __bytes__(self) -> bytes:
         return self._private_key.private_bytes(
             encoding=serialization.Encoding.DER,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption(),
         )
 
