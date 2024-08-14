@@ -676,10 +676,7 @@ class FullNodeSimulator(FullNodeAPI):
                 # seen that amount sent to that puzzle hash
                 puzzle_hash = await wallet.get_puzzle_hash(new=amount in amounts_seen)
                 outputs.append(Payment(puzzle_hash, amount))
-                if amount in amounts_seen:
-                    amounts_seen = set()
-                else:
-                    amounts_seen.add(amount)
+                amounts_seen.add(amount)
 
             transaction_records: List[TransactionRecord] = []
             outputs_iterator = iter(outputs)
