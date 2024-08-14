@@ -11,3 +11,7 @@ class ObservationRoot(Protocol):
 
     @classmethod
     def from_bytes(cls, blob: bytes) -> ObservationRoot: ...
+
+
+class Signature(Protocol):
+    def __bytes__(self) -> bytes: ...
