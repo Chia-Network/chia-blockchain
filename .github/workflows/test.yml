@@ -109,7 +109,7 @@ jobs:
       matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   macos-intel:
-    if: false
+    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-intel
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -123,7 +123,7 @@ jobs:
       runs-on: macos-12
       arch: intel
   macos-arm:
-    if: false
+    if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
@@ -138,7 +138,7 @@ jobs:
       arch: arm
       collect-junit: false
   ubuntu:
-    if: false
+    if: github.event_name != 'workflow_dispatch' || inputs.run-linux
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
