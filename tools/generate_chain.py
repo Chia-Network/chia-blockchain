@@ -162,7 +162,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                         pool_reward_puzzle_hash=pool_puzzlehash,
                         keep_going_until_tx_block=True,
                         transaction_data=SpendBundle.aggregate(spend_bundles),
-                        previous_generator=block_references,
+                        block_refs=block_references,
                     )
                     prev_tx_block = b
                     prev_block = blocks[-2]

@@ -84,11 +84,12 @@ class SideEffects(Protocol):
 
 
 _T_SideEffects = TypeVar("_T_SideEffects", bound=SideEffects)
+_T_Config = TypeVar("_T_Config")
 
 
 @final
 @dataclass
-class ActionScope(Generic[_T_SideEffects]):
+class ActionScope(Generic[_T_SideEffects, _T_Config]):
     """
     The idea of an "action" is to map a single client input to many potentially distributed functions and side
     effects. The action holds on to a temporary state that the many callers modify at will but only one at a time.
@@ -100,6 +101,7 @@ class ActionScope(Generic[_T_SideEffects]):
 
     _resource_manager: ResourceManager
     _side_effects_format: Type[_T_SideEffects]
+    _config: _T_Config  # An object not intended to be mutated during the lifetime of the scope
     _callback: Optional[Callable[[StateInterface[_T_SideEffects]], Awaitable[None]]] = None
     _final_side_effects: Optional[_T_SideEffects] = field(init=False, default=None)
 
@@ -113,15 +115,22 @@ class ActionScope(Generic[_T_SideEffects]):
 
         return self._final_side_effects
 
+    @property
+    def config(self) -> _T_Config:
+        return self._config
+
     @classmethod
     @contextlib.asynccontextmanager
     async def new_scope(
         cls,
         side_effects_format: Type[_T_SideEffects],
+        # I want a default here in case a use case doesn't want to take advantage of the config but no default seems to
+        # satisfy the type hint _T_Config so we'll just ignore this.
+        config: _T_Config = object(),  # type: ignore[assignment]
         resource_manager_backend: Type[ResourceManager] = SQLiteResourceManager,
-    ) -> AsyncIterator[ActionScope[_T_SideEffects]]:
+    ) -> AsyncIterator[ActionScope[_T_SideEffects, _T_Config]]:
         async with resource_manager_backend.managed(side_effects_format()) as resource_manager:
-            self = cls(_resource_manager=resource_manager, _side_effects_format=side_effects_format)
+            self = cls(_resource_manager=resource_manager, _side_effects_format=side_effects_format, _config=config)
 
             yield self
 

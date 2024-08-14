@@ -21,6 +21,12 @@ class TestSideEffects:
         return cls(blob)
 
 
+@final
+@dataclass
+class TestConfig:
+    test_foo: str = "test_foo"
+
+
 async def default_async_callback(interface: StateInterface[TestSideEffects]) -> None:
     return None  # pragma: no cover
 
@@ -36,13 +42,14 @@ def test_set_callback() -> None:
 
 
 @pytest.fixture(name="action_scope")
-async def action_scope_fixture() -> AsyncIterator[ActionScope[TestSideEffects]]:
-    async with ActionScope.new_scope(TestSideEffects) as scope:
+async def action_scope_fixture() -> AsyncIterator[ActionScope[TestSideEffects, TestConfig]]:
+    async with ActionScope.new_scope(TestSideEffects, TestConfig()) as scope:
+        assert scope.config == TestConfig(test_foo="test_foo")
         yield scope
 
 
 @pytest.mark.anyio
-async def test_new_action_scope(action_scope: ActionScope[TestSideEffects]) -> None:
+async def test_new_action_scope(action_scope: ActionScope[TestSideEffects, TestConfig]) -> None:
     """
     Assert we can immediately check out some initial state
     """
@@ -51,7 +58,7 @@ async def test_new_action_scope(action_scope: ActionScope[TestSideEffects]) -> N
 
 
 @pytest.mark.anyio
-async def test_scope_persistence(action_scope: ActionScope[TestSideEffects]) -> None:
+async def test_scope_persistence(action_scope: ActionScope[TestSideEffects, TestConfig]) -> None:
     async with action_scope.use() as interface:
         interface.side_effects.buf = b"baz"
 
@@ -60,7 +67,7 @@ async def test_scope_persistence(action_scope: ActionScope[TestSideEffects]) -> 
 
 
 @pytest.mark.anyio
-async def test_transactionality(action_scope: ActionScope[TestSideEffects]) -> None:
+async def test_transactionality(action_scope: ActionScope[TestSideEffects, TestConfig]) -> None:
     async with action_scope.use() as interface:
         interface.side_effects.buf = b"baz"
 
@@ -75,7 +82,7 @@ async def test_transactionality(action_scope: ActionScope[TestSideEffects]) -> N
 
 @pytest.mark.anyio
 async def test_callbacks() -> None:
-    async with ActionScope.new_scope(TestSideEffects) as action_scope:
+    async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
         async with action_scope.use() as interface:
 
             async def callback(interface: StateInterface[TestSideEffects]) -> None:
@@ -89,7 +96,7 @@ async def test_callbacks() -> None:
 @pytest.mark.anyio
 async def test_callback_in_callback_error() -> None:
     with pytest.raises(RuntimeError, match="Callback"):
-        async with ActionScope.new_scope(TestSideEffects) as action_scope:
+        async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
             async with action_scope.use() as interface:
 
                 async def callback(interface: StateInterface[TestSideEffects]) -> None:
@@ -101,7 +108,7 @@ async def test_callback_in_callback_error() -> None:
 @pytest.mark.anyio
 async def test_no_callbacks_if_error() -> None:
     with pytest.raises(Exception, match="This should prevent the callbacks from being called"):
-        async with ActionScope.new_scope(TestSideEffects) as action_scope:
+        async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
             async with action_scope.use() as interface:
 
                 async def callback(interface: StateInterface[TestSideEffects]) -> None:
@@ -113,7 +120,7 @@ async def test_no_callbacks_if_error() -> None:
                 raise RuntimeError("This should prevent the callbacks from being called")
 
     with pytest.raises(Exception, match="This should prevent the callbacks from being called"):
-        async with ActionScope.new_scope(TestSideEffects) as action_scope:
+        async with ActionScope.new_scope(TestSideEffects, TestConfig()) as action_scope:
             async with action_scope.use() as interface:
 
                 async def callback2(interface: StateInterface[TestSideEffects]) -> None:
@@ -126,7 +133,7 @@ async def test_no_callbacks_if_error() -> None:
 
 # TODO: add suport, change this test to test it and add a test for nested transactionality
 @pytest.mark.anyio
-async def test_nested_use_banned(action_scope: ActionScope[TestSideEffects]) -> None:
+async def test_nested_use_banned(action_scope: ActionScope[TestSideEffects, TestConfig]) -> None:
     async with action_scope.use():
         with pytest.raises(RuntimeError, match="cannot currently support nested transactions"):
             async with action_scope.use():

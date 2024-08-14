@@ -382,7 +382,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
 
-    await generate_funds(full_node_api, env.wallet_1)
+    await generate_funds(full_node_api, env.wallet_1, num_blocks=2)
 
     outputs = await create_tx_outputs(wallet, [(1234321, None)])
 
@@ -394,18 +394,29 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
         )
     ).signed_tx
 
-    await client.push_transactions([tx])
-    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict_convenience(wallet_node.config)]})
+    resp_client = await client.push_transactions([tx], fee=uint64(10))
+    resp = await client.fetch(
+        "push_transactions", {"transactions": [tx.to_json_dict_convenience(wallet_node.config)], "fee": 10}
+    )
     assert resp["success"]
-    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()]})
+    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
     assert resp["success"]
 
-    spend_bundle = tx.spend_bundle
+    spend_bundle = SpendBundle.aggregate(
+        [
+            # We ARE checking that the spendbundle is not None but mypy can't recognize this
+            TransactionRecord.from_json_dict_convenience(tx).spend_bundle  # type: ignore[misc]
+            for tx in resp_client["transactions"]
+            if tx["spend_bundle"] is not None
+        ]
+    )
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
-    tx = await client.get_transaction(transaction_id=tx.name)
-    assert tx.confirmed
+    for tx_json in resp_client["transactions"]:
+        tx = TransactionRecord.from_json_dict_convenience(tx_json)
+        tx = await client.get_transaction(transaction_id=tx.name)
+        assert tx.confirmed
 
 
 @pytest.mark.anyio
@@ -416,13 +427,12 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
-    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
             {"identifier": "genesis_by_id"},
             uint64(100),
-            DEFAULT_TX_CONFIG,
             action_scope,
         )
     await full_node_api.wait_transaction_records_entered_mempool(action_scope.side_effects.transactions)
@@ -466,11 +476,10 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     await generate_funds(full_node_api, env.wallet_1)
 
     fee_amount = 100
-    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet.generate_signed_transaction(
             amount=uint64(5),
             puzzle_hash=bytes32([0] * 32),
-            tx_config=DEFAULT_TX_CONFIG,
             action_scope=action_scope,
             fee=uint64(fee_amount),
         )
@@ -1103,7 +1112,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
-    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
+    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal).mod == CAT_MOD
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     await farm_transaction_block(full_node_api, wallet_node)

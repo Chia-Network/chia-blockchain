@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import time
-from operator import attrgetter
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from chia_rs import G1Element, G2Element
@@ -21,7 +20,7 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import (
@@ -58,7 +57,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig, TXConfigLoader
+from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -302,7 +301,6 @@ class DataLayerWallet:
     async def generate_new_reporter(
         self,
         initial_root: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -311,14 +309,18 @@ class DataLayerWallet:
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
 
-        coins: Set[Coin] = await self.standard_wallet.select_coins(uint64(fee + 1), tx_config.coin_selection_config)
+        coins: Set[Coin] = await self.standard_wallet.select_coins(
+            uint64(fee + 1), action_scope.config.tx_config.coin_selection_config
+        )
         if coins is None:
             raise ValueError("Not enough coins to create new data layer singleton")
 
         launcher_parent: Coin = list(coins)[0]
         launcher_coin: Coin = Coin(launcher_parent.name(), SINGLETON_LAUNCHER.get_tree_hash(), uint64(1))
 
-        inner_puzzle: Program = await self.standard_wallet.get_puzzle(new=not tx_config.reuse_puzhash)
+        inner_puzzle: Program = await self.standard_wallet.get_puzzle(
+            new=not action_scope.config.tx_config.reuse_puzhash
+        )
         full_puzzle: Program = create_host_fullpuz(inner_puzzle, initial_root, launcher_coin.name())
 
         genesis_launcher_solution: Program = Program.to(
@@ -330,7 +332,6 @@ class DataLayerWallet:
         await self.standard_wallet.generate_signed_transaction(
             amount=uint64(1),
             puzzle_hash=SINGLETON_LAUNCHER.get_tree_hash(),
-            tx_config=tx_config,
             action_scope=action_scope,
             fee=fee,
             origin_id=launcher_parent.name(),
@@ -374,13 +375,11 @@ class DataLayerWallet:
         self,
         fee: uint64,
         announcement_to_assert: AssertAnnouncement,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
     ) -> None:
         await self.standard_wallet.generate_signed_transaction(
             amount=uint64(0),
-            puzzle_hash=await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash),
-            tx_config=tx_config,
+            puzzle_hash=await self.standard_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash),
             action_scope=action_scope,
             fee=fee,
             negative_change_allowed=False,
@@ -391,7 +390,6 @@ class DataLayerWallet:
         self,
         launcher_id: bytes32,
         root_hash: Optional[bytes32],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         new_puz_hash: Optional[bytes32] = None,
         new_amount: Optional[uint64] = None,
@@ -415,7 +413,9 @@ class DataLayerWallet:
 
         # Make the child's puzzles
         if new_puz_hash is None:
-            new_puz_hash = await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
+            new_puz_hash = await self.standard_wallet.get_puzzle_hash(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
         assert new_puz_hash is not None
         next_full_puz_hash: bytes32 = create_host_fullpuz(new_puz_hash, root_hash, launcher_id).get_tree_hash_precalc(
             new_puz_hash
@@ -592,7 +592,6 @@ class DataLayerWallet:
             await self.create_tandem_xch_tx(
                 fee,
                 AssertAnnouncement(True, asserted_origin_id=current_coin.name(), asserted_msg=b"$"),
-                tx_config,
                 action_scope,
             )
 
@@ -612,7 +611,6 @@ class DataLayerWallet:
         self,
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Set[Coin] = set(),
@@ -644,7 +642,6 @@ class DataLayerWallet:
         await self.create_update_state_spend(
             launcher_id,
             new_root_hash,
-            tx_config,
             action_scope,
             puzzle_hashes[0],
             amounts[0],
@@ -713,7 +710,6 @@ class DataLayerWallet:
         launcher_id: bytes32,
         amount: uint64,
         urls: List[bytes],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -721,7 +717,6 @@ class DataLayerWallet:
         await self.standard_wallet.generate_signed_transaction(
             amount=amount,
             puzzle_hash=create_mirror_puzzle().get_tree_hash(),
-            tx_config=tx_config,
             action_scope=action_scope,
             fee=fee,
             primaries=[],
@@ -733,7 +728,6 @@ class DataLayerWallet:
         self,
         mirror_id: bytes32,
         peer: WSChiaConnection,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -752,7 +746,9 @@ class DataLayerWallet:
             raise ValueError(f"DL Wallet does not have permission to delete mirror with ID {mirror_id}")
 
         parent_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
-        new_puzhash: bytes32 = await self.standard_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
+        new_puzhash: bytes32 = await self.standard_wallet.get_puzzle_hash(
+            new=not action_scope.config.tx_config.reuse_puzhash
+        )
         excess_fee: int = fee - mirror_coin.amount
         inner_sol: Program = self.standard_wallet.make_solution(
             primaries=[Payment(new_puzhash, uint64(mirror_coin.amount - fee))] if excess_fee < 0 else [],
@@ -799,7 +795,6 @@ class DataLayerWallet:
             await self.wallet_state_manager.main_wallet.generate_signed_transaction(
                 uint64(1),
                 new_puzhash,
-                tx_config,
                 action_scope,
                 fee=uint64(excess_fee),
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=mirror_coin.name(), asserted_msg=b"$"),),
@@ -903,98 +898,8 @@ class DataLayerWallet:
             await self.wallet_state_manager.add_interested_coin_ids(
                 [new_singleton.name()],
             )
-            await self.potentially_handle_resubmit(singleton_record.launcher_id)
         elif parent_spend.coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             await self.wallet_state_manager.dl_store.delete_mirror(parent_name)
-
-    # This function, though in use, is currently untested because it never runs due to other design choices
-    async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:  # pragma: no cover
-        """
-        This method is meant to detect a fork in our expected pending singletons and the singletons that have actually
-        been confirmed on chain.  If there is a fork and the root on chain never changed, we will attempt to rebase our
-        singletons on to the new latest singleton.  If there is a fork and the root changed, we assume that everything
-        has failed and delete any pending state.
-        """
-        unconfirmed_singletons = await self.wallet_state_manager.dl_store.get_unconfirmed_singletons(launcher_id)
-        if len(unconfirmed_singletons) == 0:
-            return
-        unconfirmed_singletons = sorted(unconfirmed_singletons, key=attrgetter("generation"))
-        full_branch: List[SingletonRecord] = await self.wallet_state_manager.dl_store.get_all_singletons_for_launcher(
-            launcher_id,
-            min_generation=unconfirmed_singletons[0].generation,
-        )
-        if len(unconfirmed_singletons) == len(full_branch) and set(unconfirmed_singletons) == set(full_branch):
-            return
-
-        # Now we have detected a fork so we should check whether the root changed at all
-        self.log.info("Attempting automatic rebase")
-        parent_name = unconfirmed_singletons[0].lineage_proof.parent_name
-        assert parent_name is not None
-        parent_singleton = await self.wallet_state_manager.dl_store.get_singleton_record(parent_name)
-        if parent_singleton is None or any(parent_singleton.root != s.root for s in full_branch if s.confirmed):
-            root_changed: bool = True
-        else:
-            root_changed = False
-
-        # Regardless of whether the root changed or not, our old state is bad so let's eliminate it
-        # First let's find all of our txs matching our unconfirmed singletons
-        relevant_dl_txs: List[TransactionRecord] = []
-        for singleton in unconfirmed_singletons:
-            parent_name = singleton.lineage_proof.parent_name
-            if parent_name is None:
-                continue
-
-            tx = await self.wallet_state_manager.tx_store.get_transaction_record(parent_name)
-            if tx is not None:
-                relevant_dl_txs.append(tx)
-        # Let's check our standard wallet for fee transactions related to these dl txs
-        all_spends: List[SpendBundle] = [tx.spend_bundle for tx in relevant_dl_txs if tx.spend_bundle is not None]
-        all_removal_ids: Set[bytes32] = {removal.name() for sb in all_spends for removal in sb.removals()}
-        unconfirmed_std_txs: List[TransactionRecord] = (
-            await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.standard_wallet.id())
-        )
-        relevant_std_txs: List[TransactionRecord] = [
-            tx for tx in unconfirmed_std_txs if any(c.name() in all_removal_ids for c in tx.removals)
-        ]
-        # Delete all of the relevant transactions
-        for tx in [*relevant_dl_txs, *relevant_std_txs]:
-            await self.wallet_state_manager.tx_store.delete_transaction_record(tx.name)
-        # Delete all of the unconfirmed singleton records
-        for singleton in unconfirmed_singletons:
-            await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
-
-        if not root_changed:
-            # The root never changed so let's attempt a rebase
-            try:
-                async with self.wallet_state_manager.new_action_scope(push=True) as action_scope:
-                    for singleton in unconfirmed_singletons:
-                        for tx in relevant_dl_txs:
-                            if any(c.name() == singleton.coin_id for c in tx.additions):
-                                if tx.spend_bundle is not None:
-                                    # This executes the puzzles
-                                    fee = uint64(estimate_fees(tx.spend_bundle))
-                                else:
-                                    fee = uint64(0)
-
-                                assert self.wallet_state_manager.wallet_node.logged_in_fingerprint is not None
-                                await self.create_update_state_spend(
-                                    launcher_id,
-                                    singleton.root,
-                                    TXConfigLoader().autofill(
-                                        constants=self.wallet_state_manager.constants,
-                                        config=self.wallet_state_manager.config,
-                                        logged_in_fingerprint=(
-                                            self.wallet_state_manager.wallet_node.logged_in_fingerprint
-                                        ),
-                                    ),
-                                    action_scope=action_scope,
-                                    fee=fee,
-                                )
-            except Exception as e:
-                self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
-                # Something went wrong so let's delete anything pending that was created
-                for singleton in unconfirmed_singletons:
-                    await self.wallet_state_manager.dl_store.delete_singleton_record(singleton.coin_id)
 
     async def stop_tracking_singleton(self, launcher_id: bytes32) -> None:
         await self.wallet_state_manager.dl_store.delete_singleton_records_by_launcher_id(launcher_id)
@@ -1124,7 +1029,6 @@ class DataLayerWallet:
         offer_dict: Dict[Optional[bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo],
         solver: Solver,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -1146,12 +1050,15 @@ class DataLayerWallet:
             except KeyError:
                 this_solver = solver["0x" + launcher.hex()]
             new_root: bytes32 = this_solver["new_root"]
-            new_ph: bytes32 = await wallet_state_manager.main_wallet.get_puzzle_hash(new=not tx_config.reuse_puzhash)
-            async with wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+            new_ph: bytes32 = await wallet_state_manager.main_wallet.get_puzzle_hash(
+                new=not action_scope.config.tx_config.reuse_puzhash
+            )
+            async with wallet_state_manager.new_action_scope(
+                action_scope.config.tx_config, push=False
+            ) as inner_action_scope:
                 await dl_wallet.generate_signed_transaction(
                     [uint64(1)],
                     [new_ph],
-                    tx_config,
                     inner_action_scope,
                     fee=fee_left_to_pay,
                     launcher_id=launcher,

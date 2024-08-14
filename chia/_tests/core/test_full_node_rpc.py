@@ -7,6 +7,7 @@ import pytest
 from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
+from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
@@ -574,6 +575,23 @@ async def test_get_network_info(one_wallet_and_one_simulator_services, self_host
             "network_prefix": "txch",
             "genesis_challenge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "success": True,
+        }
+
+
+@pytest.mark.anyio
+async def test_get_version(one_wallet_and_one_simulator_services, self_hostname):
+    nodes, _, bt = one_wallet_and_one_simulator_services
+    (full_node_service_1,) = nodes
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    ) as client:
+        version = await client.fetch("get_version", {})
+        assert version == {
+            "success": True,
+            "version": __version__,
         }
 
 

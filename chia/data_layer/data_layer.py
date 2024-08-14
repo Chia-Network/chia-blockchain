@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import dataclasses
+import functools
 import json
 import logging
 import os
@@ -60,8 +61,8 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, Singleton
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
     delete_full_file_if_exists,
-    get_delta_filename,
-    get_full_tree_filename,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     insert_from_delta_file,
     write_files_for_root,
 )
@@ -124,6 +125,10 @@ class DataLayer:
     _wallet_rpc: Optional[WalletRpcClient] = None
     subscription_lock: asyncio.Lock = dataclasses.field(default_factory=asyncio.Lock)
     subscription_update_concurrency: int = 5
+    client_timeout: aiohttp.ClientTimeout = dataclasses.field(
+        default_factory=functools.partial(aiohttp.ClientTimeout, total=45, sock_connect=5)
+    )
+    group_files_by_store: bool = False
 
     @property
     def server(self) -> ChiaServer:
@@ -185,6 +190,10 @@ class DataLayer:
             maximum_full_file_count=config.get("maximum_full_file_count", 1),
             subscription_update_concurrency=config.get("subscription_update_concurrency", 5),
             unsubscribe_data_queue=[],
+            client_timeout=aiohttp.ClientTimeout(
+                total=config.get("client_timeout", 45), sock_connect=config.get("connect_timeout", 5)
+            ),
+            group_files_by_store=config.get("group_files_by_store", False),
         )
 
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -586,7 +595,6 @@ class DataLayer:
                 max_generation=singleton_record.generation,
             )
             try:
-                timeout = self.config.get("client_timeout", 15)
                 proxy_url = self.config.get("proxy_url", None)
                 success = await insert_from_delta_file(
                     self.data_store,
@@ -595,10 +603,11 @@ class DataLayer:
                     [record.root for record in reversed(to_download)],
                     server_info,
                     self.server_files_location,
-                    timeout,
+                    self.client_timeout,
                     self.log,
                     proxy_url,
                     await self.get_downloader(store_id, url),
+                    self.group_files_by_store,
                 )
                 if success:
                     self.log.info(
@@ -669,6 +678,7 @@ class DataLayer:
                 root,
                 self.server_files_location,
                 full_tree_first_publish_generation,
+                group_by_store=self.group_files_by_store,
             )
             if not write_file_result.result:
                 # this particular return only happens if the files already exist, no need to log anything
@@ -678,6 +688,7 @@ class DataLayer:
                     request_json = {
                         "store_id": store_id.hex(),
                         "diff_filename": write_file_result.diff_tree.name,
+                        "group_files_by_store": self.group_files_by_store,
                     }
                     if write_file_result.full_tree is not None:
                         request_json["full_tree_filename"] = write_file_result.full_tree.name
@@ -729,6 +740,7 @@ class DataLayer:
                 server_files_location,
                 full_tree_first_publish_generation,
                 overwrite,
+                self.group_files_by_store,
             )
             files.append(res.diff_tree.name)
             if res.full_tree is not None:
@@ -736,7 +748,11 @@ class DataLayer:
 
         uploaders = await self.get_uploaders(store_id)
         if uploaders is not None and len(uploaders) > 0:
-            request_json = {"store_id": store_id.hex(), "files": json.dumps(files)}
+            request_json = {
+                "store_id": store_id.hex(),
+                "files": json.dumps(files),
+                "group_files_by_store": self.group_files_by_store,
+            }
             for uploader in uploaders:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
@@ -766,6 +782,10 @@ class DataLayer:
 
     async def unsubscribe(self, store_id: bytes32, retain_data: bool) -> None:
         async with self.subscription_lock:
+            subscriptions = await self.data_store.get_subscriptions()
+            if store_id not in (subscription.store_id for subscription in subscriptions):
+                raise RuntimeError("No subscription found for the given store_id.")
+
             # Unsubscribe is processed later, after all fetching of data is done, to avoid races.
             self.unsubscribe_data_queue.append(UnsubscribeData(store_id, retain_data))
 
@@ -774,14 +794,32 @@ class DataLayer:
         subscriptions = await self.data_store.get_subscriptions()
         if store_id not in (subscription.store_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given store_id.")
-        filenames: List[str] = []
+        paths: List[Path] = []
         if await self.data_store.store_id_exists(store_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(store_id)
             all_roots = await self.data_store.get_roots_between(store_id, 1, generation + 1)
             for root in all_roots:
                 root_hash = root.node_hash if root.node_hash is not None else self.none_bytes
-                filenames.append(get_full_tree_filename(store_id, root_hash, root.generation))
-                filenames.append(get_delta_filename(store_id, root_hash, root.generation))
+                for group_by_store in (True, False):
+                    paths.append(
+                        get_full_tree_filename_path(
+                            self.server_files_location,
+                            store_id,
+                            root_hash,
+                            root.generation,
+                            group_by_store,
+                        )
+                    )
+                    paths.append(
+                        get_delta_filename_path(
+                            self.server_files_location,
+                            store_id,
+                            root_hash,
+                            root.generation,
+                            group_by_store,
+                        )
+                    )
+
         # stop tracking first, then unsubscribe from the data store
         await self.wallet_rpc.dl_stop_tracking(store_id)
         await self.data_store.unsubscribe(store_id)
@@ -789,8 +827,7 @@ class DataLayer:
             await self.data_store.delete_store_data(store_id)
 
         self.log.info(f"Unsubscribed to {store_id}")
-        for filename in filenames:
-            file_path = self.server_files_location.joinpath(filename)
+        for file_path in paths:
             try:
                 file_path.unlink()
             except FileNotFoundError:
@@ -863,21 +900,45 @@ class DataLayer:
                 await asyncio.sleep(0.1)
 
         while not self._shut_down:
+            # Add existing subscriptions
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
 
-            # Subscribe to all local store_ids that we can find on chain.
-            local_store_ids = await self.data_store.get_store_ids()
+            # pseudo-subscribe to all unsubscribed owned stores
+            # Need this to make sure we process updates and generate DAT files
+            try:
+                owned_stores = await self.get_owned_stores()
+            except ValueError:
+                # Sometimes the DL wallet isn't available, so we can't get the owned stores.
+                # We'll try again next time.
+                owned_stores = []
             subscription_store_ids = {subscription.store_id for subscription in subscriptions}
-            for local_id in local_store_ids:
-                if local_id not in subscription_store_ids:
+            for record in owned_stores:
+                store_id = record.launcher_id
+                if store_id not in subscription_store_ids:
                     try:
-                        subscription = await self.subscribe(local_id, [])
-                        subscriptions.insert(0, subscription)
+                        # don't actually subscribe, just add to the list
+                        subscriptions.insert(0, Subscription(store_id=store_id, servers_info=[]))
                     except Exception as e:
                         self.log.info(
-                            f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
+                            f"Can't subscribe to owned store {store_id}: {type(e)} {e} {traceback.format_exc()}"
                         )
+
+            # Optionally
+            # Subscribe to all local non-owned store_ids that we can find on chain.
+            # This is the prior behavior where all local stores, both owned and not owned, are subscribed to.
+            if self.config.get("auto_subscribe_to_local_stores", False):
+                local_store_ids = await self.data_store.get_store_ids()
+                subscription_store_ids = {subscription.store_id for subscription in subscriptions}
+                for local_id in local_store_ids:
+                    if local_id not in subscription_store_ids:
+                        try:
+                            subscription = await self.subscribe(local_id, [])
+                            subscriptions.insert(0, subscription)
+                        except Exception as e:
+                            self.log.info(
+                                f"Can't subscribe to local store {local_id}: {type(e)} {e} {traceback.format_exc()}"
+                            )
 
             work_queue: asyncio.Queue[Job[Subscription]] = asyncio.Queue()
             async with QueuedAsyncPool.managed(
