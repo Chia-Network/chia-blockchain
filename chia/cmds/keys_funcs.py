@@ -315,7 +315,11 @@ def sign(message: str, private_key: SecretInfo[Any], hd_path: str, as_bytes: boo
         if not isinstance(private_key, PrivateKey):
             print("Cannot derive non-BLS keys")
             return
-        sk = derive_pk_and_sk_from_hd_path(private_key.public_key(), hd_path, master_sk=private_key)[1]
+        sk: Optional[SecretInfo[Any]] = derive_pk_and_sk_from_hd_path(
+            private_key.public_key(), hd_path, master_sk=private_key
+        )[1]
+    else:
+        sk = private_key
     assert sk is not None
     data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
     signing_mode: SigningMode = (

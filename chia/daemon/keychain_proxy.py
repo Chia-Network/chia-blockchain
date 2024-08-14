@@ -232,6 +232,7 @@ class KeychainProxy(DaemonProxy):
                     raise KeyError(word)
                 else:
                     self.handle_error(response)
+                    raise RuntimeError("This should be impossible to reach")  # pragma: no cover
 
         return key, key_type
 
