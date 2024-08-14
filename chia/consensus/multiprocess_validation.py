@@ -206,6 +206,7 @@ async def pre_validate_blocks_multiprocessing(
             curr.sub_epoch_summary_included is None
             or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
             or num_sub_slots_found < num_sub_slots_to_look_for
+            or num_blocks_seen < 3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
         ) and curr.height > 0:
             if curr.first_in_sub_slot:
                 assert curr.finished_challenge_slot_hashes is not None
