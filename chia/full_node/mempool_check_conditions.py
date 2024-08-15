@@ -3,14 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional
 
-from chia_rs import (
-    ALLOW_BACKREFS,
-    DISALLOW_INFINITY_G1,
-    ENABLE_BLS_OPS_OUTSIDE_GUARD,
-    ENABLE_FIXED_DIV,
-    ENABLE_MESSAGE_CONDITIONS,
-    MEMPOOL_MODE,
-)
+from chia_rs import ALLOW_BACKREFS, DISALLOW_INFINITY_G1, ENABLE_BLS_OPS_OUTSIDE_GUARD, ENABLE_FIXED_DIV, MEMPOOL_MODE
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_block_generator2, run_chia_program
 
@@ -38,7 +31,7 @@ log = logging.getLogger(__name__)
 
 
 def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = ENABLE_BLS_OPS_OUTSIDE_GUARD | ENABLE_FIXED_DIV | ALLOW_BACKREFS | ENABLE_MESSAGE_CONDITIONS
+    flags = ENABLE_BLS_OPS_OUTSIDE_GUARD | ENABLE_FIXED_DIV | ALLOW_BACKREFS
 
     if height >= constants.SOFT_FORK5_HEIGHT:
         flags = flags | DISALLOW_INFINITY_G1
