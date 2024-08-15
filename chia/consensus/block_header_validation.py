@@ -28,6 +28,7 @@ from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChai
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
+from chia.types.prev_block_records import PrevChainState, find_chain_state
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
@@ -100,6 +101,8 @@ def validate_unfinished_header_block(
             can_finish_se = False
             can_finish_epoch = False
 
+    prev: PrevChainState = find_chain_state(blocks, prev_b, header_block, constants)
+
     # 2. Check finished slots that have been crossed since prev_b
     ses_hash: Optional[bytes32] = None
     if new_sub_slot and not skip_overflow_last_ss_validation:
@@ -123,7 +126,6 @@ def validate_unfinished_header_block(
 
                     # 2b. check sub-slot challenge hash for non-genesis block
                     if not curr.finished_challenge_slot_hashes[-1] == challenge_hash:
-                        print(curr.finished_challenge_slot_hashes[-1], challenge_hash)
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
             else:
                 # 2c. check sub-slot challenge hash for empty slot
@@ -138,49 +140,15 @@ def validate_unfinished_header_block(
                 if sub_slot.infused_challenge_chain is not None:
                     return None, ValidationError(Err.SHOULD_NOT_HAVE_ICC)
             else:
-                assert prev_b is not None
-                icc_iters_committed: Optional[uint64] = None
-                icc_iters_proof: Optional[uint64] = None
-                icc_challenge_hash: Optional[bytes32] = None
-                icc_vdf_input = None
-                if prev_b.deficit < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
-                    # There should be no ICC chain if the last block's deficit is 16
-                    # Prev sb's deficit is 0, 1, 2, 3, or 4
-                    if finished_sub_slot_n == 0:
-                        # This is the first sub slot after the last sb, which must have deficit 1-4, and thus an ICC
-                        curr = prev_b
-                        while not curr.is_challenge_block(constants) and not curr.first_in_sub_slot:
-                            curr = blocks.block_record(curr.prev_hash)
-                        if curr.is_challenge_block(constants):
-                            icc_challenge_hash = curr.challenge_block_info_hash
-                            icc_iters_committed = uint64(prev_b.sub_slot_iters - curr.ip_iters(constants))
-                        else:
-                            assert curr.finished_infused_challenge_slot_hashes is not None
-                            icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
-                            icc_iters_committed = prev_b.sub_slot_iters
-                        icc_iters_proof = uint64(prev_b.sub_slot_iters - prev_b.ip_iters(constants))
-                        if prev_b.is_challenge_block(constants):
-                            icc_vdf_input = ClassgroupElement.get_default_element()
-                        else:
-                            icc_vdf_input = prev_b.infused_challenge_vdf_output
-                    else:
-                        # This is not the first sub slot after the last block, so we might not have an ICC
-                        if (
-                            header_block.finished_sub_slots[finished_sub_slot_n - 1].reward_chain.deficit
-                            < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
-                        ):
-                            finished_ss = header_block.finished_sub_slots[finished_sub_slot_n - 1]
-                            assert finished_ss.infused_challenge_chain is not None
-
-                            # Only sets the icc iff the previous sub slots deficit is 4 or less
-                            icc_challenge_hash = finished_ss.infused_challenge_chain.get_hash()
-                            icc_iters_committed = prev_b.sub_slot_iters
-                            icc_iters_proof = icc_iters_committed
-                            icc_vdf_input = ClassgroupElement.get_default_element()
-
                 # 2e. Validate that there is not icc iff icc_challenge hash is None
-                assert (sub_slot.infused_challenge_chain is None) == (icc_challenge_hash is None)
+                assert (sub_slot.infused_challenge_chain is None) == (
+                    prev.sub_slot_state[finished_sub_slot_n].icc_challenge_hash is None
+                )
                 if sub_slot.infused_challenge_chain is not None:
+                    icc_vdf_input = prev.sub_slot_state[finished_sub_slot_n].icc_vdf_input
+                    icc_iters_proof = prev.sub_slot_state[finished_sub_slot_n].icc_iters_proof
+                    icc_iters_committed = prev.sub_slot_state[finished_sub_slot_n].icc_iters_committed
+                    icc_challenge_hash = prev.sub_slot_state[finished_sub_slot_n].icc_challenge_hash
                     assert icc_vdf_input is not None
                     assert icc_iters_proof is not None
                     assert icc_iters_committed is not None

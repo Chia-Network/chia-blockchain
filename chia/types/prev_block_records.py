@@ -1,0 +1,94 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+from chia_rs import ClassgroupElement
+
+from chia.consensus.block_record import BlockRecord
+from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.constants import ConsensusConstants
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.util.ints import uint64
+
+
+@dataclass
+class SubSlotState:
+    icc_challenge_hash: Optional[bytes32] = None
+    icc_iters_committed: Optional[uint64] = None
+    icc_iters_proof: Optional[uint64] = None
+    icc_vdf_input: Optional[ClassgroupElement] = None
+
+
+# In order to validate a block we may need information from previous blocks.
+# This class holds all previous block records that we may need, and makes block
+# validation self-contained
+@dataclass
+class PrevChainState:
+    # the previous block, or None if we're at genesis
+    prev_b: Optional[BlockRecord] = None
+    sub_slot_state: List[SubSlotState] = field(default_factory=list)
+
+
+def find_chain_state(
+    blocks: BlockchainInterface,
+    prev_b: Optional[BlockRecord],
+    header_block: UnfinishedHeaderBlock,
+    constants: ConsensusConstants,
+) -> PrevChainState:
+
+    sub_slot_state: List[SubSlotState] = []
+
+    for finished_sub_slot_n in range(len(header_block.finished_sub_slots)):
+        icc_challenge_hash: Optional[bytes32] = None
+        icc_iters_committed: Optional[uint64] = None
+        icc_iters_proof: Optional[uint64] = None
+        icc_vdf_input: Optional[ClassgroupElement] = None
+        if prev_b is not None and prev_b.deficit < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK:
+            # There should be no ICC chain if the last block's deficit is 16
+            # Prev sb's deficit is 0, 1, 2, 3, or 4
+            if finished_sub_slot_n == 0:
+                # This is the first sub slot after the last sb, which must have deficit 1-4, and thus an ICC
+                curr = prev_b
+                while not curr.is_challenge_block(constants) and not curr.first_in_sub_slot:
+                    curr = blocks.block_record(curr.prev_hash)
+                if curr.is_challenge_block(constants):
+                    icc_challenge_hash = curr.challenge_block_info_hash
+                    icc_iters_committed = uint64(prev_b.sub_slot_iters - curr.ip_iters(constants))
+                else:
+                    assert curr.finished_infused_challenge_slot_hashes is not None
+                    icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
+                    icc_iters_committed = prev_b.sub_slot_iters
+                icc_iters_proof = uint64(prev_b.sub_slot_iters - prev_b.ip_iters(constants))
+                if prev_b.is_challenge_block(constants):
+                    icc_vdf_input = ClassgroupElement.get_default_element()
+                else:
+                    icc_vdf_input = prev_b.infused_challenge_vdf_output
+            else:
+                # This is not the first sub slot after the last block, so we might not have an ICC
+                if (
+                    header_block.finished_sub_slots[finished_sub_slot_n - 1].reward_chain.deficit
+                    < constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK
+                ):
+                    finished_ss = header_block.finished_sub_slots[finished_sub_slot_n - 1]
+                    assert finished_ss.infused_challenge_chain is not None
+
+                    # Only sets the icc iff the previous sub slots deficit is 4 or less
+                    icc_challenge_hash = finished_ss.infused_challenge_chain.get_hash()
+                    icc_iters_committed = prev_b.sub_slot_iters
+                    icc_iters_proof = icc_iters_committed
+                    icc_vdf_input = ClassgroupElement.get_default_element()
+        sub_slot_state.append(
+            SubSlotState(
+                icc_challenge_hash,
+                icc_iters_committed,
+                icc_iters_proof,
+                icc_vdf_input,
+            )
+        )
+
+    return PrevChainState(
+        prev_b,
+        sub_slot_state,
+    )
