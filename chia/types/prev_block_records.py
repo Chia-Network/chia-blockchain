@@ -28,16 +28,19 @@ class SubSlotState:
 class PrevChainState:
     # the previous block, or None if we're at genesis
     prev_b: Optional[BlockRecord] = None
+    prev_tx_block: Optional[BlockRecord] = None
+    num_blocks: int = 0
+    first_in_subslot_finished_challenge_slot_hash: Optional[bytes32] = None
     sub_slot_state: List[SubSlotState] = field(default_factory=list)
 
 
 def find_chain_state(
     blocks: BlockchainInterface,
-    prev_b: Optional[BlockRecord],
     header_block: UnfinishedHeaderBlock,
     constants: ConsensusConstants,
 ) -> PrevChainState:
 
+    prev_b = blocks.try_block_record(header_block.prev_header_hash)
     sub_slot_state: List[SubSlotState] = []
 
     for finished_sub_slot_n in range(len(header_block.finished_sub_slots)):
@@ -79,6 +82,7 @@ def find_chain_state(
                     icc_iters_committed = prev_b.sub_slot_iters
                     icc_iters_proof = icc_iters_committed
                     icc_vdf_input = ClassgroupElement.get_default_element()
+
         sub_slot_state.append(
             SubSlotState(
                 icc_challenge_hash,
@@ -88,7 +92,28 @@ def find_chain_state(
             )
         )
 
+    first_in_subslot_finished_challenge_slot_hash: Optional[bytes32] = None
+    num_blocks = 0
+    if prev_b is not None:
+        num_blocks = 2  # This includes the current block and the prev block
+        curr = prev_b
+        while not curr.first_in_sub_slot:
+            num_blocks += 1
+            curr = blocks.block_record(curr.prev_hash)
+        assert curr.finished_challenge_slot_hashes is not None
+        first_in_subslot_finished_challenge_slot_hash = curr.finished_challenge_slot_hashes[-1]
+
+    prev_tx_block: Optional[BlockRecord] = None
+    if prev_b is not None:
+        curr = prev_b
+        while not curr.is_transaction_block:
+            curr = blocks.block_record(curr.prev_hash)
+        prev_tx_block = curr
+
     return PrevChainState(
         prev_b,
+        prev_tx_block,
+        num_blocks,
+        first_in_subslot_finished_challenge_slot_hash,
         sub_slot_state,
     )
