@@ -1,13 +1,49 @@
 from __future__ import annotations
 
+from typing import Any, List, Union, overload
+
 import chia_rs
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.types.coin_spend import CoinSpend
 from chia.util.errors import Err, ValidationError
+from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 from .coin_spend import compute_additions_with_cost
 
-SpendBundle = chia_rs.SpendBundle
+
+class _Unspec:
+    pass
+
+
+class SpendBundle(chia_rs.SpendBundle):
+    def debug(self) -> None:
+        debug_spend_bundle(self)
+
+    @overload  # type: ignore[misc]
+    @staticmethod
+    def aggregate(sbs: List[SpendBundle]) -> SpendBundle: ...  # type: ignore[empty-body, override]
+
+    @overload  # type: ignore[misc]
+    @classmethod
+    def from_bytes(cls, bytes: bytes) -> SpendBundle: ...  # type: ignore[empty-body]
+
+    @overload  # type: ignore[misc]
+    @classmethod
+    def from_bytes_unchecked(cls, bytes: bytes) -> SpendBundle: ...  # type: ignore[empty-body]
+
+    @overload  # type: ignore[misc]
+    @classmethod
+    def from_json_dict(cls, bytes: Any) -> SpendBundle: ...  # type: ignore[empty-body]
+
+    @overload  # type: ignore[misc]
+    @classmethod
+    def replace(  # type: ignore[empty-body]
+        self,
+        *,
+        coin_spends: Union[List[CoinSpend], _Unspec] = _Unspec(),  # type: ignore[override]
+        aggregated_signature: Union[chia_rs.G2Element, _Unspec] = _Unspec(),  # type: ignore[override]
+    ) -> SpendBundle: ...
 
 
 # This function executes all the puzzles to compute the difference between
