@@ -247,10 +247,11 @@ def test_insert_delete_loads_all_keys() -> None:
     assert set(merkle_blob.get_keys_values_indexes().keys()) == keys_values
 
     merkle_blob_2 = MerkleBlob(blob=merkle_blob.blob)
-    for key in range(num_keys, extra_keys):
+    unknown_key = KVId(42)
+    for key in range(num_keys, num_keys + extra_keys):
         kv_id = generate_kvid(key)
         hash = generate_hash(key)
-        merkle_blob_2.insert(kv_id, hash)
+        merkle_blob_2.upsert(unknown_key, kv_id, hash)
         key_index = merkle_blob_2.kv_to_index[kv_id]
         lineage = merkle_blob_2.get_lineage(TreeIndex(key_index))
         assert len(lineage) <= max_height
@@ -299,7 +300,7 @@ def test_proof_of_inclusion_merkle_blob() -> None:
     keys_values: List[KVId] = []
 
     for repeats in range(num_repeats):
-        for inserts in range(num_inserts):
+        for _ in range(num_inserts):
             seed += 1
             kv_id = generate_kvid(seed)
             hash = generate_hash(seed)
@@ -316,6 +317,23 @@ def test_proof_of_inclusion_merkle_blob() -> None:
             proof_of_inclusion = merkle_blob.get_proof_of_inclusion(kv_id)
             assert proof_of_inclusion.valid()
 
+        new_keys_values: List[KVId] = []
+        for old_kv in keys_values:
+            seed += 1
+            kv_id = generate_kvid(seed)
+            hash = generate_hash(seed)
+            merkle_blob.upsert(old_kv, kv_id, hash)
+            new_keys_values.append(kv_id)
+
+        merkle_blob.calculate_lazy_hashes()
+        for kv_id in keys_values:
+            with pytest.raises(Exception, match=f"Key {kv_id} not present in the store"):
+                merkle_blob.get_proof_of_inclusion(kv_id)
+        keys_values = new_keys_values
+        for kv_id in keys_values:
+            proof_of_inclusion = merkle_blob.get_proof_of_inclusion(kv_id)
+            assert proof_of_inclusion.valid()
+
 
 @pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(-1), TreeIndex(1), TreeIndex(null_parent)])
 def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
@@ -324,3 +342,4 @@ def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
 
     with pytest.raises(InvalidIndexError):
         merkle_blob.get_raw_node(index)
+        merkle_blob.get_metadata(index)

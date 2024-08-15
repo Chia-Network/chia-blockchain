@@ -363,6 +363,17 @@ class MerkleBlob:
             self.update_entry(grandparent_index, right=sibling_index)
         self.mark_lineage_as_dirty(grandparent_index)
 
+    def upsert(self, old_kv: KVId, new_kv: KVId, hash: bytes) -> None:
+        if old_kv not in self.kv_to_index:
+            self.insert(new_kv, hash)
+            return
+
+        leaf_index = self.kv_to_index[old_kv]
+        self.update_entry(index=leaf_index, hash=hash, key_value=new_kv)
+        node = self.get_raw_node(leaf_index)
+        if node.parent != null_parent:
+            self.mark_lineage_as_dirty(node.parent)
+
 
 class RawMerkleNodeProtocol(Protocol):
     struct: ClassVar[struct.Struct]
