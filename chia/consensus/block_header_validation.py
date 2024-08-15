@@ -774,9 +774,8 @@ def validate_unfinished_header_block(
 
         if prev.prev_b is not None:
             # 26b. The timestamp must be greater than the previous transaction block timestamp
-            prev_transaction_b = blocks.block_record(header_block.foliage_transaction_block.prev_transaction_block_hash)
-            assert prev_transaction_b.timestamp is not None
-            if header_block.foliage_transaction_block.timestamp <= prev_transaction_b.timestamp:
+            assert prev.prev_tx_timestamp is not None
+            if header_block.foliage_transaction_block.timestamp <= prev.prev_tx_timestamp:
                 return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_PAST)
     return required_iters, None  # Valid unfinished header block
 

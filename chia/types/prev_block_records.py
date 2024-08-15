@@ -28,9 +28,15 @@ class SubSlotState:
 class PrevChainState:
     # the previous block, or None if we're at genesis
     prev_b: Optional[BlockRecord] = None
+    # the previous *transaction* block
     prev_tx_block: Optional[BlockRecord] = None
+    # the timestamp of the previous transaction block
+    prev_tx_timestamp: Optional[uint64] = None
+    # the number of blocks since the start of the current sub slot
     num_blocks: int = 0
+    # the last finished_challenge_slot_hashes for the first block in the subslot
     first_in_subslot_finished_challenge_slot_hash: Optional[bytes32] = None
+    # sub slot state for each finished sub slot in the block
     sub_slot_state: List[SubSlotState] = field(default_factory=list)
 
 
@@ -104,15 +110,18 @@ def find_chain_state(
         first_in_subslot_finished_challenge_slot_hash = curr.finished_challenge_slot_hashes[-1]
 
     prev_tx_block: Optional[BlockRecord] = None
+    prev_tx_timestamp: Optional[uint64] = None
     if prev_b is not None:
         curr = prev_b
         while not curr.is_transaction_block:
             curr = blocks.block_record(curr.prev_hash)
         prev_tx_block = curr
+        prev_tx_timestamp = curr.timestamp
 
     return PrevChainState(
         prev_b,
         prev_tx_block,
+        prev_tx_timestamp,
         num_blocks,
         first_in_subslot_finished_challenge_slot_hash,
         sub_slot_state,
