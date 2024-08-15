@@ -15,7 +15,10 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.difficulty_adjustment import (
+    _get_second_to_last_transaction_block_in_previous_epoch,
+    get_next_sub_slot_iters_and_difficulty,
+)
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
@@ -221,21 +224,26 @@ async def pre_validate_blocks_multiprocessing(
         block_records.add_block_record(curr)
         recent_blocks[header_hash] = curr
 
+    last_block_prev = None
+    prev_b = None
+    if blocks[0].height > 0:
+        prev_b = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
+        assert prev_b is not None
+
+    sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+        constants, len(block.finished_sub_slots) > 0, prev_b, block_records, last_block_prev=last_block_prev)    
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
-        if block.height != 0:
-            if prev_b is None:
-                prev_b = await block_records.get_block_record_from_db(block.prev_header_hash)
-            assert prev_b is not None
-            # the call to block_to_block_record() requires the previous
-            # block is in the cache
-            # and make_sub_epoch_summary() requires all blocks until we find one
-            # that includes a sub_epoch_summary
-            curr = prev_b
+        # the call to block_to_block_record() requires the previous
+        # block is in the cache
+        # and make_sub_epoch_summary() requires all blocks until we find one
+        # that includes a sub_epoch_summary
 
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            constants, len(block.finished_sub_slots) > 0, prev_b, block_records
-        )
+        if len(block.finished_sub_slots) > 0:
+            if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
 
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
         challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
