@@ -113,7 +113,7 @@ def tx_config(request: Any) -> TXConfig:
     return replace(DEFAULT_TX_CONFIG, reuse_puzhash=request.param)
 
 
-@pytest.fixture(scope="function", params=[True])
+@pytest.fixture(scope="function", params=[True, False])
 def as_vault(request: Any) -> bool:
     as_vault: bool = request.param
     return as_vault

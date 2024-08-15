@@ -111,6 +111,9 @@ class Vault(Wallet):
     async def get_new_puzzle(self) -> Program:
         return self.get_p2_singleton_puzzle()
 
+    async def get_new_puzzlehash(self) -> bytes32:
+        return self.get_p2_singleton_puzzle_hash()
+
     async def get_new_vault_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
         next_index = dr.index
@@ -237,6 +240,8 @@ class Vault(Wallet):
                     p2_singleton_puzhash, uint64(selected_amount - total_amount), memos=[p2_singleton_puzhash]
                 ).as_condition()
             )
+        for extra in extra_conditions:
+            conditions.append(extra.to_program())
 
         p2_singleton_spends: List[CoinSpend] = []
         for coin in coins:
@@ -529,6 +534,18 @@ class Vault(Wallet):
             uint32(index), inner_puzzle_hash, self.vault_info.pubkey, self.type(), self.id(), False
         )
         return [record]
+
+    def get_p2_singleton_derivation_record(self) -> DerivationRecord:
+        inner_puzzle_hash = self.get_p2_singleton_puzzle_hash()
+        record = DerivationRecord(
+            uint32(0),
+            inner_puzzle_hash,
+            b"",  # empty bytes because only the vault DR should use the pk
+            self.type(),
+            self.id(),
+            False,
+        )
+        return record
 
     async def create_recovery_spends(
         self,

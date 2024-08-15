@@ -122,7 +122,9 @@ class GenesisById(LimitationsProgram):
             eve_solution,
         )
 
-        async with wallet.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(
+            action_scope.config.tx_config, push=False
+        ) as inner_action_scope:
             async with inner_action_scope.use() as inner_interface:
                 inner_interface.side_effects.solutions.append(inner_solution)
                 inner_interface.side_effects.coin_ids.append(eve_coin.name())

@@ -34,6 +34,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_node import WalletNode
@@ -216,7 +217,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "<=#max_send_amount": -100,
                         ">=#pending_change": 1,  # any amount increase
                         "unspent_coin_count": 0,
-                        "pending_coin_removal_count": 1,
+                        "<=#pending_coin_removal_count": 2,  # 1 for standard, 2 for vault
                     },
                     "cat": {
                         "init": True,
@@ -235,8 +236,8 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         ">=#spendable_balance": 1,  # any amount increase
                         ">=#max_send_amount": 1,  # any amount increase
                         "<=#pending_change": -1,  # any amount decrease
-                        "unspent_coin_count": 0,
-                        "pending_coin_removal_count": -1,
+                        "<=#unspent_coin_count": 1,
+                        ">=#pending_coin_removal_count": -2,
                     },
                     "cat": {
                         "confirmed_wallet_balance": 100,
@@ -268,10 +269,14 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
             assert tx_record.to_puzzle_hash == cat_2_hash
         if tx_record.spend_bundle is not None:
             tx_id = tx_record.name.hex()
+
     assert tx_id is not None
     memos = await api_0.get_transaction_memo({"transaction_id": tx_id})
-    assert len(memos[tx_id]) == 2  # One for tx, one for change
-    assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
+    if isinstance(wallet.wallet_state_manager.observation_root, VaultRoot):
+        assert len(memos[tx_id]) == 4  # One for tx, one for change
+    else:
+        assert len(memos[tx_id]) == 2  # One for tx, one for change
+        assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
 
     await wallet_environments.process_pending_states(
         [
@@ -283,7 +288,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "<=#max_send_amount": -1,
                         ">=#pending_change": 1,  # any amount increase
                         "unspent_coin_count": 0,
-                        "pending_coin_removal_count": 1,
+                        ">=#pending_coin_removal_count": 1,
                     },
                     "cat": {
                         "unconfirmed_wallet_balance": -60,
@@ -300,8 +305,8 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         ">=#spendable_balance": 1,  # any amount increase
                         ">=#max_send_amount": 1,  # any amount increase
                         "<=#pending_change": -1,  # any amount decrease
-                        "unspent_coin_count": 0,
-                        "pending_coin_removal_count": -1,
+                        ">=#unspent_coin_count": 0,
+                        "<=#pending_coin_removal_count": -1,
                     },
                     "cat": {
                         "confirmed_wallet_balance": -60,
@@ -358,6 +363,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(
                 pre_block_balance_updates={},
                 post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
                     "cat": {
                         "confirmed_wallet_balance": 15,
                         "unconfirmed_wallet_balance": 15,
@@ -381,6 +389,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
                 post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
                     "cat": {
                         "confirmed_wallet_balance": -15,
                         "pending_coin_removal_count": -1,

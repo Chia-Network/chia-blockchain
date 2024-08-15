@@ -759,6 +759,10 @@ class WalletStateManager:
             else:
                 coin_type = CoinType.NORMAL
             unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id, coin_type)
+        if isinstance(self.observation_root, VaultRoot):
+            # ignore the vault singleton
+            assert isinstance(self.main_wallet, Vault)
+            unspent_coin_records = {cr for cr in unspent_coin_records if cr.coin != self.main_wallet.vault_info.coin}
         return uint128(sum(cr.coin.amount for cr in unspent_coin_records))
 
     async def get_unconfirmed_balance(
@@ -799,6 +803,10 @@ class WalletStateManager:
                 ):
                     all_unspent_coins.remove(removal)
 
+        if isinstance(self.observation_root, VaultRoot):
+            # ignore the vault singleton
+            assert isinstance(self.main_wallet, Vault)
+            all_unspent_coins = {coin for coin in all_unspent_coins if coin != self.main_wallet.vault_info.coin}
         return uint128(sum(coin.amount for coin in all_unspent_coins))
 
     async def unconfirmed_removals_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
@@ -1214,6 +1222,11 @@ class WalletStateManager:
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
         if derivation_record is None:
+            if isinstance(self.observation_root, VaultRoot):
+                for wallet in [wal for wal in self.wallets.values() if wal.type() == WalletType.CAT]:
+                    cat_p2_singleton = wallet.get_p2_singleton_puzzle_hash()  # type: ignore[attr-defined]
+                    if coin_state.coin.puzzle_hash == cat_p2_singleton:
+                        return WalletIdentifier(wallet.id(), wallet.type())
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             return None
         else:
@@ -2252,6 +2265,15 @@ class WalletStateManager:
     async def get_wallet_identifier_for_coin(
         self, coin: Coin, hint_dict: Dict[bytes32, bytes32] = {}
     ) -> Optional[WalletIdentifier]:
+        # if we're in vault mode, then we want to return the vault wallet identifier for coins which
+        # have our p2_singleton puzzle hash
+        if self.main_wallet.handle_own_derivation():
+            for wallet_id in self.wallets:
+                wallet = self.wallets[wallet_id]
+                p2_singleton_puzzle_hash = wallet.get_p2_singleton_puzzle_hash()  # type: ignore[attr-defined]
+                if coin.puzzle_hash == p2_singleton_puzzle_hash:
+                    return WalletIdentifier(uint32(wallet.id()), wallet.type())
+
         wallet_identifier = await self.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
         if (
             wallet_identifier is None
@@ -2609,7 +2631,11 @@ class WalletStateManager:
 
     async def add_new_wallet(self, wallet: WalletProtocol[Any]) -> None:
         self.wallets[wallet.id()] = wallet
-        await self.create_more_puzzle_hashes()
+        if wallet.handle_own_derivation():
+            # add a derivation record for inner puzhash
+            pass
+        else:
+            await self.create_more_puzzle_hashes()
         self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(

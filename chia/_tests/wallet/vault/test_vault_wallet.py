@@ -93,7 +93,7 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
 
 @pytest.mark.parametrize(
     "wallet_environments",
-    [{"num_environments": 2, "blocks_needed": [1, 1]}],
+    [{"num_environments": 2, "blocks_needed": [1, 1], "as_vault": False}],
     indirect=True,
 )
 @pytest.mark.parametrize("setup_function", [vault_setup])
@@ -118,6 +118,7 @@ async def test_vault_creation(
 
     coins_to_create = 2
     funding_amount = uint64(1000000000)
+    initial_funds = funding_amount * coins_to_create
     funding_wallet = wallet_environments.environments[1].xch_wallet
     for _ in range(coins_to_create):
         async with funding_wallet.wallet_state_manager.new_action_scope(
@@ -141,7 +142,7 @@ async def test_vault_creation(
                 },
                 post_block_balance_updates={
                     1: {
-                        "confirmed_wallet_balance": funding_amount * 2,
+                        "confirmed_wallet_balance": initial_funds,
                         "set_remainder": True,
                     }
                 },
@@ -157,7 +158,7 @@ async def test_vault_creation(
     ]
     amount = uint64(1000000)
     fee = uint64(100)
-    balance_delta = 1011000099
+    balance_delta = 500000000 + 510000000 + amount + fee
 
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True, sign=True) as action_scope:
         await wallet.generate_signed_transaction(
@@ -280,7 +281,7 @@ async def test_vault_recovery(
                     },
                     post_block_balance_updates={
                         1: {
-                            "confirmed_wallet_balance": -amount + 1,
+                            "confirmed_wallet_balance": -amount,
                             "set_remainder": True,
                         }
                     },
@@ -315,7 +316,7 @@ async def test_vault_recovery(
                 },
                 post_block_balance_updates={
                     1: {
-                        "<=#confirmed_wallet_balance": 1,
+                        "confirmed_wallet_balance": 0,
                         "set_remainder": True,
                     }
                 },
@@ -343,7 +344,7 @@ async def test_vault_recovery(
                 },
                 post_block_balance_updates={
                     1: {
-                        "<=#confirmed_wallet_balance": 1,
+                        "confirmed_wallet_balance": 0,
                         "set_remainder": True,
                     }
                 },
@@ -376,7 +377,7 @@ async def test_vault_recovery(
                 },
                 post_block_balance_updates={
                     1: {
-                        "confirmed_wallet_balance": -amount - 1,
+                        "confirmed_wallet_balance": -amount,
                         "set_remainder": True,
                     }
                 },

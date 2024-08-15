@@ -453,6 +453,8 @@ class CATWallet:
             return record.puzzle_hash
 
     def require_derivation_paths(self) -> bool:
+        if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+            return False
         return True
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
@@ -583,7 +585,9 @@ class CATWallet:
         """
         announcement: Optional[AssertCoinAnnouncement] = None
         async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
+            action_scope.config.tx_config,
+            push=False,
+            sign=False,
         ) as inner_action_scope:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
@@ -616,6 +620,9 @@ class CATWallet:
                     negative_change_allowed=True,
                     extra_conditions=extra_conditions,
                 )
+            async with inner_action_scope.use() as inner_interface:
+                async with action_scope.use() as outer_interface:
+                    outer_interface.side_effects.merge(inner_interface.side_effects)
 
         message = None
         for tx in inner_action_scope.side_effects.transactions:
@@ -631,8 +638,8 @@ class CATWallet:
         assert message is not None
         announcement = AssertCoinAnnouncement(asserted_id=origin_id, asserted_msg=message)
 
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
+        # async with action_scope.use() as interface:
+        #     interface.side_effects.merge(inner_action_scope.side_effects)
 
         return announcement
 
@@ -723,6 +730,7 @@ class CATWallet:
                             primaries=primaries,
                             action_scope=action_scope,
                             conditions=(*extra_conditions, announcement),
+                            coin_id=coin.name(),
                         )
                     elif regular_chia_to_claim > fee:  # pragma: no cover
                         xch_announcement = await self.create_tandem_xch_tx(
@@ -735,6 +743,7 @@ class CATWallet:
                             primaries=primaries,
                             action_scope=action_scope,
                             conditions=(*extra_conditions, xch_announcement, announcement),
+                            coin_id=coin.name(),
                         )
                     else:
                         # TODO: what about when they are equal?
@@ -744,10 +753,14 @@ class CATWallet:
                         primaries=primaries,
                         action_scope=action_scope,
                         conditions=(*extra_conditions, announcement),
+                        coin_id=coin.name(),
                     )
             else:
                 innersol = await self.standard_wallet.make_solution(
-                    primaries=[], action_scope=action_scope, conditions=(announcement.corresponding_assertion(),)
+                    primaries=[],
+                    action_scope=action_scope,
+                    conditions=(announcement.corresponding_assertion(),),
+                    coin_id=coin.name(),
                 )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
@@ -900,3 +913,11 @@ class CATWallet:
             False,
         )
         return [record]
+
+    def get_p2_singleton_puzzle_hash(self) -> bytes32:
+        assert isinstance(self.wallet_state_manager.main_wallet, Vault)
+        p2_inner = self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle_hash()
+        cat_puzzle_hash = construct_cat_puzzle(
+            CAT_MOD, self.cat_info.limitations_program_hash, p2_inner
+        ).get_tree_hash_precalc(p2_inner)
+        return cat_puzzle_hash

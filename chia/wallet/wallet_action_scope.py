@@ -91,6 +91,13 @@ class WalletSideEffects:
 
         return instance
 
+    def merge(self, other: WalletSideEffects) -> None:
+        self.transactions.extend(other.transactions)
+        self.signing_responses.extend(other.signing_responses)
+        self.extra_spends.extend(other.extra_spends)
+        self.solutions.extend(other.solutions)
+        self.coin_ids.extend(other.coin_ids)
+
 
 @final
 @dataclass(frozen=True)
