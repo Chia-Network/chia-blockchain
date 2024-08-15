@@ -537,7 +537,7 @@ def search_derive(
             private_keys = [
                 (
                     master_key_data.private_key
-                    if master_key_data.secrets is not None and isinstance(master_key_data, PrivateKey)
+                    if master_key_data.secrets is not None and isinstance(master_key_data.private_key, PrivateKey)
                     else None
                 )
             ]
