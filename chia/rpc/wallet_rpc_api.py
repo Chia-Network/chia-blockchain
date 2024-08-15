@@ -119,7 +119,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vault.vault_drivers import get_vault_hidden_puzzle_with_index
@@ -4630,25 +4630,36 @@ class WalletRpcApi:
         )
         return VaultCreateResponse([], [])  # tx_endpoint will take care of filling this out
 
+    @tx_endpoint(push=False, merge_spends=False, sign=False)
     @marshal
     async def vault_recovery(
-        self, request: VaultRecovery, tx_config: TXConfig = DEFAULT_TX_CONFIG
+        self,
+        request: VaultRecovery,
+        action_scope: WalletActionScope,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> VaultRecoveryResponse:
         """
         Initiate Vault Recovery
         """
         if request.fee != 0:
             raise ValueError("Recovery endpoint cannot add fees because it assumes your vault is currently inacessible")
+        if action_scope.config.push or action_scope.config.sign:
+            raise ValueError(
+                "Cannot push or sign from this endpoint because the vault is assumed to be inaccessible by this wallet."
+                " Please push the individual transactions to the /push_transactions endpoint on a wallet "
+                " with the correct keyset."
+            )
         wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=Vault)
         hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(request.hp_index).get_tree_hash()
         genesis_challenge = self.service.wallet_state_manager.constants.GENESIS_CHALLENGE
-        recovery_txs = await wallet.create_recovery_spends(
+        recovery_tx_id, finish_tx_id = await wallet.create_recovery_spends(
             request.secp_pk,
             hidden_puzzle_hash,
             genesis_challenge,
-            tx_config,
+            action_scope,
             bls_pk=request.bls_pk,
             timelock=request.timelock,
         )
-        # TODO: port this endpoint to tx_endpoint and action scopes
-        return VaultRecoveryResponse([], recovery_txs)
+
+        # tx_endpoint will take care of filling the empty lists out
+        return VaultRecoveryResponse([], [], recovery_tx_id, finish_tx_id)
