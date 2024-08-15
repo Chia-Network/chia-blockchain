@@ -45,7 +45,6 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
-ZERO_32 = bytes32([0] * 32)
 
 
 def detect_dependent_coin(
@@ -63,7 +62,7 @@ def detect_dependent_coin(
 
 @dataclass(frozen=True)
 class NotarizedPayment(Payment):
-    nonce: bytes32 = ZERO_32
+    nonce: bytes32 = bytes32.zeros
 
     @classmethod
     def from_condition_and_nonce(cls, condition: Program, nonce: bytes32) -> NotarizedPayment:
@@ -592,7 +591,7 @@ class Offer:
             additional_coin_spends.append(
                 make_spend(
                     Coin(
-                        ZERO_32,
+                        bytes32.zeros,
                         puzzle_reveal.get_tree_hash(),
                         uint64(0),
                     ),
@@ -624,7 +623,7 @@ class Offer:
                 driver_dict[asset_id] = driver
             else:
                 asset_id = None
-            if coin_spend.coin.parent_coin_info == ZERO_32:
+            if coin_spend.coin.parent_coin_info == bytes32.zeros:
                 notarized_payments: list[NotarizedPayment] = []
                 for payment_group in coin_spend.solution.to_program().as_iter():
                     nonce = bytes32(payment_group.first().as_atom())
