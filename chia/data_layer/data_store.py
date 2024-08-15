@@ -49,7 +49,7 @@ log = logging.getLogger(__name__)
 # TODO: pick exception types other than Exception
 
 
-class RootNotFoundError(Exception):
+class RootHashNotFoundError(Exception):
     def __init__(self, hash: Optional[bytes32]) -> None:
         super().__init__(f"unable to find root for: {hash}")
 
@@ -592,6 +592,8 @@ class DataStore:
     async def _resolve_tree_id(
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> TreeId[int, Optional[bytes32]]:
+        # TODO: maybe verify accuracy if both are specified?  clear performance cost to re-resolving
+
         root_hash = tree_id.root_hash
         if root_hash == bytes32([0] * 32):
             # TODO: maybe warn about this pattern to try to root it out
@@ -604,7 +606,7 @@ class DataStore:
             else:
                 root = await self.get_last_tree_root_by_hash(store_id=tree_id.store_id, hash=root_hash)
                 if root is None:
-                    raise RootNotFoundError(hash=root_hash)
+                    raise RootHashNotFoundError(hash=root_hash)
                 generation = root.generation
 
         if root_hash is TreeId.unspecified:
@@ -845,7 +847,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            except RootNotFoundError:
+            except RootHashNotFoundError:
                 return []
 
             # avoid accidental usage
@@ -879,8 +881,8 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            except RootNotFoundError:
-                # TODO: not cool
+            except RootHashNotFoundError:
+                # this error implies (ugh) that the root hash was specified by the tree id
                 assert tree_id.root_hash is not TreeId.unspecified
                 return KeysValuesCompressed({}, {}, {}, tree_id.root_hash)
             # avoid accidental usage
@@ -928,8 +930,8 @@ class DataStore:
         async with self.transaction():
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            except RootNotFoundError:
-                # TODO: not cool
+            except RootHashNotFoundError:
+                # this error implies (ugh) that the root hash was specified by the tree id
                 assert tree_id.root_hash is not TreeId.unspecified
                 return KeysPaginationData(0, 0, [], tree_id.root_hash)
             # avoid accidental usage
@@ -1125,7 +1127,7 @@ class DataStore:
     ) -> Dict[bytes, bytes]:
         try:
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-        except RootNotFoundError:
+        except RootHashNotFoundError:
             return {}
 
         # avoid accidental usage
@@ -1140,7 +1142,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            except RootNotFoundError:
+            except RootHashNotFoundError:
                 return []
             # avoid accidental usage
             del tree_id
