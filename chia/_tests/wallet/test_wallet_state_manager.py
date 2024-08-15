@@ -72,7 +72,7 @@ async def test_get_private_key(simulator_and_wallet: OldSimulatorsAndWallets, ha
     expected_private_key = conversion_method(wallet_state_manager.get_master_private_key(), derivation_index)
     record = DerivationRecord(
         derivation_index,
-        bytes32(b"0" * 32),
+        bytes32.zeros,
         expected_private_key.get_g1(),
         WalletType.STANDARD_WALLET,
         uint32(1),
