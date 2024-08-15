@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import copy
 import dataclasses
 import logging
 import multiprocessing
@@ -1105,6 +1106,18 @@ class FullNode:
         # block between the main chain and the fork. Here "fork_point_height"
         # seems to refer to the first diverging block
 
+        if fork_point_height == 0:
+            ssi = self.constants.SUB_SLOT_ITERS_STARTING
+            diff = self.constants.DIFFICULTY_STARTING
+            prev_ses_block = None
+        else:
+            prev_b_hash = self.blockchain.height_to_hash(fork_point_height)
+            assert prev_b_hash is not None
+            prev_b = await self.blockchain.get_full_block(prev_b_hash)
+            assert prev_b is not None
+            ssi, diff, prev_ses_block = await self.get_sub_slot_iters_difficulty_ses_block(prev_b, None, None)
+        cs = ChainState(ssi, diff, prev_ses_block)
+
         async def fetch_block_batches(
             output_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
@@ -1173,26 +1186,17 @@ class FullNode:
                     )
                 await output_queue.put((peer, blocks, npc_results))
 
-        async def ingest_block_batches(
+        async def validate_block_batches(
             input_queue: asyncio.Queue[
                 Optional[Tuple[WSChiaConnection, List[FullBlock], Dict[uint32, Awaitable[bytes]]]]
             ],
+            output_queue: asyncio.Queue[
+                Optional[
+                    Tuple[WSChiaConnection, List[FullBlock], List[PreValidationResult], Optional[ForkInfo], ChainState]
+                ]
+            ],
         ) -> None:
             fork_info: Optional[ForkInfo] = None
-            if fork_point_height == 0:
-                ssi = self.constants.SUB_SLOT_ITERS_STARTING
-                diff = self.constants.DIFFICULTY_STARTING
-                prev_ses_block = None
-            else:
-                prev_b_hash = self.blockchain.height_to_hash(fork_point_height)
-                assert prev_b_hash is not None
-                prev_b = await self.blockchain.get_full_block(prev_b_hash)
-                assert prev_b is not None
-                ssi, diff, prev_ses_block = await self.get_sub_slot_iters_difficulty_ses_block(prev_b, None, None)
-            cs = ChainState(ssi, diff, prev_ses_block)
-            block_rate = 0
-            block_rate_time = time.monotonic()
-            block_rate_height = -1
             while True:
                 res: Optional[Tuple[WSChiaConnection, List[FullBlock], Dict[uint32, Awaitable[bytes]]]] = (
                     await input_queue.get()
@@ -1202,11 +1206,6 @@ class FullNode:
                     return None
                 npc_futures: Dict[uint32, Awaitable[bytes]]
                 peer, blocks, npc_futures = res
-                start_height = blocks[0].height
-                end_height = blocks[-1].height
-
-                if block_rate_height == -1:
-                    block_rate_height = start_height
 
                 # in case we're validating a reorg fork (i.e. not extending the
                 # main chain), we need to record the coin set from that fork in
@@ -1241,16 +1240,62 @@ class FullNode:
                         await peer.close(600)
                         raise ConsensusError(Err(result.error))
                     npc_results[height] = result
-
-                success, state_change_summary, err = await self.add_block_batch(
+                blocks_to_validate = await self.filter_blocks(
                     blocks,
-                    peer.get_peer_logging(),
                     fork_info,
+                    cs,
+                )
+
+                if blocks_to_validate == []:
+                    continue
+
+                pre_validation_results, err = await self.prevalidate_blocks(
+                    blocks_to_validate,
+                    peer.peer_info,
                     cs,
                     summaries,
                     npc_results,
                 )
-                if success is False:
+                if err is not None:
+                    await peer.close(600)
+                    raise ValueError(f"Failed to validate block batch: {err}")
+                await output_queue.put(
+                    (peer, blocks_to_validate, pre_validation_results, copy.deepcopy(fork_info), copy.deepcopy(cs))
+                )
+
+        async def ingest_block_batches(
+            input_queue: asyncio.Queue[
+                Optional[
+                    Tuple[WSChiaConnection, List[FullBlock], List[PreValidationResult], Optional[ForkInfo], ChainState]
+                ]
+            ],
+        ) -> None:
+            block_rate = 0
+            block_rate_time = time.monotonic()
+            block_rate_height = -1
+            while True:
+                res: Optional[
+                    Tuple[WSChiaConnection, List[FullBlock], List[PreValidationResult], Optional[ForkInfo], ChainState]
+                ] = await input_queue.get()
+                if res is None:
+                    self.log.debug("done fetching blocks")
+                    return None
+                peer, blocks, pre_validation_results, fork_info, chain_state = res
+                start_height = blocks[0].height
+                end_height = blocks[-1].height
+
+                if block_rate_height == -1:
+                    block_rate_height = start_height
+
+                state_change_summary, err = await self.add_prevalidated_blocks(
+                    blocks,
+                    pre_validation_results,
+                    fork_info,
+                    peer.get_peer_logging(),
+                    chain_state,
+                )
+
+                if err is not None:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
                 if end_height - block_rate_height > 100:
@@ -1259,11 +1304,7 @@ class FullNode:
                     block_rate_time = now
                     block_rate_height = end_height
 
-                self.log.info(
-                    f"Added blocks {start_height} to {end_height}"
-                    f" ({block_rate} blocks/s)"
-                    f" (pre-validated: {int(len(npc_results)/len(blocks)*100)}%)"
-                )
+                self.log.info(f"Added blocks {start_height} to {end_height} ({block_rate} blocks/s)")
                 peak = self.blockchain.get_peak()
                 if state_change_summary is not None:
                     assert peak is not None
@@ -1284,15 +1325,22 @@ class FullNode:
         batch_queue_input: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]] = asyncio.Queue(
             maxsize=buffer_size
         )
-        validated_queue: asyncio.Queue[
+        executed_queue: asyncio.Queue[
             Optional[Tuple[WSChiaConnection, List[FullBlock], Dict[uint32, Awaitable[bytes]]]]
+        ] = asyncio.Queue(maxsize=buffer_size)
+        validated_queue: asyncio.Queue[
+            Optional[
+                Tuple[WSChiaConnection, List[FullBlock], List[PreValidationResult], Optional[ForkInfo], ChainState]
+            ]
         ] = asyncio.Queue(maxsize=buffer_size)
         # the fetch task puts blocks in the batch_queue_input
         fetch_task = asyncio.Task(fetch_block_batches(batch_queue_input))
         # the execute_task pulls blocks from batch_queue_input and pushes
-        # validated block batches onto validated_queue
-        execute_task = asyncio.Task(execute_block_batches(batch_queue_input, validated_queue))
-        # ingest_task pulls validated blocks from validated_queue and adds them
+        # validated block batches onto executed_queue
+        execute_task = asyncio.Task(execute_block_batches(batch_queue_input, executed_queue))
+
+        validate_task = asyncio.Task(validate_block_batches(executed_queue, validated_queue))
+        # ingest_task pulls validated blocks from executed_queue and adds them
         # to the blockchain object
         ingest_task = asyncio.Task(ingest_block_batches(validated_queue))
         try:
@@ -1302,6 +1350,7 @@ class FullNode:
             assert ingest_task.done()
             fetch_task.cancel()  # no need to cancel ingest_task, if we end up here ingest_task is already done
             execute_task.cancel()
+            validate_task.cancel()
 
     def get_peers_with_peak(self, peak_hash: bytes32) -> List[WSChiaConnection]:
         peer_ids: Set[bytes32] = self.sync_store.get_peers_that_have_peak([peak_hash])
@@ -1458,6 +1507,10 @@ class FullNode:
         npc_results: Dict[uint32, NPCResult] = {},
     ) -> Tuple[List[PreValidationResult], Optional[Err]]:
         pre_validate_start = time.monotonic()
+
+        if len(blocks_to_validate) == 0:
+            return [], None
+
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
         # pre_validate_blocks_multiprocessing() will update the ChainState

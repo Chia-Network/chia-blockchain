@@ -330,9 +330,10 @@ class Blockchain:
         # blocks. We can only accept blocks that are connected to another block
         # we know of.
         prev_block: Optional[BlockRecord] = None
-        if not extending_main_chain and not genesis:
-            prev_block = self.try_block_record(block.prev_header_hash)
-            if prev_block is None:
+        if not extending_main_chain:
+            prev_block = self.block_record(block.prev_header_hash)
+            if not genesis and prev_block is None:
+                log.info("invalid block: can't find prev_block is None")
                 return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
             if prev_block.height + 1 != block.height:
@@ -711,6 +712,10 @@ class Blockchain:
             not self.contains_block(block.prev_header_hash)
             and block.prev_header_hash != self.constants.GENESIS_CHALLENGE
         ):
+            log.info(
+                f"invalid block: contains_block: {self.contains_block(block.prev_header_hash)} "
+                f"prev_header_hash: {block.prev_header_hash} genesis: {self.constants.GENESIS_CHALLENGE}"
+            )
             return None, Err.INVALID_PREV_BLOCK_HASH
 
         if block.transactions_info is not None:
