@@ -128,7 +128,7 @@ class DAOCATWallet:
         if name is None:
             name = CATWallet.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
-        limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
+        limitations_program_hash = bytes32.from_hexstr(limitations_program_hash_hex)
 
         self.dao_cat_info = DAOCATInfo(
             dao_wallet_id,

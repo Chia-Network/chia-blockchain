@@ -36,6 +36,13 @@ BASE_WARPED_MILLIETH = {
     "symbol": "wmilliETH.b",
 }
 
+BASE_WARPED_EURC = {
+    "asset_id": "31ffd54c5b38bb33352dc0be0ebf9cf4f29a6329156dd4811d6f4254f85c8200",
+    "name": "Base Warped EURC",
+    "symbol": "wEURC.b",
+}
+
+
 ETH_WARPED_USDC = {
     "asset_id": "bbb51b246fbec1da1305be31dcf17151ccd0b8231a1ec306d7ce9f5b8c742b9e",
     "name": "Ethereum Warped USDC",
@@ -61,6 +68,7 @@ DEFAULT_CATS = {
     CHIA_HOLIDAY_TOKEN["asset_id"]: CHIA_HOLIDAY_TOKEN,
     BASE_WARPED_USDC["asset_id"]: BASE_WARPED_USDC,
     BASE_WARPED_MILLIETH["asset_id"]: BASE_WARPED_MILLIETH,
+    BASE_WARPED_EURC["asset_id"]: BASE_WARPED_EURC,
     ETH_WARPED_USDC["asset_id"]: ETH_WARPED_USDC,
     ETH_WARPED_MILLIETH["asset_id"]: ETH_WARPED_MILLIETH,
     ETH_WARPED_USDT["asset_id"]: ETH_WARPED_USDT,

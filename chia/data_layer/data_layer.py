@@ -782,6 +782,10 @@ class DataLayer:
 
     async def unsubscribe(self, store_id: bytes32, retain_data: bool) -> None:
         async with self.subscription_lock:
+            subscriptions = await self.data_store.get_subscriptions()
+            if store_id not in (subscription.store_id for subscription in subscriptions):
+                raise RuntimeError("No subscription found for the given store_id.")
+
             # Unsubscribe is processed later, after all fetching of data is done, to avoid races.
             self.unsubscribe_data_queue.append(UnsubscribeData(store_id, retain_data))
 
@@ -896,21 +900,45 @@ class DataLayer:
                 await asyncio.sleep(0.1)
 
         while not self._shut_down:
+            # Add existing subscriptions
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
 
-            # Subscribe to all local store_ids that we can find on chain.
-            local_store_ids = await self.data_store.get_store_ids()
+            # pseudo-subscribe to all unsubscribed owned stores
+            # Need this to make sure we process updates and generate DAT files
+            try:
+                owned_stores = await self.get_owned_stores()
+            except ValueError:
+                # Sometimes the DL wallet isn't available, so we can't get the owned stores.
+                # We'll try again next time.
+                owned_stores = []
             subscription_store_ids = {subscription.store_id for subscription in subscriptions}
-            for local_id in local_store_ids:
-                if local_id not in subscription_store_ids:
+            for record in owned_stores:
+                store_id = record.launcher_id
+                if store_id not in subscription_store_ids:
                     try:
-                        subscription = await self.subscribe(local_id, [])
-                        subscriptions.insert(0, subscription)
+                        # don't actually subscribe, just add to the list
+                        subscriptions.insert(0, Subscription(store_id=store_id, servers_info=[]))
                     except Exception as e:
                         self.log.info(
-                            f"Can't subscribe to locally stored {local_id}: {type(e)} {e} {traceback.format_exc()}"
+                            f"Can't subscribe to owned store {store_id}: {type(e)} {e} {traceback.format_exc()}"
                         )
+
+            # Optionally
+            # Subscribe to all local non-owned store_ids that we can find on chain.
+            # This is the prior behavior where all local stores, both owned and not owned, are subscribed to.
+            if self.config.get("auto_subscribe_to_local_stores", False):
+                local_store_ids = await self.data_store.get_store_ids()
+                subscription_store_ids = {subscription.store_id for subscription in subscriptions}
+                for local_id in local_store_ids:
+                    if local_id not in subscription_store_ids:
+                        try:
+                            subscription = await self.subscribe(local_id, [])
+                            subscriptions.insert(0, subscription)
+                        except Exception as e:
+                            self.log.info(
+                                f"Can't subscribe to local store {local_id}: {type(e)} {e} {traceback.format_exc()}"
+                            )
 
             work_queue: asyncio.Queue[Job[Subscription]] = asyncio.Queue()
             async with QueuedAsyncPool.managed(

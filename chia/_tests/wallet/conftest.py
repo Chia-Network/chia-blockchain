@@ -148,6 +148,8 @@ async def wallet_environments(
                     **config_overrides,
                 }
                 service._node.wallet_state_manager.config = service._node.config
+                # Shorten the 10 seconds default value
+                service._node.coin_state_retry_seconds = 2
                 await service._node.server.start_client(
                     PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
                 )
