@@ -34,8 +34,8 @@ class PrevChainState:
     prev_tx_timestamp: Optional[uint64] = None
     # the number of blocks since the start of the current sub slot
     num_blocks: int = 0
-    # the last finished_challenge_slot_hashes for the first block in the subslot
-    first_in_subslot_finished_challenge_slot_hash: Optional[bytes32] = None
+    # the first block in the subslot
+    first_in_subslot: Optional[BlockRecord] = None
     # sub slot state for each finished sub slot in the block
     sub_slot_state: List[SubSlotState] = field(default_factory=list)
 
@@ -98,7 +98,7 @@ def find_chain_state(
             )
         )
 
-    first_in_subslot_finished_challenge_slot_hash: Optional[bytes32] = None
+    first_in_subslot: Optional[BlockRecord] = None
     num_blocks = 0
     if prev_b is not None:
         num_blocks = 2  # This includes the current block and the prev block
@@ -107,7 +107,7 @@ def find_chain_state(
             num_blocks += 1
             curr = blocks.block_record(curr.prev_hash)
         assert curr.finished_challenge_slot_hashes is not None
-        first_in_subslot_finished_challenge_slot_hash = curr.finished_challenge_slot_hashes[-1]
+        first_in_subslot = curr
 
     prev_tx_block: Optional[BlockRecord] = None
     prev_tx_timestamp: Optional[uint64] = None
@@ -123,6 +123,6 @@ def find_chain_state(
         prev_tx_block,
         prev_tx_timestamp,
         num_blocks,
-        first_in_subslot_finished_challenge_slot_hash,
+        first_in_subslot,
         sub_slot_state,
     )

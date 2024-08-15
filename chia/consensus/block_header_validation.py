@@ -117,7 +117,9 @@ def validate_unfinished_header_block(
                     if challenge_hash != constants.GENESIS_CHALLENGE:
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
                 else:
-                    finished_challenge_slot_hash = prev.first_in_subslot_finished_challenge_slot_hash
+                    assert prev.first_in_subslot is not None
+                    assert prev.first_in_subslot.finished_challenge_slot_hashes is not None
+                    finished_challenge_slot_hash = prev.first_in_subslot.finished_challenge_slot_hashes[-1]
                     assert finished_challenge_slot_hash is not None
 
                     # 2b. check sub-slot challenge hash for non-genesis block
@@ -590,12 +592,9 @@ def validate_unfinished_header_block(
             if genesis_block:
                 rc_sp_hash = constants.GENESIS_CHALLENGE
             else:
-                assert prev.prev_b is not None
-                curr = prev.prev_b
-                while not curr.first_in_sub_slot:
-                    curr = blocks.block_record(curr.prev_hash)
-                assert curr.finished_reward_slot_hashes is not None
-                rc_sp_hash = curr.finished_reward_slot_hashes[-1]
+                assert prev.first_in_subslot is not None
+                assert prev.first_in_subslot.finished_reward_slot_hashes is not None
+                rc_sp_hash = prev.first_in_subslot.finished_reward_slot_hashes[-1]
 
     # 12. Check reward chain sp signature
     if not AugSchemeMPL.verify(
@@ -650,19 +649,18 @@ def validate_unfinished_header_block(
             return None, ValidationError(Err.INVALID_IS_TRANSACTION_BLOCK, "invalid genesis")
     else:
         assert prev.prev_b is not None
-        # Finds the previous block
-        curr = prev.prev_b
-        while not curr.is_transaction_block:
-            curr = blocks.block_record(curr.prev_hash)
 
         # The first block to have an sp > the last tx block's infusion iters, is a tx block
         if overflow:
             our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - expected_sub_slot_iters)
         else:
             our_sp_total_iters = uint128(total_iters - ip_iters + sp_iters)
-        if (our_sp_total_iters > curr.total_iters) != (header_block.foliage.foliage_transaction_block_hash is not None):
+        assert prev.prev_tx_block is not None
+        if (our_sp_total_iters > prev.prev_tx_block.total_iters) != (
+            header_block.foliage.foliage_transaction_block_hash is not None
+        ):
             return None, ValidationError(Err.INVALID_IS_TRANSACTION_BLOCK)
-        if (our_sp_total_iters > curr.total_iters) != (
+        if (our_sp_total_iters > prev.prev_tx_block.total_iters) != (
             header_block.foliage.foliage_transaction_block_signature is not None
         ):
             return None, ValidationError(Err.INVALID_IS_TRANSACTION_BLOCK)
