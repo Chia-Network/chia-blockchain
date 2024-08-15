@@ -1871,16 +1871,10 @@ class DataStore:
 
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
 
-    async def get_node_by_key_latest_generation(
-        self, key: bytes, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
-    ) -> TerminalNode:
+    async def get_node_by_key_latest_generation(self, key: bytes, store_id: bytes32) -> TerminalNode:
         async with self.db_wrapper.reader() as reader:
-            # TODO: do we need to require the latest generation?
-            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            # avoid accidental usage
-            del tree_id
-
-            if resolved_tree_id.root_hash is None:
+            tree_id = await self._resolve_tree_id(tree_id=TreeId.create(store_id=store_id))
+            if tree_id.root_hash is None:
                 raise KeyNotFoundError(key=key)
 
             cursor = await reader.execute(
@@ -1892,7 +1886,7 @@ class DataStore:
                 ORDER BY a.generation DESC
                 LIMIT 1
                 """,
-                {"key": key, "tree_id": resolved_tree_id.store_id},
+                {"key": key, "tree_id": store_id},
             )
 
             row = await cursor.fetchone()
@@ -1902,12 +1896,12 @@ class DataStore:
             node = await self.get_node(row["hash"])
             node_hash = node.hash
             while True:
-                internal_node = await self._get_one_ancestor(node_hash, tree_id=resolved_tree_id)
+                internal_node = await self._get_one_ancestor(node_hash, tree_id=tree_id)
                 if internal_node is None:
                     break
                 node_hash = internal_node.hash
 
-            if node_hash != resolved_tree_id.root_hash:
+            if node_hash != tree_id.root_hash:
                 raise KeyNotFoundError(key=key)
             assert isinstance(node, TerminalNode)
             return node
@@ -1923,11 +1917,9 @@ class DataStore:
 
         return None
 
-    async def maybe_get_node_by_key(
-        self, key: bytes, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
-    ) -> Optional[TerminalNode]:
+    async def maybe_get_node_by_key(self, key: bytes, store_id: bytes32) -> Optional[TerminalNode]:
         try:
-            node = await self.get_node_by_key_latest_generation(key, tree_id=tree_id)
+            node = await self.get_node_by_key_latest_generation(key, store_id=store_id)
             return node
         except KeyNotFoundError:
             return None
@@ -1938,7 +1930,7 @@ class DataStore:
         tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
     ) -> TerminalNode:
         if tree_id.root_hash is TreeId.unspecified:
-            return await self.get_node_by_key_latest_generation(key, tree_id=tree_id)
+            return await self.get_node_by_key_latest_generation(key, store_id=tree_id.store_id)
 
         nodes = await self.get_keys_values(tree_id=tree_id)
 
