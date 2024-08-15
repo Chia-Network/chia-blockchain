@@ -49,6 +49,11 @@ log = logging.getLogger(__name__)
 # TODO: pick exception types other than Exception
 
 
+class RootNotFoundError(Exception):
+    def __init__(self, hash: Optional[bytes32]) -> None:
+        super().__init__(f"unable to find root for: {hash}")
+
+
 @dataclass
 class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
@@ -587,35 +592,33 @@ class DataStore:
     async def _resolve_tree_id(
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> TreeId[int, Optional[bytes32]]:
-        if tree_id.root_hash == bytes32([0] * 32):
-            tree_id = replace(tree_id, root_hash=None)
-        # TODO: optimize
+        root_hash = tree_id.root_hash
+        if root_hash == bytes32([0] * 32):
+            # TODO: maybe warn about this pattern to try to root it out
+            root_hash = None
 
-        if tree_id.generation is TreeId.unspecified:
-            if tree_id.root_hash is TreeId.unspecified:
+        generation = tree_id.generation
+        if generation is TreeId.unspecified:
+            if root_hash is TreeId.unspecified:
                 generation = await self.get_tree_generation(store_id=tree_id.store_id)
             else:
-                # TODO: can this be more direct
-                root = await self.get_last_tree_root_by_hash(store_id=tree_id.store_id, hash=tree_id.root_hash)
-                assert root is not None, f"unable to find root: {root!r}"
+                root = await self.get_last_tree_root_by_hash(store_id=tree_id.store_id, hash=root_hash)
+                if root is None:
+                    raise RootNotFoundError(hash=root_hash)
                 generation = root.generation
 
-            tree_id = replace(tree_id, generation=generation)
+        if root_hash is TreeId.unspecified:
+            root = await self.get_tree_root(tree_id=TreeId.create(store_id=tree_id.store_id, generation=generation))
+            root_hash = root.node_hash
 
-        if tree_id.root_hash is TreeId.unspecified:
-            root = await self.get_tree_root(tree_id=tree_id)
-            tree_id = replace(tree_id, root_hash=root.node_hash)
-
-        # TODO: ignore, yuck
-        return tree_id  # type: ignore[return-value]
+        return TreeId.create(store_id=tree_id.store_id, root_hash=root_hash, generation=generation)
 
     async def get_tree_root(
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> Root:
         async with self.db_wrapper.reader() as reader:
-            # TODO: feels dirty having this loop with _resolve_tree_id, but maybe
-            #       breaking it like this here is ok
             if tree_id.generation is TreeId.unspecified:
+                # avoid a loop with resolve by only calling for an unspecified generation
                 tree_id = await self._resolve_tree_id(tree_id=tree_id)
 
             cursor = await reader.execute(
@@ -842,10 +845,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            except AssertionError as e:
-                # TODO: blech, review context
-                if not e.args[0].startswith("unable to find root: "):
-                    raise
+            except RootNotFoundError:
                 return []
 
             # avoid accidental usage
@@ -879,10 +879,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            except AssertionError as e:
-                # TODO: blech, review context
-                if not e.args[0].startswith("unable to find root: "):
-                    raise
+            except RootNotFoundError:
                 # TODO: not cool
                 assert tree_id.root_hash is not TreeId.unspecified
                 return KeysValuesCompressed({}, {}, {}, tree_id.root_hash)
@@ -931,10 +928,7 @@ class DataStore:
         async with self.transaction():
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            except AssertionError as e:
-                # TODO: blech, review context
-                if not e.args[0].startswith("unable to find root: "):
-                    raise
+            except RootNotFoundError:
                 # TODO: not cool
                 assert tree_id.root_hash is not TreeId.unspecified
                 return KeysPaginationData(0, 0, [], tree_id.root_hash)
@@ -1129,8 +1123,15 @@ class DataStore:
     async def get_keys_values_dict(
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> Dict[bytes, bytes]:
-        # TODO: should we resolve here?
-        pairs = await self.get_keys_values(tree_id=tree_id)
+        try:
+            resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
+        except RootNotFoundError:
+            return {}
+
+        # avoid accidental usage
+        del tree_id
+
+        pairs = await self.get_keys_values(tree_id=resolved_tree_id)
         return {node.key: node.value for node in pairs}
 
     async def get_keys(
@@ -1139,10 +1140,7 @@ class DataStore:
         async with self.db_wrapper.reader() as reader:
             try:
                 resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
-            except AssertionError as e:
-                # TODO: blech, review context
-                if not e.args[0].startswith("unable to find root: "):
-                    raise
+            except RootNotFoundError:
                 return []
             # avoid accidental usage
             del tree_id
@@ -1557,7 +1555,6 @@ class DataStore:
             tree_id = await self._resolve_tree_id(tree_id=TreeId.create(store_id=store_id))
 
             old_root = await self.get_tree_root(tree_id=tree_id)
-            # TODO: hum, pending, ...  i forgot what i was thinking about here
             pending_root = await self.get_pending_root(store_id=tree_id.store_id)
             if pending_root is None:
                 latest_local_root: Optional[Root] = old_root
@@ -1685,9 +1682,6 @@ class DataStore:
                             to_update_hashes.add(node.hash)
                             to_update_queue.append(node.hash)
 
-                # assert latest_local_root is not None
-                # assert latest_local_root.node_hash is not None
-                # TODO: can we do something nicer? or maybe this isn't even right
                 assert latest_local_tree_id.root_hash is not None
                 new_root_hash = await self.batch_upsert(
                     hash=latest_local_tree_id.root_hash,
@@ -1713,8 +1707,6 @@ class DataStore:
 
             if len(pending_autoinsert_hashes):
                 subtree_hash = pending_autoinsert_hashes[0]
-                # TODO: definitely think this over
-                # if latest_local_root is None or latest_local_root.node_hash is None:
                 if latest_local_tree_id.root_hash is None:
                     await self._insert_root(store_id=tree_id.store_id, node_hash=subtree_hash, status=Status.COMMITTED)
                 else:
@@ -1825,7 +1817,6 @@ class DataStore:
         self, tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]]
     ) -> None:
         async with self.db_wrapper.writer() as writer:
-            # TODO: do we now need to block acting on a not-latest generation/root?
             resolved_tree_id = await self._resolve_tree_id(tree_id=tree_id)
             # avoid accidental usage
             del tree_id
@@ -1944,10 +1935,8 @@ class DataStore:
         key: bytes,
         tree_id: TreeId[Union[int, TreeId.Unspecified], Union[Optional[bytes32], TreeId.Unspecified]],
     ) -> TerminalNode:
-        # TODO: recover usage of .get_node_by_key_latest_generation()
-        #       None has mixed use in terms of empty roots vs. not-specified roots
-        # if tree_id.root_hash is None:
-        #     return await self.get_node_by_key_latest_generation(key, tree_id=tree_id)
+        if tree_id.root_hash is TreeId.unspecified:
+            return await self.get_node_by_key_latest_generation(key, tree_id=tree_id)
 
         nodes = await self.get_keys_values(tree_id=tree_id)
 

@@ -343,17 +343,10 @@ class TreeId(Generic[T_MaybeGeneration, T_MaybeBytes32]):
         def __repr__(self) -> str:
             return "TreeId.Unspecified"
 
-    # TODO: is this really useful vs. just saying Unspecified.instance?
     unspecified: ClassVar[Unspecified] = Unspecified.instance
 
     store_id: bytes32
     generation: T_MaybeGeneration
-
-    # TODO: what if there were an @resolved_tree_id decorator or such that would
-    #       resolve the tree id parameter.  it would also have a reader added...?  or
-    #       writer if requested and...  that would avoid extra transactions?  some
-    #       good feelings, some pretty yucky about this
-
     root_hash: T_MaybeBytes32
 
     @overload
