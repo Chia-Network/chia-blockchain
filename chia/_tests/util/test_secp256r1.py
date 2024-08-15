@@ -24,7 +24,7 @@ def test_key_drivers() -> None:
     assert Secp256r1PublicKey.from_bytes(bytes(pk)) == pk
     assert pk.get_fingerprint() < uint32.MAXIMUM
     with pytest.raises(NotImplementedError):
-        sk.derive_unhardened(1)
+        pk.derive_unhardened(1)
 
     sig = sk.sign(b"foo")
     assert Secp256r1Signature.from_bytes(bytes(sig)) == sig
