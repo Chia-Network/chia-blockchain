@@ -22,7 +22,6 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.wallet_action_scope import WalletActionScope
 
 GENESIS_BY_ID_MOD = load_clvm_maybe_recompile(
@@ -57,7 +56,7 @@ class LimitationsProgram:
 
     @classmethod
     async def generate_issuance_bundle(
-        cls, wallet, cat_tail_info: Dict, amount: uint64, tx_config: TXConfig, action_scope: WalletActionScope
+        cls, wallet, cat_tail_info: Dict, amount: uint64, action_scope: WalletActionScope
     ) -> SpendBundle:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
@@ -90,11 +89,12 @@ class GenesisById(LimitationsProgram):
         wallet,
         _: Dict,
         amount: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
     ) -> SpendBundle:
-        coins = await wallet.standard_wallet.select_coins(amount + fee, tx_config.coin_selection_config)
+        coins = await wallet.standard_wallet.select_coins(
+            amount + fee, action_scope.config.tx_config.coin_selection_config
+        )
 
         origin = coins.copy().pop()
         origin_id = origin.name()
@@ -109,9 +109,11 @@ class GenesisById(LimitationsProgram):
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
-        async with wallet.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(
+            action_scope.config.tx_config, push=False
+        ) as inner_action_scope:
             await wallet.standard_wallet.generate_signed_transaction(
-                amount, minted_cat_puzzle_hash, tx_config, inner_action_scope, fee, coins, origin_id=origin_id
+                amount, minted_cat_puzzle_hash, inner_action_scope, fee, coins, origin_id=origin_id
             )
 
         async with action_scope.use() as interface:
@@ -253,7 +255,6 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         wallet,
         tail_info: Dict,
         amount: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
     ) -> SpendBundle:
@@ -261,7 +262,9 @@ class GenesisByIdOrSingleton(LimitationsProgram):
             coins: List[Coin] = tail_info["coins"]
             origin_id = coins.copy().pop().name()
         else:  # pragma: no cover
-            coins = await wallet.standard_wallet.select_coins(amount + fee, tx_config.coin_selection_config)
+            coins = await wallet.standard_wallet.select_coins(
+                amount + fee, action_scope.config.tx_config.coin_selection_config
+            )
             origin = coins.copy().pop()
             origin_id = origin.name()
 
@@ -283,11 +286,12 @@ class GenesisByIdOrSingleton(LimitationsProgram):
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
-        async with wallet.wallet_state_manager.new_action_scope(push=False) as inner_action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(
+            action_scope.config.tx_config, push=False
+        ) as inner_action_scope:
             await wallet.standard_wallet.generate_signed_transaction(
                 amount,
                 minted_cat_puzzle_hash,
-                tx_config,
                 inner_action_scope,
                 fee,
                 coins=set(coins),

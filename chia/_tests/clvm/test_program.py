@@ -119,10 +119,28 @@ def test_run() -> None:
     ret = div.run([10, -5])
     assert ret.atom == bytes([0xFE])
 
+    # run()
+    with pytest.raises(ValueError, match="div operator with negative operands is deprecated"):
+        cost, ret = div.run_with_cost(100000, [10, -5], 0)
+
+    cost, ret = div.run_with_cost(100000, [10, -5], ENABLE_FIXED_DIV)
+    assert cost == 1107
+    print(ret)
+    assert ret.atom == bytes([0xFE])
+
+    # run_with_flags()
     with pytest.raises(ValueError, match="div operator with negative operands is deprecated"):
         cost, ret = div.run_with_flags(100000, 0, [10, -5])
 
     cost, ret = div.run_with_flags(100000, ENABLE_FIXED_DIV, [10, -5])
     assert cost == 1107
+    print(ret)
+    assert ret.atom == bytes([0xFE])
+
+    # run_with_cost()
+    with pytest.raises(ValueError, match="div operator with negative operands is deprecated"):
+        ret = div.run([10, -5], 100000, 0)
+
+    ret = div.run([10, -5], 100000, ENABLE_FIXED_DIV)
     print(ret)
     assert ret.atom == bytes([0xFE])

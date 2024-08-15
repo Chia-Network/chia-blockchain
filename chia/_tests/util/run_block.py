@@ -144,7 +144,7 @@ def run_generator_with_args(
     if not generator_program_hex:
         return []
     generator_program = SerializedProgram.fromhex(generator_program_hex)
-    block_generator = BlockGenerator(generator_program, generator_args, [])
+    block_generator = BlockGenerator(generator_program, generator_args)
     return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost))
 
 

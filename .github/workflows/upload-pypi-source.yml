@@ -136,6 +136,9 @@ jobs:
             command: |
               python3 -m chia._tests.util.build_network_protocol_files
               git diff --exit-code
+          - name: poetry
+            command: |
+              .penv/bin/poetry check
 
     steps:
       - uses: chia-network/actions/clean-workspace@main
@@ -199,8 +202,7 @@ jobs:
 
       - name: Build source distribution
         run: |
-          # TODO: let poetry do this?
-          python -m build --sdist --outdir dist .
+          python -m build --outdir dist .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
