@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import struct
-from dataclasses import astuple, dataclass, field
+from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, ClassVar, Dict, List, NewType, Optional, Protocol, Set, Type, TypeVar, cast, final
+from typing import TYPE_CHECKING, ClassVar, Dict, List, NewType, Optional, Protocol, Set, Tuple, Type, TypeVar, cast, final
 
 from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -67,10 +67,11 @@ class MerkleBlob:
         if end > len(self.blob):
             raise InvalidIndexError(index=index)
 
-        metadata = NodeMetadata.unpack(self.blob[metadata_start:data_start])
+        block = self.blob[metadata_start:end]
+        metadata = NodeMetadata.unpack(block[:metadata_size])
         return unpack_raw_node(
             metadata=metadata,
-            data=self.blob[data_start:end],
+            data=block[-data_size:],
             index=index,
         )
 
@@ -390,6 +391,8 @@ class RawMerkleNodeProtocol(Protocol):
     @property
     def hash(self) -> bytes: ...
 
+    def as_tuple(self) -> Tuple[object, ...]: ...
+
 
 @final
 @dataclass(frozen=True)
@@ -401,7 +404,7 @@ class NodeMetadata:
     dirty: bool
 
     def pack(self) -> bytes:
-        return self.struct.pack(*astuple(self))
+        return self.struct.pack(self.type, self.dirty)
 
     @classmethod
     def unpack(cls, blob: bytes) -> NodeMetadata:
@@ -416,9 +419,7 @@ def unpack_raw_node(index: TreeIndex, metadata: NodeMetadata, data: bytes) -> Ra
 
 # TODO: allow broader bytes'ish types
 def pack_raw_node(raw_node: RawMerkleNodeProtocol) -> bytes:
-    # TODO: really hacky ignoring of the index field
-    # TODO: try again to indicate that the RawMerkleNodeProtocol requires the dataclass interface
-    return raw_node.struct.pack(*astuple(raw_node)[:-1])  # type: ignore[call-overload]
+    return raw_node.struct.pack(*raw_node.as_tuple())
 
 
 @final
@@ -443,6 +444,9 @@ class RawInternalMerkleNode:
     hash: bytes
     # TODO: this feels like a bit of a violation being aware of your location
     index: TreeIndex
+
+    def as_tuple(self) -> Tuple[TreeIndex, TreeIndex, TreeIndex, bytes]:
+        return (self.parent, self.left, self.right, self.hash)
 
     def get_sibling_index(self, index: TreeIndex) -> TreeIndex:
         if self.left == index:
@@ -478,6 +482,9 @@ class RawLeafMerkleNode:
     hash: bytes
     # TODO: this feels like a bit of a violation being aware of your location
     index: TreeIndex
+
+    def as_tuple(self) -> Tuple[TreeIndex, KVId, bytes]:
+        return (self.parent, self.key_value, self.hash)
 
 
 metadata_size = NodeMetadata.struct.size

@@ -343,3 +343,11 @@ def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
     with pytest.raises(InvalidIndexError):
         merkle_blob.get_raw_node(index)
         merkle_blob.get_metadata(index)
+
+
+@pytest.mark.parametrize(argnames="cls", argvalues=raw_node_classes)
+def test_as_tuple_matches_dataclasses_astuple(cls: Type[RawMerkleNodeProtocol], seeded_random: Random) -> None:
+    raw_bytes = seeded_random.randbytes(cls.struct.size)
+    raw_node = cls(*cls.struct.unpack(raw_bytes), index=seeded_random.randrange(1_000_000))
+    # hacky [:-1] to exclude the index
+    assert raw_node.as_tuple() == astuple(raw_node)[:-1]
