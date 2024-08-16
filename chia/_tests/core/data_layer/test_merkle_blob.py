@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import struct
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from random import Random
 from typing import Dict, Generic, List, Set, Type, TypeVar, final
 
@@ -347,7 +347,7 @@ def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
 
 @pytest.mark.parametrize(argnames="cls", argvalues=raw_node_classes)
 def test_as_tuple_matches_dataclasses_astuple(cls: Type[RawMerkleNodeProtocol], seeded_random: Random) -> None:
-    raw_bytes = seeded_random.randbytes(cls.struct.size)
-    raw_node = cls(*cls.struct.unpack(raw_bytes), index=seeded_random.randrange(1_000_000))
+    raw_bytes = bytes(seeded_random.getrandbits(8) for _ in range(cls.struct.size))
+    raw_node = cls(*cls.struct.unpack(raw_bytes), index=TreeIndex(seeded_random.randrange(1_000_000)))
     # hacky [:-1] to exclude the index
     assert raw_node.as_tuple() == astuple(raw_node)[:-1]
