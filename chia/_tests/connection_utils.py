@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Set, Tuple
+from typing import List, Set, Tuple
 
 import aiohttp
 from cryptography import x509
@@ -39,15 +39,26 @@ async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaSer
 
 
 async def add_dummy_connection(
-    server: ChiaServer, self_hostname: str, dummy_port: int, type: NodeType = NodeType.FULL_NODE
+    server: ChiaServer,
+    self_hostname: str,
+    dummy_port: int,
+    type: NodeType = NodeType.FULL_NODE,
+    *,
+    additional_capabilities: List[Tuple[uint16, str]] = [],
 ) -> Tuple[asyncio.Queue, bytes32]:
-    wsc, peer_id = await add_dummy_connection_wsc(server, self_hostname, dummy_port, type)
+    wsc, peer_id = await add_dummy_connection_wsc(
+        server, self_hostname, dummy_port, type, additional_capabilities=additional_capabilities
+    )
 
     return wsc.incoming_queue, peer_id
 
 
 async def add_dummy_connection_wsc(
-    server: ChiaServer, self_hostname: str, dummy_port: int, type: NodeType = NodeType.FULL_NODE
+    server: ChiaServer,
+    self_hostname: str,
+    dummy_port: int,
+    type: NodeType = NodeType.FULL_NODE,
+    additional_capabilities: List[Tuple[uint16, str]] = [],
 ) -> Tuple[WSChiaConnection, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
@@ -86,7 +97,7 @@ async def add_dummy_connection_wsc(
         peer_id,
         100,
         30,
-        local_capabilities_for_handshake=default_capabilities[type],
+        local_capabilities_for_handshake=default_capabilities[type] + additional_capabilities,
     )
     await wsc.perform_handshake(server._network_id, dummy_port, type)
     if wsc.incoming_message_task is not None:

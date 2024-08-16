@@ -5,6 +5,7 @@ import dataclasses
 import json
 import logging
 import os
+import shutil
 import signal
 import ssl
 import subprocess
@@ -31,6 +32,7 @@ from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_server
+from chia.server.signal_handlers import SignalHandlers
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.chia_version import chia_short_version
@@ -41,7 +43,6 @@ from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
-from chia.util.misc import SignalHandlers
 from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
@@ -60,7 +61,7 @@ try:
     from aiohttp.web_ws import WebSocketResponse
 except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
-    quit()
+    sys.exit()
 
 
 log = logging.getLogger(__name__)
@@ -112,7 +113,8 @@ else:
     application_path = os.path.dirname(__file__)
 
     def executable_for_service(service_name: str) -> str:
-        return service_name
+        cmd_to_exec = shutil.which(service_name)
+        return cmd_to_exec if cmd_to_exec is not None else service_name
 
 
 async def ping() -> Dict[str, Any]:

@@ -118,7 +118,7 @@ def generate_secure_bundle(
     tail_str: Optional[str] = None,
 ) -> SpendBundle:
     announcement_assertions: List[Program] = [a.to_program() for a in announcements]
-    selected_coin_amount = sum([c.amount for c in selected_coins])
+    selected_coin_amount = sum(c.amount for c in selected_coins)
     non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
     inner_solution: List[Any] = [
         [51, Offer.ph(), offered_amount],  # Offered coin
@@ -196,7 +196,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         red_notarized_payments = Offer.notarize_payments(red_requested_payments, red_coins_1)
         red_announcements = Offer.calculate_announcements(red_notarized_payments, driver_dict)
         red_secured_bundle = generate_secure_bundle(
-            red_coins_1, red_announcements, uint64(sum([c.amount for c in red_coins_1])), tail_str="red"
+            red_coins_1, red_announcements, uint64(sum(c.amount for c in red_coins_1)), tail_str="red"
         )
         red_offer = Offer(red_notarized_payments, red_secured_bundle, driver_dict)
         assert not red_offer.is_valid()
@@ -207,7 +207,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         red_notarized_payments_2 = Offer.notarize_payments(red_requested_payments_2, red_coins_2)
         red_announcements_2 = Offer.calculate_announcements(red_notarized_payments_2, driver_dict)
         red_secured_bundle_2 = generate_secure_bundle(
-            red_coins_2, red_announcements_2, uint64(sum([c.amount for c in red_coins_2])), tail_str="red"
+            red_coins_2, red_announcements_2, uint64(sum(c.amount for c in red_coins_2)), tail_str="red"
         )
         red_offer_2 = Offer(red_notarized_payments_2, red_secured_bundle_2, driver_dict)
         assert not red_offer_2.is_valid()

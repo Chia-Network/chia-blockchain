@@ -11,7 +11,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
-from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
+from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
 from chia.util.condition_tools import parse_sexp_to_conditions, pkm_pairs, pkm_pairs_for_conditions_dict
 from chia.util.errors import ConsensusError
 from chia.util.hash import std_hash
@@ -32,7 +32,7 @@ def mk_agg_sig_conditions(
     agg_sig_data: List[Tuple[G1Element, bytes]],
     agg_sig_unsafe_data: List[Tuple[G1Element, bytes]] = [],
 ) -> SpendBundleConditions:
-    spend = Spend(
+    spend = SpendConditions(
         coin_id=TEST_COIN.name(),
         parent_id=H1,
         puzzle_hash=H2,
@@ -178,32 +178,6 @@ class TestPkmPairs:
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert [bytes(pk) for pk in pks] == [bytes(PK2), bytes(PK1)]
         assert msgs == [b"msg2", b"msg1" + value + addendum]
-
-    @pytest.mark.parametrize(
-        "opcode",
-        [
-            ConditionOpcode.AGG_SIG_PARENT,
-            ConditionOpcode.AGG_SIG_PUZZLE,
-            ConditionOpcode.AGG_SIG_AMOUNT,
-            ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
-            ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-            ConditionOpcode.AGG_SIG_ME,
-        ],
-    )
-    def test_agg_sig_unsafe_restriction(self, opcode: ConditionOpcode) -> None:
-        conds = mk_agg_sig_conditions(opcode, agg_sig_data=[], agg_sig_unsafe_data=[(PK1, b"msg1"), (PK2, b"msg2")])
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"sg1")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"msg2")
-
-        with pytest.raises(ConsensusError, match="INVALID_CONDITION"):
-            pkm_pairs(conds, b"g2")
 
 
 class TestPkmPairsForConditionDict:

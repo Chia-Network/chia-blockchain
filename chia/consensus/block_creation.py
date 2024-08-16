@@ -137,8 +137,6 @@ def create_foliage(
         assert prev_block is not None
         prev_block_hash = prev_block.header_hash
 
-    generator_block_heights_list: List[uint32] = []
-
     foliage_transaction_block_hash: Optional[bytes32]
 
     if is_transaction_block:
@@ -146,7 +144,6 @@ def create_foliage(
 
         # Calculate the cost of transactions
         if block_generator is not None:
-            generator_block_heights_list = block_generator.block_height_list
             cost = compute_cost(block_generator, constants, height)
 
             spend_bundle_fees = compute_fees(additions, removals)
@@ -229,10 +226,6 @@ def create_foliage(
             generator_hash = std_hash(block_generator.program)
 
         generator_refs_hash = bytes32([1] * 32)
-        if generator_block_heights_list not in (None, []):
-            generator_ref_list_bytes = b"".join([i.stream_to_bytes() for i in generator_block_heights_list])
-            generator_refs_hash = std_hash(generator_ref_list_bytes)
-
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
@@ -423,7 +416,7 @@ def create_unfinished_block(
         foliage_transaction_block,
         transactions_info,
         block_generator.program if block_generator else None,
-        block_generator.block_height_list if block_generator else [],
+        [],  # generator_refs
     )
 
 

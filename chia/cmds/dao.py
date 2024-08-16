@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence
 
 import click
 
-from chia.cmds.cmds_util import tx_config_args
-from chia.cmds.plotnft import validate_fee
+from chia.cmds import options
+from chia.cmds.cmds_util import CMDTXConfigLoader, tx_config_args, tx_out_cmd
+from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, TransactionFeeParamType, Uint64ParamType
+from chia.cmds.units import units
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
+from chia.wallet.transaction_record import TransactionRecord
 
 
 @click.group("dao", short_help="Create, manage or show state of DAOs", no_args_is_help=True)
@@ -33,33 +38,27 @@ def dao_cmd(ctx: click.Context) -> None:
     "-t",
     "--treasury-id",
     help="The Treasury ID of the DAO you want to track",
-    type=str,
+    type=Bytes32ParamType(),
     required=True,
 )
 @click.option(
     "-a",
     "--filter-amount",
     help="The minimum number of votes a proposal needs before the wallet will recognise it",
-    type=int,
-    default=1,
+    type=Uint64ParamType(),
+    default=uint64(1),
     show_default=True,
 )
 def dao_add_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    treasury_id: str,
-    filter_amount: int,
+    treasury_id: bytes32,
+    filter_amount: uint64,
     name: Optional[str],
 ) -> None:
     from .dao_funcs import add_dao_wallet
 
-    extra_params = {
-        "name": name,
-        "treasury_id": treasury_id,
-        "filter_amount": filter_amount,
-    }
-
-    asyncio.run(add_dao_wallet(extra_params, wallet_rpc_port, fingerprint))
+    asyncio.run(add_dao_wallet(wallet_rpc_port, fingerprint, name, treasury_id, filter_amount))
 
 
 # ----------------------------------------------------------------------------------------
@@ -79,103 +78,96 @@ def dao_add_cmd(
 @click.option(
     "--proposal-timelock",
     help="The minimum number of blocks before a proposal can close",
-    type=int,
-    default=1000,
+    type=Uint64ParamType(),
+    default="1000",
     show_default=True,
 )
 @click.option(
     "--soft-close",
     help="The number of blocks a proposal must remain unspent before closing",
-    type=int,
-    default=20,
+    type=Uint64ParamType(),
+    default="20",
     show_default=True,
 )
 @click.option(
     "--attendance-required",
     help="The minimum number of votes a proposal must receive to be accepted",
-    type=int,
+    type=Uint64ParamType(),
     required=True,
 )
 @click.option(
     "--pass-percentage",
     help="The percentage of 'yes' votes in basis points a proposal must receive to be accepted. 100% = 10000",
-    type=int,
-    default=5000,
+    type=Uint64ParamType(),
+    default="5000",
     show_default=True,
 )
 @click.option(
     "--self-destruct",
     help="The number of blocks required before a proposal can be automatically removed",
-    type=int,
-    default=10000,
+    type=Uint64ParamType(),
+    default="10000",
     show_default=True,
 )
 @click.option(
     "--oracle-delay",
     help="The number of blocks required between oracle spends of the treasury",
-    type=int,
-    default=50,
+    type=Uint64ParamType(),
+    default="50",
     show_default=True,
 )
 @click.option(
     "--proposal-minimum",
     help="The minimum amount (in xch) that a proposal must use to be created",
-    type=str,
-    default="0.000000000001",
+    type=AmountParamType(),
+    default="1",
     show_default=True,
 )
 @click.option(
     "--filter-amount",
     help="The minimum number of votes a proposal needs before the wallet will recognise it",
-    type=int,
-    default=1,
+    type=Uint64ParamType(),
+    default="1",
     show_default=True,
 )
 @click.option(
     "--cat-amount",
     help="The number of DAO CATs (in mojos) to create when initializing the DAO",
-    type=int,
+    type=AmountParamType(),
     required=True,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @click.option(
     "--fee-for-cat",
     help="Set the fees for the CAT creation transaction, in XCH.",
-    type=str,
+    type=TransactionFeeParamType(),
     default="0",
     show_default=True,
-    callback=validate_fee,
 )
 @tx_config_args
+@tx_out_cmd
 def dao_create_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
-    proposal_timelock: int,
-    soft_close: int,
-    attendance_required: int,
-    pass_percentage: int,
-    self_destruct: int,
-    oracle_delay: int,
-    proposal_minimum: str,
-    filter_amount: int,
-    cat_amount: int,
+    proposal_timelock: uint64,
+    soft_close: uint64,
+    attendance_required: uint64,
+    pass_percentage: uint64,
+    self_destruct: uint64,
+    oracle_delay: uint64,
+    proposal_minimum: CliAmount,
+    filter_amount: uint64,
+    cat_amount: CliAmount,
     name: Optional[str],
-    fee: str,
-    fee_for_cat: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    fee: uint64,
+    fee_for_cat: uint64,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import create_dao_wallet
 
     if self_destruct == proposal_timelock:
@@ -183,26 +175,32 @@ def dao_create_cmd(
 
     print("Creating new DAO")
 
-    extra_params = {
-        "fee": fee,
-        "fee_for_cat": fee_for_cat,
-        "name": name,
-        "proposal_timelock": proposal_timelock,
-        "soft_close_length": soft_close,
-        "attendance_required": attendance_required,
-        "pass_percentage": pass_percentage,
-        "self_destruct_length": self_destruct,
-        "oracle_spend_delay": oracle_delay,
-        "proposal_minimum_amount": proposal_minimum,
-        "filter_amount": filter_amount,
-        "amount_of_cats": cat_amount,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(create_dao_wallet(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        create_dao_wallet(
+            wallet_rpc_port,
+            fingerprint,
+            fee,
+            fee_for_cat,
+            name,
+            proposal_timelock,
+            soft_close,
+            attendance_required,
+            pass_percentage,
+            self_destruct,
+            oracle_delay,
+            proposal_minimum.convert_amount(units["chia"]),
+            filter_amount,
+            cat_amount,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 # ----------------------------------------------------------------------------------------
@@ -226,10 +224,7 @@ def dao_get_id_cmd(
 ) -> None:
     from .dao_funcs import get_treasury_id
 
-    extra_params = {
-        "wallet_id": wallet_id,
-    }
-    asyncio.run(get_treasury_id(extra_params, wallet_rpc_port, fingerprint))
+    asyncio.run(get_treasury_id(wallet_rpc_port, fingerprint, wallet_id))
 
 
 @dao_cmd.command("add_funds", short_help="Send funds to a DAO treasury", no_args_is_help=True)
@@ -253,46 +248,46 @@ def dao_get_id_cmd(
     "-a",
     "--amount",
     help="The amount of funds to send",
-    type=str,
+    type=AmountParamType(),
     required=True,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @tx_config_args
+@tx_out_cmd
 def dao_add_funds_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
     funding_wallet_id: int,
-    amount: str,
-    fee: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    amount: CliAmount,
+    fee: uint64,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import add_funds_to_treasury
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "fee": fee,
-        "funding_wallet_id": funding_wallet_id,
-        "amount": amount,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(add_funds_to_treasury(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        add_funds_to_treasury(
+            wallet_rpc_port,
+            fingerprint,
+            wallet_id,
+            funding_wallet_id,
+            amount,
+            fee,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 @dao_cmd.command("balance", short_help="Get the asset balances for a DAO treasury", no_args_is_help=True)
@@ -312,10 +307,7 @@ def dao_get_balance_cmd(
 ) -> None:
     from .dao_funcs import get_treasury_balance
 
-    extra_params = {
-        "wallet_id": wallet_id,
-    }
-    asyncio.run(get_treasury_balance(extra_params, wallet_rpc_port, fingerprint))
+    asyncio.run(get_treasury_balance(wallet_rpc_port, fingerprint, wallet_id))
 
 
 @dao_cmd.command("rules", short_help="Get the current rules governing the DAO", no_args_is_help=True)
@@ -335,10 +327,7 @@ def dao_rules_cmd(
 ) -> None:
     from .dao_funcs import get_rules
 
-    extra_params = {
-        "wallet_id": wallet_id,
-    }
-    asyncio.run(get_rules(extra_params, wallet_rpc_port, fingerprint))
+    asyncio.run(get_rules(wallet_rpc_port, fingerprint, wallet_id))
 
 
 # ----------------------------------------------------------------------------------------
@@ -372,11 +361,7 @@ def dao_list_proposals_cmd(
     if not include_closed:
         include_closed = False
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "include_closed": include_closed,
-    }
-    asyncio.run(list_proposals(extra_params, wallet_rpc_port, fingerprint))
+    asyncio.run(list_proposals(wallet_rpc_port, fingerprint, wallet_id, include_closed))
 
 
 @dao_cmd.command("show_proposal", short_help="Show the details of a specific proposal", no_args_is_help=True)
@@ -404,11 +389,7 @@ def dao_show_proposal_cmd(
 ) -> None:
     from .dao_funcs import show_proposal
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "proposal_id": proposal_id,
-    }
-    asyncio.run(show_proposal(extra_params, wallet_rpc_port, fingerprint))
+    asyncio.run(show_proposal(wallet_rpc_port, fingerprint, wallet_id, proposal_id))
 
 
 # ----------------------------------------------------------------------------------------
@@ -436,7 +417,7 @@ def dao_show_proposal_cmd(
     "-a",
     "--vote-amount",
     help="The number of votes you want to cast",
-    type=int,
+    type=Uint64ParamType(),
     required=True,
 )
 @click.option(
@@ -445,47 +426,47 @@ def dao_show_proposal_cmd(
     help="Use this option to vote against a proposal. If not present then the vote is for the proposal",
     is_flag=True,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @tx_config_args
+@tx_out_cmd
 def dao_vote_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
     proposal_id: str,
-    vote_amount: int,
+    vote_amount: uint64,
     vote_no: Optional[bool],
-    fee: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    fee: uint64,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import vote_on_proposal
 
     is_yes_vote = False if vote_no else True
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "fee": fee,
-        "proposal_id": proposal_id,
-        "vote_amount": vote_amount,
-        "is_yes_vote": is_yes_vote,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(vote_on_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        vote_on_proposal(
+            wallet_rpc_port,
+            fingerprint,
+            wallet_id,
+            proposal_id,
+            vote_amount,
+            is_yes_vote,
+            fee,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 # ----------------------------------------------------------------------------------------
@@ -516,43 +497,43 @@ def dao_vote_cmd(
     is_flag=True,
     default=False,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @tx_config_args
+@tx_out_cmd
 def dao_close_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
     proposal_id: str,
     self_destruct: bool,
-    fee: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    fee: uint64,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import close_proposal
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "fee": fee,
-        "proposal_id": proposal_id,
-        "self_destruct": self_destruct,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(close_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        close_proposal(
+            wallet_rpc_port,
+            fingerprint,
+            wallet_id,
+            fee,
+            proposal_id,
+            self_destruct,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 # ----------------------------------------------------------------------------------------
@@ -573,44 +554,44 @@ def dao_close_proposal_cmd(
     "-a",
     "--amount",
     help="The amount of CATs (not mojos) to lock in voting mode",
-    type=str,
+    type=AmountParamType(),
     required=True,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @tx_config_args
+@tx_out_cmd
 def dao_lockup_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    amount: str,
-    fee: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    amount: CliAmount,
+    fee: uint64,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import lockup_coins
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "fee": fee,
-        "amount": amount,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(lockup_coins(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        lockup_coins(
+            wallet_rpc_port,
+            fingerprint,
+            wallet_id,
+            amount,
+            fee,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 @dao_cmd.command("release_coins", short_help="Release closed proposals from DAO CATs", no_args_is_help=True)
@@ -623,39 +604,39 @@ def dao_lockup_coins_cmd(
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @tx_config_args
+@tx_out_cmd
 def dao_release_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    fee: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    fee: uint64,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool = True,
+) -> List[TransactionRecord]:
     from .dao_funcs import release_coins
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "fee": fee,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(release_coins(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        release_coins(
+            wallet_rpc_port,
+            fingerprint,
+            wallet_id,
+            fee,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 @dao_cmd.command("exit_lockup", short_help="Release DAO CATs from voting mode", no_args_is_help=True)
@@ -668,39 +649,39 @@ def dao_release_coins_cmd(
 )
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which key to use", type=int)
 @click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @tx_config_args
+@tx_out_cmd
 def dao_exit_lockup_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    fee: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    fee: uint64,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import exit_lockup
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "fee": fee,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(exit_lockup(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        exit_lockup(
+            wallet_rpc_port,
+            fingerprint,
+            wallet_id,
+            fee,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 # ----------------------------------------------------------------------------------------
@@ -735,7 +716,7 @@ def dao_proposal(ctx: click.Context) -> None:
     "-a",
     "--amount",
     help="The amount of funds the proposal will send (in mojos)",
-    type=float,
+    type=str,
     required=False,
     default=None,
 )
@@ -762,49 +743,49 @@ def dao_proposal(ctx: click.Context) -> None:
     required=False,
     default=None,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @tx_config_args
+@tx_out_cmd
 def dao_create_spend_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
+    fee: uint64,
     vote_amount: Optional[int],
     to_address: Optional[str],
     amount: Optional[str],
     asset_id: Optional[str],
     from_json: Optional[str],
-    fee: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import create_spend_proposal
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "fee": fee,
-        "vote_amount": vote_amount,
-        "to_address": to_address,
-        "amount": amount,
-        "asset_id": asset_id,
-        "from_json": from_json,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(create_spend_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        create_spend_proposal(
+            wallet_rpc_port,
+            fingerprint,
+            wallet_id,
+            fee,
+            vote_amount,
+            to_address,
+            amount,
+            asset_id,
+            from_json,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 @dao_proposal.command("update", short_help="Create a proposal to change the DAO rules", no_args_is_help=True)
@@ -821,99 +802,99 @@ def dao_create_spend_proposal_cmd(
     "-v",
     "--vote-amount",
     help="The number of votes to add",
-    type=int,
+    type=Uint64ParamType(),
     required=False,
     default=None,
 )
 @click.option(
     "--proposal-timelock",
     help="The new minimum number of blocks before a proposal can close",
-    type=int,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--soft-close",
     help="The number of blocks a proposal must remain unspent before closing",
-    type=int,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--attendance-required",
     help="The minimum number of votes a proposal must receive to be accepted",
-    type=int,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--pass-percentage",
     help="The percentage of 'yes' votes in basis points a proposal must receive to be accepted. 100% = 10000",
-    type=int,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--self-destruct",
     help="The number of blocks required before a proposal can be automatically removed",
-    type=int,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
 @click.option(
     "--oracle-delay",
     help="The number of blocks required between oracle spends of the treasury",
-    type=int,
+    type=Uint64ParamType(),
     default=None,
     required=False,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @tx_config_args
+@tx_out_cmd
 def dao_create_update_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    vote_amount: Optional[int],
-    proposal_timelock: Optional[int],
-    soft_close: Optional[int],
-    attendance_required: Optional[int],
-    pass_percentage: Optional[int],
-    self_destruct: Optional[int],
-    oracle_delay: Optional[int],
-    fee: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    fee: uint64,
+    vote_amount: Optional[uint64],
+    proposal_timelock: Optional[uint64],
+    soft_close: Optional[uint64],
+    attendance_required: Optional[uint64],
+    pass_percentage: Optional[uint64],
+    self_destruct: Optional[uint64],
+    oracle_delay: Optional[uint64],
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import create_update_proposal
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "fee": fee,
-        "vote_amount": vote_amount,
-        "proposal_timelock": proposal_timelock,
-        "soft_close_length": soft_close,
-        "attendance_required": attendance_required,
-        "pass_percentage": pass_percentage,
-        "self_destruct_length": self_destruct,
-        "oracle_spend_delay": oracle_delay,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(create_update_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        create_update_proposal(
+            wallet_rpc_port,
+            fingerprint,
+            wallet_id,
+            fee,
+            vote_amount,
+            proposal_timelock,
+            soft_close,
+            attendance_required,
+            pass_percentage,
+            self_destruct,
+            oracle_delay,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 @dao_proposal.command("mint", short_help="Create a proposal to mint new DAO CATs", no_args_is_help=True)
@@ -930,7 +911,7 @@ def dao_create_update_proposal_cmd(
     "-a",
     "--amount",
     help="The amount of new cats the proposal will mint (in mojos)",
-    type=int,
+    type=Uint64ParamType(),
     required=True,
 )
 @click.option(
@@ -949,45 +930,45 @@ def dao_create_update_proposal_cmd(
     required=False,
     default=None,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees per transaction, in XCH.",
-    type=str,
-    default="0",
-    show_default=True,
-    callback=validate_fee,
-)
+@options.create_fee()
 @tx_config_args
+@tx_out_cmd
 def dao_create_mint_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     wallet_id: int,
-    amount: int,
-    to_address: int,
+    fee: uint64,
+    amount: uint64,
+    to_address: str,
     vote_amount: Optional[int],
-    fee: str,
-    min_coin_amount: Optional[str],
-    max_coin_amount: Optional[str],
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-) -> None:
+    push: bool,
+) -> List[TransactionRecord]:
     from .dao_funcs import create_mint_proposal
 
-    extra_params = {
-        "wallet_id": wallet_id,
-        "fee": fee,
-        "amount": amount,
-        "cat_target_address": to_address,
-        "vote_amount": vote_amount,
-        "min_coin_amount": min_coin_amount,
-        "max_coin_amount": max_coin_amount,
-        "coins_to_exclude": coins_to_exclude,
-        "amounts_to_exclude": amounts_to_exclude,
-        "reuse_puzhash": reuse,
-    }
-    asyncio.run(create_mint_proposal(extra_params, wallet_rpc_port, fingerprint))
+    return asyncio.run(
+        create_mint_proposal(
+            wallet_rpc_port,
+            fingerprint,
+            wallet_id,
+            fee,
+            amount,
+            to_address,
+            vote_amount,
+            CMDTXConfigLoader(
+                min_coin_amount=min_coin_amount,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_ids=list(coins_to_exclude),
+                excluded_coin_amounts=list(amounts_to_exclude),
+                reuse_puzhash=reuse,
+            ),
+            push,
+        )
+    )
 
 
 # ----------------------------------------------------------------------------------------

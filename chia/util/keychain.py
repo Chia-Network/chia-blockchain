@@ -5,7 +5,7 @@ import unicodedata
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
+from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, overload
 
 import importlib_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -24,6 +24,7 @@ from chia.util.errors import (
     KeychainSecretsMissing,
     KeychainUserNotFound,
 )
+from chia.util.file_keyring import Key
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
 from chia.util.keyring_wrapper import KeyringWrapper
@@ -32,7 +33,7 @@ from chia.util.streamable import Streamable, streamable
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
 DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8
-MAX_KEYS = 100
+MAX_KEYS = 101
 MIN_PASSPHRASE_LEN = 8
 
 
@@ -309,14 +310,14 @@ class Keychain:
         is represented by the class `KeyData`.
         """
         user = get_private_key_user(self.user, index)
-        read_str = self.keyring_wrapper.get_passphrase(self.service, user)
-        if read_str is None or len(read_str) == 0:
+        key = self.keyring_wrapper.keyring.get_key(self.service, user)
+        if key is None or len(key.secret) == 0:
             raise KeychainUserNotFound(self.service, user)
-        str_bytes = bytes.fromhex(read_str)
+        str_bytes = key.secret
 
         public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
         fingerprint = public_key.get_fingerprint()
-        if len(str_bytes) == G1Element.SIZE + 32:
+        if len(str_bytes) > G1Element.SIZE:
             entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
         else:
             entropy = None
@@ -324,7 +325,7 @@ class Keychain:
         return KeyData(
             fingerprint=uint32(fingerprint),
             public_key=public_key,
-            label=self.keyring_wrapper.get_label(fingerprint),
+            label=self.keyring_wrapper.keyring.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
         )
 
@@ -370,7 +371,7 @@ class Keychain:
             key = AugSchemeMPL.key_gen(seed)
             assert isinstance(key, PrivateKey)
             pk = key.get_g1()
-            key_data = bytes(pk).hex() + entropy.hex()
+            key_data = Key(bytes(pk) + entropy)
             fingerprint = pk.get_fingerprint()
         else:
             index = self._get_free_private_key_index()
@@ -382,7 +383,7 @@ class Keychain:
                 pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
             key = G1Element.from_bytes(pk_bytes)
             assert isinstance(key, G1Element)
-            key_data = pk_bytes.hex()
+            key_data = Key(pk_bytes)
             fingerprint = key.get_fingerprint()
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
@@ -392,17 +393,17 @@ class Keychain:
         # Try to set the label first, it may fail if the label is invalid or already exists.
         # This can probably just be moved into `FileKeyring.set_passphrase` after the legacy keyring stuff was dropped.
         if label is not None:
-            self.keyring_wrapper.set_label(fingerprint, label)
+            self.keyring_wrapper.keyring.set_label(fingerprint, label)
 
         try:
-            self.keyring_wrapper.set_passphrase(
+            self.keyring_wrapper.keyring.set_key(
                 self.service,
                 get_private_key_user(self.user, index),
                 key_data,
             )
         except Exception:
             if label is not None:
-                self.keyring_wrapper.delete_label(fingerprint)
+                self.keyring_wrapper.keyring.delete_label(fingerprint)
             raise
 
         return key
@@ -412,37 +413,42 @@ class Keychain:
         Assigns the given label to the first key with the given fingerprint.
         """
         self.get_key(fingerprint)  # raise if the fingerprint doesn't exist
-        self.keyring_wrapper.set_label(fingerprint, label)
+        self.keyring_wrapper.keyring.set_label(fingerprint, label)
 
     def delete_label(self, fingerprint: int) -> None:
         """
         Removes the label assigned to the key with the given fingerprint.
         """
-        self.keyring_wrapper.delete_label(fingerprint)
+        self.keyring_wrapper.keyring.delete_label(fingerprint)
+
+    def _iterate_through_key_datas(
+        self, include_secrets: bool = True, skip_public_only: bool = False
+    ) -> Iterator[KeyData]:
+        for index in range(MAX_KEYS):
+            try:
+                key_data = self._get_key_data(index, include_secrets=include_secrets)
+                if key_data is None or (skip_public_only and key_data.secrets is None):
+                    continue
+                yield key_data
+            except KeychainUserNotFound:
+                pass
+        return None
 
     def get_first_private_key(self) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
-        for index in range(MAX_KEYS + 1):
-            try:
-                key_data = self._get_key_data(index)
-                return key_data.private_key, key_data.entropy
-            except KeychainUserNotFound:
-                pass
+        for key_data in self._iterate_through_key_datas(skip_public_only=True):
+            return key_data.private_key, key_data.entropy
         return None
 
     def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Return first private key which have the given public key fingerprint.
         """
-        for index in range(MAX_KEYS + 1):
-            try:
-                key_data = self._get_key_data(index)
-                if key_data.fingerprint == fingerprint:
-                    return key_data.private_key, key_data.entropy
-            except KeychainUserNotFound:
-                pass
+        for key_data in self._iterate_through_key_datas(skip_public_only=True):
+            if key_data.fingerprint == fingerprint:
+                return key_data.private_key, key_data.entropy
         return None
 
     def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
@@ -451,25 +457,17 @@ class Keychain:
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
         """
         all_keys: List[Tuple[PrivateKey, bytes]] = []
-        for index in range(MAX_KEYS + 1):
-            try:
-                key_data = self._get_key_data(index)
-                all_keys.append((key_data.private_key, key_data.entropy))
-            except (KeychainUserNotFound, KeychainSecretsMissing):
-                pass
+        for key_data in self._iterate_through_key_datas(skip_public_only=True):
+            all_keys.append((key_data.private_key, key_data.entropy))
         return all_keys
 
     def get_key(self, fingerprint: int, include_secrets: bool = False) -> KeyData:
         """
         Return the KeyData of the first key which has the given public key fingerprint.
         """
-        for index in range(MAX_KEYS + 1):
-            try:
-                key_data = self._get_key_data(index, include_secrets)
-                if key_data.public_key.get_fingerprint() == fingerprint:
-                    return key_data
-            except KeychainUserNotFound:
-                pass
+        for key_data in self._iterate_through_key_datas(include_secrets=include_secrets, skip_public_only=False):
+            if key_data.public_key.get_fingerprint() == fingerprint:
+                return key_data
         raise KeychainFingerprintNotFound(fingerprint)
 
     def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
@@ -477,12 +475,9 @@ class Keychain:
         Returns the KeyData of all keys which can be retrieved.
         """
         all_keys: List[KeyData] = []
-        for index in range(MAX_KEYS + 1):
-            try:
-                key_data = self._get_key_data(index, include_secrets)
-                all_keys.append(key_data)
-            except KeychainUserNotFound:
-                pass
+        for key_data in self._iterate_through_key_datas(include_secrets=include_secrets, skip_public_only=False):
+            all_keys.append(key_data)
+
         return all_keys
 
     def get_all_public_keys(self) -> List[G1Element]:
@@ -490,12 +485,9 @@ class Keychain:
         Returns all public keys.
         """
         all_keys: List[G1Element] = []
-        for index in range(MAX_KEYS + 1):
-            try:
-                key_data = self._get_key_data(index)
-                all_keys.append(key_data.public_key)
-            except KeychainUserNotFound:
-                pass
+        for key_data in self._iterate_through_key_datas(skip_public_only=False):
+            all_keys.append(key_data.public_key)
+
         return all_keys
 
     def get_first_public_key(self) -> Optional[G1Element]:
@@ -510,17 +502,18 @@ class Keychain:
         Deletes all keys which have the given public key fingerprint and returns how many keys were removed.
         """
         removed = 0
-        for index in range(MAX_KEYS + 1):
+        # We duplicate ._iterate_through_key_datas due to needing the index
+        for index in range(MAX_KEYS):
             try:
                 key_data = self._get_key_data(index, include_secrets=False)
-                if key_data.fingerprint == fingerprint:
+                if key_data is not None and key_data.fingerprint == fingerprint:
                     try:
-                        self.keyring_wrapper.delete_label(key_data.fingerprint)
+                        self.keyring_wrapper.keyring.delete_label(key_data.fingerprint)
                     except (KeychainException, NotImplementedError):
                         # Just try to delete the label and move on if there wasn't one
                         pass
                     try:
-                        self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
+                        self.keyring_wrapper.keyring.delete_key(self.service, get_private_key_user(self.user, index))
                         removed += 1
                     except Exception:
                         pass
@@ -545,12 +538,8 @@ class Keychain:
         """
         Deletes all keys from the keychain.
         """
-        for index in range(MAX_KEYS + 1):
-            try:
-                key_data = self._get_key_data(index)
-                self.delete_key_by_fingerprint(key_data.fingerprint)
-            except KeychainUserNotFound:
-                pass
+        for key_data in self._iterate_through_key_datas(include_secrets=False, skip_public_only=False):
+            self.delete_key_by_fingerprint(key_data.fingerprint)
 
     @staticmethod
     def is_keyring_locked() -> bool:

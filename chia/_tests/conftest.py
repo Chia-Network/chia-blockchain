@@ -14,7 +14,6 @@ import random
 import sysconfig
 import tempfile
 from contextlib import AsyncExitStack
-from enum import IntEnum
 from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
 
 import aiohttp
@@ -29,7 +28,15 @@ from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.core.node_height import node_height_at_least
 from chia._tests.simulation.test_simulation import test_constants_modified
-from chia._tests.util.misc import BenchmarkRunner, GcMode, RecordingWebServer, TestId, _AssertRuntime, measure_overhead
+from chia._tests.util.misc import (
+    BenchmarkRunner,
+    ComparableEnum,
+    GcMode,
+    RecordingWebServer,
+    TestId,
+    _AssertRuntime,
+    measure_overhead,
+)
 from chia._tests.util.setup_nodes import (
     OldSimulatorsAndWallets,
     SimulatorsAndWallets,
@@ -187,16 +194,15 @@ def get_keychain():
         KeyringWrapper.cleanup_shared_instance()
 
 
-class ConsensusMode(IntEnum):
+class ConsensusMode(ComparableEnum):
     PLAIN = 0
-    SOFT_FORK_4 = 1
-    HARD_FORK_2_0 = 2
-    SOFT_FORK_5 = 3
+    HARD_FORK_2_0 = 1
+    SOFT_FORK_5 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_4, ConsensusMode.SOFT_FORK_5],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_5],
 )
 def consensus_mode(request):
     return request.param
@@ -205,14 +211,9 @@ def consensus_mode(request):
 @pytest.fixture(scope="session")
 def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     ret: ConsensusConstants = test_constants
-    if consensus_mode >= ConsensusMode.SOFT_FORK_4:
-        ret = ret.replace(
-            SOFT_FORK4_HEIGHT=uint32(2),
-        )
     if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
             HARD_FORK_HEIGHT=uint32(2),
-            HARD_FORK_FIX_HEIGHT=uint32(2),
             PLOT_FILTER_128_HEIGHT=uint32(10),
             PLOT_FILTER_64_HEIGHT=uint32(15),
             PLOT_FILTER_32_HEIGHT=uint32(20),
@@ -1049,6 +1050,14 @@ async def timelord_service(bt: BlockTools) -> AsyncIterator[TimelordService]:
 @pytest.fixture(scope="function")
 async def crawler_service(root_path_populated_with_config: Path, database_uri: str) -> AsyncIterator[CrawlerService]:
     async with setup_crawler(root_path_populated_with_config, database_uri) as service:
+        yield service
+
+
+@pytest.fixture(scope="function")
+async def crawler_service_no_loop(
+    root_path_populated_with_config: Path, database_uri: str
+) -> AsyncIterator[CrawlerService]:
+    async with setup_crawler(root_path_populated_with_config, database_uri, start_crawler_loop=False) as service:
         yield service
 
 

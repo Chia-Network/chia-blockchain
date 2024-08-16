@@ -12,7 +12,7 @@ from chia_rs import G1Element
 from chia._tests.plot_sync.util import get_dummy_connection
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
 from chia.plot_sync.delta import Delta
-from chia.plot_sync.receiver import Receiver, Sync
+from chia.plot_sync.receiver import Receiver, Sync, get_list_or_len
 from chia.plot_sync.util import ErrorCodes, State
 from chia.plotting.util import HarvestingMode
 from chia.protocols.harvester_protocol import (
@@ -27,7 +27,6 @@ from chia.protocols.harvester_protocol import (
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64
-from chia.util.misc import get_list_or_len
 from chia.util.streamable import _T_Streamable
 
 log = logging.getLogger(__name__)
@@ -132,7 +131,7 @@ def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]
 async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
     assert receiver.current_sync().state == sync_step.state
     last_sync_time_before = receiver._last_sync.time_done
-    # For the the list types invoke the trigger function in batches
+    # For the list types invoke the trigger function in batches
     if sync_step.payload_type == PlotSyncPlotList or sync_step.payload_type == PlotSyncPathList:
         step_data, _ = sync_step.args
         assert len(step_data) == 10

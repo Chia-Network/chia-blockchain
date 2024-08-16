@@ -7,6 +7,7 @@ import pytest
 from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
+from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
@@ -221,10 +222,9 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
         block: FullBlock = (await full_node_api_1.get_all_full_blocks())[-1]
 
-        if consensus_mode < ConsensusMode.HARD_FORK_2_0:
-            # after the hard fork, we don't compress blocks using
-            # block references anymore
-            assert len(block.transactions_generator_ref_list) > 0  # compression has occurred
+        # since the hard fork, we no longer compress blocks using
+        # block references anymore
+        assert block.transactions_generator_ref_list == []
 
         block_spends = await client.get_block_spends(block.header_hash)
 
@@ -575,6 +575,23 @@ async def test_get_network_info(one_wallet_and_one_simulator_services, self_host
             "network_prefix": "txch",
             "genesis_challenge": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             "success": True,
+        }
+
+
+@pytest.mark.anyio
+async def test_get_version(one_wallet_and_one_simulator_services, self_hostname):
+    nodes, _, bt = one_wallet_and_one_simulator_services
+    (full_node_service_1,) = nodes
+    async with FullNodeRpcClient.create_as_context(
+        self_hostname,
+        full_node_service_1.rpc_server.listen_port,
+        full_node_service_1.root_path,
+        full_node_service_1.config,
+    ) as client:
+        version = await client.fetch("get_version", {})
+        assert version == {
+            "success": True,
+            "version": __version__,
         }
 
 

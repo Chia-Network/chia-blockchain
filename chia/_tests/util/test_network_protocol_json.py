@@ -180,6 +180,10 @@ def test_protocol_json() -> None:
     assert type(respond_coin_state).from_json_dict(respond_coin_state_json) == respond_coin_state
     assert str(reject_coin_state_json) == str(reject_coin_state.to_json_dict())
     assert type(reject_coin_state).from_json_dict(reject_coin_state_json) == reject_coin_state
+    assert str(request_cost_info_json) == str(request_cost_info.to_json_dict())
+    assert type(request_cost_info).from_json_dict(request_cost_info_json) == request_cost_info
+    assert str(respond_cost_info_json) == str(respond_cost_info.to_json_dict())
+    assert type(respond_cost_info).from_json_dict(respond_cost_info_json) == respond_cost_info
     assert str(pool_difficulty_json) == str(pool_difficulty.to_json_dict())
     assert type(pool_difficulty).from_json_dict(pool_difficulty_json) == pool_difficulty
     assert str(harvester_handhsake_json) == str(harvester_handhsake.to_json_dict())
