@@ -350,4 +350,5 @@ def test_as_tuple_matches_dataclasses_astuple(cls: Type[RawMerkleNodeProtocol], 
     raw_bytes = bytes(seeded_random.getrandbits(8) for _ in range(cls.struct.size))
     raw_node = cls(*cls.struct.unpack(raw_bytes), index=TreeIndex(seeded_random.randrange(1_000_000)))
     # hacky [:-1] to exclude the index
-    assert raw_node.as_tuple() == astuple(raw_node)[:-1]
+    # TODO: try again to indicate that the RawMerkleNodeProtocol requires the dataclass interface
+    assert raw_node.as_tuple() == astuple(raw_node)[:-1]  # type: ignore[call-overload]
