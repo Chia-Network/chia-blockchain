@@ -11,7 +11,6 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -66,6 +65,7 @@ def validate_unfinished_header_block(
         blocks,
         header_block,
         expected_sub_slot_iters,
+        skip_overflow_last_ss_validation,
         constants,
     )
     genesis_block = prev.prev_b is None
@@ -423,35 +423,26 @@ def validate_unfinished_header_block(
     # If block state is correct, we should always find a challenge here
     # This computes what the challenge should be for this block
 
-    challenge = get_block_challenge(
-        constants,
-        header_block,
-        blocks,
-        genesis_block,
-        overflow,
-        skip_overflow_last_ss_validation,
-    )
-
     # 5a. Check proof of space
-    if challenge != header_block.reward_chain_block.pos_ss_cc_challenge_hash:
+    if prev.challenge != header_block.reward_chain_block.pos_ss_cc_challenge_hash:
         log.error(f"Finished slots: {header_block.finished_sub_slots}")
         log.error(
             f"Data: {genesis_block} {overflow} {skip_overflow_last_ss_validation} {header_block.total_iters} "
             f"{header_block.reward_chain_block.signage_point_index}"
             f"Prev: {prev.prev_b}"
         )
-        log.error(f"Challenge {challenge} provided {header_block.reward_chain_block.pos_ss_cc_challenge_hash}")
+        log.error(f"Challenge {prev.challenge} provided {header_block.reward_chain_block.pos_ss_cc_challenge_hash}")
         return None, ValidationError(Err.INVALID_CC_CHALLENGE)
 
     # 5b. Check proof of space
     if header_block.reward_chain_block.challenge_chain_sp_vdf is None:
         # Edge case of first sp (start of slot), where sp_iters == 0
-        cc_sp_hash: bytes32 = challenge
+        cc_sp_hash: bytes32 = prev.challenge
     else:
         cc_sp_hash = header_block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
 
     q_str: Optional[bytes32] = verify_and_get_quality_string(
-        header_block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=height
+        header_block.reward_chain_block.proof_of_space, constants, prev.challenge, cc_sp_hash, height=height
     )
     if q_str is None:
         return None, ValidationError(Err.INVALID_POSPACE)

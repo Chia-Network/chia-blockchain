@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
 from chia_rs import ClassgroupElement
@@ -8,7 +8,8 @@ from chia_rs import ClassgroupElement
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.get_block_challenge import final_eos_is_already_included
+from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
+from chia.consensus.pot_iterations import is_overflow_block
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.ints import uint64
@@ -28,25 +29,27 @@ class SubSlotState:
 @dataclass
 class PrevChainState:
     # the previous block, or None if we're at genesis
-    prev_b: Optional[BlockRecord] = None
+    prev_b: Optional[BlockRecord]
     # the previous *transaction* block
-    prev_tx_block: Optional[BlockRecord] = None
+    prev_tx_block: Optional[BlockRecord]
     # the timestamp of the previous transaction block
-    prev_tx_timestamp: Optional[uint64] = None
+    prev_tx_timestamp: Optional[uint64]
     # the number of blocks since the start of the current sub slot
-    num_blocks: int = 0
+    num_blocks: int
     # the first block in the subslot
-    first_in_subslot: Optional[BlockRecord] = None
+    first_in_subslot: Optional[BlockRecord]
     # sub slot state for each finished sub slot in the block
-    sub_slot_state: List[SubSlotState] = field(default_factory=list)
+    sub_slot_state: List[SubSlotState]
 
-    final_eos_is_already_included: bool = False
+    final_eos_is_already_included: bool
+    challenge: bytes32
 
 
 def find_chain_state(
     blocks: BlockchainInterface,
     header_block: UnfinishedHeaderBlock,
     expected_sub_slot_iters: uint64,
+    skip_overflow_last_ss_validation: bool,
     constants: ConsensusConstants,
 ) -> PrevChainState:
 
@@ -124,6 +127,16 @@ def find_chain_state(
 
     final_eos_included = final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters)
 
+    overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
+    challenge: bytes32 = get_block_challenge(
+        constants,
+        header_block,
+        blocks,
+        prev_b is None,
+        overflow,
+        skip_overflow_last_ss_validation,
+    )
+
     return PrevChainState(
         prev_b,
         prev_tx_block,
@@ -132,4 +145,5 @@ def find_chain_state(
         first_in_subslot,
         sub_slot_state,
         final_eos_included,
+        challenge,
     )
