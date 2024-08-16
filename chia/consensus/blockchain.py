@@ -795,6 +795,9 @@ class Blockchain(BlockchainInterface):
         self,
         blocks: List[FullBlock],
         npc_results: Dict[uint32, NPCResult],  # A cache of the result of running CLVM, optional (you can use {})
+        # TODO: Once we don't have to pass all recent block records to every job
+        # submission, we can make the batch-size 1 and simplify the code and
+        # improve parallelization of validation
         batch_size: int = 4,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
