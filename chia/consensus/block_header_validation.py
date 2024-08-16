@@ -11,7 +11,7 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
-from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
+from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -62,7 +62,12 @@ def validate_unfinished_header_block(
     """
     # 1. Check that the previous block exists in the blockchain, or that it is correct
 
-    prev: PrevChainState = find_chain_state(blocks, header_block, constants)
+    prev: PrevChainState = find_chain_state(
+        blocks,
+        header_block,
+        expected_sub_slot_iters,
+        constants,
+    )
     genesis_block = prev.prev_b is None
 
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_CHALLENGE:
@@ -70,7 +75,7 @@ def validate_unfinished_header_block(
 
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
     if skip_overflow_last_ss_validation and overflow:
-        if final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters):
+        if prev.final_eos_is_already_included:
             skip_overflow_last_ss_validation = False
             finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
         else:

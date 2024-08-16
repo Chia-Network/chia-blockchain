@@ -8,6 +8,7 @@ from chia_rs import ClassgroupElement
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.get_block_challenge import final_eos_is_already_included
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.ints import uint64
@@ -39,10 +40,13 @@ class PrevChainState:
     # sub slot state for each finished sub slot in the block
     sub_slot_state: List[SubSlotState] = field(default_factory=list)
 
+    final_eos_is_already_included: bool = False
+
 
 def find_chain_state(
     blocks: BlockchainInterface,
     header_block: UnfinishedHeaderBlock,
+    expected_sub_slot_iters: uint64,
     constants: ConsensusConstants,
 ) -> PrevChainState:
 
@@ -103,7 +107,7 @@ def find_chain_state(
     if prev_b is not None:
         num_blocks = 2  # This includes the current block and the prev block
         curr = prev_b
-        while not curr.first_in_sub_slot:
+        while not curr.first_in_sub_slot and curr.height != 0:
             num_blocks += 1
             curr = blocks.block_record(curr.prev_hash)
         assert curr.finished_challenge_slot_hashes is not None
@@ -118,6 +122,8 @@ def find_chain_state(
         prev_tx_block = curr
         prev_tx_timestamp = curr.timestamp
 
+    final_eos_included = final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters)
+
     return PrevChainState(
         prev_b,
         prev_tx_block,
@@ -125,4 +131,5 @@ def find_chain_state(
         num_blocks,
         first_in_subslot,
         sub_slot_state,
+        final_eos_included,
     )
