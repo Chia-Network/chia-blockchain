@@ -125,9 +125,14 @@ def find_chain_state(
         prev_tx_block = curr
         prev_tx_timestamp = curr.timestamp
 
-    final_eos_included = final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters)
-
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
+    final_eos_included: bool = False
+    if prev_b is not None:
+        final_eos_included = final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters)
+
+        if skip_overflow_last_ss_validation and overflow and final_eos_included:
+            skip_overflow_last_ss_validation = False
+
     challenge: bytes32 = get_block_challenge(
         constants,
         header_block,
