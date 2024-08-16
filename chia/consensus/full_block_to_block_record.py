@@ -57,11 +57,15 @@ def block_to_block_record(
     if found_ses_hash:
         assert prev_b is not None
         assert len(block.finished_sub_slots) > 0
+        prev_prev_b = blocks.block_record(prev_b.prev_hash)
+        ses_block: BlockRecord = prev_prev_b
+        while ses_block.sub_epoch_summary_included is None and ses_block.height > 0:
+            ses_block = blocks.block_record(ses_block.prev_hash)
         ses = make_sub_epoch_summary(
             constants,
-            blocks,
+            ses_block,
             block.height,
-            blocks.block_record(prev_b.prev_hash),
+            prev_prev_b,
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )

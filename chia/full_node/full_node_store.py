@@ -519,11 +519,15 @@ class FullNodeStore:
             )
             if finish_se:
                 # this is the first slot in a new sub epoch, should include SES
+                prev_prev_b = blocks.block_record(blocks.block_record(peak.prev_hash).prev_hash)
+                ses_block: BlockRecord = prev_prev_b
+                while ses_block.sub_epoch_summary_included is None and ses_block.height > 0:
+                    ses_block = blocks.block_record(ses_block.prev_hash)
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     self.constants,
-                    blocks,
+                    ses_block,
                     peak.height,
-                    blocks.block_record(blocks.block_record(peak.prev_hash).prev_hash),
+                    prev_prev_b,
                     next_difficulty if finish_epoch else None,
                     next_sub_slot_iters if finish_epoch else None,
                 )

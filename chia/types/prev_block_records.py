@@ -31,8 +31,12 @@ class SubSlotState:
 class PrevChainState:
     # the previous block, or None if we're at genesis
     prev_b: Optional[BlockRecord]
+    # the block before the previous block
+    prev_prev_b: Optional[BlockRecord]
     # the previous *transaction* block
     prev_tx_block: Optional[BlockRecord]
+    # the most recent block that includes a sub epoch summary
+    ses_block: Optional[BlockRecord]
     # the timestamp of the previous transaction block
     prev_tx_timestamp: Optional[uint64]
     # the number of blocks since the start of the current sub slot
@@ -59,6 +63,17 @@ def find_chain_state(
 
     prev_b = blocks.try_block_record(header_block.prev_header_hash)
     sub_slot_state: List[SubSlotState] = []
+
+    prev_prev_b: Optional[BlockRecord] = None
+    if prev_b is not None:
+        prev_prev_b = blocks.try_block_record(prev_b.prev_hash)
+
+    ses_block: Optional[BlockRecord] = None
+    if prev_prev_b is not None:
+        curr: BlockRecord = prev_prev_b
+        while curr.sub_epoch_summary_included is None and curr.height > 0:
+            curr = blocks.block_record(curr.prev_hash)
+        ses_block = curr
 
     for finished_sub_slot_n in range(len(header_block.finished_sub_slots)):
         icc_challenge_hash: Optional[bytes32] = None
@@ -169,7 +184,9 @@ def find_chain_state(
 
     return PrevChainState(
         prev_b,
+        prev_prev_b,
         prev_tx_block,
+        ses_block,
         prev_tx_timestamp,
         num_blocks,
         first_in_subslot,

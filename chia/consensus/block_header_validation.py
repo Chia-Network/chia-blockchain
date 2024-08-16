@@ -371,11 +371,13 @@ def validate_unfinished_header_block(
 
                 # 3c. Check the actual sub-epoch is correct
                 if check_sub_epoch_summary:
+                    assert prev.ses_block is not None
+                    assert prev.prev_prev_b is not None
                     expected_sub_epoch_summary = make_sub_epoch_summary(
                         constants,
-                        blocks,
+                        prev.ses_block,
                         height,
-                        blocks.block_record(prev.prev_b.prev_hash),
+                        prev.prev_prev_b,
                         expected_difficulty if prev.can_finish_epoch else None,
                         expected_sub_slot_iters if prev.can_finish_epoch else None,
                     )

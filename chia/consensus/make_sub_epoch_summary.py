@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 def make_sub_epoch_summary(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    ses_block: BlockRecord,
     blocks_included_height: uint32,
     prev_prev_block: BlockRecord,
     new_difficulty: Optional[uint64],
@@ -38,7 +38,7 @@ def make_sub_epoch_summary(
 
     Args:
         constants: consensus constants being used for this chain
-        blocks: dictionary from header hash to SBR of all included SBR
+        ses_block: The most recent block that includes a sub epoch summary
         blocks_included_height: block height in which the SES will be included
         prev_prev_block: second to last block in epoch
         new_difficulty: difficulty in new epoch
@@ -56,16 +56,14 @@ def make_sub_epoch_summary(
             None,
             None,
         )
-    curr: BlockRecord = prev_prev_block
-    while curr.sub_epoch_summary_included is None:
-        curr = blocks.block_record(curr.prev_hash)
-    assert curr is not None
-    assert curr.finished_reward_slot_hashes is not None
-    prev_ses = curr.sub_epoch_summary_included.get_hash()
+    assert ses_block is not None
+    assert ses_block.finished_reward_slot_hashes is not None
+    assert ses_block.sub_epoch_summary_included is not None
+    prev_ses = ses_block.sub_epoch_summary_included.get_hash()
     return SubEpochSummary(
         prev_ses,
-        curr.finished_reward_slot_hashes[-1],
-        uint8(curr.height % constants.SUB_EPOCH_BLOCKS),
+        ses_block.finished_reward_slot_hashes[-1],
+        uint8(ses_block.height % constants.SUB_EPOCH_BLOCKS),
         new_difficulty,
         new_sub_slot_iters,
     )
@@ -195,9 +193,14 @@ def next_sub_epoch_summary(
             True,
         )
 
+    assert prev_b is not None
+    ses_block: BlockRecord = prev_b
+    while ses_block.sub_epoch_summary_included is None and ses_block.height > 0:
+        ses_block = blocks.block_record(ses_block.prev_hash)
+
     return make_sub_epoch_summary(
         constants,
-        blocks,
+        ses_block,
         uint32(prev_b.height + 2),
         prev_b,
         next_difficulty,
