@@ -74,7 +74,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: chia-network/actions/cache-pip@cache-pip-poetry
+      - uses: chia-network/actions/cache-pip@main
         with:
           mode: poetry
 
