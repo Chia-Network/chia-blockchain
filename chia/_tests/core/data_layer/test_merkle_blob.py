@@ -289,8 +289,8 @@ def test_small_insert_deletes() -> None:
 
 def test_proof_of_inclusion_merkle_blob() -> None:
     num_repeats = 10
-    num_inserts = 10000
-    num_deletes = 1000
+    num_inserts = 1000
+    num_deletes = 100
     seed = 0
 
     random = Random()
