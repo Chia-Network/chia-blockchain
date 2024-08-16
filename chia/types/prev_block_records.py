@@ -8,6 +8,7 @@ from chia_rs import ClassgroupElement
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
+from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.get_block_challenge import final_eos_is_already_included, get_block_challenge
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -42,7 +43,10 @@ class PrevChainState:
     sub_slot_state: List[SubSlotState]
 
     final_eos_is_already_included: bool
+    # block challenge (or genesis challenge if height 0)
     challenge: bytes32
+    can_finish_se: bool
+    can_finish_epoch: bool
 
 
 def find_chain_state(
@@ -126,12 +130,33 @@ def find_chain_state(
         prev_tx_timestamp = curr.timestamp
 
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
+
     final_eos_included: bool = False
+    can_finish_se: bool = False
+    can_finish_epoch: bool = False
+
     if prev_b is not None:
         final_eos_included = final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters)
 
-        if skip_overflow_last_ss_validation and overflow and final_eos_included:
+    if skip_overflow_last_ss_validation and overflow:
+        if final_eos_included:
             skip_overflow_last_ss_validation = False
+            finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
+        else:
+            finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
+    else:
+        finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
+
+    new_sub_slot: bool = finished_sub_slots_since_prev > 0
+    if prev_b is not None and new_sub_slot:
+        can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
+            constants,
+            blocks,
+            prev_b.height,
+            prev_b.prev_hash,
+            prev_b.deficit,
+            prev_b.sub_epoch_summary_included is not None,
+        )
 
     challenge: bytes32 = get_block_challenge(
         constants,
@@ -151,4 +176,6 @@ def find_chain_state(
         sub_slot_state,
         final_eos_included,
         challenge,
+        can_finish_se,
+        can_finish_epoch,
     )
