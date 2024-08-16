@@ -175,7 +175,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - uses: chia-network/actions/cache-pip@main
+      - uses: chia-network/actions/cache-pip@cache-pip-poetry
         with:
           mode: poetry
 
