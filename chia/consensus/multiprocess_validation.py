@@ -28,6 +28,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
@@ -207,13 +208,6 @@ async def pre_validate_blocks_multiprocessing(
             curr = await block_records.get_block_record_from_db(curr.prev_hash)
             assert curr is not None
         recent_blocks[header_hash] = curr
-    block_record_was_present = []
-
-    block_hashes: List[bytes32] = []
-    for block in blocks:
-        header_hash = block.header_hash
-        block_hashes.append(header_hash)
-        block_record_was_present.append(block_records.contains_block(header_hash))
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
 
@@ -243,6 +237,10 @@ async def pre_validate_blocks_multiprocessing(
             block_records.add_block_record(curr)
             counter += 1
 
+    # the agumented blockchain object will let us add temporary block records
+    # they won't actually be added to the underlying blockchain object
+    block_records = AugmentedBlockchain(block_records, {})
+
     for block in blocks:
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
@@ -258,9 +256,6 @@ async def pre_validate_blocks_multiprocessing(
             block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=block.height
         )
         if q_str is None:
-            for i, block_i in enumerate(blocks):
-                if not block_record_was_present[i] and block_records.contains_block(block_hashes[i]):
-                    block_records.remove_block_record(block_hashes[i])
             return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False, uint32(0))]
 
         required_iters: uint64 = calculate_iterations_quality(
@@ -290,7 +285,7 @@ async def pre_validate_blocks_multiprocessing(
                 return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
         # Makes sure to not override the valid blocks already in block_records
         if not block_records.contains_block(block_rec.header_hash):
-            block_records.add_block_record(block_rec)  # Temporarily add block to dict
+            block_records.add_extra_block(block_rec)  # Temporarily add block to dict
             recent_blocks[block_rec.header_hash] = block_rec
         else:
             recent_blocks[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
@@ -298,10 +293,8 @@ async def pre_validate_blocks_multiprocessing(
         diff_ssis.append((difficulty, sub_slot_iters))
 
     block_dict: Dict[bytes32, FullBlock] = {}
-    for i, block in enumerate(blocks):
-        block_dict[block_hashes[i]] = block
-        if not block_record_was_present[i]:
-            block_records.remove_block_record(block_hashes[i])
+    for block in blocks:
+        block_dict[block.header_hash] = block
 
     npc_results_pickled = {}
     for k, v in npc_results.items():
