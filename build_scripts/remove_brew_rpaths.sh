@@ -33,7 +33,7 @@ if [[ -n "$nt_output" ]]; then
   echo "$nt_output" | grep "no LC_RPATH load command with path:" >/dev/null
   # shellcheck disable=SC2181
   if [[ $? -ne 0 ]]; then
-    >&2 echo "An unexpected error occured when running install_name_tool:"
+    >&2 echo "An unexpected error occurred when running install_name_tool:"
     >&2 echo "$nt_output"
   fi
 fi
