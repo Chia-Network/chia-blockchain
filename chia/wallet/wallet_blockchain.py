@@ -11,7 +11,6 @@ from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, WeightProof
 from chia.util.errors import Err
@@ -231,18 +230,10 @@ class WalletBlockchain:
     async def warmup(self, fork_point: uint32) -> None:
         pass
 
-    async def get_header_block_by_height(
-        self, height: int, header_hash: bytes32, tx_filter: bool = True
-    ) -> Optional[HeaderBlock]:
-        return None
-
     async def get_header_blocks_in_range(
         self, start: int, stop: int, tx_filter: bool = True
     ) -> Dict[bytes32, HeaderBlock]:
         return {}
-
-    def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
-        return False
 
     def get_ses_heights(self) -> List[uint32]:
         return []

@@ -5,7 +5,6 @@ from typing import Dict, List, Optional, Protocol
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.ints import uint32
@@ -37,9 +36,6 @@ class BlockchainInterface(BlockRecordsProtocol, Protocol):
         self, start: int, stop: int, tx_filter: bool = True
     ) -> Dict[bytes32, HeaderBlock]: ...
 
-    async def get_header_block_by_height(
-        self, height: int, header_hash: bytes32, tx_filter: bool = True
-    ) -> Optional[HeaderBlock]: ...
     async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]: ...
 
     async def persist_sub_epoch_challenge_segments(
@@ -50,4 +46,3 @@ class BlockchainInterface(BlockRecordsProtocol, Protocol):
         self,
         sub_epoch_summary_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]: ...
-    def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool: ...

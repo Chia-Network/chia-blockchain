@@ -949,7 +949,7 @@ class BlockTools:
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
-                    BlockCache(blocks, height_to_hash=height_to_hash),
+                    BlockCache(blocks),
                     latest_block.required_iters,
                     block_list[-1],
                     False,
@@ -1247,7 +1247,7 @@ class BlockTools:
             for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
-                    BlockCache({}, {}),
+                    BlockCache({}),
                     None,
                     sub_slot_total_iters,
                     uint8(signage_point_index),
