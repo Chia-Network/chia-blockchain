@@ -5,10 +5,11 @@ import json
 import ssl
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import aiohttp
 
+from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -42,7 +43,7 @@ class DaemonProxy:
                 autoclose=True,
                 autoping=True,
                 heartbeat=self.heartbeat,
-                ssl_context=self.ssl_context,
+                ssl=self.ssl_context,
                 max_msg_size=self.max_message_size,
             )
         except Exception:
@@ -96,6 +97,12 @@ class DaemonProxy:
         response = await self._get(request)
         return response
 
+    async def get_network_info(self) -> WsRpcMessage:
+        data: Dict[str, Any] = {}
+        request = self.format_request("get_network_info", data)
+        response = await self._get(request)
+        return response
+
     async def start_service(self, service_name: str) -> WsRpcMessage:
         data = {"service": service_name}
         request = self.format_request("start_service", data)
@@ -144,6 +151,12 @@ class DaemonProxy:
     async def exit(self) -> WsRpcMessage:
         request = self.format_request("exit", {})
         return await self._get(request)
+
+    async def get_keys_for_plotting(self, fingerprints: Optional[List[uint32]] = None) -> WsRpcMessage:
+        data = {"fingerprints": fingerprints} if fingerprints else {}
+        request = self.format_request("get_keys_for_plotting", data)
+        response = await self._get(request)
+        return response
 
 
 async def connect_to_daemon(
@@ -215,6 +228,6 @@ async def acquire_connection_to_daemon(
         yield daemon  # <----
     except Exception as e:
         print(f"Exception occurred while communicating with the daemon: {e}")
-
-    if daemon is not None:
-        await daemon.close()
+    finally:
+        if daemon is not None:
+            await daemon.close()

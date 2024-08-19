@@ -26,10 +26,11 @@ from chia.util.ints import uint32
 transaction_block_heights = []
 last = 225698
 file_path = os.path.realpath(__file__)
-for delta in open(Path(file_path).parent / "transaction_height_delta", "rb").read():
-    new = last + delta
-    transaction_block_heights.append(new)
-    last = new
+with open(Path(file_path).parent / "transaction_height_delta", "rb") as f:
+    for delta in f.read():
+        new = last + delta
+        transaction_block_heights.append(new)
+        last = new
 
 
 @dataclass(frozen=True)
@@ -48,7 +49,7 @@ def random_refs() -> List[uint32]:
 REPETITIONS = 100
 
 
-async def main(db_path: Path):
+async def main(db_path: Path) -> None:
     random.seed(0x213FB154)
 
     async with aiosqlite.connect(db_path) as connection:
@@ -91,7 +92,7 @@ async def main(db_path: Path):
 
 @click.command()
 @click.argument("db-path", type=click.Path())
-def entry_point(db_path: Path):
+def entry_point(db_path: Path) -> None:
     asyncio.run(main(Path(db_path)))
 
 

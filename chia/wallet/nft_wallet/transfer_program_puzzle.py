@@ -11,7 +11,10 @@ from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH, SINGLETON_MOD_HASH
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-TRANSFER_PROGRAM_MOD = load_clvm_maybe_recompile("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
+TRANSFER_PROGRAM_MOD = load_clvm_maybe_recompile(
+    "nft_ownership_transfer_program_one_way_claim_with_royalties.clsp",
+    package_or_requirement="chia.wallet.nft_wallet.puzzles",
+)
 
 
 def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, List[Program]]:
@@ -36,7 +39,7 @@ def solution_for_transfer_program(
     new_did_inner_hash: bytes32,
     trade_prices_list: Program,
 ) -> Program:
-    return Program.to([conditions, current_owner, [new_did, trade_prices_list, new_did_inner_hash]])  # type: ignore
+    return Program.to([conditions, current_owner, [new_did, trade_prices_list, new_did_inner_hash]])
 
 
 @dataclass(frozen=True)
@@ -76,4 +79,4 @@ class TransferProgramPuzzle:
         return None
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
-        return Program.to(None)  # type: ignore
+        return Program.to(None)

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
-from chia_rs import ENABLE_ASSERT_BEFORE, LIMIT_STACK, MEMPOOL_MODE
+from chia_rs import MEMPOOL_MODE, get_flags_for_height_and_constants
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
-from chia_rs import run_block_generator, run_chia_program
-from clvm.casts import int_from_bytes
+from chia_rs import run_block_generator, run_block_generator2, run_chia_program
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
@@ -16,18 +15,16 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend
+from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo, make_spend
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
+from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
-from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-
-GENERATOR_MOD = get_generator()
 
 DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
-    "chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles"
+    "chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles"
 )
 
 log = logging.getLogger(__name__)
@@ -37,41 +34,37 @@ def get_name_puzzle_conditions(
     generator: BlockGenerator,
     max_cost: int,
     *,
-    cost_per_byte: int,
     mempool_mode: bool,
-    height: Optional[uint32] = None,
-    constants: ConsensusConstants = DEFAULT_CONSTANTS,
+    height: uint32,
+    constants: ConsensusConstants,
 ) -> NPCResult:
-    # in mempool mode, the height doesn't matter, because it's always strict.
-    # But otherwise, height must be specified to know which rules to apply
-    assert mempool_mode or height is not None
+    flags = get_flags_for_height_and_constants(height, constants)
 
     if mempool_mode:
-        flags = MEMPOOL_MODE
-    elif height is not None and height >= constants.SOFT_FORK2_HEIGHT:
-        flags = LIMIT_STACK | ENABLE_ASSERT_BEFORE
-    elif height is not None and height >= constants.SOFT_FORK_HEIGHT:
-        flags = LIMIT_STACK
+        flags = flags | MEMPOOL_MODE
+
+    if height >= constants.HARD_FORK_HEIGHT:
+        run_block = run_block_generator2
     else:
-        flags = 0
+        run_block = run_block_generator
 
     try:
         block_args = [bytes(gen) for gen in generator.generator_refs]
-        err, result = run_block_generator(bytes(generator.program), block_args, max_cost, flags)
+        err, result = run_block(bytes(generator.program), block_args, max_cost, flags, DEFAULT_CONSTANTS)
         assert (err is None) != (result is None)
         if err is not None:
-            return NPCResult(uint16(err), None, uint64(0))
+            return NPCResult(uint16(err), None)
         else:
             assert result is not None
-            return NPCResult(None, result, uint64(result.cost))
+            return NPCResult(None, result)
     except BaseException:
         log.exception("get_name_puzzle_condition failed")
-        return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None, uint64(0))
+        return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None)
 
 
 def get_puzzle_and_solution_for_coin(
-    generator: BlockGenerator, coin: Coin
-) -> Tuple[Optional[Exception], Optional[SerializedProgram], Optional[SerializedProgram]]:
+    generator: BlockGenerator, coin: Coin, height: int, constants: ConsensusConstants
+) -> SpendInfo:
     try:
         args = bytearray(b"\xff")
         args += bytes(DESERIALIZE_MOD)
@@ -86,14 +79,14 @@ def get_puzzle_and_solution_for_coin(
             coin.parent_coin_info,
             coin.amount,
             coin.puzzle_hash,
+            get_flags_for_height_and_constants(height, constants),
         )
-
-        return None, SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution)
+        return SpendInfo(SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution))
     except Exception as e:
-        return e, None, None
+        raise ValueError(f"Failed to get puzzle and solution for coin {coin}, error: {e}") from e
 
 
-def get_spends_for_block(generator: BlockGenerator) -> List[CoinSpend]:
+def get_spends_for_block(generator: BlockGenerator, height: int, constants: ConsensusConstants) -> List[CoinSpend]:
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
@@ -104,7 +97,7 @@ def get_spends_for_block(generator: BlockGenerator) -> List[CoinSpend]:
         bytes(generator.program),
         bytes(args),
         DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-        0,
+        get_flags_for_height_and_constants(height, constants),
     )
 
     spends: List[CoinSpend] = []
@@ -112,8 +105,39 @@ def get_spends_for_block(generator: BlockGenerator) -> List[CoinSpend]:
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
         puzzle_hash = puzzle.get_tree_hash()
-        coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
-        spends.append(CoinSpend(coin, puzzle, solution))
+        coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
+        spends.append(make_spend(coin, puzzle, solution))
+
+    return spends
+
+
+def get_spends_for_block_with_conditions(
+    generator: BlockGenerator, height: int, constants: ConsensusConstants
+) -> List[CoinSpendWithConditions]:
+    args = bytearray(b"\xff")
+    args += bytes(DESERIALIZE_MOD)
+    args += b"\xff"
+    args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
+    args += b"\x80\x80"
+
+    flags = get_flags_for_height_and_constants(height, constants)
+
+    _, ret = run_chia_program(
+        bytes(generator.program),
+        bytes(args),
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        flags,
+    )
+
+    spends: List[CoinSpendWithConditions] = []
+
+    for spend in Program.to(ret).first().as_iter():
+        parent, puzzle, amount, solution = spend.as_iter()
+        puzzle_hash = puzzle.get_tree_hash()
+        coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
+        coin_spend = make_spend(coin, puzzle, solution)
+        conditions = conditions_for_solution(puzzle, solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+        spends.append(CoinSpendWithConditions(coin_spend, conditions))
 
     return spends
 
@@ -132,6 +156,12 @@ def mempool_check_time_locks(
         return Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
     if timestamp < bundle_conds.seconds_absolute:
         return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
+    if bundle_conds.before_height_absolute is not None:
+        if prev_transaction_block_height >= bundle_conds.before_height_absolute:
+            return Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED
+    if bundle_conds.before_seconds_absolute is not None:
+        if timestamp >= bundle_conds.before_seconds_absolute:
+            return Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED
 
     for spend in bundle_conds.spends:
         unspent = removal_coin_records[bytes32(spend.coin_id)]
@@ -144,6 +174,14 @@ def mempool_check_time_locks(
         if spend.height_relative is not None:
             if prev_transaction_block_height < unspent.confirmed_block_index + spend.height_relative:
                 return Err.ASSERT_HEIGHT_RELATIVE_FAILED
-        if timestamp < unspent.timestamp + spend.seconds_relative:
-            return Err.ASSERT_SECONDS_RELATIVE_FAILED
+        if spend.seconds_relative is not None:
+            if timestamp < unspent.timestamp + spend.seconds_relative:
+                return Err.ASSERT_SECONDS_RELATIVE_FAILED
+        if spend.before_height_relative is not None:
+            if prev_transaction_block_height >= unspent.confirmed_block_index + spend.before_height_relative:
+                return Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED
+        if spend.before_seconds_relative is not None:
+            if timestamp >= unspent.timestamp + spend.before_seconds_relative:
+                return Err.ASSERT_BEFORE_SECONDS_RELATIVE_FAILED
+
     return None

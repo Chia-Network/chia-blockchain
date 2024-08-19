@@ -120,6 +120,20 @@ class RequestUnfinishedBlock(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class NewUnfinishedBlock2(Streamable):
+    unfinished_reward_hash: bytes32
+    foliage_hash: Optional[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestUnfinishedBlock2(Streamable):
+    unfinished_reward_hash: bytes32
+    foliage_hash: Optional[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
 class RespondUnfinishedBlock(Streamable):
     unfinished_block: UnfinishedBlock
 

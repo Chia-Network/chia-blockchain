@@ -8,7 +8,7 @@ from aiosqlite import Row
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 
@@ -29,7 +29,7 @@ def _row_to_singleton_record(row: Row) -> SingletonRecord:
     )
 
 
-def _row_to_mirror(row: Row) -> Mirror:
+def _row_to_mirror(row: Row, confirmed_at_height: Optional[uint32]) -> Mirror:
     urls: List[bytes] = []
     byte_list: bytes = row[3]
     while byte_list != b"":
@@ -37,7 +37,7 @@ def _row_to_mirror(row: Row) -> Mirror:
         url = byte_list[2 : length + 2]
         byte_list = byte_list[length + 2 :]
         urls.append(url)
-    return Mirror(bytes32(row[0]), bytes32(row[1]), uint64.from_bytes(row[2]), urls, bool(row[4]))
+    return Mirror(bytes32(row[0]), bytes32(row[1]), uint64.from_bytes(row[2]), urls, bool(row[4]), confirmed_at_height)
 
 
 class DataLayerStore:
@@ -55,29 +55,31 @@ class DataLayerStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS singleton_records("
-                    "coin_id blob PRIMARY KEY,"
-                    " launcher_id blob,"
-                    " root blob,"
-                    " inner_puzzle_hash blob,"
-                    " confirmed tinyint,"
-                    " confirmed_at_height int,"
-                    " proof blob,"
-                    " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
-                    " timestamp int)"
-                )
+                "CREATE TABLE IF NOT EXISTS singleton_records("
+                "coin_id blob PRIMARY KEY,"
+                " launcher_id blob,"
+                " root blob,"
+                " inner_puzzle_hash blob,"
+                " confirmed tinyint,"
+                " confirmed_at_height int,"
+                " proof blob,"
+                " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
+                " timestamp int)"
             )
 
             await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS mirrors("
-                    "coin_id blob PRIMARY KEY,"
-                    "launcher_id blob,"
-                    "amount blob,"
-                    "urls blob,"
-                    "ours tinyint)"
-                )
+                "CREATE TABLE IF NOT EXISTS mirrors("
+                "coin_id blob PRIMARY KEY,"
+                "launcher_id blob,"
+                "amount blob,"
+                "urls blob,"
+                "ours tinyint)"
+            )
+
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS mirror_confirmations("
+                "coin_id blob PRIMARY KEY,"
+                "confirmed_at_height int)"
             )
 
             await conn.execute(
@@ -247,15 +249,18 @@ class DataLayerStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM singleton_records WHERE launcher_id=?", (launcher_id,))).close()
 
-    async def add_launcher(self, launcher: Coin) -> None:
+    async def add_launcher(self, launcher: Coin, confirmed_at_height: uint32) -> None:
         """
         Add a new launcher coin's information to the DB
         """
-        launcher_bytes: bytes = launcher.parent_coin_info + launcher.puzzle_hash + bytes(uint64(launcher.amount))
+        launcher_bytes: bytes = (
+            launcher.parent_coin_info + launcher.puzzle_hash + uint64(launcher.amount).stream_to_bytes()
+        )
         async with self.db_wrapper.writer_maybe_transaction() as conn:
+            launcher_id = launcher.name()
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO launchers VALUES (?, ?)",
-                (launcher.name(), launcher_bytes),
+                (launcher_id, launcher_bytes),
             )
 
     async def get_launcher(self, launcher_id: bytes32) -> Optional[Coin]:
@@ -309,9 +314,18 @@ class DataLayerStore:
                 (
                     mirror.coin_id,
                     mirror.launcher_id,
-                    bytes(mirror.amount),
-                    b"".join([bytes(uint16(len(url))) + url for url in mirror.urls]),  # prefix each item with a length
+                    mirror.amount.stream_to_bytes(),
+                    b"".join(
+                        [uint16(len(url)).stream_to_bytes() + url for url in mirror.urls]
+                    ),  # prefix each item with a length
                     1 if mirror.ours else 0,
+                ),
+            )
+            await conn.execute_insert(
+                "INSERT OR REPLACE INTO mirror_confirmations (coin_id, confirmed_at_height) VALUES (?, ?)",
+                (
+                    mirror.coin_id,
+                    mirror.confirmed_at_height,
                 ),
             )
 
@@ -323,10 +337,15 @@ class DataLayerStore:
             )
             rows = await cursor.fetchall()
             await cursor.close()
-        mirrors: List[Mirror] = []
+            mirrors: List[Mirror] = []
 
-        for row in rows:
-            mirrors.append(_row_to_mirror(row))
+            for row in rows:
+                confirmation_height = await execute_fetchone(
+                    conn, "SELECT * FROM mirror_confirmations WHERE coin_id=?", (row[0],)
+                )
+                mirrors.append(
+                    _row_to_mirror(row, None if confirmation_height is None else uint32(confirmation_height[1]))
+                )
 
         return mirrors
 
@@ -338,10 +357,51 @@ class DataLayerStore:
             )
             row = await cursor.fetchone()
             await cursor.close()
-        assert row is not None
+            assert row is not None
+            confirmation_height = await execute_fetchone(
+                conn, "SELECT * FROM mirror_confirmations WHERE coin_id=?", (row[0],)
+            )
 
-        return _row_to_mirror(row)
+        return _row_to_mirror(row, None if confirmation_height is None else uint32(confirmation_height[1]))
 
     async def delete_mirror(self, coin_id: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM mirrors WHERE coin_id=?", (coin_id,))).close()
+            await (await conn.execute("DELETE FROM mirror_confirmations WHERE coin_id=?", (coin_id,))).close()
+
+    async def rollback_to_block(self, height: int) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "SELECT * from mirror_confirmations WHERE confirmed_at_height>?",
+                (height,),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+
+            for row in rows:
+                await conn.execute(
+                    "DELETE from mirror_confirmations WHERE coin_id=?",
+                    (row[0],),
+                )
+                await conn.execute(
+                    "DELETE from mirrors WHERE coin_id=?",
+                    (row[0],),
+                )
+
+            cursor = await conn.execute(
+                "SELECT launcher_id from singleton_records WHERE confirmed_at_height>? AND generation=0",
+                (height,),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+            for row in rows:
+                await conn.execute(
+                    "DELETE from launchers WHERE id=?",
+                    (row[0],),
+                )
+
+            await conn.execute(
+                "UPDATE singleton_records SET "
+                "confirmed_at_height = 0, confirmed = 0, timestamp = 0 WHERE confirmed_at_height > ?",
+                (height,),
+            )

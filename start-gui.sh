@@ -4,11 +4,14 @@ set -o errexit
 
 export NODE_OPTIONS="--max-old-space-size=3000"
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "$0")"; pwd)
+SCRIPT_DIR=$(
+  cd -- "$(dirname -- "$0")"
+  pwd
+)
 
 echo "### Checking GUI dependencies"
 
-if [ -d  "${SCRIPT_DIR}/.n" ]; then
+if [ -d "${SCRIPT_DIR}/.n" ]; then
   export N_PREFIX="${SCRIPT_DIR}/.n"
   export PATH="${N_PREFIX}/bin:${PATH}"
   echo "Loading nodejs/npm from"
@@ -29,8 +32,8 @@ if ! npm version >/dev/null 2>&1; then
 fi
 
 NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
-if [ "$NPM_VERSION" -lt "7" ]; then
-  echo "Current npm version($(npm -v)) is less than 7. GUI app requires npm>=7."
+if [ "$NPM_VERSION" -lt "9" ]; then
+  echo "Current npm version($(npm -v)) is less than 9. GUI app requires npm>=9."
   exit 1
 else
   echo "Found npm $(npm -v)"

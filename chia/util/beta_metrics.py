@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 import psutil
 
 from chia.util.config import load_config
+from chia.util.cpu import available_logical_cores
 
 log = logging.getLogger("beta")
 
@@ -23,6 +24,7 @@ def log_static_info() -> None:
     log.debug(f"architecture: {platform.architecture()}")
     log.debug(f"processor: {platform.processor()}")
     log.debug(f"cpu count: {psutil.cpu_count()}")
+    log.debug(f"available logical cores: {available_logical_cores()}")
     log.debug(f"machine: {platform.machine()}")
     log.debug(f"platform: {platform.platform()}")
 

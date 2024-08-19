@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import pkg_resources
+import importlib_resources
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -29,8 +29,9 @@ _all_public_node_names: List[str] = ["full_node", "wallet", "farmer", "introduce
 
 
 def get_chia_ca_crt_key() -> Tuple[Any, Any]:
-    crt = pkg_resources.resource_string(__name__, "chia_ca.crt")
-    key = pkg_resources.resource_string(__name__, "chia_ca.key")
+    here = importlib_resources.files(__name__.rpartition(".")[0])
+    crt = here.joinpath("chia_ca.crt").read_bytes()
+    key = here.joinpath("chia_ca.key").read_bytes()
     return crt, key
 
 
@@ -60,7 +61,7 @@ def ensure_ssl_dirs(dirs: List[Path]):
     """Create SSL dirs with a default 755 mode if necessary"""
     for dir in dirs:
         if not dir.exists():
-            dir.mkdir(mode=0o755)
+            dir.mkdir(mode=0o755, parents=True)
 
 
 def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_out: Path):
@@ -95,7 +96,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
     cert_pem = cert.public_bytes(encoding=serialization.Encoding.PEM)
     key_pem = cert_key.private_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     )
 
@@ -117,8 +118,8 @@ def make_ca_cert(cert_path: Path, key_path: Path):
         .issuer_name(issuer)
         .public_key(root_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.utcnow())
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=3650))
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=3650))
         .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
         .sign(root_key, hashes.SHA256(), default_backend())
     )
@@ -126,7 +127,7 @@ def make_ca_cert(cert_path: Path, key_path: Path):
     cert_pem = root_cert.public_bytes(encoding=serialization.Encoding.PEM)
     key_pem = root_key.private_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     )
 

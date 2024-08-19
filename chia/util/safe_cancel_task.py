@@ -5,7 +5,7 @@ import logging
 from typing import Optional
 
 
-def cancel_task_safe(task: Optional[asyncio.Task], log: Optional[logging.Logger] = None):
+def cancel_task_safe(task: Optional[asyncio.Task[None]], log: Optional[logging.Logger] = None) -> None:
     if task is not None:
         try:
             task.cancel()

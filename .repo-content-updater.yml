@@ -1,0 +1,3 @@
+var_overrides:
+  DEPENDABOT_ACTIONS_REVIEWERS: '["cmmarslender", "altendky"]'
+  DEPENDABOT_PIP_REBASE_STRATEGY: disabled

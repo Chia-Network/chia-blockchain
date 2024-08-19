@@ -15,7 +15,7 @@ rm -rf chia-blockchain-gui/build || true
 rm -rf chia-blockchain-gui/daemon || true
 rm -rf chia-blockchain-gui/node_modules || true
 rm chia-blockchain-gui/temp.json || true
-( cd "$PWD/chia-blockchain-gui" && git checkout HEAD -- package-lock.json ) || true
+(cd "$PWD/chia-blockchain-gui" && git checkout HEAD -- package-lock.json) || true
 cd "$PWD" || true
 
 # Clean up old globally installed node_modules that might conflict with the current build

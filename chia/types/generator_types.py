@@ -15,21 +15,8 @@ class GeneratorBlockCacheInterface:
         return  # type: ignore[return-value]
 
 
-@dataclass(frozen=True)
-class CompressorArg:
-    """`CompressorArg` is used as input to the Block Compressor"""
-
-    block_height: uint32
-    generator: SerializedProgram
-    start: int
-    end: int
-
-
 @streamable
 @dataclass(frozen=True)
 class BlockGenerator(Streamable):
     program: SerializedProgram
     generator_refs: List[SerializedProgram]
-
-    # the heights are only used when creating new blocks, never when validating
-    block_height_list: List[uint32]

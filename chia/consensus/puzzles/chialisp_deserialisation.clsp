@@ -1,0 +1,69 @@
+;; this code is included in the ROM. Unfortunately, it has a problem that limits
+;; its usefulness: it is incapable of deserializing atoms with length longer than
+;; 8191 = 0x1fff.
+;;
+;; Because this code is included in the ROM, fixing the bug would be a hard fork
+;; so we're rather stuck with this bug. We recommend simply using a local version
+;; of this code when necessary.
+
+(mod (input)
+
+  (defconstant MAX_SINGLE_BYTE 0x7F)
+  (defconstant MAX_TWO_BYTE 0xbf)
+  (defconstant MAX_THREE_BYTE 0xdf)
+  (defconstant MAX_FOUR_BYTE 0xef)
+  (defconstant MAX_FIVE_BYTE 0xf7)
+  (defconstant MAX_SIX_BYTE 0xfb)
+  (defconstant CONS_BOX_MARKER 0xFF)
+
+  (defun sexp_from_stream (input_stream)
+    (if (= (substr input_stream 0 1) CONS_BOX_MARKER)
+        (cons_sexp_from_stream (sexp_from_stream (substr input_stream 1)))
+        (atom_from_stream (substr input_stream 1) (substr input_stream 0 1))
+    )
+  )
+
+  (defun cons_sexp_from_stream (left_sexp_with_input)
+    (cons_return (f left_sexp_with_input) (sexp_from_stream (f (r left_sexp_with_input))))
+  )
+
+  (defun cons_return (left_sexp right_sexp_with_input)
+    (list (c left_sexp (f right_sexp_with_input)) (f (r right_sexp_with_input)))
+  )
+
+  (defun atom_from_stream (input_file input_bits)
+    (if (= input_bits (quote 0x80))
+        (list () input_file)
+        (if (>s input_bits MAX_SINGLE_BYTE)
+            (atom_from_stream_part_two (get_bitcount input_bits input_file))
+            (list input_bits input_file)
+        )
+    )
+  )
+
+  ; Note that we reject any serialized atom here with more than 3 bytes of
+  ; encoded length prefix, even though the Rust and Python CLVM interpreters
+  ; and deserializers support more.
+  ; This allows 5 + 8 = 13 bits = 8191-byte atoms
+  ; Also note that this does not limit intermediate atom length. Those limits
+  ; are implemented in the clvm interpreters theselves
+  (defun-inline get_bitcount (input_bits input_file)
+    (if (>s input_bits MAX_TWO_BYTE)
+        (if (>s input_bits MAX_THREE_BYTE)
+            (x)
+            ;three byte length prefix
+            (list (concat (logand (quote 0x1f) input_bits) (substr input_file 0 1)) (substr input_file 1))
+        )
+        ;two byte length prefix
+        (list (logand (quote 0x3f) input_bits) input_file)
+    )
+  )
+
+  (defun atom_from_stream_part_two ((size_to_read input_file))
+    (list (substr input_file 0 size_to_read) (substr input_file size_to_read))
+  )
+
+  ; main
+  (f (sexp_from_stream input))
+
+)

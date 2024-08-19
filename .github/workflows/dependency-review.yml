@@ -1,10 +1,11 @@
+# Managed by repo-content-updater
 # Dependency Review Action
 #
 # This Action will scan dependency manifest files that change as part of a Pull Request, surfacing known-vulnerable versions of the packages declared or updated in the PR. Once installed, if the workflow run is marked as required, PRs introducing known-vulnerable packages will be blocked from merging.
 #
 # Source repository: https://github.com/actions/dependency-review-action
 # Public documentation: https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/about-dependency-review#dependency-review-enforcement
-name: '🚨 Dependency Review'
+name: "🚨 Dependency Review"
 on: [pull_request]
 
 permissions:
@@ -14,7 +15,11 @@ jobs:
   dependency-review:
     runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout Repository'
-        uses: actions/checkout@v3
-      - name: 'Dependency Review'
-        uses: actions/dependency-review-action@v3
+      - name: "Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "Dependency Review"
+        uses: actions/dependency-review-action@v4
+        with:
+          allow-dependencies-licenses: pkg:pypi/pylint, pkg:pypi/pyinstaller
+          deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-1.0-or-later, AGPL-3.0-or-later, GPL-1.0-only, GPL-1.0-or-later, GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later

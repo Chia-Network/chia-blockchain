@@ -95,6 +95,8 @@ def get_block_challenge(
                 if curr.first_in_sub_slot:
                     assert curr.finished_challenge_slot_hashes is not None
                     reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
+                    if len(reversed_challenge_hashes) >= challenges_to_look_for:
+                        break
                 if curr.height == 0:
                     assert curr.finished_challenge_slot_hashes is not None
                     assert len(curr.finished_challenge_slot_hashes) > 0

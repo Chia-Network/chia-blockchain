@@ -5,12 +5,12 @@ from typing import Optional
 import click
 
 
-@click.group("farm", short_help="Manage your farm")
+@click.group("farm", help="Manage your farm")
 def farm_cmd() -> None:
     pass
 
 
-@farm_cmd.command("summary", short_help="Summary of farming information")
+@farm_cmd.command("summary", help="Summary of farming information")
 @click.option(
     "-p",
     "--rpc-port",
@@ -62,7 +62,7 @@ def summary_cmd(
     asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
 
 
-@farm_cmd.command("challenges", short_help="Show the latest challenges")
+@farm_cmd.command("challenges", help="Show the latest challenges")
 @click.option(
     "-fp",
     "--farmer-rpc-port",
