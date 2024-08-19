@@ -37,7 +37,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
@@ -184,11 +183,7 @@ class VCWallet:
         if not found_did:
             raise ValueError(f"You don't own the DID {provider_did.hex()}")  # pragma: no cover
         # Mint VC
-        coins = list(
-            await self.standard_wallet.select_coins(
-                uint64(1 + fee), action_scope.config.tx_config.coin_selection_config
-            )
-        )
+        coins = list(await self.standard_wallet.select_coins(uint64(1 + fee), action_scope))
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
         if inner_puzzle_hash is None:  # pragma: no cover
@@ -391,9 +386,7 @@ class VCWallet:
         coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
         if fee > 0:
-            coins.update(
-                await self.standard_wallet.select_coins(fee, action_scope.config.tx_config.coin_selection_config)
-            )
+            coins.update(await self.standard_wallet.select_coins(fee, action_scope))
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
         sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = SerializedProgram.to(sorted_coin_list).get_tree_hash()
@@ -605,7 +598,7 @@ class VCWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         raise RuntimeError("VCWallet does not support select_coins()")  # pragma: no cover
 

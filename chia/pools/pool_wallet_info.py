@@ -9,7 +9,6 @@ from chia_rs import G1Element
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
@@ -75,7 +74,7 @@ def initial_pool_state_from_dict(
         pool_url: str = ""
         relative_lock_height = uint32(0)
     elif singleton_state == FARMING_TO_POOL:
-        target_puzzle_hash = bytes32(hexstr_to_bytes(state_dict["target_puzzle_hash"]))
+        target_puzzle_hash = bytes32.from_hexstr(state_dict["target_puzzle_hash"])
         pool_url = state_dict["pool_url"]
         relative_lock_height = uint32(state_dict["relative_lock_height"])
     else:

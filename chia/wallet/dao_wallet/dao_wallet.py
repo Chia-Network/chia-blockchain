@@ -69,7 +69,6 @@ from chia.wallet.singleton import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -341,7 +340,7 @@ class DAOWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -363,14 +362,16 @@ class DAOWallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.wallet_info.id
         )
-        coins = await select_coins(
-            spendable_amount,
-            coin_selection_config,
-            spendable_coins,
-            unconfirmed_removals,
-            self.log,
-            uint128(amount),
-        )
+        async with action_scope.use() as interface:
+            coins = await select_coins(
+                spendable_amount,
+                action_scope.config.adjust_for_side_effects(interface.side_effects).tx_config.coin_selection_config,
+                spendable_coins,
+                unconfirmed_removals,
+                self.log,
+                uint128(amount),
+            )
+            interface.side_effects.selected_coins.extend([*coins])
         assert sum(c.amount for c in coins) >= amount
         return coins
 
@@ -635,12 +636,10 @@ class DAOWallet:
         if amount_of_cats_to_create is not None and amount_of_cats_to_create > 0:
             coins = await self.standard_wallet.select_coins(
                 uint64(amount_of_cats_to_create + fee + 1),
-                action_scope.config.tx_config.coin_selection_config,
+                action_scope,
             )
         else:  # pragma: no cover
-            coins = await self.standard_wallet.select_coins(
-                uint64(fee + 1), action_scope.config.tx_config.coin_selection_config
-            )
+            coins = await self.standard_wallet.select_coins(uint64(fee + 1), action_scope)
 
         if coins is None:  # pragma: no cover
             return None
@@ -655,12 +654,7 @@ class DAOWallet:
             assert amount_of_cats_to_create is not None
             different_coins = await self.standard_wallet.select_coins(
                 uint64(amount_of_cats_to_create + fee_for_cat),
-                coin_selection_config=action_scope.config.tx_config.coin_selection_config.override(
-                    excluded_coin_ids=[
-                        *action_scope.config.tx_config.coin_selection_config.excluded_coin_ids,
-                        origin.name(),
-                    ]
-                ),
+                action_scope,
             )
             cat_origin = different_coins.copy().pop()
             assert origin.name() != cat_origin.name()
@@ -854,7 +848,7 @@ class DAOWallet:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         coins = await self.standard_wallet.select_coins(
             uint64(fee + dao_rules.proposal_minimum_amount),
-            action_scope.config.tx_config.coin_selection_config,
+            action_scope,
         )
         if coins is None:  # pragma: no cover
             return None

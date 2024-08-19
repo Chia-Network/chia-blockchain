@@ -415,7 +415,7 @@ class CRCATWallet(CATWallet):
             cat_coins = list(
                 await self.select_coins(
                     uint64(starting_amount),
-                    action_scope.config.tx_config.coin_selection_config,
+                    action_scope,
                 )
             )
         else:
@@ -706,7 +706,7 @@ class CRCATWallet(CATWallet):
         if fee > 0:
             chia_coins = await self.standard_wallet.select_coins(
                 fee,
-                action_scope.config.tx_config.coin_selection_config,
+                action_scope,
             )
         else:
             chia_coins = set()

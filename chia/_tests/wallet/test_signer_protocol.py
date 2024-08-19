@@ -78,7 +78,7 @@ from chia.wallet.util.clvm_streamable import (
     json_deserialize_with_clvm_streamable,
     json_serialize_with_clvm_streamable,
 )
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -134,7 +134,8 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
 
     # Test first that we can properly examine and sign a regular transaction
-    [coin] = await wallet.select_coins(uint64(0), DEFAULT_COIN_SELECTION_CONFIG)
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
+        [coin] = await wallet.select_coins(uint64(0), action_scope)
     puzzle: Program = await wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
     delegated_puzzle: Program = Program.to(None)
     delegated_puzzle_hash: bytes32 = delegated_puzzle.get_tree_hash()

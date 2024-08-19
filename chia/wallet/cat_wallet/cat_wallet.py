@@ -51,7 +51,6 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -225,7 +224,7 @@ class CATWallet:
         elif name is None:
             name = self.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
-        limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
+        limitations_program_hash = bytes32.from_hexstr(limitations_program_hash_hex)
         self.cat_info = CATInfo(limitations_program_hash, None)
         info_as_string = bytes(self.cat_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
@@ -511,7 +510,7 @@ class CATWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -525,14 +524,16 @@ class CATWallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-        coins = await select_coins(
-            spendable_amount,
-            coin_selection_config,
-            spendable_coins,
-            unconfirmed_removals,
-            self.log,
-            uint128(amount),
-        )
+        async with action_scope.use() as interface:
+            coins = await select_coins(
+                spendable_amount,
+                action_scope.config.adjust_for_side_effects(interface.side_effects).tx_config.coin_selection_config,
+                spendable_coins,
+                unconfirmed_removals,
+                self.log,
+                uint128(amount),
+            )
+            interface.side_effects.selected_coins.extend([*coins])
         assert sum(c.amount for c in coins) >= amount
         return coins
 
@@ -576,7 +577,7 @@ class CATWallet:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope.config.tx_config.coin_selection_config,
+                    action_scope,
                 )
                 origin_id = list(chia_coins)[0].name()
                 await self.standard_wallet.generate_signed_transaction(
@@ -592,7 +593,7 @@ class CATWallet:
             else:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope.config.tx_config.coin_selection_config,
+                    action_scope,
                 )
                 origin_id = list(chia_coins)[0].name()
                 selected_amount = sum(c.amount for c in chia_coins)
@@ -642,7 +643,7 @@ class CATWallet:
         if coins is None:
             cat_coins = await self.select_coins(
                 uint64(starting_amount),
-                action_scope.config.tx_config.coin_selection_config,
+                action_scope,
             )
         else:
             cat_coins = coins
@@ -852,12 +853,14 @@ class CATWallet:
         self,
         asset_id: Optional[bytes32],
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         balance = await self.get_confirmed_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
-        return await self.select_coins(amount, coin_selection_config)
+        # We need to sandbox this because this method isn't supposed to lock up the coins
+        async with self.wallet_state_manager.new_action_scope(action_scope.config.tx_config) as sandbox:
+            return await self.select_coins(amount, sandbox)
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return (

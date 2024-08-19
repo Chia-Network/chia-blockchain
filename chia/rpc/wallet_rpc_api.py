@@ -115,7 +115,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
@@ -1047,7 +1047,7 @@ class WalletRpcApi:
         return {"wallet_balances": wallet_balances}
 
     async def get_transaction(self, request: Dict[str, Any]) -> EndpointResult:
-        transaction_id: bytes32 = bytes32(hexstr_to_bytes(request["transaction_id"]))
+        transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
         tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
@@ -1058,7 +1058,7 @@ class WalletRpcApi:
         }
 
     async def get_transaction_memo(self, request: Dict[str, Any]) -> EndpointResult:
-        transaction_id: bytes32 = bytes32(hexstr_to_bytes(request["transaction_id"]))
+        transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
         tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
         if tr is None:
             raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
@@ -1352,17 +1352,17 @@ class WalletRpcApi:
         request: Dict[str, Any],
     ) -> EndpointResult:
         assert self.service.logged_in_fingerprint is not None
-        cs_config_loader: CoinSelectionConfigLoader = CoinSelectionConfigLoader.from_json_dict(request)
+        tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
         # Some backwards compat fill-ins
-        if cs_config_loader.excluded_coin_ids is None:
+        if tx_config_loader.excluded_coin_ids is None:
             excluded_coins: Optional[List[Dict[str, Any]]] = request.get("excluded_coins", request.get("exclude_coins"))
             if excluded_coins is not None:
-                cs_config_loader = cs_config_loader.override(
+                tx_config_loader = tx_config_loader.override(
                     excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
                 )
 
-        cs_config: CoinSelectionConfig = cs_config_loader.autofill(
+        tx_config: TXConfig = tx_config_loader.autofill(
             constants=self.service.wallet_state_manager.constants,
         )
 
@@ -1373,8 +1373,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        async with self.service.wallet_state_manager.lock:
-            selected_coins = await wallet.select_coins(amount, cs_config)
+        async with self.service.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
+            selected_coins = await wallet.select_coins(amount, action_scope)
 
         return {"coins": [coin.to_json_dict() for coin in selected_coins]}
 
@@ -3681,7 +3681,7 @@ class WalletRpcApi:
             if xch_change_target[:2] == "xch":
                 xch_change_ph = decode_puzzle_hash(xch_change_target)
             else:
-                xch_change_ph = bytes32(hexstr_to_bytes(xch_change_target))
+                xch_change_ph = bytes32.from_hexstr(xch_change_target)
         else:
             xch_change_ph = None
         new_innerpuzhash = request.get("new_innerpuzhash", None)
@@ -3693,7 +3693,7 @@ class WalletRpcApi:
             did_coin = None
         did_lineage_parent_hex = request.get("did_lineage_parent", None)
         if did_lineage_parent_hex:
-            did_lineage_parent = bytes32(hexstr_to_bytes(did_lineage_parent_hex))
+            did_lineage_parent = bytes32.from_hexstr(did_lineage_parent_hex)
         else:
             did_lineage_parent = None
         mint_from_did = request.get("mint_from_did", False)
@@ -3982,7 +3982,7 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
 
         if "target_puzzlehash" in request:
-            target_puzzlehash = bytes32(hexstr_to_bytes(request["target_puzzlehash"]))
+            target_puzzlehash = bytes32.from_hexstr(request["target_puzzlehash"])
         assert target_puzzlehash is not None
         new_target_state: PoolState = create_pool_state(
             FARMING_TO_POOL,

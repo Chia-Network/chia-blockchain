@@ -48,7 +48,7 @@ from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionV
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -576,9 +576,7 @@ class PoolWallet:
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         with the "pooling" inner state, which can be either self pooling or using a pool
         """
-        coins: Set[Coin] = await standard_wallet.select_coins(
-            uint64(amount + fee), action_scope.config.tx_config.coin_selection_config
-        )
+        coins: Set[Coin] = await standard_wallet.select_coins(uint64(amount + fee), action_scope)
         if coins is None:
             raise ValueError("Not enough coins to create pool wallet")
 
@@ -912,7 +910,7 @@ class PoolWallet:
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[object]) -> None:
         pass
 
-    async def select_coins(self, amount: uint64, coin_selection_config: CoinSelectionConfig) -> Set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> Set[Coin]:
         raise RuntimeError("PoolWallet does not support select_coins()")
 
     def require_derivation_paths(self) -> bool:
