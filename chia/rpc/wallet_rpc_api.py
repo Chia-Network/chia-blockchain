@@ -1107,6 +1107,8 @@ class WalletRpcApi:
                 f"Coin amount: {coin.amount} is less than the total amount of the split: {total_amount}, exiting."
             )
 
+        if request.wallet_id not in self.service.wallet_state_manager.wallets:
+            raise ValueError(f"Wallet with ID {request.wallet_id} does not exist")
         wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
         if not isinstance(wallet, (Wallet, CATWallet)):
             raise ValueError("Cannot split coins from non-fungible wallet types")
@@ -1122,16 +1124,13 @@ class WalletRpcApi:
         if wallet.type() == WalletType.STANDARD_WALLET:
             assert isinstance(wallet, Wallet)
             if coin.amount < total_amount + request.fee:
+                async with action_scope.use() as interface:
+                    interface.side_effects.selected_coins.append(coin)
                 coins = await wallet.select_coins(
                     uint64(total_amount + request.fee - coin.amount),
-                    dataclasses.replace(
-                        action_scope.config.tx_config.coin_selection_config,
-                        excluded_coin_ids=[
-                            coin.name(),
-                            *action_scope.config.tx_config.coin_selection_config.excluded_coin_ids,
-                        ],
-                    ),
+                    action_scope,
                 )
+                coins.add(coin)
             else:
                 coins = {coin}
             await wallet.generate_signed_transaction(

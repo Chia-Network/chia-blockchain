@@ -1709,5 +1709,5 @@ class WalletRpcClient(RpcClient):
         tx_config: TXConfig,
     ) -> SplitCoinsResponse:
         return SplitCoinsResponse.from_json_dict(
-            await self.fetch("split_coins", {*args.to_json_dict(), *tx_config.to_json_dict()})
+            await self.fetch("split_coins", {**args.to_json_dict(), **tx_config.to_json_dict()})
         )
