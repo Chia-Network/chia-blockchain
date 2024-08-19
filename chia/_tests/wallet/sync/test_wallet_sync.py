@@ -45,7 +45,7 @@ from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.wallet_state_manager import WalletStateManager
@@ -819,7 +819,8 @@ async def test_dusted_wallet(
     log.info(f"all_unspent is {all_unspent}")
     small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
     balance = await dust_wallet.get_confirmed_balance()
-    num_coins = len(await dust_wallet.select_coins(uint64(balance), DEFAULT_COIN_SELECTION_CONFIG))
+    async with dust_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        num_coins = len(await dust_wallet.select_coins(uint64(balance), action_scope))
 
     log.info(f"Small coin count is {small_unspent_count}")
     log.info(f"Wallet balance is {balance}")
@@ -886,7 +887,6 @@ async def test_dusted_wallet(
     balance = await dust_wallet.get_confirmed_balance()
     # Selecting coins by using the wallet's coin selection algorithm won't work for large
     # numbers of coins, so we'll use the state manager for the rest of the test
-    # num_coins = len(await dust_wallet.select_coins(balance))
     spendable_coins = await dust_wallet_node.wallet_state_manager.get_spendable_coins_for_wallet(1)
     num_coins = len(spendable_coins)
 

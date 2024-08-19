@@ -48,7 +48,6 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatree_pair
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -338,10 +337,13 @@ class DIDWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         try:
-            return {await self.get_coin()}
+            async with action_scope.use() as interface:
+                coin = await self.get_coin()
+                interface.side_effects.selected_coins.append(coin)
+            return {coin}
         except RuntimeError:
             return set()
 
@@ -1207,9 +1209,7 @@ class DIDWallet:
         This must be called under the wallet state manager lock
         """
 
-        coins = await self.standard_wallet.select_coins(
-            uint64(amount + fee), action_scope.config.tx_config.coin_selection_config
-        )
+        coins = await self.standard_wallet.select_coins(uint64(amount + fee), action_scope)
 
         origin = coins.copy().pop()
         genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE

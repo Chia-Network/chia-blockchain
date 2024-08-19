@@ -57,7 +57,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -309,9 +308,7 @@ class DataLayerWallet:
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
 
-        coins: Set[Coin] = await self.standard_wallet.select_coins(
-            uint64(fee + 1), action_scope.config.tx_config.coin_selection_config
-        )
+        coins: Set[Coin] = await self.standard_wallet.select_coins(uint64(fee + 1), action_scope)
         if coins is None:
             raise ValueError("Not enough coins to create new data layer singleton")
 
@@ -1234,7 +1231,7 @@ class DataLayerWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         raise RuntimeError("DataLayerWallet does not support select_coins()")
 

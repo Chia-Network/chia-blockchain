@@ -89,9 +89,7 @@ class NotificationManager:
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> None:
-        coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(
-            uint64(amount + fee), action_scope.config.tx_config.coin_selection_config
-        )
+        coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(uint64(amount + fee), action_scope)
         origin_coin: bytes32 = next(iter(coins)).name()
         notification_puzzle: Program = construct_notification(target, amount)
         notification_hash: bytes32 = notification_puzzle.get_tree_hash()

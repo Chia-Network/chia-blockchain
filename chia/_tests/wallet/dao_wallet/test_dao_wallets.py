@@ -168,17 +168,19 @@ async def test_dao_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsA
     await time_out_assert(20, dao_wallet_0.get_pending_change_balance, uint64(0))
 
     # check select coins
-    no_coins = await dao_wallet_0.select_coins(uint64(2), DEFAULT_TX_CONFIG)
-    assert no_coins == set()
-    selected_coins = await dao_wallet_0.select_coins(uint64(1), DEFAULT_TX_CONFIG)
-    assert len(selected_coins) == 1
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        no_coins = await dao_wallet_0.select_coins(uint64(2), action_scope)
+        assert no_coins == set()
+        selected_coins = await dao_wallet_0.select_coins(uint64(1), action_scope)
+        assert len(selected_coins) == 1
 
     # get the cat wallets
     cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.cat_wallet_id]
     dao_cat_wallet_0 = dao_wallet_0.wallet_state_manager.wallets[dao_wallet_0.dao_info.dao_cat_wallet_id]
     # Some dao_cat_wallet checks for coverage
     assert dao_cat_wallet_0.get_name() == f"CAT {cat_wallet_0.cat_info.limitations_program_hash.hex()[:16]}..."
-    assert (await dao_cat_wallet_0.select_coins(uint64(1), DEFAULT_TX_CONFIG)) == set()
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        assert (await dao_cat_wallet_0.select_coins(uint64(1), action_scope)) == set()
     dao_cat_puzhash = await dao_cat_wallet_0.get_new_puzzlehash()
     assert dao_cat_puzhash == bytes32.from_hexstr("09f905ba3e9db3644ac4537495565bf268c6f030266aa412863c5efced6b1800")
     await dao_cat_wallet_0.get_new_inner_puzzle(DEFAULT_TX_CONFIG)

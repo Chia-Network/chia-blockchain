@@ -92,9 +92,7 @@ class GenesisById(LimitationsProgram):
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
     ) -> SpendBundle:
-        coins = await wallet.standard_wallet.select_coins(
-            amount + fee, action_scope.config.tx_config.coin_selection_config
-        )
+        coins = await wallet.standard_wallet.select_coins(amount + fee, action_scope)
 
         origin = coins.copy().pop()
         origin_id = origin.name()
@@ -262,9 +260,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
             coins: List[Coin] = tail_info["coins"]
             origin_id = coins.copy().pop().name()
         else:  # pragma: no cover
-            coins = await wallet.standard_wallet.select_coins(
-                amount + fee, action_scope.config.tx_config.coin_selection_config
-            )
+            coins = await wallet.standard_wallet.select_coins(amount + fee, action_scope)
             origin = coins.copy().pop()
             origin_id = origin.name()
 

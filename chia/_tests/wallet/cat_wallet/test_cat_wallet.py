@@ -25,7 +25,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_pk_to_wallet_pk_unhardened
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
@@ -402,7 +402,8 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
         ]
     )
 
-    coins = await cat_wallet_2.select_coins(uint64(60), DEFAULT_COIN_SELECTION_CONFIG)
+    async with cat_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        coins = await cat_wallet_2.select_coins(uint64(60), action_scope)
     assert len(coins) == 1
     coin = coins.pop()
     tx_id = coin.name().hex()
