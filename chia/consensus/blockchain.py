@@ -294,6 +294,8 @@ class Blockchain(BlockchainInterface):
         pre_validation_result: PreValidationResult,
         bls_cache: Optional[BLSCache],
         fork_info: Optional[ForkInfo] = None,
+        sub_slot_iters: Optional[uint64] = None,
+        prev_ses_block: Optional[BlockRecord] = None,
     ) -> Tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
         This method must be called under the blockchain lock
@@ -459,6 +461,8 @@ class Blockchain(BlockchainInterface):
             required_iters,
             block,
             None,
+            sub_slot_iters=sub_slot_iters,
+            prev_ses_block=prev_ses_block,
         )
 
         # in case we fail and need to restore the blockchain state, remember the
@@ -801,6 +805,9 @@ class Blockchain(BlockchainInterface):
         self,
         blocks: List[FullBlock],
         npc_results: Dict[uint32, NPCResult],  # A cache of the result of running CLVM, optional (you can use {})
+        sub_slot_iters: uint64,
+        difficulty: uint64,
+        prev_ses_block: Optional[BlockRecord] = None,
         batch_size: int = 4,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
@@ -815,6 +822,9 @@ class Blockchain(BlockchainInterface):
             npc_results,
             self.get_block_generator,
             batch_size,
+            sub_slot_iters,
+            difficulty,
+            prev_ses_block,
             wp_summaries,
             validate_signatures=validate_signatures,
         )

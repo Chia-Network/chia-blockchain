@@ -15,10 +15,6 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.difficulty_adjustment import (
-    _get_second_to_last_transaction_block_in_previous_epoch,
-    get_next_sub_slot_iters_and_difficulty,
-)
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
@@ -114,6 +110,7 @@ def batch_pre_validate_blocks(
                 check_filter,
                 expected_difficulty[i],
                 expected_sub_slot_iters[i],
+                check_sub_epoch_summary=False,
             )
             error_int: Optional[uint16] = None
             if error is not None:
@@ -165,6 +162,9 @@ async def pre_validate_blocks_multiprocessing(
     npc_results: Dict[uint32, NPCResult],
     get_block_generator: Callable[[BlockInfo, Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]],
     batch_size: int,
+    sub_slot_iters: uint64,
+    difficulty: uint64,
+    prev_ses_block: Optional[BlockRecord] = None,
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
     validate_signatures: bool = True,
@@ -223,28 +223,27 @@ async def pre_validate_blocks_multiprocessing(
             assert curr is not None
         block_records.add_block_record(curr)
         recent_blocks[header_hash] = curr
+    block_record_was_present = []
+    block_hashes: List[bytes32] = []
+    for block in blocks:
+        header_hash = block.header_hash
+        block_hashes.append(header_hash)
+        block_record_was_present.append(block_records.contains_block(header_hash))
 
-    last_block_prev = None
-    prev_b = None
-    if blocks[0].height > 0:
-        prev_b = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
-        assert prev_b is not None
-
-    sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-        constants, len(block.finished_sub_slots) > 0, prev_b, block_records, last_block_prev=last_block_prev)    
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
-        # the call to block_to_block_record() requires the previous
-        # block is in the cache
-        # and make_sub_epoch_summary() requires all blocks until we find one
-        # that includes a sub_epoch_summary
+        if block.height != 0:
+            if prev_b is None:
+                prev_b = await block_records.get_block_record_from_db(block.prev_header_hash)
+            assert prev_b is not None
 
+            curr = prev_b
+            block_records.add_block_record(curr)
         if len(block.finished_sub_slots) > 0:
-            if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
-                sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
             if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                 difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
-
+            if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
         challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -275,16 +274,22 @@ async def pre_validate_blocks_multiprocessing(
                 required_iters,
                 block,
                 None,
+                sub_slot_iters=sub_slot_iters,
+                prev_ses_block=prev_ses_block,
             )
         except ValueError:
             return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
-        if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
-            idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
-            next_ses = wp_summaries[idx]
-            if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
-                log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
-                return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
+        if block_rec.sub_epoch_summary_included is not None:
+            prev_ses_block = block_rec
+            if wp_summaries is not None:
+                idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
+                next_ses = wp_summaries[idx]
+                if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
+                    log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
+                    return [
+                        PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))
+                    ]
         # Makes sure to not override the valid blocks already in block_records
         if not block_records.contains_block(block_rec.header_hash):
             block_records.add_block_record(block_rec)  # Temporarily add block to dict

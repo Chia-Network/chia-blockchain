@@ -26,6 +26,7 @@ def block_to_block_record(
     full_block: Optional[Union[FullBlock, HeaderBlock]],
     header_block: Optional[HeaderBlock],
     sub_slot_iters: Optional[uint64] = None,
+    prev_ses_block: Optional[BlockRecord] = None,
 ) -> BlockRecord:
     if full_block is None:
         assert header_block is not None
@@ -64,6 +65,7 @@ def block_to_block_record(
             blocks.block_record(prev_b.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+            prev_ses_block,
         )
         if ses.get_hash() != found_ses_hash:
             raise ValueError(Err.INVALID_SUB_EPOCH_SUMMARY)
