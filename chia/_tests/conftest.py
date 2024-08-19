@@ -197,13 +197,12 @@ def get_keychain():
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
-    SOFT_FORK_4 = 2
-    SOFT_FORK_5 = 3
+    SOFT_FORK_5 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_4, ConsensusMode.SOFT_FORK_5],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_5],
 )
 def consensus_mode(request):
     return request.param
@@ -212,10 +211,6 @@ def consensus_mode(request):
 @pytest.fixture(scope="session")
 def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     ret: ConsensusConstants = test_constants
-    if consensus_mode >= ConsensusMode.SOFT_FORK_4:
-        ret = ret.replace(
-            SOFT_FORK4_HEIGHT=uint32(2),
-        )
     if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
             HARD_FORK_HEIGHT=uint32(2),
@@ -1055,6 +1050,14 @@ async def timelord_service(bt: BlockTools) -> AsyncIterator[TimelordService]:
 @pytest.fixture(scope="function")
 async def crawler_service(root_path_populated_with_config: Path, database_uri: str) -> AsyncIterator[CrawlerService]:
     async with setup_crawler(root_path_populated_with_config, database_uri) as service:
+        yield service
+
+
+@pytest.fixture(scope="function")
+async def crawler_service_no_loop(
+    root_path_populated_with_config: Path, database_uri: str
+) -> AsyncIterator[CrawlerService]:
+    async with setup_crawler(root_path_populated_with_config, database_uri, start_crawler_loop=False) as service:
         yield service
 
 

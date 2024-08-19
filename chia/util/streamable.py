@@ -511,7 +511,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     try:
         # Ignore mypy here because we especially want to access a not available member to test if
         # the dataclass is frozen.
-        object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None  # type: ignore[attr-defined]
+        object.__new__(cls)._streamable_test_if_dataclass_frozen_ = None
     except dataclasses.FrozenInstanceError:
         pass
     else:
@@ -522,7 +522,7 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
 
     cls._streamable_fields = create_fields(cls)
 
-    return cls  # type: ignore[return-value]
+    return cls
 
 
 class Streamable:

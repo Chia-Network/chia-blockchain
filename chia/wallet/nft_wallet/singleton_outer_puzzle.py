@@ -91,7 +91,7 @@ class SingletonOuterPuzzle:
         also = constructor.also()
         if also is not None:
             inner_solution = self._solve(also, solver, inner_puzzle, inner_solution)
-        matched, curried_args = match_singleton_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal.to_program()))
+        matched, curried_args = match_singleton_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal))
         assert matched
         _, parent_inner_puzzle = curried_args
         return solution_for_singleton(

@@ -382,7 +382,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
 
-    await generate_funds(full_node_api, env.wallet_1)
+    await generate_funds(full_node_api, env.wallet_1, num_blocks=2)
 
     outputs = await create_tx_outputs(wallet, [(1234321, None)])
 
@@ -394,18 +394,29 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
         )
     ).signed_tx
 
-    await client.push_transactions([tx])
-    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict_convenience(wallet_node.config)]})
+    resp_client = await client.push_transactions([tx], fee=uint64(10))
+    resp = await client.fetch(
+        "push_transactions", {"transactions": [tx.to_json_dict_convenience(wallet_node.config)], "fee": 10}
+    )
     assert resp["success"]
-    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()]})
+    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
     assert resp["success"]
 
-    spend_bundle = tx.spend_bundle
+    spend_bundle = SpendBundle.aggregate(
+        [
+            # We ARE checking that the spendbundle is not None but mypy can't recognize this
+            TransactionRecord.from_json_dict_convenience(tx).spend_bundle  # type: ignore[misc]
+            for tx in resp_client["transactions"]
+            if tx["spend_bundle"] is not None
+        ]
+    )
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
-    tx = await client.get_transaction(transaction_id=tx.name)
-    assert tx.confirmed
+    for tx_json in resp_client["transactions"]:
+        tx = TransactionRecord.from_json_dict_convenience(tx_json)
+        tx = await client.get_transaction(transaction_id=tx.name)
+        assert tx.confirmed
 
 
 @pytest.mark.anyio
@@ -416,11 +427,15 @@ async def test_get_balance(wallet_rpc_environment: WalletRpcTestEnvironment):
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_rpc_client = env.wallet_1.rpc_client
     await full_node_api.farm_blocks_to_wallet(2, wallet)
-    async with wallet_node.wallet_state_manager.lock:
-        cat_wallet, tx_records = await CATWallet.create_new_cat_wallet(
-            wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100), DEFAULT_TX_CONFIG
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            wallet_node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(100),
+            action_scope,
         )
-    await full_node_api.wait_transaction_records_entered_mempool(tx_records)
+    await full_node_api.wait_transaction_records_entered_mempool(action_scope.side_effects.transactions)
     await full_node_api.wait_for_wallet_synced(wallet_node)
     await assert_get_balance(wallet_rpc_client, wallet_node, wallet)
     await assert_get_balance(wallet_rpc_client, wallet_node, cat_wallet)
@@ -461,16 +476,16 @@ async def test_get_farmed_amount_with_fee(wallet_rpc_environment: WalletRpcTestE
     await generate_funds(full_node_api, env.wallet_1)
 
     fee_amount = 100
-    [tx] = await wallet.generate_signed_transaction(
-        amount=uint64(5),
-        puzzle_hash=bytes32([0] * 32),
-        tx_config=DEFAULT_TX_CONFIG,
-        fee=uint64(fee_amount),
-    )
-    [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await wallet.generate_signed_transaction(
+            amount=uint64(5),
+            puzzle_hash=bytes32([0] * 32),
+            action_scope=action_scope,
+            fee=uint64(fee_amount),
+        )
 
     our_ph = await wallet.get_new_puzzlehash()
-    await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+    await full_node_api.wait_transaction_records_entered_mempool(records=action_scope.side_effects.transactions)
     await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
@@ -555,7 +570,7 @@ async def test_create_signed_transaction(
         )
         assert len(selected_coin) == 1
 
-    tx = (
+    txs = (
         await wallet_1_rpc.create_signed_transactions(
             outputs,
             coins=selected_coin,
@@ -567,12 +582,12 @@ async def test_create_signed_transaction(
             ),
             push=True,
         )
-    ).signed_tx
+    ).transactions
     change_expected = not selected_coin or selected_coin[0].amount - amount_total > 0
-    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
+    assert_tx_amounts(txs[-1], outputs, amount_fee=amount_fee, change_expected=change_expected, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
-    spend_bundle = tx.spend_bundle
+    spend_bundle = txs[0].spend_bundle
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
     await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, wallet_id)
@@ -1094,20 +1109,19 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
             ["the cat memo"],
         )
     tx_res = await client.cat_spend(cat_0_id, DEFAULT_TX_CONFIG, uint64(4), addr_1, uint64(0), ["the cat memo"])
-    assert tx_res.transaction.wallet_id == cat_0_id
+
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
-    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
+    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal).mod == CAT_MOD
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     await farm_transaction_block(full_node_api, wallet_node)
 
     # Test CAT spend with a fee
     tx_res = await client.cat_spend(cat_0_id, DEFAULT_TX_CONFIG, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"])
-    assert tx_res.transaction.wallet_id == cat_0_id
+
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
-    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Test CAT spend with a fee and pre-specified removals / coins
@@ -1117,11 +1131,10 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     tx_res = await client.cat_spend(
         cat_0_id, DEFAULT_TX_CONFIG, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"], removals=removals
     )
-    assert tx_res.transaction.wallet_id == cat_0_id
+
     spend_bundle = tx_res.transaction.spend_bundle
     assert spend_bundle is not None
-    assert removals[0] in tx_res.transaction.removals
-    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
+    assert removals[0] in {removal for tx in tx_res.transactions for removal in tx.removals}
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Test unacknowledged CAT
@@ -1494,8 +1507,6 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     with pytest.raises(ValueError, match="wallet id 1 is of type Wallet but type DIDWallet is required"):
         await wallet_1_rpc.update_did_metadata(wallet_1_id, {"Twitter": "Https://test"}, DEFAULT_TX_CONFIG)
     await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"}, DEFAULT_TX_CONFIG)
-
-    await farm_transaction_block(full_node_api, wallet_1_node)
 
     res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
     assert res["metadata"]["Twitter"] == "Https://test"

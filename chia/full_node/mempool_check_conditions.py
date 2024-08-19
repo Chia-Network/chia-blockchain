@@ -3,16 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional
 
-from chia_rs import (
-    AGG_SIG_ARGS,
-    ALLOW_BACKREFS,
-    DISALLOW_INFINITY_G1,
-    ENABLE_BLS_OPS_OUTSIDE_GUARD,
-    ENABLE_FIXED_DIV,
-    ENABLE_MESSAGE_CONDITIONS,
-    ENABLE_SOFTFORK_CONDITION,
-    MEMPOOL_MODE,
-)
+from chia_rs import MEMPOOL_MODE, get_flags_for_height_and_constants
 from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_block_generator2, run_chia_program
 
@@ -37,18 +28,6 @@ DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
 )
 
 log = logging.getLogger(__name__)
-
-
-def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = ENABLE_SOFTFORK_CONDITION | ENABLE_BLS_OPS_OUTSIDE_GUARD | ENABLE_FIXED_DIV | AGG_SIG_ARGS | ALLOW_BACKREFS
-
-    if height >= constants.SOFT_FORK4_HEIGHT:
-        flags = flags | ENABLE_MESSAGE_CONDITIONS
-
-    if height >= constants.SOFT_FORK5_HEIGHT:
-        flags = flags | DISALLOW_INFINITY_G1
-
-    return flags
 
 
 def get_name_puzzle_conditions(

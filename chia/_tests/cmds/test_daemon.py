@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -9,7 +10,7 @@ from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
 from chia.cmds.chia import cli
-from chia.cmds.start_funcs import create_start_daemon_connection
+from chia.cmds.start_funcs import create_start_daemon_connection, launch_start_daemon
 
 
 @pytest.mark.anyio
@@ -50,6 +51,20 @@ async def test_daemon(
         assert captured.out.endswith("Skipping to unlock keyring\n")
     else:
         assert not captured.out.endswith("Skipping to unlock keyring\n")
+
+
+@pytest.mark.anyio
+def test_launch_start_daemon(tmp_path: Path) -> None:
+    sys.argv[0] = "not-exist"
+    with pytest.raises(FileNotFoundError):
+        launch_start_daemon(tmp_path)
+
+    helper: Path = Path(sys.executable)
+    sys.argv[0] = str(helper.parent) + "/chia"
+    process = launch_start_daemon(tmp_path)
+    assert process is not None
+    process.kill()
+    process.wait()
 
 
 def test_start_daemon(tmp_path: Path, empty_keyring: Any, mocker: MockerFixture) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections
 import logging
 from dataclasses import dataclass, field
-from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, Union
 
 from chia_rs import AugSchemeMPL, BLSCache, G1Element
 from chiabip158 import PyBIP158
@@ -11,19 +11,14 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.block_root_validation import validate_block_merkle_roots
-from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
-from chia.full_node.block_store import BlockStore
-from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
-from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
@@ -126,15 +121,12 @@ class ForkInfo:
 
 async def validate_block_body(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
-    block_store: BlockStore,
-    coin_store: CoinStore,
-    peak: Optional[BlockRecord],
+    get_block_record_from_db: Callable[[bytes32], Awaitable[Optional[BlockRecord]]],
+    get_coin_records: Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]],
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
     npc_result: Optional[NPCResult],
     fork_info: ForkInfo,
-    get_block_generator: Callable[[BlockInfo], Awaitable[Optional[BlockGenerator]]],
     bls_cache: Optional[BLSCache],
     *,
     validate_signature: bool = True,
@@ -166,10 +158,10 @@ async def validate_block_body(
         ):
             return Err.NOT_BLOCK_BUT_HAS_DATA, None
 
-        prev_tb: Optional[BlockRecord] = await blocks.get_block_record_from_db(block.prev_header_hash)
+        prev_tb: Optional[BlockRecord] = await get_block_record_from_db(block.prev_header_hash)
         assert prev_tb is not None
         while not prev_tb.is_transaction_block:
-            prev_tb = await blocks.get_block_record_from_db(prev_tb.prev_hash)
+            prev_tb = await get_block_record_from_db(prev_tb.prev_hash)
             assert prev_tb is not None
         assert prev_tb.timestamp is not None
         if len(block.transactions_generator_ref_list) > 0:
@@ -200,7 +192,7 @@ async def validate_block_body(
     # If height == 0, expected_reward_coins will be left empty
     if height > 0:
         # Add reward claims for all blocks from the prev prev block, until the prev block (including the latter)
-        prev_transaction_block = await blocks.get_block_record_from_db(
+        prev_transaction_block = await get_block_record_from_db(
             block.foliage_transaction_block.prev_transaction_block_hash
         )
         assert prev_transaction_block is not None
@@ -226,7 +218,7 @@ async def validate_block_body(
 
         # For the second block in the chain, don't go back further
         if prev_transaction_block.height > 0:
-            curr_b = await blocks.get_block_record_from_db(prev_transaction_block.prev_hash)
+            curr_b = await get_block_record_from_db(prev_transaction_block.prev_hash)
             assert curr_b is not None
             while not curr_b.is_transaction_block:
                 expected_reward_coins.add(
@@ -245,7 +237,7 @@ async def validate_block_body(
                         constants.GENESIS_CHALLENGE,
                     )
                 )
-                curr_b = await blocks.get_block_record_from_db(curr_b.prev_hash)
+                curr_b = await get_block_record_from_db(curr_b.prev_hash)
                 assert curr_b is not None
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
@@ -411,7 +403,7 @@ async def validate_block_body(
                 return Err.DOUBLE_SPEND_IN_FORK, None
             removals_from_db.append(rem)
 
-    unspent_records = await coin_store.get_coin_records(removals_from_db)
+    unspent_records = await get_coin_records(removals_from_db)
 
     # some coin spends we need to ensure exist in the fork branch. Both coins we
     # can't find in the DB, but also coins that were spent after the fork point

@@ -131,7 +131,7 @@ def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]
 async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
     assert receiver.current_sync().state == sync_step.state
     last_sync_time_before = receiver._last_sync.time_done
-    # For the the list types invoke the trigger function in batches
+    # For the list types invoke the trigger function in batches
     if sync_step.payload_type == PlotSyncPlotList or sync_step.payload_type == PlotSyncPathList:
         step_data, _ = sync_step.args
         assert len(step_data) == 10

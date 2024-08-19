@@ -24,8 +24,8 @@ Timelord uses to run the VDF and prove the Proof of Time is `vdf_client` and
 `vdf_bench` is a utility to get a sense of a given CPU's iterations per second.
 
 - To build vdf_client set the environment variable BUILD_VDF_CLIENT to "Y".
-`export BUILD_VDF_CLIENT=Y`.
+  `export BUILD_VDF_CLIENT=Y`.
 - Similarly, to build vdf_bench set the environment variable BUILD_VDF_BENCH
-to "Y". `export BUILD_VDF_BENCH=Y`.
+  to "Y". `export BUILD_VDF_BENCH=Y`.
 
 Building and running Timelords in Windows x86-64 is not yet supported.

@@ -252,7 +252,7 @@ def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[Type[ChiaC
                 kw_only=True,
             )(cls)
 
-        cmd.command(name, help=help)(_convert_class_to_function(wrapped_cls))
+        cmd.command(name, short_help=help)(_convert_class_to_function(wrapped_cls))
         return wrapped_cls
 
     return _chia_command
