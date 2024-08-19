@@ -427,15 +427,12 @@ class Blockchain(BlockchainInterface):
 
         error_code, _ = await validate_block_body(
             self.constants,
-            self,
-            self.block_store,
-            self.coin_store,
-            self.get_peak(),
+            self.get_block_record_from_db,
+            self.coin_store.get_coin_records,
             block,
             block.height,
             npc_result,
             fork_info,
-            self.get_block_generator,
             bls_cache,
             # If we did not already validate the signature, validate it now
             validate_signature=not pre_validation_result.validated_signature,
@@ -779,15 +776,12 @@ class Blockchain(BlockchainInterface):
 
         error_code, cost_result = await validate_block_body(
             self.constants,
-            self,
-            self.block_store,
-            self.coin_store,
-            self.get_peak(),
+            self.get_block_record_from_db,
+            self.coin_store.get_coin_records,
             block,
             uint32(prev_height + 1),
             npc_result,
             fork_info,
-            self.get_block_generator,
             None,
             validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )

@@ -310,7 +310,7 @@ async def join_pool(
         func = functools.partial(
             wallet_client.pw_join_pool,
             wallet_id,
-            bytes32(hexstr_to_bytes(json_dict["target_puzzle_hash"])),
+            bytes32.from_hexstr(json_dict["target_puzzle_hash"]),
             pool_url,
             json_dict["relative_lock_height"],
             fee,

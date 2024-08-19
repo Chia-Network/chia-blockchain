@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from chia.util.ints import uint32
-from chia.util.key_types import Secp256r1PrivateKey, Secp256r1PublicKey
+from chia.util.key_types import Secp256r1PrivateKey, Secp256r1PublicKey, Secp256r1Signature
 from chia.util.keychain import generate_mnemonic, mnemonic_to_seed
 
 
@@ -23,3 +23,10 @@ def test_key_drivers() -> None:
     pk = sk.public_key()
     assert Secp256r1PublicKey.from_bytes(bytes(pk)) == pk
     assert pk.get_fingerprint() < uint32.MAXIMUM
+    with pytest.raises(NotImplementedError):
+        pk.derive_unhardened(1)
+
+    sig = sk.sign(b"foo")
+    assert Secp256r1Signature.from_bytes(bytes(sig)) == sig
+    with pytest.raises(NotImplementedError):
+        sk.sign(b"foo", final_pk=pk)
