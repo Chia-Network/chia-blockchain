@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Type, TypeVar, dataclass_transform
+from typing import Any, Dict, List, Optional, Type, TypeVar
+
+from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
