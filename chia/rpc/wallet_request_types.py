@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from typing_extensions import dataclass_transform
@@ -123,10 +123,10 @@ class TransactionEndpointResponse(Streamable):
 @streamable
 @kw_only_dataclass
 class SplitCoins(TransactionEndpointRequest):
-    wallet_id: uint32
-    number_of_coins: uint16
-    amount_per_coin: uint64
-    target_coin_id: bytes32
+    wallet_id: uint32 = field(default_factory=default_raise)
+    number_of_coins: uint16 = field(default_factory=default_raise)
+    amount_per_coin: uint64 = field(default_factory=default_raise)
+    target_coin_id: bytes32 = field(default_factory=default_raise)
 
 
 @streamable
