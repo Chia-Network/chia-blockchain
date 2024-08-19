@@ -74,6 +74,8 @@ jobs:
           fetch-depth: 0
 
       - uses: chia-network/actions/cache-pip@main
+        with:
+          mode: poetry
 
       - name: Checkout test blocks and plots
         uses: actions/checkout@v4

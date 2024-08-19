@@ -175,6 +175,8 @@ jobs:
             ${{ runner.os }}-node-
 
       - uses: chia-network/actions/cache-pip@main
+        with:
+          mode: poetry
 
       - name: Cache test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots
