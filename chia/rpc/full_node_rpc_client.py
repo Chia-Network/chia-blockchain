@@ -12,7 +12,6 @@ from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
 
 
@@ -235,13 +234,13 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
         response = await self.fetch("get_all_mempool_tx_ids", {})
-        return [bytes32(hexstr_to_bytes(tx_id_hex)) for tx_id_hex in response["tx_ids"]]
+        return [bytes32.from_hexstr(tx_id_hex) for tx_id_hex in response["tx_ids"]]
 
     async def get_all_mempool_items(self) -> Dict[bytes32, Dict[str, Any]]:
         response = await self.fetch("get_all_mempool_items", {})
         converted: Dict[bytes32, Dict[str, Any]] = {}
         for tx_id_hex, item in response["mempool_items"].items():
-            converted[bytes32(hexstr_to_bytes(tx_id_hex))] = item
+            converted[bytes32.from_hexstr(tx_id_hex)] = item
         return converted
 
     async def get_mempool_item_by_tx_id(
