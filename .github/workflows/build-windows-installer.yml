@@ -356,4 +356,4 @@ jobs:
 
       - name: Run chia dev installers test
         run: |
-          & ($env:INSTALL_PATH + "/resources/app.asar.unpacked/daemon/chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}" --gui-command ($env:INSTALL_PATH + "\Chia.exe")
+          & ($env:INSTALL_PATH + "/resources/app.asar.unpacked/daemon/chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}" --gui-command ($env:INSTALL_PATH + "/Chia.exe")
