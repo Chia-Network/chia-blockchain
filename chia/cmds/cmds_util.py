@@ -25,9 +25,10 @@ from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError, InvalidPathError
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint64
 from chia.util.keychain import KeyData
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
 
@@ -312,6 +313,14 @@ def tx_config_args(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def timelock_args(func: Callable[..., None]) -> Callable[..., None]:
+    def _convert_timelock_args_to_cvt(*args: Any, **kwargs: Any) -> None:
+        func(
+            condition_valid_times=ConditionValidTimes(
+                min_time=uint64.construct_optional(kwargs["valid_at"]),
+                max_time=uint64.construct_optional(kwargs["expires_at"]),
+            )
+        )
+
     return click.option(
         "--valid-at",
         help="UNIX timestamp at which the associated transactions become valid",
@@ -325,7 +334,7 @@ def timelock_args(func: Callable[..., None]) -> Callable[..., None]:
             type=int,
             required=False,
             default=None,
-        )(func)
+        )(_convert_timelock_args_to_cvt)
     )
 
 
