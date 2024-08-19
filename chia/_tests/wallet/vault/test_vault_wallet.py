@@ -14,7 +14,6 @@ from chia.rpc.wallet_request_types import VaultCreate, VaultRecovery
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.payment import Payment
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vault.vault_info import VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.vault.vault_wallet import Vault
@@ -122,7 +121,7 @@ async def test_vault_creation(
     funding_wallet = wallet_environments.environments[1].xch_wallet
     for _ in range(coins_to_create):
         async with funding_wallet.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=True, sign=True
+            wallet_environments.tx_config, push=True, sign=True
         ) as action_scope:
             await funding_wallet.generate_signed_transaction(
                 funding_amount,
@@ -160,7 +159,9 @@ async def test_vault_creation(
     fee = uint64(100)
     balance_delta = 500000000 + 510000000 + amount + fee
 
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True, sign=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True, sign=True
+    ) as action_scope:
         await wallet.generate_signed_transaction(
             amount, recipient_ph, action_scope, primaries=primaries, fee=fee, memos=[recipient_ph]
         )
@@ -236,7 +237,7 @@ async def test_vault_recovery(
     funding_amount = uint64(1000000000)
     funding_wallet = wallet_environments.environments[1].xch_wallet
     await wallet_environments.environments[1].rpc_client.send_transaction(
-        funding_wallet.id(), funding_amount, p2_addr, DEFAULT_TX_CONFIG
+        funding_wallet.id(), funding_amount, p2_addr, wallet_environments.tx_config
     )
 
     await wallet_environments.process_pending_states(
@@ -263,7 +264,7 @@ async def test_vault_recovery(
         amount = uint64(10000)
         recipient_ph = await funding_wallet.get_new_puzzlehash()
         async with wallet.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=False, sign=False
+            wallet_environments.tx_config, push=False, sign=False
         ) as action_scope:
             await wallet.generate_signed_transaction(amount, recipient_ph, action_scope, memos=[recipient_ph])
 
@@ -360,7 +361,9 @@ async def test_vault_recovery(
     recipient_ph = await funding_wallet.get_new_puzzlehash()
     amount = uint64(200)
 
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False, sign=False) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False, sign=False
+    ) as action_scope:
         await wallet.generate_signed_transaction(amount, recipient_ph, action_scope, memos=[recipient_ph])
 
     # Test we can push the transaction separately

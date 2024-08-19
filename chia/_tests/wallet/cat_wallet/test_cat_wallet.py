@@ -32,7 +32,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_pk_to_wallet_pk_unhardened
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.wallet_info import WalletInfo
@@ -198,7 +198,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
         "cat": 2,
     }
 
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
@@ -261,7 +261,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-    async with cat_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with cat_wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], action_scope, fee=uint64(1))
     tx_id = None
     for tx_record in action_scope.side_effects.transactions:
@@ -347,7 +349,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
         ]
     )
 
-    coins = await cat_wallet_2.select_coins(uint64(60), DEFAULT_COIN_SELECTION_CONFIG)
+    coins = await cat_wallet_2.select_coins(uint64(60), wallet_environments.tx_config.coin_selection_config)
     assert len(coins) == 1
     coin = coins.pop()
     tx_id = coin.name().hex()
@@ -355,7 +357,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     assert len(memos[tx_id]) == 2
     assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
     cat_hash = await cat_wallet.get_new_inner_hash()
-    async with cat_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with cat_wallet_2.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], action_scope)
 
     await wallet_environments.process_pending_states(
