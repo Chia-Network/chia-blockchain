@@ -533,7 +533,6 @@ class Keychain:
         for key_data in self._iterate_through_key_datas(include_secrets=include_secrets, skip_public_only=False):
             if key_data.observation_root.get_fingerprint() == fingerprint:
                 return key_data
-
         raise KeychainFingerprintNotFound(fingerprint)
 
     def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
