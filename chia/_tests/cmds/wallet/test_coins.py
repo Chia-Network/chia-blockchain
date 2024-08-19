@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from chia_rs import Coin
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
-from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, get_bytes32
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.util.ints import uint32, uint64
+from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
+from chia.rpc.wallet_request_types import SplitCoins, SplitCoinsResponse
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
 
 # Coin Commands
@@ -168,23 +167,13 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
 
     # set RPC Client
     class CoinsSplitRpcClient(TestWalletRpcClient):
-        async def get_coin_records_by_names(
+        async def split_coins(
             self,
-            names: List[bytes32],
-            include_spent_coins: bool = True,
-            start_height: Optional[int] = None,
-            end_height: Optional[int] = None,
-        ) -> List[CoinRecord]:
-            self.add_to_log("get_coin_records_by_names", (names, include_spent_coins, start_height, end_height))
-            return [
-                CoinRecord(
-                    Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000)),
-                    uint32(123456),
-                    uint32(0),
-                    False,
-                    uint64(0),
-                ),
-            ]
+            args: SplitCoins,
+            tx_config: TXConfig,
+        ) -> SplitCoinsResponse:
+            self.add_to_log("split_coins", (args, tx_config))
+            return SplitCoinsResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = CoinsSplitRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -202,23 +191,24 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     ]
     # these are various things that should be in the output
     assert_list = [
-        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{get_bytes32(2).hex()}",
+        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{STD_TX.name.hex()}",
         "WARNING: The amount per coin: 1E-7 is less than the dust threshold: 1e-06.",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_wallets": [(None,)],
         "get_synced": [()],
-        "get_coin_records_by_names": [([target_coin_id], True, None, None)],
-        "get_next_address": [(1, True) for i in range(10)],
-        "send_transaction_multi": [
+        "split_coins": [
             (
-                1,
-                [{"amount": 100000, "puzzle_hash": bytes32([i] * 32)} for i in range(10)],
+                SplitCoins(
+                    wallet_id=uint32(1),
+                    number_of_coins=uint16(10),
+                    amount_per_coin=uint64(100_000),
+                    target_coin_id=target_coin_id,
+                    fee=uint64(1_000_000_000),
+                    push=True,
+                ),
                 DEFAULT_TX_CONFIG,
-                [Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000))],
-                1000000000,
-                True,
             )
         ],
     }
