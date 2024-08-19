@@ -13,7 +13,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
-from chia.types.spend_bundle_conditions import Spend
+from chia.types.spend_bundle_conditions import SpendConditions
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm, load_serialized_clvm_maybe_recompile
 
@@ -139,7 +139,7 @@ class TestROM:
         )
         assert npc_result.conds is not None
 
-        spend = Spend(
+        spend = SpendConditions(
             coin_id=bytes32.fromhex("e8538c2d14f2a7defae65c5c97f5d4fae7ee64acef7fec9d28ad847a0880fd03"),
             parent_id=bytes32.fromhex("0000000000000000000000000000000000000000000000000000000000000000"),
             puzzle_hash=bytes32.fromhex("9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2"),
