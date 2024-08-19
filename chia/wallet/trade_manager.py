@@ -186,7 +186,7 @@ class TradeManager:
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
         # If any of our settlement_payments were spent, this offer was a success!
         if set(our_addition_ids) == set(coin_state_names):
-            height = coin_states[0].created_height
+            height = coin_state.spent_height
             assert height is not None
             await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, index=height)
             tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(offer, False)
