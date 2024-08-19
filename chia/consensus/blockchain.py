@@ -799,14 +799,21 @@ class Blockchain(BlockchainInterface):
         self,
         blocks: List[FullBlock],
         npc_results: Dict[uint32, NPCResult],  # A cache of the result of running CLVM, optional (you can use {})
-        sub_slot_iters: uint64,
-        difficulty: uint64,
+        sub_slot_iters: Optional[uint64] = None,
+        difficulty: Optional[uint64] = None,
         prev_ses_block: Optional[BlockRecord] = None,
         batch_size: int = 4,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
         validate_signatures: bool,
     ) -> List[PreValidationResult]:
+        if difficulty is None or sub_slot_iters is None:
+            block = blocks[0]
+            prev_b = await self.get_block_record_from_db(block.prev_header_hash)
+            sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+                self.constants, len(block.finished_sub_slots) > 0, prev_b, self
+            )
+
         return await pre_validate_blocks_multiprocessing(
             self.constants,
             self,
