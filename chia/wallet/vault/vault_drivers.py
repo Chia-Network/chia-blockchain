@@ -128,6 +128,13 @@ def match_vault_puzzle(mod: Program, curried_args: Program) -> bool:
     return False
 
 
+def match_p2_delegated_secp(mod: Program, curried_args: Program) -> bool:
+    if mod == P2_DELEGATED_SECP_MOD:
+        return True
+    else:
+        return False
+
+
 def match_recovery_puzzle(mod: Program, curried_args: Program, solution: Program) -> bool:
     if match_vault_puzzle(mod, curried_args):
         try:
