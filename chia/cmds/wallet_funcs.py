@@ -1352,7 +1352,9 @@ async def set_nft_did(
     nft_coin_id: str,
     did_id: str,
     reuse_puzhash: Optional[bool],
-) -> None:
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.set_nft_did(
@@ -1363,11 +1365,15 @@ async def set_nft_did(
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
+                push=push,
+                timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()
             print(f"Transaction to set DID on NFT has been initiated with: {spend_bundle}")
+            return response.transactions
         except Exception as e:
             print(f"Failed to set DID on NFT: {e}")
+            return []
 
 
 async def get_nft_info(wallet_rpc_port: Optional[int], fp: Optional[int], nft_coin_id: str) -> None:

@@ -23,7 +23,7 @@ from chia.rpc.wallet_request_types import (
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.conditions import parse_timelock_info
+from chia.wallet.conditions import ConditionValidTimes, parse_timelock_info
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
@@ -49,6 +49,7 @@ def test_dao_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             fee: uint64 = uint64(0),
             fee_for_cat: uint64 = uint64(0),
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CreateNewDAOWalletResponse:
             if not treasury_id:
                 treasury_id = bytes32(token_bytes(32))
@@ -142,6 +143,7 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DAOAddFundsToTreasuryResponse:
             return DAOAddFundsToTreasuryResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
@@ -281,6 +283,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             is_yes_vote: bool,
             fee: uint64 = uint64(0),
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DAOVoteOnProposalResponse:
             return DAOVoteOnProposalResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
@@ -293,6 +296,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             self_destruct: bool = False,
             reuse_puzhash: Optional[bool] = None,
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DAOCloseProposalResponse:
             return DAOCloseProposalResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
@@ -311,6 +315,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DAOCreateProposalResponse:
             return DAOCreateProposalResponse([STD_UTX], [STD_TX], bytes32([0] * 32), STD_TX.name, STD_TX)
 
@@ -495,6 +500,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DAOSendToLockupResponse:
             return DAOSendToLockupResponse([STD_UTX], [STD_TX], STD_TX.name, [STD_TX])
 
@@ -505,6 +511,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DAOFreeCoinsFromFinishedProposalsResponse:
             return DAOFreeCoinsFromFinishedProposalsResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
@@ -516,6 +523,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DAOExitLockupResponse:
             return DAOExitLockupResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 

@@ -10,7 +10,10 @@ from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, ge
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
+
+test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
 # Coin Commands
 
@@ -83,6 +86,10 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         "0.2",
         "--exclude-amount",
         "0.3",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     # these are various things that should be in the output
     assert_list = [
@@ -139,6 +146,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
                 ],
                 1000000000,
                 True,
+                test_condition_valid_times,
             ),
             (
                 1,
@@ -157,6 +165,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
                 ],
                 1000000000,
                 True,
+                test_condition_valid_times,
             ),
         ],
     }
@@ -199,6 +208,10 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         "-n10",
         "-a0.0000001",
         f"-t{target_coin_id.hex()}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     # these are various things that should be in the output
     assert_list = [
@@ -219,6 +232,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
                 [Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000))],
                 1000000000,
                 True,
+                test_condition_valid_times,
             )
         ],
     }

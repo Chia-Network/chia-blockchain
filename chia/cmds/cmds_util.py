@@ -315,10 +315,12 @@ def tx_config_args(func: Callable[..., None]) -> Callable[..., None]:
 def timelock_args(func: Callable[..., None]) -> Callable[..., None]:
     def _convert_timelock_args_to_cvt(*args: Any, **kwargs: Any) -> None:
         func(
+            *args,
             condition_valid_times=ConditionValidTimes(
                 min_time=uint64.construct_optional(kwargs["valid_at"]),
                 max_time=uint64.construct_optional(kwargs["expires_at"]),
-            )
+            ),
+            **{k: v for k, v in kwargs.items() if k not in ("valid_at", "expires_at")},
         )
 
     return click.option(

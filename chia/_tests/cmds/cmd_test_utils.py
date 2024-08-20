@@ -255,8 +255,9 @@ class TestWalletRpcClient(TestRpcClient):
         coins: Optional[List[Coin]] = None,
         fee: uint64 = uint64(0),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> SendTransactionMultiResponse:
-        self.add_to_log("send_transaction_multi", (wallet_id, additions, tx_config, coins, fee, push))
+        self.add_to_log("send_transaction_multi", (wallet_id, additions, tx_config, coins, fee, push, timelock_info))
         name = bytes32([2] * 32)
         return SendTransactionMultiResponse(
             [STD_UTX],

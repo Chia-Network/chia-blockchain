@@ -1285,6 +1285,7 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, num:
     is_flag=True,
     default=False,
 )
+@tx_out_cmd
 def nft_set_did_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1293,10 +1294,12 @@ def nft_set_did_cmd(
     nft_coin_id: str,
     fee: uint64,
     reuse: bool,
-) -> None:
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+) -> List[TransactionRecord]:
     from .wallet_funcs import set_nft_did
 
-    asyncio.run(
+    return asyncio.run(
         set_nft_did(
             wallet_rpc_port=wallet_rpc_port,
             fp=fingerprint,
@@ -1305,6 +1308,8 @@ def nft_set_did_cmd(
             nft_coin_id=nft_coin_id,
             did_id=did_id,
             reuse_puzhash=True if reuse else None,
+            push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
