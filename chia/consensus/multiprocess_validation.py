@@ -57,11 +57,16 @@ def batch_pre_validate_blocks(
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
+    prev_ses_block_bytes: Optional[bytes] = None,
 ) -> List[bytes]:
     blocks: Dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
         blocks[bytes32(k)] = BlockRecord.from_bytes_unchecked(v)
     results: List[PreValidationResult] = []
+
+    prev_ses_block = None
+    if prev_ses_block_bytes is not None:
+        prev_ses_block = BlockRecord.from_bytes_unchecked(prev_ses_block_bytes)
 
     # In this case, we are validating full blocks, not headers
     for i in range(len(full_blocks_pickled)):
@@ -110,7 +115,7 @@ def batch_pre_validate_blocks(
                 check_filter,
                 expected_difficulty[i],
                 expected_sub_slot_iters[i],
-                check_sub_epoch_summary=False,
+                prev_ses_block=prev_ses_block,
             )
             error_int: Optional[uint16] = None
             if error is not None:
@@ -209,7 +214,6 @@ async def pre_validate_blocks_multiprocessing(
             curr.sub_epoch_summary_included is None
             or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
             or num_sub_slots_found < num_sub_slots_to_look_for
-            or num_blocks_seen < 3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
         ) and curr.height > 0:
             if curr.first_in_sub_slot:
                 assert curr.finished_challenge_slot_hashes is not None
@@ -223,12 +227,6 @@ async def pre_validate_blocks_multiprocessing(
             assert curr is not None
         block_records.add_block_record(curr)
         recent_blocks[header_hash] = curr
-    block_record_was_present = []
-    block_hashes: List[bytes32] = []
-    for block in blocks:
-        header_hash = block.header_hash
-        block_hashes.append(header_hash)
-        block_record_was_present.append(block_records.contains_block(header_hash))
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
@@ -281,7 +279,6 @@ async def pre_validate_blocks_multiprocessing(
             return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
         if block_rec.sub_epoch_summary_included is not None:
-            prev_ses_block = block_rec
             if wp_summaries is not None:
                 idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
                 next_ses = wp_summaries[idx]
@@ -311,6 +308,7 @@ async def pre_validate_blocks_multiprocessing(
         npc_results_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
+    prev_ses_block_bytes = bytes(prev_ses_block) if prev_ses_block is not None else None
     recent_blocks_bytes = {bytes(k): bytes(v) for k, v in recent_blocks.items()}  # convert to bytes
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
@@ -358,6 +356,7 @@ async def pre_validate_blocks_multiprocessing(
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
                 validate_signatures,
+                prev_ses_block_bytes,
             )
         )
     # Collect all results into one flat list
