@@ -146,7 +146,7 @@ def dao_add_cmd(
     show_default=True,
 )
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_create_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -256,7 +256,7 @@ def dao_get_id_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_add_funds_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -433,7 +433,7 @@ def dao_show_proposal_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_vote_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -506,7 +506,7 @@ def dao_vote_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_close_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -568,7 +568,7 @@ def dao_close_proposal_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_lockup_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -617,7 +617,7 @@ def dao_lockup_coins_cmd(
 @click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_release_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -664,7 +664,7 @@ def dao_release_coins_cmd(
 @click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_exit_lockup_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -760,7 +760,7 @@ def dao_proposal(ctx: click.Context) -> None:
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_create_spend_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -867,7 +867,7 @@ def dao_create_spend_proposal_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_create_update_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -951,7 +951,7 @@ def dao_create_update_proposal_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_create_mint_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,

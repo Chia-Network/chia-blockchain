@@ -151,7 +151,7 @@ def list_cmd(
     default=False,
     help="Sort coins from largest to smallest or smallest to largest.",
 )
-@tx_out_cmd
+@tx_out_cmd()
 def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -214,7 +214,7 @@ def combine_cmd(
     required=True,
 )
 @click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")
-@tx_out_cmd
+@tx_out_cmd()
 def split_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,

@@ -9,7 +9,7 @@ from chia.wallet.conditions import ConditionValidTimes
 
 def test_timelock_args() -> None:
     @click.command()
-    @timelock_args
+    @timelock_args(enable=True)
     def test_cmd(condition_valid_times: ConditionValidTimes) -> None:
         print(condition_valid_times.min_time)
         print(condition_valid_times.max_time)
@@ -49,3 +49,27 @@ def test_timelock_args() -> None:
     )
 
     assert "None\nNone\n" == result.output
+
+    # Test the hidden help
+    @click.command()
+    @timelock_args(enable=False)
+    def test_cmd_disabled(condition_valid_times: ConditionValidTimes) -> None:
+        print(condition_valid_times.min_time)
+        print(condition_valid_times.max_time)
+
+    result = runner.invoke(
+        test_cmd_disabled,
+        [],
+        catch_exceptions=False,
+    )
+
+    assert "None\nNone\n" == result.output
+
+    result = runner.invoke(
+        test_cmd_disabled,
+        ["--help"],
+        catch_exceptions=False,
+    )
+
+    assert "--valid-at" not in result.output
+    assert "--expires-at" not in result.output

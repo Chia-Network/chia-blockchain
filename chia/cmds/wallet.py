@@ -197,7 +197,7 @@ def get_transactions_cmd(
     type=int,
     default=0,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def send_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -316,7 +316,7 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id: int, fingerprint: int, n
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def clawback(
     wallet_rpc_port: Optional[int],
     id: int,
@@ -485,7 +485,7 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: bytes32, token_name:
     default=False,
 )
 @click.option("--override", help="Creates offer without checking for unusual values", is_flag=True, default=False)
-@timelock_args
+@timelock_args(enable=True)
 # This command looks like a good candidate for @tx_out_cmd however, pushing an incomplete tx is nonsensical and
 # we already have a canonical offer file format which the idea of exporting a different transaction conflicts with
 def make_offer_cmd(
@@ -586,7 +586,7 @@ def get_offers_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def take_offer_cmd(
     path_or_hex: str,
     wallet_rpc_port: Optional[int],
@@ -624,7 +624,7 @@ def take_offer_cmd(
 @click.option("-id", "--id", help="The offer ID that you wish to cancel", required=True, type=Bytes32ParamType())
 @click.option("--insecure", help="Don't make an on-chain transaction, simply mark the offer as cancelled", is_flag=True)
 @options.create_fee("The fee to use when cancelling the offer securely, in XCH")
-@tx_out_cmd
+@tx_out_cmd()
 def cancel_offer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -687,7 +687,7 @@ def did_cmd() -> None:
     show_default=True,
 )
 @options.create_fee()
-@tx_out_cmd
+@tx_out_cmd()
 def did_create_wallet_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -804,7 +804,7 @@ def did_get_details_cmd(wallet_rpc_port: Optional[int], fingerprint: int, coin_i
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def did_update_metadata_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -901,7 +901,7 @@ def did_find_lost_cmd(
     type=str,
     required=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def did_message_spend_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -969,7 +969,7 @@ def did_message_spend_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def did_transfer_did(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1084,7 +1084,7 @@ def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: C
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def nft_mint_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1165,7 +1165,7 @@ def nft_mint_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def nft_add_uri_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1218,7 +1218,7 @@ def nft_add_uri_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def nft_transfer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1285,7 +1285,7 @@ def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, num:
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def nft_set_did_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1367,7 +1367,7 @@ def notification_cmd() -> None:
 )
 @click.option("-n", "--message", help="The message of the notification", type=str)
 @options.create_fee()
-@tx_out_cmd
+@tx_out_cmd()
 def send_notification_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1464,7 +1464,7 @@ def vcs_cmd() -> None:  # pragma: no cover
     required=False,
 )
 @options.create_fee("Blockchain fee for mint transaction, in XCH")
-@tx_out_cmd
+@tx_out_cmd()
 def mint_vc_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1546,7 +1546,7 @@ def get_vcs_cmd(
     default=False,
     show_default=True,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def spend_vc_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1647,7 +1647,7 @@ def get_proofs_for_root_cmd(
     default=False,
     show_default=True,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def revoke_vc_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -1708,7 +1708,7 @@ def revoke_vc_cmd(
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def approve_r_cats_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
