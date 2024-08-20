@@ -33,7 +33,7 @@
   (list
     (list
       (if (all key new_url)
-          (if (any (= key "mu") (= key "lu") (= key "u"))
+          (if (any (= key "mu") (= key "lu") (= key "u") (= key "did"))
               (add_url CURRENT_METADATA key new_url)
               CURRENT_METADATA
           )
