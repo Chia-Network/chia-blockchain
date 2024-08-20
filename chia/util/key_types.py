@@ -31,7 +31,8 @@ class Secp256r1PublicKey:
         pk = serialization.load_der_public_key(blob)
         if isinstance(pk, ec.EllipticCurvePublicKey):
             return Secp256r1PublicKey(pk)
-        else:
+        else:  # pragma: no cover
+            # Not sure how to test this, it's really just for mypy sake
             raise ValueError("Could not load EllipticCurvePublicKey provided blob")
 
     def derive_unhardened(self, index: int) -> Secp256r1PublicKey:
@@ -45,6 +46,10 @@ class Secp256r1Signature:
     def __bytes__(self) -> bytes:
         return self._buf
 
+    @classmethod
+    def from_bytes(cls, blob: bytes) -> Secp256r1Signature:
+        return cls(blob)
+
 
 # A wrapper for SigningKey that conforms to the SecretInfo protocol
 @dataclass(frozen=True)
@@ -57,7 +62,7 @@ class Secp256r1PrivateKey:
     def __bytes__(self) -> bytes:
         return self._private_key.private_bytes(
             encoding=serialization.Encoding.DER,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption(),
         )
 
@@ -66,7 +71,8 @@ class Secp256r1PrivateKey:
         sk = serialization.load_der_private_key(blob, password=None)
         if isinstance(sk, ec.EllipticCurvePrivateKey):
             return Secp256r1PrivateKey(sk)
-        else:
+        else:  # pragma: no cover
+            # Not sure how to test this, it's really just for mypy sake
             raise ValueError("Could not load EllipticCurvePrivateKey provided blob")
 
     def public_key(self) -> Secp256r1PublicKey:
@@ -80,7 +86,7 @@ class Secp256r1PrivateKey:
 
     def sign(self, msg: bytes, final_pk: Optional[Secp256r1PublicKey] = None) -> Secp256r1Signature:
         if final_pk is not None:
-            raise ValueError("SECP256r1 does not support signature aggregation")
+            raise NotImplementedError("SECP256r1 does not support signature aggregation")
         der_sig = self._private_key.sign(msg, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
         r, s = decode_dss_signature(der_sig)
         sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")

@@ -1102,6 +1102,9 @@ class FullNode:
         ) -> None:
             fork_info: Optional[ForkInfo] = None
 
+            block_rate = 0
+            block_rate_time = time.monotonic()
+            block_rate_height = -1
             while True:
                 res: Optional[Tuple[WSChiaConnection, List[FullBlock]]] = await inner_batch_queue.get()
                 if res is None:
@@ -1110,6 +1113,9 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
+
+                if block_rate_height == -1:
+                    block_rate_height = start_height
 
                 # in case we're validating a reorg fork (i.e. not extending the
                 # main chain), we need to record the coin set from that fork in
@@ -1142,7 +1148,13 @@ class FullNode:
                 if success is False:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
-                self.log.info(f"Added blocks {start_height} to {end_height}")
+                if end_height - block_rate_height > 100:
+                    now = time.monotonic()
+                    block_rate = int((end_height - block_rate_height) // (now - block_rate_time))
+                    block_rate_time = now
+                    block_rate_height = end_height
+
+                self.log.info(f"Added blocks {start_height} to {end_height} ({block_rate} blocks/s)")
                 peak = self.blockchain.get_peak()
                 if state_change_summary is not None:
                     assert peak is not None

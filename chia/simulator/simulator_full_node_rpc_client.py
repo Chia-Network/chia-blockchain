@@ -7,7 +7,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint128
 
 
@@ -33,7 +32,7 @@ class SimulatorFullNodeRpcClient(FullNodeRpcClient):
 
     async def get_farming_ph(self) -> bytes32:
         result = await self.fetch("get_farming_ph", {})
-        return bytes32(hexstr_to_bytes(result["puzzle_hash"]))
+        return bytes32.from_hexstr(result["puzzle_hash"])
 
     async def get_all_coins(self, include_spent_coins: bool = False) -> List[CoinRecord]:
         json_result = await self.fetch("get_all_coins", {"include_spent_coins": include_spent_coins})
