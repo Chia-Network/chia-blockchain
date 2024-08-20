@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import dataclass, replace
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import importlib_resources
 import pytest
@@ -21,6 +21,7 @@ from chia.util.errors import (
     KeychainSecretsMissing,
 )
 from chia.util.ints import uint32
+from chia.util.key_types import Secp256r1PrivateKey
 from chia.util.keychain import (
     Keychain,
     KeyData,
@@ -33,6 +34,7 @@ from chia.util.keychain import (
     mnemonic_to_seed,
 )
 from chia.util.observation_root import ObservationRoot
+from chia.util.secret_info import SecretInfo
 from chia.wallet.vault.vault_root import VaultRoot
 
 
@@ -522,17 +524,27 @@ async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool)
 
 
 @pytest.mark.parametrize("key_type", [e.value for e in KeyTypes])
-def test_key_type_support(key_type: str) -> None:
+@pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
+def test_key_type_support(key_type: str, key_info: KeyInfo) -> None:
     """
     The purpose of this test is to make sure that whenever KeyTypes is updated, all relevant functionality is
     also updated with it.
     """
     launcher_id = bytes32(b"1" * 32)
     vault_root = VaultRoot(launcher_id)
-    generate_test_key_for_key_type: Dict[str, Tuple[int, bytes, ObservationRoot]] = {
-        KeyTypes.G1_ELEMENT.value: (G1Element().get_fingerprint(), bytes(G1Element()), G1Element()),
-        KeyTypes.VAULT_LAUNCHER.value: (uint32(vault_root.get_fingerprint()), vault_root.launcher_id, vault_root),
+    secp_sk = Secp256r1PrivateKey.from_seed(mnemonic_to_seed(key_info.mnemonic))
+    secp_pk = secp_sk.public_key()
+    generate_test_key_for_key_type: Dict[str, Tuple[int, ObservationRoot, Optional[SecretInfo[Any]]]] = {
+        KeyTypes.G1_ELEMENT.value: (
+            G1Element().get_fingerprint(),
+            G1Element(),
+            key_info.private_key,
+        ),
+        KeyTypes.SECP_256_R1.value: (secp_pk.get_fingerprint(), secp_pk, secp_sk),
+        KeyTypes.VAULT_LAUNCHER.value: (vault_root.get_fingerprint(), vault_root, None),
     }
-    obr_fingerprint, obr_bytes, obr = generate_test_key_for_key_type[key_type]
-    assert KeyData(uint32(obr_fingerprint), obr_bytes, None, None, key_type).observation_root == obr
-    assert KeyTypes.parse_observation_root(obr_bytes, KeyTypes(key_type)) == obr
+    obr_fingerprint, obr, secret_info = generate_test_key_for_key_type[key_type]
+    assert KeyData(uint32(obr_fingerprint), bytes(obr), None, None, key_type).observation_root == obr
+    assert KeyTypes.parse_observation_root(bytes(obr), KeyTypes(key_type)) == obr
+    if secret_info is not None:
+        assert KeyTypes.parse_secret_info(bytes(secret_info), KeyTypes(key_type)) == secret_info
