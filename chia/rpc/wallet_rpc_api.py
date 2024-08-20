@@ -268,6 +268,7 @@ class WalletRpcApi:
             "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
+            "/nft_update_owner_via_metadata": self.nft_update_owner_via_metadata,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
             "/nft_mint_bulk": self.nft_mint_bulk,
             "/nft_set_did_bulk": self.nft_set_did_bulk,
@@ -3157,6 +3158,9 @@ class WalletRpcApi:
             ("sn", uint64(request.get("edition_number", 1))),
             ("st", uint64(request.get("edition_total", 1))),
         ]
+        if "secp_pk" in request:
+            metadata_list.append(("pk", bytes.fromhex(request["secp_pk"])))
+            metadata_list.append(("did", 0))
         if "meta_hash" in request and len(request["meta_hash"]) > 0:
             metadata_list.append(("mh", hexstr_to_bytes(request["meta_hash"])))
         if "license_hash" in request and len(request["license_hash"]) > 0:
@@ -3601,8 +3605,45 @@ class WalletRpcApi:
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
 
         fee = uint64(request.get("fee", 0))
+        signature = 0x00
+        if "signature" in request:
+            signature = bytes.fromhex(request["signature"])
+    
         await nft_wallet.update_metadata(
-            nft_coin_info, key, uri, action_scope, fee=fee, extra_conditions=extra_conditions
+            nft_coin_info, key, uri, action_scope, signature=signature, fee=fee, extra_conditions=extra_conditions
+        )
+        return {
+            "wallet_id": wallet_id,
+            "success": True,
+            "spend_bundle": None,  # tx_endpoint wrapper will take care of this
+            "transactions": None,  # tx_endpoint wrapper will take care of this
+        }
+    
+    # This function is the experimental extension of update_metadata() to add in a new "owner"
+    # It could probably be merged with the above nft_add_uri() function
+    @tx_endpoint(push=True)
+    async def nft_update_owner_via_metadata(
+        self,
+        request: Dict[str, Any],
+        action_scope: WalletActionScope,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+    ) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
+        uri = request["new_owner"]  # set this to be the new owner's DID
+        key = "did"
+        signature = bytes.fromhex(request["signature"])
+
+        nft_coin_id = request["nft_coin_id"]
+        if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
+            nft_coin_id = decode_puzzle_hash(nft_coin_id)
+        else:
+            nft_coin_id = bytes32.from_hexstr(nft_coin_id)
+        nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+
+        fee = uint64(request.get("fee", 0))
+        await nft_wallet.update_metadata(
+            nft_coin_info, key, uri, action_scope, signature=signature, fee=fee, extra_conditions=extra_conditions
         )
         return {
             "wallet_id": wallet_id,

@@ -444,6 +444,7 @@ class NFTWallet:
         key: str,
         uri: str,
         action_scope: WalletActionScope,
+        signature: bytes = 0x00,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> None:
@@ -462,7 +463,7 @@ class NFTWallet:
             action_scope,
             fee,
             {nft_coin_info.coin},
-            metadata_update=(key, uri),
+            metadata_update=[key, uri, signature],
             extra_conditions=extra_conditions,
         )
         await self.update_coin_status(nft_coin_info.coin.name(), True)
@@ -581,7 +582,7 @@ class NFTWallet:
         new_did_inner_hash: Optional[bytes] = kwargs.get("new_did_inner_hash", None)
         trade_prices_list: Optional[Program] = kwargs.get("trade_prices_list", None)
         additional_bundles: List[SpendBundle] = kwargs.get("additional_bundles", [])
-        metadata_update: Optional[Tuple[str, str]] = kwargs.get("metadata_update", None)
+        metadata_update: Optional[List[str, str, bytes]] = kwargs.get("metadata_update", None)
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
 
@@ -647,7 +648,7 @@ class NFTWallet:
         new_owner: Optional[bytes] = None,
         new_did_inner_hash: Optional[bytes] = None,
         trade_prices_list: Optional[Program] = None,
-        metadata_update: Optional[Tuple[str, str]] = None,
+        metadata_update: Optional[List[str, str, bytes]] = None,
         nft_coin: Optional[NFTCoinInfo] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> SpendBundle:

@@ -36,6 +36,13 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
 
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+
+
 
 async def get_nft_count(wallet: NFTWallet) -> int:
     return await wallet.get_nft_count()
@@ -704,6 +711,184 @@ async def test_nft_wallet_rpc_update_metadata(
     nft_coin_id = coin["nft_coin_id"]
     tr1 = await api_0.nft_add_uri(
         {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://data", "key": "u"}
+    )
+
+    assert isinstance(tr1, dict)
+    assert tr1.get("success")
+    sb = tr1["spend_bundle"]
+    transactions = [TransactionRecord.from_json_dict_convenience(tx) for tx in tr1["transactions"]]
+    await full_node_api.process_transaction_records(transactions)
+    coins_response = await wait_rpc_state_condition(
+        5,
+        api_0.nft_get_nfts,
+        [dict(wallet_id=nft_wallet_0_id)],
+        lambda x: x["nft_list"] and len(x["nft_list"][0].data_uris) == 2,
+    )
+    coins = coins_response["nft_list"]
+    assert len(coins) == 1
+    coin = coins[0].to_json_dict()
+    assert coin["mint_height"] > 0
+    uris = coin["data_uris"]
+    assert len(uris) == 2
+    assert len(coin["metadata_uris"]) == 1
+    assert "http://data" == coin["data_uris"][0]
+
+
+
+@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.anyio
+async def test_nft_wallet_rpc_change_owner(
+    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool
+) -> None:
+    num_blocks = 3
+    full_nodes, wallets, _ = two_wallet_nodes
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, server_0 = wallets[0]
+    wallet_node_1, server_1 = wallets[1]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+
+    ph = await wallet_0.get_new_puzzlehash()
+    _ = await wallet_1.get_new_puzzlehash()
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_1.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+
+    funds = sum(
+        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
+    )
+
+    await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
+
+    api_0 = WalletRpcApi(wallet_node_0)
+    await time_out_assert(30, wallet_node_0.wallet_state_manager.synced, True)
+    await time_out_assert(30, wallet_node_1.wallet_state_manager.synced, True)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
+
+    nft_wallet_0 = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
+    assert isinstance(nft_wallet_0, dict)
+    assert nft_wallet_0.get("success")
+    nft_wallet_0_id = nft_wallet_0["wallet_id"]
+
+    secret_exponent = 0x1a62c9636d1c9db2e7d564d0c11603bf456aad25aa7b12bdfd762b4e38e7edc6
+
+    private_key = ec.derive_private_key(secret_exponent, ec.SECP256K1(), default_backend())
+    public_key = private_key.public_key()
+    pk = public_key.public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
+
+    # mint NFT
+    resp = await api_0.nft_mint_nft(
+        {
+            "wallet_id": nft_wallet_0_id,
+            "artist_address": ph,
+            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
+            "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
+            "secp_pk": pk.hex(),
+        },
+    )
+
+    assert resp.get("success")
+    sb = resp["spend_bundle"]
+
+    transactions = [TransactionRecord.from_json_dict_convenience(tx) for tx in resp["transactions"]]
+    await full_node_api.process_transaction_records(transactions)
+    coins_response = await wait_rpc_state_condition(
+        5, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: x["nft_list"]
+    )
+    assert coins_response["nft_list"], isinstance(coins_response, dict)
+    assert coins_response.get("success")
+    coins: List[NFTInfo] = coins_response["nft_list"]
+    coin = coins[0].to_json_dict()
+    assert coin["mint_height"] > 0
+    assert coin["data_hash"] == "0xd4584ad463139fa8c0d9f68f4b59f185"
+    assert coin["chain_info"] == disassemble(
+        Program.to(
+            [
+                ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+                ("h", hexstr_to_bytes("0xD4584AD463139FA8C0D9F68F4B59F185")),
+                ("mu", []),
+                ("lu", []),
+                ("sn", uint64(1)),
+                ("st", uint64(1)),
+                ("pk", pk),
+                ("did", 0)
+            ]
+        )
+    )
+    # add another URI using a bech32m nft_coin_id
+    # this must be signed
+    await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
+
+    message = Program.to(["mu", "http://metadata"]).get_tree_hash()
+    der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
+    r, s = decode_dss_signature(der_sig)
+    secp_sig = r.to_bytes(32, byteorder='big') + s.to_bytes(32, byteorder='big')
+    # Verify the signature
+    assert public_key.verify(
+            der_sig,
+            message,
+            ec.ECDSA(hashes.SHA256())
+        )
+    nft_coin_id = encode_puzzle_hash(
+        bytes32.from_hexstr(coin["nft_coin_id"]), AddressType.NFT.hrp(api_0.service.config)
+    )
+    tr1 = await api_0.nft_add_uri(
+        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://metadata", "key": "mu", "signature": secp_sig.hex()},
+    )
+
+    assert tr1.get("success")
+    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+    coins = coins_response["nft_list"]
+    assert coins[0].pending_transaction
+    sb = tr1["spend_bundle"]
+    assert isinstance(sb, SpendBundle)
+    transactions = [TransactionRecord.from_json_dict_convenience(tx) for tx in tr1["transactions"]]
+    await full_node_api.process_transaction_records(transactions)
+    # check that new URI was added
+    coins_response = await wait_rpc_state_condition(
+        5,
+        api_0.nft_get_nfts,
+        [dict(wallet_id=nft_wallet_0_id)],
+        lambda x: x["nft_list"] and len(x["nft_list"][0].metadata_uris) == 1,
+    )
+    coins = coins_response["nft_list"]
+    assert len(coins) == 1
+    coin = coins[0].to_json_dict()
+    assert coin["mint_height"] > 0
+    uris = coin["data_uris"]
+    assert len(uris) == 1
+    assert "https://www.chia.net/img/branding/chia-logo.svg" in uris
+    assert len(coin["metadata_uris"]) == 1
+    assert "http://metadata" == coin["metadata_uris"][0]
+    assert len(coin["license_uris"]) == 0
+
+    # change the registered owner for this coin
+    await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
+    nft_coin_id = coin["nft_coin_id"]
+    new_owner = Program.to("silly name").get_tree_hash()
+
+    message = Program.to(["did", new_owner]).get_tree_hash()
+    der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
+    r, s = decode_dss_signature(der_sig)
+    secp_sig = r.to_bytes(32, byteorder='big') + s.to_bytes(32, byteorder='big')
+    tr1 = await api_0.nft_update_owner_via_metadata(
+        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "new_owner": new_owner.hex(), "signature": secp_sig.hex()}
     )
 
     assert isinstance(tr1, dict)

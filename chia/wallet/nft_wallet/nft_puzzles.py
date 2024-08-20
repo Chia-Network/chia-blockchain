@@ -184,7 +184,7 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
     """
     new_metadata: Dict[bytes, Any] = nft_program_to_metadata(metadata)
     uri: Program = update_condition.rest().rest().first()
-    prepend_value(uri.first().as_python(), uri.rest(), new_metadata)
+    prepend_value(uri.first().as_python(), uri.rest().first(), new_metadata)
     return metadata_to_program(new_metadata)
 
 
