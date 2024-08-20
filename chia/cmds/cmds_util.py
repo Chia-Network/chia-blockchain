@@ -345,6 +345,7 @@ class TransactionBundle(Streamable):
 
 
 def tx_out_cmd(func: Callable[..., List[TransactionRecord]]) -> Callable[..., None]:
+    @timelock_args
     def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
         txs: List[TransactionRecord] = func(**kwargs)
         if transaction_file is not None:

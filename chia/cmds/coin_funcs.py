@@ -12,6 +12,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint64, uint128
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -123,6 +124,7 @@ async def async_combine(
     target_coin_ids: Sequence[bytes32],
     largest_first: bool,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         if number_of_coins > 500:
@@ -181,7 +183,9 @@ async def async_combine(
         target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(wallet_id, False))
         additions = [{"amount": (total_amount - fee) if is_xch else total_amount, "puzzle_hash": target_ph}]
         transaction: TransactionRecord = (
-            await wallet_client.send_transaction_multi(wallet_id, additions, tx_config, removals, fee, push=push)
+            await wallet_client.send_transaction_multi(
+                wallet_id, additions, tx_config, removals, fee, push=push, timelock_info=condition_valid_times
+            )
         ).transaction
         tx_id = transaction.name.hex()
         if push:
@@ -202,6 +206,7 @@ async def async_split(
     target_coin_id_str: str,
     # TODO: [add TXConfig args]
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         target_coin_id: bytes32 = bytes32.from_hexstr(target_coin_id_str)
@@ -243,7 +248,13 @@ async def async_split(
 
         transaction: TransactionRecord = (
             await wallet_client.send_transaction_multi(
-                wallet_id, additions, tx_config, [removal_coin_record.coin], fee, push=push
+                wallet_id,
+                additions,
+                tx_config,
+                [removal_coin_record.coin],
+                fee,
+                push=push,
+                timelock_info=condition_valid_times,
             )
         ).transaction
         tx_id = transaction.name.hex()
