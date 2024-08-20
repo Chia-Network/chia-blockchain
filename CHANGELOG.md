@@ -62,7 +62,7 @@ for setuptools_scm/PEP 440 reasons.
 - Fix backwards compatibility for `add_private_key`
 - Fix timelord log spam.
 - Fix duplicate connection log spam.
-- ad.fee_estimation_fixes
+- Fix conversion error in fee calculation
 - Fix CATWallet pending_change calculation
 - Add a better clawback auto claim test and fix related issue
 - chore: remove repetitive words (thanks @peicuiping)
