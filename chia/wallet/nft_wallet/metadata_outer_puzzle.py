@@ -3,10 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
