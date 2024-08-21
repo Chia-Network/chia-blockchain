@@ -341,7 +341,6 @@ class EligibleCoinSpends:
                 height,
             )
         except TypeError as e:
-            error = Err(e.args[0])
             if len(e.args) > 0:
                 error = Err(e.args[0])
                 raise ValueError(f"Mempool item became invalid after singleton fast forward with error {error}.")
