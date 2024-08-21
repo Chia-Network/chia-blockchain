@@ -287,7 +287,7 @@ class MempoolManager:
                 error = Err(e.args[0])
                 raise ValidationError(error)
             else:
-                raise ValidationError
+                raise ValidationError(Err.UNKNOWN)
         finally:
             self._worker_queue_size -= 1
 
