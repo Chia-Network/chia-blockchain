@@ -259,7 +259,6 @@ class MempoolManager:
     async def pre_validate_spendbundle(
         self,
         new_spend: SpendBundle,
-        new_spend_bytes: Optional[bytes],
         spend_name: bytes32,
         bls_cache: Optional[BLSCache] = None,
     ) -> SpendBundleConditions:
@@ -267,8 +266,6 @@ class MempoolManager:
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
         """
-        if new_spend_bytes is None:
-            new_spend_bytes = bytes(new_spend)
 
         if new_spend.coin_spends == []:
             raise ValidationError(Err.INVALID_SPEND_BUNDLE, "Empty SpendBundle")

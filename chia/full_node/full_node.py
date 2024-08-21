@@ -2356,7 +2356,7 @@ class FullNode:
         else:
             try:
                 cost_result = await self.mempool_manager.pre_validate_spendbundle(
-                    transaction, tx_bytes, spend_name, self._bls_cache
+                    transaction, spend_name, self._bls_cache
                 )
             except ValidationError as e:
                 self.mempool_manager.remove_seen(spend_name)
