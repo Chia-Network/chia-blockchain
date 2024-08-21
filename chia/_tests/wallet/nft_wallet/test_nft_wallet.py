@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -13,6 +13,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -45,10 +46,11 @@ async def get_wallet_number(manager: WalletStateManager) -> int:
     return len(manager.wallets)
 
 
+# TODO: This is not a very paradigmatic function and should be updated
 async def wait_rpc_state_condition(
     timeout: float,
-    async_function: Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]],
-    params: List[Dict[str, Any]],
+    async_function: Any,
+    params: List[Any],
     condition_func: Callable[[Dict[str, Any]], bool],
 ) -> Dict[str, Any]:
     __tracebackhide__ = True
@@ -506,92 +508,96 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_nft_wallet_rpc_creation_and_list(
-    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool
-) -> None:
-    num_blocks = 3
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_0, server_0 = wallets[0]
-    wallet_node_1, server_1 = wallets[1]
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet_node = env.node
+    wallet = env.xch_wallet
 
-    ph = await wallet_0.get_new_puzzlehash()
-    _ = await wallet_1.get_new_puzzlehash()
+    env.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+    }
 
-    if trusted:
-        wallet_node_0.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-        wallet_node_1.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_0.config["trusted_peers"] = {}
-        wallet_node_1.config["trusted_peers"] = {}
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    for _ in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
-    )
-
-    await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
-    await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-    await time_out_assert(30, wallet_node_0.wallet_state_manager.synced, True)
-    api_0 = WalletRpcApi(wallet_node_0)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
-
-    nft_wallet_0 = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
+    nft_wallet_0 = await env.rpc_client.fetch("create_new_wallet", dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(nft_wallet_0, dict)
     assert nft_wallet_0.get("success")
     nft_wallet_0_id = nft_wallet_0["wallet_id"]
 
-    tr1 = await api_0.nft_mint_nft(
-        {
-            "wallet_id": nft_wallet_0_id,
-            "artist_address": ph,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
-            "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
-        },
+    await env.rpc_client.mint_nft(
+        wallet_id=nft_wallet_0_id,
+        royalty_address=encode_puzzle_hash(
+            await wallet.get_puzzle_hash(new=False), AddressType.NFT.hrp(wallet_node.config)
+        ),
+        target_address=None,
+        hash="0xD4584AD463139FA8C0D9F68F4B59F185",
+        uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+        tx_config=wallet_environments.tx_config,
     )
 
-    assert isinstance(tr1, dict)
-    assert tr1.get("success")
-    sb = tr1["spend_bundle"]
-
-    transactions = [TransactionRecord.from_json_dict_convenience(tx) for tx in tr1["transactions"]]
-    await full_node_api.process_transaction_records(transactions)
-
-    await wait_rpc_state_condition(30, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: x["nft_list"])
-    tr2 = await api_0.nft_mint_nft(
-        {
-            "wallet_id": nft_wallet_0_id,
-            "artist_address": ph,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F184",
-            "uris": ["https://chialisp.com/img/logo.svg"],
-            "meta_uris": [
-                "https://bafybeigzcazxeu7epmm4vtkuadrvysv74lbzzbl2evphtae6k57yhgynp4.ipfs.nftstorage.link/6590.json"
-            ],
-            "meta_hash": "0x6a9cb99b7b9a987309e8dd4fd14a7ca2423858585da68cc9ec689669dd6dd6ab",
-        },
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},  # tested above
+                    "nft": {"init": True, "pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},  # tested above
+                    "nft": {
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1,
+                    },
+                },
+            )
+        ]
     )
-    assert isinstance(tr2, dict)
-    assert tr2.get("success")
-    sb = tr2["spend_bundle"]
-    transactions = [TransactionRecord.from_json_dict_convenience(tx) for tx in tr2["transactions"]]
-    await full_node_api.process_transaction_records(transactions)
+
+    await wait_rpc_state_condition(
+        30, env.rpc_client.fetch, ["nft_get_nfts", dict(wallet_id=nft_wallet_0_id)], lambda x: x["nft_list"]
+    )
+    second_mint = await env.rpc_client.mint_nft(
+        wallet_id=nft_wallet_0_id,
+        royalty_address=encode_puzzle_hash(
+            await wallet.get_puzzle_hash(new=False), AddressType.NFT.hrp(wallet_node.config)
+        ),
+        target_address=None,
+        tx_config=wallet_environments.tx_config,
+        hash="0xD4584AD463139FA8C0D9F68F4B59F184",
+        uris=["https://chialisp.com/img/logo.svg"],
+        meta_uris=[
+            "https://bafybeigzcazxeu7epmm4vtkuadrvysv74lbzzbl2evphtae6k57yhgynp4.ipfs.nftstorage.link/6590.json"
+        ],
+        meta_hash="0x6a9cb99b7b9a987309e8dd4fd14a7ca2423858585da68cc9ec689669dd6dd6ab",
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},  # tested above
+                    "nft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},  # tested above
+                    "nft": {
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1,
+                    },
+                },
+            )
+        ]
+    )
+
     coins_response = await wait_rpc_state_condition(
-        5, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: x["success"] and len(x["nft_list"]) == 2
+        30,
+        env.rpc_client.fetch,
+        ["nft_get_nfts", dict(wallet_id=nft_wallet_0_id)],
+        lambda x: x["success"] and len(x["nft_list"]) == 2,
     )
-    coins: List[NFTInfo] = coins_response["nft_list"]
+    coins: List[NFTInfo] = [NFTInfo.from_json_dict(d) for d in coins_response["nft_list"]]
     uris = []
     for coin in coins:
         assert not coin.supports_did
@@ -599,30 +605,32 @@ async def test_nft_wallet_rpc_creation_and_list(
         assert coin.mint_height > 0
     assert len(uris) == 2
     assert "https://chialisp.com/img/logo.svg" in uris
-    assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
+    assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [
+        x.name() for x in second_mint.spend_bundle.additions()
+    ]
 
     coins_response = await wait_rpc_state_condition(
         5,
-        api_0.nft_get_nfts,
-        [{"wallet_id": nft_wallet_0_id, "start_index": 1, "num": 1}],
+        env.rpc_client.fetch,
+        ["nft_get_nfts", {"wallet_id": nft_wallet_0_id, "start_index": 1, "num": 1}],
         lambda x: x["success"] and len(x["nft_list"]) == 1,
     )
-    coins = coins_response["nft_list"]
+    coins = [NFTInfo.from_json_dict(d) for d in coins_response["nft_list"]]
     assert len(coins) == 1
     assert coins[0].data_hash.hex() == "0xD4584AD463139FA8C0D9F68F4B59F184"[2:].lower()
 
     # test counts
 
     resp = await wait_rpc_state_condition(
-        10, api_0.nft_count_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: x["success"]
+        10, env.rpc_client.fetch, ["nft_count_nfts", {"wallet_id": nft_wallet_0_id}], lambda x: x["success"]
     )
     assert resp["count"] == 2
-    resp = await wait_rpc_state_condition(10, api_0.nft_count_nfts, [{}], lambda x: x["success"])
+    resp = await wait_rpc_state_condition(10, env.rpc_client.fetch, ["nft_count_nfts", {}], lambda x: x["success"])
     assert resp["count"] == 2
-    resp = await wait_rpc_state_condition(
-        10, api_0.nft_count_nfts, [{"wallet_id": 50}], lambda x: x["success"] is False
-    )
-    assert resp.get("count") is None
+    with pytest.raises(ResponseFailureError, match="not found"):
+        resp = await wait_rpc_state_condition(
+            10, env.rpc_client.fetch, ["nft_count_nfts", {"wallet_id": 50}], lambda x: x["success"] is False
+        )
 
 
 @pytest.mark.parametrize("trusted", [True, False])
