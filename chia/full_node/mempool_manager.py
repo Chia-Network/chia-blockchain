@@ -283,8 +283,11 @@ class MempoolManager:
                 self.peak.height,
             )
         except Exception as e:  # take returned TypeError and turn into ValidationError class by
-            error = Err(e.args[0])
-            raise ValidationError(error)
+            if len(e.args) > 0:
+                error = Err(e.args[0])
+                raise ValidationError(error)
+            else:
+                raise ValidationError
         finally:
             self._worker_queue_size -= 1
 
