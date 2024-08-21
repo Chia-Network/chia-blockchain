@@ -1287,11 +1287,6 @@ class FullNode:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
-        assert current_ssi is not None and current_difficulty is not None
-        block_dict: Dict[bytes32, FullBlock] = {}
-        for block in all_blocks:
-            block_dict[block.header_hash] = block
-
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
             header_hash = block.header_hash
@@ -1329,8 +1324,8 @@ class FullNode:
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
-                await self.blockchain.advance_fork_info(block, fork_info, block_dict)
-                await self.blockchain.run_single_block(block, fork_info, block_dict)
+                await self.blockchain.advance_fork_info(block, fork_info)
+                await self.blockchain.run_single_block(block, fork_info)
 
         if len(blocks_to_validate) == 0:
             return True, None, current_ssi, current_difficulty, prev_ses_block, None

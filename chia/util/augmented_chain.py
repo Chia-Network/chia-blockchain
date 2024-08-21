@@ -76,9 +76,6 @@ class AugmentedBlockchain:
             return ret
         return maybe_record(self._extra_blocks.get(header_hash))
 
-    def remove_block_record(self, header_hash: bytes32) -> None:
-        self._underlying.remove_block_record(header_hash)
-
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._underlying.add_block_record(block_record)
 
