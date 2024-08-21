@@ -346,8 +346,8 @@ class EligibleCoinSpends:
                 error = Err(e.args[0])
                 raise ValueError(f"Mempool item became invalid after singleton fast forward with error {error}.")
             else:
-                raise ValueError(f"Mempool item became invalid after singleton fast forward with an unspecified error.")
-            
+                raise ValueError("Mempool item became invalid after singleton fast forward with an unspecified error.")
+
         # Update bundle_coin_spends using the collected data
         for coin_id in replaced_coin_ids:
             mempool_item.bundle_coin_spends.pop(coin_id, None)
