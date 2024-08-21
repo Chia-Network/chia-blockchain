@@ -199,7 +199,7 @@ async def run_sync_test(
                                 await full_node.add_unfinished_block(make_unfinished_block(b, constants), peer)
                                 await full_node.add_block(b, None, full_node._bls_cache)
                         else:
-                            success, summary, _ = await full_node.add_block_batch(block_batch, peer_info, None)
+                            success, summary, _, _, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 

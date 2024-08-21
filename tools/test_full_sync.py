@@ -153,7 +153,7 @@ async def run_sync_checkpoint(
                 if len(block_batch) < 32:
                     continue
 
-                success, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
+                success, _, _, _, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -165,7 +165,7 @@ async def run_sync_checkpoint(
                 block_batch = []
 
             if len(block_batch) > 0:
-                success, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
+                success, _, _, _, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
                 if not success:
                     raise RuntimeError("failed to ingest block batch")
 

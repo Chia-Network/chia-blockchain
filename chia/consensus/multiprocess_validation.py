@@ -208,6 +208,7 @@ async def pre_validate_blocks_multiprocessing(
         curr = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
         if curr is None:
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
+        prev_b = curr
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         header_hash = curr.header_hash
         while (
@@ -230,13 +231,6 @@ async def pre_validate_blocks_multiprocessing(
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
     for block in blocks:
-        if block.height != 0:
-            if prev_b is None:
-                prev_b = await block_records.get_block_record_from_db(block.prev_header_hash)
-            assert prev_b is not None
-
-            curr = prev_b
-            block_records.add_block_record(curr)
         if len(block.finished_sub_slots) > 0:
             if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                 difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
