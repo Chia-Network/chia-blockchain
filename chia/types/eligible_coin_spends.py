@@ -333,7 +333,7 @@ class EligibleCoinSpends:
         # We need to run the new spend bundle to make sure it remains valid
         assert mempool_item.conds is not None
         try:
-            new_sbc_result = get_conditions_from_spendbundle(
+            new_conditions = get_conditions_from_spendbundle(
                 new_sb,
                 mempool_item.conds.cost,
                 constants,
@@ -357,4 +357,4 @@ class EligibleCoinSpends:
         # change. Still, it's good form to update the spend bundle with the
         # new coin spends
         mempool_item.spend_bundle = new_sb
-        mempool_item.conds = new_sbc_result
+        mempool_item.conds = new_conditions
