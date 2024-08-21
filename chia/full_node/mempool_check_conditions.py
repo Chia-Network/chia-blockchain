@@ -47,7 +47,7 @@ def get_name_puzzle_conditions(
         run_block = run_block_generator
 
     try:
-        block_args = [bytes(gen) for gen in generator.generator_refs]
+        block_args = generator.generator_refs
         err, result = run_block(bytes(generator.program), block_args, max_cost, flags, constants)
         assert (err is None) != (result is None)
         if err is not None:
@@ -66,7 +66,7 @@ def get_puzzle_and_solution_for_coin(
     try:
         puzzle, solution = get_puzzle_and_solution_for_coin_rust(
             generator.program,
-            [bytes(a) for a in generator.generator_refs],
+            generator.generator_refs,
             constants.MAX_BLOCK_COST_CLVM,
             coin,
             get_flags_for_height_and_constants(height, constants),
@@ -80,7 +80,7 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
-    args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
+    args += bytes(Program.to(generator.generator_refs))
     args += b"\x80\x80"
 
     _, ret = run_chia_program(
@@ -107,7 +107,7 @@ def get_spends_for_block_with_conditions(
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
-    args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
+    args += bytes(Program.to(generator.generator_refs))
     args += b"\x80\x80"
 
     flags = get_flags_for_height_and_constants(height, constants)

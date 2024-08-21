@@ -9,7 +9,6 @@ import typing_extensions
 import zstd
 
 from chia.consensus.block_record import BlockRecord
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
@@ -264,10 +263,10 @@ class BlockStore:
                     b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
                 )
 
-    async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
+    async def get_generator(self, header_hash: bytes32) -> Optional[bytes]:
         cached = self.block_cache.get(header_hash)
         if cached is not None:
-            return cached.transactions_generator
+            return None if cached.transactions_generator is None else bytes(cached.transactions_generator)
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -278,19 +277,19 @@ class BlockStore:
 
             try:
                 return generator_from_block(block_bytes)
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 log.error(f"cheap parser failed for block at height {row[1]}: {e}")
                 # this is defensive, on the off-chance that
                 # generator_from_block() fails, fall back to the reliable
                 # definition of parsing a block
                 b = FullBlock.from_bytes(block_bytes)
-                return b.transactions_generator
+                return None if b.transactions_generator is None else bytes(b.transactions_generator)
 
-    async def get_generators_at(self, heights: List[uint32]) -> List[SerializedProgram]:
+    async def get_generators_at(self, heights: List[uint32]) -> List[bytes]:
         if len(heights) == 0:
             return []
 
-        generators: Dict[uint32, SerializedProgram] = {}
+        generators: Dict[uint32, bytes] = {}
         formatted_str = (
             f"SELECT block, height from full_blocks "
             f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights) - 1)}?)'
@@ -302,13 +301,13 @@ class BlockStore:
 
                     try:
                         gen = generator_from_block(block_bytes)
-                    except Exception as e:
+                    except Exception as e:  # pragma: no cover
                         log.error(f"cheap parser failed for block at height {row[1]}: {e}")
                         # this is defensive, on the off-chance that
                         # generator_from_block() fails, fall back to the reliable
                         # definition of parsing a block
                         b = FullBlock.from_bytes(block_bytes)
-                        gen = b.transactions_generator
+                        gen = None if b.transactions_generator is None else bytes(b.transactions_generator)
                     if gen is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     generators[uint32(row[1])] = gen

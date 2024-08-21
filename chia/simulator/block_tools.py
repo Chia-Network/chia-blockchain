@@ -1940,7 +1940,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
     clvm_cost = 0
 
     if height >= constants.HARD_FORK_HEIGHT:
-        blocks = [bytes(g) for g in generator.generator_refs]
+        blocks = generator.generator_refs
         cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
@@ -1955,7 +1955,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
             condition_cost += conditions_cost(result)
 
     else:
-        block_program_args = SerializedProgram.to([[bytes(g) for g in generator.generator_refs]])
+        block_program_args = SerializedProgram.to([generator.generator_refs])
         clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, [generator.program, block_program_args])
 
         for res in result.first().as_iter():
