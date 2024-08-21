@@ -331,7 +331,6 @@ class EligibleCoinSpends:
             coin_spends=new_coin_spends, aggregated_signature=mempool_item.spend_bundle.aggregated_signature
         )
         # We need to run the new spend bundle to make sure it remains valid
-        # generator = simple_solution_generator(new_sb)
         assert mempool_item.conds is not None
         try:
             new_sbc_result = get_conditions_from_spendbundle(
