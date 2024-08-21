@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, cast
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -51,3 +51,6 @@ class BlockCache:
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records.get(header_hash)
+
+    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+        return [self._block_records[h].prev_hash for h in header_hashes]
