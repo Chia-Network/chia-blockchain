@@ -282,7 +282,7 @@ class MempoolManager:
                 self.constants,
                 self.peak.height,
             )
-        except Exception as e:  # take returned TypeError and turn into ValidationError class by
+        except Exception as e:  # take returned TypeError and turn raise it as a ValidationError
             if len(e.args) > 0:
                 error = Err(e.args[0])
                 raise ValidationError(error)
