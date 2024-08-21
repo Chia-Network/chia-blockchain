@@ -142,7 +142,6 @@ class MempoolManager:
         self,
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]],
         consensus_constants: ConsensusConstants,
-        multiprocessing_context: Optional[BaseContext] = None,
         *,
         single_threaded: bool = False,
         max_tx_clvm_cost: Optional[uint64] = None,
