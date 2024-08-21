@@ -16,6 +16,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.coin_store import CoinStore
@@ -1188,7 +1189,9 @@ class FullNodeAPI:
         tx_additions: List[Coin] = []
 
         if block.transactions_generator is not None:
-            block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
+            block_generator: Optional[BlockGenerator] = await get_block_generator(
+                self.full_node.blockchain.lookup_block_generators, block
+            )
             # get_block_generator() returns None in case the block we specify
             # does not have a generator (i.e. is not a transaction block).
             # in this case we've already made sure `block` does have a
@@ -1388,7 +1391,9 @@ class FullNodeAPI:
         if block is None or block.transactions_generator is None:
             return reject_msg
 
-        block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
+        block_generator: Optional[BlockGenerator] = await get_block_generator(
+            self.full_node.blockchain.lookup_block_generators, block
+        )
         assert block_generator is not None
         try:
             spend_info = await asyncio.get_running_loop().run_in_executor(

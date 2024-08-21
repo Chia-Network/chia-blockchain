@@ -28,6 +28,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -311,7 +312,7 @@ class TestBlockHeaderValidation:
         # below
         assert unf.transactions_generator is None
         if unf.transactions_generator is not None:  # pragma: no cover
-            block_generator = await blockchain.get_block_generator(unf)
+            block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
             block_bytes = bytes(unf)
             npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
@@ -339,7 +340,7 @@ class TestBlockHeaderValidation:
         # below
         assert unf.transactions_generator is None
         if unf.transactions_generator is not None:  # pragma: no cover
-            block_generator = await blockchain.get_block_generator(unf)
+            block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
             block_bytes = bytes(unf)
             npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
@@ -430,7 +431,7 @@ class TestBlockHeaderValidation:
                 # below
                 assert block.transactions_generator is None
                 if block.transactions_generator is not None:  # pragma: no cover
-                    block_generator = await blockchain.get_block_generator(unf)
+                    block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
                     assert block_generator is not None
                     block_bytes = bytes(unf)
                     npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
