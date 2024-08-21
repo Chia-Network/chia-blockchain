@@ -548,3 +548,6 @@ def test_key_type_support(key_type: str, key_info: KeyInfo) -> None:
     assert KeyTypes.parse_observation_root(bytes(obr), KeyTypes(key_type)) == obr
     if secret_info is not None:
         assert KeyTypes.parse_secret_info(bytes(secret_info), KeyTypes(key_type)) == secret_info
+        assert (
+            KeyTypes.parse_secret_info_from_seed(mnemonic_to_seed(key_info.mnemonic), KeyTypes(key_type)) == secret_info
+        )

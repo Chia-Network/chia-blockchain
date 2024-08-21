@@ -663,19 +663,6 @@ class Keychain:
                 pass
         return removed
 
-    def delete_keys(self, keys_to_delete: List[Tuple[SecretInfo[Any], bytes]]) -> None:
-        """
-        Deletes all keys in the list.
-        """
-        remaining_fingerprints = {x[0].public_key().get_fingerprint() for x in keys_to_delete}
-        remaining_removals = len(remaining_fingerprints)
-        while len(remaining_fingerprints):
-            key_to_delete = remaining_fingerprints.pop()
-            if self.delete_key_by_fingerprint(key_to_delete) > 0:
-                remaining_removals -= 1
-        if remaining_removals > 0:
-            raise ValueError(f"{remaining_removals} keys could not be found for deletion")
-
     def delete_all_keys(self) -> None:
         """
         Deletes all keys from the keychain.

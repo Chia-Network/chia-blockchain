@@ -71,6 +71,20 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
     assert isinstance(key, PrivateKey)
     assert key.get_g1().get_fingerprint() == fingerprint
 
+    # We should get the same result with a bogus fingerprint
+    key = await node.get_key(123456789)
+
+    assert key is not None
+    assert isinstance(key, PrivateKey)
+    assert key.get_g1().get_fingerprint() == fingerprint
+
+    # Test coverage
+    key = await node.get_key(123456789, private=False)
+
+    assert key is not None
+    assert isinstance(key, G1Element)
+    assert key.get_fingerprint() == fingerprint
+
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("fingerprint", [None, 1234567890])
