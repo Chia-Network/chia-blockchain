@@ -599,6 +599,7 @@ class FullNode:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
+                    prev_b = None
                     if response.blocks[0].height > 0:
                         prev_b = await self.blockchain.get_block_record_from_db(response.blocks[0].prev_header_hash)
                         assert prev_b is not None
@@ -606,7 +607,7 @@ class FullNode:
                     ssi, diff = get_next_sub_slot_iters_and_difficulty(
                         self.constants, new_slot, prev_b, self.blockchain
                     )
-                    success, state_change_summary, _ = await self.add_block_batch(
+                    success, state_change_summary, ssi, diff, _, _ = await self.add_block_batch(
                         response.blocks, peer_info, None, ssi, diff
                     )
                     if not success:
@@ -1110,7 +1111,16 @@ class FullNode:
             inner_batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
             fork_info: Optional[ForkInfo] = None
-
+            if fork_point_height == 0:
+                ssi = self.constants.SUB_SLOT_ITERS_STARTING
+                diff = self.constants.DIFFICULTY_STARTING
+                prev_ses_block = None
+            else:
+                prev_b_hash = self.blockchain.height_to_hash(fork_point_height)
+                assert prev_b_hash is not None
+                prev_b = await self.blockchain.get_full_block(prev_b_hash)
+                assert prev_b is not None
+                ssi, diff, prev_ses_block = await self.get_ssi_diff_ses_block(prev_b, None, None)
             block_rate = 0
             block_rate_time = time.monotonic()
             block_rate_height = -1
@@ -1148,12 +1158,13 @@ class FullNode:
                             assert fork_hash is not None
                             fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
-                success, state_change_summary, err = await self.add_block_batch(
+                success, state_change_summary, ssi, diff, prev_ses_block, err = await self.add_block_batch(
                     blocks,
                     peer.get_peer_logging(),
                     fork_info,
-                    None,
-                    None,
+                    ssi,
+                    diff,
+                    prev_ses_block,
                     summaries,
                 )
                 if success is False:
@@ -1256,42 +1267,13 @@ class FullNode:
         fork_info: Optional[ForkInfo],
         ssi: Optional[uint64] = None,
         diff: Optional[uint64] = None,
+        prev_ses_block: Optional[BlockRecord] = None,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
-    ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
+    ) -> Tuple[bool, Optional[StateChangeSummary], uint64, uint64, Optional[BlockRecord], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
-        prev_ses_block = None
-        if ssi is None or diff is None:
-            if all_blocks[0].height == 0:
-                ssi = self.constants.SUB_SLOT_ITERS_STARTING
-                diff = self.constants.DIFFICULTY_STARTING
-        if ssi is None or diff is None:
-            if len(all_blocks[0].finished_sub_slots) > 0:
-                if all_blocks[0].finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-                    diff = all_blocks[0].finished_sub_slots[0].challenge_chain.new_difficulty
-                if all_blocks[0].finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
-                    ssi = all_blocks[0].finished_sub_slots[0].challenge_chain.new_sub_slot_iters
-
-        if all_blocks[0].height > 0:
-            prev_b = await self.blockchain.get_block_record_from_db(all_blocks[0].prev_header_hash)
-            curr = prev_b
-            while prev_ses_block is None or ssi is None or diff is None:
-                assert curr is not None
-                if curr.height == 0:
-                    if ssi is None or diff is None:
-                        ssi = self.constants.SUB_SLOT_ITERS_STARTING
-                        diff = self.constants.DIFFICULTY_STARTING
-                    if prev_ses_block is None:
-                        prev_ses_block = curr
-                if curr.sub_epoch_summary_included is not None:
-                    if prev_ses_block is None:
-                        prev_ses_block = curr
-                    if ssi is None or diff is None:
-                        if curr.sub_epoch_summary_included.new_difficulty is not None:
-                            diff = curr.sub_epoch_summary_included.new_difficulty
-                        if curr.sub_epoch_summary_included.new_sub_slot_iters is not None:
-                            ssi = curr.sub_epoch_summary_included.new_sub_slot_iters
-                curr = await self.blockchain.get_block_record_from_db(curr.prev_hash)
+        if ssi is None or diff is None or prev_ses_block is None:
+            ssi, diff, prev_ses_block = await self.get_ssi_diff_ses_block(all_blocks[0], ssi, diff)
 
         assert ssi is not None and diff is not None
         block_dict: Dict[bytes32, FullBlock] = {}
@@ -1307,6 +1289,7 @@ class FullNode:
                 break
             else:
                 if block_rec.sub_epoch_summary_included:
+                    # already validated block, update ssi,diff and prev ses
                     prev_ses_block = block_rec
                     if block_rec.sub_epoch_summary_included.new_sub_slot_iters is not None:
                         ssi = block_rec.sub_epoch_summary_included.new_sub_slot_iters
@@ -1337,7 +1320,7 @@ class FullNode:
                 await self.blockchain.run_single_block(block, fork_info, block_dict)
 
         if len(blocks_to_validate) == 0:
-            return True, None, None
+            return True, None, ssi, diff, prev_ses_block, None
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
@@ -1359,7 +1342,7 @@ class FullNode:
                 self.log.error(
                     f"Invalid block from peer: {peer_info} height {block.height} {Err(pre_validation_results[i].error)}"
                 )
-                return False, None, Err(pre_validation_results[i].error)
+                return False, None, ssi, diff, prev_ses_block, Err(pre_validation_results[i].error)
 
         agg_state_change_summary: Optional[StateChangeSummary] = None
 
@@ -1373,6 +1356,8 @@ class FullNode:
             if len(block.finished_sub_slots) > 0:
                 if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
                     ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+                if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                    diff = block.finished_sub_slots[0].challenge_chain.new_difficulty
             result, error, state_change_summary = await self.blockchain.add_block(
                 block, pre_validation_results[i], None, fork_info, ssi, prev_ses_block=prev_ses_block
             )
@@ -1400,7 +1385,7 @@ class FullNode:
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
-                return False, agg_state_change_summary, error
+                return False, agg_state_change_summary, ssi, diff, prev_ses_block, error
             block_record = await self.blockchain.get_block_record_from_db(block.header_hash)
             assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
@@ -1413,7 +1398,46 @@ class FullNode:
                 f"Total time for {len(blocks_to_validate)} blocks: {time.monotonic() - pre_validate_start}, "
                 f"advanced: True"
             )
-        return True, agg_state_change_summary, None
+        return True, agg_state_change_summary, ssi, diff, prev_ses_block, None
+
+    async def get_ssi_diff_ses_block(
+        self, block: FullBlock, ssi: Optional[uint64], diff: Optional[uint64]
+    ) -> Tuple[uint64, uint64, Optional[BlockRecord]]:
+        prev_ses_block = None
+        if ssi is None or diff is None:
+            if block.height == 0:
+                ssi = self.constants.SUB_SLOT_ITERS_STARTING
+                diff = self.constants.DIFFICULTY_STARTING
+        if ssi is None or diff is None:
+            if len(block.finished_sub_slots) > 0:
+                if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                    diff = block.finished_sub_slots[0].challenge_chain.new_difficulty
+                if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                    ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+
+        if block.height > 0:
+            prev_b = await self.blockchain.get_block_record_from_db(block.prev_header_hash)
+            curr = prev_b
+            while prev_ses_block is None or ssi is None or diff is None:
+                assert curr is not None
+                if curr.height == 0:
+                    if ssi is None or diff is None:
+                        ssi = self.constants.SUB_SLOT_ITERS_STARTING
+                        diff = self.constants.DIFFICULTY_STARTING
+                    if prev_ses_block is None:
+                        prev_ses_block = curr
+                if curr.sub_epoch_summary_included is not None:
+                    if prev_ses_block is None:
+                        prev_ses_block = curr
+                    if ssi is None or diff is None:
+                        if curr.sub_epoch_summary_included.new_difficulty is not None:
+                            diff = curr.sub_epoch_summary_included.new_difficulty
+                        if curr.sub_epoch_summary_included.new_sub_slot_iters is not None:
+                            ssi = curr.sub_epoch_summary_included.new_sub_slot_iters
+                curr = await self.blockchain.get_block_record_from_db(curr.prev_hash)
+        assert ssi is not None
+        assert diff is not None
+        return ssi, diff, prev_ses_block
 
     async def _finish_sync(self) -> None:
         """
@@ -1796,6 +1820,7 @@ class FullNode:
 
             # Don't validate signatures because we want to validate them in the main thread later, since we have a
             # cache available
+            prev_b = None
             if block.height > 0:
                 prev_b = await self.blockchain.get_block_record_from_db(block.prev_header_hash)
                 assert prev_b is not None

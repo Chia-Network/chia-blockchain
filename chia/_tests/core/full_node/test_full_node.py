@@ -2364,25 +2364,30 @@ async def test_long_reorg_nodes(
         reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
     else:
         reorg_blocks = test_long_reorg_blocks[: 1200 - chain_length]
-
+    ssi = None
+    diff = None
+    prev_ses_block = None
     # full node 1 has the original chain
     for block_batch in to_batches(blocks, 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await full_node_1.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        success, change, ssi, diff, prev_ses_block, err = await full_node_1.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None, diff=diff, ssi=ssi, prev_ses_block=prev_ses_block
         )
         assert err is None
         assert success is True
 
+    ssi = None
+    diff = None
+    prev_ses_block = None
     # full node 2 has the reorg-chain
     for block_batch in to_batches(reorg_blocks[:-1], 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"reorg chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await full_node_2.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        success, change, ssi, diff, prev_ses_block, err = await full_node_2.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None, diff=diff, ssi=ssi, prev_ses_block=prev_ses_block
         )
         assert err is None
         assert success is True
@@ -2416,12 +2421,15 @@ async def test_long_reorg_nodes(
     blocks = default_10000_blocks[:4000]
 
     # full node 3 has the original chain, but even longer
+    ssi = None
+    diff = None
+    prev_ses_block = None
     for block_batch in to_batches(blocks, 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await full_node_3.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        success, change, ssi, diff, prev_ses_block, err = await full_node_3.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None, diff=diff, ssi=ssi, prev_ses_block=prev_ses_block
         )
         assert err is None
         assert success is True
