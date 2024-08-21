@@ -21,7 +21,10 @@
   (defun scan_for_pk (METADATA msg signature)
     (if METADATA
       (if (= (f (f METADATA)) "pk")
-        (not (secp256k1_verify (r (f METADATA)) msg signature))  ; returns 0 if passed, fails otherwise
+        (if (secp256k1_verify (r (f METADATA)) msg signature)
+          (x)
+          0
+        )  ; returns 0 if passed, fails otherwise
         (scan_for_pk (r METADATA) msg signature)
       )
       0  ; if the SECP PK is not set, then let anybody update the puzzle - this means that tests that don't have a PK still pass
@@ -42,6 +45,6 @@
       METADATA_UPDATER_PUZZLE_HASH
     )
     ; TODO: this is vulnerable to replay attacks - pass in my_coin_ID as part of the signature and return an assert_my_id to fix
-    (scan_for_pk CURRENT_METADATA (sha256tree (list key new_url)) signature)
+    (scan_for_pk CURRENT_METADATA (sha256 (sha256tree (list key new_url))) signature)
   )
 )

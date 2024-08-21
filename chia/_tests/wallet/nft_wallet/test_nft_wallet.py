@@ -736,6 +736,7 @@ async def test_nft_wallet_rpc_update_metadata(
 
 
 @pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="secp sigs")
 @pytest.mark.anyio
 async def test_nft_wallet_rpc_change_owner(
     self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool
@@ -837,19 +838,21 @@ async def test_nft_wallet_rpc_change_owner(
 
     message = Program.to(["mu", "http://metadata"]).get_tree_hash()
     der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
-    r, s = decode_dss_signature(der_sig)
-    secp_sig = r.to_bytes(32, byteorder='big') + s.to_bytes(32, byteorder='big')
+    r, _s = decode_dss_signature(der_sig)
+    curve_order = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
+    if _s > curve_order//2:
+        s = -_s % curve_order
+    else:
+        s = _s
+    sig = r.to_bytes(32, byteorder='big') + s.to_bytes(32, byteorder='big')
     # Verify the signature
-    assert public_key.verify(
-            der_sig,
-            message,
-            ec.ECDSA(hashes.SHA256())
-        )
+    assert public_key.verify(der_sig, message, ec.ECDSA(hashes.SHA256())) is None
     nft_coin_id = encode_puzzle_hash(
         bytes32.from_hexstr(coin["nft_coin_id"]), AddressType.NFT.hrp(api_0.service.config)
     )
+
     tr1 = await api_0.nft_add_uri(
-        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://metadata", "key": "mu", "signature": secp_sig.hex()},
+        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://metadata", "key": "mu", "signature": sig.hex()},
     )
 
     assert tr1.get("success")
@@ -878,6 +881,9 @@ async def test_nft_wallet_rpc_change_owner(
     assert "http://metadata" == coin["metadata_uris"][0]
     assert len(coin["license_uris"]) == 0
 
+    # Test is passing up to this point
+    breakpoint()
+
     # change the registered owner for this coin
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
     nft_coin_id = coin["nft_coin_id"]
@@ -885,10 +891,15 @@ async def test_nft_wallet_rpc_change_owner(
 
     message = Program.to(["did", new_owner]).get_tree_hash()
     der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
-    r, s = decode_dss_signature(der_sig)
-    secp_sig = r.to_bytes(32, byteorder='big') + s.to_bytes(32, byteorder='big')
+    r, _s = decode_dss_signature(der_sig)
+    curve_order = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
+    if _s > curve_order//2:
+        s = -_s % curve_order
+    else:
+        s = _s
+    sig = r.to_bytes(32, byteorder='big') + s.to_bytes(32, byteorder='big')
     tr1 = await api_0.nft_update_owner_via_metadata(
-        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "new_owner": new_owner.hex(), "signature": secp_sig.hex()}
+        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "new_owner": new_owner.hex(), "signature": sig.hex()}
     )
 
     assert isinstance(tr1, dict)
