@@ -797,16 +797,7 @@ def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
     return None
 
 
-def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]) -> Optional[PrivateKey]:
-    """
-    Get a private key with the specified fingerprint. If fingerprint is not
-    specified, prompt the user to select a key.
-    """
-
-    # Return the private key matching the specified fingerprint
-    if fingerprint is not None:
-        return private_key_for_fingerprint(fingerprint)
-
+def prompt_for_fingerprint() -> Optional[int]:
     fingerprints: List[int] = [pk.get_fingerprint() for pk in Keychain().get_all_public_keys()]
     while True:
         print("Choose key:")
@@ -826,7 +817,21 @@ def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]) -> Op
                     val = None
                     continue
                 else:
-                    return private_key_for_fingerprint(fingerprints[index])
+                    return fingerprints[index]
+
+
+def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]) -> Optional[PrivateKey]:
+    """
+    Get a private key with the specified fingerprint. If fingerprint is not
+    specified, prompt the user to select a key.
+    """
+
+    # Return the private key matching the specified fingerprint
+    if fingerprint is not None:
+        return private_key_for_fingerprint(fingerprint)
+
+    fingerprint_prompt = prompt_for_fingerprint()
+    return None if fingerprint_prompt is None else private_key_for_fingerprint(fingerprint_prompt)
 
 
 def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:

@@ -370,7 +370,7 @@ def search_cmd(
 def wallet_address_cmd(
     ctx: click.Context, index: int, count: int, prefix: Optional[str], non_observer_derivation: bool, show_hd_path: bool
 ) -> None:
-    from .keys_funcs import derive_wallet_address, resolve_derivation_master_key
+    from .keys_funcs import derive_wallet_address, prompt_for_fingerprint, resolve_derivation_master_key
 
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
@@ -378,6 +378,12 @@ def wallet_address_cmd(
     sk = None
     if non_observer_derivation:
         sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+
+    if fingerprint is None and sk is None:
+        fingerprint = prompt_for_fingerprint()
+        if fingerprint is None:
+            print("A fingerprint of a root key to derive from is required")
+            return
 
     derive_wallet_address(
         ctx.obj["root_path"], fingerprint, index, count, prefix, non_observer_derivation, show_hd_path, sk
@@ -438,7 +444,7 @@ def child_key_cmd(
     show_private_keys: bool,
     show_hd_path: bool,
 ) -> None:
-    from .keys_funcs import derive_child_key, resolve_derivation_master_key
+    from .keys_funcs import derive_child_key, prompt_for_fingerprint, resolve_derivation_master_key
 
     if key_type is None and derive_from_hd_path is None:
         ctx.fail("--type or --derive-from-hd-path is required")
@@ -449,6 +455,12 @@ def child_key_cmd(
     sk = None
     if non_observer_derivation:
         sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+
+    if fingerprint is None and sk is None:
+        fingerprint = prompt_for_fingerprint()
+        if fingerprint is None:
+            print("A fingerprint of a root key to derive from is required")
+            return
 
     derive_child_key(
         fingerprint,
