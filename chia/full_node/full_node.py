@@ -1057,6 +1057,18 @@ class FullNode:
             self.blockchain, fork_point_height, peers_with_peak, node_next_block_check
         )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        counter = 0
+        curr = self.blockchain.height_to_block_record(fork_point_height)
+        while (
+            curr.sub_epoch_summary_included is None
+            or counter < 3 * self.constants.MAX_SUB_SLOT_BLOCKS + self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
+        ):
+            res = await self.blockchain.get_block_record_from_db(curr.prev_hash)
+            if res is None:
+                break
+            curr = res
+            self.blockchain.add_block_record(curr)
+            counter += 1
 
         # normally "fork_point" or "fork_height" refers to the first common
         # block between the main chain and the fork. Here "fork_point_height"
@@ -1247,7 +1259,6 @@ class FullNode:
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
-
         block_dict: Dict[bytes32, FullBlock] = {}
         for block in all_blocks:
             block_dict[block.header_hash] = block
@@ -1255,7 +1266,10 @@ class FullNode:
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
             header_hash = block.header_hash
-            if not await self.blockchain.contains_block_from_db(header_hash):
+            rec = await self.blockchain.get_block_record_from_db(header_hash)
+            if rec is not None:
+                self.blockchain.add_block_record(rec)
+            else:
                 blocks_to_validate = all_blocks[i:]
                 break
 
@@ -1285,6 +1299,8 @@ class FullNode:
         if len(blocks_to_validate) == 0:
             return True, None, None
 
+        self.log.info(f"inside add block batch {all_blocks[0].height} - {all_blocks[0].height}")
+
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.monotonic()
@@ -1313,6 +1329,8 @@ class FullNode:
             # when adding blocks in batches, we won't have any overlapping
             # signatures with the mempool. There won't be any cache hits, so
             # there's no need to pass the BLS cache in
+            if block.height % 100 == 0:
+                self.log.info(f"inside add  block batch add block {block.height}")
             result, error, state_change_summary = await self.blockchain.add_block(
                 block, pre_validation_results[i], None, fork_info
             )

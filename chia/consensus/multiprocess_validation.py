@@ -228,20 +228,6 @@ async def pre_validate_blocks_multiprocessing(
             # that includes a sub_epoch_summary
             curr = prev_b
             block_records.add_block_record(curr)
-            counter = 0
-            # TODO: It would probably be better to make
-            # get_next_sub_slot_iters_and_difficulty() async and able to pull
-            # from the database rather than trying to predict which blocks it
-            # may need in the cache
-            while (
-                curr.sub_epoch_summary_included is None
-                or counter < 3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
-            ):
-                curr = await block_records.get_block_record_from_db(curr.prev_hash)
-                if curr is None:
-                    break
-                block_records.add_block_record(curr)
-                counter += 1
 
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
