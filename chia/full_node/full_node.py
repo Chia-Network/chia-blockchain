@@ -1058,17 +1058,19 @@ class FullNode:
         )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
         counter = 0
-        curr = self.blockchain.height_to_block_record(fork_point_height)
-        while (
-            curr.sub_epoch_summary_included is None
-            or counter < 3 * self.constants.MAX_SUB_SLOT_BLOCKS + self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
-        ):
-            res = await self.blockchain.get_block_record_from_db(curr.prev_hash)
-            if res is None:
-                break
-            curr = res
-            self.blockchain.add_block_record(curr)
-            counter += 1
+        if fork_point_height != 0:
+            # warmup the cache
+            curr = self.blockchain.height_to_block_record(fork_point_height)
+            while (
+                curr.sub_epoch_summary_included is None
+                or counter < 3 * self.constants.MAX_SUB_SLOT_BLOCKS + self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
+            ):
+                res = await self.blockchain.get_block_record_from_db(curr.prev_hash)
+                if res is None:
+                    break
+                curr = res
+                self.blockchain.add_block_record(curr)
+                counter += 1
 
         # normally "fork_point" or "fork_height" refers to the first common
         # block between the main chain and the fork. Here "fork_point_height"
