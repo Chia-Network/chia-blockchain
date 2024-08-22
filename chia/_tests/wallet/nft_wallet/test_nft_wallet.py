@@ -828,7 +828,7 @@ async def test_nft_wallet_rpc_change_owner(
                 ("sn", uint64(1)),
                 ("st", uint64(1)),
                 ("pk", pk),
-                ("did", 0)
+                ("did", [])
             ]
         )
     )
@@ -908,7 +908,7 @@ async def test_nft_wallet_rpc_change_owner(
         5,
         api_0.nft_get_nfts,
         [dict(wallet_id=nft_wallet_0_id)],
-        lambda x: x["nft_list"] and len(x["nft_list"][0].data_uris) == 1,
+        lambda x: x["nft_list"] and len(x["nft_list"][0].data_uris) == 1 and len(x["nft_list"][0].metadata_owners_list) == 1,
     )
     coins = coins_response["nft_list"]
     assert len(coins) == 1
@@ -917,6 +917,7 @@ async def test_nft_wallet_rpc_change_owner(
     uris = coin["data_uris"]
     assert len(uris) == 1
     assert len(coin["metadata_uris"]) == 1
+    assert bytes32.from_hexstr(coin["metadata_owners_list"][0]) == new_owner
 
 
 @pytest.mark.parametrize("trusted", [True, False])

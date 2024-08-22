@@ -97,9 +97,12 @@ async def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo, config: Dict[str,
     uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
     assert uncurried_nft is not None
     data_uris: List[str] = []
+    metadata_owners: List[bytes32] = []
 
     for uri in uncurried_nft.data_uris.as_python():  # pylint: disable=E1133
         data_uris.append(str(uri, "utf-8"))
+    for owner in uncurried_nft.owner_uris.as_iter(): # pylint: disable=E1133
+        metadata_owners.append(owner.as_atom())
     meta_uris: List[str] = []
     for uri in uncurried_nft.meta_uris.as_python():  # pylint: disable=E1133
         meta_uris.append(str(uri, "utf-8"))
@@ -131,6 +134,7 @@ async def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo, config: Dict[str,
         nft_coin_info.pending_transaction,
         nft_coin_info.minter_did,
         off_chain_metadata=off_chain_metadata,
+        metadata_owners_list=metadata_owners,
     )
     return nft_info
 

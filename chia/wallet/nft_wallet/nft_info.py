@@ -91,6 +91,8 @@ class NFTInfo(Streamable):
     off_chain_metadata: Optional[str] = None
     """Serialized off-chain metadata"""
 
+    metadata_owners_list: Optional[List[bytes32]] = None,
+
 
 @streamable
 @dataclass(frozen=True)

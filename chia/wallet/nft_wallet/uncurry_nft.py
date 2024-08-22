@@ -60,6 +60,7 @@ class UncurriedNFT(Streamable):
     meta_hash: Program
     license_uris: Program
     license_hash: Program
+    owner_uris: Program
     edition_number: Program
     edition_total: Program
 
@@ -122,6 +123,7 @@ class UncurriedNFT(Streamable):
             data_hash = Program.to(0)
             meta_uris = Program.to([])
             meta_hash = Program.to(0)
+            owner_uris = Program.to([])
             license_uris = Program.to([])
             license_hash = Program.to(0)
             edition_number = Program.to(1)
@@ -144,6 +146,8 @@ class UncurriedNFT(Streamable):
                     edition_number = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"st":
                     edition_total = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"did":
+                    owner_uris = kv_pair.rest()
             current_did: Optional[bytes32] = None
             transfer_program = None
             transfer_program_args = None
@@ -189,6 +193,7 @@ class UncurriedNFT(Streamable):
             meta_hash=meta_hash,
             license_uris=license_uris,
             license_hash=license_hash,
+            owner_uris=owner_uris,
             edition_number=edition_number,
             edition_total=edition_total,
             inner_puzzle=inner_puzzle,
