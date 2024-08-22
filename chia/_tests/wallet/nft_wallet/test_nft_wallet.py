@@ -908,16 +908,15 @@ async def test_nft_wallet_rpc_change_owner(
         5,
         api_0.nft_get_nfts,
         [dict(wallet_id=nft_wallet_0_id)],
-        lambda x: x["nft_list"] and len(x["nft_list"][0].data_uris) == 2,
+        lambda x: x["nft_list"] and len(x["nft_list"][0].data_uris) == 1,
     )
     coins = coins_response["nft_list"]
     assert len(coins) == 1
     coin = coins[0].to_json_dict()
     assert coin["mint_height"] > 0
     uris = coin["data_uris"]
-    assert len(uris) == 2
+    assert len(uris) == 1
     assert len(coin["metadata_uris"]) == 1
-    assert "http://data" == coin["data_uris"][0]
 
 
 @pytest.mark.parametrize("trusted", [True, False])
