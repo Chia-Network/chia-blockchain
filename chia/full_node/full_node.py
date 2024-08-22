@@ -1299,8 +1299,6 @@ class FullNode:
         if len(blocks_to_validate) == 0:
             return True, None, None
 
-        self.log.info(f"inside add block batch {all_blocks[0].height} - {all_blocks[0].height}")
-
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.monotonic()
@@ -1329,8 +1327,6 @@ class FullNode:
             # when adding blocks in batches, we won't have any overlapping
             # signatures with the mempool. There won't be any cache hits, so
             # there's no need to pass the BLS cache in
-            if block.height % 100 == 0:
-                self.log.info(f"inside add  block batch add block {block.height}")
             result, error, state_change_summary = await self.blockchain.add_block(
                 block, pre_validation_results[i], None, fork_info
             )
