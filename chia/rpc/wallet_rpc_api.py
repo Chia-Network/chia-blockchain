@@ -3630,7 +3630,7 @@ class WalletRpcApi:
     ) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         nft_wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=NFTWallet)
-        uri = request["new_owner"]  # set this to be the new owner's DID
+        uri = bytes.fromhex(request["new_owner"])  # set this to be the new owner's DID
         key = "did"
         signature = bytes.fromhex(request["signature"])
 

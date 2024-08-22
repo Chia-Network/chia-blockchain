@@ -881,9 +881,6 @@ async def test_nft_wallet_rpc_change_owner(
     assert "http://metadata" == coin["metadata_uris"][0]
     assert len(coin["license_uris"]) == 0
 
-    # Test is passing up to this point
-    breakpoint()
-
     # change the registered owner for this coin
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
     nft_coin_id = coin["nft_coin_id"]
