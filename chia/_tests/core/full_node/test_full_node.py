@@ -2296,15 +2296,13 @@ async def test_long_reorg(
     node.full_node.blockchain.clean_block_records()
 
     fork_info: Optional[ForkInfo] = None
-    for block_batch in to_batches(reorg_blocks, 64):
-        b = block_batch.entries[0]
+    for b in reorg_blocks:
         if (b.height % 128) == 0:
-            print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await node.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
+            peak = node.full_node.blockchain.get_peak()
+            print(f"reorg chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
+        if b.height > fork_point and fork_info is None:
+            fork_info = ForkInfo(fork_point, fork_point, reorg_blocks[fork_point].header_hash)
+        await node.full_node.add_block(b, fork_info=fork_info)
 
     # if these asserts fires, there was no reorg
     peak = node.full_node.blockchain.get_peak()
@@ -2324,7 +2322,8 @@ async def test_long_reorg(
     # now reorg back to the original chain
     # this exercises the case where we have some of the blocks in the DB already
     node.full_node.blockchain.clean_block_records()
-
+    # when using add_block manualy we must warmup the cache
+    await node.full_node.blockchain.warmup(fork_point - 100)
     if light_blocks:
         blocks = default_10000_blocks[fork_point - 100 : 1800]
     else:
