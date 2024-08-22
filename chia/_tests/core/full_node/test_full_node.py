@@ -2296,13 +2296,15 @@ async def test_long_reorg(
     node.full_node.blockchain.clean_block_records()
 
     fork_info: Optional[ForkInfo] = None
-    for b in reorg_blocks:
+    for block_batch in to_batches(reorg_blocks, 64):
+        b = block_batch.entries[0]
         if (b.height % 128) == 0:
-            peak = node.full_node.blockchain.get_peak()
-            print(f"reorg chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
-        if b.height > fork_point and fork_info is None:
-            fork_info = ForkInfo(fork_point, fork_point, reorg_blocks[fork_point].header_hash)
-        await node.full_node.add_block(b, fork_info=fork_info)
+            print(f"main chain: {b.height:4} weight: {b.weight}")
+        success, change, err = await node.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        )
+        assert err is None
+        assert success is True
 
     # if these asserts fires, there was no reorg
     peak = node.full_node.blockchain.get_peak()
