@@ -11,14 +11,13 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from chia_rs import BLSCache
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -91,7 +90,13 @@ class BlockchainMutexPriority(enum.IntEnum):
     high = 0
 
 
-class Blockchain(BlockchainInterface):
+# implements BlockchainInterface
+class Blockchain:
+    if TYPE_CHECKING:
+        from chia.consensus.blockchain_interface import BlockchainInterface
+
+        _protocol_check: ClassVar[BlockchainInterface] = cast("Blockchain", None)
+
     constants: ConsensusConstants
 
     # peak of the blockchain
@@ -987,6 +992,11 @@ class Blockchain(BlockchainInterface):
             res = await self.block_store.get_block_records_by_hash(hashes)
             records.extend(res)
         return records
+
+    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        if self.contains_block(header_hash):
+            return self.block_record(header_hash)
+        return None
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         ret = self.__block_records.get(header_hash)
