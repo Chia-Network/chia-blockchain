@@ -633,79 +633,47 @@ async def test_nft_wallet_rpc_creation_and_list(wallet_environments: WalletTestF
         )
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
 @pytest.mark.anyio
-async def test_nft_wallet_rpc_update_metadata(
-    self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool
-) -> None:
-    num_blocks = 3
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_0, server_0 = wallets[0]
-    wallet_node_1, server_1 = wallets[1]
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet_node = env.node
+    wallet = env.xch_wallet
 
-    ph = await wallet_0.get_new_puzzlehash()
-    _ = await wallet_1.get_new_puzzlehash()
+    env.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+    }
 
-    if trusted:
-        wallet_node_0.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-        wallet_node_1.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_0.config["trusted_peers"] = {}
-        wallet_node_1.config["trusted_peers"] = {}
+    nft_wallet = await NFTWallet.create_new_nft_wallet(wallet_node.wallet_state_manager, wallet, name="NFT WALLET 1")
 
-    for _ in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
+    await env.rpc_client.mint_nft(
+        wallet_id=nft_wallet.id(),
+        royalty_address=None,
+        target_address=None,
+        hash="0xD4584AD463139FA8C0D9F68F4B59F185",
+        uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+        tx_config=wallet_environments.tx_config,
     )
 
-    await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
-    await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-
-    api_0 = WalletRpcApi(wallet_node_0)
-    await time_out_assert(30, wallet_node_0.wallet_state_manager.synced, True)
-    await time_out_assert(30, wallet_node_1.wallet_state_manager.synced, True)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
-
-    nft_wallet_0 = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
-    assert isinstance(nft_wallet_0, dict)
-    assert nft_wallet_0.get("success")
-    nft_wallet_0_id = nft_wallet_0["wallet_id"]
-
-    # mint NFT
-    resp = await api_0.nft_mint_nft(
-        {
-            "wallet_id": nft_wallet_0_id,
-            "artist_address": ph,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
-            "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
-        },
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "nft": {"init": True, "pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "nft": {"pending_coin_removal_count": -1, "unspent_coin_count": 1},
+                },
+            )
+        ]
     )
 
-    assert resp.get("success")
-    sb = resp["spend_bundle"]
-
-    transactions = [TransactionRecord.from_json_dict_convenience(tx) for tx in resp["transactions"]]
-    await full_node_api.process_transaction_records(transactions)
-    coins_response = await wait_rpc_state_condition(
-        5, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: x["nft_list"]
-    )
-    assert coins_response["nft_list"], isinstance(coins_response, dict)
-    assert coins_response.get("success")
-    coins: List[NFTInfo] = coins_response["nft_list"]
-    coin = coins[0].to_json_dict()
+    coins: List[Dict[str, Any]] = (await env.rpc_client.list_nfts(nft_wallet.id(), start_index=0, num=1))["nft_list"]
+    coin = coins[0]
     assert coin["mint_height"] > 0
     assert coin["data_hash"] == "0xd4584ad463139fa8c0d9f68f4b59f185"
     assert coin["chain_info"] == disassemble(
@@ -720,33 +688,40 @@ async def test_nft_wallet_rpc_update_metadata(
             ]
         )
     )
-    # add another URI using a bech32m nft_coin_id
-    await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
-    nft_coin_id = encode_puzzle_hash(
-        bytes32.from_hexstr(coin["nft_coin_id"]), AddressType.NFT.hrp(api_0.service.config)
-    )
-    tr1 = await api_0.nft_add_uri(
-        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://metadata", "key": "mu"},
+
+    nft_coin_id = encode_puzzle_hash(bytes32.from_hexstr(coin["nft_coin_id"]), AddressType.NFT.hrp(env.node.config))
+    await env.rpc_client.add_uri_to_nft(
+        wallet_id=nft_wallet.id(),
+        nft_coin_id=nft_coin_id,
+        uri="http://metadata",
+        key="mu",
+        fee=0,
+        tx_config=wallet_environments.tx_config,
     )
 
-    assert tr1.get("success")
-    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
-    coins = coins_response["nft_list"]
-    assert coins[0].pending_transaction
-    sb = tr1["spend_bundle"]
-    assert isinstance(sb, WalletSpendBundle)
-    transactions = [TransactionRecord.from_json_dict_convenience(tx) for tx in tr1["transactions"]]
-    await full_node_api.process_transaction_records(transactions)
-    # check that new URI was added
-    coins_response = await wait_rpc_state_condition(
-        5,
-        api_0.nft_get_nfts,
-        [dict(wallet_id=nft_wallet_0_id)],
-        lambda x: x["nft_list"] and len(x["nft_list"][0].metadata_uris) == 1,
+    coins = (await env.rpc_client.list_nfts(nft_wallet.id(), start_index=0, num=1))["nft_list"]
+    assert coins[0]["pending_transaction"]
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "nft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "nft": {"pending_coin_removal_count": -1},
+                },
+            ),
+            WalletStateTransition(),
+        ]
     )
-    coins = coins_response["nft_list"]
+
+    # check that new URI was added
+    coins = (await env.rpc_client.list_nfts(nft_wallet.id(), start_index=0, num=1))["nft_list"]
     assert len(coins) == 1
-    coin = coins[0].to_json_dict()
+    coin = coins[0]
     assert coin["mint_height"] > 0
     uris = coin["data_uris"]
     assert len(uris) == 1
@@ -756,26 +731,35 @@ async def test_nft_wallet_rpc_update_metadata(
     assert len(coin["license_uris"]) == 0
 
     # add yet another URI, this time using a hex nft_coin_id
-    await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
     nft_coin_id = coin["nft_coin_id"]
-    tr1 = await api_0.nft_add_uri(
-        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://data", "key": "u"}
+    await env.rpc_client.add_uri_to_nft(
+        wallet_id=nft_wallet.id(),
+        nft_coin_id=nft_coin_id,
+        uri="http://data",
+        key="u",
+        fee=0,
+        tx_config=wallet_environments.tx_config,
     )
 
-    assert isinstance(tr1, dict)
-    assert tr1.get("success")
-    sb = tr1["spend_bundle"]
-    transactions = [TransactionRecord.from_json_dict_convenience(tx) for tx in tr1["transactions"]]
-    await full_node_api.process_transaction_records(transactions)
-    coins_response = await wait_rpc_state_condition(
-        5,
-        api_0.nft_get_nfts,
-        [dict(wallet_id=nft_wallet_0_id)],
-        lambda x: x["nft_list"] and len(x["nft_list"][0].data_uris) == 2,
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "nft": {"pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "nft": {"pending_coin_removal_count": -1},
+                },
+            ),
+            WalletStateTransition(),
+        ]
     )
-    coins = coins_response["nft_list"]
+
+    coins = (await env.rpc_client.list_nfts(nft_wallet.id(), start_index=0, num=1))["nft_list"]
     assert len(coins) == 1
-    coin = coins[0].to_json_dict()
+    coin = coins[0]
     assert coin["mint_height"] > 0
     uris = coin["data_uris"]
     assert len(uris) == 2

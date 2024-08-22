@@ -976,7 +976,6 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_mint_nft", request)
         return json_deserialize_with_clvm_streamable(response, NFTMintNFTResponse)
 
-    # TODO: add a test for this
     async def add_uri_to_nft(
         self,
         wallet_id: int,
@@ -988,7 +987,7 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTAddURIResponse:  # pragma: no cover
+    ) -> NFTAddURIResponse:
         request = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
