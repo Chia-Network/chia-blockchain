@@ -325,8 +325,8 @@ def search_cmd(
 
     # Specifying the master key is optional for the search command. If not specified, we'll search all keys.
     sk = None
-    if fingerprint is None and filename is not None:
-        sk = resolve_derivation_master_key(filename)
+    if (fingerprint is not None or filename is not None) and non_observer_derivation:
+        sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
     found: bool = search_derive(
         ctx.obj["root_path"],
@@ -376,8 +376,8 @@ def wallet_address_cmd(
     filename: Optional[str] = ctx.obj.get("filename", None)
 
     sk = None
-    if fingerprint is None and filename is not None:
-        sk = resolve_derivation_master_key(filename)
+    if non_observer_derivation:
+        sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
     derive_wallet_address(
         ctx.obj["root_path"], fingerprint, index, count, prefix, non_observer_derivation, show_hd_path, sk
@@ -447,8 +447,8 @@ def child_key_cmd(
     filename: Optional[str] = ctx.obj.get("filename", None)
 
     sk = None
-    if fingerprint is None and filename is not None:
-        sk = resolve_derivation_master_key(filename)
+    if non_observer_derivation:
+        sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
     derive_child_key(
         fingerprint,
