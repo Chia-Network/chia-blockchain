@@ -21,6 +21,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.action_scope import StateInterface
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.observation_root import ObservationRoot
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -69,6 +70,7 @@ from chia.wallet.vault.vault_drivers import (
     get_vault_inner_solution,
     get_vault_proof,
     match_finish_spend,
+    match_p2_delegated_secp,
     match_recovery_puzzle,
     match_vault_puzzle,
 )
@@ -328,7 +330,7 @@ class Vault(Wallet):
         vault_spend = SpendBundle([make_spend(self.vault_info.coin, full_puzzle, full_solution)], G2Element())
         interface.side_effects.extra_spends.append(vault_spend)
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_for_pk(self, pubkey: ObservationRoot) -> Program:
         raise NotImplementedError("vault wallet")
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
@@ -350,26 +352,28 @@ class Vault(Wallet):
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
         pk = self.vault_info.pubkey
-        # match the vault puzzle
+
+        targets = []
         for spend in coin_spends:
             mod, curried_args = spend.puzzle.uncurry()
-            if match_vault_puzzle(mod, curried_args):
+            # match the vault puzzle
+            if match_vault_puzzle(mod, curried_args) and match_p2_delegated_secp(*spend.solution.at("rrfrf").uncurry()):
                 vault_spend = spend
-                break
-        inner_sol = vault_spend.solution.at("rrf")
-        secp_puz = inner_sol.at("rf")
-        secp_sol = inner_sol.at("rrf")
-        _, secp_args = secp_puz.uncurry()
-        genesis_challenge = secp_args.at("f").as_atom()
-        hidden_puzzle_hash = secp_args.at("rrf").as_atom()
-        delegated_puzzle_hash = secp_sol.at("f").get_tree_hash()
-        coin_id = secp_sol.at("rrrf").as_atom()
-        message = delegated_puzzle_hash + coin_id + genesis_challenge + hidden_puzzle_hash
-        fingerprint = self.wallet_state_manager.observation_root.get_fingerprint().to_bytes(4, "big")
-        target = SigningTarget(fingerprint, message, std_hash(pk + message))
+                inner_sol = vault_spend.solution.at("rrf")
+                secp_puz = inner_sol.at("rf")
+                secp_sol = inner_sol.at("rrf")
+                _, secp_args = secp_puz.uncurry()
+                genesis_challenge = secp_args.at("f").as_atom()
+                hidden_puzzle_hash = secp_args.at("rrf").as_atom()
+                delegated_puzzle_hash = secp_sol.at("f").get_tree_hash()
+                coin_id = secp_sol.at("rrrf").as_atom()
+                message = delegated_puzzle_hash + coin_id + genesis_challenge + hidden_puzzle_hash
+                fingerprint = self.wallet_state_manager.observation_root.get_fingerprint().to_bytes(4, "big")
+                targets.append(SigningTarget(fingerprint, message, std_hash(pk + message)))
+
         sig_info = SigningInstructions(
             await self.wallet_state_manager.key_hints_for_pubkeys([pk]),
-            [target],
+            targets,
         )
         return sig_info
 
@@ -477,7 +481,7 @@ class Vault(Wallet):
             )
             return puzzle
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+    def puzzle_hash_for_pk(self, pubkey: ObservationRoot) -> bytes32:
         raise ValueError("This won't work")
 
     def require_derivation_paths(self) -> bool:
