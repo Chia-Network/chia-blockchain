@@ -59,7 +59,7 @@ def test_vault_recovery(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
             args: VaultRecovery,
             tx_config: TXConfig,
         ) -> VaultRecoveryResponse:
-            return VaultRecoveryResponse([STD_UTX, STD_UTX], [STD_TX, STD_TX])
+            return VaultRecoveryResponse([STD_UTX, STD_UTX], [STD_TX, STD_TX], STD_TX.name, STD_TX.name)
 
     inst_rpc_client = CreateVaultRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

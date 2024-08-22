@@ -93,8 +93,7 @@ async def recover_vault(
                 ),
                 tx_config=tx_config,
             )
-            # TODO: do not rely on ordering of transactions here
-            write_transactions_to_file(response.transactions[0:1], initiate_file)
-            write_transactions_to_file(response.transactions[1:2], finish_file)
+            write_transactions_to_file([response.recovery_tx], initiate_file)
+            write_transactions_to_file([response.finish_tx], finish_file)
         except Exception as e:
             print(f"Error creating recovery transactions: {e}")

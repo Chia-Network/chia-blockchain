@@ -152,7 +152,16 @@ class VaultRecovery(TransactionEndpointRequest):
 @streamable
 @dataclass(frozen=True)
 class VaultRecoveryResponse(TransactionEndpointResponse):
-    pass
+    recovery_tx_id: bytes32
+    finish_tx_id: bytes32
+
+    @property
+    def recovery_tx(self) -> TransactionRecord:
+        return next(tx for tx in self.transactions if tx.name == self.recovery_tx_id)
+
+    @property
+    def finish_tx(self) -> TransactionRecord:
+        return next(tx for tx in self.transactions if tx.name == self.finish_tx_id)
 
 
 # TODO: The section below needs corresponding request types

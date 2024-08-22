@@ -46,7 +46,7 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.vault.vault_drivers import (
@@ -502,12 +502,12 @@ class Vault(Wallet):
         secp_pk: bytes,
         hidden_puzzle_hash: bytes32,
         genesis_challenge: bytes32,
-        tx_config: TXConfig,
+        action_scope: WalletActionScope,
         bls_pk: Optional[G1Element] = None,
         timelock: Optional[uint64] = None,
-    ) -> List[TransactionRecord]:
+    ) -> Tuple[bytes32, bytes32]:
         """
-        Returns two tx records
+        Returns two tx IDs
         1. Recover the vault which can be taken to the appropriate BLS wallet for signing
         2. Complete the recovery after the timelock has elapsed
         """
@@ -585,7 +585,6 @@ class Vault(Wallet):
             [recovery_coin.name(), new_vault_coin_id], [self.id(), self.id()]
         )
 
-        # make the tx records
         recovery_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -626,7 +625,10 @@ class Vault(Wallet):
             valid_times=parse_timelock_info(tuple()),
         )
 
-        return [recovery_tx, finish_tx]
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.extend([recovery_tx, finish_tx])
+
+        return (recovery_tx.name, finish_tx.name)
 
     async def sync_vault_launcher(self) -> None:
         wallet_node: Any = self.wallet_state_manager.wallet_node
