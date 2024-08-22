@@ -468,6 +468,8 @@ class CATWallet:
         return curry_and_treehash(QUOTED_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash)
 
     async def get_new_cat_puzzle_hash(self) -> bytes32:
+        if self.handle_own_derivation():
+            return self.get_p2_singleton_puzzle_hash()
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
     async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
