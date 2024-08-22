@@ -461,11 +461,9 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
             # version which is the grandchild in this scenario
             assert status == MempoolInclusionStatus.SUCCESS
             assert error is None
-            old_lineage_info = unspent_lineage_info
             unspent_lineage_info = await sim_client.service.coin_store.get_unspent_lineage_info_for_puzzle_hash(
                 singleton_puzzle_hash
             )
-            assert old_lineage_info != unspent_lineage_info
             singleton_grandchild, [remaining_coin] = await get_singleton_and_remaining_coins(sim)
             assert unspent_lineage_info == UnspentLineageInfo(
                 coin_id=singleton_grandchild.name(),
