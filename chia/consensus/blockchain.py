@@ -356,7 +356,7 @@ class Blockchain(BlockchainInterface):
             block_rec = await self.get_block_record_from_db(header_hash)
             if block_rec is not None:
                 self.add_block_record(block_rec)
-                # this means we have already seen and validated this block.                
+                # this means we have already seen and validated this block.
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
             elif extending_main_chain:
                 # this is the common and efficient case where we extend the main
