@@ -34,7 +34,6 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
@@ -1079,7 +1078,7 @@ class Blockchain:
         if len(ref_list) == 0:
             return BlockGenerator(block.transactions_generator, [])
 
-        result: List[SerializedProgram] = []
+        result: List[bytes] = []
         previous_br = await self.get_block_record_from_db(block.prev_header_hash)
         if previous_br is not None and self.height_to_hash(previous_br.height) == block.prev_header_hash:
             # We are not in a reorg, no need to look up alternate header hashes
@@ -1114,7 +1113,7 @@ class Blockchain:
                     ref_block = additional_height_dict[ref_height]
                     if ref_block.transactions_generator is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(ref_block.transactions_generator)
+                    result.append(bytes(ref_block.transactions_generator))
                 elif ref_height in reorg_chain:
                     gen = await self.block_store.get_generator(reorg_chain[ref_height])
                     if gen is None:
