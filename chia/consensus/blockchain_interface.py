@@ -1,103 +1,48 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Protocol
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
-from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.ints import uint32
 
 
-class BlockchainInterface:
-    def get_peak(self) -> Optional[BlockRecord]:
-        pass
+class BlockRecordsProtocol(Protocol):
+    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]: ...
+    def block_record(self, header_hash: bytes32) -> BlockRecord: ...
+    def contains_height(self, height: uint32) -> bool: ...
+    def contains_block(self, header_hash: bytes32) -> bool: ...
+    def height_to_hash(self, height: uint32) -> Optional[bytes32]: ...
+    def height_to_block_record(self, height: uint32) -> BlockRecord: ...
 
-    def get_peak_height(self) -> Optional[uint32]:
-        pass
 
-    def block_record(self, header_hash: bytes32) -> BlockRecord:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
-
-    def height_to_block_record(self, height: uint32) -> BlockRecord:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
-
-    def get_ses_heights(self) -> List[uint32]:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
-
-    def get_ses(self, height: uint32) -> SubEpochSummary:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
-
-    def height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        pass
-
-    def contains_block(self, header_hash: bytes32) -> bool:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
-
-    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
-        return  # type: ignore[return-value]
-
-    def remove_block_record(self, header_hash: bytes32) -> None:
-        pass
-
-    def add_block_record(self, block_record: BlockRecord) -> None:
-        pass
-
-    def contains_height(self, height: uint32) -> bool:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
-
-    async def warmup(self, fork_point: uint32) -> None:
-        pass
-
-    async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        pass
-
-    async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
-
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
-        return  # type: ignore[return-value]
+class BlockchainInterface(BlockRecordsProtocol, Protocol):
+    def get_peak(self) -> Optional[BlockRecord]: ...
+    def get_peak_height(self) -> Optional[uint32]: ...
+    def get_ses_heights(self) -> List[uint32]: ...
+    def get_ses(self, height: uint32) -> SubEpochSummary: ...
+    async def contains_block_from_db(self, header_hash: bytes32) -> bool: ...
+    def remove_block_record(self, header_hash: bytes32) -> None: ...
+    def add_block_record(self, block_record: BlockRecord) -> None: ...
+    async def warmup(self, fork_point: uint32) -> None: ...
+    async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]: ...
+    async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]: ...
+    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]: ...
 
     async def get_header_blocks_in_range(
         self, start: int, stop: int, tx_filter: bool = True
-    ) -> Dict[bytes32, HeaderBlock]:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
+    ) -> Dict[bytes32, HeaderBlock]: ...
 
-    async def get_header_block_by_height(
-        self, height: int, header_hash: bytes32, tx_filter: bool = True
-    ) -> Optional[HeaderBlock]:
-        pass
-
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
-
-    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        if self.contains_block(header_hash):
-            return self.block_record(header_hash)
-        return None
+    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]: ...
 
     async def persist_sub_epoch_challenge_segments(
         self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
-    ) -> None:
-        pass
+    ) -> None: ...
 
     async def get_sub_epoch_challenge_segments(
         self,
         sub_epoch_summary_hash: bytes32,
-    ) -> Optional[List[SubEpochChallengeSegment]]:
-        pass
-
-    def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
-        # ignoring hinting error until we handle our interfaces more formally
-        return  # type: ignore[return-value]
+    ) -> Optional[List[SubEpochChallengeSegment]]: ...

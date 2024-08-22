@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 # noinspection PyCallByClass
 def validate_unfinished_header_block(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     header_block: UnfinishedHeaderBlock,
     check_filter: bool,
     expected_difficulty: uint64,
@@ -828,7 +828,7 @@ def validate_unfinished_header_block(
 
 def validate_finished_header_block(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     header_block: HeaderBlock,
     check_filter: bool,
     expected_difficulty: uint64,

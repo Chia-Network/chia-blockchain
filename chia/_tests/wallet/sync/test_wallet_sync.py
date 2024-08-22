@@ -13,6 +13,7 @@ from chia_rs import confirm_not_included_already_hashed
 from colorlog import getLogger
 
 from chia._tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
+from chia._tests.util.blockchain_mock import BlockchainMock
 from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
@@ -39,7 +40,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.batches import to_batches
-from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -646,7 +646,7 @@ async def test_get_wp_fork_point(
 ) -> None:
     blocks = default_10000_blocks
     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks, blockchain_constants)
-    wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+    wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries))
     wp1 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9_000)]].header_hash)
     assert wp1 is not None
     wp2 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9_030)]].header_hash)
@@ -1410,7 +1410,7 @@ async def test_bad_peak_mismatch(
     full_node_server = full_node.server
     blocks = default_1000_blocks
     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks, blockchain_constants)
-    wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+    wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries))
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
