@@ -1522,7 +1522,7 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
     uris = coins[0]["data_uris"]
     assert len(uris) == 1
     assert "https://www.chia.net/img/branding/chia-logo.svg" in uris
-    assert len(coins[0]["metadata_uris"]) == 1
+    assert len(coins[0]["metadata_uris"]) == 2
     assert "http://metadata" == coins[0]["metadata_uris"][0]
     assert len(coins[0]["license_uris"]) == 0
 
