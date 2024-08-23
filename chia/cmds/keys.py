@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, Tuple
 
 import click
+from chia_rs import PrivateKey
 
 from chia.cmds import options
 
@@ -325,8 +326,11 @@ def search_cmd(
 
     # Specifying the master key is optional for the search command. If not specified, we'll search all keys.
     sk = None
-    if (fingerprint is not None or filename is not None) and non_observer_derivation:
-        sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+    if fingerprint is not None or filename is not None:
+        try:
+            sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+        except ValueError:
+            print("Could not resolve private key from fingerprint/mnemonic file")
 
     found: bool = search_derive(
         ctx.obj["root_path"],
@@ -342,6 +346,34 @@ def search_cmd(
     )
 
     sys.exit(0 if found else 1)
+
+
+class ResolutionError(Exception):
+    pass
+
+
+def _resolve_fingerprint_and_sk(
+    filename: Optional[str], fingerprint: Optional[int], non_observer_derivation: bool
+) -> Tuple[Optional[int], Optional[PrivateKey]]:
+    from .keys_funcs import prompt_for_fingerprint, resolve_derivation_master_key
+
+    sk = None
+    try:
+        sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+    except ValueError:
+        if non_observer_derivation:
+            print("Could not resolve private key for non-observer derivation")
+            raise ResolutionError()
+        else:
+            pass
+
+    if fingerprint is None and sk is None:
+        fingerprint = prompt_for_fingerprint()
+        if fingerprint is None:
+            print("A fingerprint of a root key to derive from is required")
+            raise ResolutionError()
+
+    return fingerprint, sk
 
 
 @derive_cmd.command("wallet-address", help="Derive wallet receive addresses")
@@ -370,20 +402,15 @@ def search_cmd(
 def wallet_address_cmd(
     ctx: click.Context, index: int, count: int, prefix: Optional[str], non_observer_derivation: bool, show_hd_path: bool
 ) -> None:
-    from .keys_funcs import derive_wallet_address, prompt_for_fingerprint, resolve_derivation_master_key
+    from .keys_funcs import derive_wallet_address
 
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
 
-    sk = None
-    if non_observer_derivation:
-        sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
-
-    if fingerprint is None and sk is None:
-        fingerprint = prompt_for_fingerprint()
-        if fingerprint is None:
-            print("A fingerprint of a root key to derive from is required")
-            return
+    try:
+        fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)
+    except ResolutionError:
+        return
 
     derive_wallet_address(
         ctx.obj["root_path"], fingerprint, index, count, prefix, non_observer_derivation, show_hd_path, sk
@@ -444,7 +471,7 @@ def child_key_cmd(
     show_private_keys: bool,
     show_hd_path: bool,
 ) -> None:
-    from .keys_funcs import derive_child_key, prompt_for_fingerprint, resolve_derivation_master_key
+    from .keys_funcs import derive_child_key
 
     if key_type is None and derive_from_hd_path is None:
         ctx.fail("--type or --derive-from-hd-path is required")
@@ -452,15 +479,10 @@ def child_key_cmd(
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
 
-    sk = None
-    if non_observer_derivation:
-        sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
-
-    if fingerprint is None and sk is None:
-        fingerprint = prompt_for_fingerprint()
-        if fingerprint is None:
-            print("A fingerprint of a root key to derive from is required")
-            return
+    try:
+        fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)
+    except ResolutionError:
+        return
 
     derive_child_key(
         fingerprint,

@@ -648,10 +648,7 @@ def derive_wallet_address(
     """
     if fingerprint is not None:
         key_data: KeyData = Keychain().get_key(fingerprint, include_secrets=non_observer_derivation)
-        if non_observer_derivation and key_data.secrets is None:
-            print("Need a private key for non observer derivation of wallet addresses")
-            return
-        elif non_observer_derivation:
+        if non_observer_derivation:
             sk = key_data.private_key
         else:
             sk = None
@@ -718,9 +715,6 @@ def derive_child_key(
         assert private_key is not None
         current_pk = private_key.get_g1()
         current_sk = private_key
-
-    if non_observer_derivation and current_sk is None:
-        raise ValueError("Cannot perform non-observer derivation on an observer-only key")
 
     # Key type was specified
     if key_type is not None:

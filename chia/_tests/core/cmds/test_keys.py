@@ -1342,7 +1342,7 @@ class TestKeysCommands:
             ],
         )
         assert result.exit_code == 0
-        assert result.output.find("Need a private key for non observer derivation of wallet addresses") != -1
+        assert result.output.find("Could not resolve private key for non-observer derivation") != -1
 
     def test_derive_wallet_testnet_address(self, tmp_path, keyring_with_one_public_one_private_key):
         """
@@ -1678,9 +1678,7 @@ class TestKeysCommands:
             ],
         )
 
-        assert isinstance(result.exception, ValueError) and result.exception.args == (
-            "Cannot perform non-observer derivation on an observer-only key",
-        )
+        assert result.output.find("Could not resolve private key for non-observer derivation") != -1
 
         result: Result = runner.invoke(
             cli,
