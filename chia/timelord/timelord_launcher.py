@@ -108,19 +108,22 @@ async def spawn_process(
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")
             continue
+        log.info(f"Successfully started VDF Client {counter}.")
 
         async with process_mgr.manage_proc(proc):
-            stdout, stderr = await proc.communicate()
+            await proc.communicate()
+            stdout = (await proc.stdout.readline()).decode().rstrip()
             if stdout:
-                log.info(f"VDF client {counter}: {stdout.decode().rstrip()}")
+                log.info(f"VDF client {counter}: {stdout}")
+            stderr = (await proc.stderr.readline()).decode().rstrip()
             if stderr:
                 if first_10_seconds:
                     if time.time() - start_time > 10:
                         first_10_seconds = False
                 else:
-                    log.error(f"VDF client {counter}: {stderr.decode().rstrip()}")
-
-        await asyncio.sleep(0.1)
+                    log.error(f"VDF client {counter}: {stderr}")
+                    
+            await asyncio.sleep(0.1)
 
 
 async def spawn_all_processes(config: Dict, net_config: Dict, process_mgr: VDFClientProcessMgr):
