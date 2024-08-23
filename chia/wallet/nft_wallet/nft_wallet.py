@@ -463,7 +463,7 @@ class NFTWallet:
             action_scope,
             fee,
             {nft_coin_info.coin},
-            metadata_update=[key, uri, signature],
+            metadata_update=[key, uri, signature, nft_coin_info.coin.name()],
             extra_conditions=extra_conditions,
         )
         await self.update_coin_status(nft_coin_info.coin.name(), True)

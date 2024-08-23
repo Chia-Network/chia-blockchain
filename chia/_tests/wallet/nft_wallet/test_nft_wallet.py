@@ -836,7 +836,7 @@ async def test_nft_wallet_rpc_change_owner(
     # this must be signed
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
 
-    message = Program.to(["mu", "http://metadata"]).get_tree_hash()
+    message = Program.to(["mu", "http://metadata", bytes32.from_hexstr(coin["nft_coin_id"])]).get_tree_hash()
     der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
     r, _s = decode_dss_signature(der_sig)
     curve_order = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
@@ -886,7 +886,7 @@ async def test_nft_wallet_rpc_change_owner(
     nft_coin_id = coin["nft_coin_id"]
     new_owner = Program.to("silly name").get_tree_hash()
 
-    message = Program.to(["did", new_owner]).get_tree_hash()
+    message = Program.to(["did", new_owner, bytes32.from_hexstr(coin["nft_coin_id"])]).get_tree_hash()
     der_sig = private_key.sign(message, ec.ECDSA(hashes.SHA256(), deterministic_signing=True))
     r, _s = decode_dss_signature(der_sig)
     curve_order = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141

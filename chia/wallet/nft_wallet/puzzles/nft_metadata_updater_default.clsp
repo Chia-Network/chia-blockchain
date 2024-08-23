@@ -1,4 +1,4 @@
-(mod (CURRENT_METADATA METADATA_UPDATER_PUZZLE_HASH (key new_url signature))
+(mod (CURRENT_METADATA METADATA_UPDATER_PUZZLE_HASH (key new_url signature my_id))
 
   ; METADATA and METADATA_UPDATER_PUZZLE_HASH are passed in as truths from the layer above
   ; This program returns ((new_metadata new_metadata_updater_puzhash) conditions)
@@ -44,7 +44,6 @@
       )
       METADATA_UPDATER_PUZZLE_HASH
     )
-    ; TODO: this is vulnerable to replay attacks - pass in my_coin_ID as part of the signature and return an assert_my_id to fix
-    (scan_for_pk CURRENT_METADATA (sha256 (sha256tree (list key new_url))) signature)
+    (c (list ASSERT_MY_COIN_ID my_id) (scan_for_pk CURRENT_METADATA (sha256 (sha256tree (list key new_url my_id))) signature))
   )
 )
