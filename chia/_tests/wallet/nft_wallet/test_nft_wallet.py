@@ -832,6 +832,7 @@ async def test_nft_wallet_rpc_change_owner(
             ]
         )
     )
+    nft_id = coin["nft_id"]
     # add another URI using a bech32m nft_coin_id
     # this must be signed
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
@@ -918,6 +919,10 @@ async def test_nft_wallet_rpc_change_owner(
     assert len(uris) == 1
     assert len(coin["metadata_uris"]) == 1
     assert bytes32.from_hexstr(coin["metadata_owners_list"][0]) == new_owner
+
+    # check nft_get_info
+    nft_info_response = await api_0.nft_get_info({"coin_id": nft_id})
+    assert nft_info_response["nft_info"].metadata_owners_list[0] == new_owner
 
 
 @pytest.mark.parametrize("trusted", [True, False])

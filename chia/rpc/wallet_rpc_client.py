@@ -1134,6 +1134,23 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_mint_bulk", request)
         return json_deserialize_with_clvm_streamable(response, NFTMintBulkResponse)
 
+    async def nft_update_owner_via_metadata(
+            self,
+            wallet_id: int,
+            new_owner: str,
+            signature: str,
+            fee: uint64 = uint64(0),
+            push: bool = True,
+    ) -> Dict[str, Any]:
+        request = {
+            "wallet_id": wallet_id,
+            "new_owner": new_owner,
+            "signature": signature,
+            "fee": fee,
+        }
+        response = await self.fetch("nft_update_owner_via_metadata", request)
+        return response
+
     # DataLayer
     async def create_new_dl(
         self,
