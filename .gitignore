@@ -308,3 +308,6 @@ tags
 # Ignore the binaries that are pulled for the installer
 /bladebit/
 /madmax/
+/.vs/chia-blockchain/FileContentIndex
+/.vs/chia-blockchain/v17
+/.vs
