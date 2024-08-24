@@ -1229,11 +1229,37 @@ class WalletStateManager:
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
         if derivation_record is None:
+            # TODO: remove this when vault derivation records for p2_singletons are sorted out
             if isinstance(self.observation_root, VaultRoot):
+                assert isinstance(self.main_wallet, Vault)
+                p2_singleton = self.main_wallet.get_p2_singleton_puzzle_hash()
                 for wallet in [wal for wal in self.wallets.values() if wal.type() == WalletType.CAT]:
                     cat_p2_singleton = wallet.get_p2_singleton_puzzle_hash()  # type: ignore[attr-defined]
                     if coin_state.coin.puzzle_hash == cat_p2_singleton:
                         return WalletIdentifier(wallet.id(), wallet.type())
+                # check if we need to create a cat Wallet
+                if p2_singleton == hinted_coin.hint:
+                    if parent_data.tail_program_hash.hex() in self.default_cats or self.config.get(
+                        "automatically_add_unknown_cats", False
+                    ):
+                        cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
+                            self, self.main_wallet, parent_data.tail_program_hash.hex()
+                        )
+                        return WalletIdentifier.create(cat_wallet)
+                    else:
+                        await self.interested_store.add_unacknowledged_token(
+                            parent_data.tail_program_hash,
+                            CATWallet.default_wallet_name_for_unknown_cat(parent_data.tail_program_hash.hex()),
+                            None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
+                            parent_coin_state.coin.puzzle_hash,
+                        )
+                        await self.interested_store.add_unacknowledged_coin_state(
+                            parent_data.tail_program_hash,
+                            coin_state,
+                            fork_height,
+                        )
+                        self.state_changed("added_stray_cat")
+                        return None
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             return None
         else:
@@ -1293,7 +1319,7 @@ class WalletStateManager:
                 "automatically_add_unknown_cats", False
             ):
                 if is_crcat:
-                    cat_wallet: Union[CATWallet, CRCATWallet] = await CRCATWallet.get_or_create_wallet_for_cat(
+                    cat_wallet = await CRCATWallet.get_or_create_wallet_for_cat(
                         self,
                         self.main_wallet,
                         crcat.tail_hash.hex(),

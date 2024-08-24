@@ -143,7 +143,7 @@ async def wallet_environments(
         config_overrides = {}
     if (("as_vault" not in request.param) or (not request.param["as_vault"])) and as_vault:
         pytest.skip("Vault tests not requested")
-    if as_vault and (consensus_mode != ConsensusMode.HARD_FORK_2_0):
+    if as_vault and (consensus_mode not in [ConsensusMode.HARD_FORK_2_0, ConsensusMode.PLAIN]):
         pytest.skip("Skipping vault tests for consensus modes other than HARD_FORK_2_0")
     async with setup_simulators_and_wallets_service(
         1,

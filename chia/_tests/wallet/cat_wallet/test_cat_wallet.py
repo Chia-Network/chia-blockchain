@@ -231,7 +231,7 @@ async def test_cat_creation_unique_lineage_store(wallet_environments: WalletTest
     assert cat_wallet_1.lineage_store.table_name != cat_wallet_2.lineage_store.table_name
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0], reason="irrelevant")
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
 @pytest.mark.parametrize(
     "wallet_environments",
     [
@@ -1301,7 +1301,6 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
     async with wallet_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], action_scope, memos=[[cat_2_hash]])
 
-    breakpoint()
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -1430,9 +1429,11 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
         [
             WalletStateTransition(
                 pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {},
                 },
                 post_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {
                         "confirmed_wallet_balance": 5,
                         "unconfirmed_wallet_balance": 5,
@@ -1446,6 +1447,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {
                         "unconfirmed_wallet_balance": -5,
                         "<=#spendable_balance": -5,
@@ -1456,6 +1458,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
                 post_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {
                         "confirmed_wallet_balance": -5,
                         ">=#spendable_balance": 1,
