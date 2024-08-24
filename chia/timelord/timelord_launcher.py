@@ -117,6 +117,7 @@ async def spawn_process(
                 stdout = (await proc.stdout.readline()).decode().rstrip()
                 if stdout:
                     log.info(f"VDF client {counter}: {stdout}")
+                stderr = (await proc.stderr.readline()).decode().rstrip()
                 if stderr:
                     if first_10_seconds:
                         if time.time() - start_time > 10:
