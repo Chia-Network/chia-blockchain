@@ -104,10 +104,12 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
 
             assert await store.get_full_blocks_at([block.height]) == [block]
             if block.transactions_generator is not None:
-                assert await store.get_generators_at([block.height]) == [bytes(block.transactions_generator)]
+                assert await store.get_generators_at({block.height}) == {
+                    block.height: bytes(block.transactions_generator)
+                }
             else:
                 with pytest.raises(ValueError, match="GENERATOR_REF_HAS_NO_GENERATOR"):
-                    await store.get_generators_at([block.height])
+                    await store.get_generators_at({block.height})
 
         assert len(await store.get_full_blocks_at([uint32(1)])) == 1
         assert len(await store.get_full_blocks_at([uint32(0)])) == 1
@@ -321,19 +323,21 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
             await store.set_peak(block_record.header_hash)
             new_blocks.append(block)
 
-        expected_generators = list(map(lambda x: maybe_serialize(x.transactions_generator), new_blocks[1:10]))
-        generators = await store.get_generators_at([uint32(x) for x in range(1, 10)])
+        expected_generators = {b.height: maybe_serialize(b.transactions_generator) for b in new_blocks[1:10]}
+        generators = await store.get_generators_at({uint32(x) for x in range(1, 10)})
         assert generators == expected_generators
 
         # test out-of-order heights
-        expected_generators = list(
-            map(lambda x: maybe_serialize(x.transactions_generator), [new_blocks[i] for i in [4, 8, 3, 9]])
-        )
-        generators = await store.get_generators_at([uint32(4), uint32(8), uint32(3), uint32(9)])
+        expected_generators = {
+            b.height: maybe_serialize(b.transactions_generator) for b in [new_blocks[i] for i in [4, 8, 3, 9]]
+        }
+        generators = await store.get_generators_at({uint32(4), uint32(8), uint32(3), uint32(9)})
         assert generators == expected_generators
 
         with pytest.raises(KeyError):
-            await store.get_generators_at([uint32(100)])
+            await store.get_generators_at({uint32(100)})
+
+        assert await store.get_generators_at(set()) == {}
 
         assert await store.get_generator(blocks[2].header_hash) == maybe_serialize(new_blocks[2].transactions_generator)
         assert await store.get_generator(blocks[4].header_hash) == maybe_serialize(new_blocks[4].transactions_generator)

@@ -1081,49 +1081,79 @@ class Blockchain:
         if len(ref_list) == 0:
             return BlockGenerator(block.transactions_generator, [])
 
-        result: List[bytes] = []
-        previous_br = await self.get_block_record_from_db(block.prev_header_hash)
-        if previous_br is not None and self.height_to_hash(previous_br.height) == block.prev_header_hash:
-            # We are not in a reorg, no need to look up alternate header hashes
-            # (we can get them from height_to_hash)
-            # in the v2 database, we can look up blocks by height directly
-            # (as long as we're in the main chain)
-            result = await self.block_store.get_generators_at(block.transactions_generator_ref_list)
-        else:
-            # First tries to find the blocks in additional_blocks
-            curr = block
-            additional_height_dict = {}
-            while curr.prev_header_hash in additional_blocks:
-                prev: FullBlock = additional_blocks[curr.prev_header_hash]
-                additional_height_dict[prev.height] = prev
-                curr = prev
+        generators: Dict[uint32, bytes] = {}
 
-            peak: Optional[BlockRecord] = self.get_peak()
-            prev_block_record = await self.get_block_record_from_db(curr.prev_header_hash)
-            reorg_chain: Dict[uint32, bytes32] = {}
-            if prev_block_record is not None and peak is not None:
+        # The block heights in the transactions_generator_ref_list don't
+        # necessarily refer to the main chain. The generators may be found in 3
+        # different places. The additional blocks, a fork of the chain (but in
+        # the database) or in the main chain.
+
+        #              * <- block
+        # additional : |
+        #              * <- peak of fork (i.e. we have not
+        #              | :  validated blocks past this height)
+        #              | :
+        # peak -> *    | : reorg_chain
+        #          \   / :
+        #           \ /  :
+        #            *  <- fork point
+        #         :  |
+        #  main   :  |
+        #  chain  :  |
+        #         :  |
+        #         :  * <- genesis
+
+        generator_refs = set(block.transactions_generator_ref_list)
+
+        # traverse the additional blocks (if any) and resolve heights into
+        # generators
+        curr = block
+        to_remove = []
+        while curr.prev_header_hash in additional_blocks:
+            prev: FullBlock = additional_blocks[curr.prev_header_hash]
+            if prev.height in generator_refs:
+                if prev.transactions_generator is None:
+                    raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                generators[prev.height] = bytes(prev.transactions_generator)
+                to_remove.append(prev.height)
+            curr = prev
+        for i in to_remove:
+            generator_refs.remove(i)
+
+        if len(generator_refs) > 0:
+            # If the block immediately before the additional blocks is not part of
+            # the main chain, we're on a fork, and we need to find the fork point
+            prev_b = self.try_block_record(curr.prev_header_hash)
+            if prev_b is None:
+                prev_b = await self.get_block_record_from_db(curr.prev_header_hash)
+            assert prev_b is not None
+            if self.height_to_hash(prev_b.height) != curr.prev_header_hash:
+                peak: Optional[BlockRecord] = self.get_peak()
+                assert peak is not None
+                reorg_chain: Dict[uint32, bytes32]
                 # Then we look up blocks up to fork point one at a time, backtracking
-                height_to_hash, _ = await lookup_fork_chain(
+                reorg_chain, _ = await lookup_fork_chain(
                     self,
                     (peak.height, peak.header_hash),
-                    (prev_block_record.height, prev_block_record.header_hash),
+                    (prev_b.height, prev_b.header_hash),
                     self.constants,
                 )
-                reorg_chain.update(height_to_hash)
 
-            for ref_height in block.transactions_generator_ref_list:
-                if ref_height in additional_height_dict:
-                    ref_block = additional_height_dict[ref_height]
-                    if ref_block.transactions_generator is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(bytes(ref_block.transactions_generator))
-                elif ref_height in reorg_chain:
-                    gen = await self.block_store.get_generator(reorg_chain[ref_height])
-                    if gen is None:
-                        raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(gen)
-                else:
-                    [gen] = await self.block_store.get_generators_at([ref_height])
-                    result.append(gen)
-        assert len(result) == len(ref_list)
+                to_remove = []
+                for ref_height in generator_refs:
+                    if ref_height in reorg_chain:
+                        gen = await self.block_store.get_generator(reorg_chain[ref_height])
+                        if gen is None:
+                            raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+                        generators[ref_height] = gen
+                        to_remove.append(ref_height)
+                for i in to_remove:
+                    generator_refs.remove(i)
+
+        if len(generator_refs) > 0:
+            # any remaining references fall in the main chain, and can be looked up
+            # in a single query
+            generators.update(await self.block_store.get_generators_at(generator_refs))
+
+        result = [generators[height] for height in block.transactions_generator_ref_list]
         return BlockGenerator(block.transactions_generator, result)
