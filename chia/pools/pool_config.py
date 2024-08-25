@@ -97,9 +97,7 @@ def update_pool_config_entry(
                     if update_closure(pool_config_dict):
                         updated = True
             except Exception as e:
-                log.error(
-                    f"Exception updating pool config {pool_config_dict} for launcher_id {launcher_id}: {e}"
-                )
+                log.error(f"Exception updating pool config {pool_config_dict} for launcher_id {launcher_id}: {e}")
     if updated:
         log.info(update_log_message)
         config["pool"]["pool_list"] = pool_list
