@@ -32,7 +32,7 @@ class BlockCache:
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
 
-    def height_to_block_record(self, height: uint32, check_db: bool = False) -> BlockRecord:
+    def height_to_block_record(self, height: uint32) -> BlockRecord:
         # Precondition: height is < peak height
         header_hash: Optional[bytes32] = self.height_to_hash(height)
         assert header_hash is not None
