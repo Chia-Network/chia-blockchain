@@ -113,7 +113,6 @@ async def spawn_process(
             while True:
                 if proc.stdout.at_eof() and proc.stderr.at_eof():
                     break
-
                 stdout = (await proc.stdout.readline()).decode().rstrip()
                 if stdout:
                     log.info(f"VDF client {counter}: {stdout}")
