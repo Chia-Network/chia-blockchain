@@ -111,6 +111,8 @@ async def spawn_process(
 
         async with process_mgr.manage_proc(proc):
             while True:
+                if proc.stdout is None or proc.stderr is None:
+                    break
                 if proc.stdout.at_eof() and proc.stderr.at_eof():
                     break
                 stdout = (await proc.stdout.readline()).decode().rstrip()
