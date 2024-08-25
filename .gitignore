@@ -50,6 +50,7 @@ activate
 # Editors
 .vscode
 .idea
+.vs
 
 # Packaging
 chia-blockchain.tar.gz
