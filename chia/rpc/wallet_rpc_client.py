@@ -1057,21 +1057,19 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_get_nfts", request)
         return response
 
-    # TODO: add a test for this
     async def set_nft_did(
         self,
         wallet_id: int,
-        did_id: str,
+        did_id: Optional[str],
         nft_coin_id: str,
         fee: int,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTSetNFTDIDResponse:  # pragma: no cover
+    ) -> NFTSetNFTDIDResponse:
         request = {
             "wallet_id": wallet_id,
-            "did_id": did_id,
             "nft_coin_id": nft_coin_id,
             "fee": fee,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
@@ -1079,6 +1077,8 @@ class WalletRpcClient(RpcClient):
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
         }
+        if did_id is not None:
+            request["did_id"] = did_id
         response = await self.fetch("nft_set_nft_did", request)
         return json_deserialize_with_clvm_streamable(response, NFTSetNFTDIDResponse)
 
