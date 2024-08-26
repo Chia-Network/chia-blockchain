@@ -357,7 +357,9 @@ class Blockchain:
         # tests that make sure the Blockchain object can handle any blocks,
         # including orphaned ones, without any fork context
         if fork_info is None:
-            if await self.contains_block_from_db(header_hash):
+            block_rec = await self.get_block_record_from_db(header_hash)
+            if block_rec is not None:
+                self.add_block_record(block_rec)
                 # this means we have already seen and validated this block.
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
             elif extending_main_chain:
@@ -411,13 +413,14 @@ class Blockchain:
             if extending_main_chain:
                 fork_info.reset(block.height - 1, block.prev_header_hash)
 
-            if await self.contains_block_from_db(header_hash):
+            block_rec = await self.get_block_record_from_db(header_hash)
+            if block_rec is not None:
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
                 await self.advance_fork_info(block, fork_info, {})
                 fork_info.include_spends(npc_result, block, header_hash)
-
+                self.add_block_record(block_rec)
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
             if fork_info.peak_hash != block.prev_header_hash:
