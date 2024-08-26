@@ -199,8 +199,13 @@ def sign_cmd(
 ) -> None:
     from .keys_funcs import resolve_derivation_master_key, sign
 
-    private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
-    sign(message, private_key, hd_path, as_bytes, json)
+    _, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+
+    if resolved_sk is None:
+        print("Could not resolve a secret key to sign with.")
+        return
+
+    sign(message, resolved_sk, hd_path, as_bytes, json)
 
 
 def parse_signature_json(json_str: str) -> Tuple[str, str, str, str]:
@@ -325,11 +330,10 @@ def search_cmd(
     filename: Optional[str] = ctx.obj.get("filename", None)
 
     # Specifying the master key is optional for the search command. If not specified, we'll search all keys.
-    sk = None
+    resolved_sk = None
     if fingerprint is not None or filename is not None:
-        try:
-            sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
-        except ValueError:
+        _, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+        if resolved_sk is None:
             print("Could not resolve private key from fingerprint/mnemonic file")
 
     found: bool = search_derive(
@@ -342,7 +346,7 @@ def search_cmd(
         ("all",) if "all" in search_type else search_type,
         derive_from_hd_path,
         prefix,
-        sk,
+        resolved_sk,
     )
 
     sys.exit(0 if found else 1)
@@ -355,25 +359,21 @@ class ResolutionError(Exception):
 def _resolve_fingerprint_and_sk(
     filename: Optional[str], fingerprint: Optional[int], non_observer_derivation: bool
 ) -> Tuple[Optional[int], Optional[PrivateKey]]:
-    from .keys_funcs import prompt_for_fingerprint, resolve_derivation_master_key
+    from .keys_funcs import resolve_derivation_master_key
 
-    sk = None
-    try:
-        sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
-    except ValueError:
-        if non_observer_derivation:
-            print("Could not resolve private key for non-observer derivation")
-            raise ResolutionError()
-        else:
-            pass
+    reolved_fp, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
-    if fingerprint is None and sk is None:
-        fingerprint = prompt_for_fingerprint()
-        if fingerprint is None:
-            print("A fingerprint of a root key to derive from is required")
-            raise ResolutionError()
+    if non_observer_derivation and resolved_sk is None:
+        print("Could not resolve private key for non-observer derivation")
+        raise ResolutionError()
+    else:
+        pass
 
-    return fingerprint, sk
+    if reolved_fp is None:
+        print("A fingerprint of a root key to derive from is required")
+        raise ResolutionError()
+
+    return reolved_fp, resolved_sk
 
 
 @derive_cmd.command("wallet-address", help="Derive wallet receive addresses")

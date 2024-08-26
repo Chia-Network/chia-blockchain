@@ -814,7 +814,9 @@ def prompt_for_fingerprint() -> Optional[int]:
                     return fingerprints[index]
 
 
-def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]) -> Optional[PrivateKey]:
+def get_private_key_with_fingerprint_or_prompt(
+    fingerprint: Optional[int],
+) -> Tuple[Optional[int], Optional[PrivateKey]]:
     """
     Get a private key with the specified fingerprint. If fingerprint is not
     specified, prompt the user to select a key.
@@ -822,10 +824,10 @@ def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]) -> Op
 
     # Return the private key matching the specified fingerprint
     if fingerprint is not None:
-        return private_key_for_fingerprint(fingerprint)
+        return fingerprint, private_key_for_fingerprint(fingerprint)
 
     fingerprint_prompt = prompt_for_fingerprint()
-    return None if fingerprint_prompt is None else private_key_for_fingerprint(fingerprint_prompt)
+    return fingerprint_prompt, None if fingerprint_prompt is None else private_key_for_fingerprint(fingerprint_prompt)
 
 
 def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
@@ -838,15 +840,15 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
     return AugSchemeMPL.key_gen(seed)
 
 
-def resolve_derivation_master_key(fingerprint_or_filename: Optional[Union[int, str, Path]]) -> PrivateKey:
+def resolve_derivation_master_key(
+    fingerprint_or_filename: Optional[Union[int, str, Path]]
+) -> Tuple[Optional[int], Optional[PrivateKey]]:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.
     """
 
     if fingerprint_or_filename is not None and (isinstance(fingerprint_or_filename, (str, Path))):
-        return private_key_from_mnemonic_seed_file(Path(os.fspath(fingerprint_or_filename)))
+        sk = private_key_from_mnemonic_seed_file(Path(os.fspath(fingerprint_or_filename)))
+        return sk.get_g1().get_fingerprint(), sk
     else:
-        ret = get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
-        if ret is None:
-            raise ValueError("Abort. No private key")
-        return ret
+        return get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
