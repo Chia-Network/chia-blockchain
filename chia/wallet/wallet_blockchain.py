@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, cast
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import AddBlockResult
-from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
-from chia.types.weight_proof import WeightProof
+from chia.types.weight_proof import SubEpochChallengeSegment, WeightProof
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 from chia.wallet.key_val_store import KeyValStore
@@ -21,7 +21,13 @@ from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 log = logging.getLogger(__name__)
 
 
-class WalletBlockchain(BlockchainInterface):
+# implements BlockchainInterface
+class WalletBlockchain:
+    if TYPE_CHECKING:
+        from chia.consensus.blockchain_interface import BlockchainInterface
+
+        _protocol_check: ClassVar[BlockchainInterface] = cast("WalletBlockchain", None)
+
     constants: ConsensusConstants
     _basic_store: KeyValStore
     _weight_proof_handler: WalletWeightProofHandler
@@ -205,6 +211,51 @@ class WalletBlockchain(BlockchainInterface):
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records.get(header_hash)
+
+    def get_peak(self) -> Optional[BlockRecord]:
+        return None
+
+    def get_peak_height(self) -> Optional[uint32]:
+        return None
+
+    def remove_block_record(self, header_hash: bytes32) -> None:
+        pass
+
+    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
+        return []
+
+    async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
+        return {}
+
+    async def warmup(self, fork_point: uint32) -> None:
+        pass
+
+    async def get_header_blocks_in_range(
+        self, start: int, stop: int, tx_filter: bool = True
+    ) -> Dict[bytes32, HeaderBlock]:
+        return {}
+
+    def get_ses_heights(self) -> List[uint32]:
+        return []
+
+    def get_ses(self, height: uint32) -> SubEpochSummary:
+        return  # type: ignore[return-value]
+
+    async def get_sub_epoch_challenge_segments(
+        self,
+        sub_epoch_summary_hash: bytes32,
+    ) -> Optional[List[SubEpochChallengeSegment]]:
+        return None
+
+    def height_to_block_record(self, height: uint32) -> BlockRecord:
+        header_hash: Optional[bytes32] = self.height_to_hash(height)
+        assert header_hash is not None
+        return self._block_records[header_hash]
+
+    async def persist_sub_epoch_challenge_segments(
+        self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
+    ) -> None:
+        pass
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]

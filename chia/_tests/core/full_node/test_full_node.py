@@ -2322,7 +2322,8 @@ async def test_long_reorg(
     # now reorg back to the original chain
     # this exercises the case where we have some of the blocks in the DB already
     node.full_node.blockchain.clean_block_records()
-
+    # when using add_block manualy we must warmup the cache
+    await node.full_node.blockchain.warmup(fork_point - 100)
     if light_blocks:
         blocks = default_10000_blocks[fork_point - 100 : 1800]
     else:

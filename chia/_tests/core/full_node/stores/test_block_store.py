@@ -5,7 +5,7 @@ import logging
 import random
 import sqlite3
 from pathlib import Path
-from typing import List, cast
+from typing import List, Optional, cast
 
 import pytest
 
@@ -37,6 +37,13 @@ log = logging.getLogger(__name__)
 @pytest.fixture(scope="function", params=[True, False])
 def use_cache(request: SubRequest) -> bool:
     return cast(bool, request.param)
+
+
+def maybe_serialize(gen: Optional[SerializedProgram]) -> Optional[bytes]:
+    if gen is None:
+        return None
+    else:
+        return bytes(gen)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
@@ -85,7 +92,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
             assert GeneratorBlockInfo(
                 block.foliage.prev_block_hash, block.transactions_generator, block.transactions_generator_ref_list
             ) == await store.get_block_info(block.header_hash)
-            assert block.transactions_generator == await store.get_generator(block.header_hash)
+            assert maybe_serialize(block.transactions_generator) == await store.get_generator(block.header_hash)
             assert block_record == (await store.get_block_record(block_record_hh))
             await store.set_in_chain([(block_record.header_hash,)])
             await store.set_peak(block_record.header_hash)
@@ -98,7 +105,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
 
             assert await store.get_full_blocks_at([block.height]) == [block]
             if block.transactions_generator is not None:
-                assert await store.get_generators_at([block.height]) == [block.transactions_generator]
+                assert await store.get_generators_at([block.height]) == [bytes(block.transactions_generator)]
             else:
                 with pytest.raises(ValueError, match="GENERATOR_REF_HAS_NO_GENERATOR"):
                     await store.get_generators_at([block.height])
@@ -315,22 +322,24 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
             await store.set_peak(block_record.header_hash)
             new_blocks.append(block)
 
-        expected_generators = list(map(lambda x: x.transactions_generator, new_blocks[1:10]))
+        expected_generators = list(map(lambda x: maybe_serialize(x.transactions_generator), new_blocks[1:10]))
         generators = await store.get_generators_at([uint32(x) for x in range(1, 10)])
         assert generators == expected_generators
 
         # test out-of-order heights
-        expected_generators = list(map(lambda x: x.transactions_generator, [new_blocks[i] for i in [4, 8, 3, 9]]))
+        expected_generators = list(
+            map(lambda x: maybe_serialize(x.transactions_generator), [new_blocks[i] for i in [4, 8, 3, 9]])
+        )
         generators = await store.get_generators_at([uint32(4), uint32(8), uint32(3), uint32(9)])
         assert generators == expected_generators
 
         with pytest.raises(KeyError):
             await store.get_generators_at([uint32(100)])
 
-        assert await store.get_generator(blocks[2].header_hash) == new_blocks[2].transactions_generator
-        assert await store.get_generator(blocks[4].header_hash) == new_blocks[4].transactions_generator
-        assert await store.get_generator(blocks[6].header_hash) == new_blocks[6].transactions_generator
-        assert await store.get_generator(blocks[7].header_hash) == new_blocks[7].transactions_generator
+        assert await store.get_generator(blocks[2].header_hash) == maybe_serialize(new_blocks[2].transactions_generator)
+        assert await store.get_generator(blocks[4].header_hash) == maybe_serialize(new_blocks[4].transactions_generator)
+        assert await store.get_generator(blocks[6].header_hash) == maybe_serialize(new_blocks[6].transactions_generator)
+        assert await store.get_generator(blocks[7].header_hash) == maybe_serialize(new_blocks[7].transactions_generator)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
