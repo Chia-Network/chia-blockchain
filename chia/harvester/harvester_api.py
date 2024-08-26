@@ -27,15 +27,18 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
-
+from chia.util.config import load_config
+from typing import Any, Dict
 
 class HarvesterAPI:
     log: logging.Logger
     harvester: Harvester
+    config: Dict[str, Any]
 
-    def __init__(self, harvester: Harvester):
+    def __init__(self, harvester: Harvester, config):
         self.log = logging.getLogger(__name__)
         self.harvester = harvester
+        self.config = config
 
     def ready(self) -> bool:
         return True
@@ -250,12 +253,13 @@ class HarvesterAPI:
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         time_taken = time.time() - start
         total_proofs_found = 0
+        latency_warning_threshold = self.config.get("latency_warning_threshold", 8)
         for filename_sublist_awaitable in asyncio.as_completed(awaitables):
             filename, sublist = await filename_sublist_awaitable
             time_taken = time.time() - start
-            if time_taken > 8:
+            if time_taken > latency_warning_threshold:
                 self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below 8 seconds"
+                    f"Looking up qualities on {filename} took: {time_taken}. This should be below {latency_warning_threshold} seconds"
                     f" to minimize risk of losing rewards."
                 )
             else:

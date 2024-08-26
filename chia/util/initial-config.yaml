@@ -181,6 +181,8 @@ harvester:
   disable_cpu_affinity: False
   # Ignore compressed plots with compression level greater than this.
   max_compression_level_allowed: 7
+  #Number of seconds after which the harvester will produce a warning for looking up plot qualities
+  latency_warning_threshold: 8
   use_gpu_harvesting: False
   gpu_index: 0
   enforce_gpu_index: False

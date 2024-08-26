@@ -37,7 +37,7 @@ def create_harvester_service(
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
     harvester = Harvester(root_path, service_config, updated_constants)
-    peer_api = HarvesterAPI(harvester)
+    peer_api = HarvesterAPI(harvester, service_config)
     network_id = service_config["selected_network"]
     rpc_info: Optional[RpcInfo[HarvesterRpcApi]] = None
     if service_config["start_rpc_server"]:
