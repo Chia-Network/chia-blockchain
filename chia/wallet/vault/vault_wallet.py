@@ -46,7 +46,6 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.vault.vault_drivers import (
@@ -215,7 +214,7 @@ class Vault(Wallet):
                 )
             coins = await self.select_coins(
                 uint64(total_amount),
-                action_scope.config.tx_config.coin_selection_config,
+                action_scope,
             )
         assert len(coins) > 0
         selected_amount = sum(coin.amount for coin in coins)
@@ -464,7 +463,7 @@ class Vault(Wallet):
     def get_p2_singleton_puzzle_hash(self) -> bytes32:
         return get_p2_singleton_puzzle_hash(self.launcher_id)
 
-    async def select_coins(self, amount: uint64, coin_selection_config: CoinSelectionConfig) -> Set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> Set[Coin]:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
@@ -472,14 +471,16 @@ class Vault(Wallet):
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
         assert records
         spendable_amount = uint128(sum(rec.coin.amount for rec in records))
-        coins = await select_coins(
-            spendable_amount,
-            coin_selection_config,
-            records,
-            unconfirmed_removals,
-            self.log,
-            uint128(amount),
-        )
+        async with action_scope.use() as interface:
+            coins = await select_coins(
+                spendable_amount,
+                action_scope.config.adjust_for_side_effects(interface.side_effects).tx_config.coin_selection_config,
+                records,
+                unconfirmed_removals,
+                self.log,
+                uint128(amount),
+            )
+            interface.side_effects.selected_coins.extend([*coins])
         return coins
 
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:

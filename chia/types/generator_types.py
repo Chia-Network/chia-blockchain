@@ -19,4 +19,4 @@ class GeneratorBlockCacheInterface:
 @dataclass(frozen=True)
 class BlockGenerator(Streamable):
     program: SerializedProgram
-    generator_refs: List[SerializedProgram]
+    generator_refs: List[bytes]

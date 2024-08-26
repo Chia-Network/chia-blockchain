@@ -2886,7 +2886,7 @@ class WalletStateManager:
 
         # Get xch coin
         amount = uint64(1)
-        coins = await wallet.select_coins(uint64(amount + fee), action_scope.config.tx_config.coin_selection_config)
+        coins = await wallet.select_coins(uint64(amount + fee), action_scope)
 
         # Create singleton launcher
         origin = next(iter(coins))

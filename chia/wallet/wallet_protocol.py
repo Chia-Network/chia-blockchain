@@ -26,7 +26,6 @@ from chia.wallet.signer_protocol import (
     Spend,
     SumHint,
 )
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -50,7 +49,7 @@ class WalletProtocol(Protocol[T]):
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]: ...
 
     async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128: ...
@@ -162,7 +161,7 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         self,
         asset_id: Optional[bytes32],
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]: ...
 
 
