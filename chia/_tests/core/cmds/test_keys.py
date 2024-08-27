@@ -11,6 +11,7 @@ from click.testing import CliRunner, Result
 
 from chia.cmds.chia import cli
 from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, sign_cmd, verify_cmd
+from chia.cmds.keys_funcs import get_private_key_with_fingerprint_or_prompt
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
@@ -1705,3 +1706,22 @@ class TestKeysCommands:
         assert isinstance(result.exception, ValueError) and result.exception.args == (
             "Hardened path specified for observer key",
         )
+
+    @pytest.mark.anyio
+    async def test_get_private_key_with_fingerprint_or_prompt(
+        self, monkeypatch, keyring_with_one_public_one_private_key
+    ) -> None:
+        [sk1_plus_ent] = keyring_with_one_public_one_private_key.get_all_private_keys()
+        sk1, _ = sk1_plus_ent
+        [pk1, pk2] = keyring_with_one_public_one_private_key.get_all_public_keys()
+        assert pk1.get_fingerprint() == TEST_FINGERPRINT
+        assert pk2.get_fingerprint() == TEST_PK_FINGERPRINT
+
+        assert get_private_key_with_fingerprint_or_prompt(TEST_FINGERPRINT) == (TEST_FINGERPRINT, sk1)
+        assert get_private_key_with_fingerprint_or_prompt(TEST_PK_FINGERPRINT) == (TEST_PK_FINGERPRINT, None)
+
+        monkeypatch.setattr("builtins.input", lambda _: "1")
+        assert get_private_key_with_fingerprint_or_prompt(None) == (TEST_FINGERPRINT, sk1)
+
+        monkeypatch.setattr("builtins.input", lambda _: "2")
+        assert get_private_key_with_fingerprint_or_prompt(None) == (TEST_PK_FINGERPRINT, None)
