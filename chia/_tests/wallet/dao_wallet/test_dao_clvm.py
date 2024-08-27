@@ -47,7 +47,7 @@ DAO_CAT_TAIL: Program = load_clvm(
     "genesis_by_coin_id_or_singleton.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
 )
 DAO_CAT_TAIL_HASH: bytes32 = DAO_CAT_TAIL.get_tree_hash()
-P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle.clsp")
+P2_SINGLETON_MOD: Program = load_clvm("p2_singleton_via_delegated_puzzle_w_aggregator.clsp")
 P2_SINGLETON_MOD_HASH: bytes32 = P2_SINGLETON_MOD.get_tree_hash()
 P2_SINGLETON_AGGREGATOR_MOD: Program = load_clvm("p2_singleton_aggregator.clsp")
 P2_SINGLETON_AGGREGATOR_MOD_HASH: bytes32 = P2_SINGLETON_AGGREGATOR_MOD.get_tree_hash()

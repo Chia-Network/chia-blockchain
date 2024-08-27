@@ -12,6 +12,7 @@ from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 
 SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clsp")
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
@@ -250,6 +251,15 @@ def puzzle_for_singleton(
         (SINGLETON_MOD_HASH, (launcher_id, launcher_hash)),
         inner_puz,
     )
+
+
+# Convenience to calculate the singleton puzzle hash with just inner puzhash and launcher id
+def puzzle_hash_for_singleton(
+    launcher_id: bytes32, inner_puzzle_hash: bytes32, launcher_hash: bytes32 = SINGLETON_LAUNCHER_HASH
+) -> bytes32:
+    hash_of_quoted_mod_hash = calculate_hash_of_quoted_mod_hash(SINGLETON_MOD_HASH)
+    hashed_args = [Program.to((SINGLETON_MOD_HASH, (launcher_id, launcher_hash))).get_tree_hash(), inner_puzzle_hash]
+    return curry_and_treehash(hash_of_quoted_mod_hash, *hashed_args)
 
 
 # Return a solution to spend a singleton

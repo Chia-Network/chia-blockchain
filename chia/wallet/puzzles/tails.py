@@ -120,7 +120,12 @@ class GenesisById(LimitationsProgram):
         inner_tree_hash = cat_inner.get_tree_hash()
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
-            wallet.standard_wallet.make_solution(primaries=[Payment(inner_tree_hash, amount, [inner_tree_hash])]),
+            (
+                await wallet.standard_wallet.make_solution(
+                    primaries=[Payment(inner_tree_hash, amount, [inner_tree_hash])],
+                    action_scope=action_scope,
+                )
+            ),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,
@@ -301,8 +306,11 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         payment = Payment(cat_inner.get_tree_hash(), amount)
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
             Program.to([51, 0, -113, tail, []]),
-            wallet.standard_wallet.make_solution(
-                primaries=[payment],
+            (
+                await wallet.standard_wallet.make_solution(
+                    primaries=[payment],
+                    action_scope=action_scope,
+                )
             ),
         )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(

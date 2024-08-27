@@ -102,6 +102,7 @@ def wrap_http_handler(f) -> Callable:
 def tx_endpoint(
     push: bool = False,
     merge_spends: bool = True,
+    sign: Optional[bool] = None,
 ) -> Callable[[RpcEndpoint], RpcEndpoint]:
     def _inner(func: RpcEndpoint) -> RpcEndpoint:
         async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
@@ -154,7 +155,7 @@ def tx_endpoint(
                 tx_config,
                 push=request.get("push", push),
                 merge_spends=request.get("merge_spends", merge_spends),
-                sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
+                sign=request.get("sign", self.service.config.get("auto_sign_txs", True) if sign is None else sign),
             ) as action_scope:
                 response: Dict[str, Any] = await func(
                     self,

@@ -30,6 +30,10 @@ from chia.rpc.wallet_request_types import (
     GetNotificationsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    VaultCreate,
+    VaultCreateResponse,
+    VaultRecovery,
+    VaultRecoveryResponse,
 )
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -118,6 +122,8 @@ from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPE
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.vault.vault_drivers import get_vault_hidden_puzzle_with_index
+from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -301,6 +307,9 @@ class WalletRpcApi:
             "/submit_transactions": self.submit_transactions,
             # Not technically Signer Protocol but related
             "/execute_signing_instructions": self.execute_signing_instructions,
+            # VAULT
+            "/vault_create": self.vault_create,
+            "/vault_recovery": self.vault_recovery,
         }
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -446,7 +455,7 @@ class WalletRpcApi:
         # Adding a key from 24 word mnemonic
         mnemonic = request["mnemonic"]
         try:
-            sk = await self.service.keychain_proxy.add_key(" ".join(mnemonic))
+            sk, _ = await self.service.keychain_proxy.add_key(" ".join(mnemonic))
         except KeyError as e:
             return {
                 "success": False,
@@ -966,9 +975,9 @@ class WalletRpcApi:
                     if max_pwi + 1 >= (MAX_POOL_WALLETS - 1):
                         raise ValueError(f"Too many pool wallets ({max_pwi}), cannot create any more on this key.")
 
-                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(
-                        self.service.wallet_state_manager.get_master_private_key(), uint32(max_pwi + 1)
-                    )
+                    master_sk = self.service.wallet_state_manager.get_master_private_key()
+                    assert isinstance(master_sk, PrivateKey), "Pooling only works with BLS keys at this time"
+                    owner_sk: PrivateKey = master_sk_to_singleton_owner_sk(master_sk, uint32(max_pwi + 1))
                     owner_pk: G1Element = owner_sk.get_g1()
 
                     initial_target_state = initial_pool_state_from_dict(
@@ -4592,3 +4601,65 @@ class WalletRpcApi:
                 request.signing_instructions, request.partial_allowed
             )
         )
+
+    ##########################################################################################
+    # VAULT
+    ##########################################################################################
+    @tx_endpoint(push=False)
+    @marshal
+    async def vault_create(
+        self,
+        request: VaultCreate,
+        action_scope: WalletActionScope,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+    ) -> VaultCreateResponse:
+        """
+        Create a new vault
+        """
+        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(request.hp_index).get_tree_hash()
+        genesis_challenge = self.service.wallet_state_manager.constants.GENESIS_CHALLENGE
+
+        await self.service.wallet_state_manager.create_vault_wallet(
+            request.secp_pk,
+            hidden_puzzle_hash,
+            genesis_challenge,
+            action_scope,
+            bls_pk=request.bls_pk,
+            timelock=request.timelock,
+            fee=request.fee,
+        )
+        return VaultCreateResponse([], [])  # tx_endpoint will take care of filling this out
+
+    @tx_endpoint(push=False, merge_spends=False, sign=False)
+    @marshal
+    async def vault_recovery(
+        self,
+        request: VaultRecovery,
+        action_scope: WalletActionScope,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+    ) -> VaultRecoveryResponse:
+        """
+        Initiate Vault Recovery
+        """
+        if request.fee != 0:
+            raise ValueError("Recovery endpoint cannot add fees because it assumes your vault is currently inacessible")
+        if action_scope.config.push or action_scope.config.sign:
+            raise ValueError(
+                "Cannot push or sign from this endpoint because the vault is assumed to be inaccessible by this wallet."
+                " Please push the individual transactions to the /push_transactions endpoint on a wallet "
+                " with the correct keyset."
+            )
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=Vault)
+        hidden_puzzle_hash = get_vault_hidden_puzzle_with_index(request.hp_index).get_tree_hash()
+        genesis_challenge = self.service.wallet_state_manager.constants.GENESIS_CHALLENGE
+        recovery_tx_id, finish_tx_id = await wallet.create_recovery_spends(
+            request.secp_pk,
+            hidden_puzzle_hash,
+            genesis_challenge,
+            action_scope,
+            bls_pk=request.bls_pk,
+            timelock=request.timelock,
+        )
+
+        # tx_endpoint will take care of filling the empty lists out
+        return VaultRecoveryResponse([], [], recovery_tx_id, finish_tx_id)

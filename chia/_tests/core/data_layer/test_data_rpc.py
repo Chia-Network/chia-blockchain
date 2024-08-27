@@ -69,8 +69,8 @@ from chia.util.keychain import bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_protocol import MainWalletProtocol
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
@@ -824,7 +824,7 @@ async def offer_setup_fixture(
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     enable_batch_autoinsertion_settings = getattr(request, "param", (True, True))
     full_node_api = full_node_service._api
-    wallets: List[Wallet] = []
+    wallets: List[MainWalletProtocol] = []
     for wallet_service in wallet_services:
         wallet_node = wallet_service._node
         assert wallet_node.server is not None
@@ -2372,7 +2372,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
 
     mnemonic = create_mnemonic()
     assert wallet_rpc_api.service.local_keychain is not None
-    private_key = wallet_rpc_api.service.local_keychain.add_key(mnemonic_or_pk=mnemonic)
+    private_key, _ = wallet_rpc_api.service.local_keychain.add_key(mnemonic_or_pk=mnemonic)
     secondary_fingerprint: int = private_key.get_g1().get_fingerprint()
 
     await wallet_rpc_api.log_in(request={"fingerprint": primary_fingerprint})

@@ -14,11 +14,19 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
+from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
+from chia.util.observation_root import ObservationRoot
 from chia.util.streamable import Streamable
 from chia.wallet.coin_selection import select_coins
-from chia.wallet.conditions import AssertCoinAnnouncement, Condition, CreateCoinAnnouncement, parse_timelock_info
+from chia.wallet.conditions import (
+    AssertCoinAnnouncement,
+    Condition,
+    CreateCoin,
+    CreateCoinAnnouncement,
+    parse_timelock_info,
+)
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     MAX_POOL_WALLETS,
@@ -44,6 +52,7 @@ from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
     SigningResponse,
+    SigningTarget,
     Spend,
     SumHint,
     TransactionInfo,
@@ -81,6 +90,7 @@ class Wallet:
         self = Wallet()
         self.log = logging.getLogger(name)
         self.wallet_state_manager = wallet_state_manager
+        self.wallet_info = info
         self.wallet_id = info.id
 
         return self
@@ -159,10 +169,12 @@ class Wallet:
     def require_derivation_paths(self) -> bool:
         return True
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_for_pk(self, pubkey: ObservationRoot) -> Program:
+        assert isinstance(pubkey, G1Element), "Standard wallet cannot support non-BLS keys yet"
         return puzzle_for_pk(pubkey)
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+    def puzzle_hash_for_pk(self, pubkey: ObservationRoot) -> bytes32:
+        assert isinstance(pubkey, G1Element), "Standard wallet cannot support non-BLS keys yet"
         return puzzle_hash_for_pk(pubkey)
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
@@ -204,11 +216,13 @@ class Wallet:
         puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
         return puzhash
 
-    def make_solution(
+    async def make_solution(
         self,
         primaries: List[Payment],
+        action_scope: WalletActionScope,
         conditions: Tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
+        **kwargs: Any,
     ) -> Program:
         assert fee >= 0
         condition_list: List[Any] = [condition.to_program() for condition in conditions]
@@ -281,7 +295,12 @@ class Wallet:
         if primaries_input is not None:
             primaries.extend(primaries_input)
 
-        total_amount = amount + sum(primary.amount for primary in primaries) + fee
+        total_amount = (
+            amount
+            + sum(primary.amount for primary in primaries)
+            + fee
+            + sum(c.amount for c in extra_conditions if isinstance(c, CreateCoin))
+        )
         total_balance = await self.get_spendable_balance()
         if coins is None:
             if total_amount > total_balance:
@@ -342,8 +361,9 @@ class Wallet:
                     message_list.append(Coin(coin.name(), primary.puzzle_hash, primary.amount).name())
                 message: bytes32 = std_hash(b"".join(message_list))
                 puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-                solution: Program = self.make_solution(
+                solution: Program = await self.make_solution(
                     primaries=primaries,
+                    action_scope=action_scope,
                     fee=fee,
                     conditions=(*extra_conditions, CreateCoinAnnouncement(message)),
                 )
@@ -364,7 +384,9 @@ class Wallet:
             if coin.name() == origin_id:
                 continue
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = self.make_solution(primaries=[], conditions=(primary_announcement,))
+            solution = await self.make_solution(
+                primaries=[], action_scope=action_scope, conditions=(primary_announcement,)
+            )
             solution = decorator_manager.solve(puzzle, [], solution)
             spends.append(
                 make_spend(
@@ -379,6 +401,7 @@ class Wallet:
         # CHIP-0002 message signing as documented at:
         # https://github.com/Chia-Network/chips/blob/80e4611fe52b174bf1a0382b9dff73805b18b8c6/CHIPs/chip-0002.md#signmessage
         private = await self.wallet_state_manager.get_private_key(puzzle_hash)
+        assert isinstance(private, PrivateKey)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
         if mode == SigningMode.CHIP_0002_HEX_INPUT:
@@ -412,9 +435,11 @@ class Wallet:
         The first output is (amount, puzzle_hash, memos), and the rest of the outputs are in primaries.
         """
         if primaries is None:
-            non_change_amount = amount
+            non_change_amount: int = amount
         else:
-            non_change_amount = uint64(amount + sum(p.amount for p in primaries))
+            non_change_amount = amount + sum(p.amount for p in primaries)
+
+        non_change_amount += sum(c.amount for c in extra_conditions if isinstance(c, CreateCoin))
 
         self.log.debug("Generating transaction for: %s %s %s", puzzle_hash, amount, repr(coins))
         transaction = await self._generate_unsigned_transaction(
@@ -536,43 +561,46 @@ class Wallet:
             index = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
                 puzzle_hash_for_synthetic_public_key(pk_parsed)
             )
-        root_pubkey: bytes = self.wallet_state_manager.root_pubkey.get_fingerprint().to_bytes(4, "big")
+        root_fingerprint: bytes = self.wallet_state_manager.observation_root.get_fingerprint().to_bytes(4, "big")
         if index is None:
             # Pool wallet may have a secret key here
-            if self.wallet_state_manager.private_key is not None:
+            if self.wallet_state_manager.private_key is not None and isinstance(
+                self.wallet_state_manager.private_key, PrivateKey
+            ):
                 for pool_wallet_index in range(MAX_POOL_WALLETS):
                     try_owner_sk = master_sk_to_singleton_owner_sk(
                         self.wallet_state_manager.private_key, uint32(pool_wallet_index)
                     )
                     if try_owner_sk.get_g1() == pk_parsed:
                         return PathHint(
-                            root_pubkey,
+                            root_fingerprint,
                             [uint64(12381), uint64(8444), uint64(5), uint64(pool_wallet_index)],
                         )
             return None
         return PathHint(
-            root_pubkey,
+            root_fingerprint,
             [uint64(12381), uint64(8444), uint64(2), uint64(index)],
         )
 
     async def execute_signing_instructions(
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
     ) -> List[SigningResponse]:
-        root_pubkey: G1Element = self.wallet_state_manager.root_pubkey
-        pk_lookup: Dict[int, G1Element] = (
-            {root_pubkey.get_fingerprint(): root_pubkey} if self.wallet_state_manager.private_key is not None else {}
-        )
-        sk_lookup: Dict[int, PrivateKey] = (
-            {root_pubkey.get_fingerprint(): self.wallet_state_manager.get_master_private_key()}
-            if self.wallet_state_manager.private_key is not None
-            else {}
-        )
+        assert isinstance(self.wallet_state_manager.observation_root, G1Element)
+        root_pubkey: G1Element = self.wallet_state_manager.observation_root
+        pk_lookup: Dict[int, G1Element] = {}
+        sk_lookup: Dict[int, PrivateKey] = {}
         aggregate_responses_at_end: bool = True
         responses: List[SigningResponse] = []
 
         # TODO: expand path hints and sum hints recursively (a sum hint can give a new key to path hint)
         # Next, expand our pubkey set with path hints
         if self.wallet_state_manager.private_key is not None:
+            root_secret_key = self.wallet_state_manager.get_master_private_key()
+            assert isinstance(root_secret_key, PrivateKey)
+            root_fingerprint = root_pubkey.get_fingerprint()
+            pk_lookup[root_fingerprint] = root_pubkey
+            sk_lookup[root_fingerprint] = root_secret_key
+
             for path_hint in signing_instructions.key_hints.path_hints:
                 if int.from_bytes(path_hint.root_fingerprint, "big") != root_pubkey.get_fingerprint():
                     if not partial_allowed:
@@ -581,12 +609,10 @@ class Wallet:
                         continue
                 else:
                     path = [int(step) for step in path_hint.path]
-                    derive_child_sk = _derive_path(self.wallet_state_manager.get_master_private_key(), path)
-                    derive_child_sk_unhardened = _derive_path_unhardened(
-                        self.wallet_state_manager.get_master_private_key(), path
-                    )
-                    derive_child_pk = derive_child_sk.get_g1()
-                    derive_child_pk_unhardened = derive_child_sk_unhardened.get_g1()
+                    derive_child_sk = _derive_path(root_secret_key, path)
+                    derive_child_sk_unhardened = _derive_path_unhardened(root_secret_key, path)
+                    derive_child_pk = derive_child_sk.public_key()
+                    derive_child_pk_unhardened = derive_child_sk_unhardened.public_key()
                     pk_lookup[derive_child_pk.get_fingerprint()] = derive_child_pk
                     pk_lookup[derive_child_pk_unhardened.get_fingerprint()] = derive_child_pk_unhardened
                     sk_lookup[derive_child_pk.get_fingerprint()] = derive_child_sk
@@ -695,4 +721,35 @@ class Wallet:
                     ),
                 )
             ],
+        )
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()
+
+    async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
+        pks: List[bytes] = []
+        signing_targets: List[SigningTarget] = []
+        for coin_spend in coin_spends:
+            _coin_spend = coin_spend.as_coin_spend()
+            # Get AGG_SIG conditions
+            conditions_dict = conditions_dict_for_solution(
+                _coin_spend.puzzle_reveal.to_program(),
+                _coin_spend.solution.to_program(),
+                self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+            )
+            # Create signature
+            for pk, msg in pkm_pairs_for_conditions_dict(
+                conditions_dict, _coin_spend.coin, self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
+                pk_bytes = pk.to_bytes()
+                pks.append(pk_bytes)
+                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
+                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
+
+        return SigningInstructions(
+            await self.wallet_state_manager.key_hints_for_pubkeys(pks),
+            signing_targets,
         )

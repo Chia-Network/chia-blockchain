@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from chia_rs import G1Element
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
@@ -1465,7 +1466,10 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework) ->
 
     # Mint CAT to ourselves, immediately spend it to an unhinted puzzle hash that we have manually added to the DB
     # We should pick up this coin as balance even though it is unhinted because it is "change"
-    pubkey_unhardened = master_pk_to_wallet_pk_unhardened(wsm.root_pubkey, uint32(100000000))
+    assert isinstance(env.node.wallet_state_manager.observation_root, G1Element)
+    pubkey_unhardened = master_pk_to_wallet_pk_unhardened(
+        env.node.wallet_state_manager.observation_root, uint32(100000000)
+    )
     inner_puzhash = puzzle_hash_for_pk(pubkey_unhardened)
     puzzlehash_unhardened = construct_cat_puzzle(
         CAT_MOD, Program.to(None).get_tree_hash(), inner_puzhash
@@ -1694,46 +1698,48 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
     assert isinstance(cat_wallet, CATWallet)
 
     # Let's test that continuing to melt this CAT results in the correct balance changes
-    for _ in range(0, 5):
-        tx_amount -= 1
-        new_coin = (await cat_wallet.get_cat_spendable_coins())[0].coin
-        new_spend = unsigned_spend_bundle_for_spendable_cats(
-            CAT_MOD,
-            [
-                SpendableCAT(
-                    coin=new_coin,
-                    limitations_program_hash=ACS_TAIL_HASH,
-                    inner_puzzle=await cat_wallet.inner_puzzle_for_cat_puzhash(new_coin.puzzle_hash),
-                    inner_solution=wallet.make_solution(
-                        primaries=[Payment(wallet_ph, uint64(tx_amount), [wallet_ph])],
-                        conditions=(
-                            UnknownCondition(
-                                opcode=Program.to(51),
-                                args=[Program.to(None), Program.to(-113), Program.to(ACS_TAIL), Program.to(None)],
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
+        for _ in range(0, 5):
+            tx_amount -= 1
+            new_coin = (await cat_wallet.get_cat_spendable_coins())[0].coin
+            new_spend = unsigned_spend_bundle_for_spendable_cats(
+                CAT_MOD,
+                [
+                    SpendableCAT(
+                        coin=new_coin,
+                        limitations_program_hash=ACS_TAIL_HASH,
+                        inner_puzzle=await cat_wallet.inner_puzzle_for_cat_puzhash(new_coin.puzzle_hash),
+                        inner_solution=await wallet.make_solution(
+                            primaries=[Payment(wallet_ph, uint64(tx_amount), [wallet_ph])],
+                            action_scope=action_scope,
+                            conditions=(
+                                UnknownCondition(
+                                    opcode=Program.to(51),
+                                    args=[Program.to(None), Program.to(-113), Program.to(ACS_TAIL), Program.to(None)],
+                                ),
                             ),
                         ),
-                    ),
-                    extra_delta=-1,
-                )
-            ],
-        )
-        signed_spend, _ = await env.wallet_state_manager.sign_bundle(new_spend.coin_spends)
-        await env.rpc_client.push_tx(signed_spend)
-        await time_out_assert(10, simulator.tx_id_in_mempool, True, signed_spend.name())
+                        extra_delta=-1,
+                    )
+                ],
+            )
+            signed_spend, _ = await env.wallet_state_manager.sign_bundle(new_spend.coin_spends)
+            await env.rpc_client.push_tx(signed_spend)
+            await time_out_assert(10, simulator.tx_id_in_mempool, True, signed_spend.name())
 
-        await wallet_environments.process_pending_states(
-            [
-                WalletStateTransition(
-                    pre_block_balance_updates={},
-                    post_block_balance_updates={
-                        "xch": {},
-                        "cat": {
-                            "confirmed_wallet_balance": -1,
-                            "unconfirmed_wallet_balance": -1,
-                            "spendable_balance": -1,
-                            "max_send_amount": -1,
+            await wallet_environments.process_pending_states(
+                [
+                    WalletStateTransition(
+                        pre_block_balance_updates={},
+                        post_block_balance_updates={
+                            "xch": {},
+                            "cat": {
+                                "confirmed_wallet_balance": -1,
+                                "unconfirmed_wallet_balance": -1,
+                                "spendable_balance": -1,
+                                "max_send_amount": -1,
+                            },
                         },
-                    },
-                )
-            ]
-        )
+                    )
+                ]
+            )

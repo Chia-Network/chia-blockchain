@@ -48,7 +48,7 @@ from chia.wallet.vc_wallet.vc_wallet import VCWallet
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import MainWalletProtocol, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -315,7 +315,7 @@ class TradeManager:
                     interface.side_effects.selected_coins.append(coin)
                 # This should probably not switch on whether or not we're spending a XCH but it has to for now
                 if wallet.type() == WalletType.STANDARD_WALLET:
-                    assert isinstance(wallet, Wallet)
+                    assert isinstance(wallet, MainWalletProtocol)
                     if fee_to_pay > coin.amount:
                         selected_coins: Set[Coin] = await wallet.select_coins(
                             uint64(fee_to_pay - coin.amount),
@@ -504,7 +504,7 @@ class TradeManager:
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets.get(wallet_id)
-                        assert isinstance(wallet, (CATWallet, Wallet))
+                        assert isinstance(wallet, (CATWallet, MainWalletProtocol))
                         p2_ph: bytes32 = await wallet.get_puzzle_hash(
                             new=not action_scope.config.tx_config.reuse_puzhash
                         )
@@ -548,7 +548,7 @@ class TradeManager:
                     amount_to_select = abs(amount)
                     if wallet.type() == WalletType.STANDARD_WALLET:
                         amount_to_select += fee
-                    assert isinstance(wallet, (CATWallet, DataLayerWallet, NFTWallet, Wallet))
+                    assert isinstance(wallet, (CATWallet, DataLayerWallet, NFTWallet, MainWalletProtocol))
                     if isinstance(wallet, DataLayerWallet):
                         assert asset_id is not None
                         coins_to_offer[id] = await wallet.get_coins_to_offer(launcher_id=asset_id)
@@ -683,7 +683,7 @@ class TradeManager:
             if key is None:
                 continue
             # ATTENTION: new_wallets
-            exists = await wsm.get_wallet_for_puzzle_info(offer.driver_dict[key])
+            exists: Optional[WalletProtocol[Any]] = await wsm.get_wallet_for_puzzle_info(offer.driver_dict[key])
             if exists is None:
                 await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])
 
@@ -741,7 +741,7 @@ class TradeManager:
             if wallet_identifier is not None:
                 if addition.parent_coin_info in settlement_coin_ids:
                     wallet = self.wallet_state_manager.wallets[wallet_identifier.id]
-                    assert isinstance(wallet, (CATWallet, NFTWallet, Wallet))
+                    assert isinstance(wallet, (CATWallet, NFTWallet, MainWalletProtocol))
                     to_puzzle_hash = await wallet.convert_puzzle_hash(addition.puzzle_hash)  # ATTENTION: new wallets
                     txs.append(
                         TransactionRecord(

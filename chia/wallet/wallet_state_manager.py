@@ -48,18 +48,19 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.coin_spend import CoinSpend, compute_additions
+from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
+from chia.util.observation_root import ObservationRoot
 from chia.util.path import path_from_root
+from chia.util.secret_info import SecretInfo
 from chia.util.streamable import Streamable, UInt32Range, UInt64Range, VersionedBlob
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, CRCATInfo
@@ -112,13 +113,17 @@ from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
     SigningResponse,
-    SigningTarget,
     Spend,
     SumHint,
     TransactionInfo,
     UnsignedTransaction,
 )
-from chia.wallet.singleton import create_singleton_puzzle, get_inner_puzzle_from_singleton, get_singleton_id_from_puzzle
+from chia.wallet.singleton import (
+    SINGLETON_LAUNCHER_PUZZLE,
+    create_singleton_puzzle,
+    get_inner_puzzle_from_singleton,
+    get_singleton_id_from_puzzle,
+)
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -138,6 +143,9 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletIdentifier, WalletType
+from chia.wallet.vault.vault_drivers import get_vault_full_puzzle_hash, get_vault_inner_puzzle_hash, match_vault_puzzle
+from chia.wallet.vault.vault_root import VaultRoot
+from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, ProofsChecker, construct_pending_approval_state
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_drivers import VerifiedCredential
@@ -152,9 +160,10 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import MainWalletProtocol, WalletProtocol
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
+from chia.wallet.wallet_singleton_store import WalletSingletonStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 
@@ -192,10 +201,10 @@ class WalletStateManager:
     db_path: Path
     db_wrapper: DBWrapper2
 
-    main_wallet: Wallet
+    main_wallet: MainWalletProtocol
     wallets: Dict[uint32, WalletProtocol[Any]]
-    private_key: Optional[PrivateKey]
-    root_pubkey: G1Element
+    private_key: Optional[SecretInfo[Any]]
+    observation_root: ObservationRoot
 
     trade_manager: TradeManager
     notification_manager: NotificationManager
@@ -209,6 +218,7 @@ class WalletStateManager:
     wallet_node: WalletNode
     pool_store: WalletPoolStore
     dl_store: DataLayerStore
+    singleton_store: WalletSingletonStore
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
     initial_num_public_keys: int
@@ -216,14 +226,14 @@ class WalletStateManager:
 
     @staticmethod
     async def create(
-        private_key: Optional[PrivateKey],
+        private_key: Optional[SecretInfo[Any]],
         config: Dict[str, Any],
         db_path: Path,
         constants: ConsensusConstants,
         server: ChiaServer,
         root_path: Path,
         wallet_node: WalletNode,
-        root_pubkey: Optional[G1Element] = None,
+        observation_root: Optional[ObservationRoot] = None,
     ) -> WalletStateManager:
         self = WalletStateManager()
 
@@ -264,6 +274,7 @@ class WalletStateManager:
         self.dl_store = await DataLayerStore.create(self.db_wrapper)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
         self.retry_store = await WalletRetryStore.create(self.db_wrapper)
+        self.singleton_store = await WalletSingletonStore.create(self.db_wrapper)
         self.default_cats = DEFAULT_CATS
 
         self.wallet_node = wallet_node
@@ -278,21 +289,21 @@ class WalletStateManager:
 
         self.private_key = private_key
         if private_key is None:  # pragma: no cover
-            if root_pubkey is None:
+            if observation_root is None:
                 raise ValueError("WalletStateManager requires either a root private key or root public key")
             else:
-                self.root_pubkey = root_pubkey
+                self.observation_root = observation_root
         else:
-            calculated_root_public_key: G1Element = private_key.get_g1()
-            if root_pubkey is not None:
-                assert root_pubkey == calculated_root_public_key
-            self.root_pubkey = calculated_root_public_key
+            calculated_root_public_key: ObservationRoot = private_key.public_key()
+            if observation_root is not None:
+                assert observation_root == calculated_root_public_key
+            self.observation_root = calculated_root_public_key
 
-        fingerprint = self.root_pubkey.get_fingerprint()
+        fingerprint = self.observation_root.get_fingerprint()
         puzzle_decorators = self.config.get("puzzle_decorators", {}).get(fingerprint, [])
         self.decorator_manager = PuzzleDecoratorManager.create(puzzle_decorators)
 
-        self.main_wallet = await Wallet.create(self, main_wallet_info)
+        self.main_wallet = await self.get_main_wallet_driver(self.observation_root).create(self, main_wallet_info)
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
 
@@ -365,16 +376,34 @@ class WalletStateManager:
 
         return self
 
-    def get_public_key_unhardened(self, index: uint32) -> G1Element:
-        return master_pk_to_wallet_pk_unhardened(self.root_pubkey, index)
+    def get_main_wallet_driver(self, observation_root: ObservationRoot) -> Type[MainWalletProtocol]:
+        root_bytes: bytes = bytes(observation_root)
+        if len(root_bytes) == 48:
+            return Wallet
+        if len(root_bytes) == 32:
+            return Vault
 
-    async def get_private_key(self, puzzle_hash: bytes32) -> PrivateKey:
+        raise ValueError(  # pragma: no cover
+            f"Could not find a valid wallet type for observation_root: {root_bytes.hex()}"
+        )
+
+    def get_public_key_unhardened(self, index: uint32) -> G1Element:
+        if not isinstance(self.observation_root, G1Element):  # pragma: no cover
+            # TODO: Add test coverage when vault wallet exists
+            raise ValueError("Public key derivation is not supported for non-G1Element keys")
+        return master_pk_to_wallet_pk_unhardened(self.observation_root, index)
+
+    async def get_private_key(self, puzzle_hash: bytes32) -> SecretInfo[Any]:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
         if record is None:
             raise ValueError(f"No key for puzzle hash: {puzzle_hash.hex()}")
+        sk = self.get_master_private_key()
+        # This will need to work when other key types are derivable but for now we will just sanitize and move on
+        assert isinstance(sk, PrivateKey)
         if record.hardened:
-            return master_sk_to_wallet_sk(self.get_master_private_key(), record.index)
-        return master_sk_to_wallet_sk_unhardened(self.get_master_private_key(), record.index)
+            return master_sk_to_wallet_sk(sk, record.index)
+
+        return master_sk_to_wallet_sk_unhardened(sk, record.index)
 
     async def get_public_key(self, puzzle_hash: bytes32) -> bytes:
         record = await self.puzzle_store.record_for_puzzle_hash(puzzle_hash)
@@ -386,7 +415,7 @@ class WalletStateManager:
             pk_bytes = bytes(record._pubkey)
         return pk_bytes
 
-    def get_master_private_key(self) -> PrivateKey:
+    def get_master_private_key(self) -> SecretInfo[Any]:
         if self.private_key is None:  # pragma: no cover
             raise ValueError("Wallet is currently in observer mode and access to private key is denied")
 
@@ -455,21 +484,29 @@ class WalletStateManager:
         if len(start_index_by_wallet) == 0:
             return
 
-        # now derive the keysfrom start_index to last_index
-        # these maps derivation index to public key
-        hardened_keys: Dict[int, G1Element] = {}
-        unhardened_keys: Dict[int, G1Element] = {}
+        if not target_wallet.handle_own_derivation():
+            # now derive the keysfrom start_index to last_index
+            # these maps derivation index to public key
+            hardened_keys: Dict[int, G1Element] = {}
+            unhardened_keys: Dict[int, G1Element] = {}
 
-        if self.private_key is not None:
-            # Hardened
-            intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
+            # This function shoul work for other types of observation roots too
+            # However to generalize this function beyond pubkeys is beyond the scope of current work
+            # So we're just going to sanitize and move on
+            assert isinstance(self.observation_root, G1Element)
+            if self.private_key is not None:
+                assert isinstance(self.private_key, PrivateKey)
+
+            if self.private_key is not None:
+                # Hardened
+                intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
+                for index in range(start_index, last_index):
+                    hardened_keys[index] = _derive_path(intermediate_sk, [index]).public_key()
+
+            # Unhardened
+            intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.observation_root)
             for index in range(start_index, last_index):
-                hardened_keys[index] = _derive_path(intermediate_sk, [index]).get_g1()
-
-        # Unhardened
-        intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.root_pubkey)
-        for index in range(start_index, last_index):
-            unhardened_keys[index] = _derive_pk_unhardened(intermediate_pk_un, [index])
+                unhardened_keys[index] = _derive_pk_unhardened(intermediate_pk_un, [index])
 
         for wallet_id, start_index in start_index_by_wallet.items():
             target_wallet = self.wallets[wallet_id]
@@ -480,38 +517,41 @@ class WalletStateManager:
             creating_msg = f"Creating puzzle hashes from {start_index} to {last_index - 1} for wallet_id: {wallet_id}"
             self.log.info(f"Start: {creating_msg}")
             for index in range(start_index, last_index):
-                pubkey: Optional[G1Element] = hardened_keys.get(index)
-                if pubkey is not None:
-                    # Hardened
-                    puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
-                    self.log.debug(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
+                if target_wallet.handle_own_derivation():
+                    derivation_paths.extend(target_wallet.derivation_for_index(index))
+                else:
+                    pubkey: Optional[G1Element] = hardened_keys.get(index)
+                    if pubkey is not None:
+                        # Hardened
+                        puzzlehash: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
+                        self.log.debug(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
+                        derivation_paths.append(
+                            DerivationRecord(
+                                uint32(index),
+                                puzzlehash,
+                                pubkey,
+                                target_wallet.type(),
+                                uint32(target_wallet.id()),
+                                True,
+                            )
+                        )
+                    # Unhardened
+                    pubkey = unhardened_keys.get(index)
+                    assert pubkey is not None
+                    puzzlehash_unhardened: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
+                    self.log.debug(
+                        f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
+                    )
                     derivation_paths.append(
                         DerivationRecord(
                             uint32(index),
-                            puzzlehash,
+                            puzzlehash_unhardened,
                             pubkey,
                             target_wallet.type(),
                             uint32(target_wallet.id()),
-                            True,
+                            False,
                         )
                     )
-                # Unhardened
-                pubkey = unhardened_keys.get(index)
-                assert pubkey is not None
-                puzzlehash_unhardened: bytes32 = target_wallet.puzzle_hash_for_pk(pubkey)
-                self.log.debug(
-                    f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
-                )
-                derivation_paths.append(
-                    DerivationRecord(
-                        uint32(index),
-                        puzzlehash_unhardened,
-                        pubkey,
-                        target_wallet.type(),
-                        uint32(target_wallet.id()),
-                        False,
-                    )
-                )
             self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             if len(derivation_paths) > 0:
                 await self.puzzle_store.add_derivation_paths(derivation_paths)
@@ -519,12 +559,13 @@ class WalletStateManager:
                     await self.wallet_node.new_peak_queue.subscribe_to_puzzle_hashes(
                         [record.puzzle_hash for record in derivation_paths]
                     )
-        if len(unhardened_keys) > 0:
-            self.state_changed("new_derivation_index", data_object={"index": last_index - 1})
-        # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
-        if mark_existing_as_used and unused > 0 and len(unhardened_keys) > 0:
-            self.log.info(f"Updating last used derivation index: {unused - 1}")
-            await self.puzzle_store.set_used_up_to(uint32(unused - 1))
+        if not target_wallet.handle_own_derivation():
+            if len(unhardened_keys) > 0:
+                self.state_changed("new_derivation_index", data_object={"index": last_index - 1})
+            # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
+            if mark_existing_as_used and unused > 0 and len(unhardened_keys) > 0:
+                self.log.info(f"Updating last used derivation index: {unused - 1}")
+                await self.puzzle_store.set_used_up_to(uint32(unused - 1))
 
     async def update_wallet_puzzle_hashes(self, wallet_id: uint32) -> None:
         derivation_paths: List[DerivationRecord] = []
@@ -805,6 +846,10 @@ class WalletStateManager:
 
         uncurried = uncurry_puzzle(coin_spend.puzzle_reveal)
 
+        vault_check = match_vault_puzzle(uncurried.mod, uncurried.args)
+        if vault_check:
+            return await self.handle_vault(coin_spend.puzzle_reveal.to_program(), coin_spend, coin_state), None
+
         dao_ids = []
         wallets = self.wallets.values()
         for wallet in wallets:
@@ -996,7 +1041,7 @@ class WalletStateManager:
                 # Remove the clawback hint since it is unnecessary for the XCH coin
                 memos: List[bytes] = [] if len(incoming_tx.memos) == 0 else incoming_tx.memos[0][1][1:]
                 inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
-                inner_solution: Program = self.main_wallet.make_solution(
+                inner_solution: Program = await self.main_wallet.make_solution(
                     primaries=[
                         Payment(
                             derivation_record.puzzle_hash,
@@ -1004,6 +1049,7 @@ class WalletStateManager:
                             memos,  # Forward memo of the first coin
                         )
                     ],
+                    action_scope=action_scope,
                     conditions=(
                         extra_conditions
                         if len(coin_spends) > 0 or fee == 0
@@ -1101,6 +1147,23 @@ class WalletStateManager:
     async def is_standard_wallet_tx(self, coin_state: CoinState) -> bool:
         wallet_identifier = await self.get_wallet_identifier_for_puzzle_hash(coin_state.coin.puzzle_hash)
         return wallet_identifier is not None and wallet_identifier.type == WalletType.STANDARD_WALLET
+
+    async def handle_vault(
+        self,
+        puzzle: Program,
+        coin_spend: CoinSpend,
+        coin_state: CoinState,
+    ) -> Optional[WalletIdentifier]:
+        if isinstance(self.observation_root, VaultRoot):
+            for wallet in self.wallets.values():
+                if wallet.type() == WalletType.STANDARD_WALLET:
+                    assert isinstance(wallet, Vault)
+                    # make sure we've got the singleton coin
+                    if coin_state.coin.amount % 2 == 1:
+                        # Update the vault singleton record
+                        await wallet.update_vault_singleton(puzzle, coin_spend, coin_state)
+                        return WalletIdentifier.create(wallet)
+        return None
 
     async def handle_dao_cat(
         self,
@@ -1750,6 +1813,7 @@ class WalletStateManager:
                         wallet_identifier = WalletIdentifier(uint32(local_record.wallet_id), local_record.wallet_type)
                     elif coin_state.created_height is not None:
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
+
                         try:
                             dl_wallet = self.get_dl_wallet()
                         except ValueError:
@@ -1762,6 +1826,18 @@ class WalletStateManager:
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
 
                     if wallet_identifier is None:
+                        # Confirm tx records for txs which we submitted for coins which aren't in our wallet
+                        # Used for vault recovery spends
+                        if coin_state.created_height is not None and coin_state.spent_height is not None:
+                            all_unconfirmed = await self.tx_store.get_all_unconfirmed()
+                            tx_records_to_confirm: List[TransactionRecord] = []
+                            for out_tx_record in all_unconfirmed:
+                                if coin_state.coin in out_tx_record.removals:
+                                    tx_records_to_confirm.append(out_tx_record)
+
+                            if len(tx_records_to_confirm) > 0:
+                                for tx_record in tx_records_to_confirm:
+                                    await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
 
@@ -2189,7 +2265,6 @@ class WalletStateManager:
             coin_record = await self.coin_store.get_coin_record(coin.name())
             if coin_record is not None:
                 wallet_identifier = WalletIdentifier(uint32(coin_record.wallet_id), coin_record.wallet_type)
-
         return wallet_identifier
 
     async def get_wallet_identifier_for_hinted_coin(self, coin: Coin, hint: bytes32) -> Optional[WalletIdentifier]:
@@ -2327,6 +2402,17 @@ class WalletStateManager:
                 [] if additional_signing_responses is None else additional_signing_responses,
                 additional_signing_responses != [] and additional_signing_responses is not None,
             )
+
+            # Check that tx_records have additions/removals since vault txs don't have them until they're signed
+            for i, tx in enumerate(tx_records):
+                if tx.spend_bundle is not None:
+                    if tx.additions == []:
+                        tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
+                    if tx.removals == []:
+                        assert isinstance(tx.spend_bundle, SpendBundle)
+                        tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
+                tx_records[i] = tx
+
         if push:
             all_coins_names = []
             async with self.db_wrapper.writer_maybe_transaction():
@@ -2647,29 +2733,7 @@ class WalletStateManager:
         )
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
-        pks: List[bytes] = []
-        signing_targets: List[SigningTarget] = []
-        for coin_spend in coin_spends:
-            _coin_spend = coin_spend.as_coin_spend()
-            # Get AGG_SIG conditions
-            conditions_dict = conditions_dict_for_solution(
-                _coin_spend.puzzle_reveal.to_program(),
-                _coin_spend.solution.to_program(),
-                self.constants.MAX_BLOCK_COST_CLVM,
-            )
-            # Create signature
-            for pk, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, _coin_spend.coin, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
-            ):
-                pk_bytes = bytes(pk)
-                pks.append(pk_bytes)
-                fingerprint: bytes = pk.get_fingerprint().to_bytes(4, "big")
-                signing_targets.append(SigningTarget(fingerprint, msg, std_hash(pk_bytes + msg)))
-
-        return SigningInstructions(
-            await self.key_hints_for_pubkeys(pks),
-            signing_targets,
-        )
+        return await self.main_wallet.gather_signing_info(coin_spends)
 
     async def gather_signing_info_for_bundles(self, bundles: List[SpendBundle]) -> List[UnsignedTransaction]:
         utxs: List[UnsignedTransaction] = []
@@ -2804,3 +2868,77 @@ class WalletStateManager:
             extra_spends=extra_spends,
         ) as action_scope:
             yield action_scope
+
+    async def create_vault_wallet(
+        self,
+        secp_pk: bytes,
+        hidden_puzzle_hash: bytes32,
+        genesis_challenge: bytes32,
+        action_scope: WalletActionScope,
+        bls_pk: Optional[G1Element] = None,
+        timelock: Optional[uint64] = None,
+        fee: uint64 = uint64(0),
+    ) -> None:
+        """
+        Returns a tx record for creating a new vault
+        """
+        wallet = self.main_wallet
+
+        # Get xch coin
+        amount = uint64(1)
+        coins = await wallet.select_coins(uint64(amount + fee), action_scope)
+
+        # Create singleton launcher
+        origin = next(iter(coins))
+        launcher_coin = Coin(origin.name(), SINGLETON_LAUNCHER_HASH, amount)
+
+        vault_inner_puzzle_hash = get_vault_inner_puzzle_hash(
+            secp_pk, genesis_challenge, hidden_puzzle_hash, bls_pk, timelock
+        )
+        vault_full_puzzle_hash = get_vault_full_puzzle_hash(launcher_coin.name(), vault_inner_puzzle_hash)
+        memos = [secp_pk, hidden_puzzle_hash]
+        if bls_pk:
+            memos.extend([bls_pk.to_bytes(), Program.to(timelock).as_atom()])
+
+        genesis_launcher_solution = Program.to([vault_full_puzzle_hash, amount, memos])
+        announcement_message = genesis_launcher_solution.get_tree_hash()
+
+        await wallet.generate_signed_transaction(
+            amount,
+            SINGLETON_LAUNCHER_HASH,
+            action_scope,
+            fee,
+            coins,
+            None,
+            origin_id=origin.name(),
+            extra_conditions=(
+                AssertCoinAnnouncement(asserted_id=launcher_coin.name(), asserted_msg=announcement_message),
+            ),
+        )
+
+        launcher_cs = make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, genesis_launcher_solution)
+        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.append(
+                TransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    amount=uint64(amount),
+                    to_puzzle_hash=vault_inner_puzzle_hash,
+                    fee_amount=fee,
+                    confirmed=False,
+                    sent=uint32(0),
+                    spend_bundle=launcher_sb,
+                    additions=launcher_sb.additions(),
+                    removals=launcher_sb.removals(),
+                    wallet_id=wallet.id(),
+                    sent_to=[],
+                    trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
+                    name=launcher_sb.name(),
+                    memos=[],
+                    valid_times=ConditionValidTimes(),
+                )
+            )
+            await self.add_interested_puzzle_hashes([launcher_coin.name()], [self.main_wallet.id()])

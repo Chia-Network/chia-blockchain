@@ -86,11 +86,11 @@ def add_key_info(mnemonic_or_pk: str, label: Optional[str]) -> None:
     unlock_keyring()
     try:
         if check_mnemonic_validity(mnemonic_or_pk):
-            sk = Keychain().add_key(mnemonic_or_pk, label, private=True)
+            sk, _ = Keychain().add_key(mnemonic_or_pk, label, private=True)
             fingerprint = sk.get_g1().get_fingerprint()
             print(f"Added private key with public key fingerprint {fingerprint}")
         else:
-            pk = Keychain().add_key(mnemonic_or_pk, label, private=False)
+            pk, _ = Keychain().add_key(mnemonic_or_pk, label, private=False)
             fingerprint = pk.get_fingerprint()
             print(f"Added public key with fingerprint {fingerprint}")
 
@@ -172,7 +172,11 @@ def show_keys(
             key["label"] = key_data.label
 
         key["fingerprint"] = key_data.fingerprint
-        key["master_pk"] = bytes(key_data.public_key).hex()
+        if isinstance(key_data.observation_root, G1Element):
+            key["master_pk"] = key_data.public_key.hex()
+        else:  # pragma: no cover
+            # TODO: Add test coverage once vault wallet exists
+            key["observation_root"] = key_data.public_key.hex()
         if sk is not None:
             key["farmer_pk"] = bytes(master_sk_to_farmer_sk(sk).get_g1()).hex()
             key["pool_pk"] = bytes(master_sk_to_pool_sk(sk).get_g1()).hex()
@@ -180,19 +184,20 @@ def show_keys(
             key["farmer_pk"] = None
             key["pool_pk"] = None
 
-        if non_observer_derivation:
-            if sk is None:
-                first_wallet_pk: Optional[G1Element] = None
+        if isinstance(key_data.observation_root, G1Element):
+            if non_observer_derivation:
+                if sk is None:
+                    first_wallet_pk: Optional[G1Element] = None
+                else:
+                    first_wallet_pk = master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
             else:
-                first_wallet_pk = master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
-        else:
-            first_wallet_pk = master_pk_to_wallet_pk_unhardened(key_data.public_key, uint32(0))
+                first_wallet_pk = master_pk_to_wallet_pk_unhardened(key_data.observation_root, uint32(0))
 
-        if first_wallet_pk is not None:
-            wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_pk), prefix)
-            key["wallet_address"] = wallet_address
-        else:
-            key["wallet_address"] = None
+            if first_wallet_pk is not None:
+                wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_pk), prefix)
+                key["wallet_address"] = wallet_address
+            else:
+                key["wallet_address"] = None
 
         key["non_observer"] = non_observer_derivation
 
@@ -504,7 +509,7 @@ def search_derive(
         search_private_key = True
 
     if fingerprint is None and private_key is None:
-        public_keys: List[G1Element] = Keychain().get_all_public_keys()
+        public_keys: List[G1Element] = Keychain().get_all_public_keys_of_type(G1Element)
         private_keys: List[Optional[PrivateKey]] = [
             data.private_key if data.secrets is not None else None for data in Keychain().get_keys(include_secrets=True)
         ]
@@ -514,8 +519,13 @@ def search_derive(
         private_keys = [private_key]
     else:
         master_key_data = Keychain().get_key(fingerprint, include_secrets=True)
-        public_keys = [master_key_data.public_key]
-        private_keys = [master_key_data.private_key if master_key_data.secrets is not None else None]
+        if isinstance(master_key_data.observation_root, G1Element):
+            public_keys = [master_key_data.observation_root]
+            private_keys = [master_key_data.private_key if master_key_data.secrets is not None else None]
+        else:  # pragma: no cover
+            # TODO: Add test coverage once vault wallet exists
+            print("Cannot currently derive paths from non-BLS keys")
+            return True
 
     for pk, sk in zip(public_keys, private_keys):
         if sk is None and non_observer_derivation:
@@ -648,6 +658,10 @@ def derive_wallet_address(
     """
     if fingerprint is not None:
         key_data: KeyData = Keychain().get_key(fingerprint, include_secrets=non_observer_derivation)
+        if not isinstance(key_data.observation_root, G1Element):  # pragma: no cover
+            # TODO: Add test coverage once vault wallet exists
+            print("Cannot currently derive from non-BLS keys")
+            return
         if non_observer_derivation and key_data.secrets is None:
             print("Need a private key for non observer derivation of wallet addresses")
             return
@@ -655,7 +669,7 @@ def derive_wallet_address(
             sk = key_data.private_key
         else:
             sk = None
-        pk = key_data.public_key
+        pk: G1Element = key_data.observation_root
     else:
         assert private_key is not None
         sk = private_key
@@ -712,7 +726,11 @@ def derive_child_key(
 
     if fingerprint is not None:
         key_data: KeyData = Keychain().get_key(fingerprint, include_secrets=True)
-        current_pk: G1Element = key_data.public_key
+        if not isinstance(key_data.observation_root, G1Element):  # pragma: no cover
+            # TODO: Add coverage when vault wallet exists
+            print("Cannot currently derive from non-BLS keys")
+            return
+        current_pk: G1Element = key_data.observation_root
         current_sk: Optional[PrivateKey] = key_data.private_key if key_data.secrets is not None else None
     else:
         assert private_key is not None

@@ -3,9 +3,11 @@ from __future__ import annotations
 import sys
 import unicodedata
 from dataclasses import dataclass
+from enum import Enum
+from functools import cached_property
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, overload
+from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Type, TypeVar, Union, overload
 
 import importlib_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -27,14 +29,21 @@ from chia.util.errors import (
 from chia.util.file_keyring import Key
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
+from chia.util.key_types import Secp256r1PrivateKey, Secp256r1PublicKey
 from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.observation_root import ObservationRoot
+from chia.util.secret_info import SecretInfo
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.vault.vault_root import VaultRoot
 
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
 DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8
 MAX_KEYS = 101
 MIN_PASSPHRASE_LEN = 8
+
+
+_T_ObservationRoot = TypeVar("_T_ObservationRoot", bound=ObservationRoot)
 
 
 def supports_os_passphrase_storage() -> bool:
@@ -223,21 +232,66 @@ class KeyDataSecrets(Streamable):
         return " ".join(self.mnemonic)
 
 
+class KeyTypes(str, Enum):
+    G1_ELEMENT = "G1 Element"
+    VAULT_LAUNCHER = "Vault Launcher"
+    SECP_256_R1 = "SECP256r1"
+
+    @classmethod
+    def parse_observation_root(cls: Type[KeyTypes], pk_bytes: bytes, key_type: KeyTypes) -> ObservationRoot:
+        if key_type == cls.G1_ELEMENT:
+            return G1Element.from_bytes(pk_bytes)
+        if key_type == cls.VAULT_LAUNCHER:
+            return VaultRoot(pk_bytes)
+        elif key_type == cls.SECP_256_R1:
+            return Secp256r1PublicKey.from_bytes(pk_bytes)
+        else:  # pragma: no cover
+            # mypy should prevent this from ever running
+            raise RuntimeError("Not all key types have been handled in KeyTypes.parse_observation_root")
+
+    @classmethod
+    def parse_secret_info(cls: Type[KeyTypes], sk_bytes: bytes, key_type: KeyTypes) -> SecretInfo[Any]:
+        if key_type == cls.G1_ELEMENT:
+            return PrivateKey.from_bytes(sk_bytes)
+        elif key_type == cls.SECP_256_R1:
+            return Secp256r1PrivateKey.from_bytes(sk_bytes)
+        else:  # pragma: no cover
+            # mypy should prevent this from ever running
+            raise RuntimeError("Not all key types have been handled in KeyTypes.parse_secret_info")
+
+
+TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {
+    G1Element: KeyTypes.G1_ELEMENT,
+    VaultRoot: KeyTypes.VAULT_LAUNCHER,
+    Secp256r1PublicKey: KeyTypes.SECP_256_R1,
+}
+KEY_TYPES_TO_TYPES: Dict[KeyTypes, Type[ObservationRoot]] = {v: k for k, v in TYPES_TO_KEY_TYPES.items()}
+PUBLIC_TYPES_TO_PRIVATE_TYPES: Dict[Type[ObservationRoot], Type[SecretInfo[Any]]] = {
+    G1Element: PrivateKey,
+    Secp256r1PublicKey: Secp256r1PrivateKey,
+}
+
+
 @final
 @streamable
 @dataclass(frozen=True)
 class KeyData(Streamable):
     fingerprint: uint32
-    public_key: G1Element
+    public_key: bytes
     label: Optional[str]
     secrets: Optional[KeyDataSecrets]
+    key_type: str
+
+    @cached_property
+    def observation_root(self) -> ObservationRoot:
+        return KeyTypes.parse_observation_root(self.public_key, KeyTypes(self.key_type))
 
     def __post_init__(self) -> None:
         # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyData` instance with
         # an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of keys here.
-        if self.secrets is not None and self.public_key != self.private_key.get_g1():
+        if self.secrets is not None and self.observation_root != self.private_key.get_g1():
             raise KeychainKeyDataMismatch("public_key")
-        if uint32(self.public_key.get_fingerprint()) != self.fingerprint:
+        if uint32(self.observation_root.get_fingerprint()) != self.fingerprint:
             raise KeychainKeyDataMismatch("fingerprint")
 
     @classmethod
@@ -245,9 +299,10 @@ class KeyData(Streamable):
         private_key = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic))
         return cls(
             fingerprint=uint32(private_key.get_g1().get_fingerprint()),
-            public_key=private_key.get_g1(),
+            public_key=bytes(private_key.get_g1()),
             label=label,
             secrets=KeyDataSecrets.from_mnemonic(mnemonic),
+            key_type=KeyTypes.G1_ELEMENT.value,
         )
 
     @classmethod
@@ -314,19 +369,31 @@ class Keychain:
         if key is None or len(key.secret) == 0:
             raise KeychainUserNotFound(self.service, user)
         str_bytes = key.secret
-
-        public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
-        fingerprint = public_key.get_fingerprint()
-        if len(str_bytes) > G1Element.SIZE:
+        pk = str_bytes
+        entropy = None
+        if len(str_bytes) == 32:
+            observation_root: ObservationRoot = VaultRoot.from_bytes(str_bytes)
+            fingerprint = observation_root.get_fingerprint()
+            key_type = KeyTypes.VAULT_LAUNCHER.value
+        elif len(str_bytes) == 48:
+            observation_root = G1Element.from_bytes(str_bytes)
+            fingerprint = observation_root.get_fingerprint()
+            key_type = KeyTypes.G1_ELEMENT.value
+        elif len(str_bytes) > G1Element.SIZE:
+            pk = str_bytes[: G1Element.SIZE]
+            observation_root = G1Element.from_bytes(pk)
+            fingerprint = observation_root.get_fingerprint()
             entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+            key_type = KeyTypes.G1_ELEMENT.value
         else:
-            entropy = None
+            raise ValueError(f"Public key must be either 32 or 48 bytes, got {len(pk)} bytes")
 
         return KeyData(
             fingerprint=uint32(fingerprint),
-            public_key=public_key,
+            public_key=pk,
             label=self.keyring_wrapper.keyring.get_label(fingerprint),
             secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
+            key_type=key_type,
         )
 
     def _get_free_private_key_index(self) -> int:
@@ -341,34 +408,46 @@ class Keychain:
             except KeychainUserNotFound:
                 return index
 
+    # pylint requires these NotImplementedErrors for some reason
     @overload
-    def add_key(self, mnemonic_or_pk: str) -> PrivateKey: ...
+    def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> PrivateKey: ...
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> PrivateKey: ...
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> Tuple[PrivateKey, KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]) -> G1Element: ...
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
+    ) -> Tuple[ObservationRoot, KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: bool) -> Union[PrivateKey, G1Element]: ...
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: bool
+    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
 
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
-    ) -> Union[PrivateKey, G1Element]:
+    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
         """
         Adds a key to the keychain. The keychain itself will store the public key, and the entropy bytes (if given),
         but not the passphrase.
         """
-        key: Union[PrivateKey, G1Element]
+        key: Union[PrivateKey, ObservationRoot]
+        key_type: KeyTypes
         if private:
             seed = mnemonic_to_seed(mnemonic_or_pk)
             entropy = bytes_from_mnemonic(mnemonic_or_pk)
             index = self._get_free_private_key_index()
             key = AugSchemeMPL.key_gen(seed)
+            key_type = KeyTypes.G1_ELEMENT
             assert isinstance(key, PrivateKey)
             pk = key.get_g1()
             key_data = Key(bytes(pk) + entropy)
@@ -381,8 +460,14 @@ class Keychain:
                 pk_bytes = bytes(convertbits(data, 5, 8, False))
             else:
                 pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
-            key = G1Element.from_bytes(pk_bytes)
-            assert isinstance(key, G1Element)
+            if len(pk_bytes) == 48:
+                key = G1Element.from_bytes(pk_bytes)
+                key_type = KeyTypes.G1_ELEMENT
+            elif len(pk_bytes) == 32:
+                key = VaultRoot(pk_bytes)
+                key_type = KeyTypes.VAULT_LAUNCHER
+            else:
+                raise ValueError(f"Cannot identify type of pubkey {mnemonic_or_pk}")  # pragma: no cover
             key_data = Key(pk_bytes)
             fingerprint = key.get_fingerprint()
 
@@ -406,7 +491,7 @@ class Keychain:
                 self.keyring_wrapper.keyring.delete_label(fingerprint)
             raise
 
-        return key
+        return key, key_type
 
     def set_label(self, fingerprint: int, label: str) -> None:
         """
@@ -466,7 +551,7 @@ class Keychain:
         Return the KeyData of the first key which has the given public key fingerprint.
         """
         for key_data in self._iterate_through_key_datas(include_secrets=include_secrets, skip_public_only=False):
-            if key_data.public_key.get_fingerprint() == fingerprint:
+            if key_data.observation_root.get_fingerprint() == fingerprint:
                 return key_data
         raise KeychainFingerprintNotFound(fingerprint)
 
@@ -480,13 +565,22 @@ class Keychain:
 
         return all_keys
 
-    def get_all_public_keys(self) -> List[G1Element]:
+    def get_all_public_keys(self) -> List[ObservationRoot]:
         """
         Returns all public keys.
         """
-        all_keys: List[G1Element] = []
+        all_keys: List[ObservationRoot] = []
         for key_data in self._iterate_through_key_datas(skip_public_only=False):
-            all_keys.append(key_data.public_key)
+            all_keys.append(key_data.observation_root)
+
+        return all_keys
+
+    def get_all_public_keys_of_type(self, key_type: Type[_T_ObservationRoot]) -> List[_T_ObservationRoot]:
+        all_keys: List[_T_ObservationRoot] = []
+        for key_data in self._iterate_through_key_datas(skip_public_only=False):
+            if key_data.key_type == TYPES_TO_KEY_TYPES[key_type]:
+                assert isinstance(key_data.observation_root, key_type)
+                all_keys.append(key_data.observation_root)
 
         return all_keys
 

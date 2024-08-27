@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator, List
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import G2Element, PrivateKey
 
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
@@ -68,11 +68,13 @@ async def test_get_private_key(simulator_and_wallet: OldSimulatorsAndWallets, ha
     wallet_state_manager: WalletStateManager = wallet_node.wallet_state_manager
     derivation_index = uint32(10000)
     conversion_method = master_sk_to_wallet_sk if hardened else master_sk_to_wallet_sk_unhardened
-    expected_private_key = conversion_method(wallet_state_manager.get_master_private_key(), derivation_index)
+    sk = wallet_state_manager.get_master_private_key()
+    assert isinstance(sk, PrivateKey)
+    expected_private_key = conversion_method(sk, derivation_index)
     record = DerivationRecord(
         derivation_index,
         bytes32(b"0" * 32),
-        expected_private_key.get_g1(),
+        bytes(expected_private_key.public_key()),
         WalletType.STANDARD_WALLET,
         uint32(1),
         hardened,

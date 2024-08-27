@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import dataclass, replace
-from typing import Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import importlib_resources
 import pytest
@@ -21,16 +21,21 @@ from chia.util.errors import (
     KeychainSecretsMissing,
 )
 from chia.util.ints import uint32
+from chia.util.key_types import Secp256r1PrivateKey
 from chia.util.keychain import (
     Keychain,
     KeyData,
     KeyDataSecrets,
+    KeyTypes,
     bytes_from_mnemonic,
     bytes_to_mnemonic,
     generate_mnemonic,
     mnemonic_from_short_words,
     mnemonic_to_seed,
 )
+from chia.util.observation_root import ObservationRoot
+from chia.util.secret_info import SecretInfo
+from chia.wallet.vault.vault_root import VaultRoot
 
 
 @dataclass
@@ -115,6 +120,9 @@ class TestKeychain:
         assert kc._get_free_private_key_index() == 2
         assert len(kc.get_all_private_keys()) == 2
         assert len(kc.get_all_public_keys()) == 2
+        all_pks: List[G1Element] = kc.get_all_public_keys_of_type(G1Element)
+        assert len(all_pks) == 2
+
         assert kc.get_all_private_keys()[0] == kc.get_first_private_key()
         assert kc.get_all_public_keys()[0] == kc.get_first_public_key()
 
@@ -131,7 +139,7 @@ class TestKeychain:
         assert len(kc.get_all_private_keys()) == 0
 
         kc.add_key(key_info.bech32, label=None, private=False)
-        all_pks = kc.get_all_public_keys()
+        all_pks = kc.get_all_public_keys_of_type(G1Element)
         assert len(all_pks) == 1
         assert all_pks[0] == key_info.public_key
         kc.delete_all_keys()
@@ -189,7 +197,7 @@ class TestKeychain:
 
         mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
         print("entropy to seed:", mnemonic_to_seed(mnemonic).hex())
-        master_sk = kc.add_key(mnemonic)
+        master_sk, _ = kc.add_key(mnemonic)
         tv_master_int = 8075452428075949470768183878078858156044736575259233735633523546099624838313
         tv_child_int = 18507161868329770878190303689452715596635858303241878571348190917018711023613
         assert master_sk == PrivateKey.from_bytes(tv_master_int.to_bytes(32, "big"))
@@ -271,7 +279,7 @@ def test_key_data_generate(label: Optional[str]) -> None:
     key_data = KeyData.generate(label)
     assert key_data.private_key == AugSchemeMPL.key_gen(mnemonic_to_seed(key_data.mnemonic_str()))
     assert key_data.entropy == bytes_from_mnemonic(key_data.mnemonic_str())
-    assert key_data.public_key == key_data.private_key.get_g1()
+    assert key_data.observation_root == key_data.private_key.get_g1()
     assert key_data.fingerprint == key_data.private_key.get_g1().get_fingerprint()
     assert key_data.label == label
 
@@ -284,7 +292,7 @@ def test_key_data_generate(label: Optional[str]) -> None:
 def test_key_data_creation(label: str, key_info: KeyInfo, get_item: str, from_method: Callable[..., KeyData]) -> None:
     key_data = from_method(getattr(key_info, get_item), label)
     assert key_data.fingerprint == key_info.fingerprint
-    assert key_data.public_key == key_info.public_key
+    assert key_data.public_key == bytes(key_info.public_key)
     assert key_data.mnemonic == key_info.mnemonic.split()
     assert key_data.mnemonic_str() == key_info.mnemonic
     assert key_data.entropy == key_info.entropy
@@ -294,7 +302,7 @@ def test_key_data_creation(label: str, key_info: KeyInfo, get_item: str, from_me
 
 @pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
 def test_key_data_without_secrets(key_info: KeyInfo) -> None:
-    key_data = KeyData(key_info.fingerprint, key_info.public_key, None, None)
+    key_data = KeyData(key_info.fingerprint, bytes(key_info.public_key), None, None, KeyTypes.G1_ELEMENT.value)
     assert key_data.secrets is None
 
     with pytest.raises(KeychainSecretsMissing):
@@ -329,17 +337,18 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
         (
             (
                 _24keyinfo.fingerprint,
-                G1Element(),
+                bytes(G1Element()),
                 None,
                 KeyDataSecrets(_24keyinfo.mnemonic.split(), _24keyinfo.entropy, _24keyinfo.private_key),
+                KeyTypes.G1_ELEMENT.value,
             ),
             "public_key",
         ),
-        ((_24keyinfo.fingerprint, G1Element(), None, None), "fingerprint"),
+        ((_24keyinfo.fingerprint, bytes(G1Element()), None, None, KeyTypes.G1_ELEMENT.value), "fingerprint"),
     ],
 )
 def test_key_data_post_init(
-    input_data: Tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
+    input_data: Tuple[uint32, bytes, Optional[str], Optional[KeyDataSecrets], str], data_type: str
 ) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)
@@ -512,3 +521,30 @@ async def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool)
         for key_data in keys:
             keychain.delete_key_by_fingerprint(key_data.fingerprint)
             assert keychain.keyring_wrapper.keyring.get_label(key_data.fingerprint) is None
+
+
+@pytest.mark.parametrize("key_type", [e.value for e in KeyTypes])
+@pytest.mark.parametrize("key_info", [_24keyinfo, _12keyinfo])
+def test_key_type_support(key_type: str, key_info: KeyInfo) -> None:
+    """
+    The purpose of this test is to make sure that whenever KeyTypes is updated, all relevant functionality is
+    also updated with it.
+    """
+    launcher_id = bytes32(b"1" * 32)
+    vault_root = VaultRoot(launcher_id)
+    secp_sk = Secp256r1PrivateKey.from_seed(mnemonic_to_seed(key_info.mnemonic))
+    secp_pk = secp_sk.public_key()
+    generate_test_key_for_key_type: Dict[str, Tuple[int, ObservationRoot, Optional[SecretInfo[Any]]]] = {
+        KeyTypes.G1_ELEMENT.value: (
+            G1Element().get_fingerprint(),
+            G1Element(),
+            key_info.private_key,
+        ),
+        KeyTypes.SECP_256_R1.value: (secp_pk.get_fingerprint(), secp_pk, secp_sk),
+        KeyTypes.VAULT_LAUNCHER.value: (vault_root.get_fingerprint(), vault_root, None),
+    }
+    obr_fingerprint, obr, secret_info = generate_test_key_for_key_type[key_type]
+    assert KeyData(uint32(obr_fingerprint), bytes(obr), None, None, key_type).observation_root == obr
+    assert KeyTypes.parse_observation_root(bytes(obr), KeyTypes(key_type)) == obr
+    if secret_info is not None:
+        assert KeyTypes.parse_secret_info(bytes(secret_info), KeyTypes(key_type)) == secret_info

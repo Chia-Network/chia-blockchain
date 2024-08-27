@@ -30,6 +30,7 @@ from chia.wallet.dao_wallet.dao_utils import (
     get_innerpuz_from_lockup_puzzle,
     get_lockup_puzzle,
 )
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
@@ -38,10 +39,10 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import MainWalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -61,7 +62,7 @@ class DAOCATWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     dao_cat_info: DAOCATInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     cost_of_single_tx: Optional[int]
     lineage_store: CATLineageStore
 
@@ -72,7 +73,7 @@ class DAOCATWallet:
     @staticmethod
     async def create(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
     ) -> DAOCATWallet:
         self = DAOCATWallet()
@@ -93,7 +94,7 @@ class DAOCATWallet:
     @staticmethod
     async def get_or_create_wallet_for_cat(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
     ) -> DAOCATWallet:
@@ -256,6 +257,7 @@ class DAOCATWallet:
         amount: uint64,
         proposal_id: bytes32,
         is_yes_vote: bool,
+        action_scope: WalletActionScope,
         proposal_puzzle: Optional[Program] = None,
     ) -> SpendBundle:
         coins: List[LockedCoinInfo] = await self.advanced_select_coins(amount, proposal_id)
@@ -297,8 +299,9 @@ class DAOCATWallet:
                     )
                 ]
                 message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
-                inner_solution = self.standard_wallet.make_solution(
+                inner_solution = await self.standard_wallet.make_solution(
                     primaries=primaries,
+                    action_scope=action_scope,
                     conditions=(CreatePuzzleAnnouncement(message),),
                 )
             else:
@@ -320,8 +323,9 @@ class DAOCATWallet:
                         )
                     )
                 message = Program.to([proposal_id, vote_amount, is_yes_vote, coin.name()]).get_tree_hash()
-                inner_solution = self.standard_wallet.make_solution(
+                inner_solution = await self.standard_wallet.make_solution(
                     primaries=primaries,
+                    action_scope=action_scope,
                     conditions=(CreatePuzzleAnnouncement(message),),
                 )
             if is_yes_vote:
@@ -419,8 +423,9 @@ class DAOCATWallet:
                 ),
             ]
             total_amt += coin.amount
-            inner_solution = self.standard_wallet.make_solution(
+            inner_solution = await self.standard_wallet.make_solution(
                 primaries=primaries,
+                action_scope=action_scope,
             )
             # Create the solution using only the values needed for exiting the lockup mode (my_id = 0)
             solution = Program.to(
@@ -667,3 +672,9 @@ class DAOCATWallet:
 
     def get_name(self) -> str:
         return self.wallet_info.name
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()

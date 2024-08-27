@@ -53,11 +53,10 @@ from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_has
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -95,7 +94,7 @@ class CATWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     cat_info: CATInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     lineage_store: CATLineageStore
 
     @staticmethod
@@ -105,7 +104,7 @@ class CATWallet:
     @staticmethod
     async def create_new_cat_wallet(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         cat_tail_info: Dict[str, Any],
         amount: uint64,
         action_scope: WalletActionScope,
@@ -116,7 +115,7 @@ class CATWallet:
         self = CATWallet()
         self.standard_wallet = wallet
         self.log = logging.getLogger(__name__)
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
@@ -200,7 +199,7 @@ class CATWallet:
     @staticmethod
     async def get_or_create_wallet_for_cat(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
     ) -> CATWallet:
@@ -253,7 +252,7 @@ class CATWallet:
     async def create_from_puzzle_info(
         cls,
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
@@ -279,7 +278,7 @@ class CATWallet:
     @staticmethod
     async def create(
         wallet_state_manager: WalletStateManager,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
     ) -> CATWallet:
         self = CATWallet()
@@ -708,8 +707,9 @@ class CATWallet:
                             action_scope,
                             extra_conditions=(announcement.corresponding_assertion(),),
                         )
-                        innersol = self.standard_wallet.make_solution(
+                        innersol = await self.standard_wallet.make_solution(
                             primaries=primaries,
+                            action_scope=action_scope,
                             conditions=(*extra_conditions, announcement),
                         )
                     elif regular_chia_to_claim > fee:  # pragma: no cover
@@ -719,21 +719,23 @@ class CATWallet:
                             action_scope,
                         )
                         assert xch_announcement is not None
-                        innersol = self.standard_wallet.make_solution(
+                        innersol = await self.standard_wallet.make_solution(
                             primaries=primaries,
+                            action_scope=action_scope,
                             conditions=(*extra_conditions, xch_announcement, announcement),
                         )
                     else:
                         # TODO: what about when they are equal?
                         raise Exception("Equality not handled")
                 else:
-                    innersol = self.standard_wallet.make_solution(
+                    innersol = await self.standard_wallet.make_solution(
                         primaries=primaries,
+                        action_scope=action_scope,
                         conditions=(*extra_conditions, announcement),
                     )
             else:
-                innersol = self.standard_wallet.make_solution(
-                    primaries=[], conditions=(announcement.corresponding_assertion(),)
+                innersol = await self.standard_wallet.make_solution(
+                    primaries=[], action_scope=action_scope, conditions=(announcement.corresponding_assertion(),)
                 )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
@@ -867,3 +869,9 @@ class CATWallet:
             construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, hint).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()

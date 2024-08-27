@@ -42,6 +42,10 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactions,
     SubmitTransactionsResponse,
     TakeOfferResponse,
+    VaultCreate,
+    VaultCreateResponse,
+    VaultRecovery,
+    VaultRecoveryResponse,
     VCMintResponse,
     VCRevokeResponse,
     VCSpendResponse,
@@ -1699,4 +1703,22 @@ class WalletRpcClient(RpcClient):
     ) -> ExecuteSigningInstructionsResponse:
         return ExecuteSigningInstructionsResponse.from_json_dict(
             await self.fetch("execute_signing_instructions", args.to_json_dict())
+        )
+
+    async def vault_create(
+        self,
+        args: VaultCreate,
+        tx_config: TXConfig,
+    ) -> VaultCreateResponse:
+        return VaultCreateResponse.from_json_dict(
+            await self.fetch("vault_create", {**args.to_json_dict(), **tx_config.to_json_dict()})
+        )
+
+    async def vault_recovery(
+        self,
+        args: VaultRecovery,
+        tx_config: TXConfig,
+    ) -> VaultRecoveryResponse:
+        return VaultRecoveryResponse.from_json_dict(
+            await self.fetch("vault_recovery", {**args.to_json_dict(), **tx_config.to_json_dict()})
         )

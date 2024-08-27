@@ -45,15 +45,16 @@ from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
+from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_protocol import MainWalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -75,7 +76,7 @@ class PoolWallet:
     wallet_state_manager: WalletStateManager
     log: logging.Logger
     wallet_info: WalletInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     wallet_id: int
     next_transaction_fee: uint64 = uint64(0)
     next_tx_config: TXConfig = DEFAULT_TX_CONFIG
@@ -324,7 +325,7 @@ class PoolWallet:
     async def create(
         cls,
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         launcher_coin_id: bytes32,
         block_spends: List[CoinSpend],
         block_height: uint32,
@@ -365,7 +366,7 @@ class PoolWallet:
     async def create_from_db(
         cls,
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
         name: Optional[str] = None,
     ) -> PoolWallet:
@@ -385,7 +386,7 @@ class PoolWallet:
     @staticmethod
     async def create_new_pool_wallet_transaction(
         wallet_state_manager: Any,
-        main_wallet: Wallet,
+        main_wallet: MainWalletProtocol,
         initial_target_state: PoolState,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
@@ -409,7 +410,7 @@ class PoolWallet:
         if p2_singleton_delay_time is None:
             p2_singleton_delay_time = uint64(604800)
 
-        unspent_records = await wallet_state_manager.coin_store.get_unspent_coins_for_wallet(standard_wallet.wallet_id)
+        unspent_records = await wallet_state_manager.coin_store.get_unspent_coins_for_wallet(standard_wallet.id())
         balance = await standard_wallet.get_confirmed_balance(unspent_records)
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE:
             raise ValueError("Not enough balance in main wallet to create a managed plotting pool.")
@@ -438,9 +439,11 @@ class PoolWallet:
         return p2_singleton_puzzle_hash, launcher_coin_id
 
     async def _get_owner_key_cache(self) -> Tuple[PrivateKey, uint32]:
+        private_key = self.wallet_state_manager.get_master_private_key()
+        assert isinstance(private_key, PrivateKey)
         if self._owner_sk_and_index is None:
             self._owner_sk_and_index = find_owner_sk(
-                [self.wallet_state_manager.get_master_private_key()],
+                [private_key],
                 (await self.get_current_state()).current.owner_pubkey,
             )
         assert self._owner_sk_and_index is not None
@@ -562,7 +565,7 @@ class PoolWallet:
 
     @staticmethod
     async def generate_launcher_spend(
-        standard_wallet: Wallet,
+        standard_wallet: MainWalletProtocol,
         amount: uint64,
         fee: uint64,
         initial_target_state: PoolState,
@@ -924,3 +927,9 @@ class PoolWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:  # pragma: no cover
         return False  # PoolWallet pre-dates hints
+
+    def handle_own_derivation(self) -> bool:  # pragma: no cover
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()

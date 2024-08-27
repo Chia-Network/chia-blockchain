@@ -50,11 +50,10 @@ from chia.wallet.util.curry_and_treehash import NIL_TREEHASH, shatree_int, shatr
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import MainWalletProtocol, WalletProtocol
 
 
 class DIDWallet:
@@ -66,7 +65,7 @@ class DIDWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     did_info: DIDInfo
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     base_puzzle_program: Optional[bytes]
     base_inner_puzzle_hash: Optional[bytes32]
     wallet_id: int
@@ -74,7 +73,7 @@ class DIDWallet:
     @staticmethod
     async def create_new_did_wallet(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         amount: uint64,
         action_scope: WalletActionScope,
         backups_ids: List[bytes32] = [],
@@ -106,7 +105,7 @@ class DIDWallet:
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
         self.log = logging.getLogger(name if name else __name__)
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
@@ -134,7 +133,7 @@ class DIDWallet:
             name=name, wallet_type=WalletType.DECENTRALIZED_ID.value, data=info_as_string
         )
         self.wallet_id = self.wallet_info.id
-        std_wallet_id = self.standard_wallet.wallet_id
+        std_wallet_id = self.standard_wallet.id()
         bal = await wallet_state_manager.get_confirmed_balance_for_wallet(std_wallet_id)
         if amount > bal:
             raise ValueError("Not enough balance")
@@ -152,7 +151,7 @@ class DIDWallet:
     @staticmethod
     async def create_new_did_wallet_from_recovery(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         backup_data: str,
         name: Optional[str] = None,
     ):
@@ -192,7 +191,7 @@ class DIDWallet:
     @staticmethod
     async def create_new_did_wallet_from_coin_spend(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         launch_coin: Coin,
         inner_puzzle: Program,
         coin_spend: CoinSpend,
@@ -267,7 +266,7 @@ class DIDWallet:
     @staticmethod
     async def create(
         wallet_state_manager: Any,
-        wallet: Wallet,
+        wallet: MainWalletProtocol,
         wallet_info: WalletInfo,
         name: str = None,
     ):
@@ -579,7 +578,7 @@ class DIDWallet:
         assert uncurried is not None
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[
                 Payment(
                     puzzle_hash=new_inner_puzzle.get_tree_hash(),
@@ -587,6 +586,7 @@ class DIDWallet:
                     memos=[p2_puzzle.get_tree_hash()],
                 )
             ],
+            action_scope=action_scope,
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
         innersol: Program = Program.to([1, p2_solution])
@@ -693,8 +693,9 @@ class DIDWallet:
             launcher_id=self.did_info.origin_coin.name(),
             metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[Payment(new_did_puzhash, uint64(coin.amount), [new_puzhash])],
+            action_scope=action_scope,
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin.name())),
         )
         # Need to include backup list reveal here, even we are don't recover
@@ -780,8 +781,9 @@ class DIDWallet:
                 launcher_id=self.did_info.origin_coin.name(),
                 metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
             )
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[Payment(puzzle_hash=new_innerpuzzle_hash, amount=uint64(coin.amount), memos=[p2_ph])],
+            action_scope=action_scope,
             conditions=extra_conditions,
         )
         # innerpuz solution is (mode p2_solution)
@@ -914,11 +916,12 @@ class DIDWallet:
         assert uncurried is not None
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[
                 Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()]),
                 Payment(innermessage, uint64(0)),
             ],
+            action_scope=action_scope,
             conditions=extra_conditions,
         )
         innersol = Program.to([1, p2_solution])
@@ -1268,7 +1271,12 @@ class DIDWallet:
             metadata=self.did_info.metadata,
         )
         await self.save_info(did_info)
-        eve_spend = await self.generate_eve_spend(eve_coin, did_full_puz, did_inner)
+        eve_spend = await self.generate_eve_spend(
+            eve_coin,
+            did_full_puz,
+            did_inner,
+            action_scope,
+        )
         full_spend = SpendBundle.aggregate([eve_spend, launcher_sb])
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
@@ -1300,6 +1308,7 @@ class DIDWallet:
         coin: Coin,
         full_puzzle: Program,
         innerpuz: Program,
+        action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ):
         assert self.did_info.origin_coin is not None
@@ -1307,8 +1316,9 @@ class DIDWallet:
         assert uncurried is not None
         p2_puzzle = uncurried[0]
         # innerpuz solution is (mode p2_solution)
-        p2_solution = self.standard_wallet.make_solution(
+        p2_solution = await self.standard_wallet.make_solution(
             primaries=[Payment(innerpuz.get_tree_hash(), uint64(coin.amount), [p2_puzzle.get_tree_hash()])],
+            action_scope=action_scope,
             conditions=extra_conditions,
         )
         innersol = Program.to([1, p2_solution])
@@ -1485,3 +1495,9 @@ class DIDWallet:
             ).get_tree_hash_precalc(hint)
             == coin.puzzle_hash
         )
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()

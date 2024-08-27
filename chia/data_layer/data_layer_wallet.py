@@ -59,11 +59,10 @@ from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol, WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -124,7 +123,7 @@ class DataLayerWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     wallet_id: uint8
-    standard_wallet: Wallet
+    standard_wallet: MainWalletProtocol
     """
     interface used by datalayer for interacting with the chain
     """
@@ -540,8 +539,9 @@ class DataLayerWallet:
                     ],
                 ),
             )
-        inner_sol: Program = self.standard_wallet.make_solution(
+        inner_sol: Program = await self.standard_wallet.make_solution(
             primaries=primaries,
+            action_scope=action_scope,
             conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if fee > 0 else extra_conditions,
         )
         db_layer_sol = Program.to([inner_sol])
@@ -747,8 +747,9 @@ class DataLayerWallet:
             new=not action_scope.config.tx_config.reuse_puzhash
         )
         excess_fee: int = fee - mirror_coin.amount
-        inner_sol: Program = self.standard_wallet.make_solution(
+        inner_sol: Program = await self.standard_wallet.make_solution(
             primaries=[Payment(new_puzhash, uint64(mirror_coin.amount - fee))] if excess_fee < 0 else [],
+            action_scope=action_scope,
             conditions=(*extra_conditions, CreateCoinAnnouncement(b"$")) if excess_fee > 0 else extra_conditions,
         )
         mirror_spend = CoinSpend(
@@ -1237,6 +1238,12 @@ class DataLayerWallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return coin.amount % 2 == 1 and await self.wallet_state_manager.dl_store.get_launcher(hint) is not None
+
+    def handle_own_derivation(self) -> bool:
+        return False
+
+    def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
+        raise NotImplementedError()
 
 
 def verify_offer(

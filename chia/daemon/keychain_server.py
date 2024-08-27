@@ -224,7 +224,7 @@ class KeychainServer:
             }
 
         try:
-            key = self.get_keychain_for_request(request).add_key(mnemonic_or_pk, label, private)
+            key, key_type = self.get_keychain_for_request(request).add_key(mnemonic_or_pk, label, private)
         except KeyError as e:
             return {
                 "success": False,
@@ -243,7 +243,7 @@ class KeychainServer:
         else:
             fingerprint = key.get_fingerprint()
 
-        return {"success": True, "fingerprint": fingerprint}
+        return {"success": True, "fingerprint": fingerprint, "key_type": key_type}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
@@ -361,5 +361,6 @@ class KeychainServer:
         return {
             "success": True,
             "pk": bytes(key_data.public_key).hex(),
+            "key_type": key_data.key_type,
             "entropy": key_data.entropy.hex() if private else None,
         }
