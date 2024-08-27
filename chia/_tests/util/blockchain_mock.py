@@ -129,4 +129,4 @@ class BlockchainMock:
 
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: Set[uint32]) -> Dict[uint32, bytes]:
         # not implemented
-        assert False
+        assert False  # pragma: no cover
