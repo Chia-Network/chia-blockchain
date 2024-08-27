@@ -1317,8 +1317,12 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("sign_message_by_address", {"address": address, "message": message})
         return response["pubkey"], response["signature"], response["signing_mode"]
 
-    async def sign_message_by_id(self, id: str, message: str) -> Tuple[str, str, str]:
-        response = await self.fetch("sign_message_by_id", {"id": id, "message": message})
+    async def sign_message_by_id(
+        self, id: str, message: str, is_hex: bool = False, safe_mode: bool = True
+    ) -> Tuple[str, str, str]:
+        response = await self.fetch(
+            "sign_message_by_id", {"id": id, "message": message, "is_hex": is_hex, "safe_mode": safe_mode}
+        )
         return response["pubkey"], response["signature"], response["signing_mode"]
 
     # DAOs

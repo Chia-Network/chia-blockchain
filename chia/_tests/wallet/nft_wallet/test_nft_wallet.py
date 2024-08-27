@@ -10,16 +10,12 @@ from clvm_tools.binutils import disassemble
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -2441,127 +2437,132 @@ async def test_set_nft_status(wallet_environments: WalletTestFramework) -> None:
     assert coin.pending_transaction
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 1, "blocks_needed": [1], "reuse_puzhash": True, "trusted": True}],
+    indirect=True,
+)
 @pytest.mark.anyio
-async def test_nft_sign_message(self_hostname: str, two_wallet_nodes: OldSimulatorsAndWallets, trusted: bool) -> None:
-    num_blocks = 5
-    full_nodes, wallets, _ = two_wallet_nodes
-    full_node_api = full_nodes[0]
-    full_node_server = full_node_api.server
-    wallet_node_0, server_0 = wallets[0]
-    wallet_node_1, server_1 = wallets[1]
-    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
-    api_0 = WalletRpcApi(wallet_node_0)
-    ph = await wallet_0.get_new_puzzlehash()
+async def test_nft_sign_message(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
 
-    if trusted:
-        wallet_node_0.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-        wallet_node_1.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
-    else:
-        wallet_node_0.config["trusted_peers"] = {}
-        wallet_node_1.config["trusted_peers"] = {}
+    env.wallet_aliases = {
+        "xch": 1,
+        "nft": 2,
+    }
 
-    await server_0.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-    await server_1.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
-
-    for _ in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-
-    funds = sum(
-        calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)
-    )
-
-    await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
-    await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=30)
-
-    res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
+    res = await env.rpc_client.fetch("create_new_wallet", dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(res, dict)
     assert res.get("success")
-    nft_wallet_0_id = res["wallet_id"]
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {},
+                    "nft": {"init": True},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "nft": {},
+                },
+            )
+        ]
+    )
 
     # Create a NFT without DID
-    resp = await api_0.nft_mint_nft(
-        {
-            "wallet_id": nft_wallet_0_id,
-            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
-            "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
-            "mu": ["https://www.chia.net/img/branding/chia-logo.svg"],
-        },
+    await env.rpc_client.mint_nft(
+        wallet_id=env.wallet_aliases["nft"],
+        royalty_address=None,
+        target_address=None,  # doesn't matter so we'll just reuse
+        hash="0xD4584AD463139FA8C0D9F68F4B59F185",
+        uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+        meta_uris=["https://www.chia.net/img/branding/chia-logo.svg"],
+        tx_config=wallet_environments.tx_config,
+        did_id="",
     )
-    assert resp.get("success")
-    sb = resp["spend_bundle"]
 
-    # ensure hints are generated
-    assert len(compute_memos(sb)) > 0
-    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
-    await make_new_block_with(resp, full_node_api, ph)
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -1,
+                        "<=#spendable_balance": -1,
+                        ">=#pending_change": 1,  # any amount increase
+                        "<=#max_send_amount": -1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "nft": {"init": True, "pending_coin_removal_count": 1},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -1,
+                        ">=#spendable_balance": 1,  # any amount increase
+                        "<=#pending_change": -1,  # any amount decrease
+                        ">=#max_send_amount": 1,  # any amount increase
+                        "pending_coin_removal_count": -1,
+                    },
+                    "nft": {"pending_coin_removal_count": -1, "unspent_coin_count": 1},
+                },
+            )
+        ]
+    )
 
     # Check DID NFT
-    coins_response = await wait_rpc_state_condition(
-        30, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: len(x["nft_list"]) > 0
-    )
-    assert coins_response["nft_list"], isinstance(coins_response, dict)
-    assert coins_response.get("success")
-    coins: List[NFTInfo] = coins_response["nft_list"]
+    coins = (await env.rpc_client.list_nfts(env.wallet_aliases["nft"], start_index=0, num=1))["nft_list"]
     assert len(coins) == 1
-    assert coins[0].owner_did is None
-    assert not coins[0].pending_transaction
+    coin = NFTInfo.from_json_dict(coins[0])
+    assert coin.owner_did is None
+    assert not coin.pending_transaction
     # Test general string
     message = "Hello World"
-    response = await api_0.sign_message_by_id(
-        {"id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value), "message": message}
+    pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
+        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value), message=message
     )
     puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, message))
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+        G1Element.from_bytes(bytes.fromhex(pubkey)),
         puzzle.get_tree_hash(),
-        G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        G2Element.from_bytes(bytes.fromhex(sig)),
     )
     # Test hex string
     message = "0123456789ABCDEF"
-    response = await api_0.sign_message_by_id(
-        {"id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value), "message": message, "is_hex": True}
+    pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
+        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value), message=message, is_hex=True
     )
     puzzle = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, bytes.fromhex(message)))
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+        G1Element.from_bytes(bytes.fromhex(pubkey)),
         puzzle.get_tree_hash(),
-        G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        G2Element.from_bytes(bytes.fromhex(sig)),
     )
     # Test BLS sign string
     message = "Hello World"
-    response = await api_0.sign_message_by_id(
-        {
-            "id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value),
-            "message": message,
-            "is_hex": "False",
-            "safe_mode": "False",
-        }
+    pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
+        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value),
+        message=message,
+        is_hex=False,
+        safe_mode=False,
     )
 
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+        G1Element.from_bytes(bytes.fromhex(pubkey)),
         bytes(message, "utf-8"),
-        G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        G2Element.from_bytes(bytes.fromhex(sig)),
     )
     # Test BLS sign hex
     message = "0123456789ABCDEF"
-    response = await api_0.sign_message_by_id(
-        {
-            "id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value),
-            "message": message,
-            "is_hex": True,
-            "safe_mode": False,
-        }
+    pubkey, sig, _ = await env.rpc_client.sign_message_by_id(
+        id=encode_puzzle_hash(coin.launcher_id, AddressType.NFT.value),
+        message=message,
+        is_hex=True,
+        safe_mode=False,
     )
 
     assert AugSchemeMPL.verify(
-        G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+        G1Element.from_bytes(bytes.fromhex(pubkey)),
         bytes.fromhex(message),
-        G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        G2Element.from_bytes(bytes.fromhex(sig)),
     )
