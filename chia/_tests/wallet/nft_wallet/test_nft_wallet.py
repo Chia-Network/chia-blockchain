@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -10,10 +10,9 @@ from clvm_tools.binutils import disassemble
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
@@ -27,7 +26,6 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -67,19 +65,6 @@ async def wait_rpc_state_condition(
             )
 
         await asyncio.sleep(0.3)
-
-
-async def make_new_block_with(
-    resp: Dict[str, Any], full_node_api: FullNodeSimulator, ph: bytes32, node_to_sync: Optional[WalletNode] = None
-) -> WalletSpendBundle:
-    assert resp.get("success")
-    sb = resp["spend_bundle"]
-    assert isinstance(sb, WalletSpendBundle)
-    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    if node_to_sync is not None:
-        await full_node_api.wait_for_wallet_synced(wallet_node=node_to_sync, timeout=30)
-    return sb
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
