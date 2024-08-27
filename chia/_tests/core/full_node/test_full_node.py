@@ -2272,12 +2272,15 @@ async def test_long_reorg(
     else:
         reorg_blocks = test_long_reorg_blocks[:1200]
 
+    ssi = None
+    diff = None
+    prev_ses_block = None
     for block_batch in to_batches(blocks, 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await node.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
+        success, change, ssi, diff, prev_ses_block, err = await node.full_node.add_block_batch(
+            block_batch.entries, PeerInfo("0.0.0.0", 8884), None, diff=diff, ssi=ssi, prev_ses_block=prev_ses_block
         )
         assert err is None
         assert success is True
