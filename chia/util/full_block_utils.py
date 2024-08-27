@@ -204,7 +204,7 @@ def skip_transactions_info(buf: memoryview) -> memoryview:
     return skip_list(buf, skip_coin)
 
 
-def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
+def generator_from_block(buf: memoryview) -> Optional[bytes]:
     buf = skip_list(buf, skip_end_of_sub_slot_bundle)  # finished_sub_slots
     buf = skip_reward_chain_block(buf)  # reward_chain_block
     buf = skip_optional(buf, skip_vdf_proof)  # challenge_chain_sp_proof
@@ -222,7 +222,7 @@ def generator_from_block(buf: memoryview) -> Optional[SerializedProgram]:
 
     buf = buf[1:]
     length = serialized_length(buf)
-    return SerializedProgram.from_bytes(bytes(buf[:length]))
+    return bytes(buf[:length])
 
 
 # this implements the BlockInfo protocol
