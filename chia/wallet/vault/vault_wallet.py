@@ -340,15 +340,7 @@ class Vault(Wallet):
         raise NotImplementedError("vault wallet")
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
-        if new:
-            return self.get_p2_singleton_puzzle_hash()
-        else:
-            record: Optional[DerivationRecord] = (
-                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            )
-            if record is None:
-                return self.get_p2_singleton_puzzle_hash()
-            return record.puzzle_hash
+        return self.get_p2_singleton_puzzle_hash()
 
     async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
         pk = self.vault_info.pubkey
@@ -467,19 +459,7 @@ class Vault(Wallet):
         return new_solution
 
     async def get_puzzle(self, new: bool) -> Program:
-        if new:
-            return await self.get_new_puzzle()
-        else:
-            record: Optional[DerivationRecord] = (
-                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            )
-            if record is None:
-                return await self.get_new_puzzle()
-            assert isinstance(record._pubkey, bytes)
-            puzzle = construct_p2_delegated_secp(
-                record._pubkey, self.wallet_state_manager.constants.GENESIS_CHALLENGE, record.puzzle_hash
-            )
-            return puzzle
+        return self.get_p2_singleton_puzzle()
 
     def puzzle_hash_for_pk(self, pubkey: ObservationRoot) -> bytes32:
         raise ValueError("This won't work")
