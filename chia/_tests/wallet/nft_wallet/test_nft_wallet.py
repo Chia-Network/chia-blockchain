@@ -1349,9 +1349,9 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
 
     res = await env_1.rpc_client.fetch("nft_get_by_did", {"did_id": hmr_did_id})
     assert res.get("success")
-    assert env_1.wallet_aliases["nft"] == res["wallet_id"]
+    assert env_1.wallet_aliases["nft_w_did"] == res["wallet_id"]
     # Check NFT DID is set now
-    coins = (await env_1.rpc_client.list_nfts(env_1.wallet_aliases["nft"], start_index=0, num=1))["nft_list"]
+    coins = (await env_1.rpc_client.list_nfts(env_1.wallet_aliases["nft_w_did"], start_index=0, num=1))["nft_list"]
     assert len(coins) == 1
     coin = NFTInfo.from_json_dict(coins[0])
     assert coin.owner_did is not None
