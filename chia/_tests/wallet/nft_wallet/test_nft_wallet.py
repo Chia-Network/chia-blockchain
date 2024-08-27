@@ -720,7 +720,6 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
                     "nft": {"pending_coin_removal_count": -1},
                 },
             ),
-            WalletStateTransition(),
         ]
     )
 
@@ -759,7 +758,6 @@ async def test_nft_wallet_rpc_update_metadata(wallet_environments: WalletTestFra
                     "nft": {"pending_coin_removal_count": -1},
                 },
             ),
-            WalletStateTransition(),
         ]
     )
 
@@ -1386,7 +1384,6 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
                     "did": {"set_remainder": True},
                 },
             ),
-            WalletStateTransition(),
         ]
     )
 
@@ -1409,7 +1406,6 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
                 },
                 post_block_balance_updates={},
             ),
-            WalletStateTransition(),
         ]
     )
 
@@ -1462,7 +1458,6 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
                     "nft": {"pending_coin_removal_count": -1, "unspent_coin_count": 1},
                 },
             ),
-            WalletStateTransition(),
         ]
     )
 
@@ -1515,7 +1510,6 @@ async def test_update_metadata_for_nft_did(wallet_environments: WalletTestFramew
                     "nft": {"pending_coin_removal_count": -1},
                 },
             ),
-            WalletStateTransition(),
         ]
     )
 
@@ -1563,7 +1557,6 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
                     "did": {"set_remainder": True},
                 },
             ),
-            WalletStateTransition(),
         ]
     )
 
@@ -1589,7 +1582,6 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
                 },
                 post_block_balance_updates={},
             ),
-            WalletStateTransition(),
         ]
     )
 
