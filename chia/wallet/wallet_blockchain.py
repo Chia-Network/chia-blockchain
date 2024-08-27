@@ -10,9 +10,8 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.header_block import HeaderBlock
-from chia.types.weight_proof import SubEpochChallengeSegment, WeightProof
+from chia.types.weight_proof import WeightProof
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 from chia.wallet.key_val_store import KeyValStore
@@ -24,9 +23,9 @@ log = logging.getLogger(__name__)
 # implements BlockchainInterface
 class WalletBlockchain:
     if TYPE_CHECKING:
-        from chia.consensus.blockchain_interface import BlockchainInterface
+        from chia.consensus.blockchain_interface import BlockRecordsProtocol
 
-        _protocol_check: ClassVar[BlockchainInterface] = cast("WalletBlockchain", None)
+        _protocol_check: ClassVar[BlockRecordsProtocol] = cast("WalletBlockchain", None)
 
     constants: ConsensusConstants
     _basic_store: KeyValStore
@@ -198,11 +197,6 @@ class WalletBlockchain:
     def contains_block(self, header_hash: bytes32) -> bool:
         return header_hash in self._block_records
 
-    async def contains_block_from_db(self, header_hash: bytes32) -> bool:
-        # the wallet doesn't have the blockchain DB, this implements the
-        # blockchain_interface
-        return header_hash in self._block_records
-
     def contains_height(self, height: uint32) -> bool:
         return height in self._height_to_hash
 
@@ -212,50 +206,10 @@ class WalletBlockchain:
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records.get(header_hash)
 
-    def get_peak(self) -> Optional[BlockRecord]:
-        return None
-
-    def get_peak_height(self) -> Optional[uint32]:
-        return None
-
-    def remove_block_record(self, header_hash: bytes32) -> None:
-        pass
-
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
-        return []
-
-    async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
-        return {}
-
-    async def warmup(self, fork_point: uint32) -> None:
-        pass
-
-    async def get_header_blocks_in_range(
-        self, start: int, stop: int, tx_filter: bool = True
-    ) -> Dict[bytes32, HeaderBlock]:
-        return {}
-
-    def get_ses_heights(self) -> List[uint32]:
-        return []
-
-    def get_ses(self, height: uint32) -> SubEpochSummary:
-        return  # type: ignore[return-value]
-
-    async def get_sub_epoch_challenge_segments(
-        self,
-        sub_epoch_summary_hash: bytes32,
-    ) -> Optional[List[SubEpochChallengeSegment]]:
-        return None
-
     def height_to_block_record(self, height: uint32) -> BlockRecord:
         header_hash: Optional[bytes32] = self.height_to_hash(height)
         assert header_hash is not None
         return self._block_records[header_hash]
-
-    async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
-    ) -> None:
-        pass
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
