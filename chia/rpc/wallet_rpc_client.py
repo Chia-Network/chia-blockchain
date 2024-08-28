@@ -39,6 +39,8 @@ from chia.rpc.wallet_request_types import (
     NFTTransferNFTResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
+    SplitCoins,
+    SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
     TakeOfferResponse,
@@ -1699,4 +1701,13 @@ class WalletRpcClient(RpcClient):
     ) -> ExecuteSigningInstructionsResponse:
         return ExecuteSigningInstructionsResponse.from_json_dict(
             await self.fetch("execute_signing_instructions", args.to_json_dict())
+        )
+
+    async def split_coins(
+        self,
+        args: SplitCoins,
+        tx_config: TXConfig,
+    ) -> SplitCoinsResponse:
+        return SplitCoinsResponse.from_json_dict(
+            await self.fetch("split_coins", {**args.to_json_dict(), **tx_config.to_json_dict()})
         )

@@ -210,7 +210,9 @@ def combine_cmd(
     type=AmountParamType(),
     required=True,
 )
-@click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")
+@click.option(
+    "-t", "--target-coin-id", type=Bytes32ParamType(), required=True, help="The coin id of the coin we are splitting."
+)
 @tx_out_cmd
 def split_cmd(
     wallet_rpc_port: Optional[int],
@@ -219,7 +221,7 @@ def split_cmd(
     number_of_coins: int,
     fee: uint64,
     amount_per_coin: CliAmount,
-    target_coin_id: str,
+    target_coin_id: bytes32,
     push: bool,
 ) -> List[TransactionRecord]:
     from .coin_funcs import async_split
@@ -232,7 +234,7 @@ def split_cmd(
             fee=fee,
             number_of_coins=number_of_coins,
             amount_per_coin=amount_per_coin,
-            target_coin_id_str=target_coin_id,
+            target_coin_id=target_coin_id,
             push=push,
         )
     )

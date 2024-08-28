@@ -1,11 +1,16 @@
+# pylint: disable=invalid-field-call
+
 from __future__ import annotations
 
-from dataclasses import dataclass
+import sys
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Type, TypeVar
+
+from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
@@ -22,6 +27,18 @@ from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamab
 from chia.wallet.vc_wallet.vc_store import VCRecord
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
+
+
+@dataclass_transform(frozen_default=True, kw_only_default=True)
+def kw_only_dataclass(cls: Type[Any]) -> Type[Any]:
+    if sys.version_info < (3, 10):
+        return dataclass(frozen=True)(cls)  # pragma: no cover
+    else:
+        return dataclass(frozen=True, kw_only=True)(cls)
+
+
+def default_raise() -> Any:  # pragma: no cover
+    raise RuntimeError("This should be impossible to hit and is just for < 3.10 compatibility")
 
 
 @streamable
@@ -88,11 +105,36 @@ class ExecuteSigningInstructionsResponse(Streamable):
     signing_responses: List[SigningResponse]
 
 
+# When inheriting from this class you must set any non default arguments with:
+# field(default_factory=default_raise)
+# (this is for < 3.10 compatibility)
+@streamable
+@kw_only_dataclass
+class TransactionEndpointRequest(Streamable):
+    fee: uint64 = uint64(0)
+    push: Optional[bool] = None
+
+
 @streamable
 @dataclass(frozen=True)
 class TransactionEndpointResponse(Streamable):
     unsigned_transactions: List[UnsignedTransaction]
     transactions: List[TransactionRecord]
+
+
+@streamable
+@kw_only_dataclass
+class SplitCoins(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    number_of_coins: uint16 = field(default_factory=default_raise)
+    amount_per_coin: uint64 = field(default_factory=default_raise)
+    target_coin_id: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class SplitCoinsResponse(TransactionEndpointResponse):
+    pass
 
 
 # TODO: The section below needs corresponding request types
