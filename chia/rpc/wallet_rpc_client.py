@@ -1137,6 +1137,7 @@ class WalletRpcClient(RpcClient):
     async def nft_update_owner_via_metadata(
             self,
             wallet_id: int,
+            nft_id: str,
             new_owner: str,
             signature: str,
             fee: uint64 = uint64(0),
@@ -1144,6 +1145,7 @@ class WalletRpcClient(RpcClient):
     ) -> Dict[str, Any]:
         request = {
             "wallet_id": wallet_id,
+            "nft_coin_id": nft_id,
             "new_owner": new_owner,
             "signature": signature,
             "fee": fee,
