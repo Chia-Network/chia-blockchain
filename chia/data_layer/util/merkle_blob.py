@@ -18,6 +18,7 @@ from typing import (
     cast,
     final,
 )
+
 from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
