@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Dict, List, NewType, Optional, Proto
 from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
+from chia.util.lru_cache import LRUCache
 
 dirty_hash = bytes32(b"\x00" * 32)
 
@@ -43,6 +44,7 @@ class MerkleBlob:
     kv_to_index: Dict[KVId, TreeIndex] = field(default_factory=dict)
     free_indexes: List[TreeIndex] = field(default_factory=list)
     last_allocated_index: TreeIndex = TreeIndex(0)
+    cache: LRUCache[TreeIndex, RawMerkleNodeProtocol] = LRUCache(10_000)
 
     def __post_init__(self) -> None:
         self.kv_to_index = self.get_keys_values_indexes()
@@ -56,7 +58,13 @@ class MerkleBlob:
 
         return self.free_indexes.pop()
 
-    def get_raw_node(self, index: TreeIndex) -> RawMerkleNodeProtocol:
+    def get_raw_node(self, index: TreeIndex, keep_in_cache: bool = True) -> RawMerkleNodeProtocol:
+        cache_node = self.cache.get(index)
+        if cache_node is not None:
+            if not keep_in_cache:
+                self.cache.remove(index)
+            return cache_node
+
         if index < 0 or null_parent <= index:
             raise InvalidIndexError(index=index)
 
@@ -69,11 +77,14 @@ class MerkleBlob:
 
         block = self.blob[metadata_start:end]
         metadata = NodeMetadata.unpack(block[:metadata_size])
-        return unpack_raw_node(
+        node = unpack_raw_node(
             metadata=metadata,
             data=block[-data_size:],
             index=index,
         )
+        if keep_in_cache:
+            self.cache.put(index, node)
+        return node
 
     def get_metadata(self, index: TreeIndex) -> NodeMetadata:
         if index < 0 or null_parent <= index:
@@ -182,6 +193,7 @@ class MerkleBlob:
         end = data_start + data_size
 
         self.blob[data_start:end] = pack_raw_node(new_node)
+        self.cache.maybe_remove(index)
 
     def get_random_leaf_node(self, seed: bytes) -> RawLeafMerkleNode:
         node = self.get_raw_node(TreeIndex(0))
@@ -205,7 +217,7 @@ class MerkleBlob:
         queue: List[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
             node_index = queue.pop()
-            node = self.get_raw_node(node_index)
+            node = self.get_raw_node(node_index, keep_in_cache=False)
             if isinstance(node, RawLeafMerkleNode):
                 kv_to_index[node.key_value] = node_index
             else:
@@ -223,7 +235,7 @@ class MerkleBlob:
         queue: List[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
             node_index = queue.pop()
-            node = self.get_raw_node(node_index)
+            node = self.get_raw_node(node_index, keep_in_cache=False)
             assert node_index in free_indexes
             free_indexes.remove(node_index)
             if isinstance(node, RawInternalMerkleNode):
@@ -251,6 +263,7 @@ class MerkleBlob:
             self.kv_to_index[key_value] = TreeIndex(0)
             self.free_indexes = []
             self.last_allocated_index = TreeIndex(1)
+            self.cache.clear()
             return
 
         seed = std_hash(key_value.to_bytes(8, byteorder="big"))
@@ -259,6 +272,7 @@ class MerkleBlob:
 
         if len(self.kv_to_index) == 1:
             self.blob.clear()
+            self.cache.clear()
             self.blob.extend(
                 NodeMetadata(type=NodeType.internal, dirty=False).pack()
                 + pack_raw_node(
@@ -305,7 +319,7 @@ class MerkleBlob:
         assert old_parent_index != null_parent
 
         self.update_entry(old_leaf.index, parent=new_internal_node_index)
-        old_parent = self.get_raw_node(old_parent_index)
+        old_parent = self.get_raw_node(old_parent_index, keep_in_cache=False)
         assert isinstance(old_parent, RawInternalMerkleNode)
         if old_leaf.index == old_parent.left:
             self.update_entry(old_parent.index, left=new_internal_node_index)
@@ -317,7 +331,7 @@ class MerkleBlob:
 
     def delete(self, key_value: KVId) -> None:
         leaf_index = self.kv_to_index[key_value]
-        leaf = self.get_raw_node(leaf_index)
+        leaf = self.get_raw_node(leaf_index, keep_in_cache=False)
         assert isinstance(leaf, RawLeafMerkleNode)
         del self.kv_to_index[key_value]
 
@@ -326,16 +340,17 @@ class MerkleBlob:
             self.free_indexes = []
             self.last_allocated_index = TreeIndex(0)
             self.blob.clear()
+            self.cache.clear()
             return
 
         self.free_indexes.append(leaf_index)
-        parent = self.get_raw_node(parent_index)
+        parent = self.get_raw_node(parent_index, keep_in_cache=False)
         assert isinstance(parent, RawInternalMerkleNode)
         sibling_index = parent.get_sibling_index(leaf_index)
 
         grandparent_index = parent.parent
         if grandparent_index == null_parent:
-            sibling = self.get_raw_node(sibling_index)
+            sibling = self.get_raw_node(sibling_index, keep_in_cache=False)
             if isinstance(sibling, RawLeafMerkleNode):
                 node_type = NodeType.leaf
             else:
@@ -350,10 +365,11 @@ class MerkleBlob:
                 for son_index in (sibling.left, sibling.right):
                     self.update_entry(son_index, parent=TreeIndex(0))
             self.free_indexes.append(sibling_index)
+            self.cache.clear()
             return
 
         self.free_indexes.append(parent_index)
-        grandparent = self.get_raw_node(grandparent_index)
+        grandparent = self.get_raw_node(grandparent_index, keep_in_cache=False)
         assert isinstance(grandparent, RawInternalMerkleNode)
 
         self.update_entry(sibling_index, parent=grandparent_index)
@@ -371,7 +387,7 @@ class MerkleBlob:
 
         leaf_index = self.kv_to_index[old_kv]
         self.update_entry(index=leaf_index, hash=hash, key_value=new_kv)
-        node = self.get_raw_node(leaf_index)
+        node = self.get_raw_node(leaf_index, keep_in_cache=False)
         if node.parent != null_parent:
             self.mark_lineage_as_dirty(node.parent)
 
