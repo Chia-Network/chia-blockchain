@@ -3634,12 +3634,12 @@ class WalletRpcApi:
         key = "did"
         signature = bytes.fromhex(request["signature"])
 
-        nft_coin_id = request["nft_coin_id"]
-        if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
-            nft_coin_id = decode_puzzle_hash(nft_coin_id)
+        nft_id = request["nft_id"]
+        if nft_id.startswith(AddressType.NFT.hrp(self.service.config)):
+            nft_coin_id = decode_puzzle_hash(nft_id)
         else:
-            nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-        nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            nft_coin_id = bytes32.from_hexstr(nft_id)
+        nft_coin_info = await nft_wallet.get_nft(nft_coin_id)
 
         fee = uint64(request.get("fee", 0))
         await nft_wallet.update_metadata(

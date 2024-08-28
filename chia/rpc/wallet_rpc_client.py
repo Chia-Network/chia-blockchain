@@ -1145,7 +1145,7 @@ class WalletRpcClient(RpcClient):
     ) -> Dict[str, Any]:
         request = {
             "wallet_id": wallet_id,
-            "nft_coin_id": nft_id,
+            "nft_id": nft_id,
             "new_owner": new_owner,
             "signature": signature,
             "fee": fee,
