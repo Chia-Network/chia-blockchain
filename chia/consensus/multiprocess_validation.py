@@ -205,7 +205,7 @@ async def pre_validate_blocks_multiprocessing(
 
     # load blocks to cache
     if blocks[0].height > 0:
-        curr = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
+        curr = block_records.block_record(blocks[0].prev_header_hash)
         if curr is None:
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
         prev_b = curr
@@ -220,20 +220,18 @@ async def pre_validate_blocks_multiprocessing(
                 assert curr.finished_challenge_slot_hashes is not None
                 num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
             recent_blocks[header_hash] = curr
-            block_records.add_block_record(curr)
             if curr.is_transaction_block:
                 num_blocks_seen += 1
             header_hash = curr.prev_hash
-            curr = await block_records.get_block_record_from_db(curr.prev_hash)
+            curr = block_records.block_record(curr.prev_hash)
             assert curr is not None
-        block_records.add_block_record(curr)
         recent_blocks[header_hash] = curr
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
 
     if blocks[0].height != 0:
         if prev_b is None:
-            prev_b = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
+            prev_b = block_records.block_record(blocks[0].prev_header_hash)
         assert prev_b is not None
 
     for block in blocks:
