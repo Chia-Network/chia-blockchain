@@ -339,7 +339,7 @@ class Blockchain:
         # we know of.
         prev_block: Optional[BlockRecord] = None
         if not extending_main_chain:
-            prev_block = await self.get_block_record_from_db(block.prev_header_hash)
+            prev_block = self.block_record(block.prev_header_hash)
             if not genesis:
                 if prev_block is None:
                     return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
@@ -436,7 +436,7 @@ class Blockchain:
 
         error_code, _ = await validate_block_body(
             self.constants,
-            self.get_block_record_from_db,
+            self,
             self.coin_store.get_coin_records,
             block,
             block.height,
@@ -464,7 +464,6 @@ class Blockchain:
             self,
             required_iters,
             block,
-            None,
             sub_slot_iters=sub_slot_iters,
             prev_ses_block=prev_ses_block,
         )
@@ -787,7 +786,7 @@ class Blockchain:
 
         error_code, cost_result = await validate_block_body(
             self.constants,
-            self.get_block_record_from_db,
+            self,
             self.coin_store.get_coin_records,
             block,
             uint32(prev_height + 1),

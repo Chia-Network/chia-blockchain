@@ -271,7 +271,6 @@ async def pre_validate_blocks_multiprocessing(
                 block_records,
                 required_iters,
                 block,
-                None,
                 sub_slot_iters=sub_slot_iters,
                 prev_ses_block=prev_ses_block,
             )

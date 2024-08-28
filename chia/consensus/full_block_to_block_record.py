@@ -23,16 +23,10 @@ def block_to_block_record(
     constants: ConsensusConstants,
     blocks: BlockRecordsProtocol,
     required_iters: uint64,
-    full_block: Optional[Union[FullBlock, HeaderBlock]],
-    header_block: Optional[HeaderBlock],
+    block: Union[FullBlock, HeaderBlock],
     sub_slot_iters: Optional[uint64] = None,
     prev_ses_block: Optional[BlockRecord] = None,
 ) -> BlockRecord:
-    if full_block is None:
-        assert header_block is not None
-        block: Union[HeaderBlock, FullBlock] = header_block
-    else:
-        block = full_block
     prev_b = blocks.try_block_record(block.prev_header_hash)
     if block.height > 0:
         assert prev_b is not None
