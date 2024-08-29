@@ -59,6 +59,11 @@ def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
     show_default=True,
     is_flag=True,
 )
+@click.option(
+    "--bech32m-prefix",
+    help=("Encode public keys in bech32m with a specified prefix"),
+    default=None,
+)
 @options.create_fingerprint()
 @click.pass_context
 def show_cmd(
@@ -67,10 +72,11 @@ def show_cmd(
     non_observer_derivation: bool,
     json: bool,
     fingerprint: Optional[int],
+    bech32m_prefix: Optional[str],
 ) -> None:
     from .keys_funcs import show_keys
 
-    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint)
+    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint, bech32m_prefix)
 
 
 @keys_cmd.command("add", help="Add a private key by mnemonic or public key as hex")
@@ -427,6 +433,11 @@ def wallet_address_cmd(
     show_default=True,
     is_flag=True,
 )
+@click.option(
+    "--bech32m-prefix",
+    help=("Encode public keys in bech32m with a specified prefix"),
+    default=None,
+)
 @click.pass_context
 def child_key_cmd(
     ctx: click.Context,
@@ -437,6 +448,7 @@ def child_key_cmd(
     non_observer_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
+    bech32m_prefix: Optional[str],
 ) -> None:
     from .keys_funcs import derive_child_key, resolve_derivation_master_key
 
@@ -460,4 +472,5 @@ def child_key_cmd(
         show_private_keys,
         show_hd_path,
         sk,
+        bech32m_prefix,
     )
