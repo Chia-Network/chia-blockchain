@@ -12,6 +12,8 @@ from chia.rpc.wallet_request_types import (
     CancelOfferResponse,
     CancelOffersResponse,
     CATSpendResponse,
+    CombineCoins,
+    CombineCoinsResponse,
     CreateNewDAOWalletResponse,
     CreateOfferForIDsResponse,
     CreateSignedTransactionsResponse,
@@ -1710,4 +1712,13 @@ class WalletRpcClient(RpcClient):
     ) -> SplitCoinsResponse:
         return SplitCoinsResponse.from_json_dict(
             await self.fetch("split_coins", {**args.to_json_dict(), **tx_config.to_json_dict()})
+        )
+
+    async def combine_coins(
+        self,
+        args: CombineCoins,
+        tx_config: TXConfig,
+    ) -> CombineCoinsResponse:
+        return CombineCoinsResponse.from_json_dict(
+            await self.fetch("combine_coins", {**args.to_json_dict(), **tx_config.to_json_dict()})
         )
