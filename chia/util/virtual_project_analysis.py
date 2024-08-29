@@ -39,9 +39,24 @@ class ChiaFile:
 
     @classmethod
     def parse(cls, file_path: Path) -> ChiaFile:
-        with open(file_path, encoding="utf-8", errors="ignore") as f:
-            file_string = f.read().strip()
-            return cls(file_path, Annotation.parse(file_string) if Annotation.is_annotated(file_string) else None)
+        # with open(file_path, encoding="utf-8", errors="ignore") as f:
+        #     file_string = f.read().strip()
+        #     return cls(file_path, Annotation.parse(file_string) if Annotation.is_annotated(file_string) else None)
+        parent = file_path.parent
+        last_directory = None
+        while parent.name != "chia":
+            last_directory = parent.name
+            parent = parent.parent
+        if last_directory in ["full_node", "consensus"]:
+            annotations = Annotation("full_node")
+        elif last_directory in ["farmer", "harvester"]:
+            annotations = Annotation("farmer")
+        elif last_directory in ["wallet", "data_layer"]:
+            annotations = Annotation("wallet")
+        else:
+            annotations = Annotation("misc")
+
+        return cls(file_path, annotations)
 
 
 def build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[Path]]:
@@ -414,14 +429,15 @@ def print_virtual_dependency_graph(config: Config) -> None:
 def print_cycles(config: Config) -> None:
     flag = False
     graph = build_dependency_graph(config.directory_parameters)
-    for cycle in find_cycles(
+    temp = find_cycles(
         graph,
         build_virtual_dependency_graph(config.directory_parameters, existing_graph=graph),
         config.directory_parameters.excluded_paths,
         config.ignore_cycles_in,
         config.ignore_specific_files,
         config.ignore_specific_edges,
-    ):
+    )
+    for cycle in temp:
         print(cycle)
         flag = True
 
