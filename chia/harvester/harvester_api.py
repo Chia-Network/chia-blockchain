@@ -27,7 +27,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
-from chia.util.config import load_config
 from typing import Any, Dict
 
 class HarvesterAPI:
@@ -35,7 +34,7 @@ class HarvesterAPI:
     harvester: Harvester
     config: Dict[str, Any]
 
-    def __init__(self, harvester: Harvester, config):
+    def __init__(self, harvester: Harvester, config: Dict[str, Any]):
         self.log = logging.getLogger(__name__)
         self.harvester = harvester
         self.config = config
@@ -259,7 +258,8 @@ class HarvesterAPI:
             time_taken = time.time() - start
             if time_taken > latency_warning_threshold:
                 self.harvester.log.warning(
-                    f"Looking up qualities on {filename} took: {time_taken}. This should be below {latency_warning_threshold} seconds"
+                    f"Looking up qualities on {filename} took: {time_taken}."
+                    f" This should be below {latency_warning_threshold} seconds"
                     f" to minimize risk of losing rewards."
                 )
             else:
