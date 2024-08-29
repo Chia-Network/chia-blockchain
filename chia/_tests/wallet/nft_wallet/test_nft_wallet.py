@@ -1791,7 +1791,7 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
     assert len(coins) == 3
     nft1 = NFTInfo.from_json_dict(coins[0])
     nft12 = NFTInfo.from_json_dict(coins[1])
-    nft13 = NFTInfo.from_json_dict(coins[1])
+    nft13 = NFTInfo.from_json_dict(coins[2])
     nft_wallet_to_check = env.wallet_state_manager.wallets[uint32(env.wallet_aliases["nft_w_did"])]
     assert isinstance(nft_wallet_to_check, NFTWallet)
     assert await nft_wallet_to_check.get_nft_count() == 3
