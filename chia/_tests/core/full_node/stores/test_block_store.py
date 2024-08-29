@@ -26,7 +26,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.full_block_utils import GeneratorBlockInfo
 from chia.util.ints import uint8, uint32, uint64
@@ -59,7 +58,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
         time_per_block=10,
     )
     wt: WalletTool = bt.get_pool_wallet_tool()
-    tx: SpendBundle = wt.generate_signed_transaction(
+    tx = wt.generate_signed_transaction(
         uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
     )
     blocks = bt.get_consecutive_blocks(

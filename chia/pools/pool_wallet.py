@@ -42,7 +42,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.conditions import AssertCoinAnnouncement, Condition, ConditionValidTimes
 from chia.wallet.derive_keys import find_owner_sk
@@ -54,6 +53,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -531,7 +531,7 @@ class PoolWallet:
         else:
             raise RuntimeError("Invalid state")
 
-        unsigned_spend_bundle = SpendBundle([outgoing_coin_spend], G2Element())
+        unsigned_spend_bundle = WalletSpendBundle([outgoing_coin_spend], G2Element())
         assert unsigned_spend_bundle.removals()[0].puzzle_hash == singleton.puzzle_hash
         assert unsigned_spend_bundle.removals()[0].name() == singleton.name()
         if fee > 0:
@@ -624,7 +624,7 @@ class PoolWallet:
             SerializedProgram.from_program(genesis_launcher_puz),
             SerializedProgram.from_program(genesis_launcher_solution),
         )
-        launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
+        launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
 
         await standard_wallet.generate_signed_transaction(
             amount,
@@ -796,7 +796,7 @@ class PoolWallet:
         if len(all_spends) == 0 or first_coin_record is None:
             raise ValueError("Nothing to claim, no unspent coinbase rewards")
 
-        claim_spend: SpendBundle = SpendBundle(all_spends, G2Element())
+        claim_spend = WalletSpendBundle(all_spends, G2Element())
 
         # If fee is 0, no signatures are required to absorb
         if fee > 0:

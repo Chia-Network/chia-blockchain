@@ -16,7 +16,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -31,6 +30,7 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 async def mint_cr_cat(
@@ -69,7 +69,7 @@ async def mint_cr_cat(
 
     # Do the eve spend back to our wallet and add the CR layer
     cat_coin = next(c for c in spend_bundle.additions() if c.amount == CAT_AMOUNT_0)
-    eve_spend = SpendBundle(
+    eve_spend = WalletSpendBundle(
         [
             make_spend(
                 cat_coin,
@@ -104,7 +104,7 @@ async def mint_cr_cat(
         ],
         G2Element(),
     )
-    spend_bundle = SpendBundle.aggregate([spend_bundle, eve_spend])
+    spend_bundle = WalletSpendBundle.aggregate([spend_bundle, eve_spend])
     await wallet_node_0.wallet_state_manager.add_pending_transactions(
         [dataclasses.replace(tx, spend_bundle=spend_bundle, name=spend_bundle.name())]
     )

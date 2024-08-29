@@ -67,6 +67,7 @@ from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -338,7 +339,7 @@ class TestFullNodeBlockCompression:
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
-        extra_spend = SpendBundle(
+        extra_spend = WalletSpendBundle(
             [
                 make_spend(
                     next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
@@ -348,7 +349,7 @@ class TestFullNodeBlockCompression:
             ],
             G2Element(),
         )
-        new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
+        new_spend_bundle = WalletSpendBundle.aggregate([tr.spend_bundle, extra_spend])
         new_tr = dataclasses.replace(
             tr,
             spend_bundle=new_spend_bundle,
@@ -386,7 +387,7 @@ class TestFullNodeBlockCompression:
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
-        extra_spend = SpendBundle(
+        extra_spend = WalletSpendBundle(
             [
                 make_spend(
                     next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
@@ -396,7 +397,7 @@ class TestFullNodeBlockCompression:
             ],
             G2Element(),
         )
-        new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
+        new_spend_bundle = WalletSpendBundle.aggregate([tr.spend_bundle, extra_spend])
         new_tr = dataclasses.replace(
             tr,
             spend_bundle=new_spend_bundle,
@@ -874,7 +875,7 @@ class TestFullNodeProtocol:
         included_tx = 0
         not_included_tx = 0
         seen_bigger_transaction_has_high_fee = False
-        successful_bundle: Optional[SpendBundle] = None
+        successful_bundle: Optional[WalletSpendBundle] = None
 
         # Fill mempool
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -902,7 +903,7 @@ class TestFullNodeProtocol:
                     uint64(500), receiver_puzzlehash, coin_records[0].coin, fee=fee
                 )
             ]
-            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            spend_bundle = WalletSpendBundle.aggregate(spend_bundles)
             assert estimate_fees(spend_bundle) == fee
             respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
 
@@ -1311,7 +1312,7 @@ class TestFullNodeProtocol:
         for idx in range(0, 6):
             # we include a different transaction in each block. This makes the
             # foliage different in each of them, but the reward block (plot) the same
-            tx: SpendBundle = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
+            tx = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
 
             # note that we use the same chain to build the new block on top of every time
             block = bt.get_consecutive_blocks(
@@ -1514,7 +1515,7 @@ class TestFullNodeProtocol:
         blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
 
         coin = blocks[-1].get_included_reward_coins()[0]
-        tx: SpendBundle = wallet_a.generate_signed_transaction(10000, wallet_receiver.get_new_puzzlehash(), coin)
+        tx = wallet_a.generate_signed_transaction(10000, wallet_receiver.get_new_puzzlehash(), coin)
 
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -1576,7 +1577,7 @@ class TestFullNodeProtocol:
         for idx in range(0, 6):
             # we include a different transaction in each block. This makes the
             # foliage different in each of them, but the reward block (plot) the same
-            tx: SpendBundle = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
+            tx = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
 
             # note that we use the same chain to build the new block on top of every time
             block = bt.get_consecutive_blocks(
