@@ -2084,7 +2084,7 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
     assert len(coins) == 3
     nft0 = NFTInfo.from_json_dict(coins[0])
     nft02 = NFTInfo.from_json_dict(coins[1])
-    nft03 = NFTInfo.from_json_dict(coins[1])
+    nft03 = NFTInfo.from_json_dict(coins[2])
     nft_set = {nft1.launcher_id, nft12.launcher_id, nft2.launcher_id}
     assert nft0.launcher_id in nft_set
     assert nft02.launcher_id in nft_set
