@@ -37,7 +37,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -130,7 +130,7 @@ class DAOCATWallet:
         if name is None:
             name = CATWallet.default_wallet_name_for_unknown_cat(limitations_program_hash_hex)
 
-        limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
+        limitations_program_hash = bytes32.from_hexstr(limitations_program_hash_hex)
 
         self.dao_cat_info = DAOCATInfo(
             dao_wallet_id,
@@ -365,7 +365,6 @@ class DAOCATWallet:
     async def enter_dao_cat_voting_mode(
         self,
         amount: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -384,7 +383,6 @@ class DAOCATWallet:
         txs: List[TransactionRecord] = await cat_wallet.generate_signed_transaction(
             [amount],
             [lockup_puzzle.get_tree_hash()],
-            tx_config,
             action_scope,
             fee=fee,
             extra_conditions=extra_conditions,
@@ -398,7 +396,6 @@ class DAOCATWallet:
     async def exit_vote_state(
         self,
         coins: List[LockedCoinInfo],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
@@ -410,7 +407,7 @@ class DAOCATWallet:
         spent_coins = []
         for lci in coins:
             coin = lci.coin
-            if tx_config.reuse_puzhash:  # pragma: no cover
+            if action_scope.config.tx_config.reuse_puzhash:  # pragma: no cover
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=False)
             else:
                 new_inner_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
@@ -460,7 +457,6 @@ class DAOCATWallet:
         if fee > 0:  # pragma: no cover
             await self.standard_wallet.create_tandem_xch_tx(
                 fee,
-                tx_config,
                 action_scope,
             )
 
@@ -502,7 +498,6 @@ class DAOCATWallet:
     async def remove_active_proposal(
         self,
         proposal_id_list: List[bytes32],
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
     ) -> SpendBundle:
@@ -565,7 +560,7 @@ class DAOCATWallet:
         spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
 
         if fee > 0:  # pragma: no cover
-            await self.standard_wallet.create_tandem_xch_tx(fee, tx_config=tx_config, action_scope=action_scope)
+            await self.standard_wallet.create_tandem_xch_tx(fee, action_scope=action_scope)
 
         return spend_bundle
 
@@ -634,7 +629,7 @@ class DAOCATWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         return set()
 

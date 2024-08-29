@@ -140,8 +140,8 @@ async def test_nft_wallet_creation_automatically(
         [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
 
-    async with nft_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
-        await nft_wallet_0.generate_new_nft(metadata, DEFAULT_TX_CONFIG, action_scope)
+    async with nft_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await nft_wallet_0.generate_new_nft(metadata, action_scope)
 
     await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
 
@@ -149,9 +149,9 @@ async def test_nft_wallet_creation_automatically(
     coins = await nft_wallet_0.get_current_nfts()
     assert len(coins) == 1, "nft not generated"
 
-    async with nft_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with nft_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await nft_wallet_0.generate_signed_transaction(
-            [uint64(coins[0].coin.amount)], [ph1], DEFAULT_TX_CONFIG, action_scope, coins={coins[0].coin}
+            [uint64(coins[0].coin.amount)], [ph1], action_scope, coins={coins[0].coin}
         )
 
     await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
@@ -199,8 +199,8 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     metadata = Program.to(
         [("u", ["https://www.chia.net/img/branding/chia-logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F185")]
     )
-    async with nft_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
-        await nft_wallet_0.generate_new_nft(metadata, DEFAULT_TX_CONFIG, action_scope)
+    async with nft_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await nft_wallet_0.generate_new_nft(metadata, action_scope)
     for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             # ensure hints are generated
@@ -279,8 +279,8 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
 
     new_metadata = Program.to([("u", ["https://www.test.net/logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F181")])
 
-    async with nft_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
-        await nft_wallet_0.generate_new_nft(new_metadata, DEFAULT_TX_CONFIG, action_scope)
+    async with nft_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await nft_wallet_0.generate_new_nft(new_metadata, action_scope)
     for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             # ensure hints are generated
@@ -330,11 +330,10 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     nft_wallet_1 = await NFTWallet.create_new_nft_wallet(
         wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
     )
-    async with nft_wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with nft_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await nft_wallet_0.generate_signed_transaction(
             [uint64(coins[1].coin.amount)],
             [await wallet_1.get_puzzle_hash(False)],
-            DEFAULT_TX_CONFIG,
             action_scope,
             coins={coins[1].coin},
         )
@@ -386,11 +385,10 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     assert len(coins) == 1
 
     # Send it back to original owner
-    async with nft_wallet_1.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with nft_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await nft_wallet_1.generate_signed_transaction(
             [uint64(coins[0].coin.amount)],
             [await wallet_0.get_puzzle_hash(False)],
-            DEFAULT_TX_CONFIG,
             action_scope,
             coins={coins[0].coin},
         )
@@ -767,9 +765,9 @@ async def test_nft_with_did_wallet_creation(
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
@@ -927,9 +925,9 @@ async def test_nft_rpc_mint(self_hostname: str, two_wallet_nodes: OldSimulatorsA
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
@@ -1042,9 +1040,9 @@ async def test_nft_transfer_nft_with_did(
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
     # Create DID
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
@@ -1090,8 +1088,8 @@ async def test_nft_transfer_nft_with_did(
     await full_node_api.wait_for_wallet_synced(wallet_node_0, 20)
     await full_node_api.wait_for_wallet_synced(wallet_node_1, 20)
     # transfer DID to the other wallet
-    async with did_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
-        await did_wallet.transfer_did(ph1, uint64(0), True, DEFAULT_TX_CONFIG, action_scope)
+    async with did_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await did_wallet.transfer_did(ph1, uint64(0), True, action_scope)
     await full_node_api.process_transaction_records(action_scope.side_effects.transactions)
     await full_node_api.wait_for_wallet_synced(wallet_node_0, 20)
     await full_node_api.wait_for_wallet_synced(wallet_node_1, 20)
@@ -1197,9 +1195,9 @@ async def test_update_metadata_for_nft_did(
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
@@ -1319,9 +1317,9 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: OldSimulat
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
@@ -1489,9 +1487,9 @@ async def test_nft_bulk_transfer(self_hostname: str, two_wallet_nodes: OldSimula
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
@@ -1636,9 +1634,9 @@ async def test_nft_set_did(self_hostname: str, two_wallet_nodes: OldSimulatorsAn
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     hex_did_id = did_wallet.get_my_DID()
@@ -1677,9 +1675,9 @@ async def test_nft_set_did(self_hostname: str, two_wallet_nodes: OldSimulatorsAn
     nft_coin_id = coins[0].nft_coin_id
 
     # Test set None -> DID1
-    async with wallet_0.wallet_state_manager.new_action_scope(push=True) as action_scope:
+    async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         did_wallet1 = await DIDWallet.create_new_did_wallet(
-            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), DEFAULT_TX_CONFIG, action_scope
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(1), action_scope
         )
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
     await time_out_assert(30, did_wallet1.get_spendable_balance, 1)

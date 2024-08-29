@@ -54,7 +54,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.puzzle_decorator import PuzzleDecoratorManager
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -231,7 +230,7 @@ class Wallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -245,14 +244,16 @@ class Wallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-        coins = await select_coins(
-            spendable_amount,
-            coin_selection_config,
-            spendable_coins,
-            unconfirmed_removals,
-            self.log,
-            uint128(amount),
-        )
+        async with action_scope.use() as interface:
+            coins = await select_coins(
+                spendable_amount,
+                action_scope.config.adjust_for_side_effects(interface.side_effects).tx_config.coin_selection_config,
+                spendable_coins,
+                unconfirmed_removals,
+                self.log,
+                uint128(amount),
+            )
+            interface.side_effects.selected_coins.extend([*coins])
         assert sum(c.amount for c in coins) >= amount
         return coins
 
@@ -260,7 +261,6 @@ class Wallet:
         self,
         amount: uint64,
         newpuzzlehash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
@@ -292,7 +292,7 @@ class Wallet:
                 )
             coins = await self.select_coins(
                 uint64(total_amount),
-                tx_config.coin_selection_config,
+                action_scope,
             )
 
         assert len(coins) > 0
@@ -329,7 +329,7 @@ class Wallet:
                     target_primary.append(Payment(newpuzzlehash, amount, memos))
 
                 if change > 0:
-                    if tx_config.reuse_puzhash:
+                    if action_scope.config.tx_config.reuse_puzhash:
                         change_puzzle_hash: bytes32 = coin.puzzle_hash
                         for primary in primaries:
                             if change_puzzle_hash == primary.puzzle_hash and change == primary.amount:
@@ -397,7 +397,6 @@ class Wallet:
         self,
         amount: uint64,
         puzzle_hash: bytes32,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         coins: Optional[Set[Coin]] = None,
@@ -423,7 +422,6 @@ class Wallet:
         transaction = await self._generate_unsigned_transaction(
             amount,
             puzzle_hash,
-            tx_config,
             action_scope,
             fee,
             origin_id,
@@ -474,15 +472,13 @@ class Wallet:
     async def create_tandem_xch_tx(
         self,
         fee: uint64,
-        tx_config: TXConfig,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
     ) -> None:
-        chia_coins = await self.select_coins(fee, tx_config.coin_selection_config)
+        chia_coins = await self.select_coins(fee, action_scope)
         await self.generate_signed_transaction(
             uint64(0),
-            (await self.get_puzzle_hash(not tx_config.reuse_puzhash)),
-            tx_config,
+            (await self.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
             action_scope,
             fee=fee,
             coins=chia_coins,
@@ -493,14 +489,16 @@ class Wallet:
         self,
         asset_id: Optional[bytes32],
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
         balance = await self.get_spendable_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
-        return await self.select_coins(amount, coin_selection_config)
+        # We need to sandbox this because this method isn't supposed to lock up the coins
+        async with self.wallet_state_manager.new_action_scope(action_scope.config.tx_config) as sandbox:
+            return await self.select_coins(amount, sandbox)
 
     # WSChiaConnection is only imported for type checking
     async def coin_added(

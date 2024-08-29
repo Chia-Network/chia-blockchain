@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Dict, Tuple, Union
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
@@ -13,7 +13,7 @@ from chia.util.ints import uint32
 
 
 async def find_fork_point_in_chain(
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     block_1: Union[BlockRecord, HeaderBlock],
     block_2: Union[BlockRecord, HeaderBlock],
 ) -> int:
@@ -62,7 +62,7 @@ async def find_fork_point_in_chain(
 
 
 async def lookup_fork_chain(
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     block_1: Tuple[int, bytes32],
     block_2: Tuple[int, bytes32],
     constants: ConsensusConstants,

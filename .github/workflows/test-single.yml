@@ -41,8 +41,7 @@ on:
         default: true
 
 concurrency:
-  # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency-name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ inputs.concurrency-name }}-${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 defaults:
@@ -176,6 +175,8 @@ jobs:
             ${{ runner.os }}-node-
 
       - uses: chia-network/actions/cache-pip@main
+        with:
+          mode: poetry
 
       - name: Cache test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots

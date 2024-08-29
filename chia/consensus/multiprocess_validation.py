@@ -54,7 +54,7 @@ def batch_pre_validate_blocks(
     constants: ConsensusConstants,
     blocks_pickled: Dict[bytes, bytes],
     full_blocks_pickled: List[bytes],
-    prev_transaction_generators: List[Optional[bytes]],
+    prev_transaction_generators: List[Optional[List[bytes]]],
     npc_results: Dict[uint32, bytes],
     check_filter: bool,
     expected_difficulty: List[uint64],
@@ -83,10 +83,10 @@ def batch_pre_validate_blocks(
                     removals, tx_additions = [], []
 
             if block.transactions_generator is not None and npc_result is None:
-                prev_generator_bytes = prev_transaction_generators[i]
-                assert prev_generator_bytes is not None
+                prev_generators = prev_transaction_generators[i]
+                assert prev_generators is not None
                 assert block.transactions_info is not None
-                block_generator: BlockGenerator = BlockGenerator.from_bytes(prev_generator_bytes)
+                block_generator = BlockGenerator(block.transactions_generator, prev_generators)
                 assert block_generator.program == block.transactions_generator
                 npc_result = get_name_puzzle_conditions(
                     block_generator,
@@ -218,33 +218,13 @@ async def pre_validate_blocks_multiprocessing(
         block_record_was_present.append(block_records.contains_block(header_hash))
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
+
+    if blocks[0].height != 0:
+        if prev_b is None:
+            prev_b = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
+        assert prev_b is not None
+
     for block in blocks:
-        if block.height != 0:
-            if prev_b is None:
-                prev_b = await block_records.get_block_record_from_db(block.prev_header_hash)
-            assert prev_b is not None
-
-            # the call to block_to_block_record() requires the previous
-            # block is in the cache
-            # and make_sub_epoch_summary() requires all blocks until we find one
-            # that includes a sub_epoch_summary
-            curr = prev_b
-            block_records.add_block_record(curr)
-            counter = 0
-            # TODO: It would probably be better to make
-            # get_next_sub_slot_iters_and_difficulty() async and able to pull
-            # from the database rather than trying to predict which blocks it
-            # may need in the cache
-            while (
-                curr.sub_epoch_summary_included is None
-                or counter < 3 * constants.MAX_SUB_SLOT_BLOCKS + constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
-            ):
-                curr = await block_records.get_block_record_from_db(curr.prev_hash)
-                if curr is None:
-                    break
-                block_records.add_block_record(curr)
-                counter += 1
-
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             constants, len(block.finished_sub_slots) > 0, prev_b, block_records
         )
@@ -314,7 +294,7 @@ async def pre_validate_blocks_multiprocessing(
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
         b_pickled: List[bytes] = []
-        previous_generators: List[Optional[bytes]] = []
+        previous_generators: List[Optional[List[bytes]]] = []
         for block in blocks_to_validate:
             # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
             # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
@@ -339,7 +319,7 @@ async def pre_validate_blocks_multiprocessing(
                     )
                 ]
             if block_generator is not None:
-                previous_generators.append(bytes(block_generator))
+                previous_generators.append(block_generator.generator_refs)
             else:
                 previous_generators.append(None)
 

@@ -13,14 +13,13 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 from chia_rs import BLSCache
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -37,7 +36,6 @@ from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
@@ -93,7 +91,13 @@ class BlockchainMutexPriority(enum.IntEnum):
     high = 0
 
 
-class Blockchain(BlockchainInterface):
+# implements BlockchainInterface
+class Blockchain:
+    if TYPE_CHECKING:
+        from chia.consensus.blockchain_interface import BlockchainInterface
+
+        _protocol_check: ClassVar[BlockchainInterface] = cast("Blockchain", None)
+
     constants: ConsensusConstants
 
     # peak of the blockchain
@@ -355,7 +359,9 @@ class Blockchain(BlockchainInterface):
         # tests that make sure the Blockchain object can handle any blocks,
         # including orphaned ones, without any fork context
         if fork_info is None:
-            if await self.contains_block_from_db(header_hash):
+            block_rec = await self.get_block_record_from_db(header_hash)
+            if block_rec is not None:
+                self.add_block_record(block_rec)
                 # this means we have already seen and validated this block.
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
             elif extending_main_chain:
@@ -409,13 +415,14 @@ class Blockchain(BlockchainInterface):
             if extending_main_chain:
                 fork_info.reset(block.height - 1, block.prev_header_hash)
 
-            if await self.contains_block_from_db(header_hash):
+            block_rec = await self.get_block_record_from_db(header_hash)
+            if block_rec is not None:
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
                 await self.advance_fork_info(block, fork_info, {})
                 fork_info.include_spends(npc_result, block, header_hash)
-
+                self.add_block_record(block_rec)
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
             if fork_info.peak_hash != block.prev_header_hash:
@@ -429,15 +436,12 @@ class Blockchain(BlockchainInterface):
 
         error_code, _ = await validate_block_body(
             self.constants,
-            self,
-            self.block_store,
-            self.coin_store,
-            self.get_peak(),
+            self.get_block_record_from_db,
+            self.coin_store.get_coin_records,
             block,
             block.height,
             npc_result,
             fork_info,
-            self.get_block_generator,
             bls_cache,
             # If we did not already validate the signature, validate it now
             validate_signature=not pre_validation_result.validated_signature,
@@ -781,15 +785,12 @@ class Blockchain(BlockchainInterface):
 
         error_code, cost_result = await validate_block_body(
             self.constants,
-            self,
-            self.block_store,
-            self.coin_store,
-            self.get_peak(),
+            self.get_block_record_from_db,
+            self.coin_store.get_coin_records,
             block,
             uint32(prev_height + 1),
             npc_result,
             fork_info,
-            self.get_block_generator,
             None,
             validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )
@@ -996,6 +997,11 @@ class Blockchain(BlockchainInterface):
             records.extend(res)
         return records
 
+    def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        if self.contains_block(header_hash):
+            return self.block_record(header_hash)
+        return None
+
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         ret = self.__block_records.get(header_hash)
         if ret is not None:
@@ -1077,7 +1083,7 @@ class Blockchain(BlockchainInterface):
         if len(ref_list) == 0:
             return BlockGenerator(block.transactions_generator, [])
 
-        result: List[SerializedProgram] = []
+        result: List[bytes] = []
         previous_br = await self.get_block_record_from_db(block.prev_header_hash)
         if previous_br is not None and self.height_to_hash(previous_br.height) == block.prev_header_hash:
             # We are not in a reorg, no need to look up alternate header hashes
@@ -1112,7 +1118,7 @@ class Blockchain(BlockchainInterface):
                     ref_block = additional_height_dict[ref_height]
                     if ref_block.transactions_generator is None:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-                    result.append(ref_block.transactions_generator)
+                    result.append(bytes(ref_block.transactions_generator))
                 elif ref_height in reorg_chain:
                     gen = await self.block_store.get_generator(reorg_chain[ref_height])
                     if gen is None:

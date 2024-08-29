@@ -1059,6 +1059,20 @@ class FullNode:
             self.blockchain, fork_point_height, peers_with_peak, node_next_block_check
         )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        counter = 0
+        if fork_point_height != 0:
+            # warmup the cache
+            curr = self.blockchain.height_to_block_record(fork_point_height)
+            while (
+                curr.sub_epoch_summary_included is None
+                or counter < 3 * self.constants.MAX_SUB_SLOT_BLOCKS + self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
+            ):
+                res = await self.blockchain.get_block_record_from_db(curr.prev_hash)
+                if res is None:
+                    break
+                curr = res
+                self.blockchain.add_block_record(curr)
+                counter += 1
 
         # normally "fork_point" or "fork_height" refers to the first common
         # block between the main chain and the fork. Here "fork_point_height"
@@ -1104,6 +1118,9 @@ class FullNode:
         ) -> None:
             fork_info: Optional[ForkInfo] = None
 
+            block_rate = 0
+            block_rate_time = time.monotonic()
+            block_rate_height = -1
             while True:
                 res: Optional[Tuple[WSChiaConnection, List[FullBlock]]] = await inner_batch_queue.get()
                 if res is None:
@@ -1112,6 +1129,9 @@ class FullNode:
                 peer, blocks = res
                 start_height = blocks[0].height
                 end_height = blocks[-1].height
+
+                if block_rate_height == -1:
+                    block_rate_height = start_height
 
                 # in case we're validating a reorg fork (i.e. not extending the
                 # main chain), we need to record the coin set from that fork in
@@ -1144,7 +1164,13 @@ class FullNode:
                 if success is False:
                     await peer.close(600)
                     raise ValueError(f"Failed to validate block batch {start_height} to {end_height}")
-                self.log.info(f"Added blocks {start_height} to {end_height}")
+                if end_height - block_rate_height > 100:
+                    now = time.monotonic()
+                    block_rate = int((end_height - block_rate_height) // (now - block_rate_time))
+                    block_rate_time = now
+                    block_rate_height = end_height
+
+                self.log.info(f"Added blocks {start_height} to {end_height} ({block_rate} blocks/s)")
                 peak = self.blockchain.get_peak()
                 if state_change_summary is not None:
                     assert peak is not None
@@ -1237,7 +1263,6 @@ class FullNode:
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
-
         block_dict: Dict[bytes32, FullBlock] = {}
         for block in all_blocks:
             block_dict[block.header_hash] = block
@@ -1245,7 +1270,10 @@ class FullNode:
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
             header_hash = block.header_hash
-            if not await self.blockchain.contains_block_from_db(header_hash):
+            rec = await self.blockchain.get_block_record_from_db(header_hash)
+            if rec is not None:
+                self.blockchain.add_block_record(rec)
+            else:
                 blocks_to_validate = all_blocks[i:]
                 break
 
