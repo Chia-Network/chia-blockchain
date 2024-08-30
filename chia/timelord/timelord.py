@@ -41,7 +41,6 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.config import process_config_start_method
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
-from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
