@@ -163,7 +163,7 @@ class Timelord:
                 workers = self.config.get("slow_bluebox_process_count", 1)
                 self.bluebox_pool = ProcessPoolExecutor(
                     max_workers=workers,
-                    mp_context=self.multiprocessing_context),
+                    mp_context=self.multiprocessing_context
                 )
                 self.main_loop = asyncio.create_task(
                     self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
@@ -1126,7 +1126,7 @@ class Timelord:
                         self.pending_bluebox_info.remove(info)
                         self.free_clients = self.free_clients[1:]
                 except Exception as e:
-                    log.error(f"Exception manage discriminant queue: {e}")
+                    log.error(f"Exception manage discriminant queue: {e}", exc_info=True)
             await asyncio.sleep(0.1)
 
     async def _start_manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor, counter: int) -> None:
