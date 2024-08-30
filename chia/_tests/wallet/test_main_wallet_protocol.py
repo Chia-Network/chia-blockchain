@@ -84,7 +84,7 @@ class AnyoneCanSpend(Wallet):
             + fee
         )
 
-        coins = await self.select_coins(uint64(non_change_amount), action_scope.config.tx_config.coin_selection_config)
+        coins = await self.select_coins(uint64(non_change_amount), action_scope)
         total_amount = sum(c.amount for c in coins)
 
         condition_list.append(Payment(ACS_PH, uint64(total_amount - non_change_amount)))

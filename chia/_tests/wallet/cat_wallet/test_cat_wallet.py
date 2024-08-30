@@ -416,7 +416,8 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
         ]
     )
 
-    coins = await cat_wallet_2.select_coins(uint64(60), wallet_environments.tx_config.coin_selection_config)
+    async with cat_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        coins = await cat_wallet_2.select_coins(uint64(60), action_scope)
     assert len(coins) == 1
     coin = coins.pop()
     tx_id = coin.name().hex()

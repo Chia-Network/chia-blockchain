@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import contextlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast, final
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
@@ -24,6 +25,7 @@ class _StreamableWalletSideEffects(Streamable):
     transactions: List[TransactionRecord]
     signing_responses: List[SigningResponse]
     extra_spends: List[SpendBundle]
+    selected_coins: List[Coin]
     solutions: List[Program]
     coin_ids: List[bytes32]
 
@@ -33,6 +35,7 @@ class WalletSideEffects:
     transactions: List[TransactionRecord] = field(default_factory=list)
     signing_responses: List[SigningResponse] = field(default_factory=list)
     extra_spends: List[SpendBundle] = field(default_factory=list)
+    selected_coins: List[Coin] = field(default_factory=list)
     solutions: List[Program] = field(default_factory=list)
     coin_ids: List[bytes32] = field(default_factory=list)
 
@@ -47,6 +50,7 @@ class WalletSideEffects:
         self.transactions.extend(other.transactions)
         self.signing_responses.extend(other.signing_responses)
         self.extra_spends.extend(other.extra_spends)
+        self.selected_coins.extend(other.selected_coins)
         self.solutions.extend(other.solutions)
         self.coin_ids.extend(other.coin_ids)
 
@@ -60,6 +64,15 @@ class WalletActionConfig:
     additional_signing_responses: List[SigningResponse]
     extra_spends: List[SpendBundle]
     tx_config: TXConfig
+
+    def adjust_for_side_effects(self, side_effects: WalletSideEffects) -> WalletActionConfig:
+        return replace(
+            self,
+            tx_config=replace(
+                self.tx_config,
+                excluded_coin_ids=[*self.tx_config.excluded_coin_ids, *(c.name() for c in side_effects.selected_coins)],
+            ),
+        )
 
 
 WalletActionScope = ActionScope[WalletSideEffects, WalletActionConfig]

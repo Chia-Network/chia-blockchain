@@ -581,11 +581,12 @@ async def test_nft_mint_from_did_multiple_xch(
     ]
 
     # Grab two coins for testing that we can create a bulk minting with more than 1 xch coin
-    xch_coins_1 = await wallet_maker.select_coins(amount=10000, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG)
-    xch_coins_2 = await wallet_maker.select_coins(
-        amount=10000,
-        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in xch_coins_1]),
-    )
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        xch_coins_1 = await wallet_maker.select_coins(amount=10000, action_scope=action_scope)
+        xch_coins_2 = await wallet_maker.select_coins(
+            amount=10000,
+            action_scope=action_scope,
+        )
     xch_coins = xch_coins_1.union(xch_coins_2)
 
     target_list = [ph_taker for x in range(mint_total)]
@@ -983,11 +984,12 @@ async def test_nft_mint_from_xch_multiple_xch(
     ]
 
     # Grab two coins for testing that we can create a bulk minting with more than 1 xch coin
-    xch_coins_1 = await wallet_maker.select_coins(amount=10000, coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG)
-    xch_coins_2 = await wallet_maker.select_coins(
-        amount=10000,
-        coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_ids=[c.name() for c in xch_coins_1]),
-    )
+    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        xch_coins_1 = await wallet_maker.select_coins(amount=10000, action_scope=action_scope)
+        xch_coins_2 = await wallet_maker.select_coins(
+            amount=10000,
+            action_scope=action_scope,
+        )
     xch_coins = xch_coins_1.union(xch_coins_2)
 
     target_list = [ph_taker for x in range(mint_total)]
