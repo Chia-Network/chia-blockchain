@@ -16,7 +16,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -291,7 +290,7 @@ async def test_nft_mint_from_did_rpc(
                 fee=fee,
                 tx_config=DEFAULT_TX_CONFIG,
             )
-            sb: SpendBundle = resp.spend_bundle
+            sb = resp.spend_bundle
             did_lineage_parent = [cn for cn in sb.removals() if cn.name() == did_coin.name()][0].parent_coin_info.hex()
             did_coin = [cn for cn in sb.additions() if (cn.parent_coin_info == did_coin.name()) and (cn.amount == 1)][0]
             spends.append(sb)
@@ -476,7 +475,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(
                 mint_from_did=True,
                 tx_config=DEFAULT_TX_CONFIG,
             )
-            sb: SpendBundle = resp.spend_bundle
+            sb = resp.spend_bundle
             did_lineage_parent = [cn for cn in sb.removals() if cn.name() == did_coin.name()][0].parent_coin_info.hex()
             did_coin = [cn for cn in sb.additions() if (cn.parent_coin_info == did_coin.name()) and (cn.amount == 1)][0]
             spends.append(sb)
@@ -865,7 +864,7 @@ async def test_nft_mint_from_xch_rpc(
                 fee=fee,
                 tx_config=DEFAULT_TX_CONFIG,
             )
-            sb: SpendBundle = resp.spend_bundle
+            sb = resp.spend_bundle
             spends.append(sb)
             xch_adds = [c for c in sb.additions() if c.puzzle_hash == funding_coin.puzzle_hash]
             assert len(xch_adds) == 1

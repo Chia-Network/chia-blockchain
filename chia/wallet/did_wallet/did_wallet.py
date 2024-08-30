@@ -16,7 +16,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
@@ -55,6 +54,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 class DIDWallet:
@@ -631,7 +631,7 @@ class DIDWallet:
             make_spend(coin, full_puzzle, fullsol),
             make_spend(new_coin, new_full_puzzle, new_full_sol),
         ]
-        spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
             coin_name = coin.name()
             await self.standard_wallet.create_tandem_xch_tx(
@@ -639,7 +639,6 @@ class DIDWallet:
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
-
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -723,7 +722,7 @@ class DIDWallet:
             ]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-        spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
         if fee > 0:
             coin_name = coin.name()
             await self.standard_wallet.create_tandem_xch_tx(
@@ -731,7 +730,6 @@ class DIDWallet:
                 action_scope,
                 extra_conditions=(AssertCoinAnnouncement(asserted_id=coin_name, asserted_msg=coin_name),),
             )
-
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -806,7 +804,7 @@ class DIDWallet:
             ]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
         tx = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -859,7 +857,7 @@ class DIDWallet:
             ]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-        spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
@@ -884,8 +882,8 @@ class DIDWallet:
                 )
             )
 
-    # Pushes a SpendBundle to create a message coin on the blockchain
-    # Returns a SpendBundle for the recoverer to spend the message coin
+    # Pushes a spend bundle to create a message coin on the blockchain
+    # Returns a spend bundle for the recoverer to spend the message coin
     async def create_attestment(
         self,
         recovering_coin_name: bytes32,
@@ -893,7 +891,7 @@ class DIDWallet:
         pubkey: G1Element,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[SpendBundle, str]:
+    ) -> Tuple[WalletSpendBundle, str]:
         """
         Create an attestment
         TODO:
@@ -902,7 +900,7 @@ class DIDWallet:
         :param recovering_coin_name: Coin ID of the DID
         :param newpuz: New puzzle hash
         :param pubkey: New wallet pubkey
-        :return: (SpendBundle, attest string)
+        :return: (Spend bundle, attest string)
         """
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
@@ -944,8 +942,8 @@ class DIDWallet:
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
         message_spend = did_wallet_puzzles.create_spend_for_message(coin.name(), recovering_coin_name, newpuz, pubkey)
-        message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
-        spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        message_spend_bundle = WalletSpendBundle([message_spend], AugSchemeMPL.aggregate([]))
+        spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -983,7 +981,7 @@ class DIDWallet:
         amount = uint64(coin.amount)
         return (parent, innerpuzhash, amount)
 
-    async def load_attest_files_for_recovery_spend(self, attest_data: List[str]) -> Tuple[List, SpendBundle]:
+    async def load_attest_files_for_recovery_spend(self, attest_data: List[str]) -> Tuple[List, WalletSpendBundle]:
         spend_bundle_list = []
         info_dict = {}
         for attest in attest_data:
@@ -993,7 +991,7 @@ class DIDWallet:
                 bytes.fromhex(info[3]),
                 uint64(info[4]),
             ]
-            new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
+            new_sb = WalletSpendBundle.from_bytes(bytes.fromhex(info[1]))
             spend_bundle_list.append(new_sb)
         # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
         my_recovery_list: List[bytes32] = self.did_info.backup_ids
@@ -1011,7 +1009,7 @@ class DIDWallet:
                 )
             else:
                 info_list.append([])
-        message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
+        message_spend_bundle = WalletSpendBundle.aggregate(spend_bundle_list)
         return info_list, message_spend_bundle
 
     async def recovery_spend(
@@ -1020,7 +1018,7 @@ class DIDWallet:
         puzhash: bytes32,
         parent_innerpuzhash_amounts_for_recovery_ids: List[Tuple[bytes, bytes, int]],
         pubkey: G1Element,
-        spend_bundle: SpendBundle,
+        spend_bundle: WalletSpendBundle,
         action_scope: WalletActionScope,
     ) -> None:
         assert self.did_info.origin_coin is not None
@@ -1059,7 +1057,7 @@ class DIDWallet:
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
 
-        spend_bundle = spend_bundle.aggregate([spend_bundle, SpendBundle(list_of_coinspends, G2Element())])
+        spend_bundle = spend_bundle.aggregate([spend_bundle, WalletSpendBundle(list_of_coinspends, G2Element())])
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
@@ -1239,7 +1237,7 @@ class DIDWallet:
         genesis_launcher_solution = Program.to([did_puzzle_hash, amount, bytes(0x80)])
 
         launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
-        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+        launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
         eve_coin = Coin(launcher_coin.name(), did_puzzle_hash, amount)
         future_parent = LineageProof(
             parent_name=eve_coin.parent_coin_info,
@@ -1269,7 +1267,7 @@ class DIDWallet:
         )
         await self.save_info(did_info)
         eve_spend = await self.generate_eve_spend(eve_coin, did_full_puz, did_inner)
-        full_spend = SpendBundle.aggregate([eve_spend, launcher_sb])
+        full_spend = WalletSpendBundle.aggregate([eve_spend, launcher_sb])
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
 
@@ -1321,7 +1319,7 @@ class DIDWallet:
             ]
         )
         list_of_coinspends = [make_spend(coin, full_puzzle, fullsol)]
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
         return unsigned_spend_bundle
 
     async def get_spendable_balance(self, unspent_records=None) -> uint128:

@@ -50,7 +50,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.util.db_synchronous import db_synchronous_on
@@ -155,6 +154,7 @@ from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 
@@ -1018,7 +1018,7 @@ class WalletStateManager:
                 self.log.error(f"Failed to create clawback spend bundle for {coin.name().hex()}: {e}")
         if len(coin_spends) == 0:
             return
-        spend_bundle: SpendBundle = SpendBundle(coin_spends, G2Element())
+        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
         if fee > 0:
             async with self.new_action_scope(action_scope.config.tx_config, push=False) as inner_action_scope:
                 await self.main_wallet.create_tandem_xch_tx(
@@ -1035,7 +1035,7 @@ class WalletStateManager:
                 interface.side_effects.transactions.extend(
                     [dataclasses.replace(tx, spend_bundle=None) for tx in inner_action_scope.side_effects.transactions]
                 )
-            spend_bundle = SpendBundle.aggregate(
+            spend_bundle = WalletSpendBundle.aggregate(
                 [
                     spend_bundle,
                     *(
@@ -1596,7 +1596,7 @@ class WalletStateManager:
             # For the recipient we need to manually subscribe the merkle coin
             await self.add_interested_coin_ids([coin_state.coin.name()])
         if is_recipient is not None:
-            spend_bundle = SpendBundle([coin_spend], G2Element())
+            spend_bundle = WalletSpendBundle([coin_spend], G2Element())
             memos = compute_memos(spend_bundle)
             spent_height: uint32 = uint32(0)
             if coin_state.spent_height is not None:
@@ -1606,7 +1606,7 @@ class WalletStateManager:
                 # Create Clawback outgoing transaction
                 created_timestamp = await self.wallet_node.get_timestamp_for_height(uint32(coin_state.spent_height))
                 clawback_coin_spend: CoinSpend = await fetch_coin_spend_for_coin_state(coin_state, peer)
-                clawback_spend_bundle: SpendBundle = SpendBundle([clawback_coin_spend], G2Element())
+                clawback_spend_bundle = WalletSpendBundle([clawback_coin_spend], G2Element())
                 if await self.puzzle_store.puzzle_hash_exists(clawback_spend_bundle.additions()[0].puzzle_hash):
                     tx_record = TransactionRecord(
                         confirmed_at_height=uint32(coin_state.spent_height),
@@ -2287,7 +2287,7 @@ class WalletStateManager:
         merge_spends: bool = True,
         sign: Optional[bool] = None,
         additional_signing_responses: Optional[List[SigningResponse]] = None,
-        extra_spends: Optional[List[SpendBundle]] = None,
+        extra_spends: Optional[List[WalletSpendBundle]] = None,
     ) -> List[TransactionRecord]:
         """
         Add a list of transactions to be submitted to the full node.
@@ -2295,12 +2295,10 @@ class WalletStateManager:
         """
         if sign is None:
             sign = self.config.get("auto_sign_txs", True)
-        agg_spend: SpendBundle = SpendBundle.aggregate(
-            [tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None]
-        )
+        agg_spend = WalletSpendBundle.aggregate([tx.spend_bundle for tx in tx_records if tx.spend_bundle is not None])
         if extra_spends is not None:
-            agg_spend = SpendBundle.aggregate([agg_spend, *extra_spends])
-        actual_spend_involved: bool = agg_spend != SpendBundle([], G2Element())
+            agg_spend = WalletSpendBundle.aggregate([agg_spend, *extra_spends])
+        actual_spend_involved: bool = agg_spend != WalletSpendBundle([], G2Element())
         if merge_spends and actual_spend_involved:
             tx_records = [
                 dataclasses.replace(
@@ -2312,7 +2310,7 @@ class WalletStateManager:
             ]
         elif extra_spends is not None and extra_spends != []:
             extra_spends.extend([] if tx_records[0].spend_bundle is None else [tx_records[0].spend_bundle])
-            extra_spend_bundle = SpendBundle.aggregate(extra_spends)
+            extra_spend_bundle = WalletSpendBundle.aggregate(extra_spends)
             tx_records = [
                 dataclasses.replace(
                     tx,
@@ -2671,7 +2669,7 @@ class WalletStateManager:
             signing_targets,
         )
 
-    async def gather_signing_info_for_bundles(self, bundles: List[SpendBundle]) -> List[UnsignedTransaction]:
+    async def gather_signing_info_for_bundles(self, bundles: List[WalletSpendBundle]) -> List[UnsignedTransaction]:
         utxs: List[UnsignedTransaction] = []
         for bundle in bundles:
             signer_protocol_spends: List[Spend] = [Spend.from_coin_spend(spend) for spend in bundle.coin_spends]
@@ -2701,10 +2699,10 @@ class WalletStateManager:
     ) -> SignedTransaction:
         return await self.main_wallet.apply_signatures(spends, signing_responses)
 
-    def signed_tx_to_spendbundle(self, signed_tx: SignedTransaction) -> SpendBundle:
+    def signed_tx_to_spendbundle(self, signed_tx: SignedTransaction) -> WalletSpendBundle:
         if len([_ for _ in signed_tx.signatures if _.type != "bls_12381_aug_scheme"]) > 0:
             raise ValueError("Unable to handle signatures that are not bls_12381_aug_scheme")  # pragma: no cover
-        return SpendBundle(
+        return WalletSpendBundle(
             [spend.as_coin_spend() for spend in signed_tx.transaction_info.spends],
             AugSchemeMPL.aggregate([G2Element.from_bytes(sig.signature) for sig in signed_tx.signatures]),
         )
@@ -2763,8 +2761,8 @@ class WalletStateManager:
         coin_spends: List[CoinSpend],
         additional_signing_responses: List[SigningResponse] = [],
         partial_allowed: bool = False,
-    ) -> Tuple[SpendBundle, List[SigningResponse]]:
-        [unsigned_tx] = await self.gather_signing_info_for_bundles([SpendBundle(coin_spends, G2Element())])
+    ) -> Tuple[WalletSpendBundle, List[SigningResponse]]:
+        [unsigned_tx] = await self.gather_signing_info_for_bundles([WalletSpendBundle(coin_spends, G2Element())])
         signing_responses: List[SigningResponse] = await self.execute_signing_instructions(
             unsigned_tx.signing_instructions, partial_allowed=partial_allowed
         )
@@ -2779,7 +2777,7 @@ class WalletStateManager:
         )
 
     async def submit_transactions(self, signed_txs: List[SignedTransaction]) -> List[bytes32]:
-        bundles: List[SpendBundle] = [self.signed_tx_to_spendbundle(tx) for tx in signed_txs]
+        bundles: List[WalletSpendBundle] = [self.signed_tx_to_spendbundle(tx) for tx in signed_txs]
         for bundle in bundles:
             await self.wallet_node.push_tx(bundle)
         return [bundle.name() for bundle in bundles]
@@ -2792,7 +2790,7 @@ class WalletStateManager:
         merge_spends: bool = True,
         sign: Optional[bool] = None,
         additional_signing_responses: List[SigningResponse] = [],
-        extra_spends: List[SpendBundle] = [],
+        extra_spends: List[WalletSpendBundle] = [],
     ) -> AsyncIterator[WalletActionScope]:
         async with new_wallet_action_scope(
             self,

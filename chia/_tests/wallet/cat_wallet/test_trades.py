@@ -36,6 +36,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 OfferSummary = Dict[Union[int, bytes32], int]
 
@@ -1959,7 +1960,7 @@ async def test_trade_bad_spend(
     assert trade_make is not None
     peer = wallet_node_taker.get_full_node_peer()
     offer = Offer.from_bytes(trade_make.offer)
-    bundle = offer._bundle.replace(aggregated_signature=G2Element())
+    bundle = WalletSpendBundle(coin_spends=offer._bundle.coin_spends, aggregated_signature=G2Element())
     offer = dataclasses.replace(offer, _bundle=bundle)
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         DEFAULT_TX_CONFIG, push=True, sign=False

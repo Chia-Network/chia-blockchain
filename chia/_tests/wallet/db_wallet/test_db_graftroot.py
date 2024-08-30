@@ -11,10 +11,10 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.util.merkle_utils import build_merkle_tree, build_merkle_tree_from_binary_tree, simplify_merkle_proof
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 GRAFTROOT_MOD = load_clvm("graftroot_dl_offers.clsp", package_or_requirement="chia.data_layer.puzzles")
 
@@ -112,7 +112,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                 ),
             )
 
-            final_bundle = SpendBundle([fake_spend, graftroot_spend], G2Element())
+            final_bundle = WalletSpendBundle([fake_spend, graftroot_spend], G2Element())
             result = await sim_client.push_tx(final_bundle)
 
             # If this is the satisfactory merkle tree
@@ -134,7 +134,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                     ACS.curry(fake_struct, ACS.curry(ACS_PH, (bytes32([0] * 32), None), None, None)),
                     Program.to([[[62, "$"]]]),
                 )
-                new_final_bundle = SpendBundle([new_fake_spend, graftroot_spend], G2Element())
+                new_final_bundle = WalletSpendBundle([new_fake_spend, graftroot_spend], G2Element())
                 result = await sim_client.push_tx(new_final_bundle)
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
             else:
