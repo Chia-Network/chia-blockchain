@@ -1169,6 +1169,9 @@ class Timelord:
                         uint16(self.constants.DISCRIMINANT_SIZE_BITS),
                         picked_info.new_proof_of_time.number_of_iterations,
                     )
+                    log.error("WJB!")
+                    return
+
                     proof = await asyncio.get_running_loop().run_in_executor(
                         pool,
                         prove_bluebox_slow,
