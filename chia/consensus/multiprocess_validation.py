@@ -54,7 +54,6 @@ def batch_pre_validate_blocks(
     full_blocks_pickled: List[bytes],
     prev_transaction_generators: List[Optional[List[bytes]]],
     npc_results: Dict[uint32, bytes],
-    check_filter: bool,
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
@@ -113,7 +112,7 @@ def batch_pre_validate_blocks(
                 constants,
                 BlockCache(blocks),
                 header_block,
-                check_filter,
+                True,  # check_filter
                 expected_difficulty[i],
                 expected_sub_slot_iters[i],
                 prev_ses_block=prev_ses_block,
@@ -164,14 +163,12 @@ async def pre_validate_blocks_multiprocessing(
     block_records: BlocksProtocol,
     blocks: Sequence[FullBlock],
     pool: Executor,
-    check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
-    batch_size: int,
+    *,
     sub_slot_iters: uint64,
     difficulty: uint64,
     prev_ses_block: Optional[BlockRecord],
     wp_summaries: Optional[List[SubEpochSummary]] = None,
-    *,
     validate_signatures: bool = True,
 ) -> List[PreValidationResult]:
     """
@@ -180,7 +177,6 @@ async def pre_validate_blocks_multiprocessing(
     if any validation issue occurs, returns False.
 
     Args:
-        check_filter:
         constants:
         pool:
         constants:
@@ -189,6 +185,7 @@ async def pre_validate_blocks_multiprocessing(
         npc_results
     """
     prev_b: Optional[BlockRecord] = None
+
     # Collects all the recent blocks (up to the previous sub-epoch)
     recent_blocks: Dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
@@ -282,6 +279,8 @@ async def pre_validate_blocks_multiprocessing(
     futures = []
     # Pool of workers to validate blocks concurrently
     recent_blocks_bytes = {bytes(k): bytes(v) for k, v in recent_blocks.items()}  # convert to bytes
+
+    batch_size = 4
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
@@ -322,7 +321,6 @@ async def pre_validate_blocks_multiprocessing(
                 b_pickled,
                 previous_generators,
                 npc_results_pickled,
-                check_filter,
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
                 validate_signatures,
