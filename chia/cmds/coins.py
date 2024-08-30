@@ -206,7 +206,7 @@ def combine_cmd(
 @click.option(
     "-a",
     "--amount-per-coin",
-    help="The amount of each newly created coin, in XCH",
+    help="The amount of each newly created coin, in XCH or CAT units",
     type=AmountParamType(),
     required=True,
 )
