@@ -58,11 +58,8 @@ class BlueboxProcessData(Streamable):
 def prove_bluebox_slow(payload: bytes) -> bytes:
     bluebox_process_data = BlueboxProcessData.from_bytes(payload)
     initial_el = b"\x08" + (b"\x00" * 99)
-    return cast(
-        bytes,
-        bytes.fromhex(
-            "020083665c591e07f59baea550faeb0f56236db0b47e4d6d6cdb183ba5277c0a1409338dc74d406b8082fdd80fdfdfe82f51d43fce3b4534d19ed26a5204c092ee6f5341a6cb013d1819a9ea66bb786149117ff8990f8e0f399ba639bff8d83c826d010003009dd61b03dae01b275fb492dfe4a4a4782272c4ba1fb5a4ddfd79b5108d095c1aa5d2b7927ffe564964a2a8dd2ef9235ae11bd64bb12df4506787081da9ec916540c9804b6ad612c8d6ec95b183c7ef0b4512c0b994dd77c3767d6b163aba56650100"
-        ),
+    return bytes.fromhex(
+        "020083665c591e07f59baea550faeb0f56236db0b47e4d6d6cdb183ba5277c0a1409338dc74d406b8082fdd80fdfdfe82f51d43fce3b4534d19ed26a5204c092ee6f5341a6cb013d1819a9ea66bb786149117ff8990f8e0f399ba639bff8d83c826d010003009dd61b03dae01b275fb492dfe4a4a4782272c4ba1fb5a4ddfd79b5108d095c1aa5d2b7927ffe564964a2a8dd2ef9235ae11bd64bb12df4506787081da9ec916540c9804b6ad612c8d6ec95b183c7ef0b4512c0b994dd77c3767d6b163aba56650100"
     )
 
 
