@@ -57,6 +57,7 @@ class BlueboxProcessData(Streamable):
 def prove_bluebox_slow(payload: bytes) -> bytes:
     bluebox_process_data = BlueboxProcessData.from_bytes(payload)
     initial_el = b"\x08" + (b"\x00" * 99)
+    return
     return cast(
         bytes,
         prove(
@@ -1169,14 +1170,13 @@ class Timelord:
                         uint16(self.constants.DISCRIMINANT_SIZE_BITS),
                         picked_info.new_proof_of_time.number_of_iterations,
                     )
-                    log.error("WJB!")
-                    return
-
                     proof = await asyncio.get_running_loop().run_in_executor(
                         pool,
                         prove_bluebox_slow,
                         bytes(bluebox_process_data),
                     )
+                    log.error("WJB!")
+                    return
                     t2 = time.time()
                     delta = t2 - t1
                     if delta > 0:
