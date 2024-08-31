@@ -182,6 +182,12 @@ class Timelord:
             if self.main_loop is not None:
                 self.main_loop.cancel()
             if self.bluebox_pool is not None:
+                for i in self.bluebox_pool._processes:
+                    try:
+                        log.info(f"Terminating chia_timelord_worker task {i}")
+                        self.bluebox_pool._processes[i].kill()
+                    except Exception as e:
+                        log.error(f"Error terminating bluebox_pool worker task {i}: {e}")
                 self.bluebox_pool.shutdown()
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
@@ -1140,7 +1146,7 @@ class Timelord:
 
     async def _manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor) -> None:
         log.info("Started task for managing bluebox queue.")
-        while not self._shut_down:
+        while not self._shut_down and not pool._broken:
             picked_info = None
             async with self.lock:
                 try:
@@ -1172,6 +1178,15 @@ class Timelord:
                         uint16(self.constants.DISCRIMINANT_SIZE_BITS),
                         picked_info.new_proof_of_time.number_of_iterations,
                     )
+                    if pool is None:
+                        log.info(f"Pool is none")
+                        break;
+                    if pool._broken:
+                        log.info(f"Pool is broken")
+                        break
+                    if self._shut_down:
+                        log.info(f"_shut_down is true")
+                        break;
                     proof = await asyncio.get_running_loop().run_in_executor(
                         pool,
                         prove_bluebox_slow,
@@ -1205,7 +1220,10 @@ class Timelord:
                         message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
                         await self.server.send_to_all([message], NodeType.FULL_NODE)
                 except Exception as e:
-                    log.error(f"Exception manage discriminant queue: {e}")
-                    tb = traceback.format_exc()
-                    log.error(f"Error while handling message: {tb}")
+                    if self._shut_down or pool._broken:
+                        log.info(f"In-progress proof compact was cancelled.")
+                    else:
+                        log.error(f"Exception manage discriminant queue: {e}")
+                        tb = traceback.format_exc()
+                        log.error(f"Error while handling message: {tb}")
             await asyncio.sleep(0.1)
