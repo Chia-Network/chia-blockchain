@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
-from multiprocessing import freeze_support
 import pathlib
 import sys
+from multiprocessing import freeze_support
 from typing import Any, Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
