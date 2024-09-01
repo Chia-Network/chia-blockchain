@@ -1178,15 +1178,6 @@ class Timelord:
                         uint16(self.constants.DISCRIMINANT_SIZE_BITS),
                         picked_info.new_proof_of_time.number_of_iterations,
                     )
-                    if pool is None:
-                        log.info(f"Pool is none")
-                        break;
-                    if pool._broken:
-                        log.info(f"Pool is broken")
-                        break
-                    if self._shut_down:
-                        log.info(f"_shut_down is true")
-                        break;
                     proof = await asyncio.get_running_loop().run_in_executor(
                         pool,
                         prove_bluebox_slow,
@@ -1221,7 +1212,7 @@ class Timelord:
                         await self.server.send_to_all([message], NodeType.FULL_NODE)
                 except Exception as e:
                     if self._shut_down or pool._broken:
-                        log.info(f"In-progress proof compact was cancelled.")
+                        log.info("In-progress proof compact was cancelled.")
                     else:
                         log.error(f"Exception manage discriminant queue: {e}")
                         tb = traceback.format_exc()
