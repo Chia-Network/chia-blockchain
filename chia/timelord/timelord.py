@@ -14,7 +14,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
-from chiavdf import create_discriminant
+from chiavdf import create_discriminant, prove
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
@@ -58,8 +58,14 @@ class BlueboxProcessData(Streamable):
 def prove_bluebox_slow(payload: bytes) -> bytes:
     bluebox_process_data = BlueboxProcessData.from_bytes(payload)
     initial_el = b"\x08" + (b"\x00" * 99)
-    return bytes.fromhex(
-        "020083665c591e07f59baea550faeb0f56236db0b47e4d6d6cdb183ba5277c0a1409338dc74d406b8082fdd80fdfdfe82f51d43fce3b4534d19ed26a5204c092ee6f5341a6cb013d1819a9ea66bb786149117ff8990f8e0f399ba639bff8d83c826d010003009dd61b03dae01b275fb492dfe4a4a4782272c4ba1fb5a4ddfd79b5108d095c1aa5d2b7927ffe564964a2a8dd2ef9235ae11bd64bb12df4506787081da9ec916540c9804b6ad612c8d6ec95b183c7ef0b4512c0b994dd77c3767d6b163aba56650100"
+    return cast(
+        bytes,
+        prove(
+            bluebox_process_data.challenge,
+            initial_el,
+            bluebox_process_data.size_bits,
+            bluebox_process_data.iters,
+        ),
     )
 
 
@@ -1166,17 +1172,11 @@ class Timelord:
                         uint16(self.constants.DISCRIMINANT_SIZE_BITS),
                         picked_info.new_proof_of_time.number_of_iterations,
                     )
-
-                    log.info(f"WJB prove_bluebox_slow bluebox_process_data {bytes(bluebox_process_data).hex()}")
-
                     proof = await asyncio.get_running_loop().run_in_executor(
                         pool,
                         prove_bluebox_slow,
                         bytes(bluebox_process_data),
                     )
-
-                    log.info(f"WJB proof {proof.hex()}")
-
                     t2 = time.time()
                     delta = t2 - t1
                     if delta > 0:
@@ -1191,6 +1191,9 @@ class Timelord:
                         return
                     vdf_proof = VDFProof(uint8(0), proof_part, True)
                     initial_form = ClassgroupElement.get_default_element()
+                    if not validate_vdf(vdf_proof, self.constants, initial_form, picked_info.new_proof_of_time):
+                        log.error("Invalid compact proof of time!")
+                        return
                     response = timelord_protocol.RespondCompactProofOfTime(
                         picked_info.new_proof_of_time,
                         vdf_proof,
@@ -1198,6 +1201,9 @@ class Timelord:
                         picked_info.height,
                         picked_info.field_vdf,
                     )
+                    if self._server is not None:
+                        message = make_msg(ProtocolMessageTypes.respond_compact_proof_of_time, response)
+                        await self.server.send_to_all([message], NodeType.FULL_NODE)
                 except Exception as e:
                     log.error(f"Exception manage discriminant queue: {e}")
                     tb = traceback.format_exc()
