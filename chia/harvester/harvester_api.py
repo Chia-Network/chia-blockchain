@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import  Any, Dict, List, Optional, Tuple
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
@@ -27,7 +27,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
-from typing import Any, Dict
 
 class HarvesterAPI:
     log: logging.Logger
