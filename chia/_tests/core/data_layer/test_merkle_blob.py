@@ -4,8 +4,9 @@ import hashlib
 import struct
 from dataclasses import astuple, dataclass
 from random import Random
-from typing import Dict, Generic, List, Set, Type, TypeVar, final
+from typing import Callable, Dict, Generic, List, Set, Type, TypeVar, final
 
+import chia_rs
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -31,6 +32,19 @@ from chia.data_layer.util.merkle_blob import (
     spacing,
     unpack_raw_node,
 )
+
+# class MerkleBlobProtocol(Protocol):
+#     def __init__(self, blob: bytearray) -> None: ...
+#     def insert(self, key_value: KVId, hash: bytes) -> None: ...
+
+
+@pytest.fixture(
+    name="merkle_blob_type",
+    params=[MerkleBlob, chia_rs.MerkleBlob],
+    ids=["python", "rust"],
+)
+def merkle_blob_type_fixture(request: SubRequest) -> Callable[[...], MerkleBlob]:
+    return MerkleBlob
 
 
 @pytest.fixture(
@@ -352,3 +366,41 @@ def test_as_tuple_matches_dataclasses_astuple(cls: Type[RawMerkleNodeProtocol], 
     # hacky [:-1] to exclude the index
     # TODO: try again to indicate that the RawMerkleNodeProtocol requires the dataclass interface
     assert raw_node.as_tuple() == astuple(raw_node)[:-1]  # type: ignore[call-overload]
+
+
+def test_just_insert_a_bunch(merkle_blob_type: Callable[[...], MerkleBlob]) -> None:
+    HASH = bytes(range(12, 44))
+
+    import pathlib
+
+    path = pathlib.Path("~/tmp/mbt/").expanduser()
+    path.joinpath("py").mkdir(parents=True, exist_ok=True)
+    path.joinpath("rs").mkdir(parents=True, exist_ok=True)
+
+    merkle_blob = merkle_blob_type(blob=bytearray())
+    import time
+
+    total_time = 0
+    for i in range(100000):
+        start = time.monotonic()
+        merkle_blob.insert(i, HASH)
+        end = time.monotonic()
+        total_time += end - start
+
+        # kv_count = i + 1
+        # if kv_count == 2:
+        #     assert len(merkle_blob.blob) == 3 * spacing
+        # elif kv_count == 3:
+        #     assert len(merkle_blob.blob) == 5 * spacing
+        #
+        # with path.joinpath("py", f"{i:04}").open(mode="w") as file:
+        #     for offset in range(0, len(merkle_blob.blob), spacing):
+        #         file.write(merkle_blob.blob[offset:offset + spacing].hex())
+        #         file.write("\n")
+        # path.joinpath("py", f"{i:04}").write_bytes(merkle_blob.blob)
+
+    # rs = pathlib.Path(
+    # "~/repos/chia_rs/crates/chia-datalayer/src/test_just_insert_a_bunch_reference").expanduser().read_bytes()
+    # b = bytes(merkle_blob.blob)
+    # assert b == rs, 'not the same'
+    assert False, f"total time: {total_time}"

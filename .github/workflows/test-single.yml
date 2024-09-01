@@ -213,6 +213,23 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
+      - name: Set up rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Clone chia_rs
+        uses: actions/checkout@v4
+        with:
+          repository: "Chia-Network/chia_rs"
+          path: "chia_rs"
+          ref: datalayer
+          fetch-depth: 1
+
+      - name: Install chia_rs with merkle blob
+        if: matrix.configuration.install_chia_rs
+        run: |
+          cd chia_rs
+          maturin develop --release -m wheel/Cargo.toml
+
       - name: Verify source and installed tests collect and match
         run: |
           echo '==== collecting source tests ===='
