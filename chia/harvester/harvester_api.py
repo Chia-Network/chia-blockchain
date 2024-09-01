@@ -28,6 +28,7 @@ from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
+
 class HarvesterAPI:
     log: logging.Logger
     harvester: Harvester
