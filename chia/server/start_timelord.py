@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from multiprocessing import freeze_support
 import pathlib
 import sys
 from typing import Any, Dict, Optional
@@ -75,6 +76,7 @@ async def async_main() -> int:
 
 
 def main() -> int:
+    freeze_support()
     return async_run(async_main())
 
 
