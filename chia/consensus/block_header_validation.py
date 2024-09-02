@@ -96,6 +96,7 @@ def validate_unfinished_header_block(
                 prev_b.prev_hash,
                 prev_b.deficit,
                 prev_b.sub_epoch_summary_included is not None,
+                prev_ses_block=prev_ses_block,
             )
         else:
             can_finish_se = False

@@ -57,16 +57,12 @@ def batch_pre_validate_blocks(
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
-    prev_ses_block_bytes: Optional[bytes] = None,
+    prev_ses_block_bytes: Optional[List[Optional[bytes]]] = None,
 ) -> List[bytes]:
     blocks: Dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
         blocks[bytes32(k)] = BlockRecord.from_bytes_unchecked(v)
     results: List[PreValidationResult] = []
-
-    prev_ses_block = None
-    if prev_ses_block_bytes is not None:
-        prev_ses_block = BlockRecord.from_bytes_unchecked(prev_ses_block_bytes)
 
     # In this case, we are validating full blocks, not headers
     for i in range(len(full_blocks_pickled)):
@@ -108,6 +104,10 @@ def batch_pre_validate_blocks(
                 continue
 
             header_block = get_block_header(block, tx_additions, removals)
+            prev_ses_block = None
+            if prev_ses_block_bytes is not None and len(prev_ses_block_bytes) > 0:
+                if prev_ses_block_bytes[i] is not None:
+                    prev_ses_block = BlockRecord.from_bytes_unchecked(prev_ses_block_bytes[i])
             required_iters, error = validate_finished_header_block(
                 constants,
                 BlockCache(blocks),
@@ -169,7 +169,7 @@ async def pre_validate_blocks_multiprocessing(
     batch_size: int,
     sub_slot_iters: uint64,
     difficulty: uint64,
-    prev_ses_block: Optional[BlockRecord] = None,
+    prev_ses_block: Optional[BlockRecord],
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
     validate_signatures: bool = True,
@@ -228,6 +228,7 @@ async def pre_validate_blocks_multiprocessing(
         recent_blocks[header_hash] = curr
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
+    prev_ses_block_list: List[Optional[BlockRecord]] = []
 
     if blocks[0].height != 0:
         if prev_b is None:
@@ -292,6 +293,9 @@ async def pre_validate_blocks_multiprocessing(
             recent_blocks[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
+        prev_ses_block_list.append(prev_ses_block)
+        if block_rec.sub_epoch_summary_included is not None:
+            prev_ses_block = block_rec
 
     block_dict: Dict[bytes32, FullBlock] = {}
     # revert cache back
@@ -305,7 +309,6 @@ async def pre_validate_blocks_multiprocessing(
         npc_results_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
-    prev_ses_block_bytes = bytes(prev_ses_block) if prev_ses_block is not None else None
     recent_blocks_bytes = {bytes(k): bytes(v) for k, v in recent_blocks.items()}  # convert to bytes
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
@@ -340,6 +343,27 @@ async def pre_validate_blocks_multiprocessing(
             else:
                 previous_generators.append(None)
 
+        ses_blocks_bytes_list: List[Optional[bytes]] = []
+        for j in range(i, end_i):
+            ses_block_rec = prev_ses_block_list[j]
+            if ses_block_rec is None:
+                ses_blocks_bytes_list.append(None)
+            else:
+                ses_blocks_bytes_list.append(bytes(ses_block_rec))
+        if blocks_to_validate[-1].height == 1559:
+            batch_pre_validate_blocks(
+                constants,
+                recent_blocks_bytes,
+                b_pickled,
+                previous_generators,
+                npc_results_pickled,
+                check_filter,
+                [diff_ssis[j][0] for j in range(i, end_i)],
+                [diff_ssis[j][1] for j in range(i, end_i)],
+                validate_signatures,
+                ses_blocks_bytes_list,
+            )
+
         futures.append(
             asyncio.get_running_loop().run_in_executor(
                 pool,
@@ -353,7 +377,7 @@ async def pre_validate_blocks_multiprocessing(
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
                 validate_signatures,
-                prev_ses_block_bytes,
+                ses_blocks_bytes_list,
             )
         )
     # Collect all results into one flat list

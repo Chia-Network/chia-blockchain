@@ -819,7 +819,11 @@ class Blockchain:
             sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
                 self.constants, len(block.finished_sub_slots) > 0, prev_b, self
             )
-
+        if prev_ses_block is None and blocks[0].height > 0:
+            curr = self.block_record(blocks[0].prev_header_hash)
+            while curr.height > 0 and curr.sub_epoch_summary_included is None:
+                curr = self.block_record(curr.prev_hash)
+            prev_ses_block = curr
         return await pre_validate_blocks_multiprocessing(
             self.constants,
             self,
