@@ -39,7 +39,6 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
-from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -1123,14 +1122,14 @@ class Timelord:
                     log.error(f"Exception manage discriminant queue: {e}")
             await asyncio.sleep(0.1)
 
-    async def _start_manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor, counter: int) -> None:
+    async def _start_manage_discriminant_queue_sanitizer_slow(self, pool: ThreadPoolExecutor, counter: int) -> None:
         tasks = []
         for _ in range(counter):
             tasks.append(asyncio.create_task(self._manage_discriminant_queue_sanitizer_slow(pool)))
         for task in tasks:
             await task
 
-    async def _manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor) -> None:
+    async def _manage_discriminant_queue_sanitizer_slow(self, pool: ThreadPoolExecutor) -> None:
         log.info("Started task for managing bluebox queue.")
         while not self._shut_down:
             picked_info = None
