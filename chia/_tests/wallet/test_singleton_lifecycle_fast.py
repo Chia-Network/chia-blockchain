@@ -14,11 +14,11 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 SINGLETON_MOD = load_clvm("singleton_top_layer.clsp")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clsp")
@@ -305,7 +305,7 @@ def launcher_conditions_and_spend_bundle(
     initial_singleton_inner_puzzle: Program,
     metadata: List[Tuple[str, str]],
     launcher_puzzle: Program,
-) -> Tuple[bytes32, List[Program], SpendBundle]:
+) -> Tuple[bytes32, List[Program], WalletSpendBundle]:
     puzzle_db.add_puzzle(launcher_puzzle)
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
@@ -330,7 +330,7 @@ def launcher_conditions_and_spend_bundle(
         metadata=metadata,
     )
     coin_spend = make_spend(launcher_coin, SerializedProgram.from_program(launcher_puzzle), solution)
-    spend_bundle = SpendBundle([coin_spend], G2Element())
+    spend_bundle = WalletSpendBundle([coin_spend], G2Element())
     return launcher_id, expected_conditions, spend_bundle
 
 
@@ -451,7 +451,7 @@ def spend_coin_to_singleton(
 
     conditions = Program.to(condition_list)
     coin_spend = make_spend(farmed_coin, ANYONE_CAN_SPEND_PUZZLE, conditions)
-    spend_bundle = SpendBundle.aggregate([launcher_spend_bundle, SpendBundle([coin_spend], G2Element())])
+    spend_bundle = WalletSpendBundle.aggregate([launcher_spend_bundle, WalletSpendBundle([coin_spend], G2Element())])
 
     additions, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
 
@@ -546,7 +546,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
         p2_singleton_coin_spend, singleton_conditions = claim_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, coin)
 
         coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(PUZZLE_DB, conditions=singleton_conditions)
-        spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
+        spend_bundle = WalletSpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
 
         _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
         now.seconds += 500
@@ -575,7 +575,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
         p2_singleton_coin_spend, singleton_conditions = claim_p2_singleton(PUZZLE_DB, SINGLETON_WALLET, coin)
 
         coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(PUZZLE_DB, conditions=singleton_conditions)
-        spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
+        spend_bundle = WalletSpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
 
         _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
         now.seconds += 500
@@ -622,7 +622,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
 
     singleton_coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(PUZZLE_DB, conditions=conditions)
 
-    spend_bundle = SpendBundle([singleton_coin_spend], G2Element())
+    spend_bundle = WalletSpendBundle([singleton_coin_spend], G2Element())
 
     _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
 
@@ -657,7 +657,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
             pool_reward_amount=p2_singleton_coin_spend.coin.amount,
             pool_reward_height=now.height - 1,
         )
-        spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
+        spend_bundle = WalletSpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
         debug_spend_bundle(spend_bundle)
 
         _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
@@ -674,7 +674,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(
         PUZZLE_DB, pool_member_spend_type="to-waiting-room", key_value_list=Program.to([("foo", "bar")])
     )
-    spend_bundle = SpendBundle([coin_spend], G2Element())
+    spend_bundle = WalletSpendBundle([coin_spend], G2Element())
 
     _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
     now.seconds += 500
@@ -711,7 +711,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
             pool_reward_amount=p2_singleton_coin_spend.coin.amount,
             pool_reward_height=now.height - 1,
         )
-        spend_bundle = SpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
+        spend_bundle = WalletSpendBundle([coin_spend, p2_singleton_coin_spend], G2Element())
 
         _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)
         now.seconds += 500
@@ -732,7 +732,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
         key_value_list=[("foo1", "bar2"), ("foo2", "baz5")],
         destination_puzzle_hash=initial_singleton_puzzle.get_tree_hash(),
     )
-    spend_bundle = SpendBundle([coin_spend], G2Element())
+    spend_bundle = WalletSpendBundle([coin_spend], G2Element())
 
     full_puzzle = singleton_puzzle(
         SINGLETON_WALLET.launcher_id, SINGLETON_WALLET.launcher_puzzle_hash, initial_singleton_puzzle
@@ -761,7 +761,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     coin_spend = SINGLETON_WALLET.coin_spend_for_conditions(
         PUZZLE_DB, conditions=[Program.to([ConditionOpcode.CREATE_COIN, 0, -113])]
     )
-    spend_bundle = SpendBundle([coin_spend], G2Element())
+    spend_bundle = WalletSpendBundle([coin_spend], G2Element())
     debug_spend_bundle(spend_bundle)
 
     _, removals = coin_store.update_coin_store_for_spend_bundle(spend_bundle, now, MAX_BLOCK_COST_CLVM)

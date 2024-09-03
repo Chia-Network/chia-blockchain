@@ -28,6 +28,8 @@ from chia.rpc.wallet_request_types import (
     GatherSigningInfoResponse,
     GetNotifications,
     GetNotificationsResponse,
+    SplitCoins,
+    SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
 )
@@ -39,7 +41,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, str2bool
@@ -115,7 +116,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
 from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, CoinSelectionConfigLoader
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
@@ -129,6 +130,7 @@ from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspe
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -200,6 +202,7 @@ class WalletRpcApi:
             "/sign_message_by_id": self.sign_message_by_id,
             "/verify_signature": self.verify_signature,
             "/get_transaction_memo": self.get_transaction_memo,
+            "/split_coins": self.split_coins,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -614,7 +617,7 @@ class WalletRpcApi:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(SpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
+        await self.service.push_tx(WalletSpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
         return {}
 
     @tx_endpoint(push=True)
@@ -1072,7 +1075,7 @@ class WalletRpcApi:
                 )
                 assert len(coin_state_list) == 1
                 coin_spend = await fetch_coin_spend_for_coin_state(coin_state_list[0], peer)
-                tr = dataclasses.replace(tr, spend_bundle=SpendBundle([coin_spend], G2Element()))
+                tr = dataclasses.replace(tr, spend_bundle=WalletSpendBundle([coin_spend], G2Element()))
             else:
                 raise ValueError(f"Transaction 0x{transaction_id.hex()} doesn't have any coin spend.")
         assert tr.spend_bundle is not None
@@ -1082,6 +1085,75 @@ class WalletRpcApi:
         for coin_id, memo_list in memos.items():
             response[coin_id.hex()] = [memo.hex() for memo in memo_list]
         return {transaction_id.hex(): response}
+
+    @tx_endpoint(push=False)
+    @marshal
+    async def split_coins(
+        self, request: SplitCoins, action_scope: WalletActionScope, extra_conditions: Tuple[Condition, ...] = tuple()
+    ) -> SplitCoinsResponse:
+        if request.number_of_coins > 500:
+            raise ValueError(f"{request.number_of_coins} coins is greater then the maximum limit of 500 coins.")
+
+        optional_coin = await self.service.wallet_state_manager.coin_store.get_coin_record(request.target_coin_id)
+        if optional_coin is None:
+            raise ValueError(f"Could not find coin with ID {request.target_coin_id}")
+        else:
+            coin = optional_coin.coin
+
+        total_amount = request.amount_per_coin * request.number_of_coins
+
+        if coin.amount < total_amount:
+            raise ValueError(
+                f"Coin amount: {coin.amount} is less than the total amount of the split: {total_amount}, exiting."
+            )
+
+        if request.wallet_id not in self.service.wallet_state_manager.wallets:
+            raise ValueError(f"Wallet with ID {request.wallet_id} does not exist")
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
+        if not isinstance(wallet, (Wallet, CATWallet)):
+            raise ValueError("Cannot split coins from non-fungible wallet types")
+
+        outputs = [
+            Payment(await wallet.get_puzzle_hash(new=True), request.amount_per_coin)
+            for _ in range(request.number_of_coins)
+        ]
+        if len(outputs) == 0:
+            return SplitCoinsResponse([], [])
+
+        # TODO: unify GST API
+        if wallet.type() == WalletType.STANDARD_WALLET:
+            assert isinstance(wallet, Wallet)
+            if coin.amount < total_amount + request.fee:
+                async with action_scope.use() as interface:
+                    interface.side_effects.selected_coins.append(coin)
+                coins = await wallet.select_coins(
+                    uint64(total_amount + request.fee - coin.amount),
+                    action_scope,
+                )
+                coins.add(coin)
+            else:
+                coins = {coin}
+            await wallet.generate_signed_transaction(
+                outputs[0].amount,
+                outputs[0].puzzle_hash,
+                action_scope,
+                request.fee,
+                coins,
+                outputs[1:] if len(outputs) > 1 else None,
+                extra_conditions=extra_conditions,
+            )
+        else:
+            assert isinstance(wallet, CATWallet)
+            await wallet.generate_signed_transaction(
+                [output.amount for output in outputs],
+                [output.puzzle_hash for output in outputs],
+                action_scope,
+                request.fee,
+                coins={coin},
+                extra_conditions=extra_conditions,
+            )
+
+        return SplitCoinsResponse([], [])  # tx_endpoint will take care to fill this out
 
     async def get_transactions(self, request: Dict[str, Any]) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
@@ -1352,17 +1424,17 @@ class WalletRpcApi:
         request: Dict[str, Any],
     ) -> EndpointResult:
         assert self.service.logged_in_fingerprint is not None
-        cs_config_loader: CoinSelectionConfigLoader = CoinSelectionConfigLoader.from_json_dict(request)
+        tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
         # Some backwards compat fill-ins
-        if cs_config_loader.excluded_coin_ids is None:
+        if tx_config_loader.excluded_coin_ids is None:
             excluded_coins: Optional[List[Dict[str, Any]]] = request.get("excluded_coins", request.get("exclude_coins"))
             if excluded_coins is not None:
-                cs_config_loader = cs_config_loader.override(
+                tx_config_loader = tx_config_loader.override(
                     excluded_coin_ids=[Coin.from_json_dict(c).name() for c in excluded_coins],
                 )
 
-        cs_config: CoinSelectionConfig = cs_config_loader.autofill(
+        tx_config: TXConfig = tx_config_loader.autofill(
             constants=self.service.wallet_state_manager.constants,
         )
 
@@ -1373,8 +1445,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        async with self.service.wallet_state_manager.lock:
-            selected_coins = await wallet.select_coins(amount, cs_config)
+        async with self.service.wallet_state_manager.new_action_scope(tx_config, push=False) as action_scope:
+            selected_coins = await wallet.select_coins(amount, action_scope)
 
         return {"coins": [coin.to_json_dict() for coin in selected_coins]}
 
@@ -2315,7 +2387,7 @@ class WalletRpcApi:
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
-        memos = compute_memos(SpendBundle([coin_spend], G2Element()))
+        memos = compute_memos(WalletSpendBundle([coin_spend], G2Element()))
         hints = []
         coin_memos = memos.get(coin_state.coin.name())
         if coin_memos is not None:
@@ -3728,7 +3800,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
         async with action_scope.use() as interface:
-            sb = SpendBundle.aggregate(
+            sb = WalletSpendBundle.aggregate(
                 [tx.spend_bundle for tx in interface.side_effects.transactions if tx.spend_bundle is not None]
             )
         nft_id_list = []

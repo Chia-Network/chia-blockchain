@@ -19,11 +19,11 @@ from chia.cmds.cmds_util import TransactionBundle
 from chia.cmds.wallet import wallet_cmd
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import ApplySignatures, ExecuteSigningInstructions, GatherSigningInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.streamable import Streamable
 from chia.wallet.signer_protocol import SignedTransaction, SigningInstructions, SigningResponse, Spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import byte_deserialize_clvm_streamable, byte_serialize_clvm_streamable
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def _clear_screen() -> None:
@@ -253,9 +253,7 @@ class ApplySignaturesCMD:
                     print("No external spot for non BLS signatures in a spend")
                     return
                 final_signature = AugSchemeMPL.aggregate([final_signature, G2Element.from_bytes(signature.signature)])
-            new_spend_bundle: SpendBundle = SpendBundle(
-                [spend.as_coin_spend() for spend in signed_spends], final_signature
-            )
+            new_spend_bundle = WalletSpendBundle([spend.as_coin_spend() for spend in signed_spends], final_signature)
             new_transactions: List[TransactionRecord] = [
                 replace(
                     self.txs_in.transaction_bundle.txs[0], spend_bundle=new_spend_bundle, name=new_spend_bundle.name()

@@ -39,6 +39,8 @@ from chia.rpc.wallet_request_types import (
     NFTTransferNFTResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
+    SplitCoins,
+    SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
     TakeOfferResponse,
@@ -50,7 +52,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
@@ -64,6 +65,7 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -145,7 +147,7 @@ class WalletRpcClient(RpcClient):
         # TODO: casting due to lack of type checked deserialization
         return cast(uint32, response["height"])
 
-    async def push_tx(self, spend_bundle: SpendBundle) -> Dict[str, Any]:
+    async def push_tx(self, spend_bundle: WalletSpendBundle) -> Dict[str, Any]:
         return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
 
     async def push_transactions(
@@ -1699,4 +1701,13 @@ class WalletRpcClient(RpcClient):
     ) -> ExecuteSigningInstructionsResponse:
         return ExecuteSigningInstructionsResponse.from_json_dict(
             await self.fetch("execute_signing_instructions", args.to_json_dict())
+        )
+
+    async def split_coins(
+        self,
+        args: SplitCoins,
+        tx_config: TXConfig,
+    ) -> SplitCoinsResponse:
+        return SplitCoinsResponse.from_json_dict(
+            await self.fetch("split_coins", {**args.to_json_dict(), **tx_config.to_json_dict()})
         )

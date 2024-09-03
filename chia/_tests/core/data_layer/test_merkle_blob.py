@@ -4,7 +4,7 @@ import hashlib
 import struct
 from dataclasses import astuple, dataclass
 from random import Random
-from typing import Callable, Dict, Generic, List, Set, Type, TypeVar, final
+from typing import Dict, Generic, List, Protocol, Set, Type, TypeVar, final
 
 import chia_rs
 import pytest
@@ -43,7 +43,7 @@ from chia.data_layer.util.merkle_blob import (
     params=[MerkleBlob, chia_rs.MerkleBlob],
     ids=["python", "rust"],
 )
-def merkle_blob_type_fixture(request: SubRequest) -> Callable[[...], MerkleBlob]:
+def merkle_blob_type_fixture(request: SubRequest) -> MerkleBlobCallable:
     return MerkleBlob
 
 
@@ -368,7 +368,11 @@ def test_as_tuple_matches_dataclasses_astuple(cls: Type[RawMerkleNodeProtocol], 
     assert raw_node.as_tuple() == astuple(raw_node)[:-1]  # type: ignore[call-overload]
 
 
-def test_just_insert_a_bunch(merkle_blob_type: Callable[[...], MerkleBlob]) -> None:
+class MerkleBlobCallable(Protocol):
+    def __call__(self, blob: bytearray) -> MerkleBlob: ...
+
+
+def test_just_insert_a_bunch(merkle_blob_type: MerkleBlobCallable) -> None:
     HASH = bytes(range(12, 44))
 
     import pathlib
@@ -380,10 +384,10 @@ def test_just_insert_a_bunch(merkle_blob_type: Callable[[...], MerkleBlob]) -> N
     merkle_blob = merkle_blob_type(blob=bytearray())
     import time
 
-    total_time = 0
+    total_time = 0.0
     for i in range(100000):
         start = time.monotonic()
-        merkle_blob.insert(i, HASH)
+        merkle_blob.insert(KVId(i), HASH)
         end = time.monotonic()
         total_time += end - start
 

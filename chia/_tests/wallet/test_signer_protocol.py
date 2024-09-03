@@ -37,7 +37,6 @@ from chia.types.blockchain_format.coin import Coin as ConsensusCoin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable
@@ -78,8 +77,9 @@ from chia.wallet.util.clvm_streamable import (
     json_deserialize_with_clvm_streamable,
     json_serialize_with_clvm_streamable,
 )
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -134,7 +134,8 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
 
     # Test first that we can properly examine and sign a regular transaction
-    [coin] = await wallet.select_coins(uint64(0), DEFAULT_COIN_SELECTION_CONFIG)
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
+        [coin] = await wallet.select_coins(uint64(0), action_scope)
     puzzle: Program = await wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
     delegated_puzzle: Program = Program.to(None)
     delegated_puzzle_hash: bytes32 = delegated_puzzle.get_tree_hash()
@@ -261,7 +262,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     await wallet_rpc.submit_transactions(SubmitTransactions(signed_transactions=signed_txs))
     await wallet_environments.full_node.wait_bundle_ids_in_mempool(
         [
-            SpendBundle(
+            WalletSpendBundle(
                 [spend.as_coin_spend() for tx in signed_txs for spend in tx.transaction_info.spends],
                 G2Element.from_bytes(signing_responses[0].signature),
             ).name()
