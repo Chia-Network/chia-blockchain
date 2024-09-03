@@ -222,7 +222,7 @@ jobs:
         with:
           repository: "Chia-Network/chia_rs"
           path: "chia_rs"
-          ref: datalayer
+          ref: merkle_blob
           fetch-depth: 1
 
       - name: Install chia_rs with merkle blob
