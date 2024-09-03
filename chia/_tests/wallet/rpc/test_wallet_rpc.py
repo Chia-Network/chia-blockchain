@@ -12,6 +12,8 @@ import aiosqlite
 import pytest
 from chia_rs import G2Element
 
+from chia._tests.conftest import ConsensusMode
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.wallet.test_wallet_coin_store import (
     get_coin_records_amount_filter_tests,
@@ -42,8 +44,9 @@ from chia._tests.wallet.test_wallet_coin_store import (
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.rpc_server import RpcServer
-from chia.rpc.wallet_request_types import GetNotifications
+from chia.rpc.wallet_request_types import GetNotifications, SplitCoins, SplitCoinsResponse
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -57,7 +60,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
@@ -94,6 +96,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import MainWalletProtocol, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 log = logging.getLogger(__name__)
 
@@ -129,7 +132,7 @@ def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
     return full_node_api.full_node.mempool_manager.mempool.size() == num_of_spends
 
 
-async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
+async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: WalletSpendBundle):
     await time_out_assert(
         20, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
     )
@@ -403,10 +406,10 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
     resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
     assert resp["success"]
 
-    spend_bundle = SpendBundle.aggregate(
+    spend_bundle = WalletSpendBundle.aggregate(
         [
-            # We ARE checking that the spendbundle is not None but mypy can't recognize this
-            TransactionRecord.from_json_dict_convenience(tx).spend_bundle  # type: ignore[misc]
+            # We ARE checking that the spend bundle is not None but mypy can't recognize this
+            TransactionRecord.from_json_dict_convenience(tx).spend_bundle  # type: ignore[type-var]
             for tx in resp_client["transactions"]
             if tx["spend_bundle"] is not None
         ]
@@ -2520,7 +2523,7 @@ async def test_cat_spend_run_tail(wallet_rpc_environment: WalletRpcTestEnvironme
 
     # Do the eve spend back to our wallet
     cat_coin = next(c for c in spend_bundle.additions() if c.amount == tx_amount)
-    eve_spend = SpendBundle(
+    eve_spend = WalletSpendBundle(
         [
             make_spend(
                 cat_coin,
@@ -2599,3 +2602,175 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert len(bal_ids) == 2
     assert bal["2"]["confirmed_wallet_balance"] == 100
     assert bal["3"]["confirmed_wallet_balance"] == 20
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes([ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.anyio
+async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
+    # Test XCH first
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
+        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        assert target_coin.amount == 250_000_000_000
+
+    xch_request = SplitCoins(
+        wallet_id=uint32(1),
+        number_of_coins=uint16(100),
+        amount_per_coin=uint64(100),
+        target_coin_id=target_coin.name(),
+        fee=uint64(1_000_000_000_000),  # 1 XCH
+        push=True,
+    )
+
+    with pytest.raises(ResponseFailureError, match="501 coins is greater then the maximum limit of 500 coins"):
+        await env.rpc_client.split_coins(
+            dataclasses.replace(xch_request, number_of_coins=uint16(501)),
+            wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match="Could not find coin with ID 00000000000000000"):
+        await env.rpc_client.split_coins(
+            dataclasses.replace(xch_request, target_coin_id=bytes32([0] * 32)),
+            wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match="is less than the total amount of the split"):
+        await env.rpc_client.split_coins(
+            dataclasses.replace(xch_request, amount_per_coin=uint64(1_000_000_000_000)),
+            wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match="Wallet with ID 42 does not exist"):
+        await env.rpc_client.split_coins(
+            dataclasses.replace(xch_request, wallet_id=uint32(42)),
+            wallet_environments.tx_config,
+        )
+
+    env.wallet_state_manager.wallets[uint32(42)] = object()  # type: ignore[assignment]
+    with pytest.raises(ResponseFailureError, match="Cannot split coins from non-fungible wallet types"):
+        await env.rpc_client.split_coins(
+            dataclasses.replace(xch_request, wallet_id=uint32(42)),
+            wallet_environments.tx_config,
+        )
+    del env.wallet_state_manager.wallets[uint32(42)]
+
+    response = await env.rpc_client.split_coins(
+        dataclasses.replace(xch_request, number_of_coins=uint16(0)),
+        wallet_environments.tx_config,
+    )
+    assert response == SplitCoinsResponse([], [])
+
+    await env.rpc_client.split_coins(
+        xch_request,
+        wallet_environments.tx_config,
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -1_000_000_000_000,  # just the fee
+                        "spendable_balance": -2_000_000_000_000,
+                        "pending_change": 1_000_000_000_000,
+                        "max_send_amount": -2_000_000_000_000,
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -1_000_000_000_000,  # just the fee
+                        "spendable_balance": 1_000_000_000_000,
+                        "pending_change": -1_000_000_000_000,
+                        "max_send_amount": 1_000_000_000_000,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": 99,  # split 1 into 100 i.e. +99
+                    }
+                },
+            )
+        ]
+    )
+
+    # Now do CATs
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            env.wallet_state_manager,
+            env.xch_wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(50),
+            action_scope,
+        )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                # no need to test this, it is tested elsewhere
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                },
+            )
+        ]
+    )
+
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
+        target_coin = list(await cat_wallet.select_coins(uint64(50), action_scope))[0]
+        assert target_coin.amount == 50
+
+    cat_request = SplitCoins(
+        wallet_id=uint32(2),
+        number_of_coins=uint16(50),
+        amount_per_coin=uint64(1),
+        target_coin_id=target_coin.name(),
+        push=True,
+    )
+
+    await env.rpc_client.split_coins(
+        cat_request,
+        wallet_environments.tx_config,
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "unconfirmed_wallet_balance": 0,
+                        "spendable_balance": -50,
+                        "pending_change": 50,
+                        "max_send_amount": -50,
+                        "pending_coin_removal_count": 1,
+                    }
+                },
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": 0,
+                        "spendable_balance": 50,
+                        "pending_change": -50,
+                        "max_send_amount": 50,
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 49,  # split 1 into 50 i.e. +49
+                    }
+                },
+            )
+        ]
+    )

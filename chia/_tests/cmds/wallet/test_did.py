@@ -10,12 +10,12 @@ from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX
 from chia.rpc.wallet_request_types import DIDMessageSpendResponse, DIDTransferDIDResponse, DIDUpdateMetadataResponse
 from chia.types.blockchain_format.sized_bytes import bytes48
 from chia.types.signing_mode import SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.ints import uint32
 from chia.wallet.conditions import Condition, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 # DID Commands
 
@@ -185,7 +185,7 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: Tuple[TestRpc
             push: bool = True,
         ) -> DIDUpdateMetadataResponse:
             self.add_to_log("update_did_metadata", (wallet_id, metadata, tx_config, push))
-            return DIDUpdateMetadataResponse([STD_UTX], [STD_TX], SpendBundle([], G2Element()), uint32(wallet_id))
+            return DIDUpdateMetadataResponse([STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()), uint32(wallet_id))
 
     inst_rpc_client = DidUpdateMetadataRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -258,7 +258,7 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
             self, wallet_id: int, tx_config: TXConfig, extra_conditions: Tuple[Condition, ...], push: bool
         ) -> DIDMessageSpendResponse:
             self.add_to_log("did_message_spend", (wallet_id, tx_config, extra_conditions, True))
-            return DIDMessageSpendResponse([STD_UTX], [STD_TX], SpendBundle([], G2Element()))
+            return DIDMessageSpendResponse([STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()))
 
     inst_rpc_client = DidMessageSpendRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
