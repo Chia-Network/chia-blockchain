@@ -17,7 +17,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint16, uint32, uint64
@@ -26,6 +25,7 @@ from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 async def get_wallet_num(wallet_manager):
@@ -403,7 +403,7 @@ class TestDIDWallet:
         with pytest.raises(Exception):  # We expect a CLVM 80 error for this test
             async with did_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
                 await did_wallet.recovery_spend(
-                    coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([])), action_scope
+                    coin, ph, info, pubkey, WalletSpendBundle([], AugSchemeMPL.aggregate([])), action_scope
                 )
 
     @pytest.mark.parametrize(

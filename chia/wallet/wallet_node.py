@@ -57,7 +57,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.types.weight_proof import WeightProof
 from chia.util.batches import to_batches
 from chia.util.config import lock_and_load_config, process_config_start_method, save_config
@@ -84,6 +83,7 @@ from chia.wallet.util.wallet_sync_utils import (
     subscribe_to_phs,
 )
 from chia.wallet.util.wallet_types import CoinType, WalletType
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler, get_wp_fork_point
 
@@ -1727,7 +1727,7 @@ class WalletNode:
         return response.coin_states
 
     # For RPC only. You should use wallet_state_manager.add_pending_transaction for normal wallet business.
-    async def push_tx(self, spend_bundle: SpendBundle) -> None:
+    async def push_tx(self, spend_bundle: WalletSpendBundle) -> None:
         msg = make_msg(ProtocolMessageTypes.send_transaction, SendTransaction(spend_bundle))
         full_nodes = self.server.get_connections(NodeType.FULL_NODE)
         for peer in full_nodes:
