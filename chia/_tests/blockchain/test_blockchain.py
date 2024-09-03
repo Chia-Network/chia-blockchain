@@ -307,7 +307,10 @@ class TestBlockHeaderValidation:
             [],
         )
         npc_result = None
-        if unf.transactions_generator is not None:
+        # if this assert fires, remove it along with the pragma for the block
+        # below
+        assert unf.transactions_generator is None
+        if unf.transactions_generator is not None:  # pragma: no cover
             block_generator = await blockchain.get_block_generator(unf)
             assert block_generator is not None
             block_bytes = bytes(unf)
@@ -332,7 +335,10 @@ class TestBlockHeaderValidation:
             [],
         )
         npc_result = None
-        if unf.transactions_generator is not None:
+        # if this assert fires, remove it along with the pragma for the block
+        # below
+        assert unf.transactions_generator is None
+        if unf.transactions_generator is not None:  # pragma: no cover
             block_generator = await blockchain.get_block_generator(unf)
             assert block_generator is not None
             block_bytes = bytes(unf)
@@ -420,7 +426,10 @@ class TestBlockHeaderValidation:
                     [],
                 )
                 npc_result = None
-                if block.transactions_generator is not None:
+                # if this assert fires, remove it along with the pragma for the block
+                # below
+                assert block.transactions_generator is None
+                if block.transactions_generator is not None:  # pragma: no cover
                     block_generator = await blockchain.get_block_generator(unf)
                     assert block_generator is not None
                     block_bytes = bytes(unf)
