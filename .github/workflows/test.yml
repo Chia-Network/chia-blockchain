@@ -384,4 +384,5 @@ jobs:
         with:
           name: coverage-reports
           path: coverage-reports/*
+          include-hidden-files: true
           if-no-files-found: error
