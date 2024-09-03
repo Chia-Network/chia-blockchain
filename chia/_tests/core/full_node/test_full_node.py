@@ -2257,21 +2257,21 @@ async def test_long_reorg(
     light_blocks: bool,
     one_node_one_block,
     default_10000_blocks: List[FullBlock],
-    test_long_reorg_blocks: List[FullBlock],
-    test_long_reorg_blocks_light: List[FullBlock],
+    test_long_reorg_1500_blocks: List[FullBlock],
+    test_long_reorg_1500_blocks_light: List[FullBlock],
     seeded_random: random.Random,
 ):
     node, server, bt = one_node_one_block
 
-    fork_point = 499
-    blocks = default_10000_blocks[:1600]
+    fork_point = 1499
+    blocks = default_10000_blocks[:3000]
 
     if light_blocks:
         # if the blocks have lighter weight, we need more height to compensate,
         # to force a reorg
-        reorg_blocks = test_long_reorg_blocks_light[:1650]
+        reorg_blocks = test_long_reorg_1500_blocks_light[:3050]
     else:
-        reorg_blocks = test_long_reorg_blocks[:1200]
+        reorg_blocks = test_long_reorg_1500_blocks[:2700]
 
     for block_batch in to_batches(blocks, 64):
         b = block_batch.entries[0]
@@ -2326,9 +2326,9 @@ async def test_long_reorg(
     # when using add_block manualy we must warmup the cache
     await node.full_node.blockchain.warmup(fork_point - 100)
     if light_blocks:
-        blocks = default_10000_blocks[fork_point - 100 : 1800]
+        blocks = default_10000_blocks[fork_point - 100 : 3200]
     else:
-        blocks = default_10000_blocks[fork_point - 100 : 2600]
+        blocks = default_10000_blocks[fork_point - 100 : 5500]
 
     fork_block = blocks[0]
     fork_info = ForkInfo(fork_block.height - 1, fork_block.height - 1, fork_block.prev_header_hash)
@@ -2347,25 +2347,43 @@ async def test_long_reorg(
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
 @pytest.mark.parametrize("chain_length", [0, 100])
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.parametrize("fork_point", [500, 1500])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
 async def test_long_reorg_nodes(
     light_blocks: bool,
     chain_length: int,
+    fork_point: int,
     three_nodes,
     default_10000_blocks: List[FullBlock],
     test_long_reorg_blocks: List[FullBlock],
     test_long_reorg_blocks_light: List[FullBlock],
+    test_long_reorg_1500_blocks: List[FullBlock],
+    test_long_reorg_1500_blocks_light: List[FullBlock],
     self_hostname: str,
     seeded_random: random.Random,
 ):
     full_node_1, full_node_2, full_node_3 = three_nodes
 
-    blocks = default_10000_blocks[: 1600 - chain_length]
+    if fork_point == 1500:
+        blocks = default_10000_blocks[: 3600 - chain_length]
+    else:
+        blocks = default_10000_blocks[: 1600 - chain_length]
 
     if light_blocks:
-        reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
+        if fork_point == 1500:
+            reorg_blocks = test_long_reorg_1500_blocks_light[: 3600 - chain_length]
+            reorg_height = 4000
+        else:
+            reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
+            reorg_height = 4000
     else:
-        reorg_blocks = test_long_reorg_blocks[: 1200 - chain_length]
+        if fork_point == 1500:
+            reorg_blocks = test_long_reorg_1500_blocks[: 3100 - chain_length]
+            reorg_height = 10000
+        else:
+            reorg_blocks = test_long_reorg_blocks[: 1200 - chain_length]
+            reorg_height = 4000
+            pytest.skip("We rely on the light-blocks test for a 0 forkpoint")
 
     # full node 1 has the original chain
     for block_batch in to_batches(blocks, 64):
@@ -2415,7 +2433,11 @@ async def test_long_reorg_nodes(
     assert p1.header_hash == reorg_blocks[-1].header_hash
     assert p2.header_hash == reorg_blocks[-1].header_hash
 
-    blocks = default_10000_blocks[:4000]
+    blocks = default_10000_blocks[:reorg_height]
+
+    # this is a pre-requisite for a reorg to happen
+    assert blocks[-1].weight > p1.weight
+    assert blocks[-1].weight > p2.weight
 
     # full node 3 has the original chain, but even longer
     for block_batch in to_batches(blocks, 64):
