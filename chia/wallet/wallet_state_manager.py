@@ -766,10 +766,6 @@ class WalletStateManager:
             else:
                 coin_type = CoinType.NORMAL
             unspent_coin_records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id, coin_type)
-        if isinstance(self.observation_root, VaultRoot):
-            # ignore the vault singleton
-            assert isinstance(self.main_wallet, Vault)
-            unspent_coin_records = {cr for cr in unspent_coin_records if cr.coin != self.main_wallet.vault_info.coin}
         return uint128(sum(cr.coin.amount for cr in unspent_coin_records))
 
     async def get_unconfirmed_balance(
@@ -810,10 +806,6 @@ class WalletStateManager:
                 ):
                     all_unspent_coins.remove(removal)
 
-        if isinstance(self.observation_root, VaultRoot):
-            # ignore the vault singleton
-            assert isinstance(self.main_wallet, Vault)
-            all_unspent_coins = {coin for coin in all_unspent_coins if coin != self.main_wallet.vault_info.coin}
         return uint128(sum(coin.amount for coin in all_unspent_coins))
 
     async def unconfirmed_removals_for_wallet(self, wallet_id: int) -> Dict[bytes32, Coin]:
@@ -828,7 +820,10 @@ class WalletStateManager:
                 # That is reserved for when the action to actually claw a tx back or forward is initiated.
                 continue
             for coin in record.removals:
-                removals[coin.name()] = coin
+                # make sure we return only coins for the relevant wallet
+                belongs = await self.does_coin_belong_to_wallet(coin, wallet_id)
+                if belongs:
+                    removals[coin.name()] = coin
         trade_removals: Dict[bytes32, WalletCoinRecord] = await self.trade_manager.get_locked_coins()
         return {**removals, **{coin_id: cr.coin for coin_id, cr in trade_removals.items() if cr.wallet_id == wallet_id}}
 
@@ -2471,9 +2466,14 @@ class WalletStateManager:
             async with self.db_wrapper.writer_maybe_transaction():
                 for tx_record in tx_records:
                     # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-                    await self.tx_store.add_transaction_record(tx_record)
                     all_coins_names.extend([coin.name() for coin in tx_record.additions])
                     all_coins_names.extend([coin.name() for coin in tx_record.removals])
+                    # remove the vault coin from tx_record.removals if present
+                    removals = tx_record.removals
+                    if isinstance(self.main_wallet, Vault):
+                        new_removals = [rem for rem in removals if rem != self.main_wallet.vault_info.coin]
+                        tx_record = dataclasses.replace(tx_record, removals=new_removals)
+                    await self.tx_store.add_transaction_record(tx_record)
 
             await self.add_interested_coin_ids(all_coins_names)
 

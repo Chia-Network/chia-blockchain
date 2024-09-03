@@ -86,7 +86,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                         "<=#spendable_balance": -test_amount + -test_fee,
                         "<=#max_send_amount": -test_amount + -test_fee,
                         ">=#pending_change": 1,  # any amount increase
-                        ">=#pending_coin_removal_count": 1,
+                        "pending_coin_removal_count": 1,
                     },
                     "cat": {
                         "init": True,
@@ -105,8 +105,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                         ">=#spendable_balance": 0,
                         ">=#max_send_amount": 0,
                         "<=#pending_change": 1,  # any amount decrease
-                        "<=#pending_coin_removal_count": -1,
-                        "<=#unspent_coin_count": 1,
+                        "pending_coin_removal_count": -1,
                     },
                     "cat": {
                         "confirmed_wallet_balance": test_amount,
@@ -154,8 +153,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                         "<=#spendable_balance": 1,
                         "<=#max_send_amount": 1,
                         ">=#pending_change": 1,  # any amount increase
-                        ">=#pending_coin_removal_count": 1,
-                        "set_remainder": True,
+                        "pending_coin_removal_count": 1,
                     },
                     "cat": {
                         "confirmed_wallet_balance": -test_amount,
@@ -172,8 +170,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
                         ">=#spendable_balance": 0,
                         ">=#max_send_amount": 0,
                         "<=#pending_change": 1,  # any amount decrease
-                        "<=#pending_coin_removal_count": -1,
-                        "set_remainder": True,
+                        "pending_coin_removal_count": -1,
                     },
                     "cat": {
                         "confirmed_wallet_balance": test_amount,
@@ -284,7 +281,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "<=#max_send_amount": -100,
                         ">=#pending_change": 1,  # any amount increase
                         "unspent_coin_count": 0,
-                        "<=#pending_coin_removal_count": 2,  # 1 for standard, 2 for vault
+                        "pending_coin_removal_count": 1,
                     },
                     "cat": {
                         "init": True,
@@ -303,8 +300,8 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         ">=#spendable_balance": 1,  # any amount increase
                         ">=#max_send_amount": 1,  # any amount increase
                         "<=#pending_change": -1,  # any amount decrease
-                        "<=#unspent_coin_count": 1,
-                        ">=#pending_coin_removal_count": -2,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": -1,
                     },
                     "cat": {
                         "confirmed_wallet_balance": 100,
@@ -338,6 +335,8 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
             assert tx_record.to_puzzle_hash == cat_2_hash
         if tx_record.spend_bundle is not None:
             tx_id = tx_record.name.hex()
+            # from chia.wallet.util.debug_spend_bundle import debug_spend_bundle as asd
+            # breakpoint()
 
     assert tx_id is not None
     memos = await api_0.get_transaction_memo({"transaction_id": tx_id})
@@ -357,7 +356,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         "<=#max_send_amount": -1,
                         ">=#pending_change": 1,  # any amount increase
                         "unspent_coin_count": 0,
-                        ">=#pending_coin_removal_count": 1,
+                        "pending_coin_removal_count": 1,
                     },
                     "cat": {
                         "unconfirmed_wallet_balance": -60,
@@ -374,8 +373,8 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                         ">=#spendable_balance": 1,  # any amount increase
                         ">=#max_send_amount": 1,  # any amount increase
                         "<=#pending_change": -1,  # any amount decrease
-                        ">=#unspent_coin_count": 0,
-                        "<=#pending_coin_removal_count": -1,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": -1,
                     },
                     "cat": {
                         "confirmed_wallet_balance": -60,
@@ -652,7 +651,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                         "<=#max_send_amount": -1,
                         ">=#pending_change": 1,  # any amount increase
                         "unspent_coin_count": 0,
-                        ">=#pending_coin_removal_count": 1,
+                        "pending_coin_removal_count": 1,
                     },
                     "cat": {
                         "unconfirmed_wallet_balance": -60,
@@ -669,8 +668,8 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                         ">=#spendable_balance": 1,  # any amount increase
                         ">=#max_send_amount": 1,  # any amount increase
                         "<=#pending_change": -1,  # any amount decrease
-                        ">=#unspent_coin_count": 0,
-                        "<=#pending_coin_removal_count": -1,
+                        "unspent_coin_count": 0,
+                        "pending_coin_removal_count": -1,
                     },
                     "cat": {
                         "confirmed_wallet_balance": -60,
@@ -725,7 +724,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                         "<=#max_send_amount": -10,
                         ">=#pending_change": 1,  # any amount increase
                         "unspent_coin_count": 0,
-                        ">=#pending_coin_removal_count": 1,
+                        "pending_coin_removal_count": 1,
                     },
                 },
                 post_block_balance_updates={
@@ -735,7 +734,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                         ">=#max_send_amount": 1,  # any amount increase
                         "<=#pending_change": -1,  # any amount decrease
                         "unspent_coin_count": 0,
-                        "<=#pending_coin_removal_count": -1,
+                        "pending_coin_removal_count": -1,
                     },
                 },
             ),

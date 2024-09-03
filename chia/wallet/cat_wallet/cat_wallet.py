@@ -641,9 +641,6 @@ class CATWallet:
         assert message is not None
         announcement = AssertCoinAnnouncement(asserted_id=origin_id, asserted_msg=message)
 
-        # async with action_scope.use() as interface:
-        #     interface.side_effects.merge(inner_action_scope.side_effects)
-
         return announcement
 
     async def generate_unsigned_spendbundle(

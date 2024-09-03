@@ -28,6 +28,7 @@ from chia.wallet.conditions import (
     Condition,
     CreateCoin,
     CreatePuzzleAnnouncement,
+    ReserveFee,
     parse_conditions_non_consensus,
     parse_timelock_info,
 )
@@ -77,6 +78,7 @@ from chia.wallet.vault.vault_info import RecoveryInfo, VaultInfo
 from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope, WalletSideEffects
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
 
@@ -231,7 +233,8 @@ class Vault(Wallet):
         assert selected_amount >= amount
 
         conditions = []
-        conditions.append(Payment(newpuzzlehash, amount, memos if memos else []).as_condition())
+        if amount > 0:
+            conditions.append(Payment(newpuzzlehash, amount, memos if memos else []).as_condition())
         p2_singleton_puzzle = get_p2_singleton_puzzle(self.launcher_id)
         p2_singleton_puzhash = p2_singleton_puzzle.get_tree_hash()
         # add the change condition
@@ -251,6 +254,7 @@ class Vault(Wallet):
                     primaries,
                     action_scope=action_scope,
                     conditions=tuple(parse_conditions_non_consensus(conditions)),
+                    fee=fee,
                     coin_id=coin.name(),
                 )
             else:
@@ -436,6 +440,8 @@ class Vault(Wallet):
             condition_progs = [primary.as_condition() for primary in primaries]
             for cond in conditions:
                 condition_progs.append(cond.to_program())
+            if fee > 0:
+                condition_progs.append(ReserveFee(fee).to_program())
             delegated_puzzle = puzzle_for_conditions(condition_progs)
             delegated_solution = solution_for_conditions(condition_progs)
             p2_solution = Program.to([self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin_id])
@@ -712,6 +718,11 @@ class Vault(Wallet):
             recovery_info,
         )
         await self.save_info(vault_info)
+        assert coin_state.created_height is not None
+        coin_record: WalletCoinRecord = WalletCoinRecord(
+            vault_coin, coin_state.created_height, uint32(0), False, False, self.type(), self.id()
+        )
+        await self.wallet_state_manager.coin_store.add_coin_record(coin_record, vault_coin.name())
         await self.wallet_state_manager.create_more_puzzle_hashes()
 
         # subscribe to p2_singleton puzzle hash
