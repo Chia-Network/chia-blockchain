@@ -12,7 +12,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
@@ -25,6 +24,7 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import OFFER_MOD, Offer
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
@@ -78,12 +78,12 @@ async def generate_coins(
                 payments.append(Payment(acs_ph, uint64(amount)))
 
     # This bundle creates all of the initial coins
-    parent_bundle = SpendBundle(
+    parent_bundle = WalletSpendBundle(
         [make_spend(parent_coin, acs, Program.to([[51, p.puzzle_hash, p.amount] for p in payments]))], G2Element()
     )
 
     # Then we aggregate it with all of the eve spends
-    await sim_client.push_tx(SpendBundle.aggregate([parent_bundle, *cat_bundles]))
+    await sim_client.push_tx(WalletSpendBundle.aggregate([parent_bundle, *cat_bundles]))
     await sim.farm_block()
 
     # Search for all of the coins and put them into a dictionary
@@ -116,8 +116,8 @@ def generate_secure_bundle(
     announcements: List[AssertPuzzleAnnouncement],
     offered_amount: uint64,
     tail_str: Optional[str] = None,
-) -> SpendBundle:
-    announcement_assertions: List[Program] = [a.to_program() for a in announcements]
+) -> WalletSpendBundle:
+    announcement_assertions = [a.to_program() for a in announcements]
     selected_coin_amount = sum(c.amount for c in selected_coins)
     non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
     inner_solution: List[Any] = [
@@ -127,7 +127,7 @@ def generate_secure_bundle(
     ]
 
     if tail_str is None:
-        bundle = SpendBundle(
+        bundle = WalletSpendBundle(
             [
                 make_spend(
                     selected_coins[0],
@@ -259,7 +259,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
             Program.to([[random_hash, [random_hash, 200, ["hey there"]]]]),
         )
         new_spends_list = [blue_spend, *new_offer.to_spend_bundle().coin_spends]
-        tail_offer = Offer.from_spend_bundle(SpendBundle(new_spends_list, G2Element()))
+        tail_offer = Offer.from_spend_bundle(WalletSpendBundle(new_spends_list, G2Element()))
         valid_spend = tail_offer.to_valid_spend(random_hash)
         real_blue_spend = [spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend)][0]
         real_blue_spend_replaced = real_blue_spend.replace(
@@ -269,7 +269,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
                 )
             ),
         )
-        valid_spend = SpendBundle(
+        valid_spend = WalletSpendBundle(
             [real_blue_spend_replaced, *[spend for spend in valid_spend.coin_spends if spend != real_blue_spend]],
             G2Element(),
         )

@@ -17,7 +17,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.observation_root import ObservationRoot
@@ -77,6 +76,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 @dataclass
@@ -156,7 +156,7 @@ class Vault(Wallet):
             puzzle_decorator_override=puzzle_decorator_override,
             extra_conditions=extra_conditions,
         )
-        spend_bundle = SpendBundle(coin_spends, G2Element())
+        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
@@ -562,7 +562,7 @@ class Vault(Wallet):
         assert full_puzzle.get_tree_hash() == vault_coin.puzzle_hash
 
         full_solution = get_vault_full_solution(self.vault_info.lineage_proof, amount, inner_solution)
-        recovery_spend = SpendBundle([make_spend(vault_coin, full_puzzle, full_solution)], G2Element())
+        recovery_spend = WalletSpendBundle([make_spend(vault_coin, full_puzzle, full_solution)], G2Element())
 
         # 2. Generate the Finish Recovery Spend
         assert isinstance(self.vault_info.recovery_info.bls_pk, G1Element)
@@ -578,7 +578,7 @@ class Vault(Wallet):
         recovery_solution = get_vault_inner_solution(recovery_finish_puzzle, recovery_finish_solution, proof)
         lineage = LineageProof(vault_coin.parent_coin_info, inner_puzzle.get_tree_hash(), amount)
         full_recovery_solution = get_vault_full_solution(lineage, amount, recovery_solution)
-        finish_spend = SpendBundle(
+        finish_spend = WalletSpendBundle(
             [make_spend(recovery_coin, full_recovery_puzzle, full_recovery_solution)], G2Element()
         )
         new_vault_coin_id = finish_spend.additions()[0].name()

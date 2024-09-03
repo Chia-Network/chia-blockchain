@@ -234,10 +234,9 @@ class Mempool:
             yield self._row_to_item(row)
 
     def size(self) -> int:
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT Count(name) FROM tx")
-            val = cursor.fetchone()
-            return 0 if val is None else int(val[0])
+        cursor = self._db_conn.execute("SELECT COUNT(name) FROM tx")
+        row = cursor.fetchone()
+        return int(row[0])
 
     def get_item_by_id(self, item_id: bytes32) -> Optional[MempoolItem]:
         with self._db_conn:
