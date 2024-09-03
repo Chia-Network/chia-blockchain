@@ -44,7 +44,7 @@ from chia.data_layer.util.merkle_blob import (
     ids=["python", "rust"],
 )
 def merkle_blob_type_fixture(request: SubRequest) -> MerkleBlobCallable:
-    return MerkleBlob
+    return request.param  # type: ignore[no-any-return]
 
 
 @pytest.fixture(
