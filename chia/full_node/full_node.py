@@ -1341,9 +1341,9 @@ class FullNode:
         pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
             blocks_to_validate,
             {},
-            current_ssi,
-            current_difficulty,
-            prev_ses_block,
+            sub_slot_iters=current_ssi,
+            difficulty=current_difficulty,
+            prev_ses_block=prev_ses_block,
             wp_summaries=wp_summaries,
             validate_signatures=True,
         )
@@ -1861,7 +1861,7 @@ class FullNode:
             new_slot = len(block.finished_sub_slots) > 0
             ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
             pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
-                [block], npc_results, ssi, diff, validate_signatures=False
+                [block], npc_results, sub_slot_iters=ssi, difficulty=diff, validate_signatures=False
             )
             added: Optional[AddBlockResult] = None
             pre_validation_time = time.monotonic() - validation_start

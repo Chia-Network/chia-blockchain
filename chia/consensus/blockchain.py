@@ -805,12 +805,12 @@ class Blockchain:
         self,
         blocks: List[FullBlock],
         npc_results: Dict[uint32, NPCResult],  # A cache of the result of running CLVM, optional (you can use {})
-        sub_slot_iters: Optional[uint64] = None,
-        difficulty: Optional[uint64] = None,
-        prev_ses_block: Optional[BlockRecord] = None,
         batch_size: int = 4,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
+        sub_slot_iters: Optional[uint64] = None,
+        difficulty: Optional[uint64] = None,
+        prev_ses_block: Optional[BlockRecord] = None,
         validate_signatures: bool,
     ) -> List[PreValidationResult]:
         if difficulty is None or sub_slot_iters is None:
