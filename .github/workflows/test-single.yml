@@ -284,6 +284,7 @@ jobs:
         with:
           name: coverage-data-${{ env.JOB_FILE_NAME }}
           path: coverage-data/*
+          include-hidden-files: true
           if-no-files-found: error
 
       - name: Check resource usage
