@@ -268,7 +268,6 @@ class SpendSim:
                     get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
                     item_inclusion_filter=item_inclusion_filter,
                 )
-
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle
@@ -337,7 +336,7 @@ class SimClient:
     async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
         try:
             spend_bundle_id = spend_bundle.name()
-            sbc = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle, None, spend_bundle_id)
+            sbc = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle, spend_bundle_id)
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
         assert self.service.mempool_manager.peak is not None
