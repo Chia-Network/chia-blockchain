@@ -976,7 +976,6 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_mint_nft", request)
         return json_deserialize_with_clvm_streamable(response, NFTMintNFTResponse)
 
-    # TODO: add a test for this
     async def add_uri_to_nft(
         self,
         wallet_id: int,
@@ -988,7 +987,7 @@ class WalletRpcClient(RpcClient):
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTAddURIResponse:  # pragma: no cover
+    ) -> NFTAddURIResponse:
         request = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
@@ -1058,21 +1057,19 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_get_nfts", request)
         return response
 
-    # TODO: add a test for this
     async def set_nft_did(
         self,
         wallet_id: int,
-        did_id: str,
+        did_id: Optional[str],
         nft_coin_id: str,
         fee: int,
         tx_config: TXConfig,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
         push: bool = True,
-    ) -> NFTSetNFTDIDResponse:  # pragma: no cover
+    ) -> NFTSetNFTDIDResponse:
         request = {
             "wallet_id": wallet_id,
-            "did_id": did_id,
             "nft_coin_id": nft_coin_id,
             "fee": fee,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
@@ -1080,6 +1077,8 @@ class WalletRpcClient(RpcClient):
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
         }
+        if did_id is not None:
+            request["did_id"] = did_id
         response = await self.fetch("nft_set_nft_did", request)
         return json_deserialize_with_clvm_streamable(response, NFTSetNFTDIDResponse)
 
@@ -1318,8 +1317,12 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("sign_message_by_address", {"address": address, "message": message})
         return response["pubkey"], response["signature"], response["signing_mode"]
 
-    async def sign_message_by_id(self, id: str, message: str) -> Tuple[str, str, str]:
-        response = await self.fetch("sign_message_by_id", {"id": id, "message": message})
+    async def sign_message_by_id(
+        self, id: str, message: str, is_hex: bool = False, safe_mode: bool = True
+    ) -> Tuple[str, str, str]:
+        response = await self.fetch(
+            "sign_message_by_id", {"id": id, "message": message, "is_hex": is_hex, "safe_mode": safe_mode}
+        )
         return response["pubkey"], response["signature"], response["signing_mode"]
 
     # DAOs

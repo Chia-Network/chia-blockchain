@@ -1365,6 +1365,11 @@ class WalletStateManager:
                 and len(launcher_parent) == 1
                 and launcher_parent[0].spent_height is not None
             )
+            # NFTs minted out of coinbase coins would not have minter DIDs
+            if self.constants.GENESIS_CHALLENGE[:16] in bytes(
+                launcher_parent[0].coin.parent_coin_info
+            ) or self.constants.GENESIS_CHALLENGE[16:] in bytes(launcher_parent[0].coin.parent_coin_info):
+                return None
             did_coin: List[CoinState] = await self.wallet_node.get_coin_state(
                 [launcher_parent[0].coin.parent_coin_info], peer=peer
             )

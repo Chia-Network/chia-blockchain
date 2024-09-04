@@ -459,8 +459,8 @@ class DIDWallet:
         # full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, origin.name())
         # All additions in this block here:
 
-        new_pubkey = (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
-        new_puzhash = puzzle_for_pk(new_pubkey).get_tree_hash()
+        new_puzhash = await self.wallet_state_manager.main_wallet.get_puzzle_hash(new=False)
+        new_pubkey = await self.wallet_state_manager.get_public_key(new_puzhash)
         parent_info = None
         assert did_info.origin_coin is not None
         assert did_info.current_inner is not None
