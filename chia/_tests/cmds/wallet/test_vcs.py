@@ -299,7 +299,7 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcC
         "-a1",
         "-m0.5",
         "--min-coin-amount",
-        "0.000000001",
+        "0.001",
         "--max-coin-amount",
         "10",
         "--reuse",
@@ -313,7 +313,7 @@ def test_vcs_approve_r_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcC
                 wallet_id,
                 uint64(1000),
                 TXConfig(
-                    min_coin_amount=uint64(0),
+                    min_coin_amount=uint64(1),
                     max_coin_amount=uint64(10000),
                     excluded_coin_amounts=[],
                     excluded_coin_ids=[],

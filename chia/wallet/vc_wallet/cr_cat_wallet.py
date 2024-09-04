@@ -13,7 +13,6 @@ from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -58,6 +57,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import MetadataTypes, WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -241,7 +241,7 @@ class CRCATWallet(CATWallet):
                 self.log.info(f"Found pending approval CRCAT coin {coin.name().hex()}")
                 is_pending = True
                 created_timestamp = await self.wallet_state_manager.wallet_node.get_timestamp_for_height(uint32(height))
-                spend_bundle = SpendBundle([coin_spend], G2Element())
+                spend_bundle = WalletSpendBundle([coin_spend], G2Element())
                 memos = compute_memos(spend_bundle)
                 # This will override the tx created in the wallet state manager
                 tx_record = TransactionRecord(
@@ -404,7 +404,7 @@ class CRCATWallet(CATWallet):
         coins: Optional[Set[Coin]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         add_authorizations_to_cr_cats: bool = True,
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         if cat_discrepancy is not None:
             extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
@@ -592,7 +592,7 @@ class CRCATWallet(CATWallet):
                 ),
             )
 
-        return SpendBundle(coin_spends, G2Element())
+        return WalletSpendBundle(coin_spends, G2Element())
 
     async def generate_signed_transaction(
         self,
@@ -751,7 +751,7 @@ class CRCATWallet(CATWallet):
             vc.launcher_id,
             vc.wrap_inner_with_backdoor().get_tree_hash(),
         )
-        claim_bundle: SpendBundle = SpendBundle(coin_spends, G2Element())
+        claim_bundle = WalletSpendBundle(coin_spends, G2Element())
 
         # Make the Fee TX
         if fee > 0:

@@ -9,8 +9,8 @@ from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def compute_memos_for_spend(coin_spend: CoinSpend) -> Dict[bytes32, List[bytes]]:
@@ -27,7 +27,7 @@ def compute_memos_for_spend(coin_spend: CoinSpend) -> Dict[bytes32, List[bytes]]
     return memos
 
 
-def compute_memos(bundle: SpendBundle) -> Dict[bytes32, List[bytes]]:
+def compute_memos(bundle: WalletSpendBundle) -> Dict[bytes32, List[bytes]]:
     """
     Retrieves the memos for additions in this spend_bundle, which are formatted as a list in the 3rd parameter of
     CREATE_COIN. If there are no memos, the addition coin_id is not included. If they are not formatted as a list

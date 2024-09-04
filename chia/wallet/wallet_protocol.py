@@ -9,13 +9,13 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -77,7 +77,7 @@ class GSTOptionalArgs(TypedDict):
     new_owner: NotRequired[Optional[bytes]]
     new_did_inner_hash: NotRequired[Optional[bytes]]
     trade_prices_list: NotRequired[Optional[Program]]
-    additional_bundles: NotRequired[List[SpendBundle]]
+    additional_bundles: NotRequired[List[WalletSpendBundle]]
     metadata_update: NotRequired[Optional[Tuple[str, str]]]
     # CR-CAT Wallet
     add_authorizations_to_cr_cats: NotRequired[bool]

@@ -350,19 +350,6 @@ async def pre_validate_blocks_multiprocessing(
                 ses_blocks_bytes_list.append(None)
             else:
                 ses_blocks_bytes_list.append(bytes(ses_block_rec))
-        if blocks_to_validate[-1].height == 1559:
-            batch_pre_validate_blocks(
-                constants,
-                recent_blocks_bytes,
-                b_pickled,
-                previous_generators,
-                npc_results_pickled,
-                check_filter,
-                [diff_ssis[j][0] for j in range(i, end_i)],
-                [diff_ssis[j][1] for j in range(i, end_i)],
-                validate_signatures,
-                ses_blocks_bytes_list,
-            )
 
         futures.append(
             asyncio.get_running_loop().run_in_executor(

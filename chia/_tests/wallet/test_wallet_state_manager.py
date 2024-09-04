@@ -15,13 +15,13 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -138,7 +138,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
 
     created_txs = action_scope.side_effects.transactions
 
-    def flatten_spend_bundles(txs: List[TransactionRecord]) -> List[SpendBundle]:
+    def flatten_spend_bundles(txs: List[TransactionRecord]) -> List[WalletSpendBundle]:
         return [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
 
     assert (
@@ -158,7 +158,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     extra_coin_spend = make_spend(
         Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), Program.to(1), Program.to([])
     )
-    extra_spend = SpendBundle([extra_coin_spend], G2Element())
+    extra_spend = WalletSpendBundle([extra_coin_spend], G2Element())
 
     new_txs = await wsm.add_pending_transactions(
         created_txs,

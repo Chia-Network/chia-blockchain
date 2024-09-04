@@ -13,7 +13,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
@@ -57,6 +56,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.server.ws_connection import WSChiaConnection
@@ -431,7 +431,7 @@ class Wallet:
             extra_conditions=extra_conditions,
         )
         assert len(transaction) > 0
-        spend_bundle: SpendBundle = SpendBundle(transaction, G2Element())
+        spend_bundle = WalletSpendBundle(transaction, G2Element())
 
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
