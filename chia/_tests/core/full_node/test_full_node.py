@@ -935,8 +935,8 @@ class TestFullNodeProtocol:
         # these numbers reflect the capacity of the mempool. In these
         # tests MEMPOOL_BLOCK_BUFFER is 1. The other factors are COST_PER_BYTE
         # and MAX_BLOCK_COST_CLVM
-        assert included_tx == 27
-        assert not_included_tx == 6
+        assert included_tx == 23
+        assert not_included_tx == 10
         assert seen_bigger_transaction_has_high_fee
 
         # Mempool is full

@@ -302,9 +302,7 @@ class MempoolManager:
         if ret.error is not None:
             raise ValidationError(Err(ret.error), "pre_validate_spendbundle failed")
         assert ret.conds is not None
-        # TODO: this cost padding is temporary, until we update the mempool's
-        # block creation logic to take the block overhead into account
-        return ret.conds.replace(cost=ret.conds.cost + 10000000)
+        return ret.conds
 
     async def add_spend_bundle(
         self,
