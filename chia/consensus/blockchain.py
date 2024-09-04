@@ -338,14 +338,13 @@ class Blockchain:
         # blocks. We can only accept blocks that are connected to another block
         # we know of.
         prev_block: Optional[BlockRecord] = None
-        if not extending_main_chain:
-            prev_block = self.block_record(block.prev_header_hash)
-            if not genesis:
-                if prev_block is None:
-                    return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
+        if not extending_main_chain and not genesis:
+            prev_block = self.try_block_record(block.prev_header_hash)
+            if prev_block is None:
+                return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
-                if prev_block.height + 1 != block.height:
-                    return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
+            if prev_block.height + 1 != block.height:
+                return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
 
         npc_result: Optional[NPCResult] = pre_validation_result.npc_result
         required_iters = pre_validation_result.required_iters
