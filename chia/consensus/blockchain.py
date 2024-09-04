@@ -820,7 +820,9 @@ class Blockchain:
                 self.constants, len(block.finished_sub_slots) > 0, prev_b, self
             )
         if prev_ses_block is None and blocks[0].height > 0:
-            curr = self.block_record(blocks[0].prev_header_hash)
+            curr = self.try_block_record(blocks[0].prev_header_hash)
+            if curr is None:
+                return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
             while curr.height > 0 and curr.sub_epoch_summary_included is None:
                 curr = self.block_record(curr.prev_hash)
             prev_ses_block = curr
