@@ -28,7 +28,6 @@ from chia.full_node.mempool_manager import (
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestBlock, RespondBlock
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.simulator.block_tools import test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
@@ -1943,7 +1942,7 @@ async def test_mempool_timelocks(cond1: List[object], cond2: List[object], expec
         assert e.code == expected
 
 
-TEST_FILL_RATE_ITEM_COST = 144_785_330
+TEST_FILL_RATE_ITEM_COST = 144_744_040
 
 
 @pytest.mark.anyio
@@ -1954,15 +1953,17 @@ TEST_FILL_RATE_ITEM_COST = 144_785_330
         # Here we set the block cost limit to twice the test items' cost, so we
         # expect both test items to get included in the block.
         # NOTE: The expected block cost is smaller than the sum of items' costs
-        # because of the spend bundle aggregation that creates the block bundle.
-        (TEST_FILL_RATE_ITEM_COST * 2, 2, TEST_FILL_RATE_ITEM_COST * 2 - 61_829),
+        # because of the spend bundle aggregation that creates the block
+        # bundle, in addition to a small block compression effect that we
+        # can't completely avoid.
+        (TEST_FILL_RATE_ITEM_COST * 2, 2, TEST_FILL_RATE_ITEM_COST * 2 - 156_020),
         # Here we set the block cost limit to twice the test items' cost - 1,
         # so we expect only one of the two test items to get included in the block.
         (TEST_FILL_RATE_ITEM_COST * 2 - 1, 1, TEST_FILL_RATE_ITEM_COST),
     ],
 )
 async def test_fill_rate_block_validation(
-    consensus_mode: ConsensusMode,
+    blockchain_constants: ConsensusConstants,
     max_block_clvm_cost: uint64,
     expected_block_items: int,
     expected_block_cost: uint64,
@@ -1985,21 +1986,26 @@ async def test_fill_rate_block_validation(
     async def fill_mempool_with_test_sbs(
         full_node_api: FullNodeSimulator,
     ) -> List[Tuple[bytes32, SerializedProgram, bytes32]]:
-        puzzle = SerializedProgram.to((1, [[ConditionOpcode.REMARK, b"1" * 12_000]]))
-        ph = puzzle.get_tree_hash()
-        for _ in range(3):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
-        coins = [cr.coin for cr in coin_records if cr.coin.amount == 250_000_000_000]
+        coins_and_puzzles = []
+        # Create different puzzles and use different (parent) coins to reduce
+        # the effects of block compression as much as possible.
+        for i in (1, 2):
+            puzzle = SerializedProgram.to((1, [[ConditionOpcode.REMARK, bytes([i] * 12_000)]]))
+            ph = puzzle.get_tree_hash()
+            for _ in range(2):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, ph)
+            coin = next(cr.coin for cr in coin_records if cr.coin.amount == 250_000_000_000)
+            coins_and_puzzles.append((coin, puzzle))
         sbs_info = []
-        for coin in coins:
+        for coin, puzzle in coins_and_puzzles:
             coin_spend = make_spend(coin, puzzle, SerializedProgram.to([]))
             sb = SpendBundle([coin_spend], G2Element())
             await send_to_mempool(full_node_api, sb)
             sbs_info.append((coin.name(), puzzle, sb.name()))
         return sbs_info
 
-    constants = test_constants.replace(MAX_BLOCK_COST_CLVM=max_block_clvm_cost)
+    constants = blockchain_constants.replace(MAX_BLOCK_COST_CLVM=max_block_clvm_cost)
     async with setup_simulators_and_wallets(1, 0, constants) as setup:
         full_node_api = setup.simulators[0].peer_api
         assert full_node_api.full_node._mempool_manager is not None
