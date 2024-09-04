@@ -1096,9 +1096,7 @@ class Blockchain:
 
         # If the block is not part of the main chain, we're on a fork, and we
         # need to find the fork point
-        peak_block = self.try_block_record(header_hash)
-        if peak_block is None:
-            peak_block = await self.get_block_record_from_db(header_hash)
+        peak_block = await self.get_block_record_from_db(header_hash)
         assert peak_block is not None
         if self.height_to_hash(peak_block.height) != header_hash:
             peak: Optional[BlockRecord] = self.get_peak()
