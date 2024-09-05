@@ -300,19 +300,22 @@ def test_proof_of_inclusion_merkle_blob() -> None:
     keys_values: List[KVId] = []
 
     for repeats in range(num_repeats):
+        kv_ids: List[KVId] = []
+        hashes: List[bytes] = []
         for _ in range(num_inserts):
             seed += 1
             kv_id = generate_kvid(seed)
-            hash = generate_hash(seed)
-            merkle_blob.insert(kv_id, hash)
+            kv_ids.append(kv_id)
+            hashes.append(generate_hash(seed))
             keys_values.append(kv_id)
 
+        merkle_blob.batch_insert(kv_ids, hashes)
         random.shuffle(keys_values)
         for kv_id in keys_values[:num_deletes]:
             merkle_blob.delete(kv_id)
         keys_values = keys_values[num_deletes:]
-
         merkle_blob.calculate_lazy_hashes()
+
         for kv_id in keys_values:
             proof_of_inclusion = merkle_blob.get_proof_of_inclusion(kv_id)
             assert proof_of_inclusion.valid()
