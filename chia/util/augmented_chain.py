@@ -45,6 +45,11 @@ class AugmentedBlockchain:
         self._extra_blocks[block_record.header_hash] = (block, block_record)
         self._height_to_hash[block_record.height] = block_record.header_hash
 
+    def remove_extra_block(self, hh: bytes32) -> None:
+        if hh in self._extra_blocks:
+            block_record = self._extra_blocks.pop(hh)[1]
+            del self._height_to_hash[block_record.height]
+
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
 
