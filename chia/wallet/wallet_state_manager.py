@@ -1767,6 +1767,17 @@ class WalletStateManager:
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
 
                     if wallet_identifier is None:
+                        # Confirm tx records for txs which we submitted for coins which aren't in our wallet
+                        if coin_state.created_height is not None and coin_state.spent_height is not None:
+                            all_unconfirmed = await self.tx_store.get_all_unconfirmed()
+                            tx_records_to_confirm: List[TransactionRecord] = []
+                            for out_tx_record in all_unconfirmed:
+                                if coin_state.coin in out_tx_record.removals:
+                                    tx_records_to_confirm.append(out_tx_record)
+
+                            if len(tx_records_to_confirm) > 0:
+                                for tx_record in tx_records_to_confirm:
+                                    await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
 
