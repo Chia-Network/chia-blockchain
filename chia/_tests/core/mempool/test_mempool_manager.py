@@ -387,7 +387,7 @@ def spend_bundle_from_conditions(
 async def add_spendbundle(
     mempool_manager: MempoolManager, sb: SpendBundle, sb_name: bytes32
 ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
-    sbc = await mempool_manager.pre_validate_spendbundle(sb, None, sb_name)
+    sbc = await mempool_manager.pre_validate_spendbundle(sb, sb_name)
     ret = await mempool_manager.add_spend_bundle(sb, sbc, sb_name, TEST_HEIGHT)
     invariant_check_mempool(mempool_manager.mempool)
     return ret.cost, ret.status, ret.error
@@ -461,7 +461,7 @@ async def test_empty_spend_bundle() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_records)
     sb = SpendBundle([], G2Element())
     with pytest.raises(ValidationError, match="INVALID_SPEND_BUNDLE"):
-        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+        await mempool_manager.pre_validate_spendbundle(sb, sb.name())
 
 
 @pytest.mark.anyio
@@ -470,7 +470,7 @@ async def test_negative_addition_amount() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, -1]]
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="COIN_AMOUNT_NEGATIVE"):
-        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+        await mempool_manager.pre_validate_spendbundle(sb, sb.name())
 
 
 @pytest.mark.anyio
@@ -481,7 +481,7 @@ async def test_valid_addition_amount() -> None:
     coin = Coin(IDENTITY_PUZZLE_HASH, IDENTITY_PUZZLE_HASH, max_amount)
     sb = spend_bundle_from_conditions(conditions, coin)
     # ensure this does not throw
-    _ = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    _ = await mempool_manager.pre_validate_spendbundle(sb, sb.name())
 
 
 @pytest.mark.anyio
@@ -491,7 +491,7 @@ async def test_too_big_addition_amount() -> None:
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, max_amount + 1]]
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="COIN_AMOUNT_EXCEEDS_MAXIMUM"):
-        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+        await mempool_manager.pre_validate_spendbundle(sb, sb.name())
 
 
 @pytest.mark.anyio
@@ -503,7 +503,7 @@ async def test_duplicate_output() -> None:
     ]
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="DUPLICATE_OUTPUT"):
-        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+        await mempool_manager.pre_validate_spendbundle(sb, sb.name())
 
 
 @pytest.mark.anyio
@@ -514,7 +514,7 @@ async def test_block_cost_exceeds_max() -> None:
         conditions.append([ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, i])
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="BLOCK_COST_EXCEEDS_MAX"):
-        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+        await mempool_manager.pre_validate_spendbundle(sb, sb.name())
 
 
 @pytest.mark.anyio
@@ -524,7 +524,7 @@ async def test_double_spend_prevalidation() -> None:
     sb = spend_bundle_from_conditions(conditions)
     sb_twice: SpendBundle = SpendBundle.aggregate([sb, sb])
     with pytest.raises(ValidationError, match="DOUBLE_SPEND"):
-        await mempool_manager.pre_validate_spendbundle(sb_twice, None, sb_twice.name())
+        await mempool_manager.pre_validate_spendbundle(sb_twice, sb_twice.name())
 
 
 @pytest.mark.anyio
@@ -532,11 +532,11 @@ async def test_minting_coin() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_records)
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT]]
     sb = spend_bundle_from_conditions(conditions)
-    _ = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    _ = await mempool_manager.pre_validate_spendbundle(sb, sb.name())
     conditions = [[ConditionOpcode.CREATE_COIN, IDENTITY_PUZZLE_HASH, TEST_COIN_AMOUNT + 1]]
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="MINTING_COIN"):
-        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+        await mempool_manager.pre_validate_spendbundle(sb, sb.name())
 
 
 @pytest.mark.anyio
@@ -544,11 +544,11 @@ async def test_reserve_fee_condition() -> None:
     mempool_manager = await instantiate_mempool_manager(zero_calls_get_coin_records)
     conditions = [[ConditionOpcode.RESERVE_FEE, TEST_COIN_AMOUNT]]
     sb = spend_bundle_from_conditions(conditions)
-    _ = await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+    _ = await mempool_manager.pre_validate_spendbundle(sb, sb.name())
     conditions = [[ConditionOpcode.RESERVE_FEE, TEST_COIN_AMOUNT + 1]]
     sb = spend_bundle_from_conditions(conditions)
     with pytest.raises(ValidationError, match="RESERVE_FEE_CONDITION_FAILED"):
-        await mempool_manager.pre_validate_spendbundle(sb, None, sb.name())
+        await mempool_manager.pre_validate_spendbundle(sb, sb.name())
 
 
 @pytest.mark.anyio
@@ -581,7 +581,7 @@ async def test_same_sb_twice_with_eligible_coin() -> None:
     sb = SpendBundle.aggregate([sb1, sb2])
     sb_name = sb.name()
     result = await add_spendbundle(mempool_manager, sb, sb_name)
-    expected_cost = uint64(10268283)
+    expected_cost = uint64(10_236_088)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
     assert mempool_manager.get_spendbundle(sb_name) == sb
     result = await add_spendbundle(mempool_manager, sb, sb_name)
@@ -614,7 +614,7 @@ async def test_sb_twice_with_eligible_coin_and_different_spends_order() -> None:
     assert mempool_manager.get_spendbundle(sb_name) is None
     assert mempool_manager.get_spendbundle(reordered_sb_name) is None
     result = await add_spendbundle(mempool_manager, sb, sb_name)
-    expected_cost = uint64(13091510)
+    expected_cost = uint64(13_056_132)
     assert result == (expected_cost, MempoolInclusionStatus.SUCCESS, None)
     assert mempool_manager.get_spendbundle(sb_name) == sb
     assert mempool_manager.get_spendbundle(reordered_sb_name) is None
@@ -1942,7 +1942,9 @@ async def test_mempool_timelocks(cond1: List[object], cond2: List[object], expec
         assert e.code == expected
 
 
-TEST_FILL_RATE_ITEM_COST = 144_744_040
+TEST_FILL_RATE_ITEM_COST = 144_720_020
+QUOTE_BYTE_COST = 2 * DEFAULT_CONSTANTS.COST_PER_BYTE
+QUOTE_EXECUTION_COST = 20
 
 
 @pytest.mark.anyio
@@ -1956,10 +1958,12 @@ TEST_FILL_RATE_ITEM_COST = 144_744_040
         # because of the spend bundle aggregation that creates the block
         # bundle, in addition to a small block compression effect that we
         # can't completely avoid.
-        (TEST_FILL_RATE_ITEM_COST * 2, 2, TEST_FILL_RATE_ITEM_COST * 2 - 156_020),
+        (TEST_FILL_RATE_ITEM_COST * 2, 2, TEST_FILL_RATE_ITEM_COST * 2 - 107_980),
         # Here we set the block cost limit to twice the test items' cost - 1,
         # so we expect only one of the two test items to get included in the block.
-        (TEST_FILL_RATE_ITEM_COST * 2 - 1, 1, TEST_FILL_RATE_ITEM_COST),
+        # NOTE: The cost difference here is because get_conditions_from_spendbundle
+        # does not include the overhead to make a block (quote byte cost  + quote runtime cost).
+        (TEST_FILL_RATE_ITEM_COST * 2 - 1, 1, TEST_FILL_RATE_ITEM_COST + QUOTE_BYTE_COST + QUOTE_EXECUTION_COST),
     ],
 )
 async def test_fill_rate_block_validation(
