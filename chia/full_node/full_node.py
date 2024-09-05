@@ -1287,6 +1287,54 @@ class FullNode:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
+        pre_validate_start = time.monotonic()
+        blocks_to_validate, current_ssi, current_difficulty, prev_ses_block = await self.filter_blocks(
+            all_blocks, fork_info, current_ssi, current_difficulty, prev_ses_block
+        )
+
+        if len(blocks_to_validate) == 0:
+            return True, None, current_ssi, current_difficulty, prev_ses_block, None
+
+        pre_validation_results, err = await self.prevalidate_blocks(
+            blocks_to_validate,
+            peer_info,
+            current_ssi,
+            current_difficulty,
+            prev_ses_block,
+            wp_summaries,
+        )
+        if err is not None:
+            return False, None, current_ssi, current_difficulty, prev_ses_block, err
+
+        agg_state_change_summary, current_ssi, current_difficulty, prev_ses_block, err = (
+            await self.add_prevalidated_blocks(
+                blocks_to_validate,
+                pre_validation_results,
+                fork_info,
+                peer_info,
+                current_ssi,
+                current_difficulty,
+                prev_ses_block,
+            )
+        )
+
+        if agg_state_change_summary is not None:
+            self._state_changed("new_peak")
+            self.log.debug(
+                f"Total time for {len(blocks_to_validate)} blocks: {time.monotonic() - pre_validate_start}, "
+                f"advanced: True"
+            )
+        return err is None, agg_state_change_summary, current_ssi, current_difficulty, prev_ses_block, err
+
+    async def filter_blocks(
+        self,
+        all_blocks: List[FullBlock],
+        fork_info: Optional[ForkInfo],
+        current_ssi: uint64,
+        current_difficulty: uint64,
+        prev_ses_block: Optional[BlockRecord] = None,
+    ) -> Tuple[List[FullBlock], uint64, uint64, Optional[BlockRecord]]:
+
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
             header_hash = block.header_hash
@@ -1326,13 +1374,20 @@ class FullNode:
                 # removals in fork_info.
                 await self.blockchain.advance_fork_info(block, fork_info)
                 await self.blockchain.run_single_block(block, fork_info)
+        return blocks_to_validate, current_ssi, current_difficulty, prev_ses_block
 
-        if len(blocks_to_validate) == 0:
-            return True, None, current_ssi, current_difficulty, prev_ses_block, None
-
+    async def prevalidate_blocks(
+        self,
+        blocks_to_validate: List[FullBlock],
+        peer_info: PeerInfo,
+        current_ssi: uint64,
+        current_difficulty: uint64,
+        prev_ses_block: Optional[BlockRecord] = None,
+        wp_summaries: Optional[List[SubEpochSummary]] = None,
+    ) -> Tuple[List[PreValidationResult], Optional[Err]]:
+        pre_validate_start = time.monotonic()
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
-        pre_validate_start = time.monotonic()
         pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             self.blockchain.constants,
             self.blockchain,
@@ -1360,15 +1415,20 @@ class FullNode:
                 self.log.error(
                     f"Invalid block from peer: {peer_info} height {block.height} {Err(pre_validation_results[i].error)}"
                 )
-                return (
-                    False,
-                    None,
-                    current_ssi,
-                    current_difficulty,
-                    prev_ses_block,
-                    Err(pre_validation_results[i].error),
-                )
+                return [], Err(pre_validation_results[i].error)
 
+        return pre_validation_results, None
+
+    async def add_prevalidated_blocks(
+        self,
+        blocks_to_validate: List[FullBlock],
+        pre_validation_results: List[PreValidationResult],
+        fork_info: Optional[ForkInfo],
+        peer_info: PeerInfo,
+        current_ssi: uint64,
+        current_difficulty: uint64,
+        prev_ses_block: Optional[BlockRecord] = None,
+    ) -> Tuple[Optional[StateChangeSummary], uint64, uint64, Optional[BlockRecord], Optional[Err]]:
         agg_state_change_summary: Optional[StateChangeSummary] = None
         block_record = await self.blockchain.get_block_record_from_db(blocks_to_validate[0].prev_header_hash)
         for i, block in enumerate(blocks_to_validate):
@@ -1417,20 +1477,14 @@ class FullNode:
             elif result == AddBlockResult.INVALID_BLOCK or result == AddBlockResult.DISCONNECTED_BLOCK:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
-                return False, agg_state_change_summary, current_ssi, current_difficulty, prev_ses_block, error
+                return agg_state_change_summary, current_ssi, current_difficulty, prev_ses_block, error
             block_record = self.blockchain.block_record(block.header_hash)
             assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
                 prev_ses_block = block_record
                 if self.weight_proof_handler is not None:
                     await self.weight_proof_handler.create_prev_sub_epoch_segments()
-        if agg_state_change_summary is not None:
-            self._state_changed("new_peak")
-            self.log.debug(
-                f"Total time for {len(blocks_to_validate)} blocks: {time.monotonic() - pre_validate_start}, "
-                f"advanced: True"
-            )
-        return True, agg_state_change_summary, current_ssi, current_difficulty, prev_ses_block, None
+        return agg_state_change_summary, current_ssi, current_difficulty, prev_ses_block, None
 
     async def get_sub_slot_iters_difficulty_ses_block(
         self, block: FullBlock, ssi: Optional[uint64], diff: Optional[uint64]
