@@ -16,7 +16,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
@@ -47,6 +46,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager  # pragma: no cover
@@ -202,7 +202,7 @@ class VCWallet:
             solution = solution_for_delegated_puzzle(dpuz, Program.to(None))
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
             coin_spends.append(make_spend(coin, puzzle, solution))
-        spend_bundle = SpendBundle(coin_spends, G2Element())
+        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
@@ -302,7 +302,7 @@ class VCWallet:
             conditions=extra_conditions,
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
-        spend_bundle = SpendBundle([coin_spend], G2Element())
+        spend_bundle = WalletSpendBundle([coin_spend], G2Element())
         if did_announcement is not None:
             # Need to spend DID
             for _, wallet in self.wallet_state_manager.wallets.items():
@@ -404,7 +404,7 @@ class VCWallet:
             extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
         )
         async with action_scope.use() as interface:
-            interface.side_effects.extra_spends.append(SpendBundle([vc_spend], G2Element()))
+            interface.side_effects.extra_spends.append(WalletSpendBundle([vc_spend], G2Element()))
 
     async def add_vc_authorization(
         self, offer: Offer, solver: Solver, action_scope: WalletActionScope
@@ -549,9 +549,9 @@ class VCWallet:
             interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
 
         return Offer.from_spend_bundle(
-            SpendBundle.aggregate(
+            WalletSpendBundle.aggregate(
                 [
-                    SpendBundle(
+                    WalletSpendBundle(
                         [
                             *(
                                 spend

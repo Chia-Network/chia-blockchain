@@ -12,7 +12,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia.cmds.passphrase_funcs import obtain_current_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.signing_mode import SigningMode
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import bech32_encode, convertbits, encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.errors import KeychainException
 from chia.util.file_keyring import MAX_LABEL_LENGTH
@@ -137,8 +137,17 @@ def delete_key_label(fingerprint: int) -> None:
         sys.exit(f"Error: {e}")
 
 
+def format_pk_bech32_maybe(prefix: Optional[str], pubkey: str) -> str:
+    return pubkey if prefix is None else bech32_encode(prefix, convertbits(list(bytes.fromhex(pubkey)), 8, 5))
+
+
 def show_keys(
-    root_path: Path, show_mnemonic: bool, non_observer_derivation: bool, json_output: bool, fingerprint: Optional[int]
+    root_path: Path,
+    show_mnemonic: bool,
+    non_observer_derivation: bool,
+    json_output: bool,
+    fingerprint: Optional[int],
+    bech32m_prefix: Optional[str],
 ) -> None:
     """
     Prints all keys and mnemonics (if available).
@@ -220,9 +229,9 @@ def show_keys(
             if "label" in key:
                 print("Label:", key["label"])
             print("Fingerprint:", key["fingerprint"])
-            print("Master public key (m):", key["master_pk"])
-            print("Farmer public key (m/12381/8444/0/0):", key["farmer_pk"])
-            print("Pool public key (m/12381/8444/1/0):", key["pool_pk"])
+            print("Master public key (m):", format_pk_bech32_maybe(bech32m_prefix, key["master_pk"]))
+            print("Farmer public key (m/12381/8444/0/0):", format_pk_bech32_maybe(bech32m_prefix, key["farmer_pk"]))
+            print("Pool public key (m/12381/8444/1/0):", format_pk_bech32_maybe(bech32m_prefix, key["pool_pk"]))
             print(f"First wallet address{' (non-observer)' if key['non_observer'] else ''}: {key['wallet_address']}")
             if show_mnemonic:
                 print("Master private key (m):", key["master_sk"])
@@ -704,6 +713,7 @@ def derive_child_key(
     show_private_keys: bool,
     show_hd_path: bool,
     private_key: Optional[PrivateKey],
+    bech32m_prefix: Optional[str],
 ) -> None:
     """
     Derive child keys from the provided master key.
@@ -782,7 +792,7 @@ def derive_child_key(
         else:
             key_type_str = "Non-Observer" if non_observer_derivation else "Observer"
 
-        print(f"{key_type_str} public key {i}{hd_path}: {pk}")
+        print(f"{key_type_str} public key {i}{hd_path}: {format_pk_bech32_maybe(bech32m_prefix, bytes(pk).hex())}")
         if show_private_keys and sk is not None:
             print(f"{key_type_str} private key {i}{hd_path}: {private_key_string_repr(sk)}")
 

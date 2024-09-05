@@ -279,7 +279,6 @@ class FullNode:
             self._mempool_manager = MempoolManager(
                 get_coin_records=self.coin_store.get_coin_records,
                 consensus_constants=self.constants,
-                multiprocessing_context=self.multiprocessing_context,
                 single_threaded=single_threaded,
             )
 
@@ -2356,7 +2355,7 @@ class FullNode:
         else:
             try:
                 cost_result = await self.mempool_manager.pre_validate_spendbundle(
-                    transaction, tx_bytes, spend_name, self._bls_cache
+                    transaction, spend_name, self._bls_cache
                 )
             except ValidationError as e:
                 self.mempool_manager.remove_seen(spend_name)

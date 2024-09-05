@@ -868,7 +868,7 @@ class FullNodeRpcApi:
             spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
             spend_name = spend_bundle.name()
             conds: SpendBundleConditions = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_name
+                spend_bundle, spend_name
             )
             cost = conds.cost
         elif "cost" in request:

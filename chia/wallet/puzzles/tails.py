@@ -6,7 +6,6 @@ from chia_rs import Coin
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_info import CATInfo
@@ -23,6 +22,7 @@ from chia.wallet.payment import Payment
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_action_scope import WalletActionScope
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 GENESIS_BY_ID_MOD = load_clvm_maybe_recompile(
     "genesis_by_coin_id.clsp", package_or_requirement="chia.wallet.cat_wallet.puzzles"
@@ -57,7 +57,7 @@ class LimitationsProgram:
     @classmethod
     async def generate_issuance_bundle(
         cls, wallet, cat_tail_info: Dict, amount: uint64, action_scope: WalletActionScope
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         raise NotImplementedError("Need to implement 'generate_issuance_bundle' on limitations programs")
 
 
@@ -91,7 +91,7 @@ class GenesisById(LimitationsProgram):
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         coins = await wallet.standard_wallet.select_coins(amount + fee, action_scope)
 
         origin = coins.copy().pop()
@@ -255,7 +255,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         if "coins" in tail_info:
             coins: List[Coin] = tail_info["coins"]
             origin_id = coins.copy().pop().name()

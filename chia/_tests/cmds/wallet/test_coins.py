@@ -9,7 +9,10 @@ from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, ST
 from chia.rpc.wallet_request_types import CombineCoins, CombineCoinsResponse, SplitCoins, SplitCoinsResponse
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
+
+test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
 # Coin Commands
 
@@ -57,8 +60,9 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             self,
             args: CombineCoins,
             tx_config: TXConfig,
+            timelock_info: ConditionValidTimes,
         ) -> CombineCoinsResponse:
-            self.add_to_log("combine_coins", (args, tx_config))
+            self.add_to_log("combine_coins", (args, tx_config, timelock_info))
             return CombineCoinsResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = CoinsCombineRpcClient()  # pylint: disable=no-value-for-parameter
@@ -81,6 +85,10 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         "1",
         "--input-coin",
         bytes(32).hex(),
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     # these are various things that should be in the output
     assert_list = [
@@ -111,10 +119,12 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             (
                 expected_request,
                 expected_tx_config,
+                test_condition_valid_times,
             ),
             (
                 dataclasses.replace(expected_request, push=True),
                 expected_tx_config,
+                test_condition_valid_times,
             ),
         ],
     }
@@ -127,11 +137,9 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     # set RPC Client
     class CoinsSplitRpcClient(TestWalletRpcClient):
         async def split_coins(
-            self,
-            args: SplitCoins,
-            tx_config: TXConfig,
+            self, args: SplitCoins, tx_config: TXConfig, timelock_info: ConditionValidTimes
         ) -> SplitCoinsResponse:
-            self.add_to_log("split_coins", (args, tx_config))
+            self.add_to_log("split_coins", (args, tx_config, timelock_info))
             return SplitCoinsResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = CoinsSplitRpcClient()  # pylint: disable=no-value-for-parameter
@@ -147,6 +155,10 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         "-n10",
         "-a0.0000001",
         f"-t{target_coin_id.hex()}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     # these are various things that should be in the output
     assert_list = [
@@ -168,6 +180,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
                     push=True,
                 ),
                 DEFAULT_TX_CONFIG,
+                test_condition_valid_times,
             )
         ],
     }
