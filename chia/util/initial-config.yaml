@@ -425,7 +425,6 @@ full_node:
     - "dns-introducer.chia.net"
     - "chia.ctrlaltdel.ch"
     - "seeder.dexie.space"
-    - "chia-seeder.h9.com"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
   introducer_peer:
