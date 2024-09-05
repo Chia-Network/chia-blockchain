@@ -10,6 +10,7 @@ from chia.cmds.cmds_util import tx_out_cmd
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -150,7 +151,7 @@ def list_cmd(
     default=False,
     help="Sort coins from largest to smallest or smallest to largest.",
 )
-@tx_out_cmd
+@tx_out_cmd()
 def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -164,6 +165,7 @@ def combine_cmd(
     input_coins: Sequence[bytes32],
     largest_first: bool,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .coin_funcs import async_combine
 
@@ -181,6 +183,7 @@ def combine_cmd(
             target_coin_ids=input_coins,
             largest_first=largest_first,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -213,7 +216,7 @@ def combine_cmd(
 @click.option(
     "-t", "--target-coin-id", type=Bytes32ParamType(), required=True, help="The coin id of the coin we are splitting."
 )
-@tx_out_cmd
+@tx_out_cmd()
 def split_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -223,6 +226,7 @@ def split_cmd(
     amount_per_coin: CliAmount,
     target_coin_id: bytes32,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .coin_funcs import async_split
 
@@ -236,5 +240,6 @@ def split_cmd(
             amount_per_coin=amount_per_coin,
             target_coin_id=target_coin_id,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )

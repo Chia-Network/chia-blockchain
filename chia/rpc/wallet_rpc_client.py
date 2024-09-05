@@ -282,6 +282,7 @@ class WalletRpcClient(RpcClient):
         coins: Optional[List[Coin]] = None,
         fee: uint64 = uint64(0),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> SendTransactionMultiResponse:
         # Converts bytes to hex for puzzle hashes
         additions_hex = []
@@ -295,6 +296,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "push": push,
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
@@ -1339,6 +1341,7 @@ class WalletRpcClient(RpcClient):
         fee_for_cat: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> CreateNewDAOWalletResponse:
         request: Dict[str, Any] = {
             "wallet_type": "dao_wallet",
@@ -1353,6 +1356,7 @@ class WalletRpcClient(RpcClient):
             "extra_conditions": list(extra_conditions),
             "push": push,
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("create_new_wallet", request)
         return json_deserialize_with_clvm_streamable(response, CreateNewDAOWalletResponse)
@@ -1382,6 +1386,7 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> DAOCreateProposalResponse:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1396,6 +1401,7 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
 
         response = await self.fetch("dao_create_proposal", request)
@@ -1421,6 +1427,7 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> DAOVoteOnProposalResponse:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1431,6 +1438,7 @@ class WalletRpcClient(RpcClient):
             "extra_conditions": list(extra_conditions),
             "push": push,
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("dao_vote_on_proposal", request)
         return json_deserialize_with_clvm_streamable(response, DAOVoteOnProposalResponse)
@@ -1449,6 +1457,7 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> DAOCloseProposalResponse:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1458,6 +1467,7 @@ class WalletRpcClient(RpcClient):
             "extra_conditions": list(extra_conditions),
             "push": push,
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("dao_close_proposal", request)
         return json_deserialize_with_clvm_streamable(response, DAOCloseProposalResponse)
@@ -1469,12 +1479,14 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> DAOFreeCoinsFromFinishedProposalsResponse:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "fee": fee,
             "extra_conditions": list(extra_conditions),
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("dao_free_coins_from_finished_proposals", request)
         return json_deserialize_with_clvm_streamable(response, DAOFreeCoinsFromFinishedProposalsResponse)
@@ -1493,6 +1505,7 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> DAOAddFundsToTreasuryResponse:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1502,6 +1515,7 @@ class WalletRpcClient(RpcClient):
             "extra_conditions": list(extra_conditions),
             "push": push,
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("dao_add_funds_to_treasury", request)
         return json_deserialize_with_clvm_streamable(response, DAOAddFundsToTreasuryResponse)
@@ -1514,6 +1528,7 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> DAOSendToLockupResponse:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1522,6 +1537,7 @@ class WalletRpcClient(RpcClient):
             "extra_conditions": list(extra_conditions),
             "push": push,
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("dao_send_to_lockup", request)
         return json_deserialize_with_clvm_streamable(response, DAOSendToLockupResponse)
@@ -1534,6 +1550,7 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         extra_conditions: Tuple[Condition, ...] = tuple(),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> DAOExitLockupResponse:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -1542,6 +1559,7 @@ class WalletRpcClient(RpcClient):
             "extra_conditions": list(extra_conditions),
             "push": push,
             **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
         }
         response = await self.fetch("dao_exit_lockup", request)
         return json_deserialize_with_clvm_streamable(response, DAOExitLockupResponse)
@@ -1649,6 +1667,7 @@ class WalletRpcClient(RpcClient):
         tx_config: TXConfig,
         fee: uint64 = uint64(0),
         push: bool = True,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> List[TransactionRecord]:
         response = await self.fetch(
             "crcat_approve_pending",
@@ -1658,6 +1677,7 @@ class WalletRpcClient(RpcClient):
                 "fee": fee,
                 "push": push,
                 **tx_config.to_json_dict(),
+                **timelock_info.to_json_dict(),
             },
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
@@ -1710,7 +1730,10 @@ class WalletRpcClient(RpcClient):
         self,
         args: SplitCoins,
         tx_config: TXConfig,
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> SplitCoinsResponse:
         return SplitCoinsResponse.from_json_dict(
-            await self.fetch("split_coins", {**args.to_json_dict(), **tx_config.to_json_dict()})
+            await self.fetch(
+                "split_coins", {**args.to_json_dict(), **tx_config.to_json_dict(), **timelock_info.to_json_dict()}
+            )
         )
