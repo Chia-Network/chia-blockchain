@@ -55,9 +55,7 @@ class VDFClientProcessMgr:
             self.active_processes.clear()
 
     @asynccontextmanager
-    async def manage_proc(
-        self, proc: asyncio.subprocess.Process
-    ) -> AsyncIterator[None]:
+    async def manage_proc(self, proc: asyncio.subprocess.Process) -> AsyncIterator[None]:
         await self.add_process(proc)
         try:
             yield
@@ -79,9 +77,7 @@ def find_vdf_client() -> pathlib.Path:
     p = location.joinpath("vdf_client")
     if p.is_file():
         return p
-    raise FileNotFoundError(
-        "Cannot find vdf_client binary. Is Timelord installed? See install-timelord.sh"
-    )
+    raise FileNotFoundError("Cannot find vdf_client binary. Is Timelord installed? See install-timelord.sh")
 
 
 async def spawn_process(
@@ -135,9 +131,7 @@ async def spawn_process(
             await proc.communicate()
 
 
-async def spawn_all_processes(
-    config: Dict, net_config: Dict, process_mgr: VDFClientProcessMgr
-):
+async def spawn_all_processes(config: Dict, net_config: Dict, process_mgr: VDFClientProcessMgr):
     await asyncio.sleep(5)
     hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
