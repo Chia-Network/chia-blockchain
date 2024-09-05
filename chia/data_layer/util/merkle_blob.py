@@ -427,6 +427,8 @@ class MerkleBlob:
                 queue.append(node.left)
                 queue.append(node.right)
 
+        raise Exception("Cannot find a leaf in the tree")
+
     def batch_insert(self, kv_ids: List[KVId], hashes: List[bytes]) -> None:
         indexes: List[TreeIndex] = []
 
