@@ -57,6 +57,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -167,6 +168,12 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("get_timestamp_for_height", request)
         # TODO: casting due to lack of type checked deserialization
         return cast(uint64, response["timestamp"])
+
+    async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
+        return AutoClaimSettings.from_json_dict(await self.fetch("set_auto_claim", {**request.to_json_dict()}))
+
+    async def get_auto_claim(self) -> AutoClaimSettings:
+        return AutoClaimSettings.from_json_dict(await self.fetch("get_auto_claim", {}))
 
     # Wallet Management APIs
     async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Any]]:

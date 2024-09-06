@@ -79,6 +79,7 @@ from chia.wallet.conditions import (
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -836,7 +837,14 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     resp = await wallet_1_rpc.spend_clawback_coins([fake_coin.name()], 100)
     assert resp["transaction_ids"] == []
     # Test claim spend
-    await wallet_2_api.set_auto_claim({"enabled": False, "tx_fee": 100, "min_amount": 0, "batch_size": 1})
+    await wallet_2_rpc.set_auto_claim(
+        AutoClaimSettings(
+            enabled=False,
+            tx_fee=uint64(100),
+            min_amount=uint64(0),
+            batch_size=uint16(1),
+        )
+    )
     resp = await wallet_2_rpc.spend_clawback_coins([clawback_coin_id_1, clawback_coin_id_2], 100)
     assert resp["success"]
     assert len(resp["transaction_ids"]) == 2
@@ -2296,6 +2304,7 @@ async def test_verify_signature(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -2306,31 +2315,34 @@ async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
     req = {"enabled": False, "tx_fee": -1, "min_amount": 100}
     has_exception = False
     try:
-        res = await api.set_auto_claim(req)
+        # Manually using API to test error condition
+        await api.set_auto_claim(req)
     except ConversionError:
         has_exception = True
     assert has_exception
     req = {"enabled": False, "batch_size": 0, "min_amount": 100}
-    res = await api.set_auto_claim(req)
-    assert not res["enabled"]
-    assert res["tx_fee"] == 0
-    assert res["min_amount"] == 100
-    assert res["batch_size"] == 50
+    res = await env.wallet_1.rpc_client.set_auto_claim(
+        AutoClaimSettings(enabled=False, batch_size=uint16(0), min_amount=uint64(100))
+    )
+    assert not res.enabled
+    assert res.tx_fee == 0
+    assert res.min_amount == 100
+    assert res.batch_size == 50
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_get_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
     rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
     await generate_funds(full_node_api, env.wallet_1)
     assert rpc_server is not None
-    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
-    res = await api.get_auto_claim({})
-    assert not res["enabled"]
-    assert res["tx_fee"] == 0
-    assert res["min_amount"] == 0
-    assert res["batch_size"] == 50
+    res = await env.wallet_1.rpc_client.get_auto_claim()
+    assert not res.enabled
+    assert res.tx_fee == 0
+    assert res.min_amount == 0
+    assert res.batch_size == 50
 
 
 @pytest.mark.anyio
