@@ -6,6 +6,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
+from chia_rs import G1Element, G2Element
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -53,6 +54,23 @@ class GetNotifications(Streamable):
 @dataclass(frozen=True)
 class GetNotificationsResponse(Streamable):
     notifications: List[Notification]
+
+
+@streamable
+@dataclass(frozen=True)
+class VerifySignature(Streamable):
+    message: str
+    pubkey: G1Element
+    signature: G2Element
+    signing_mode: Optional[str] = None
+    address: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VerifySignatureResponse(Streamable):
+    isValid: bool
+    error: Optional[str] = None
 
 
 @streamable

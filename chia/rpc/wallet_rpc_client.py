@@ -49,6 +49,8 @@ from chia.rpc.wallet_request_types import (
     VCMintResponse,
     VCRevokeResponse,
     VCSpendResponse,
+    VerifySignature,
+    VerifySignatureResponse,
 )
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -1335,6 +1337,9 @@ class WalletRpcClient(RpcClient):
             "sign_message_by_id", {"id": id, "message": message, "is_hex": is_hex, "safe_mode": safe_mode}
         )
         return response["pubkey"], response["signature"], response["signing_mode"]
+
+    async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:
+        return VerifySignatureResponse.from_json_dict(await self.fetch("verify_signature", {**request.to_json_dict()}))
 
     # DAOs
     async def create_new_dao_wallet(

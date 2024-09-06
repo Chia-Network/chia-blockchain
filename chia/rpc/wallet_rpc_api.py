@@ -1790,7 +1790,7 @@ class WalletRpcApi:
             message_to_verify,
             G2Element.from_bytes(hexstr_to_bytes(request["signature"])),
         )
-        if "address" in request:
+        if request.get("address", None) is not None:
             # For signatures made by the sign_message_by_address/sign_message_by_id
             # endpoints, the "address" field should contain the p2_address of the NFT/DID
             # that was used to sign the message.
