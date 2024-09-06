@@ -75,6 +75,45 @@ class VerifySignatureResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetTransactionMemo(Streamable):
+    transaction_id: bytes32
+
+
+# utility type for GetTransactionMemoResponse
+@streamable
+@dataclass(frozen=True)
+class CoinIDWithMemos(Streamable):
+    coin_id: bytes32
+    memos: List[bytes]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionMemoResponse(Streamable):
+    transaction_id: bytes32
+    coins_with_memos: List[CoinIDWithMemos]
+
+    # TODO: deprecate the kinda silly format of this RPC and delete these functions
+    def to_json_dict(self) -> Dict[str, Any]:
+        return {
+            self.transaction_id.hex(): {
+                cwm.coin_id.hex(): [memo.hex() for memo in cwm.memos] for cwm in self.coins_with_memos
+            }
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: Dict[str, Any]) -> GetTransactionMemoResponse:
+        return cls(
+            bytes32.from_hexstr(list(json_dict.keys())[0]),
+            [
+                CoinIDWithMemos(bytes32.from_hexstr(coin_id), [bytes32.from_hexstr(memo) for memo in memos])
+                for coin_id, memos in list(json_dict.values())[0].items()
+            ],
+        )
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: List[Spend]
 

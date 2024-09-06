@@ -34,6 +34,8 @@ from chia.rpc.wallet_request_types import (
     GatherSigningInfoResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetTransactionMemo,
+    GetTransactionMemoResponse,
     NFTAddURIResponse,
     NFTMintBulkResponse,
     NFTMintNFTResponse,
@@ -1340,6 +1342,11 @@ class WalletRpcClient(RpcClient):
 
     async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:
         return VerifySignatureResponse.from_json_dict(await self.fetch("verify_signature", {**request.to_json_dict()}))
+
+    async def get_transaction_memo(self, request: GetTransactionMemo) -> GetTransactionMemoResponse:
+        return GetTransactionMemoResponse.from_json_dict(
+            await self.fetch("get_transaction_memo", {**request.to_json_dict()})
+        )
 
     # DAOs
     async def create_new_dao_wallet(
