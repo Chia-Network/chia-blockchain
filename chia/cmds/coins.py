@@ -108,7 +108,7 @@ def list_cmd(
     help="Select coins until this amount (in XCH or CAT) is reached. \
     Combine all selected coins into one coin, which will have a value of at least target-amount",
     type=AmountParamType(),
-    default=CliAmount(mojos=True, amount=uint64(0)),
+    default=None,
 )
 @click.option(
     "--min-amount",
@@ -156,7 +156,7 @@ def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
-    target_amount: CliAmount,
+    target_amount: Optional[CliAmount],
     min_amount: CliAmount,
     amounts_to_exclude: Sequence[CliAmount],
     number_of_coins: int,

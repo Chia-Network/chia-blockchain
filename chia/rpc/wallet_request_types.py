@@ -137,6 +137,23 @@ class SplitCoinsResponse(TransactionEndpointResponse):
     pass
 
 
+@streamable
+@kw_only_dataclass
+class CombineCoins(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    number_of_coins: uint16 = field(default_factory=default_raise)
+    largest_first: bool = False
+    target_coin_ids: List[bytes32] = field(default_factory=list)
+    target_coin_amount: Optional[uint64] = None
+    coin_num_limit: uint16 = uint16(500)
+
+
+@streamable
+@dataclass(frozen=True)
+class CombineCoinsResponse(TransactionEndpointResponse):
+    pass
+
+
 # TODO: The section below needs corresponding request types
 # TODO: The section below should be added to the API (currently only for client)
 @streamable

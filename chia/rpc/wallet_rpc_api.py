@@ -22,6 +22,8 @@ from chia.rpc.util import marshal, tx_endpoint
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
     ApplySignaturesResponse,
+    CombineCoins,
+    CombineCoinsResponse,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
@@ -46,7 +48,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.streamable import Streamable, UInt32Range, streamable
@@ -114,7 +116,7 @@ from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import NIL_TREEHASH
-from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
+from chia.wallet.util.query_filter import FilterMode, HashFilter, TransactionTypeFilter
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES, TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig, TXConfigLoader
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
@@ -200,6 +202,7 @@ class WalletRpcApi:
             "/verify_signature": self.verify_signature,
             "/get_transaction_memo": self.get_transaction_memo,
             "/split_coins": self.split_coins,
+            "/combine_coins": self.combine_coins,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -1151,6 +1154,112 @@ class WalletRpcApi:
             )
 
         return SplitCoinsResponse([], [])  # tx_endpoint will take care to fill this out
+
+    @tx_endpoint(push=False)
+    @marshal
+    async def combine_coins(
+        self, request: CombineCoins, action_scope: WalletActionScope, extra_conditions: Tuple[Condition, ...] = tuple()
+    ) -> CombineCoinsResponse:
+
+        # Some "number of coins" validation
+        if request.number_of_coins > request.coin_num_limit:
+            raise ValueError(
+                f"{request.number_of_coins} coins is greater then the maximum limit of {request.coin_num_limit} coins."
+            )
+        if request.number_of_coins < 1:
+            raise ValueError("You need at least two coins to combine")
+        if len(request.target_coin_ids) > request.number_of_coins:
+            raise ValueError("More coin IDs specified than desired number of coins to combine")
+
+        if request.wallet_id not in self.service.wallet_state_manager.wallets:
+            raise ValueError(f"Wallet with ID {request.wallet_id} does not exist")
+        wallet = self.service.wallet_state_manager.wallets[request.wallet_id]
+        if not isinstance(wallet, (Wallet, CATWallet)):
+            raise ValueError("Cannot combine coins from non-fungible wallet types")
+
+        coins = []
+
+        # First get the coin IDs specified
+        if request.target_coin_ids != []:
+            coins.extend(
+                [
+                    cr.coin
+                    for cr in (
+                        await self.service.wallet_state_manager.coin_store.get_coin_records(
+                            wallet_id=request.wallet_id,
+                            coin_id_filter=HashFilter(request.target_coin_ids, mode=uint8(FilterMode.include.value)),
+                        )
+                    ).records
+                ]
+            )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.selected_coins.extend(coins)
+
+        # Next let's select enough coins to meet the target if there is one
+        if request.target_coin_amount is not None:
+            fungible_amount_needed = request.target_coin_amount
+            if isinstance(wallet, Wallet):
+                fungible_amount_needed = uint64(request.target_coin_amount + request.fee)
+            amount_selected = sum(c.amount for c in coins)
+            if amount_selected < fungible_amount_needed:
+                coins.extend(
+                    list(
+                        await wallet.select_coins(
+                            amount=uint64(fungible_amount_needed - amount_selected),
+                            action_scope=action_scope,
+                        )
+                    )
+                )
+
+        # Now let's select enough coins to get to the target number to combine
+        if len(coins) < request.number_of_coins:
+            async with action_scope.use() as interface:
+                coins.extend(
+                    [
+                        cr.coin
+                        for cr in (
+                            await self.service.wallet_state_manager.coin_store.get_coin_records(
+                                wallet_id=request.wallet_id,
+                                limit=uint32(request.number_of_coins - len(coins)),
+                                order=CoinRecordOrder.amount,
+                                coin_id_filter=HashFilter(
+                                    [c.name() for c in interface.side_effects.selected_coins],
+                                    mode=uint8(FilterMode.exclude.value),
+                                ),
+                                reverse=request.largest_first,
+                            )
+                        ).records
+                    ]
+                )
+
+        async with action_scope.use() as interface:
+            interface.side_effects.selected_coins.extend(coins)
+
+        primary_output_amount = (
+            uint64(sum(c.amount for c in coins)) if request.target_coin_amount is None else request.target_coin_amount
+        )
+        if isinstance(wallet, Wallet):
+            await wallet.generate_signed_transaction(
+                primary_output_amount,
+                await wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash),
+                action_scope,
+                request.fee,
+                set(coins),
+                extra_conditions=extra_conditions,
+            )
+        else:
+            assert isinstance(wallet, CATWallet)
+            await wallet.generate_signed_transaction(
+                [primary_output_amount],
+                [await wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash)],
+                action_scope,
+                request.fee,
+                coins=set(coins),
+                extra_conditions=extra_conditions,
+            )
+
+        return CombineCoinsResponse([], [])  # tx_endpoint will take care to fill this out
 
     async def get_transactions(self, request: Dict[str, Any]) -> EndpointResult:
         wallet_id = int(request["wallet_id"])

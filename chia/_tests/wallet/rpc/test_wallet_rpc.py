@@ -46,7 +46,7 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.rpc_server import RpcServer
-from chia.rpc.wallet_request_types import GetNotifications, SplitCoins, SplitCoinsResponse
+from chia.rpc.wallet_request_types import CombineCoins, GetNotifications, SplitCoins, SplitCoinsResponse
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -2769,6 +2769,212 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
                         "pending_coin_removal_count": -1,
                         "unspent_coin_count": 49,  # split 1 into 50 i.e. +49
                     }
+                },
+            )
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [2],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes([ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.anyio
+async def test_combine_coins(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
+    # Should have 4 coins, two 1.75 XCH, two 0.25 XCH
+
+    # Grab one of the 0.25 ones to specify
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
+        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        assert target_coin.amount == 250_000_000_000
+
+    # These parameters will give us the maximum amount of behavior coverage
+    # - More amount than the coin we specify
+    # - Less amount than will have to be selected in order create it
+    # - Higher # coins than necessary to create it
+    fee = uint64(100)
+    xch_combine_request = CombineCoins(
+        wallet_id=uint32(1),
+        target_coin_amount=uint64(1_000_000_000_000),
+        number_of_coins=uint16(3),
+        target_coin_ids=[target_coin.name()],
+        fee=fee,
+        push=True,
+    )
+
+    # Test some error cases first
+    with pytest.raises(ResponseFailureError, match="greater then the maximum limit"):
+        await env.rpc_client.combine_coins(
+            dataclasses.replace(xch_combine_request, number_of_coins=uint16(501)),
+            wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match="You need at least two coins to combine"):
+        await env.rpc_client.combine_coins(
+            dataclasses.replace(xch_combine_request, number_of_coins=uint16(0)),
+            wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match="More coin IDs specified than desired number of coins to combine"):
+        await env.rpc_client.combine_coins(
+            dataclasses.replace(xch_combine_request, target_coin_ids=[bytes32([0] * 32)] * 100),
+            wallet_environments.tx_config,
+        )
+
+    with pytest.raises(ResponseFailureError, match="Wallet with ID 50 does not exist"):
+        await env.rpc_client.combine_coins(
+            dataclasses.replace(xch_combine_request, wallet_id=uint32(50)),
+            wallet_environments.tx_config,
+        )
+
+    env.wallet_state_manager.wallets[uint32(42)] = object()  # type: ignore[assignment]
+    with pytest.raises(ResponseFailureError, match="Cannot combine coins from non-fungible wallet types"):
+        await env.rpc_client.combine_coins(
+            dataclasses.replace(xch_combine_request, wallet_id=uint32(42)),
+            wallet_environments.tx_config,
+        )
+    del env.wallet_state_manager.wallets[uint32(42)]
+
+    # Now push the request
+    await env.rpc_client.combine_coins(
+        xch_combine_request,
+        wallet_environments.tx_config,
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -fee,
+                        "spendable_balance": -2_250_000_000_000,
+                        "pending_change": 2_250_000_000_000 - fee,
+                        "max_send_amount": -2_250_000_000_000,
+                        "pending_coin_removal_count": 3,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -fee,
+                        "spendable_balance": 2_250_000_000_000 - fee,
+                        "pending_change": -(2_250_000_000_000 - fee),
+                        "max_send_amount": 2_250_000_000_000 - fee,
+                        "pending_coin_removal_count": -3,
+                        "unspent_coin_count": -1,  # combine 3 into 1 + change
+                    }
+                },
+            )
+        ]
+    )
+
+    # Now do CATs
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            env.wallet_state_manager,
+            env.xch_wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(50),
+            action_scope,
+        )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                # no need to test this, it is tested elsewhere
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                },
+            )
+        ]
+    )
+
+    BIG_COIN_AMOUNT = uint64(30)
+    SMALL_COIN_AMOUNT = uint64(15)
+    REALLY_SMALL_COIN_AMOUNT = uint64(5)
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        await cat_wallet.generate_signed_transaction(
+            [BIG_COIN_AMOUNT, SMALL_COIN_AMOUNT, REALLY_SMALL_COIN_AMOUNT],
+            [await env.xch_wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash)] * 3,
+            action_scope,
+        )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                # no need to test this, it is tested elsewhere
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                },
+            )
+        ]
+    )
+
+    # We're going to test that we select the two smaller coins
+    cat_combine_request = CombineCoins(
+        wallet_id=uint32(2),
+        target_coin_amount=None,
+        number_of_coins=uint16(2),
+        target_coin_ids=[],
+        largest_first=False,
+        fee=fee,
+        push=True,
+    )
+
+    await env.rpc_client.combine_coins(
+        cat_combine_request,
+        wallet_environments.tx_config,
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -fee,
+                        "set_remainder": True,  # We only really care that a fee was in fact attached
+                    },
+                    "cat": {
+                        "spendable_balance": -SMALL_COIN_AMOUNT - REALLY_SMALL_COIN_AMOUNT,
+                        "pending_change": SMALL_COIN_AMOUNT + REALLY_SMALL_COIN_AMOUNT,
+                        "max_send_amount": -SMALL_COIN_AMOUNT - REALLY_SMALL_COIN_AMOUNT,
+                        "pending_coin_removal_count": 2,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -fee,
+                        "set_remainder": True,  # We only really care that a fee was in fact attached
+                    },
+                    "cat": {
+                        "spendable_balance": SMALL_COIN_AMOUNT + REALLY_SMALL_COIN_AMOUNT,
+                        "pending_change": -SMALL_COIN_AMOUNT - REALLY_SMALL_COIN_AMOUNT,
+                        "max_send_amount": SMALL_COIN_AMOUNT + REALLY_SMALL_COIN_AMOUNT,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": -1,
+                    },
                 },
             )
         ]
