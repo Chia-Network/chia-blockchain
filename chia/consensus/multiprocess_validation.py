@@ -12,7 +12,6 @@ from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlocksProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.full_block_to_block_record import block_to_block_record
@@ -161,7 +160,7 @@ def batch_pre_validate_blocks(
 
 async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
-    block_records: BlocksProtocol,
+    block_records: AugmentedBlockchain,
     blocks: Sequence[FullBlock],
     pool: Executor,
     npc_results: Dict[uint32, NPCResult],
@@ -213,10 +212,6 @@ async def pre_validate_blocks_multiprocessing(
             assert curr is not None
         recent_blocks[header_hash] = curr
 
-    # the agumented blockchain object will let us add temporary block records
-    # they won't actually be added to the underlying blockchain object
-    blockchain = AugmentedBlockchain(block_records)
-
     diff_ssis: List[Tuple[uint64, uint64]] = []
     prev_ses_block_list: List[Optional[BlockRecord]] = []
 
@@ -249,7 +244,7 @@ async def pre_validate_blocks_multiprocessing(
         try:
             block_rec = block_to_block_record(
                 constants,
-                blockchain,
+                block_records,
                 required_iters,
                 block,
                 sub_slot_iters=cs.current_ssi,
@@ -266,7 +261,7 @@ async def pre_validate_blocks_multiprocessing(
                 return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
         recent_blocks[block_rec.header_hash] = block_rec
-        blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
+        block_records.add_extra_block(block, block_rec)  # Temporarily add block to chain
         prev_b = block_rec
         diff_ssis.append((cs.current_difficulty, cs.current_ssi))
         prev_ses_block_list.append(cs.prev_ses_block)
@@ -291,7 +286,7 @@ async def pre_validate_blocks_multiprocessing(
             b_pickled.append(bytes(block))
             try:
                 block_generator: Optional[BlockGenerator] = await get_block_generator(
-                    blockchain.lookup_block_generators, block
+                    block_records.lookup_block_generators, block
                 )
             except ValueError:
                 return [

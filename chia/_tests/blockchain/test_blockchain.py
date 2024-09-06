@@ -50,6 +50,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
@@ -1822,7 +1823,7 @@ class TestPreValidation:
         )
         res = await pre_validate_blocks_multiprocessing(
             empty_blockchain.constants,
-            empty_blockchain,
+            AugmentedBlockchain(empty_blockchain),
             [blocks[0], block_bad],
             empty_blockchain.pool,
             {},
@@ -1849,7 +1850,7 @@ class TestPreValidation:
             start_pv = time.time()
             res = await pre_validate_blocks_multiprocessing(
                 empty_blockchain.constants,
-                empty_blockchain,
+                AugmentedBlockchain(empty_blockchain),
                 blocks_to_validate,
                 empty_blockchain.pool,
                 {},
@@ -1955,7 +1956,7 @@ class TestBodyValidation:
         diff = b.constants.DIFFICULTY_STARTING
         pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [blocks[-1]],
             b.pool,
             {},
@@ -2077,7 +2078,7 @@ class TestBodyValidation:
             diff = b.constants.DIFFICULTY_STARTING
             pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
                 b.constants,
-                b,
+                AugmentedBlockchain(b),
                 [blocks[-1]],
                 b.pool,
                 {},
@@ -2156,7 +2157,7 @@ class TestBodyValidation:
         diff = b.constants.DIFFICULTY_STARTING
         pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [blocks[-1]],
             b.pool,
             {},
@@ -2280,7 +2281,7 @@ class TestBodyValidation:
             diff = b.constants.DIFFICULTY_STARTING
             pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
                 b.constants,
-                b,
+                AugmentedBlockchain(b),
                 [blocks[-1]],
                 b.pool,
                 {},
@@ -2636,7 +2637,7 @@ class TestBodyValidation:
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
         results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [blocks[-1]],
             b.pool,
             {},
@@ -3213,7 +3214,7 @@ class TestBodyValidation:
         diff = b.constants.DIFFICULTY_STARTING
         preval_results = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [last_block],
             b.pool,
             {},
@@ -3329,7 +3330,7 @@ class TestReorgs:
         diff = b.constants.DIFFICULTY_STARTING
         pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             blocks,
             b.pool,
             {},
@@ -3888,7 +3889,7 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
 
         preval: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [block1],
             b.pool,
             {},
@@ -3899,7 +3900,7 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
         assert err is None
         preval = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [block2],
             b.pool,
             {},
@@ -3932,7 +3933,7 @@ async def test_get_tx_peak(default_400_blocks: List[FullBlock], empty_blockchain
     diff = bc.constants.DIFFICULTY_STARTING
     res = await pre_validate_blocks_multiprocessing(
         bc.constants,
-        bc,
+        AugmentedBlockchain(bc),
         test_blocks,
         bc.pool,
         {},
