@@ -24,6 +24,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
+from chia.types.chain_state import ChainState
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
@@ -165,10 +166,8 @@ async def pre_validate_blocks_multiprocessing(
     blocks: Sequence[FullBlock],
     pool: Executor,
     block_height_conds_map: Dict[uint32, SpendBundleConditions],
+    cs: ChainState,
     *,
-    sub_slot_iters: uint64,
-    difficulty: uint64,
-    prev_ses_block: Optional[BlockRecord],
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     validate_signatures: bool = True,
 ) -> List[PreValidationResult]:
@@ -225,9 +224,9 @@ async def pre_validate_blocks_multiprocessing(
     for block in blocks:
         if len(block.finished_sub_slots) > 0:
             if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-                difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
+                cs.current_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
             if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
-                sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+                cs.current_ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
         challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -244,7 +243,7 @@ async def pre_validate_blocks_multiprocessing(
             constants.DIFFICULTY_CONSTANT_FACTOR,
             q_str,
             block.reward_chain_block.proof_of_space.size,
-            difficulty,
+            cs.current_difficulty,
             cc_sp_hash,
         )
 
@@ -254,10 +253,11 @@ async def pre_validate_blocks_multiprocessing(
                 blockchain,
                 required_iters,
                 block,
-                sub_slot_iters=sub_slot_iters,
-                prev_ses_block=prev_ses_block,
+                sub_slot_iters=cs.current_ssi,
+                prev_ses_block=cs.prev_ses_block,
             )
         except ValueError:
+            log.exception("block_to_block_record()")
             return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
         if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
@@ -269,10 +269,10 @@ async def pre_validate_blocks_multiprocessing(
         recent_blocks[block_rec.header_hash] = block_rec
         blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
         prev_b = block_rec
-        diff_ssis.append((difficulty, sub_slot_iters))
-        prev_ses_block_list.append(prev_ses_block)
+        diff_ssis.append((cs.current_difficulty, cs.current_ssi))
+        prev_ses_block_list.append(cs.prev_ses_block)
         if block_rec.sub_epoch_summary_included is not None:
-            prev_ses_block = block_rec
+            cs.prev_ses_block = block_rec
 
     conditions_pickled = {}
     for k, v in block_height_conds_map.items():

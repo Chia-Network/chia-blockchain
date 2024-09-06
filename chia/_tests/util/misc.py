@@ -59,6 +59,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool import Mempool
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.chain_state import ChainState
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
@@ -705,18 +706,16 @@ async def add_blocks_in_batches(
         ssi, diff = get_next_sub_slot_iters_and_difficulty(
             full_node.constants, True, block_record, full_node.blockchain
         )
-    prev_ses_block = None
+    cs = ChainState(ssi, diff, None)
     for block_batch in to_batches(blocks, 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, _, ssi, diff, prev_ses_block, err = await full_node.add_block_batch(
+        success, _, err = await full_node.add_block_batch(
             block_batch.entries,
             PeerInfo("0.0.0.0", 0),
             None,
-            current_ssi=ssi,
-            current_difficulty=diff,
-            prev_ses_block=prev_ses_block,
+            cs,
         )
         assert err is None
         assert success is True
