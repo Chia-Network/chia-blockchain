@@ -76,6 +76,7 @@ def create_chia_directory(
         config["network_overrides"]["config"]["simulator0"] = config["network_overrides"]["config"]["testnet0"].copy()
         sim_genesis = "eb8c4d20b322be8d9fddbf9412016bdffe9a2901d7edb0e364e94266d0e095f7"
         config["network_overrides"]["constants"]["simulator0"]["GENESIS_CHALLENGE"] = sim_genesis
+        config["network_overrides"]["constants"]["simulator0"]["AGG_SIG_ME_ADDITIONAL_DATA"] = sim_genesis
         # tell services to use simulator0
         config["selected_network"] = "simulator0"
         config["wallet"]["selected_network"] = "simulator0"
