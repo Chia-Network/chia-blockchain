@@ -820,10 +820,7 @@ class WalletStateManager:
                 # That is reserved for when the action to actually claw a tx back or forward is initiated.
                 continue
             for coin in record.removals:
-                # make sure we return only coins for the relevant wallet
-                belongs = await self.does_coin_belong_to_wallet(coin, wallet_id)
-                if belongs:
-                    removals[coin.name()] = coin
+                removals[coin.name()] = coin
         trade_removals: Dict[bytes32, WalletCoinRecord] = await self.trade_manager.get_locked_coins()
         return {**removals, **{coin_id: cr.coin for coin_id, cr in trade_removals.items() if cr.wallet_id == wallet_id}}
 
@@ -1610,6 +1607,15 @@ class WalletStateManager:
         old_derivation_record: Optional[DerivationRecord] = (
             await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
         )
+
+        if isinstance(self.main_wallet, Vault):
+            # TODO: We may need to check for DID vs non-DID wallets
+            p2_singleton = self.main_wallet.get_p2_singleton_puzzle_hash()
+            if p2_singleton == new_p2_puzhash:
+                for wallet in self.wallets.copy().values():
+                    if isinstance(wallet, NFTWallet):
+                        new_derivation_record = wallet.derivation_for_index(0)[0]
+                        break
         if new_derivation_record is None and old_derivation_record is None:
             self.log.debug(
                 "Cannot find a P2 puzzle hash for NFT:%s, this NFT belongs to others.",
@@ -2453,12 +2459,18 @@ class WalletStateManager:
 
             # Check that tx_records have additions/removals since vault txs don't have them until they're signed
             for i, tx in enumerate(tx_records):
+                new_removals = []
                 if tx.spend_bundle is not None:
                     if tx.additions == []:
                         tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
                     if tx.removals == []:
                         assert isinstance(tx.spend_bundle, SpendBundle)
-                        tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
+                        removals = tx.spend_bundle.removals()
+                        for rem in removals:
+                            belongs = await self.does_coin_belong_to_wallet(rem, tx.wallet_id)
+                            if belongs:
+                                new_removals.append(rem)
+                        tx = dataclasses.replace(tx, removals=new_removals)
                 tx_records[i] = tx
 
         if push:

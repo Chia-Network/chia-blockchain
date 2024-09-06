@@ -53,6 +53,8 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vault.vault_root import VaultRoot
+from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -190,14 +192,20 @@ class NFTWallet:
         metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, data.parent_coin_spend.solution)
         self.log.debug("Got back puzhash from solution: %s", p2_puzzle_hash)
         self.log.debug("Got back updated metadata: %s", metadata)
-        derivation_record: Optional[DerivationRecord] = (
-            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
-        )
+        if self.handle_own_derivation():
+            derivation_record: Optional[DerivationRecord] = self.derivation_for_index(0)[0]
+        else:
+            derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                p2_puzzle_hash
+            )
         self.log.debug("Record for %s is: %s", p2_puzzle_hash, derivation_record)
         if derivation_record is None:
             self.log.debug("Not our NFT, pointing to %s, skipping", p2_puzzle_hash)
             return
-        p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
+        if self.handle_own_derivation():
+            p2_puzzle = await self.wallet_state_manager.main_wallet.get_puzzle(new=False)
+        else:
+            p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [singleton_id], peer=peer
         )
@@ -607,6 +615,9 @@ class NFTWallet:
         spend_bundle = SpendBundle.aggregate([unsigned_spend_bundle] + additional_bundles)
 
         async with action_scope.use() as interface:
+            if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+                assert isinstance(self.wallet_state_manager.main_wallet, Vault)
+                interface.set_callback(self.wallet_state_manager.main_wallet.vault_spend_callback)
             other_tx_removals: Set[Coin] = {
                 removal for tx in interface.side_effects.transactions for removal in tx.removals
             }
@@ -704,6 +715,7 @@ class NFTWallet:
             primaries=payments,
             action_scope=action_scope,
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin_name)) if fee > 0 else extra_conditions,
+            coin_id=nft_coin.coin.name(),
         )
 
         if unft.supports_did:
@@ -1689,7 +1701,24 @@ class NFTWallet:
         return False
 
     def handle_own_derivation(self) -> bool:  # pragma: no cover
+        if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+            return True
         return False
 
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
-        raise NotImplementedError()
+        assert isinstance(self.wallet_state_manager.main_wallet, Vault)
+        p2_singleton_puzzle_hash = self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle_hash()
+        record = DerivationRecord(
+            uint32(index),
+            p2_singleton_puzzle_hash,
+            self.wallet_state_manager.main_wallet.vault_info.pubkey,
+            self.type(),
+            self.id(),
+            False,
+        )
+        return [record]
+
+    def get_p2_singleton_puzzle_hash(self) -> bytes32:
+        assert isinstance(self.wallet_state_manager.main_wallet, Vault)
+        p2_inner = self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle_hash()
+        return p2_inner
