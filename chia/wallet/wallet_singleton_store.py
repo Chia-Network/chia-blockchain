@@ -253,7 +253,7 @@ class WalletSingletonStore:
             )
         return [self._to_singleton_record(row) for row in rows]
 
-    async def rollback(self, height: int, wallet_id_arg: int) -> None:
+    async def rollback_to_block(self, height: int, wallet_id_arg: int) -> None:
         """
         Rollback removes all entries which have entry_height > height passed in. Note that this is not committed to the
         DB until db_wrapper.commit() is called. However, it is written to the cache, so it can be fetched with

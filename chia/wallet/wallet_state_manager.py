@@ -2589,6 +2589,8 @@ class WalletStateManager:
         await self.coin_store.rollback_to_block(height)
         await self.interested_store.rollback_to_block(height)
         await self.dl_store.rollback_to_block(height)
+        if isinstance(self.observation_root, VaultRoot):
+            await self.singleton_store.rollback_to_block(height, wallet_id_arg=self.main_wallet.id())
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
