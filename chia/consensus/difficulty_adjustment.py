@@ -140,6 +140,7 @@ def can_finish_sub_and_full_epoch(
     prev_header_hash: Optional[bytes32],
     deficit: uint8,
     block_at_height_included_ses: bool,
+    prev_ses_block: Optional[BlockRecord] = None,
 ) -> Tuple[bool, bool]:
     """
     Returns a bool tuple
@@ -173,14 +174,18 @@ def can_finish_sub_and_full_epoch(
     # If it's 0, height+1 is the first place that a sub-epoch can be included
     # If it's 1, we just checked whether 0 included it in the previous check
     if (height + 1) % constants.SUB_EPOCH_BLOCKS > 1:
-        curr: BlockRecord = blocks.block_record(prev_header_hash)
-        while curr.height % constants.SUB_EPOCH_BLOCKS > 0:
+        if prev_ses_block is not None:
+            if height - height % constants.SUB_EPOCH_BLOCKS <= prev_ses_block.height:
+                return False, False
+        else:
+            curr: BlockRecord = blocks.block_record(prev_header_hash)
+            while curr.height % constants.SUB_EPOCH_BLOCKS > 0:
+                if curr.sub_epoch_summary_included is not None:
+                    return False, False
+                curr = blocks.block_record(curr.prev_hash)
+
             if curr.sub_epoch_summary_included is not None:
                 return False, False
-            curr = blocks.block_record(curr.prev_hash)
-
-        if curr.sub_epoch_summary_included is not None:
-            return False, False
 
     # For checking new epoch, make sure the epoch blocks are aligned
     return True, height_can_be_first_in_epoch(constants, uint32(height + 1))

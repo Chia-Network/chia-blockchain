@@ -189,7 +189,7 @@ def finish_block(
         [],
     )
 
-    block_record = block_to_block_record(constants, BlockCache(blocks), uint64(1), full_block, None, uint64(1))
+    block_record = block_to_block_record(constants, BlockCache(blocks), uint64(1), full_block, uint64(1))
     return full_block, block_record
 
 

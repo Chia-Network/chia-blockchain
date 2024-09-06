@@ -300,6 +300,8 @@ class Blockchain:
         pre_validation_result: PreValidationResult,
         bls_cache: Optional[BLSCache],
         fork_info: Optional[ForkInfo] = None,
+        sub_slot_iters: Optional[uint64] = None,
+        prev_ses_block: Optional[BlockRecord] = None,
     ) -> Tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
         This method must be called under the blockchain lock
@@ -338,14 +340,13 @@ class Blockchain:
         # blocks. We can only accept blocks that are connected to another block
         # we know of.
         prev_block: Optional[BlockRecord] = None
-        if not extending_main_chain:
-            prev_block = await self.get_block_record_from_db(block.prev_header_hash)
-            if not genesis:
-                if prev_block is None:
-                    return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
+        if not extending_main_chain and not genesis:
+            prev_block = self.try_block_record(block.prev_header_hash)
+            if prev_block is None:
+                return AddBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
-                if prev_block.height + 1 != block.height:
-                    return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
+            if prev_block.height + 1 != block.height:
+                return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
 
         npc_result: Optional[NPCResult] = pre_validation_result.npc_result
         required_iters = pre_validation_result.required_iters
@@ -436,7 +437,7 @@ class Blockchain:
 
         error_code, _ = await validate_block_body(
             self.constants,
-            self.get_block_record_from_db,
+            self,
             self.coin_store.get_coin_records,
             block,
             block.height,
@@ -464,7 +465,8 @@ class Blockchain:
             self,
             required_iters,
             block,
-            None,
+            sub_slot_iters=sub_slot_iters,
+            prev_ses_block=prev_ses_block,
         )
 
         # in case we fail and need to restore the blockchain state, remember the
@@ -785,7 +787,7 @@ class Blockchain:
 
         error_code, cost_result = await validate_block_body(
             self.constants,
-            self.get_block_record_from_db,
+            self,
             self.coin_store.get_coin_records,
             block,
             uint32(prev_height + 1),
@@ -807,8 +809,24 @@ class Blockchain:
         batch_size: int = 4,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
+        sub_slot_iters: Optional[uint64] = None,
+        difficulty: Optional[uint64] = None,
+        prev_ses_block: Optional[BlockRecord] = None,
         validate_signatures: bool,
     ) -> List[PreValidationResult]:
+        if difficulty is None or sub_slot_iters is None:
+            block = blocks[0]
+            prev_b = await self.get_block_record_from_db(block.prev_header_hash)
+            sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
+                self.constants, len(block.finished_sub_slots) > 0, prev_b, self
+            )
+        if prev_ses_block is None and blocks[0].height > 0:
+            curr = self.try_block_record(blocks[0].prev_header_hash)
+            if curr is None:
+                return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
+            while curr.height > 0 and curr.sub_epoch_summary_included is None:
+                curr = self.block_record(curr.prev_hash)
+            prev_ses_block = curr
         return await pre_validate_blocks_multiprocessing(
             self.constants,
             self,
@@ -817,6 +835,9 @@ class Blockchain:
             True,
             npc_results,
             batch_size,
+            sub_slot_iters,
+            difficulty,
+            prev_ses_block,
             wp_summaries,
             validate_signatures=validate_signatures,
         )

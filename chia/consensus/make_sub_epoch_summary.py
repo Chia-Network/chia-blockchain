@@ -30,6 +30,7 @@ def make_sub_epoch_summary(
     prev_prev_block: BlockRecord,
     new_difficulty: Optional[uint64],
     new_sub_slot_iters: Optional[uint64],
+    prev_ses_block: Optional[BlockRecord] = None,
 ) -> SubEpochSummary:
     """
     Creates a sub-epoch-summary object, assuming that the first block in the new sub-epoch is at height
@@ -56,16 +57,20 @@ def make_sub_epoch_summary(
             None,
             None,
         )
-    curr: BlockRecord = prev_prev_block
-    while curr.sub_epoch_summary_included is None:
-        curr = blocks.block_record(curr.prev_hash)
-    assert curr is not None
-    assert curr.finished_reward_slot_hashes is not None
-    prev_ses = curr.sub_epoch_summary_included.get_hash()
+    if prev_ses_block is None:
+        curr: BlockRecord = prev_prev_block
+        while curr.sub_epoch_summary_included is None:
+            curr = blocks.block_record(curr.prev_hash)
+        prev_ses_block = curr
+    assert prev_ses_block is not None
+    assert prev_ses_block.sub_epoch_summary_included is not None
+    assert prev_ses_block.finished_reward_slot_hashes is not None
+
+    prev_ses = prev_ses_block.sub_epoch_summary_included.get_hash()
     return SubEpochSummary(
         prev_ses,
-        curr.finished_reward_slot_hashes[-1],
-        uint8(curr.height % constants.SUB_EPOCH_BLOCKS),
+        prev_ses_block.finished_reward_slot_hashes[-1],
+        uint8(prev_ses_block.height % constants.SUB_EPOCH_BLOCKS),
         new_difficulty,
         new_sub_slot_iters,
     )

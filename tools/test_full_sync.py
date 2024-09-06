@@ -15,6 +15,7 @@ from chia._tests.util.full_sync import FakePeer, FakeServer, run_sync_test
 from chia.cmds.init_funcs import chia_init
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.full_block import FullBlock
@@ -153,7 +154,13 @@ async def run_sync_checkpoint(
                 if len(block_batch) < 32:
                     continue
 
-                success, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
+                block_record = await full_node.blockchain.get_block_record_from_db(block_batch[0].prev_header_hash)
+                ssi, diff = get_next_sub_slot_iters_and_difficulty(
+                    full_node.constants, True, block_record, full_node.blockchain
+                )
+                success, _, _, _, _, _ = await full_node.add_block_batch(
+                    block_batch, peer_info, None, current_ssi=ssi, current_difficulty=diff
+                )
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
@@ -165,7 +172,13 @@ async def run_sync_checkpoint(
                 block_batch = []
 
             if len(block_batch) > 0:
-                success, _, _ = await full_node.add_block_batch(block_batch, peer_info, None)
+                block_record = await full_node.blockchain.get_block_record_from_db(block_batch[0].prev_header_hash)
+                ssi, diff = get_next_sub_slot_iters_and_difficulty(
+                    full_node.constants, True, block_record, full_node.blockchain
+                )
+                success, _, _, _, _, _ = await full_node.add_block_batch(
+                    block_batch, peer_info, None, current_ssi=ssi, current_difficulty=diff
+                )
                 if not success:
                     raise RuntimeError("failed to ingest block batch")
 

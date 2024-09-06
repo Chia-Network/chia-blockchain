@@ -3352,6 +3352,7 @@ class TestReorgs:
         # can catch up
         fork_block = default_10000_blocks[num_blocks_chain_2_start - 200]
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
+        await b.warmup(fork_block.height)
         for block in blocks:
             if (block.height % 128) == 0:
                 peak = b.get_peak()

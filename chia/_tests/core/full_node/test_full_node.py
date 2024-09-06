@@ -19,7 +19,7 @@ from chia._tests.connection_utils import add_dummy_connection, connect_and_get_p
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.core.node_height import node_height_at_least
-from chia._tests.util.misc import wallet_height_at_least
+from chia._tests.util.misc import add_blocks_in_batches, wallet_height_at_least
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
@@ -59,7 +59,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.batches import to_batches
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -126,23 +125,11 @@ async def test_sync_no_farmer(
     blocks = default_1000_blocks
 
     # full node 1 has the complete chain
-    for block_batch in to_batches(blocks, 64):
-        success, change, err = await full_node_1.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
     target_peak = full_node_1.full_node.blockchain.get_peak()
 
     # full node 2 is behind by 800 blocks
-    for block_batch in to_batches(blocks[:-800], 64):
-        success, change, err = await full_node_2.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(blocks[:-800], full_node_2.full_node)
     # connect the nodes and wait for node 2 to sync up to node 1
     await connect_and_get_peer(server_1, server_2, self_hostname)
 
@@ -2273,16 +2260,7 @@ async def test_long_reorg(
     else:
         reorg_blocks = test_long_reorg_1500_blocks[:2700]
 
-    for block_batch in to_batches(blocks, 64):
-        b = block_batch.entries[0]
-        if (b.height % 128) == 0:
-            print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await node.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(blocks, node.full_node)
     peak = node.full_node.blockchain.get_peak()
     chain_1_height = peak.height
     chain_1_weight = peak.weight
@@ -2385,28 +2363,10 @@ async def test_long_reorg_nodes(
             reorg_height = 4000
             pytest.skip("We rely on the light-blocks test for a 0 forkpoint")
 
-    # full node 1 has the original chain
-    for block_batch in to_batches(blocks, 64):
-        b = block_batch.entries[0]
-        if (b.height % 128) == 0:
-            print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await full_node_1.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
 
     # full node 2 has the reorg-chain
-    for block_batch in to_batches(reorg_blocks[:-1], 64):
-        b = block_batch.entries[0]
-        if (b.height % 128) == 0:
-            print(f"reorg chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await full_node_2.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(reorg_blocks[:-1], full_node_2.full_node)
     await connect_and_get_peer(full_node_1.full_node.server, full_node_2.full_node.server, self_hostname)
 
     # TODO: There appears to be an issue where the node with the lighter chain
@@ -2440,16 +2400,7 @@ async def test_long_reorg_nodes(
     assert blocks[-1].weight > p2.weight
 
     # full node 3 has the original chain, but even longer
-    for block_batch in to_batches(blocks, 64):
-        b = block_batch.entries[0]
-        if (b.height % 128) == 0:
-            print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await full_node_3.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(blocks, full_node_3.full_node)
     print("connecting node 3")
     await connect_and_get_peer(full_node_3.full_node.server, full_node_1.full_node.server, self_hostname)
     await connect_and_get_peer(full_node_3.full_node.server, full_node_2.full_node.server, self_hostname)
