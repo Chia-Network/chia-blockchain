@@ -52,6 +52,7 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfi
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.chain_state import ChainState
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -432,9 +433,7 @@ class TestFullNodeBlockCompression:
                         all_blocks[:i],
                         blockchain.pool,
                         {},
-                        sub_slot_iters=ssi,
-                        difficulty=diff,
-                        prev_ses_block=None,
+                        ChainState(ssi, diff, None),
                         validate_signatures=False,
                     )
                     assert results is not None
@@ -451,9 +450,7 @@ class TestFullNodeBlockCompression:
                         all_blocks[:i],
                         blockchain.pool,
                         {},
-                        sub_slot_iters=ssi,
-                        difficulty=diff,
-                        prev_ses_block=None,
+                        ChainState(ssi, diff, None),
                         validate_signatures=False,
                     )
                     assert results is not None
