@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Union
 import aiohttp
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 
-from chia import __version__
+from chia.__version__ import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
 from chia.harvester.harvester_api import HarvesterAPI

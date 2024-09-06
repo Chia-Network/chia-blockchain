@@ -23,7 +23,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 from chia_rs import G1Element
 from typing_extensions import Protocol
 
-from chia import __version__
+from chia.__version__ import __version__
 from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk

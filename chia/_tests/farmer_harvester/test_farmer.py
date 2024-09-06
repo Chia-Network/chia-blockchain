@@ -13,7 +13,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from pytest_mock import MockerFixture
 from yarl import URL
 
-from chia import __version__
+from chia.__version__ import __version__
 from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

@@ -14,7 +14,7 @@ from aiohttp.web import WebSocketResponse
 from packaging.version import Version
 from typing_extensions import Protocol, final
 
-from chia import __version__
+from chia.__version__ import __version__
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (

@@ -7,7 +7,7 @@ from typing import Callable, Tuple, cast
 import pytest
 from packaging.version import Version
 
-from chia import __version__
+from chia.version import __version__
 from chia._tests.connection_utils import connect_and_get_peer
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert

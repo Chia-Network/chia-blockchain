@@ -13,7 +13,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Generic, List,
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
 
-from chia import __version__
+from chia.__version__ import __version__
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_for_server

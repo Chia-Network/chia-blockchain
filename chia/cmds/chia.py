@@ -5,7 +5,7 @@ from typing import Optional
 
 import click
 
-from chia import __version__
+from chia.__version__ import __version__
 from chia.cmds.beta import beta_cmd
 from chia.cmds.completion import completion
 from chia.cmds.configure import configure_cmd

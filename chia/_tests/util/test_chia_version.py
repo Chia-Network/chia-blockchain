@@ -5,7 +5,7 @@ from typing import Optional
 import pytest
 from packaging.version import Version
 
-from chia import __version__
+from chia.__version__ import __version__
 from chia.util.chia_version import chia_short_version
 
 

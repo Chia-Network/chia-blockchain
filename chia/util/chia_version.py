@@ -5,7 +5,7 @@ from typing import Union
 
 from packaging.version import InvalidVersion, Version
 
-from chia import __version__
+from chia.__version__ import __version__
 
 
 def _chia_short_version_from_version(version: Version) -> str:

@@ -7,7 +7,7 @@ import pytest
 from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
-from chia import __version__
+from chia.__version__ import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
