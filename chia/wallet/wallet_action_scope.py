@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast, final
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle
 from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import SigningResponse
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import TXConfig
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     # Avoid a circular import here
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 class _StreamableWalletSideEffects(Streamable):
     transactions: List[TransactionRecord]
     signing_responses: List[SigningResponse]
-    extra_spends: List[SpendBundle]
+    extra_spends: List[WalletSpendBundle]
     selected_coins: List[Coin]
     solutions: List[Program]
     coin_ids: List[bytes32]
@@ -34,7 +34,7 @@ class _StreamableWalletSideEffects(Streamable):
 class WalletSideEffects:
     transactions: List[TransactionRecord] = field(default_factory=list)
     signing_responses: List[SigningResponse] = field(default_factory=list)
-    extra_spends: List[SpendBundle] = field(default_factory=list)
+    extra_spends: List[WalletSpendBundle] = field(default_factory=list)
     selected_coins: List[Coin] = field(default_factory=list)
     solutions: List[Program] = field(default_factory=list)
     coin_ids: List[bytes32] = field(default_factory=list)
@@ -62,7 +62,7 @@ class WalletActionConfig:
     merge_spends: bool
     sign: Optional[bool]
     additional_signing_responses: List[SigningResponse]
-    extra_spends: List[SpendBundle]
+    extra_spends: List[WalletSpendBundle]
     tx_config: TXConfig
 
     def adjust_for_side_effects(self, side_effects: WalletSideEffects) -> WalletActionConfig:
@@ -86,7 +86,7 @@ async def new_wallet_action_scope(
     merge_spends: bool = True,
     sign: Optional[bool] = None,
     additional_signing_responses: List[SigningResponse] = [],
-    extra_spends: List[SpendBundle] = [],
+    extra_spends: List[WalletSpendBundle] = [],
 ) -> AsyncIterator[WalletActionScope]:
     async with ActionScope.new_scope(
         WalletSideEffects,

@@ -15,7 +15,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.signing_mode import SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.util.observation_root import ObservationRoot
 from chia.wallet.conditions import Condition, CreateCoin, ReserveFee, parse_timelock_info
@@ -37,6 +36,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 ACS: Program = Program.to(1)
@@ -89,7 +89,7 @@ class AnyoneCanSpend(Wallet):
 
         condition_list.append(Payment(ACS_PH, uint64(total_amount - non_change_amount)))
 
-        spend_bundle = SpendBundle(
+        spend_bundle = WalletSpendBundle(
             [
                 make_spend(
                     coin,

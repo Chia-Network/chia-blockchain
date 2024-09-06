@@ -10,10 +10,10 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def test_debug_spend_bundle() -> None:
@@ -48,7 +48,7 @@ def test_debug_spend_bundle() -> None:
     sys.stdout = result
 
     debug_spend_bundle(
-        SpendBundle(
+        WalletSpendBundle(
             [
                 make_spend(
                     coin_bad_reveal,
