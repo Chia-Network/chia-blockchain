@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
@@ -468,7 +469,7 @@ class FullNodeRpcApi:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
         spends: List[CoinSpend] = []
-        block_generator = await self.service.blockchain.get_block_generator(full_block)
+        block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": spends}
 
@@ -484,7 +485,7 @@ class FullNodeRpcApi:
         if full_block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        block_generator = await self.service.blockchain.get_block_generator(full_block)
+        block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends_with_conditions": []}
 
@@ -765,7 +766,9 @@ class FullNodeRpcApi:
         if block is None or block.transactions_generator is None:
             raise ValueError("Invalid block or block generator")
 
-        block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
+        block_generator: Optional[BlockGenerator] = await get_block_generator(
+            self.service.blockchain.lookup_block_generators, block
+        )
         assert block_generator is not None
 
         spend_info = get_puzzle_and_solution_for_coin(

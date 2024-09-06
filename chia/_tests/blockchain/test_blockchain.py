@@ -28,6 +28,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -311,7 +312,7 @@ class TestBlockHeaderValidation:
         # below
         assert unf.transactions_generator is None
         if unf.transactions_generator is not None:  # pragma: no cover
-            block_generator = await blockchain.get_block_generator(unf)
+            block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
             block_bytes = bytes(unf)
             npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
@@ -339,7 +340,7 @@ class TestBlockHeaderValidation:
         # below
         assert unf.transactions_generator is None
         if unf.transactions_generator is not None:  # pragma: no cover
-            block_generator = await blockchain.get_block_generator(unf)
+            block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
             block_bytes = bytes(unf)
             npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
@@ -430,7 +431,7 @@ class TestBlockHeaderValidation:
                 # below
                 assert block.transactions_generator is None
                 if block.transactions_generator is not None:  # pragma: no cover
-                    block_generator = await blockchain.get_block_generator(unf)
+                    block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
                     assert block_generator is not None
                     block_bytes = bytes(unf)
                     npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
@@ -3853,3 +3854,117 @@ async def test_get_tx_peak(default_400_blocks: List[FullBlock], empty_blockchain
             last_tx_block_record = block_record
 
     assert bc.get_tx_peak() == last_tx_block_record
+
+
+def to_bytes(gen: Optional[SerializedProgram]) -> bytes:
+    assert gen is not None
+    return bytes(gen)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="block heights for generators differ between test chains in different modes")
+@pytest.mark.parametrize("clear_cache", [True, False])
+async def test_lookup_block_generators(
+    default_10000_blocks: List[FullBlock],
+    test_long_reorg_blocks_light: List[FullBlock],
+    bt: BlockTools,
+    empty_blockchain: Blockchain,
+    clear_cache: bool,
+) -> None:
+    b = empty_blockchain
+    blocks_1 = default_10000_blocks
+    blocks_2 = test_long_reorg_blocks_light
+
+    # this test blockchain is expected to have block generators at these
+    # heights:
+    # 2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+    # 24, 25, 26, 28
+
+    # default_10000_blocks and test_long_reorg_blocks_light diverge at height
+    # 500. Add blocks from both past the fork to be able to test both
+
+    # fork 1 is expected to have generators at these heights:
+    # 503, 507, 511, 517, 524, 529, 532, 533, 534, 539, 542, 543, 546, 547
+
+    # fork 2 is expected to have generators at these heights:
+    # 507, 516, 527, 535, 539, 543, 547
+
+    # start with adding some blocks to test lookups from the mainchain
+    for block in blocks_2[:550]:
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK)
+
+    for block in blocks_1[500:550]:
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+
+    # now we have a blockchain with two forks, the peak is at blocks_2[550] and
+    # the leight weight peak is at blocks_1[550]
+    # make sure we can lookup block generators from each fork
+
+    peak_1 = blocks_1[550]
+    peak_2 = blocks_2[550]
+
+    # single generators, from the shared part of the chain
+    for peak in [peak_1, peak_2]:
+        if clear_cache:
+            b.clean_block_records()
+        generators = await b.lookup_block_generators(peak.prev_header_hash, {uint32(2)})
+        assert generators == {
+            uint32(2): to_bytes(blocks_1[2].transactions_generator),
+        }
+
+    # multiple generators from the shared part of the chain
+    for peak in [peak_1, peak_2]:
+        if clear_cache:
+            b.clean_block_records()
+        generators = await b.lookup_block_generators(peak.prev_header_hash, {uint32(2), uint32(10), uint32(26)})
+        assert generators == {
+            uint32(2): to_bytes(blocks_1[2].transactions_generator),
+            uint32(10): to_bytes(blocks_1[10].transactions_generator),
+            uint32(26): to_bytes(blocks_1[26].transactions_generator),
+        }
+
+    # lookups from the past the fork
+    if clear_cache:
+        b.clean_block_records()
+    generators = await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(503)})
+    assert generators == {uint32(503): to_bytes(blocks_1[503].transactions_generator)}
+
+    if clear_cache:
+        b.clean_block_records()
+    generators = await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(516)})
+    assert generators == {uint32(516): to_bytes(blocks_2[516].transactions_generator)}
+
+    # make sure we don't cross the forks
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+        await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(516)})
+
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+        await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(503)})
+
+    # make sure we fail when looking up a non-transaction block from the main
+    # chain, regardless of which chain we start at
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+        await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(8)})
+
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+        await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(8)})
+
+    # if we try to look up generators starting from a disconnected block, we
+    # fail
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(AssertionError):
+        await b.lookup_block_generators(blocks_2[600].prev_header_hash, {uint32(3)})
+
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(AssertionError):
+        await b.lookup_block_generators(blocks_1[600].prev_header_hash, {uint32(3)})

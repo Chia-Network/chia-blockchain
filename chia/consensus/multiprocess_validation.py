@@ -6,21 +6,21 @@ import time
 import traceback
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlocksProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -155,12 +155,11 @@ def batch_pre_validate_blocks(
 
 async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
-    block_records: BlockchainInterface,
+    block_records: BlocksProtocol,
     blocks: Sequence[FullBlock],
     pool: Executor,
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
-    get_block_generator: Callable[[BlockInfo, Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]],
     batch_size: int,
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
@@ -179,7 +178,6 @@ async def pre_validate_blocks_multiprocessing(
         block_records:
         blocks: list of full blocks to validate (must be connected to current chain)
         npc_results
-        get_block_generator
     """
     prev_b: Optional[BlockRecord] = None
     # Collects all the recent blocks (up to the previous sub-epoch)
@@ -306,10 +304,11 @@ async def pre_validate_blocks_multiprocessing(
                 prev_blocks_dict[header_hash] = curr_b
 
             assert isinstance(block, FullBlock)
-            assert get_block_generator is not None
             b_pickled.append(bytes(block))
             try:
-                block_generator: Optional[BlockGenerator] = await get_block_generator(block, prev_blocks_dict)
+                block_generator: Optional[BlockGenerator] = await get_block_generator(
+                    block_records.lookup_block_generators, block, prev_blocks_dict
+                )
             except ValueError:
                 return [
                     PreValidationResult(

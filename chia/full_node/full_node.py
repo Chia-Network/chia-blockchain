@@ -40,6 +40,7 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
@@ -1975,7 +1976,9 @@ class FullNode:
             pre_validation_start = time.monotonic()
             assert block.transactions_info is not None
             try:
-                block_generator: Optional[BlockGenerator] = await self.blockchain.get_block_generator(block)
+                block_generator: Optional[BlockGenerator] = await get_block_generator(
+                    self.blockchain.lookup_block_generators, block
+                )
             except ValueError:
                 raise ConsensusError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
             if block_generator is None:
