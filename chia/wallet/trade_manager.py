@@ -909,29 +909,9 @@ class TradeManager:
 
         await self.save_trade(trade_record, offer)
 
-        # Dummy transaction for the sake of the wallet push
-        push_tx = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=bytes32([1] * 32),
-            amount=uint64(0),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=final_spend_bundle,
-            additions=final_spend_bundle.additions(),
-            removals=final_spend_bundle.removals(),
-            wallet_id=uint32(0),
-            sent_to=[],
-            trade_id=bytes32([1] * 32),
-            type=uint32(TransactionType.OUTGOING_TRADE.value),
-            name=final_spend_bundle.name(),
-            memos=[],
-            valid_times=ConditionValidTimes(),
-        )
-
         async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend([push_tx, *tx_records])
+            interface.side_effects.transactions.extend(tx_records)
+            interface.side_effects.extra_spends.append(final_spend_bundle)
 
         return trade_record
 
