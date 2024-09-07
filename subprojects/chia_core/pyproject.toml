@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "chia-core"
+version = "0.1.0"
+description = "Core functionality of chia"
+readme = "README.md"
+authors = ["Chia Network <hello@chia.net>"]
+license = "Apache License"
+homepage = "https://chia.net/"
+
+packages = [
+    { include = "chia/core"},
+]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
