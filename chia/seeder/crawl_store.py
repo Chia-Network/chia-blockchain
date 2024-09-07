@@ -10,8 +10,8 @@ from typing import Dict, List
 
 import aiosqlite
 
+from chia.core.types.ints import uint32, uint64
 from chia.seeder.peer_record import PeerRecord, PeerReliability
-from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

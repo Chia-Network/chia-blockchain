@@ -6,11 +6,11 @@ from secrets import token_bytes
 import pytest
 
 from chia._tests.util.db_connection import DBConnection
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
-from chia.util.ints import uint32, uint64
 
 # from chia.wallet.dao_wallet.dao_wallet import DAOInfo, DAOWallet
 from chia.wallet.lineage_proof import LineageProof

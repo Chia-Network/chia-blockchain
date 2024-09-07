@@ -24,6 +24,7 @@ from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.core.types.ints import uint8, uint16, uint32, uint64, uint128
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
@@ -62,7 +63,6 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.batches import to_batches
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof

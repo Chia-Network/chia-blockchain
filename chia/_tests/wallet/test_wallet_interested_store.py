@@ -5,9 +5,9 @@ import random
 import pytest
 
 from chia._tests.util.db_connection import DBConnection
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 
 

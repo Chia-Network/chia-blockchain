@@ -11,6 +11,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.simulator.block_tools import BlockTools, compute_additions_unchecked
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -27,7 +28,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 DEFAULT_PROOF_OF_SPACE = ProofOfSpace(
     bytes32([0] * 32),

@@ -10,6 +10,7 @@ from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.core.types.ints import uint32, uint64, uint128
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -17,7 +18,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet

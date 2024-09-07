@@ -8,8 +8,8 @@ import click
 from chia.cmds import options
 from chia.cmds.cmds_util import tx_out_cmd
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.transaction_record import TransactionRecord
 
 

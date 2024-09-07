@@ -13,12 +13,12 @@ from chia._tests.util.network_protocol_data import (
     respond_signatures,
     signed_values,
 )
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.farmer.farmer_api import FarmerAPI
 from chia.protocols import farmer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, NodeType
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 
 T = TypeVar("T")
 

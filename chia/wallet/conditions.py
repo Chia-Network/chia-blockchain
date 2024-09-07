@@ -7,11 +7,11 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVa
 from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")

@@ -13,6 +13,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.units import units
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.core.types.ints import uint8, uint16, uint32, uint64
 from chia.daemon.server import WebSocketServer
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
@@ -25,7 +26,6 @@ from chia.simulator.setup_services import setup_full_node
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.ws_message import create_payload
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode

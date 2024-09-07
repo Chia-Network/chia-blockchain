@@ -9,6 +9,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.pot_iterations import calculate_iterations_quality
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.full_node.weight_proof import WeightProofHandler, _map_sub_epoch_summaries, _validate_summaries_weight
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.proof_of_space import calculate_prefix_bits, verify_and_get_quality_string
@@ -18,7 +19,6 @@ from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.block_cache import BlockCache
 from chia.util.generator_tools import get_block_header
-from chia.util.ints import uint8, uint32, uint64
 
 
 async def load_blocks_dont_validate(

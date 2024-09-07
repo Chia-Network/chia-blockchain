@@ -8,6 +8,7 @@ from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.generator_tools_testing import run_and_get_removals_and_additions
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.server.server import ChiaServer
@@ -18,7 +19,6 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.util.errors import ConsensusError, Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)

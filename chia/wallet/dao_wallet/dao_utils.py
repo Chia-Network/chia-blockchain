@@ -6,10 +6,10 @@ from typing import Any, Iterator, List, Optional, Tuple, Union
 
 from clvm.EvalError import EvalError
 
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, CAT_MOD_HASH, construct_cat_puzzle
 from chia.wallet.dao_wallet.dao_info import DAORules, ProposalType
 from chia.wallet.puzzles.load_clvm import load_clvm

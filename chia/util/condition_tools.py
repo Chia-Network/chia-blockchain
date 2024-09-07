@@ -6,6 +6,7 @@ from typing import Callable, Dict, List, Tuple, Union
 from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -15,7 +16,6 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 
 
 def parse_sexp_to_condition(sexp: Program) -> ConditionWithArgs:

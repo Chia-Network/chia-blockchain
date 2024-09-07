@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import NewType
 
-from chia.util.ints import uint64
+from chia.core.types.ints import uint64
 
 """
 CLVM Cost is the cost to run a CLVM program on the CLVM.

@@ -15,6 +15,7 @@ from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.core.types.ints import uint8
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
 from chia.rpc.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
@@ -33,7 +34,6 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
-from chia.util.ints import uint8
 
 
 @pytest.mark.anyio

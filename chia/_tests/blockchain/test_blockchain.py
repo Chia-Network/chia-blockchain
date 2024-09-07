@@ -30,6 +30,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.keyring import TempKeyring
@@ -52,7 +53,6 @@ from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof

@@ -13,7 +13,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
 
     from chia.cmds.cmds_util import format_bytes
     from chia.consensus.block_record import BlockRecord
-    from chia.util.ints import uint64
+    from chia.core.types.ints import uint64
 
     blockchain_state = await node_client.get_blockchain_state()
     if blockchain_state is None:

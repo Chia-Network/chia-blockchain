@@ -9,6 +9,7 @@ import pytest
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import uint32, uint64
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -17,7 +18,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32, uint64
 from chia.util.timing import adjusted_timeout
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
@@ -52,7 +53,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer

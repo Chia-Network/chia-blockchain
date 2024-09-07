@@ -9,6 +9,7 @@ from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
+from chia.core.types.ints import uint64
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
@@ -18,7 +19,6 @@ from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.did_wallet.did_wallet import DIDWallet

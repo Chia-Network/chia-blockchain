@@ -7,11 +7,11 @@ from typing import Any, List, Optional, Tuple
 import pytest
 
 from chia._tests.util.db_connection import DBConnection
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord, TransactionRecordOld, minimum_send_attempts
 from chia.wallet.util.query_filter import TransactionTypeFilter

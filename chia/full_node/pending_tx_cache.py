@@ -5,9 +5,9 @@ from typing import Dict, Optional
 
 from sortedcontainers import SortedDict
 
+from chia.core.types.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import MempoolItem
-from chia.util.ints import uint32
 
 
 @dataclass

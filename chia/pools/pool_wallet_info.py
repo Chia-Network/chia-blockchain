@@ -6,11 +6,11 @@ from typing import Any, Dict, Optional
 
 from chia_rs import G1Element
 
+from chia.core.types.ints import uint8, uint32
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
 

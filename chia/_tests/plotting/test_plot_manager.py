@@ -14,6 +14,7 @@ from chia_rs import G1Element
 
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import uint16, uint32
 from chia.plotting.cache import CURRENT_VERSION, CacheDataV1
 from chia.plotting.manager import Cache, PlotManager
 from chia.plotting.util import (
@@ -27,7 +28,6 @@ from chia.plotting.util import (
 )
 from chia.simulator.block_tools import get_plot_dir
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.ints import uint16, uint32
 from chia.util.streamable import VersionedBlob
 
 log = logging.getLogger(__name__)

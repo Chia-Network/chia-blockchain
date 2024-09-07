@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List
 
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 
 
 # This class is supposed to correspond to a CREATE_COIN condition

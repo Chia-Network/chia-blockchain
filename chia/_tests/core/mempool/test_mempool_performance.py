@@ -7,10 +7,10 @@ import pytest
 from chia._tests.util.misc import BenchmarkRunner, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import uint64, uint128
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint64, uint128
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
 

@@ -5,10 +5,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from clvm_tools.binutils import disassemble
 
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 from chia.wallet.vc_wallet.cr_cat_drivers import PROOF_FLAGS_CHECKER, construct_cr_layer, match_cr_layer, solve_cr_layer

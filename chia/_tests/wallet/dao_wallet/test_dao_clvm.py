@@ -7,6 +7,7 @@ from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -17,7 +18,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import curry_singleton, get_p2_singleton_puzhash, get_treasury_puzzle

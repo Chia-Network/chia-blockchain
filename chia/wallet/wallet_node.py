@@ -32,6 +32,7 @@ from packaging.version import Version
 
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint16, uint32, uint64, uint128
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
@@ -64,7 +65,6 @@ from chia.util.config import lock_and_load_config, process_config_start_method, 
 from chia.util.db_wrapper import manage_connection
 from chia.util.errors import KeychainIsEmpty, KeychainIsLocked, KeychainKeyNotFound, KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import mem_profile_task, profile_task

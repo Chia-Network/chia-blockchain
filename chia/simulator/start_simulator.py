@@ -7,6 +7,7 @@ from multiprocessing import freeze_support
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from chia.core.types.ints import uint16
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
@@ -19,7 +20,6 @@ from chia.util.bech32m import decode_puzzle_hash
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
 
 SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
 

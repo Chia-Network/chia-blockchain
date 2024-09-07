@@ -10,6 +10,7 @@ from typing import Any, Generic, Iterable, List, Optional, Tuple, Type, TypeVar
 
 from typing_extensions import Protocol
 
+from chia.core.types.ints import int16, uint32, uint64
 from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionTypeError
 from chia.plot_sync.util import Constants
 from chia.plotting.manager import PlotManager
@@ -27,7 +28,6 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.batches import to_batches
-from chia.util.ints import int16, uint32, uint64
 
 log = logging.getLogger(__name__)
 

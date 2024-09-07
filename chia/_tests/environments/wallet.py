@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
+from chia.core.types.ints import uint32
 from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -13,7 +14,6 @@ from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES

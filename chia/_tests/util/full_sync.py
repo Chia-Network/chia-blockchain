@@ -16,6 +16,7 @@ from chia._tests.util.constants import test_constants as TEST_CONSTANTS
 from chia.cmds.init_funcs import chia_init
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint16
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
@@ -25,7 +26,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
-from chia.util.ints import uint16
 
 
 class ExitOnError(logging.Handler):

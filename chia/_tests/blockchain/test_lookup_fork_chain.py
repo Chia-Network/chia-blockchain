@@ -9,9 +9,9 @@ from chia._tests.util.benchmarks import rand_hash
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.find_fork_point import find_fork_point_in_chain, lookup_fork_chain
+from chia.core.types.ints import uint32
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
 
 
 class DummyChain:

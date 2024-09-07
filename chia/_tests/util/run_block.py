@@ -8,12 +8,12 @@ from typing import Any, Dict, List, Tuple
 from chia_rs import Coin
 
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import uncurry_puzzle

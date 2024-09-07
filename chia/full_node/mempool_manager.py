@@ -15,6 +15,7 @@ from chiabip158 import PyBIP158
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
@@ -36,7 +37,6 @@ from chia.util.condition_tools import pkm_pairs
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor
-from chia.util.ints import uint32, uint64
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)

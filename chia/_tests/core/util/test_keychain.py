@@ -10,6 +10,7 @@ import pytest
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 import chia._tests.util
+from chia.core.types.ints import uint32
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import (
@@ -20,7 +21,6 @@ from chia.util.errors import (
     KeychainLabelInvalid,
     KeychainSecretsMissing,
 )
-from chia.util.ints import uint32
 from chia.util.keychain import (
     Keychain,
     KeyData,

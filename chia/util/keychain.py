@@ -12,6 +12,7 @@ from bitstring import BitArray  # pyright: reportMissingImports=false
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from typing_extensions import final
 
+from chia.core.types.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, convertbits
 from chia.util.byte_types import hexstr_to_bytes
@@ -26,7 +27,6 @@ from chia.util.errors import (
 )
 from chia.util.file_keyring import Key
 from chia.util.hash import std_hash
-from chia.util.ints import uint32
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.util.streamable import Streamable, streamable
 

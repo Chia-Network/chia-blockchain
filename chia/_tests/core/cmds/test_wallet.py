@@ -5,8 +5,8 @@ from typing import Any, Dict, Optional, Tuple
 import pytest
 
 from chia.cmds.wallet_funcs import print_offer_summary
+from chia.core.types.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
 
 TEST_DUCKSAUCE_ASSET_ID = "1000000000000000000000000000000000000000000000000000000000000001"
 TEST_CRUNCHBERRIES_ASSET_ID = "1000000000000000000000000000000000000000000000000000000000000002"

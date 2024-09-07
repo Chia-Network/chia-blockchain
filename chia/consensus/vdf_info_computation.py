@@ -5,10 +5,10 @@ from typing import List, Optional, Tuple
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint64, uint128
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.ints import uint64, uint128
 
 
 def get_signage_point_vdf_info(

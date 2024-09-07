@@ -7,6 +7,7 @@ from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 from chia_rs import PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.core.types.ints import uint32
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.server.signal_handlers import SignalHandlers
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -24,7 +25,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import create_default_chia_config, load_config, save_config
 from chia.util.errors import KeychainFingerprintExists
-from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.util.lock import Lockfile
 from chia.wallet.derive_keys import master_sk_to_wallet_sk

@@ -7,6 +7,7 @@ from chia_rs import fast_forward_singleton
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
@@ -16,7 +17,6 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
 
 
 @dataclasses.dataclass(frozen=True)

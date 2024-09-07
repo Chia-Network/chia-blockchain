@@ -11,6 +11,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.rpc_server import default_get_connections
@@ -23,7 +24,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.config import lock_and_load_config, save_config
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.payment import Payment
 from chia.wallet.transaction_record import TransactionRecord

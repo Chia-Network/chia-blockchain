@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing_extensions import Protocol
 
+from chia.core.types.ints import uint32
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo, MempoolItemInfo
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRateV2
-from chia.util.ints import uint32
 
 
 class FeeEstimatorInterface(Protocol):

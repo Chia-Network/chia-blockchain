@@ -24,6 +24,7 @@ from chia.cmds.signer import (
     TransactionsIn,
     TransactionsOut,
 )
+from chia.core.types.ints import uint64
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import (
     ApplySignatures,
@@ -39,7 +40,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import AggSigMe
 from chia.wallet.derivation_record import DerivationRecord

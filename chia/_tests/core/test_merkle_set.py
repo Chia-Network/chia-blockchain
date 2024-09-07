@@ -10,11 +10,11 @@ from typing import List, Optional, Tuple
 import pytest
 from chia_rs import Coin, MerkleSet, compute_merkle_set_root, confirm_included_already_hashed
 
+from chia.core.types.ints import uint64
 from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
 from chia.util.hash import std_hash
-from chia.util.ints import uint64
 from chia.wallet.util.wallet_sync_utils import validate_additions, validate_removals
 
 

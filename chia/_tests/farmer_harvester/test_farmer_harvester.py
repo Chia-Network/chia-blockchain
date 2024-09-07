@@ -12,6 +12,7 @@ from chia._tests.conftest import HarvesterFarmerEnvironment
 from chia._tests.util.split_managers import split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmds_util import get_any_service_client
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.farmer.farmer import Farmer
 from chia.plotting.util import PlotsRefreshParameter
 from chia.protocols import farmer_protocol, harvester_protocol
@@ -24,7 +25,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.config import load_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.keychain import generate_mnemonic
 
 

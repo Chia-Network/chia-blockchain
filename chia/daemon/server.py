@@ -27,6 +27,7 @@ from chia.__version__ import __version__
 from chia.cmds.init_funcs import check_keys, chia_init
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.core.types.ints import uint32
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
 from chia.plotters.plotters import get_available_plotters
@@ -38,7 +39,6 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.chia_version import chia_short_version
 from chia.util.config import load_config
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
-from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import Keychain, KeyData, passphrase_requirements, supports_os_passphrase_storage
 from chia.util.lock import Lockfile, LockfileError

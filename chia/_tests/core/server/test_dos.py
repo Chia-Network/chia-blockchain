@@ -11,6 +11,7 @@ from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgT
 
 import chia.server.server
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import uint64
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -23,7 +24,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.util.timing import adjusted_timeout
 from chia.wallet.wallet_node import WalletNode
 

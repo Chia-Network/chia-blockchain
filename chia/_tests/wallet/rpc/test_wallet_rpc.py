@@ -41,6 +41,7 @@ from chia._tests.wallet.test_wallet_coin_store import (
 )
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_request_types import GetNotifications
@@ -62,7 +63,6 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import ConversionError, InvalidTypeError
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle

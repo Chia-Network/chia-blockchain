@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, Any, ClassVar, List, Optional, Set, Tuple, cas
 
 from chia_rs import G1Element
 
+from chia.core.types.ints import uint32, uint64, uint128
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,

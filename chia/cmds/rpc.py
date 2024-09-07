@@ -8,9 +8,9 @@ from typing import Any, Dict, List, Optional, TextIO
 import click
 from aiohttp import ClientResponseError
 
+from chia.core.types.ints import uint16
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
 
 services: List[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
 

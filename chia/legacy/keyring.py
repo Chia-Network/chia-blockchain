@@ -13,7 +13,7 @@ from chia_rs import G1Element
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
 
-from chia.util.ints import uint32
+from chia.core.types.ints import uint32
 
 try:
     from keyrings.cryptfile.cryptfile import CryptFileKeyring

@@ -18,6 +18,7 @@ from chiavdf import create_discriminant, prove
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
+from chia.core.types.ints import uint8, uint16, uint32, uint64, uint128
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
@@ -40,7 +41,6 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.util.config import process_config_start_method
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import Streamable, streamable
 

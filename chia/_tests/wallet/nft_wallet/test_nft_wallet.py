@@ -13,6 +13,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.core.types.ints import uint32, uint64
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -23,7 +24,6 @@ from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
 from chia.util.timing import adjusted_timeout
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_info import NFTInfo

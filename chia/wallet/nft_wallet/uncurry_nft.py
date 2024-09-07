@@ -4,11 +4,11 @@ import logging
 from dataclasses import dataclass
 from typing import Optional, Type, TypeVar
 
+from chia.core.types.ints import uint16
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
-from chia.util.ints import uint16
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 

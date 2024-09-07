@@ -6,12 +6,12 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia._tests.util.key_tool import KeyTool
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import (
     p2_conditions,
     p2_delegated_conditions,

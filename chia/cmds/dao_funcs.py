@@ -10,10 +10,10 @@ from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client, transactio
 from chia.cmds.param_types import CliAmount
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
-from chia.util.ints import uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG
 from chia.wallet.util.wallet_types import WalletType

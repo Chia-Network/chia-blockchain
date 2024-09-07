@@ -13,6 +13,7 @@ from clvm_tools import binutils
 
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.generator.test_rom import run_generator
+from chia.core.types.ints import uint32
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.simulator.block_tools import test_constants
@@ -21,7 +22,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 TEST_GEN_DESERIALIZE = load_clvm(

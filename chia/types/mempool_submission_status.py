@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Optional, Union
 
+from chia.core.types.ints import uint8
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.ints import uint8
 from chia.util.streamable import Streamable, streamable
 
 

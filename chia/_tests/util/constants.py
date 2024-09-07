@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.core.types.ints import uint8, uint16, uint32, uint64, uint128
 
 test_constants = DEFAULT_CONSTANTS.replace(
     MIN_PLOT_SIZE=uint8(18),

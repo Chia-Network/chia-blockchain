@@ -11,6 +11,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError
 from chia.data_layer.data_layer_util import dl_verify_proof
 from chia.data_layer.data_layer_wallet import DataLayerWallet
@@ -45,7 +46,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.streamable import Streamable, UInt32Range, streamable

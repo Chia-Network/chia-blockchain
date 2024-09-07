@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, List, Optional, Set, Tuple, TypeVar
 from chia_rs import G1Element
 from typing_extensions import NotRequired, Protocol, TypedDict
 
+from chia.core.types.ints import uint32, uint64, uint128
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_types import WalletType

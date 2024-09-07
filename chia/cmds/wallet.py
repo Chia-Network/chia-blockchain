@@ -18,8 +18,8 @@ from chia.cmds.param_types import (
     CliAmount,
     cli_amount_none,
 )
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType

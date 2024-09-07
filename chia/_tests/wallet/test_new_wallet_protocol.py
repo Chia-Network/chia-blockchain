@@ -9,6 +9,7 @@ import pytest
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, Program
 
 from chia._tests.connection_utils import add_dummy_connection
+from chia.core.types.ints import uint8, uint16, uint32, uint64
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool import MempoolRemoveReason
@@ -27,7 +28,6 @@ from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()

@@ -15,6 +15,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.core.types.ints import uint8, uint16, uint32, uint64, uint128
 from chia.full_node.full_node_store import FullNodeStore, UnfinishedBlockEntry, find_best_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
@@ -26,7 +27,6 @@ from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.recursive_replace import recursive_replace
 
 log = logging.getLogger(__name__)

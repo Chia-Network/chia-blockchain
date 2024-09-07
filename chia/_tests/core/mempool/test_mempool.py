@@ -27,6 +27,7 @@ from chia._tests.util.misc import BenchmarkRunner, invariant_check_mempool
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
@@ -62,7 +63,6 @@ from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.api_decorators import api_request
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 

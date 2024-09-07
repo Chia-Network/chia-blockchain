@@ -10,6 +10,7 @@ from chia_rs import G1Element
 from typing_extensions import Unpack
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint32, uint64, uint128
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -20,7 +21,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (

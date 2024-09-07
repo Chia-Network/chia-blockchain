@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Opti
 from typing_extensions import Literal
 
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint32
 from chia.plot_sync.sender import Sender
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
@@ -39,7 +40,6 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.cpu import available_logical_cores
-from chia.util.ints import uint32
 
 log = logging.getLogger(__name__)
 

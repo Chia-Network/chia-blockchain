@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tupl
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
+from chia.core.types.ints import uint16, uint32, uint64, uint128
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -17,7 +18,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     Condition,

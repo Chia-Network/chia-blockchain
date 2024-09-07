@@ -27,6 +27,7 @@ from typing import (
 import aiosqlite
 
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondPeers
@@ -38,7 +39,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_version import chia_short_version
-from chia.util.ints import uint32, uint64
 from chia.util.network import resolve
 from chia.util.path import path_from_root
 

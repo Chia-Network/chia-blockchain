@@ -7,6 +7,7 @@ import pytest
 from chia_rs import G2Element
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -15,7 +16,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.payment import Payment
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import (

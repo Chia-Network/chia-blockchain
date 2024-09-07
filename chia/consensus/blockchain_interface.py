@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
+from chia.core.types.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo
 from chia.types.header_block import HeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
-from chia.util.ints import uint32
 
 
 class BlockchainInterface:

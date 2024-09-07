@@ -19,6 +19,7 @@ from chia._tests.util.misc import assert_rpc_error
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver, get_list_or_len
 from chia.plotting.util import add_plot_directory
@@ -37,7 +38,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 
 log = logging.getLogger(__name__)

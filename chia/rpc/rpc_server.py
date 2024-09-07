@@ -14,6 +14,7 @@ from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse
 from typing_extensions import Protocol, final
 
 from chia.__version__ import __version__
+from chia.core.types.ints import uint16
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_for_server
@@ -21,7 +22,6 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import str2bool
-from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.network import WebServer, resolve
 from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong

@@ -11,6 +11,7 @@ from chia._tests.core.mempool.test_mempool_manager import (
     instantiate_mempool_manager,
     zero_calls_get_coin_records,
 )
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import (
     EmptyFeeMempoolInfo,
@@ -29,7 +30,6 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate, FeeRateV2
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
-from chia.util.ints import uint32, uint64
 
 
 def make_mempoolitem() -> MempoolItem:

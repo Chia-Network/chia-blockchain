@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
 from chia_rs import G1Element, G2Element
 from typing_extensions import Unpack
 
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -16,7 +17,6 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import VersionedBlob
 from chia.wallet.cat_wallet.cat_info import CATCoinData, CRCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD_HASH, CAT_MOD_HASH_HASH, construct_cat_puzzle

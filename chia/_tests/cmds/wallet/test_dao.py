@@ -10,6 +10,7 @@ from typing_extensions import override
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.rpc.wallet_request_types import (
     CreateNewDAOWalletResponse,
     DAOAddFundsToTreasuryResponse,
@@ -22,7 +23,6 @@ from chia.rpc.wallet_request_types import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import parse_timelock_info
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType

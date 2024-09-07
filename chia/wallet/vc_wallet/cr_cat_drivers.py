@@ -7,12 +7,12 @@ from typing import Iterable, List, Optional, Tuple, Type, TypeVar
 
 from clvm.casts import int_to_bytes
 
+from chia.core.types.ints import uint16, uint64
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
 from chia.wallet.conditions import AssertCoinAnnouncement

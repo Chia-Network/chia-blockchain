@@ -6,9 +6,9 @@ from typing import Dict, List, Set
 
 from chia_rs import Coin
 
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 

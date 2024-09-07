@@ -43,6 +43,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_api import FullNodeAPI
@@ -92,7 +93,6 @@ from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, TimestampError, ValidationError
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root

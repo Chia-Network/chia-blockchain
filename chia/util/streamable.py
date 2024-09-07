@@ -25,10 +25,10 @@ from typing import (
 
 from typing_extensions import Literal, get_args, get_origin
 
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance

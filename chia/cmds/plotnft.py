@@ -6,8 +6,8 @@ import click
 
 from chia.cmds import options
 from chia.cmds.param_types import AddressParamType, Bytes32ParamType, CliAddress
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 
 
 @click.group("plotnft", help="Manage your plot NFTs")

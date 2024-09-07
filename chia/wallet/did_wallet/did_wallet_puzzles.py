@@ -4,12 +4,12 @@ from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 from chia_rs import G1Element
 
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.ints import uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.singleton import (
     SINGLETON_LAUNCHER_PUZZLE_HASH,

@@ -18,6 +18,7 @@ from chia._tests.util.db_connection import DBConnection, PathDBConnection
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.full_block_to_block_record import header_block_to_sub_block_record
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.simulator.block_tools import BlockTools
@@ -29,7 +30,6 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.full_block_utils import GeneratorBlockInfo
-from chia.util.ints import uint8, uint32, uint64
 
 log = logging.getLogger(__name__)
 

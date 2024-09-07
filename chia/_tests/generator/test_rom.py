@@ -8,13 +8,13 @@ from clvm_tools.clvmc import compile_clvm_text
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint32
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import Spend
-from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm, load_serialized_clvm_maybe_recompile
 
 MAX_COST = int(1e15)

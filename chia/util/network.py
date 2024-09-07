@@ -13,9 +13,9 @@ from aiohttp import web
 from aiohttp.log import web_logger
 from typing_extensions import final
 
+from chia.core.types.ints import uint16
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16
 
 
 @dataclass(frozen=True)

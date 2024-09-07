@@ -14,6 +14,7 @@ from chia._tests.util.misc import Marks, datacases
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -29,7 +30,6 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 
 constants = test_constants
 

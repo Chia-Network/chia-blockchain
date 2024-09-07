@@ -11,6 +11,7 @@ from chia._tests.clvm.coin_store import BadSpendBundleError, CoinStore, CoinTime
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from chia._tests.util.key_tool import KeyTool
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint32, uint64
 from chia.pools.pool_puzzles import (
     SINGLETON_MOD_HASH,
     create_absorb_spend,
@@ -33,7 +34,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import singleton_top_layer
 from chia.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (

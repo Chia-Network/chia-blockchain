@@ -15,6 +15,7 @@ from packaging.version import Version
 from typing_extensions import Protocol, final
 
 from chia.__version__ import __version__
+from chia.core.types.ints import int16, uint8, uint16
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -31,7 +32,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
-from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length

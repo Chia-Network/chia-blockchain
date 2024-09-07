@@ -4,6 +4,7 @@ import logging
 from typing import Any, List, Optional, Set, Union
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -11,7 +12,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.condition_tools import conditions_for_solution
-from chia.util.ints import uint64
 from chia.util.streamable import VersionedBlob
 from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile

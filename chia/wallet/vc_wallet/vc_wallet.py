@@ -9,6 +9,7 @@ from chia_rs import G1Element, G2Element
 from clvm.casts import int_to_bytes
 from typing_extensions import Unpack
 
+from chia.core.types.ints import uint32, uint64, uint128
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -18,7 +19,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,

@@ -10,8 +10,8 @@ from chia.consensus.pot_iterations import (
     calculate_sp_iters,
     is_overflow_block,
 )
+from chia.core.types.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 test_constants = DEFAULT_CONSTANTS.replace(NUM_SPS_SUB_SLOT=uint32(32), SUB_SLOT_TIME_TARGET=uint16(300))
 

@@ -20,6 +20,7 @@ from chia._tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint32, uint64, uint128
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -41,7 +42,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.batches import to_batches
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.payment import Payment
 from chia.wallet.util.compute_memos import compute_memos

@@ -25,6 +25,7 @@ from typing import (
     cast,
 )
 
+from chia.core.types.ints import uint16
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.api_protocol import ApiProtocol
@@ -36,7 +37,6 @@ from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
-from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import resolve

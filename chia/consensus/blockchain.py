@@ -29,6 +29,7 @@ from chia.consensus.multiprocess_validation import (
     _run_generator,
     pre_validate_blocks_multiprocessing,
 )
+from chia.core.types.ints import uint16, uint32, uint64, uint128
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -52,7 +53,6 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.priority_mutex import PriorityMutex
 from chia.util.setproctitle import getproctitle, setproctitle
 

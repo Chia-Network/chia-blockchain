@@ -19,6 +19,7 @@ from chia.cmds.cmds_util import (
 )
 from chia.cmds.param_types import CliAddress
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
+from chia.core.types.ints import uint32, uint64
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
@@ -32,7 +33,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
-from chia.util.ints import uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType

@@ -9,6 +9,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -21,7 +22,6 @@ from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
 from chia.types.spend_bundle import estimate_fees
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import Err
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.payment import Payment

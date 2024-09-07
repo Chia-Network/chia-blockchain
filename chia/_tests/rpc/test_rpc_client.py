@@ -7,8 +7,8 @@ from typing import Any, AsyncIterator, Dict, Optional
 import pytest
 
 from chia._tests.util.misc import Marks, RecordingWebServer, datacases
+from chia.core.types.ints import uint16
 from chia.rpc.rpc_client import ResponseFailureError, RpcClient
-from chia.util.ints import uint16
 
 
 @dataclass

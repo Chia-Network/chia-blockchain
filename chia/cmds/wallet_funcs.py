@@ -20,13 +20,13 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import selected_network_address_prefix
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.outer_puzzles import AssetType

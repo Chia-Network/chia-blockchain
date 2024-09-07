@@ -10,9 +10,9 @@ from chia_rs import VDFInfo, VDFProof
 from chiavdf import create_discriminant, verify_n_wesolowski
 
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint8, uint64
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
-from chia.util.ints import uint8, uint64
 
 log = logging.getLogger(__name__)
 

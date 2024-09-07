@@ -8,6 +8,7 @@ from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, S
 from typing_extensions import Protocol
 
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR, _expected_plot_size
+from chia.core.types.ints import int16, uint32, uint64
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.exceptions import (
     InvalidIdentifierError,
@@ -33,7 +34,6 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import int16, uint32, uint64
 
 log = logging.getLogger(__name__)
 

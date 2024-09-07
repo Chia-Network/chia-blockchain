@@ -11,6 +11,7 @@ from typing import List, Optional
 from chia_rs import G1Element
 from chiapos import Verifier
 
+from chia.core.types.ints import uint32
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import (
     PlotInfo,
@@ -25,7 +26,6 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.cpu import available_logical_cores
 from chia.util.hash import std_hash
-from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk
 

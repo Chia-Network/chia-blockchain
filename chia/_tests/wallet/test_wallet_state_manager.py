@@ -8,6 +8,7 @@ from chia_rs import G2Element
 
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
+from chia.core.types.ints import uint32, uint64
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
@@ -16,7 +17,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.transaction_record import TransactionRecord

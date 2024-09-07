@@ -8,8 +8,8 @@ import pytest
 from chia_rs import AugSchemeMPL
 
 from chia._tests.util.db_connection import DBConnection
+from chia.core.types.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_types import WalletIdentifier, WalletType
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore

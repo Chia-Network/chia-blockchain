@@ -14,6 +14,7 @@ from clvm.casts import int_to_bytes
 from clvm_tools.binutils import assemble
 
 from chia._tests.conftest import ConsensusMode
+from chia.core.types.ints import uint32, uint64
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.program import Program
@@ -25,7 +26,6 @@ from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import agg_sig_additional_data
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 
 from ...blockchain.blockchain_test_utils import _validate_and_add_block

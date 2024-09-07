@@ -16,6 +16,7 @@ from chia_rs import G1Element
 
 from chia._tests.plot_sync.util import start_harvester_service
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import int16, uint8, uint64
 from chia.farmer.farmer import Farmer
 from chia.harvester.harvester import Harvester
 from chia.plot_sync.receiver import Receiver
@@ -31,7 +32,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.batches import to_batches
-from chia.util.ints import int16, uint8, uint64
 
 log = logging.getLogger(__name__)
 

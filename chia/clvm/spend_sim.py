@@ -15,6 +15,7 @@ from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
@@ -33,7 +34,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 

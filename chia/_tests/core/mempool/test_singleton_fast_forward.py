@@ -19,6 +19,7 @@ from chia._tests.core.mempool.test_mempool_manager import (
 from chia._tests.util.key_tool import KeyTool
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -31,7 +32,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
-from chia.util.ints import uint64
 from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
 from chia.wallet.puzzles import singleton_top_layer_v1_1 as singleton_top_layer
 

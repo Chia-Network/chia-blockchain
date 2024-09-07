@@ -15,6 +15,7 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
@@ -28,7 +29,6 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

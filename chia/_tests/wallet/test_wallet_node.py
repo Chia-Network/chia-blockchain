@@ -13,6 +13,7 @@ from chia_rs import G1Element, PrivateKey
 from chia._tests.util.misc import CoinGenerator
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
@@ -27,7 +28,6 @@ from chia.util.api_decorators import Self, api_request
 from chia.util.batches import to_batches
 from chia.util.config import load_config
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException

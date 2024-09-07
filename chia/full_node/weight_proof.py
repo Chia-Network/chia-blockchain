@@ -23,6 +23,7 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -42,7 +43,6 @@ from chia.types.weight_proof import (
 from chia.util.batches import to_batches
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)

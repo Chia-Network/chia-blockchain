@@ -7,10 +7,10 @@ from typing import Callable, Tuple, cast
 import pytest
 from packaging.version import Version
 
-from chia.version import __version__
 from chia._tests.connection_utils import connect_and_get_peer
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import int16, uint32
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RejectBlock, RequestBlock, RequestTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -26,7 +26,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import api_request
 from chia.util.errors import ApiError, Err
-from chia.util.ints import int16, uint32
+from chia.version import __version__
 
 
 @dataclass

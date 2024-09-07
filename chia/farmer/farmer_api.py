@@ -10,6 +10,7 @@ from chia_rs import AugSchemeMPL, G2Element, PrivateKey
 
 from chia.__version__ import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
+from chia.core.types.ints import uint8, uint16, uint32, uint64
 from chia.farmer.farmer import Farmer, increment_pool_stats, strip_old_entries
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, harvester_protocol
@@ -44,7 +45,6 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request
-from chia.util.ints import uint8, uint16, uint32, uint64
 
 
 class FarmerAPI:

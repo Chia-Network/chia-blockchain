@@ -37,6 +37,7 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
+from chia.core.types.ints import uint8, uint16, uint32, uint64, uint128
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.signage_point import SignagePoint
@@ -102,7 +103,6 @@ from chia.util.config import (
 )
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.ssl_check import fix_ssl
 from chia.util.timing import adjusted_timeout, backoff_times

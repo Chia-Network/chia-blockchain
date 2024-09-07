@@ -15,6 +15,7 @@ from pytest_mock import MockerFixture
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node import FullNode
@@ -40,7 +41,6 @@ from chia.types.full_block import FullBlock
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64
 
 SPType = Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]
 SPList = List[SPType]

@@ -18,7 +18,7 @@ from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chia_logging import initialize_logging
-from chia.util.ints import uint32, uint64
+from chia.core.types.ints import uint32, uint64
 
 
 @contextmanager

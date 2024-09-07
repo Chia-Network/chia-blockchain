@@ -5,10 +5,10 @@ from typing import List
 from clvm.SExp import CastableType
 from clvm_tools import binutils
 
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 
 
 def program_roundtrip(o: CastableType) -> None:

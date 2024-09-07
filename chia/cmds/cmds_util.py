@@ -12,6 +12,7 @@ from aiohttp import ClientConnectorCertificateError, ClientConnectorError
 
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint16
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -25,7 +26,6 @@ from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError, InvalidPathError
-from chia.util.ints import uint16
 from chia.util.keychain import KeyData
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.transaction_record import TransactionRecord

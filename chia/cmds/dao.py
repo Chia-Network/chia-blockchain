@@ -9,8 +9,8 @@ from chia.cmds import options
 from chia.cmds.cmds_util import CMDTXConfigLoader, tx_config_args, tx_out_cmd
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, TransactionFeeParamType, Uint64ParamType
 from chia.cmds.units import units
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.transaction_record import TransactionRecord
 
 

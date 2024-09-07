@@ -5,8 +5,8 @@ from typing import List, Optional, Set, Tuple
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.core.types.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
 
 # EIP 2334 bls key derivation
 # https://eips.ethereum.org/EIPS/eip-2334

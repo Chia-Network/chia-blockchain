@@ -49,6 +49,7 @@ from chia._tests.util.setup_nodes import (
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.clvm.spend_sim import CostLogger
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint8, uint16, uint32, uint64
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -86,7 +87,6 @@ from chia.types.aliases import (
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.db_wrapper import generate_in_memory_db_uri
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation

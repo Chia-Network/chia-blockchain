@@ -11,6 +11,7 @@ from chia_rs import AugSchemeMPL, Coin, G2Element
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -23,7 +24,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.errors import Err
-from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

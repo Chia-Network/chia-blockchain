@@ -23,6 +23,7 @@ from chia._tests.cmds.wallet.test_consts import (
     get_bytes32,
 )
 from chia.cmds.cmds_util import TransactionBundle
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.rpc.wallet_request_types import (
     CancelOfferResponse,
     CATSpendResponse,
@@ -36,7 +37,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer

@@ -9,6 +9,7 @@ import typing_extensions
 import zstd
 
 from chia.consensus.block_record import BlockRecord
+from chia.core.types.ints import uint32
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
@@ -16,7 +17,6 @@ from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
 from chia.util.full_block_utils import GeneratorBlockInfo, block_info_from_block, generator_from_block
-from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)

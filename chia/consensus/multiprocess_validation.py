@@ -19,6 +19,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
@@ -32,7 +33,6 @@ from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)

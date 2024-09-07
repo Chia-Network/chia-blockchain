@@ -9,12 +9,12 @@ from chia_rs import Coin, G2Element
 from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint8, uint64
 from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint64
 
 log = logging.getLogger(__name__)
 

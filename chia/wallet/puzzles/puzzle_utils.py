@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, List
 
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.ints import uint64
 
 
 def make_create_coin_condition(puzzle_hash: bytes32, amount: uint64, memos: List[bytes]) -> List[Any]:

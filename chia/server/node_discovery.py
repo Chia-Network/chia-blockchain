@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import dns.asyncresolver
 
+from chia.core.types.ints import uint16, uint64
 from chia.protocols.full_node_protocol import RequestPeers, RespondPeers
 from chia.protocols.introducer_protocol import RequestPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -23,7 +24,6 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo, UnresolvedPeerInfo
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint64
 from chia.util.network import IPAddress, resolve
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000

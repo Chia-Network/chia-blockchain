@@ -13,6 +13,7 @@ from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_interval_iters
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import timelord_protocol
 from chia.server.outbound_message import Message
@@ -22,7 +23,6 @@ from chia.types.blockchain_format.vdf import VDFInfo, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
 from chia.util.streamable import Streamable, streamable
 

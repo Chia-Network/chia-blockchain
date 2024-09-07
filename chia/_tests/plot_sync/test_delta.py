@@ -6,10 +6,10 @@ from typing import List
 import pytest
 from chia_rs import G1Element
 
+from chia.core.types.ints import uint8, uint64
 from chia.plot_sync.delta import Delta, DeltaType, PathListDelta, PlotListDelta
 from chia.protocols.harvester_protocol import Plot
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint8, uint64
 
 log = logging.getLogger(__name__)
 

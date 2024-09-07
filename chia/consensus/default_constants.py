@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from chia.core.types.ints import uint8, uint16, uint32, uint64, uint128
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 
 from .constants import ConsensusConstants
 

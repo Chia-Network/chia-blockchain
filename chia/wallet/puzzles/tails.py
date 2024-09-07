@@ -4,11 +4,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from chia_rs import Coin
 
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,

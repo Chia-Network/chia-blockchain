@@ -7,11 +7,11 @@ from typing import Dict, List, Optional, Tuple
 
 import aiosqlite
 
+from chia.core.types.ints import uint8, uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord, TransactionRecordOld, minimum_send_attempts
 from chia.wallet.transaction_sorting import SortKey

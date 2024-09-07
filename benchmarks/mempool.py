@@ -19,7 +19,7 @@ from chia.types.eligible_coin_spends import UnspentLineageInfo
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.batches import to_batches
-from chia.util.ints import uint32, uint64
+from chia.core.types.ints import uint32, uint64
 
 NUM_ITERS = 200
 NUM_PEERS = 5

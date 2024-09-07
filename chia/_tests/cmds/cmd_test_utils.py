@@ -15,6 +15,7 @@ from chia.cmds.chia import cli as chia_cli
 from chia.cmds.cmds_util import _T_RpcClient, node_config_section_names
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint8, uint16, uint32, uint64
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -28,7 +29,6 @@ from chia.types.signing_mode import SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet

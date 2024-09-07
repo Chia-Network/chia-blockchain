@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
+from chia.core.types.ints import uint32
 from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
 

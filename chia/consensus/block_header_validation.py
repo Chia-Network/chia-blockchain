@@ -21,6 +21,7 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -31,7 +32,6 @@ from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 
 log = logging.getLogger(__name__)
 

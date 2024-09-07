@@ -11,6 +11,7 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
+from chia.core.types.ints import uint128
 from chia.protocols import timelord_protocol
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
@@ -18,7 +19,6 @@ from chia.timelord.timelord_api import TimelordAPI
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
-from chia.util.ints import uint128
 
 
 class TestNewPeak:

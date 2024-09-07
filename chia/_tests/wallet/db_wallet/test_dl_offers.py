@@ -5,9 +5,9 @@ from typing import Any, List, Tuple
 import pytest
 
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import uint64
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer

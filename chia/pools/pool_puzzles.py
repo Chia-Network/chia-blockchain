@@ -8,13 +8,13 @@ from clvm.casts import int_to_bytes
 
 from chia.consensus.block_rewards import calculate_pool_reward
 from chia.consensus.coinbase import pool_parent_id
+from chia.core.types.ints import uint32, uint64
 from chia.pools.pool_wallet_info import LEAVING_POOL, SELF_POOLING, PoolState
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
-from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.singleton_top_layer import puzzle_for_singleton
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash, shatree_atom

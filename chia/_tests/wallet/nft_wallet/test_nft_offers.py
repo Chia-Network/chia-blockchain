@@ -9,12 +9,12 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.wallet.nft_wallet.test_nft_1_offers import mempool_not_empty
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.core.types.ints import uint32, uint64
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import create_asset_id, match_puzzle

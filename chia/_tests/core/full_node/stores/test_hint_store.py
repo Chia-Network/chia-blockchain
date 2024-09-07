@@ -7,6 +7,7 @@ import pytest
 from clvm.casts import int_to_bytes
 
 from chia._tests.util.db_connection import DBConnection
+from chia.core.types.ints import uint64
 from chia.full_node.hint_store import HintStore
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
@@ -17,7 +18,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 

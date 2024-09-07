@@ -16,6 +16,7 @@ from chia._tests.plotting.test_plot_manager import Directory, MockPlotInfo
 from chia._tests.plotting.util import get_test_plots
 from chia._tests.util.split_managers import SplitAsyncManager, split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import uint8, uint32, uint64
 from chia.farmer.farmer import Farmer
 from chia.harvester.harvester import Harvester
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
@@ -30,7 +31,6 @@ from chia.simulator.block_tools import BlockTools
 from chia.types.aliases import FarmerService, HarvesterService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import _T_Streamable
 
 

@@ -7,11 +7,11 @@ from typing import Dict, List, Optional, Tuple
 
 import aiofiles
 
+from chia.core.types.ints import uint32
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.files import write_file_async
-from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)

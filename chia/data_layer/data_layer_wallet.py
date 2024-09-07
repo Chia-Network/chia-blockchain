@@ -11,6 +11,7 @@ from clvm.EvalError import EvalError
 from typing_extensions import Unpack, final
 
 from chia.consensus.block_record import BlockRecord
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.data_layer.data_layer_errors import LauncherCoinNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofOfInclusionLayer, StoreProofs, leaf_hash
 from chia.protocols.wallet_protocol import CoinState
@@ -22,7 +23,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle, estimate_fees
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import (
     AssertAnnouncement,

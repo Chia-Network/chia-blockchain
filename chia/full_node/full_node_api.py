@@ -17,6 +17,7 @@ from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import BlockchainMutexPriority
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
+from chia.core.types.ints import uint8, uint32, uint64, uint128
 from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
@@ -63,7 +64,6 @@ from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
 
 if TYPE_CHECKING:

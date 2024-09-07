@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from chia._tests.util.network_protocol_data import *  # noqa: F403
-from chia.util.ints import uint32
+from chia.core.types.ints import uint32
 
 version = "1.0"
 

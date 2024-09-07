@@ -55,11 +55,11 @@ import chia
 import chia._tests
 from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.full_node.mempool import Mempool
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 from chia.util.network import WebServer
 from chia.wallet.util.compute_hints import HintedCoin
 from chia.wallet.wallet_node import WalletNode

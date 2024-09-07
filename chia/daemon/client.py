@@ -9,7 +9,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 
 import aiohttp
 
-from chia.util.ints import uint32
+from chia.core.types.ints import uint32
 from chia.util.json_util import dict_to_json_str
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 

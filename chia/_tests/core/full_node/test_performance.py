@@ -16,12 +16,12 @@ from chia._tests.util.misc import BenchmarkRunner
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.core.types.ints import uint64
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol as fnp
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from chia.core.types.ints import uint64
 from chia.introducer.introducer import Introducer
 from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -11,7 +12,6 @@ from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import TimestampedPeerInfo
 from chia.util.api_decorators import api_request
-from chia.util.ints import uint64
 
 
 class IntroducerAPI:

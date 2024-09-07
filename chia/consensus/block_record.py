@@ -5,8 +5,8 @@ from typing import Optional
 import chia_rs
 from typing_extensions import Protocol
 
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
 
 BlockRecord = chia_rs.BlockRecord
 

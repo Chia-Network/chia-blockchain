@@ -10,9 +10,9 @@ from typing import IO, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
+from chia.core.types.ints import uint32
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries, validate_weight_proof_inner
 from chia.types.weight_proof import WeightProof
-from chia.util.ints import uint32
 from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)

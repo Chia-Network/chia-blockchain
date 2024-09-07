@@ -12,6 +12,7 @@ from clvm.casts import int_from_bytes, int_to_bytes
 from typing_extensions import Unpack
 
 import chia.wallet.singleton
+from chia.core.types.ints import uint16, uint32, uint64, uint128
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -21,7 +22,6 @@ from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import (
     AssertCoinAnnouncement,
     AssertPuzzleAnnouncement,

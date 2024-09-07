@@ -5,11 +5,11 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from clvm_tools.binutils import disassemble
 
+from chia.core.types.ints import uint16, uint64
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile

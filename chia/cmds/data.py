@@ -9,8 +9,8 @@ import click
 
 from chia.cmds import options
 from chia.cmds.param_types import Bytes32ParamType
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 
 _T = TypeVar("_T")
 

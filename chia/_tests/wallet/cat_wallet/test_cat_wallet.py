@@ -12,6 +12,7 @@ from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransi
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -22,7 +23,6 @@ from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle

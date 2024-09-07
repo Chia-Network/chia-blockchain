@@ -6,6 +6,7 @@ import pytest
 
 from chia._tests.core.consensus.test_pot_iterations import test_constants
 from chia._tests.util.db_connection import DBConnection
+from chia.core.types.ints import uint32, uint64
 from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate_store import FeeStore
@@ -13,7 +14,6 @@ from chia.full_node.fee_estimation import MempoolItemInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
-from chia.util.ints import uint32, uint64
 
 
 @pytest.mark.anyio

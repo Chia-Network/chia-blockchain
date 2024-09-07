@@ -13,6 +13,7 @@ from typing_extensions import Protocol
 
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.util.misc import closing_chia_root_popen
+from chia.core.types.ints import uint16
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
@@ -22,7 +23,6 @@ from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.socket import find_available_listen_port
 from chia.util.config import lock_and_load_config, save_config
-from chia.util.ints import uint16
 from chia.util.timing import adjusted_timeout
 
 if sys.platform == "win32" or sys.platform == "cygwin":

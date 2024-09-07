@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Dict
 from unittest import TestCase
 
+from chia.core.types.ints import uint32
 from chia.full_node.generator import create_block_generator
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.generator_types import GeneratorBlockCacheInterface
-from chia.util.ints import uint32
 
 gen0 = SerializedProgram.from_bytes(
     bytes.fromhex(

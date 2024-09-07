@@ -11,6 +11,7 @@ from chia._tests.connection_utils import add_dummy_connection
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.core.types.ints import uint32, uint64
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -22,7 +23,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32, uint64
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet import Wallet
 

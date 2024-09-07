@@ -9,6 +9,7 @@ import pytest
 
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.core.types.ints import uint32, uint64, uint128
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import NewPeak
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -18,7 +19,6 @@ from chia.server.outbound_message import make_msg
 from chia.types.aliases import CrawlerService
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint32, uint64, uint128
 
 
 @pytest.mark.anyio

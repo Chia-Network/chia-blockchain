@@ -13,7 +13,7 @@ from chia._tests.util.benchmarks import rand_hash, rewards
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.core.types.ints import uint32, uint64
 
 # to run this benchmark:
 # python -m benchmarks.coin_store

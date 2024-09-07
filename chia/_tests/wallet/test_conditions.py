@@ -7,10 +7,10 @@ import pytest
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import (
     CONDITION_DRIVERS,
     CONDITION_DRIVERS_W_ABSTRACTIONS,

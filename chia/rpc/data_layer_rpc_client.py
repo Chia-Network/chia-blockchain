@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from chia.core.types.ints import uint64
 from chia.data_layer.data_layer_util import ClearPendingRootsRequest
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 
 
 class DataLayerRpcClient(RpcClient):

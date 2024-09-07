@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Iterable, List, Set, Tuple
 
+from chia.core.types.ints import uint16
 from chia.protocols.shared_protocol import Capability
-from chia.util.ints import uint16
 
 
 def known_active_capabilities(values: Iterable[Tuple[uint16, str]]) -> List[Capability]:

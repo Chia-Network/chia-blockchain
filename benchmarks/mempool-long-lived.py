@@ -17,7 +17,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint32, uint64
+from chia.core.types.ints import uint32, uint64
 
 # this is one week worth of blocks
 NUM_ITERS = 32256

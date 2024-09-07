@@ -37,6 +37,7 @@ from chia.cmds.data_funcs import (
     wallet_log_in_cmd,
 )
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.core.types.ints import uint8, uint16, uint32, uint64
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import KeyNotFoundError, OfferIntegrityError
 from chia.data_layer.data_layer_util import (
@@ -64,7 +65,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.trading.offer import Offer as TradingOffer

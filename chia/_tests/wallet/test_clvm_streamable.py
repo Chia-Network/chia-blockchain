@@ -5,9 +5,9 @@ from typing import List, Optional, Tuple
 
 import pytest
 
+from chia.core.types.ints import uint64
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import Coin, Spend
 from chia.wallet.util.clvm_streamable import (

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from chia.core.types.ints import uint32
 from chia.harvester.harvester import Harvester
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.util.ints import uint32
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 

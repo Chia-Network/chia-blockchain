@@ -6,11 +6,11 @@ from typing import Dict, List, Optional, Tuple, Type, TypeVar
 
 from aiosqlite import Row
 
+from chia.core.types.ints import uint32, uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.util.merkle_utils import list_to_binary_tree

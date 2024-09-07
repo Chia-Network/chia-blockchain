@@ -19,6 +19,7 @@ from chia_rs import run_block_generator, run_block_generator2, run_chia_program
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.core.types.ints import uint16, uint32, uint64
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -29,7 +30,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle_conditions import SpendBundleConditions
 from chia.util.condition_tools import conditions_for_solution
 from chia.util.errors import Err
-from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 
 DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
