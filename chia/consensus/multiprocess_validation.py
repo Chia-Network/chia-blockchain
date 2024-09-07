@@ -228,11 +228,6 @@ async def pre_validate_blocks_multiprocessing(
     diff_ssis: List[Tuple[uint64, uint64]] = []
     prev_ses_block_list: List[Optional[BlockRecord]] = []
 
-    if blocks[0].height != 0:
-        if prev_b is None:
-            prev_b = block_records.block_record(blocks[0].prev_header_hash)
-        assert prev_b is not None
-
     for block in blocks:
         if len(block.finished_sub_slots) > 0:
             if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
