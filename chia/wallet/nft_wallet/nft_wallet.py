@@ -715,7 +715,7 @@ class NFTWallet:
             primaries=payments,
             action_scope=action_scope,
             conditions=(*extra_conditions, CreateCoinAnnouncement(coin_name)) if fee > 0 else extra_conditions,
-            coin_id=nft_coin.coin.name(),
+            coin=nft_coin.coin,
         )
 
         if unft.supports_did:
