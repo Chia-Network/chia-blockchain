@@ -3,24 +3,21 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from concurrent.futures import Executor
-from concurrent.futures.process import ProcessPoolExecutor
+from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass
-from multiprocessing.context import BaseContext
 from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, TypeVar
 
-from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, BLSCache, G1Element, supports_fast_forward
+from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, BLSCache, supports_fast_forward, validate_clvm_and_signature
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecordProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.fee_estimation import FeeBlockInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.mempool import MEMPOOL_ITEM_FEE_LIMIT, Mempool, MempoolRemoveInfo, MempoolRemoveReason
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
+from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -32,7 +29,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import BundleCoinSpend, MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.condition_tools import pkm_pairs
 from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor
@@ -44,49 +40,6 @@ log = logging.getLogger(__name__)
 # mempool items replacing existing ones must increase the total fee at least by
 # this amount. 0.00001 XCH
 MEMPOOL_MIN_FEE_INCREASE = uint64(10000000)
-
-
-# TODO: once the 1.8.0 soft-fork has activated, we don't really need to pass
-# the constants through here
-def validate_clvm_and_signature(
-    spend_bundle_bytes: bytes, max_cost: int, constants: ConsensusConstants, height: uint32
-) -> Tuple[Optional[Err], bytes, List[Tuple[bytes, bytes]], float]:
-    """
-    Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
-    in order to validate the heavy parts of a transaction in a different thread. Returns an optional error,
-    the NPCResult and a cache of the new pairings validated (if not error)
-    """
-
-    start_time = time.monotonic()
-    additional_data = constants.AGG_SIG_ME_ADDITIONAL_DATA
-
-    try:
-        bundle: SpendBundle = SpendBundle.from_bytes(spend_bundle_bytes)
-        program = simple_solution_generator(bundle)
-        # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        result: NPCResult = get_name_puzzle_conditions(
-            program, max_cost, mempool_mode=True, constants=constants, height=height
-        )
-
-        if result.error is not None:
-            return Err(result.error), b"", [], time.monotonic() - start_time
-
-        pks: List[G1Element] = []
-        msgs: List[bytes] = []
-        assert result.conds is not None
-        pks, msgs = pkm_pairs(result.conds, additional_data)
-
-        # Verify aggregated signature
-        cache = BLSCache(10000)
-        if not cache.aggregate_verify(pks, msgs, bundle.aggregated_signature):
-            return Err.BAD_AGGREGATE_SIGNATURE, b"", [], time.monotonic() - start_time
-        new_cache_entries: List[Tuple[bytes, bytes]] = cache.items()
-    except ValidationError as e:
-        return e.code, b"", [], time.monotonic() - start_time
-    except Exception:
-        return Err.UNKNOWN, b"", [], time.monotonic() - start_time
-
-    return None, bytes(result), new_cache_entries, time.monotonic() - start_time
 
 
 @dataclass
@@ -188,7 +141,6 @@ class MempoolManager:
         self,
         get_coin_records: Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]],
         consensus_constants: ConsensusConstants,
-        multiprocessing_context: Optional[BaseContext] = None,
         *,
         single_threaded: bool = False,
         max_tx_clvm_cost: Optional[uint64] = None,
@@ -220,9 +172,8 @@ class MempoolManager:
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            self.pool = ProcessPoolExecutor(
+            self.pool = ThreadPoolExecutor(
                 max_workers=2,
-                mp_context=multiprocessing_context,
                 initializer=setproctitle,
                 initargs=(f"{getproctitle()}_mempool_worker",),
             )
@@ -306,7 +257,6 @@ class MempoolManager:
     async def pre_validate_spendbundle(
         self,
         new_spend: SpendBundle,
-        new_spend_bytes: Optional[bytes],
         spend_name: bytes32,
         bls_cache: Optional[BLSCache] = None,
     ) -> SpendBundleConditions:
@@ -314,8 +264,6 @@ class MempoolManager:
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
         """
-        if new_spend_bytes is None:
-            new_spend_bytes = bytes(new_spend)
 
         if new_spend.coin_spends == []:
             raise ValidationError(Err.INVALID_SPEND_BUNDLE, "Empty SpendBundle")
@@ -324,23 +272,30 @@ class MempoolManager:
 
         self._worker_queue_size += 1
         try:
-            err, cached_result_bytes, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
+            sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
                 self.pool,
                 validate_clvm_and_signature,
-                new_spend_bytes,
+                new_spend,
                 self.max_tx_clvm_cost,
                 self.constants,
                 self.peak.height,
             )
+        # validate_clvm_and_signature raises a TypeError with an error code
+        except Exception as e:
+            # Convert that to a ValidationError
+            if len(e.args) > 0:
+                error = Err(e.args[0])
+                raise ValidationError(error)
+            else:
+                raise ValidationError(Err.UNKNOWN)  # pragma: no cover
         finally:
             self._worker_queue_size -= 1
 
-        if err is not None:
-            raise ValidationError(err)
         if bls_cache is not None:
-            bls_cache.update(new_cache_entries)
+            bls_cache.update([(e[0], bytes(e[1])) for e in new_cache_entries])
 
-        ret: NPCResult = NPCResult.from_bytes(cached_result_bytes)
+        ret = NPCResult(None, sbc)
+
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
             f"pre_validate_spendbundle took {duration:0.4f} seconds "

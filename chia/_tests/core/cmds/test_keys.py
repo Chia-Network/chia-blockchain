@@ -22,6 +22,7 @@ TEST_MNEMONIC_SEED = (
     "tomato remind jaguar original blur embody project can"
 )
 TEST_PUBLIC_KEY = "8a37cad4c5edf0a7544cbdb9f9383f7c5e82567d0236dc4f5b0547137afff9a5ce33aece3358d0202cafb9a12607ab53"
+TEST_BECH32_PUBKEY = "bls123814rygqxr4ryyadg0tx9cprt55vzpamcumr34v3ys66cynl6qx43emhm35nlz8clfxnujzkhpvkvqf5n2fxpd"
 TEST_PK_FINGERPRINT = 2167729070
 TEST_FINGERPRINT = 2877570395
 
@@ -339,6 +340,10 @@ class TestKeysCommands:
         assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
         assert result.output.find(f"Fingerprint: {TEST_PK_FINGERPRINT}") != -1
         assert result.output.find("First wallet address (non-observer): N/A") != -1
+
+        # Try with bech32 formatting
+        result = runner.invoke(cli, [*base_params, *cmd_params, "--bech32m-prefix", "bls1238"])
+        assert result.output.find(TEST_BECH32_PUBKEY) != -1
 
     def test_show_fingerprint(self, keyring_with_one_public_one_private_key, tmp_path):
         """
@@ -1643,6 +1648,8 @@ class TestKeysCommands:
                 "--count",
                 "1",
                 "--show-hd-path",
+                "--bech32m-prefix",
+                "bls1238",
             ],
         )
 
@@ -1650,7 +1657,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 "Wallet public key 9 (m/12381/8444/2/9): "
-                "a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e3d4d1acfa5d63d6542336c7b24d2fceab991919e989"
+                "bls123815fedt24xq3hxf0tl66d6u2ytn709vgkpxpvwclgmsh3af5dvlfwk84j5yvmv0vjd9l82hxger85cjly2r27"
             )
             != -1
         )

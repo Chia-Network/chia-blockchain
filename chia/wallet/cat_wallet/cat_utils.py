@@ -10,11 +10,11 @@ from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 NULL_SIGNATURE = G2Element()
 
@@ -103,9 +103,11 @@ def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
 
 
 # This should probably return UnsignedSpendBundle if that type ever exists
-def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_list: List[SpendableCAT]) -> SpendBundle:
+def unsigned_spend_bundle_for_spendable_cats(
+    mod_code: Program, spendable_cat_list: List[SpendableCAT]
+) -> WalletSpendBundle:
     """
-    Given a list of `SpendableCAT` objects, create a `SpendBundle` that spends all those coins.
+    Given a list of `SpendableCAT` objects, create a `WalletSpendBundle` that spends all those coins.
     Note that no signing is done here, so it falls on the caller to sign the resultant bundle.
     """
 
@@ -158,4 +160,4 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
         coin_spend = make_spend(spend_info.coin, puzzle_reveal, Program.to(solution))
         coin_spends.append(coin_spend)
 
-    return SpendBundle(coin_spends, NULL_SIGNATURE)
+    return WalletSpendBundle(coin_spends, NULL_SIGNATURE)
