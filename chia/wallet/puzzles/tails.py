@@ -112,7 +112,7 @@ class GenesisById(LimitationsProgram):
         eve_solution = await wallet.standard_wallet.make_solution(
             primaries=[Payment(inner_tree_hash, amount, [inner_tree_hash])],
             action_scope=action_scope,
-            coin_id=eve_coin.name(),
+            coin=eve_coin,
         )
 
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
@@ -125,7 +125,7 @@ class GenesisById(LimitationsProgram):
         ) as inner_action_scope:
             async with inner_action_scope.use() as inner_interface:
                 inner_interface.side_effects.solutions.append(inner_solution)
-                inner_interface.side_effects.coin_ids.append(eve_coin.name())
+                inner_interface.side_effects.selected_coins.append(eve_coin)
             await wallet.standard_wallet.generate_signed_transaction(
                 amount,
                 minted_cat_puzzle_hash,

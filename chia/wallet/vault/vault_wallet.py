@@ -255,7 +255,7 @@ class Vault(Wallet):
                     action_scope=action_scope,
                     conditions=tuple(parse_conditions_non_consensus(conditions)),
                     fee=fee,
-                    coin_id=coin.name(),
+                    coin=coin,
                 )
             else:
                 p2_solution = await self.make_solution(
@@ -274,7 +274,10 @@ class Vault(Wallet):
         ).to_program()
         vault_conditions.append(recreate_vault_condition)
         p2_singleton_sols = interface.side_effects.solutions
-        p2_singleton_coins = interface.side_effects.coin_ids
+        p2_singleton_coins = []
+        for coin in interface.side_effects.selected_coins:
+            if coin.name() not in p2_singleton_coins:
+                p2_singleton_coins.append(coin.name())
 
         for p2_solution, coin_id in zip(p2_singleton_sols, p2_singleton_coins):
             puzzle_to_announce = p2_solution.at("rf")
@@ -430,12 +433,12 @@ class Vault(Wallet):
         **kwargs: Any,
     ) -> Program:
         assert fee >= 0
-        coin_id = kwargs.get("coin_id")
-        if coin_id is None:
-            raise ValueError("Vault p2_singleton solutions require a coin id")
+        coin = kwargs.get("coin")
+        if coin is None:
+            raise ValueError("Vault p2_singleton solutions require a coin")
 
         if kwargs.get("is_secondary_coin"):
-            p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin_id])
+            p2_solution = Program.to([self.vault_info.inner_puzzle_hash, 0, 0, coin.name()])
         else:
             condition_progs = [primary.as_condition() for primary in primaries]
             for cond in conditions:
@@ -444,11 +447,19 @@ class Vault(Wallet):
                 condition_progs.append(ReserveFee(fee).to_program())
             delegated_puzzle = puzzle_for_conditions(condition_progs)
             delegated_solution = solution_for_conditions(condition_progs)
-            p2_solution = Program.to([self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin_id])
+            p2_solution = Program.to(
+                [self.vault_info.inner_puzzle_hash, delegated_puzzle, delegated_solution, coin.name()]
+            )
 
         async with action_scope.use() as interface:
-            interface.side_effects.solutions.append(p2_solution)
-            interface.side_effects.coin_ids.append(coin_id)
+            # If we've already got the coin in selected coins, move it to the front of the list
+            if coin in interface.side_effects.selected_coins:
+                interface.side_effects.selected_coins.insert(
+                    0, interface.side_effects.selected_coins.pop(interface.side_effects.selected_coins.index(coin))
+                )
+            else:
+                interface.side_effects.selected_coins.insert(0, coin)
+            interface.side_effects.solutions.insert(0, p2_solution)
         return p2_solution
 
     def add_condition_to_solution(self, condition: Program, solution: Program) -> Program:

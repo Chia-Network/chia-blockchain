@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast, final
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import SigningResponse
@@ -27,7 +26,6 @@ class _StreamableWalletSideEffects(Streamable):
     extra_spends: List[WalletSpendBundle]
     selected_coins: List[Coin]
     solutions: List[Program]
-    coin_ids: List[bytes32]
 
 
 @dataclass
@@ -37,7 +35,6 @@ class WalletSideEffects:
     extra_spends: List[WalletSpendBundle] = field(default_factory=list)
     selected_coins: List[Coin] = field(default_factory=list)
     solutions: List[Program] = field(default_factory=list)
-    coin_ids: List[bytes32] = field(default_factory=list)
 
     def __bytes__(self) -> bytes:
         return bytes(_StreamableWalletSideEffects(**self.__dict__))
@@ -52,7 +49,6 @@ class WalletSideEffects:
         self.extra_spends.extend(other.extra_spends)
         self.selected_coins.extend(other.selected_coins)
         self.solutions.extend(other.solutions)
-        self.coin_ids.extend(other.coin_ids)
 
 
 @final
