@@ -1855,13 +1855,23 @@ class FullNode:
             # Don't validate signatures because we want to validate them in the main thread later, since we have a
             # cache available
             prev_b = None
+            prev_ses_block = None
             if block.height > 0:
                 prev_b = await self.blockchain.get_block_record_from_db(block.prev_header_hash)
                 assert prev_b is not None
+                curr = prev_b
+                while curr.height > 0 and curr.sub_epoch_summary_included is None:
+                    curr = self.blockchain.block_record(curr.prev_hash)
+                prev_ses_block = curr
             new_slot = len(block.finished_sub_slots) > 0
             ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
             pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
-                [block], npc_results, sub_slot_iters=ssi, difficulty=diff, validate_signatures=False
+                [block],
+                npc_results,
+                sub_slot_iters=ssi,
+                difficulty=diff,
+                prev_ses_block=prev_ses_block,
+                validate_signatures=False,
             )
             added: Optional[AddBlockResult] = None
             pre_validation_time = time.monotonic() - validation_start

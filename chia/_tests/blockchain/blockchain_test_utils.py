@@ -59,9 +59,14 @@ async def _validate_and_add_block(
     # If expected_result == INVALID_BLOCK but expected_error is None, we will allow for errors to happen
 
     prev_b = None
+    prev_ses_block = None
     if block.height > 0:
         prev_b = await blockchain.get_block_record_from_db(block.prev_header_hash)
         assert prev_b is not None
+        curr = prev_b
+        while curr.height > 0 and curr.sub_epoch_summary_included is None:
+            curr = blockchain.block_record(curr.prev_hash)
+        prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
     ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, blockchain)
     await check_block_store_invariant(blockchain)
@@ -71,7 +76,7 @@ async def _validate_and_add_block(
         # validate_signatures must be False in order to trigger add_block() to
         # validate the signature.
         pre_validation_results: List[PreValidationResult] = await blockchain.pre_validate_blocks_multiprocessing(
-            [block], {}, sub_slot_iters=ssi, difficulty=diff, validate_signatures=False
+            [block], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=prev_ses_block, validate_signatures=False
         )
         assert pre_validation_results is not None
         results = pre_validation_results[0]

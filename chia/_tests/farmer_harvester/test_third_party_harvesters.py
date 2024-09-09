@@ -425,13 +425,18 @@ async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: Ful
     # of the GENESIS_PRE_FARM_FARMER_PUZZLE_HASH.
     prev_b = None
     block = blocks[0]
+    prev_ses_block = None
     if block.height > 0:
         prev_b = await full_node.blockchain.get_block_record_from_db(block.prev_header_hash)
         assert prev_b is not None
+        curr = prev_b
+        while curr.height > 0 and curr.sub_epoch_summary_included is None:
+            curr = full_node.blockchain.block_record(curr.prev_hash)
+        prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
-    ssi, _ = get_next_sub_slot_iters_and_difficulty(full_node.constants, new_slot, prev_b, full_node.blockchain)
+    ssi, diff = get_next_sub_slot_iters_and_difficulty(full_node.constants, new_slot, prev_b, full_node.blockchain)
     pre_validation_results: List[PreValidationResult] = await full_node.blockchain.pre_validate_blocks_multiprocessing(
-        blocks, {}, validate_signatures=True
+        blocks, {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=prev_ses_block, validate_signatures=True
     )
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
     for i in range(len(blocks)):

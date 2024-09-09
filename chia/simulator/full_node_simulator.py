@@ -163,6 +163,8 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_new_transaction_block(
         self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
     ) -> FullBlock:
+        ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+        diff = self.full_node.constants.DIFFICULTY_STARTING
         async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -170,7 +172,12 @@ class FullNodeSimulator(FullNodeAPI):
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
                 pre_validation_results: List[PreValidationResult] = (
                     await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                        [genesis], {}, validate_signatures=True
+                        [genesis],
+                        {},
+                        sub_slot_iters=ssi,
+                        difficulty=diff,
+                        prev_ses_block=None,
+                        validate_signatures=True,
                     )
                 )
                 assert pre_validation_results is not None
@@ -218,6 +225,8 @@ class FullNodeSimulator(FullNodeAPI):
         return more[-1]
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
+        ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+        diffculty = self.full_node.constants.DIFFICULTY_STARTING
         async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -225,7 +234,12 @@ class FullNodeSimulator(FullNodeAPI):
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
                 pre_validation_results: List[PreValidationResult] = (
                     await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                        [genesis], {}, validate_signatures=True
+                        [genesis],
+                        {},
+                        sub_slot_iters=ssi,
+                        difficulty=diffculty,
+                        prev_ses_block=None,
+                        validate_signatures=True,
                     )
                 )
                 assert pre_validation_results is not None
@@ -233,7 +247,7 @@ class FullNodeSimulator(FullNodeAPI):
                     genesis,
                     pre_validation_results[0],
                     self.full_node._bls_cache,
-                    self.full_node.constants.SUB_SLOT_ITERS_STARTING,
+                    ssi,
                 )
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
