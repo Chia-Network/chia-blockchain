@@ -42,7 +42,7 @@ class NullBlockchain:
         raise KeyError("no block records in NullBlockchain")  # pragma: no cover
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
-        raise ValueError("no block records in NullBlockchain")  # pragma: no cover
+        raise ValueError("Height is not in blockchain")
 
     def height_to_hash(self, height: uint32) -> Optional[bytes32]:
         return self.heights.get(height)

@@ -10,12 +10,6 @@ from chia.util.errors import Err
 from chia.util.ints import uint32
 
 
-def maybe_record(eb: Optional[Tuple[FullBlock, BlockRecord]]) -> Optional[BlockRecord]:
-    if eb is None:
-        return None
-    return eb[1]
-
-
 class AugmentedBlockchain:
     """
     This class wraps a BlocksProtocol and forwards calls to it, when
@@ -39,6 +33,12 @@ class AugmentedBlockchain:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+
+    def _get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        eb = self._extra_blocks.get(header_hash)
+        if eb is None:
+            return None
+        return eb[1]
 
     def add_extra_block(self, block: FullBlock, block_record: BlockRecord) -> None:
         assert block.header_hash == block_record.header_hash
@@ -71,10 +71,10 @@ class AugmentedBlockchain:
         return generators
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        ret = await self._underlying.get_block_record_from_db(header_hash)
+        ret = self._get_block_record(header_hash)
         if ret is not None:
             return ret
-        return maybe_record(self._extra_blocks.get(header_hash))
+        return await self._underlying.get_block_record_from_db(header_hash)
 
     def add_block_record(self, block_record: BlockRecord) -> None:
         self._underlying.add_block_record(block_record)
@@ -88,31 +88,30 @@ class AugmentedBlockchain:
 
     # BlockRecordsProtocol
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        ret = self._underlying.try_block_record(header_hash)
-        if ret is None:
-            ret = maybe_record(self._extra_blocks.get(header_hash))
-        return ret
-
-    def block_record(self, header_hash: bytes32) -> BlockRecord:
-        ret = self._underlying.try_block_record(header_hash)
+        ret = self._get_block_record(header_hash)
         if ret is not None:
             return ret
-        return self._extra_blocks[header_hash][1]
+        return self._underlying.try_block_record(header_hash)
+
+    def block_record(self, header_hash: bytes32) -> BlockRecord:
+        ret = self._get_block_record(header_hash)
+        if ret is not None:
+            return ret
+        return self._underlying.block_record(header_hash)
 
     def height_to_block_record(self, height: uint32) -> BlockRecord:
-        header_hash = self._underlying.height_to_hash(height)
-        if header_hash is not None:
-            return self._underlying.block_record(header_hash)
         header_hash = self._height_to_hash.get(height)
-        if header_hash is None:
-            raise ValueError(f"Height is not in blockchain: {height}")
-        return self._extra_blocks[header_hash][1]
+        if header_hash is not None:
+            ret = self._get_block_record(header_hash)
+            if ret is not None:
+                return ret
+        return self._underlying.height_to_block_record(height)
 
     def height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        header_hash = self._underlying.height_to_hash(height)
-        if header_hash is not None:
-            return header_hash
-        return self._height_to_hash.get(height)
+        ret = self._height_to_hash.get(height)
+        if ret is not None:
+            return ret
+        return self._underlying.height_to_hash(height)
 
     def contains_block(self, header_hash: bytes32) -> bool:
         return (header_hash in self._extra_blocks) or self._underlying.contains_block(header_hash)

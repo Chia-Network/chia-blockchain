@@ -264,18 +264,13 @@ async def pre_validate_blocks_multiprocessing(
             return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
         if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
-            idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
-            next_ses = wp_summaries[idx]
+            next_ses = wp_summaries[int(block.height / constants.SUB_EPOCH_BLOCKS) - 1]
             if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
                 log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
                 return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
-        # Makes sure to not override the valid blocks already in block_records
-        if not blockchain.contains_block(block_rec.header_hash):
-            recent_blocks[block_rec.header_hash] = block_rec
-            blockchain.add_extra_block(block, block_rec)  # Temporarily add block to dict
-        else:
-            recent_blocks[block_rec.header_hash] = blockchain.block_record(block_rec.header_hash)
+        recent_blocks[block_rec.header_hash] = block_rec
+        blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
         prev_ses_block_list.append(prev_ses_block)
