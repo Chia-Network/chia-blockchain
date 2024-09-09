@@ -34,6 +34,7 @@ from chia.rpc.wallet_request_types import (
     GatherSigningInfoResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetOffersCountResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
     NFTAddURIResponse,
@@ -885,6 +886,9 @@ class WalletRpcClient(RpcClient):
             records.append(TradeRecord.from_json_dict_convenience(record, offer))
 
         return records
+
+    async def get_offers_count(self) -> GetOffersCountResponse:
+        return GetOffersCountResponse.from_json_dict(await self.fetch("get_offers_count", {}))
 
     async def cancel_offer(
         self,

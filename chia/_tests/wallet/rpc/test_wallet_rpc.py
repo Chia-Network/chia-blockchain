@@ -1253,6 +1253,11 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
     assert all_offers[0].offer == bytes(offer)
 
+    offer_count = await wallet_1_rpc.get_offers_count()
+    assert offer_count.total == 1
+    assert offer_count.my_offers_count == 1
+    assert offer_count.taken_offers_count == 0
+
     trade_record = (await wallet_2_rpc.take_offer(offer, DEFAULT_TX_CONFIG, fee=uint64(1))).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
@@ -1272,6 +1277,10 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     )
     all_offers = await wallet_1_rpc.get_all_offers()
     assert len(all_offers) == 2
+    offer_count = await wallet_1_rpc.get_offers_count()
+    assert offer_count.total == 2
+    assert offer_count.my_offers_count == 2
+    assert offer_count.taken_offers_count == 0
     new_trade_record = create_res.trade_record
 
     await farm_transaction_block(full_node_api, wallet_node)

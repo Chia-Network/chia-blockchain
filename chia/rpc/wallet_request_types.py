@@ -114,6 +114,14 @@ class GetTransactionMemoResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetOffersCountResponse(Streamable):
+    total: uint16
+    my_offers_count: uint16
+    taken_offers_count: uint16
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: List[Spend]
 
