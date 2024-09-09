@@ -6,7 +6,7 @@ from typing import AsyncIterator, List
 import pytest
 from chia_rs import G2Element
 
-from chia._tests.environments.wallet import WalletTestFramework
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import NodeType
@@ -203,3 +203,50 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     )
 
     await wallet_environments.full_node.wait_transaction_records_entered_mempool(new_txs)
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework) -> None:
+    env_1 = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
+
+    # Some transaction, doesn't matter what
+    async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
+        await env_1.xch_wallet.generate_signed_transaction(
+            uint64(1),
+            await env_1.xch_wallet.get_puzzle_hash(new=False),
+            action_scope,
+        )
+
+    await env_2.rpc_client.push_transactions(action_scope.side_effects.transactions)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    1: {
+                        "unspent_coin_count": 1,  # We just split a coin so no other balance changes
+                    }
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "pending_coin_removal_count": 1,  # not sure if this is desirable
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        "pending_coin_removal_count": -1,
+                    }
+                },
+            ),
+        ]
+    )
