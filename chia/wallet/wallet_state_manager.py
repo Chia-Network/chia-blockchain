@@ -452,6 +452,8 @@ class WalletStateManager:
             else:
                 start_index_by_wallet[wallet_id] = 0
 
+        self.log.info(f"Done: for wallet_id in targets Time: {time.time() - start_t} seconds")
+
         if len(start_index_by_wallet) == 0:
             return
 
@@ -466,10 +468,14 @@ class WalletStateManager:
             for index in range(start_index, last_index):
                 hardened_keys[index] = _derive_path(intermediate_sk, [index]).get_g1()
 
+        self.log.info(f"Done: _derive_path Time: {time.time() - start_t} seconds")
+
         # Unhardened
         intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.root_pubkey)
         for index in range(start_index, last_index):
             unhardened_keys[index] = _derive_pk_unhardened(intermediate_pk_un, [index])
+
+        self.log.info(f"Done: _derive_pk_unhardened Time: {time.time() - start_t} seconds")
 
         for wallet_id, start_index in start_index_by_wallet.items():
             target_wallet = self.wallets[wallet_id]
@@ -495,6 +501,9 @@ class WalletStateManager:
                             True,
                         )
                     )
+
+                self.log.info(f"Done: Hardened puzzle_hash_for_pk Time: {time.time() - start_t} seconds")
+
                 # Unhardened
                 pubkey = unhardened_keys.get(index)
                 assert pubkey is not None
@@ -512,6 +521,9 @@ class WalletStateManager:
                         False,
                     )
                 )
+
+                self.log.info(f"Done: Unhardened puzzle_hash_for_pk Time: {time.time() - start_t} seconds")
+
             self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             if len(derivation_paths) > 0:
                 await self.puzzle_store.add_derivation_paths(derivation_paths)
