@@ -299,8 +299,8 @@ class Blockchain:
         block: FullBlock,
         pre_validation_result: PreValidationResult,
         bls_cache: Optional[BLSCache],
+        sub_slot_iters: uint64,
         fork_info: Optional[ForkInfo] = None,
-        sub_slot_iters: Optional[uint64] = None,
         prev_ses_block: Optional[BlockRecord] = None,
     ) -> Tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """

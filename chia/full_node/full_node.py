@@ -1393,7 +1393,7 @@ class FullNode:
                     assert expected_sub_slot_iters == current_ssi
                     assert expected_difficulty == current_difficulty
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], None, fork_info, current_ssi, prev_ses_block=prev_ses_block
+                block, pre_validation_results[i], None, current_ssi, fork_info, prev_ses_block=prev_ses_block
             )
 
             if result == AddBlockResult.NEW_PEAK:
@@ -1885,7 +1885,7 @@ class FullNode:
                     )
                     assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
-                        block, result_to_validate, bls_cache, fork_info
+                        block, result_to_validate, bls_cache, ssi, fork_info
                     )
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
                     return None

@@ -32,11 +32,15 @@ async def load_blocks_dont_validate(
     sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
     prev_block = None
     difficulty = constants.DIFFICULTY_STARTING
+    sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
     block: FullBlock
     for block in blocks:
-        if block.height > 0:
+        if block.height > 0 and len(block.finished_sub_slots) > 0:
             assert prev_block is not None
-            difficulty = uint64(block.reward_chain_block.weight - prev_block.weight)
+            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
+            if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
 
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             assert block.reward_chain_block.signage_point_index == 0
@@ -66,7 +70,7 @@ async def load_blocks_dont_validate(
             BlockchainMock(sub_blocks, height_to_hash=height_to_hash),
             required_iters,
             block,
-            None,
+            sub_slot_iters,
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash

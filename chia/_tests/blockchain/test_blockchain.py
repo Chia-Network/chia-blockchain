@@ -1848,7 +1848,9 @@ class TestPreValidation:
                 assert res[n].error is None
                 block = blocks_to_validate[n]
                 start_rb = time.time()
-                result, err, _ = await empty_blockchain.add_block(block, res[n], None)
+                result, err, _ = await empty_blockchain.add_block(
+                    block, res[n], None, empty_blockchain.constants.SUB_SLOT_ITERS_STARTING
+                )
                 end_rb = time.time()
                 times_rb.append(end_rb - start_rb)
                 assert err is None
@@ -1935,13 +1937,13 @@ class TestBodyValidation:
             transaction_data=bundles,
             time_per_block=10,
         )
-
+        ssi = b.constants.SUB_SLOT_ITERS_STARTING
         pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [blocks[-1]], {}, validate_signatures=False
+            [blocks[-1]], {}, sub_slot_iters=ssi, validate_signatures=False
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
-        code, err, state_change = await b.add_block(blocks[-1], repl_preval_results, None)
+        code, err, state_change = await b.add_block(blocks[-1], repl_preval_results, None, sub_slot_iters=ssi)
         assert code == AddBlockResult.NEW_PEAK
         assert err is None
         assert state_change is not None
@@ -2050,12 +2052,12 @@ class TestBodyValidation:
                 transaction_data=tx,
                 time_per_block=10,
             )
-
+            ssi = b.constants.SUB_SLOT_ITERS_STARTING
             pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-                [blocks[-1]], {}, validate_signatures=True
+                [blocks[-1]], {}, sub_slot_iters=ssi, validate_signatures=True
             )
             assert pre_validation_results is not None
-            assert (await b.add_block(blocks[-1], pre_validation_results[0], None))[0] == expected
+            assert (await b.add_block(blocks[-1], pre_validation_results[0], None, sub_slot_iters=ssi))[0] == expected
 
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin was in fact spent
@@ -2122,13 +2124,13 @@ class TestBodyValidation:
             transaction_data=bundles,
             time_per_block=10,
         )
-
+        ssi = b.constants.SUB_SLOT_ITERS_STARTING
         pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [blocks[-1]], {}, validate_signatures=False
+            [blocks[-1]], {}, sub_slot_iters=ssi, validate_signatures=False
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
-        res, error, state_change = await b.add_block(blocks[-1], repl_preval_results, None)
+        res, error, state_change = await b.add_block(blocks[-1], repl_preval_results, None, sub_slot_iters=ssi)
         assert res == AddBlockResult.NEW_PEAK
         assert error is None
         assert state_change is not None and state_change.fork_height == uint32(2)
@@ -2239,12 +2241,12 @@ class TestBodyValidation:
                 transaction_data=bundles,
                 time_per_block=10,
             )
-
+            ssi = b.constants.SUB_SLOT_ITERS_STARTING
             pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-                [blocks[-1]], {}, validate_signatures=True
+                [blocks[-1]], {}, sub_slot_iters=ssi, validate_signatures=True
             )
             assert pre_validation_results is not None
-            assert (await b.add_block(blocks[-1], pre_validation_results[0], None))[0] == expected
+            assert (await b.add_block(blocks[-1], pre_validation_results[0], None, sub_slot_iters=ssi))[0] == expected
 
             if expected == AddBlockResult.NEW_PEAK:
                 # ensure coin1 was in fact spent
@@ -2582,13 +2584,15 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
-        err = (await b.add_block(blocks[-1], PreValidationResult(None, uint64(1), npc_result, True, uint32(0)), None))[
-            1
-        ]
+        ssi = b.constants.SUB_SLOT_ITERS_STARTING
+        err = (
+            await b.add_block(
+                blocks[-1], PreValidationResult(None, uint64(1), npc_result, True, uint32(0)), None, sub_slot_iters=ssi
+            )
+        )[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
-
         results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [blocks[-1]], {}, validate_signatures=False
+            [blocks[-1]], {}, sub_slot_iters=ssi, validate_signatures=False
         )
         assert results is not None
         assert Err(results[0].error) == Err.BLOCK_COST_EXCEEDS_MAX
@@ -2649,7 +2653,10 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
-        _, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)), None)
+        ssi = b.constants.SUB_SLOT_ITERS_STARTING
+        _, err, _ = await b.add_block(
+            block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)), None, sub_slot_iters=ssi
+        )
         assert err == Err.INVALID_BLOCK_COST
 
         # too low
@@ -2676,7 +2683,9 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
-        _, err, _ = await b.add_block(block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)), None)
+        _, err, _ = await b.add_block(
+            block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)), None, sub_slot_iters=ssi
+        )
         assert err == Err.INVALID_BLOCK_COST
 
         # too high
@@ -2706,7 +2715,7 @@ class TestBodyValidation:
         )
 
         result, err, _ = await b.add_block(
-            block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)), None
+            block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)), None, sub_slot_iters=ssi
         )
         assert err == Err.INVALID_BLOCK_COST
 
@@ -3260,12 +3269,15 @@ class TestReorgs:
         pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             blocks, {}, validate_signatures=False
         )
-
+        ssi = b.constants.SUB_SLOT_ITERS_STARTING
         for i, block in enumerate(blocks):
+            if block.height != 0 and len(block.finished_sub_slots) > 0:
+                if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                    ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
             assert pre_validation_results[i].error is None
             if (block.height % 100) == 0:
                 print(f"main chain: {block.height:4} weight: {block.weight}")
-            (result, err, _) = await b.add_block(block, pre_validation_results[i], None)
+            (result, err, _) = await b.add_block(block, pre_validation_results[i], None, sub_slot_iters=ssi)
             await check_block_store_invariant(b)
             assert err is None
             assert result == AddBlockResult.NEW_PEAK
@@ -3797,6 +3809,7 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
     assert len(chain_a) == len(chain_b)
 
     counter = 0
+    ssi = b.constants.SUB_SLOT_ITERS_STARTING
     for b1, b2 in zip(chain_a, chain_b):
         # alternate the order we add blocks from the two chains, to ensure one
         # chain overtakes the other one in weight every other time
@@ -3809,10 +3822,10 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
         preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
             [block1], {}, validate_signatures=False
         )
-        _, err, _ = await b.add_block(block1, preval[0], None)
+        _, err, _ = await b.add_block(block1, preval[0], None, sub_slot_iters=ssi)
         assert err is None
         preval = await b.pre_validate_blocks_multiprocessing([block2], {}, validate_signatures=False)
-        _, err, _ = await b.add_block(block2, preval[0], None)
+        _, err, _ = await b.add_block(block2, preval[0], None, sub_slot_iters=ssi)
         assert err is None
 
     peak = b.get_peak()
@@ -3834,13 +3847,13 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
 async def test_get_tx_peak(default_400_blocks: List[FullBlock], empty_blockchain: Blockchain) -> None:
     bc = empty_blockchain
     test_blocks = default_400_blocks[:100]
-
-    res = await bc.pre_validate_blocks_multiprocessing(test_blocks, {}, validate_signatures=False)
+    ssi = empty_blockchain.constants.SUB_SLOT_ITERS_STARTING
+    res = await bc.pre_validate_blocks_multiprocessing(test_blocks, {}, sub_slot_iters=ssi, validate_signatures=False)
 
     last_tx_block_record = None
     for b, prevalidation_res in zip(test_blocks, res):
         assert bc.get_tx_peak() == last_tx_block_record
-        _, err, _ = await bc.add_block(b, prevalidation_res, None)
+        _, err, _ = await bc.add_block(b, prevalidation_res, None, sub_slot_iters=ssi)
         assert err is None
 
         if b.is_transaction_block():
@@ -3850,7 +3863,7 @@ async def test_get_tx_peak(default_400_blocks: List[FullBlock], empty_blockchain
                 bc,
                 prevalidation_res.required_iters,
                 b,
-                None,
+                empty_blockchain.constants.SUB_SLOT_ITERS_STARTING,
             )
             last_tx_block_record = block_record
 

@@ -1619,7 +1619,9 @@ def finish_block(
         difficulty,
     )
 
-    block_record = block_to_block_record(constants, BlockCache(blocks), required_iters, full_block, None)
+    block_record = block_to_block_record(
+        constants, BlockCache(blocks), required_iters, full_block, sub_slot_iters=sub_slot_iters
+    )
     return full_block, block_record
 
 
@@ -1670,14 +1672,17 @@ def get_plot_tmp_dir(plot_dir_name: str = "test-plots", automated_testing: bool 
 def load_block_list(
     block_list: List[FullBlock], constants: ConsensusConstants
 ) -> Tuple[Dict[uint32, bytes32], uint64, Dict[bytes32, BlockRecord]]:
-    difficulty = 0
+    difficulty = uint64(constants.DIFFICULTY_STARTING)
+    sub_slot_iters = uint64(constants.SUB_SLOT_ITERS_STARTING)
     height_to_hash: Dict[uint32, bytes32] = {}
     blocks: Dict[bytes32, BlockRecord] = {}
     for full_block in block_list:
-        if full_block.height == 0:
-            difficulty = uint64(constants.DIFFICULTY_STARTING)
-        else:
-            difficulty = full_block.weight - block_list[full_block.height - 1].weight
+        if full_block.height != 0:
+            if len(full_block.finished_sub_slots) > 0:
+                if full_block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                    difficulty = full_block.finished_sub_slots[0].challenge_chain.new_difficulty
+                if full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                    sub_slot_iters = full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         if full_block.reward_chain_block.signage_point_index == 0:
             challenge = full_block.reward_chain_block.pos_ss_cc_challenge_hash
             sp_hash = challenge
@@ -1702,7 +1707,7 @@ def load_block_list(
             BlockCache(blocks),
             required_iters,
             full_block,
-            None,
+            sub_slot_iters,
         )
         height_to_hash[uint32(full_block.height)] = full_block.header_hash
     return height_to_hash, uint64(difficulty), blocks
