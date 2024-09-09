@@ -122,6 +122,20 @@ class GetOffersCountResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DefaultCAT(Streamable):
+    asset_id: bytes32
+    name: str
+    symbol: str
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCATListResponse(Streamable):
+    cat_list: List[DefaultCAT]
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: List[Spend]
 

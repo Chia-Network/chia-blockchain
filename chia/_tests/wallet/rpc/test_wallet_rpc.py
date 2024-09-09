@@ -1164,6 +1164,9 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     )
     assert len(selected_coins) > 0
 
+    # Test get_cat_list
+    assert len(DEFAULT_CATS) == len((await client.get_cat_list()).cat_list)
+
 
 @pytest.mark.anyio
 async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):

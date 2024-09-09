@@ -32,6 +32,7 @@ from chia.rpc.wallet_request_types import (
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
+    GetCATListResponse,
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
@@ -944,6 +945,9 @@ class WalletRpcClient(RpcClient):
         )
 
         return json_deserialize_with_clvm_streamable(res, CancelOffersResponse)
+
+    async def get_cat_list(self) -> GetCATListResponse:
+        return GetCATListResponse.from_json_dict(await self.fetch("get_cat_list", {}))
 
     # NFT wallet
     async def create_new_nft_wallet(self, did_id: Optional[str], name: Optional[str] = None) -> Dict[str, Any]:
