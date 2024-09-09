@@ -90,6 +90,9 @@ async def test_callbacks() -> None:
 
             interface.set_callback(callback)
 
+        async with action_scope.use():
+            pass  # Testing that callback stays put even through another .use()
+
     assert action_scope.side_effects.buf == b"bar"
 
 

@@ -143,7 +143,7 @@ class ActionScope(Generic[_T_SideEffects, _T_Config]):
     async def use(self, _callbacks_allowed: bool = True) -> AsyncIterator[StateInterface[_T_SideEffects]]:
         async with self._resource_manager.use():
             side_effects = await self._resource_manager.get_resource(self._side_effects_format)
-            interface = StateInterface(side_effects, _callbacks_allowed)
+            interface = StateInterface(side_effects, _callbacks_allowed, self._callback)
 
             yield interface
 
