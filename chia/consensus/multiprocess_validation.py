@@ -201,9 +201,8 @@ async def pre_validate_blocks_multiprocessing(
         block_hashes.append(header_hash)
         block_record_was_present.append(block_records.contains_block(header_hash))
 
-    # load blocks to cache
     if blocks[0].height > 0:
-        curr = block_records.block_record(blocks[0].prev_header_hash)
+        curr = block_records.try_block_record(blocks[0].prev_header_hash)
         if curr is None:
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
         prev_b = curr

@@ -418,6 +418,8 @@ class TestFullNodeBlockCompression:
         assert height == len(all_blocks) - 1
 
         if test_reorgs:
+            ssi = bt.constants.SUB_SLOT_ITERS_STARTING
+            diff = bt.constants.DIFFICULTY_STARTING
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
                 for reorg_block in reog_blocks[:r]:
@@ -425,7 +427,13 @@ class TestFullNodeBlockCompression:
                 for i in range(1, height):
                     for batch_size in range(1, height, 3):
                         results = await blockchain.pre_validate_blocks_multiprocessing(
-                            all_blocks[:i], {}, batch_size, validate_signatures=False
+                            all_blocks[:i],
+                            {},
+                            sub_slot_iters=ssi,
+                            difficulty=diff,
+                            prev_ses_block=None,
+                            batch_size=batch_size,
+                            validate_signatures=False,
                         )
                         assert results is not None
                         for result in results:
@@ -437,7 +445,13 @@ class TestFullNodeBlockCompression:
                 for i in range(1, height):
                     for batch_size in range(1, height, 3):
                         results = await blockchain.pre_validate_blocks_multiprocessing(
-                            all_blocks[:i], {}, batch_size, validate_signatures=False
+                            all_blocks[:i],
+                            {},
+                            sub_slot_iters=ssi,
+                            difficulty=diff,
+                            prev_ses_block=None,
+                            batch_size=batch_size,
+                            validate_signatures=False,
                         )
                         assert results is not None
                         for result in results:

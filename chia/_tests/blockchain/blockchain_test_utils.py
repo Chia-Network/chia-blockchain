@@ -62,11 +62,11 @@ async def _validate_and_add_block(
     prev_ses_block = None
     if block.height > 0:
         prev_b = await blockchain.get_block_record_from_db(block.prev_header_hash)
-        assert prev_b is not None
-        curr = prev_b
-        while curr.height > 0 and curr.sub_epoch_summary_included is None:
-            curr = blockchain.block_record(curr.prev_hash)
-        prev_ses_block = curr
+        if prev_b is not None:  # some negative tests require this
+            curr = prev_b
+            while curr.height > 0 and curr.sub_epoch_summary_included is None:
+                curr = blockchain.block_record(curr.prev_hash)
+            prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
     ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, blockchain)
     await check_block_store_invariant(blockchain)
