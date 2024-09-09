@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiosqlite
 import pytest
-from chia_rs import G2Element
+from chia_rs import G1Element, G2Element
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -48,6 +48,7 @@ from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_request_types import (
     CombineCoins,
+    DIDGetPubkey,
     GetNotifications,
     SplitCoins,
     SplitCoinsResponse,
@@ -1584,6 +1585,9 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     next_did_coin = await did_wallet_2.get_coin()
     assert next_did_coin.parent_coin_info == last_did_coin.name()
     assert next_did_coin.puzzle_hash == last_did_coin.puzzle_hash
+
+    # Test did_get_pubkey
+    assert isinstance((await wallet_2_rpc.get_did_pubkey(DIDGetPubkey(did_wallet_2.id()))).pubkey, G1Element)
 
 
 @pytest.mark.anyio

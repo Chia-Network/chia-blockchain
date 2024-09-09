@@ -24,6 +24,8 @@ from chia.rpc.wallet_request_types import (
     DAOFreeCoinsFromFinishedProposalsResponse,
     DAOSendToLockupResponse,
     DAOVoteOnProposalResponse,
+    DIDGetPubkey,
+    DIDGetPubkeyResponse,
     DIDMessageSpendResponse,
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
@@ -538,6 +540,9 @@ class WalletRpcClient(RpcClient):
         }
         response = await self.fetch("did_update_metadata", request)
         return json_deserialize_with_clvm_streamable(response, DIDUpdateMetadataResponse)
+
+    async def get_did_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
+        return DIDGetPubkeyResponse.from_json_dict(await self.fetch("did_get_pubkey", request.to_json_dict()))
 
     async def get_did_metadata(self, wallet_id: int) -> Dict[str, Any]:
         request = {"wallet_id": wallet_id}

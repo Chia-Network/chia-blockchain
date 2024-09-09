@@ -136,6 +136,18 @@ class GetCATListResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDGetPubkey(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetPubkeyResponse(Streamable):
+    pubkey: G1Element
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: List[Spend]
 
