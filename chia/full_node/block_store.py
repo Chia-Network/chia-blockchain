@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import typing_extensions
 import zstd
@@ -285,9 +285,9 @@ class BlockStore:
                 b = FullBlock.from_bytes(block_bytes)
                 return None if b.transactions_generator is None else bytes(b.transactions_generator)
 
-    async def get_generators_at(self, heights: List[uint32]) -> List[bytes]:
+    async def get_generators_at(self, heights: Set[uint32]) -> Dict[uint32, bytes]:
         if len(heights) == 0:
-            return []
+            return {}
 
         generators: Dict[uint32, bytes] = {}
         formatted_str = (
@@ -295,7 +295,7 @@ class BlockStore:
             f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights) - 1)}?)'
         )
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(formatted_str, heights) as cursor:
+            async with conn.execute(formatted_str, list(heights)) as cursor:
                 async for row in cursor:
                     block_bytes = zstd.decompress(row[0])
 
@@ -312,7 +312,10 @@ class BlockStore:
                         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
                     generators[uint32(row[1])] = gen
 
-        return [generators[h] for h in heights]
+        if len(generators) != len(heights):
+            raise KeyError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
+
+        return generators
 
     async def get_block_records_by_hash(self, header_hashes: List[bytes32]) -> List[BlockRecord]:
         """

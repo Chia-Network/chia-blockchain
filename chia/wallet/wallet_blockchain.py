@@ -120,9 +120,7 @@ class WalletBlockchain:
 
         # We are passing in sub_slot_iters here so we don't need to backtrack until the start of the epoch to find
         # the sub slot iters and difficulty. This allows us to keep the cache small.
-        block_record: BlockRecord = block_to_block_record(
-            self.constants, self, required_iters, None, block, sub_slot_iters
-        )
+        block_record: BlockRecord = block_to_block_record(self.constants, self, required_iters, block, sub_slot_iters)
         self.add_block_record(block_record)
         if self._peak is None:
             if block_record.is_transaction_block:

@@ -53,6 +53,7 @@ test_offer_file_path = importlib_resources.files(__name__.rpartition(".")[0]).jo
 test_offer_file_bech32 = test_offer_file_path.read_text(encoding="utf-8")
 test_offer_id: str = "0xdfb7e8643376820ec995b0bcdb3fc1f764c16b814df5e074631263fcf1e00839"
 test_offer_id_bytes: bytes32 = bytes32.from_hexstr(test_offer_id)
+test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
 
 def test_get_transaction(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
@@ -315,19 +316,11 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
             memos: Optional[List[str]] = None,
             puzzle_decorator_override: Optional[List[Dict[str, Union[str, int, bool]]]] = None,
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> SendTransactionResponse:
             self.add_to_log(
                 "send_transaction",
-                (
-                    wallet_id,
-                    amount,
-                    address,
-                    tx_config,
-                    fee,
-                    memos,
-                    puzzle_decorator_override,
-                    push,
-                ),
+                (wallet_id, amount, address, tx_config, fee, memos, puzzle_decorator_override, push, timelock_info),
             )
             name = get_bytes32(2)
             tx_rec = TransactionRecord(
@@ -363,6 +356,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
             removals: Optional[List[Coin]] = None,
             cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CATSpendResponse:
             self.add_to_log(
                 "cat_spend",
@@ -377,6 +371,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                     removals,
                     cat_discrepancy,
                     push,
+                    timelock_info,
                 ),
             )
             return CATSpendResponse([STD_UTX], [STD_TX], STD_TX, STD_TX.name)
@@ -402,6 +397,10 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
         "-l10",
         "--exclude-coin",
         bytes32_hexstr,
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     assert_list = ["Transaction submitted to nodes: [{'peer_id': 'aaaaa'", f"-f 123456 -tx 0x{get_bytes32(2).hex()}"]
     cat_assert_list = [
@@ -440,6 +439,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                 ["0x6262626262626262626262626262626262626262626262626262626262626262"],
                 [{"decorator": "CLAWBACK", "clawback_timelock": 60}],
                 True,
+                test_condition_valid_times,
             )
         ],
         "cat_spend": [
@@ -460,6 +460,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                 None,
                 None,
                 True,
+                test_condition_valid_times,
             )
         ],
         "get_transaction": [(get_bytes32(2),), (get_bytes32(2),)],
@@ -509,8 +510,9 @@ def test_clawback(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             fee: int = 0,
             force: bool = False,
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> Dict[str, Any]:
-            self.add_to_log("spend_clawback_coins", (coin_ids, fee, force, push))
+            self.add_to_log("spend_clawback_coins", (coin_ids, fee, force, push, timelock_info))
             tx_hex_list = [get_bytes32(6).hex(), get_bytes32(7).hex(), get_bytes32(8).hex()]
             return {
                 "transaction_ids": tx_hex_list,
@@ -536,11 +538,15 @@ def test_clawback(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
         "-m0.5",
         "--tx_ids",
         f"{tx_ids[0].hex()},{tx_ids[1].hex()}, {tx_ids[2].hex()}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, ["transaction_ids", str(r_tx_ids_hex)])
     # these are various things that should be in the output
     expected_calls: logType = {
-        "spend_clawback_coins": [(tx_ids, 500000000000, False, True)],
+        "spend_clawback_coins": [(tx_ids, 500000000000, False, True, test_condition_valid_times)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -734,10 +740,11 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             solver: Optional[Dict[str, Any]] = None,
             fee: uint64 = uint64(0),
             validate_only: bool = False,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CreateOfferForIDsResponse:
             self.add_to_log(
                 "create_offer_for_ids",
-                (offer_dict, tx_config, driver_dict, solver, fee, validate_only),
+                (offer_dict, tx_config, driver_dict, solver, fee, validate_only, timelock_info),
             )
 
             created_offer = Offer({}, WalletSpendBundle([], G2Element()), {})
@@ -779,6 +786,10 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         f"{request_cat_id.hex()}:10",
         "--request",
         f"{request_nft_addr}:1",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     assert_list = [
         "OFFERING:\n  - 10 XCH (10000000000000 mojos)\n  - 100 test3 (100000 mojos)",
@@ -787,7 +798,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
         "Including Fees: 0.5 XCH, 500000000000 mojos",
         "Created offer with ID 0202020202020202020202020202020202020202020202020202020202020202",
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args[:-4], ["without --override"])
+    run_cli_command_and_assert(capsys, root_dir, command_args[:-8], ["without --override"])
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "cat_asset_id_to_name": [(request_cat_id,)],
@@ -839,6 +850,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
                 None,
                 500000000000,
                 False,
+                test_condition_valid_times,
             )
         ],
     }
@@ -964,8 +976,9 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             solver: Optional[Dict[str, Any]] = None,
             fee: uint64 = uint64(0),
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> TakeOfferResponse:
-            self.add_to_log("take_offer", (offer, tx_config, solver, fee, push))
+            self.add_to_log("take_offer", (offer, tx_config, solver, fee, push, timelock_info))
             return TakeOfferResponse(
                 [STD_UTX],
                 [STD_TX],
@@ -1002,7 +1015,18 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     ]
 
     with importlib_resources.as_file(test_offer_file_path) as test_offer_file_name:
-        command_args = ["wallet", "take_offer", os.fspath(test_offer_file_name), FINGERPRINT_ARG, "-m0.5", "--reuse"]
+        command_args = [
+            "wallet",
+            "take_offer",
+            os.fspath(test_offer_file_name),
+            FINGERPRINT_ARG,
+            "-m0.5",
+            "--reuse",
+            "--valid-at",
+            "100",
+            "--expires-at",
+            "150",
+        ]
         run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
 
     expected_calls: logType = {
@@ -1011,7 +1035,16 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             (cat2,),
             (bytes32.from_hexstr("accce8e1c71b56624f2ecaeff5af57eac41365080449904d0717bd333c04806d"),),
         ],
-        "take_offer": [(Offer.from_bech32(test_offer_file_bech32), DEFAULT_TX_CONFIG, None, 500000000000, True)],
+        "take_offer": [
+            (
+                Offer.from_bech32(test_offer_file_bech32),
+                DEFAULT_TX_CONFIG,
+                None,
+                500000000000,
+                True,
+                test_condition_valid_times,
+            )
+        ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
@@ -1046,13 +1079,25 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             fee: uint64 = uint64(0),
             secure: bool = True,
             push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CancelOfferResponse:
-            self.add_to_log("cancel_offer", (trade_id, tx_config, fee, secure, push))
+            self.add_to_log("cancel_offer", (trade_id, tx_config, fee, secure, push, timelock_info))
             return CancelOfferResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = CancelOfferRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    command_args = ["wallet", "cancel_offer", FINGERPRINT_ARG, "-m0.5", "--id", test_offer_id]
+    command_args = [
+        "wallet",
+        "cancel_offer",
+        FINGERPRINT_ARG,
+        "-m0.5",
+        "--id",
+        test_offer_id,
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
+    ]
     # these are various things that should be in the output
     cat1 = bytes32.from_hexstr("fd6a341ed39c05c31157d5bfea395a0e142398ced24deea1e82f836d7ec2909c")
     cat2 = bytes32.from_hexstr("dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a7746860")
@@ -1068,7 +1113,9 @@ def test_cancel_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_offer": [(test_offer_id_bytes, True)],
-        "cancel_offer": [(test_offer_id_bytes, DEFAULT_TX_CONFIG, 500000000000, True, True)],
+        "cancel_offer": [
+            (test_offer_id_bytes, DEFAULT_TX_CONFIG, 500000000000, True, True, test_condition_valid_times)
+        ],
         "cat_asset_id_to_name": [
             (cat1,),
             (cat2,),

@@ -11,6 +11,7 @@ from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, 
 from chia.cmds.units import units
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -145,7 +146,7 @@ def dao_add_cmd(
     show_default=True,
 )
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_create_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -167,6 +168,7 @@ def dao_create_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import create_dao_wallet
 
@@ -199,6 +201,7 @@ def dao_create_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -253,7 +256,7 @@ def dao_get_id_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_add_funds_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -267,6 +270,7 @@ def dao_add_funds_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import add_funds_to_treasury
 
@@ -286,6 +290,7 @@ def dao_add_funds_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -428,7 +433,7 @@ def dao_show_proposal_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_vote_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -443,6 +448,7 @@ def dao_vote_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import vote_on_proposal
 
@@ -465,6 +471,7 @@ def dao_vote_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -499,7 +506,7 @@ def dao_vote_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_close_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -513,6 +520,7 @@ def dao_close_proposal_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import close_proposal
 
@@ -532,6 +540,7 @@ def dao_close_proposal_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -559,7 +568,7 @@ def dao_close_proposal_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_lockup_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -572,6 +581,7 @@ def dao_lockup_coins_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import lockup_coins
 
@@ -590,6 +600,7 @@ def dao_lockup_coins_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -606,7 +617,7 @@ def dao_lockup_coins_cmd(
 @click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_release_coins_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -617,7 +628,8 @@ def dao_release_coins_cmd(
     coins_to_exclude: Sequence[bytes32],
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import release_coins
 
@@ -635,6 +647,7 @@ def dao_release_coins_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -651,7 +664,7 @@ def dao_release_coins_cmd(
 @click.option("-i", "--wallet-id", help="Id of the wallet to use", type=int, required=True)
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_exit_lockup_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -663,6 +676,7 @@ def dao_exit_lockup_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import exit_lockup
 
@@ -680,6 +694,7 @@ def dao_exit_lockup_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -745,7 +760,7 @@ def dao_proposal(ctx: click.Context) -> None:
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_create_spend_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -762,6 +777,7 @@ def dao_create_spend_proposal_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import create_spend_proposal
 
@@ -784,6 +800,7 @@ def dao_create_spend_proposal_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -850,7 +867,7 @@ def dao_create_spend_proposal_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_create_update_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -869,6 +886,7 @@ def dao_create_update_proposal_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import create_update_proposal
 
@@ -893,6 +911,7 @@ def dao_create_update_proposal_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -932,7 +951,7 @@ def dao_create_update_proposal_cmd(
 )
 @options.create_fee()
 @tx_config_args
-@tx_out_cmd
+@tx_out_cmd()
 def dao_create_mint_proposal_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -947,6 +966,7 @@ def dao_create_mint_proposal_cmd(
     amounts_to_exclude: Sequence[CliAmount],
     reuse: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .dao_funcs import create_mint_proposal
 
@@ -967,6 +987,7 @@ def dao_create_mint_proposal_cmd(
                 reuse_puzhash=reuse,
             ),
             push,
+            condition_valid_times=condition_valid_times,
         )
     )
 

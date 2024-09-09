@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, cast
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -15,9 +15,9 @@ from chia.util.ints import uint32
 # implements BlockchainInterface
 class BlockchainMock:
     if TYPE_CHECKING:
-        from chia.consensus.blockchain_interface import BlockchainInterface
+        from chia.consensus.blockchain_interface import BlocksProtocol
 
-        _protocol_check: ClassVar[BlockchainInterface] = cast("BlockchainMock", None)
+        _protocol_check: ClassVar[BlocksProtocol] = cast("BlockchainMock", None)
 
     def __init__(
         self,
@@ -126,3 +126,7 @@ class BlockchainMock:
 
     def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
         return False
+
+    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: Set[uint32]) -> Dict[uint32, bytes]:
+        # not implemented
+        assert False  # pragma: no cover
