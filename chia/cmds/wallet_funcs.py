@@ -27,7 +27,7 @@ from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_h
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.conditions import CreateCoinAnnouncement, CreatePuzzleAnnouncement
+from chia.wallet.conditions import ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -274,6 +274,7 @@ async def send(
     reuse_puzhash: Optional[bool],
     clawback_time_lock: int,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if memo is None:
@@ -323,6 +324,7 @@ async def send(
                     else None
                 ),
                 push=push,
+                timelock_info=condition_valid_times,
             )
         elif typ in {WalletType.CAT, WalletType.CRCAT}:
             print("Submitting transaction...")
@@ -339,6 +341,7 @@ async def send(
                 fee,
                 memos,
                 push=push,
+                timelock_info=condition_valid_times,
             )
         else:
             print("Only standard wallet and CAT wallets are supported")
@@ -411,6 +414,7 @@ async def make_offer(
     requests: Sequence[str],
     filepath: pathlib.Path,
     reuse_puzhash: Optional[bool],
+    condition_valid_times: ConditionValidTimes,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if offers == [] or requests == []:
@@ -552,6 +556,7 @@ async def make_offer(
                         tx_config=CMDTXConfigLoader(
                             reuse_puzhash=reuse_puzhash,
                         ).to_tx_config(units["chia"], config, fingerprint),
+                        timelock_info=condition_valid_times,
                     )
                     if res.offer is not None:
                         file.write(res.offer.to_bech32())
@@ -698,7 +703,8 @@ async def take_offer(
     fee: uint64,
     file: str,
     examine_only: bool,
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if os.path.exists(file):
@@ -783,6 +789,7 @@ async def take_offer(
                 fee=fee,
                 tx_config=CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
                 push=push,
+                timelock_info=condition_valid_times,
             )
             if push:
                 print(f"Accepted offer with ID {res.trade_record.trade_id}")
@@ -801,7 +808,8 @@ async def cancel_offer(
     fee: uint64,
     offer_id: bytes32,
     secure: bool,
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         trade_record = await wallet_client.get_offer(offer_id, file_contents=True)
@@ -814,6 +822,7 @@ async def cancel_offer(
             secure=secure,
             fee=fee,
             push=push,
+            timelock_info=condition_valid_times,
         )
         if push or not secure:
             print(f"Cancelled offer with ID {trade_record.trade_id}")
@@ -922,12 +931,23 @@ async def print_balances(
 
 
 async def create_did_wallet(
-    wallet_rpc_port: Optional[int], fp: Optional[int], fee: uint64, name: Optional[str], amount: int, push: bool
+    wallet_rpc_port: Optional[int],
+    fp: Optional[int],
+    fee: uint64,
+    name: Optional[str],
+    amount: int,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.create_new_did_wallet(
-                amount, CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint), fee, name, push=push
+                amount,
+                CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
+                fee,
+                name,
+                push=push,
+                timelock_info=condition_valid_times,
             )
             wallet_id = response["wallet_id"]
             my_did = response["my_did"]
@@ -987,7 +1007,8 @@ async def update_did_metadata(
     did_wallet_id: int,
     metadata: str,
     reuse_puzhash: bool,
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
@@ -997,6 +1018,8 @@ async def update_did_metadata(
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
+                push=push,
+                timelock_info=condition_valid_times,
             )
             if push:
                 print(
@@ -1015,7 +1038,8 @@ async def did_message_spend(
     did_wallet_id: int,
     puzzle_announcements: List[str],
     coin_announcements: List[str],
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
@@ -1027,6 +1051,7 @@ async def did_message_spend(
                     *(CreatePuzzleAnnouncement(hexstr_to_bytes(pa)) for pa in puzzle_announcements),
                 ),
                 push=push,
+                timelock_info=condition_valid_times,
             )
             print(f"Message Spend Bundle: {response.spend_bundle.to_json_dict()}")
             return response.transactions
@@ -1043,7 +1068,8 @@ async def transfer_did(
     target_cli_address: CliAddress,
     with_recovery: bool,
     reuse_puzhash: Optional[bool],
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
 
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
@@ -1058,6 +1084,7 @@ async def transfer_did(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
                 push=push,
+                timelock_info=condition_valid_times,
             )
             if push:
                 print(f"Successfully transferred DID to {target_address}")
@@ -1125,7 +1152,8 @@ async def mint_nft(
     fee: uint64,
     royalty_percentage: int,
     reuse_puzhash: Optional[bool],
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         royalty_address = royalty_cli_address.validate_address_type(AddressType.XCH) if royalty_cli_address else None
@@ -1164,6 +1192,7 @@ async def mint_nft(
                 royalty_percentage,
                 did_id,
                 push=push,
+                timelock_info=condition_valid_times,
             )
             spend_bundle = mint_response.spend_bundle
             if push:
@@ -1185,7 +1214,8 @@ async def add_uri_to_nft(
     metadata_uri: Optional[str],
     license_uri: Optional[str],
     reuse_puzhash: Optional[bool],
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
@@ -1212,6 +1242,7 @@ async def add_uri_to_nft(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
                 push=push,
+                timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()
             if push:
@@ -1231,7 +1262,8 @@ async def transfer_nft(
     nft_coin_id: str,
     target_cli_address: CliAddress,
     reuse_puzhash: Optional[bool],
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
@@ -1245,6 +1277,7 @@ async def transfer_nft(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
                 push=push,
+                timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()
             if push:
@@ -1319,7 +1352,9 @@ async def set_nft_did(
     nft_coin_id: str,
     did_id: str,
     reuse_puzhash: Optional[bool],
-) -> None:
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             response = await wallet_client.set_nft_did(
@@ -1330,11 +1365,15 @@ async def set_nft_did(
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
+                push=push,
+                timelock_info=condition_valid_times,
             )
             spend_bundle = response.spend_bundle.to_json_dict()
             print(f"Transaction to set DID on NFT has been initiated with: {spend_bundle}")
+            return response.transactions
         except Exception as e:
             print(f"Failed to set DID on NFT: {e}")
+            return []
 
 
 async def get_nft_info(wallet_rpc_port: Optional[int], fp: Optional[int], nft_coin_id: str) -> None:
@@ -1412,11 +1451,19 @@ async def send_notification(
     message: bytes,
     cli_amount: CliAmount,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         amount: uint64 = cli_amount.convert_amount(units["chia"])
 
-        tx = await wallet_client.send_notification(address.puzzle_hash, message, amount, fee, push=push)
+        tx = await wallet_client.send_notification(
+            address.puzzle_hash,
+            message,
+            amount,
+            fee,
+            push=push,
+            timelock_info=condition_valid_times,
+        )
 
         if push:
             print("Notification sent successfully.")
@@ -1499,7 +1546,8 @@ async def spend_clawback(
     fee: uint64,
     tx_ids_str: str,
     force: bool = False,
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         tx_ids = []
@@ -1511,7 +1559,13 @@ async def spend_clawback(
         if fee < 0:
             print("Batch fee cannot be negative.")
             return []
-        response = await wallet_client.spend_clawback_coins(tx_ids, fee, force, push=push)
+        response = await wallet_client.spend_clawback_coins(
+            tx_ids,
+            fee,
+            force,
+            push=push,
+            timelock_info=condition_valid_times,
+        )
         print(str(response))
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
@@ -1523,6 +1577,7 @@ async def mint_vc(
     fee: uint64,
     target_address: Optional[CliAddress],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.vc_mint(
@@ -1531,6 +1586,7 @@ async def mint_vc(
             target_address.validate_address_type_get_ph(AddressType.XCH) if target_address else None,
             fee,
             push=push,
+            timelock_info=condition_valid_times,
         )
 
         if push:
@@ -1581,6 +1637,7 @@ async def spend_vc(
     new_proof_hash: str,
     reuse_puzhash: bool,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         txs = (
@@ -1593,6 +1650,7 @@ async def spend_vc(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
                 push=push,
+                timelock_info=condition_valid_times,
             )
         ).transactions
 
@@ -1645,6 +1703,7 @@ async def revoke_vc(
     fee: uint64,
     reuse_puzhash: bool,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         if parent_coin_id is None:
@@ -1666,6 +1725,7 @@ async def revoke_vc(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
                 push=push,
+                timelock_info=condition_valid_times,
             )
         ).transactions
 
@@ -1693,7 +1753,8 @@ async def approve_r_cats(
     min_coin_amount: CliAmount,
     max_coin_amount: CliAmount,
     reuse: bool,
-    push: bool = True,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         if wallet_client is None:
@@ -1708,6 +1769,7 @@ async def approve_r_cats(
                 reuse_puzhash=reuse,
             ).to_tx_config(units["cat"], config, fingerprint),
             push=push,
+            timelock_info=condition_valid_times,
         )
 
         if push:

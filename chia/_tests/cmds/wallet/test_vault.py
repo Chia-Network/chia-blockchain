@@ -8,7 +8,11 @@ from chia_rs import G1Element
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, WALLET_ID_ARG
 from chia.rpc.wallet_request_types import VaultCreate, VaultCreateResponse, VaultRecovery, VaultRecoveryResponse
+from chia.util.ints import uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.tx_config import TXConfig
+
+test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
 
 def test_vault_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
@@ -20,6 +24,7 @@ def test_vault_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
             self,
             args: VaultCreate,
             tx_config: TXConfig,
+            timelock_info: ConditionValidTimes,
         ) -> VaultCreateResponse:
             return VaultCreateResponse([STD_UTX], [STD_TX])
 
@@ -44,6 +49,10 @@ def test_vault_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
         hidden_puzzle_index,
         "-m",
         fee,
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     assert_list = ["Successfully created a Vault wallet"]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
@@ -58,8 +67,9 @@ def test_vault_recovery(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
             self,
             args: VaultRecovery,
             tx_config: TXConfig,
+            timelock_info: ConditionValidTimes,
         ) -> VaultRecoveryResponse:
-            return VaultRecoveryResponse([STD_UTX, STD_UTX], [STD_TX, STD_TX])
+            return VaultRecoveryResponse([STD_UTX, STD_UTX], [STD_TX, STD_TX], STD_TX.name, STD_TX.name)
 
     inst_rpc_client = CreateVaultRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -82,6 +92,10 @@ def test_vault_recovery(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
         str(tmp_path / "recovery_init.json"),
         "-rf",
         str(tmp_path / "recovery_finish.json"),
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     assert_list = [
         "Writing transactions to file ",

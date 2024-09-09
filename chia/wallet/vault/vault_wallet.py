@@ -17,7 +17,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.signing_mode import SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.observation_root import ObservationRoot
@@ -46,7 +45,6 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_hints import compute_spend_hints_and_additions
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend
 from chia.wallet.util.wallet_types import WalletIdentifier
 from chia.wallet.vault.vault_drivers import (
@@ -78,6 +76,7 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 @dataclass
@@ -157,7 +156,7 @@ class Vault(Wallet):
             puzzle_decorator_override=puzzle_decorator_override,
             extra_conditions=extra_conditions,
         )
-        spend_bundle = SpendBundle(coin_spends, G2Element())
+        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
@@ -215,7 +214,7 @@ class Vault(Wallet):
                 )
             coins = await self.select_coins(
                 uint64(total_amount),
-                action_scope.config.tx_config.coin_selection_config,
+                action_scope,
             )
         assert len(coins) > 0
         selected_amount = sum(coin.amount for coin in coins)
@@ -464,7 +463,7 @@ class Vault(Wallet):
     def get_p2_singleton_puzzle_hash(self) -> bytes32:
         return get_p2_singleton_puzzle_hash(self.launcher_id)
 
-    async def select_coins(self, amount: uint64, coin_selection_config: CoinSelectionConfig) -> Set[Coin]:
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> Set[Coin]:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
@@ -472,14 +471,16 @@ class Vault(Wallet):
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
         assert records
         spendable_amount = uint128(sum(rec.coin.amount for rec in records))
-        coins = await select_coins(
-            spendable_amount,
-            coin_selection_config,
-            records,
-            unconfirmed_removals,
-            self.log,
-            uint128(amount),
-        )
+        async with action_scope.use() as interface:
+            coins = await select_coins(
+                spendable_amount,
+                action_scope.config.adjust_for_side_effects(interface.side_effects).tx_config.coin_selection_config,
+                records,
+                unconfirmed_removals,
+                self.log,
+                uint128(amount),
+            )
+            interface.side_effects.selected_coins.extend([*coins])
         return coins
 
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:
@@ -502,12 +503,12 @@ class Vault(Wallet):
         secp_pk: bytes,
         hidden_puzzle_hash: bytes32,
         genesis_challenge: bytes32,
-        tx_config: TXConfig,
+        action_scope: WalletActionScope,
         bls_pk: Optional[G1Element] = None,
         timelock: Optional[uint64] = None,
-    ) -> List[TransactionRecord]:
+    ) -> Tuple[bytes32, bytes32]:
         """
-        Returns two tx records
+        Returns two tx IDs
         1. Recover the vault which can be taken to the appropriate BLS wallet for signing
         2. Complete the recovery after the timelock has elapsed
         """
@@ -561,7 +562,7 @@ class Vault(Wallet):
         assert full_puzzle.get_tree_hash() == vault_coin.puzzle_hash
 
         full_solution = get_vault_full_solution(self.vault_info.lineage_proof, amount, inner_solution)
-        recovery_spend = SpendBundle([make_spend(vault_coin, full_puzzle, full_solution)], G2Element())
+        recovery_spend = WalletSpendBundle([make_spend(vault_coin, full_puzzle, full_solution)], G2Element())
 
         # 2. Generate the Finish Recovery Spend
         assert isinstance(self.vault_info.recovery_info.bls_pk, G1Element)
@@ -577,7 +578,7 @@ class Vault(Wallet):
         recovery_solution = get_vault_inner_solution(recovery_finish_puzzle, recovery_finish_solution, proof)
         lineage = LineageProof(vault_coin.parent_coin_info, inner_puzzle.get_tree_hash(), amount)
         full_recovery_solution = get_vault_full_solution(lineage, amount, recovery_solution)
-        finish_spend = SpendBundle(
+        finish_spend = WalletSpendBundle(
             [make_spend(recovery_coin, full_recovery_puzzle, full_recovery_solution)], G2Element()
         )
         new_vault_coin_id = finish_spend.additions()[0].name()
@@ -585,7 +586,6 @@ class Vault(Wallet):
             [recovery_coin.name(), new_vault_coin_id], [self.id(), self.id()]
         )
 
-        # make the tx records
         recovery_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -626,7 +626,10 @@ class Vault(Wallet):
             valid_times=parse_timelock_info(tuple()),
         )
 
-        return [recovery_tx, finish_tx]
+        async with action_scope.use() as interface:
+            interface.side_effects.transactions.extend([recovery_tx, finish_tx])
+
+        return (recovery_tx.name, finish_tx.name)
 
     async def sync_vault_launcher(self) -> None:
         wallet_node: Any = self.wallet_state_manager.wallet_node

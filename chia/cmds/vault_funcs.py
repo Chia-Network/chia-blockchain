@@ -10,6 +10,7 @@ from chia.cmds.units import units
 from chia.rpc.wallet_request_types import VaultCreate, VaultRecovery
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -27,6 +28,7 @@ async def create_vault(
     excluded_coin_ids: Sequence[bytes32],
     reuse_puzhash: Optional[bool],
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         assert hidden_puzzle_index >= 0
@@ -49,6 +51,7 @@ async def create_vault(
                     push=push,
                 ),
                 tx_config=tx_config,
+                timelock_info=condition_valid_times,
             )
             print("Successfully created a Vault wallet")
             return res.transactions
@@ -71,6 +74,7 @@ async def recover_vault(
     max_coin_amount: CliAmount,
     excluded_coin_ids: Sequence[bytes32],
     reuse_puzhash: Optional[bool],
+    condition_valid_times: ConditionValidTimes,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         assert hidden_puzzle_index >= 0
@@ -92,9 +96,9 @@ async def recover_vault(
                     timelock=uint64(timelock) if timelock else None,
                 ),
                 tx_config=tx_config,
+                timelock_info=condition_valid_times,
             )
-            # TODO: do not rely on ordering of transactions here
-            write_transactions_to_file(response.transactions[0:1], initiate_file)
-            write_transactions_to_file(response.transactions[1:2], finish_file)
+            write_transactions_to_file([response.recovery_tx], initiate_file)
+            write_transactions_to_file([response.finish_tx], finish_file)
         except Exception as e:
             print(f"Error creating recovery transactions: {e}")

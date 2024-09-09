@@ -53,8 +53,6 @@ def sign_message(private_key: ec.EllipticCurvePrivateKey, message: bytes) -> byt
 @pytest.mark.anyio
 async def test_vault_inner(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        sim.pass_blocks(DEFAULT_CONSTANTS.SOFT_FORK2_HEIGHT)  # Make sure secp_verify is available
-
         # Setup puzzles
         secp_puzzle = construct_p2_delegated_secp(SECP_PK, DEFAULT_CONSTANTS.GENESIS_CHALLENGE, HIDDEN_PUZZLE_HASH)
         secp_puzzlehash = secp_puzzle.get_tree_hash()

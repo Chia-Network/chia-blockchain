@@ -63,7 +63,7 @@ def to_sp(sexp: bytes) -> SerializedProgram:
 
 
 def block_generator() -> BlockGenerator:
-    generator_list = [to_sp(FIRST_GENERATOR), to_sp(SECOND_GENERATOR)]
+    generator_list = [FIRST_GENERATOR, SECOND_GENERATOR]
     return BlockGenerator(to_sp(COMPILED_GENERATOR_CODE), generator_list)
 
 
@@ -80,7 +80,7 @@ EXPECTED_OUTPUT = (
 
 def run_generator(self: BlockGenerator) -> Tuple[int, Program]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
-    args = Program.to([[bytes(g) for g in self.generator_refs]])
+    args = Program.to([self.generator_refs])
     return GENERATOR_MOD.run_with_cost(MAX_COST, [self.program, args])
 
 

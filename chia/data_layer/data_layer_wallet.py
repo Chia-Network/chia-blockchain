@@ -20,7 +20,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import (
@@ -57,13 +56,13 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend, fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, MainWalletProtocol, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -308,9 +307,7 @@ class DataLayerWallet:
         Creates the initial singleton, which includes spending an origin coin, the launcher, and creating a singleton
         """
 
-        coins: Set[Coin] = await self.standard_wallet.select_coins(
-            uint64(fee + 1), action_scope.config.tx_config.coin_selection_config
-        )
+        coins: Set[Coin] = await self.standard_wallet.select_coins(uint64(fee + 1), action_scope)
         if coins is None:
             raise ValueError("Not enough coins to create new data layer singleton")
 
@@ -344,7 +341,7 @@ class DataLayerWallet:
             SerializedProgram.from_program(SINGLETON_LAUNCHER),
             SerializedProgram.from_program(genesis_launcher_solution),
         )
-        launcher_sb: SpendBundle = SpendBundle([launcher_cs], G2Element())
+        launcher_sb = WalletSpendBundle([launcher_cs], G2Element())
 
         async with action_scope.use() as interface:
             interface.side_effects.extra_spends.append(launcher_sb)
@@ -563,10 +560,10 @@ class DataLayerWallet:
             SerializedProgram.from_program(full_sol),
         )
 
-        spend_bundle = SpendBundle([coin_spend], G2Element())
+        spend_bundle = WalletSpendBundle([coin_spend], G2Element())
 
         if announce_new_state:
-            spend_bundle = spend_bundle.replace(coin_spends=[coin_spend, second_coin_spend])
+            spend_bundle = WalletSpendBundle([coin_spend, second_coin_spend], spend_bundle.aggregated_signature)
 
         dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
@@ -767,7 +764,7 @@ class DataLayerWallet:
                 ]
             ),
         )
-        mirror_bundle: SpendBundle = SpendBundle([mirror_spend], G2Element())
+        mirror_bundle = WalletSpendBundle([mirror_spend], G2Element())
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
@@ -1095,7 +1092,7 @@ class DataLayerWallet:
                     else:
                         # No test coverage for this line because it should never be reached
                         raise RuntimeError("Internal logic error while constructing update offer")  # pragma: no cover
-                    new_bundle = SpendBundle(
+                    new_bundle = WalletSpendBundle(
                         [
                             *(
                                 cs
@@ -1124,7 +1121,7 @@ class DataLayerWallet:
 
         return Offer(
             requested_payments,
-            SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None]),
+            WalletSpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None]),
             driver_dict,
         )
 
@@ -1197,7 +1194,7 @@ class DataLayerWallet:
                     spend = new_spend
             new_spends.append(spend)
 
-        return Offer({}, SpendBundle(new_spends, offer.aggregated_signature()), offer.driver_dict)
+        return Offer({}, WalletSpendBundle(new_spends, offer.aggregated_signature()), offer.driver_dict)
 
     @staticmethod
     async def get_offer_summary(offer: Offer) -> Dict[str, Any]:
@@ -1235,7 +1232,7 @@ class DataLayerWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         raise RuntimeError("DataLayerWallet does not support select_coins()")
 

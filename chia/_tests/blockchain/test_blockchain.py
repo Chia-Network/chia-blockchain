@@ -28,6 +28,7 @@ from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
@@ -307,8 +308,11 @@ class TestBlockHeaderValidation:
             [],
         )
         npc_result = None
-        if unf.transactions_generator is not None:
-            block_generator = await blockchain.get_block_generator(unf)
+        # if this assert fires, remove it along with the pragma for the block
+        # below
+        assert unf.transactions_generator is None
+        if unf.transactions_generator is not None:  # pragma: no cover
+            block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
             block_bytes = bytes(unf)
             npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
@@ -332,8 +336,11 @@ class TestBlockHeaderValidation:
             [],
         )
         npc_result = None
-        if unf.transactions_generator is not None:
-            block_generator = await blockchain.get_block_generator(unf)
+        # if this assert fires, remove it along with the pragma for the block
+        # below
+        assert unf.transactions_generator is None
+        if unf.transactions_generator is not None:  # pragma: no cover
+            block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
             assert block_generator is not None
             block_bytes = bytes(unf)
             npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
@@ -420,8 +427,11 @@ class TestBlockHeaderValidation:
                     [],
                 )
                 npc_result = None
-                if block.transactions_generator is not None:
-                    block_generator = await blockchain.get_block_generator(unf)
+                # if this assert fires, remove it along with the pragma for the block
+                # below
+                assert block.transactions_generator is None
+                if block.transactions_generator is not None:  # pragma: no cover
+                    block_generator = await get_block_generator(blockchain.lookup_block_generators, unf)
                     assert block_generator is not None
                     block_bytes = bytes(unf)
                     npc_result = await blockchain.run_generator(block_bytes, block_generator, height=softfork_height)
@@ -1889,7 +1899,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx1: SpendBundle = wt.generate_signed_transaction(
+        tx1 = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         coin1: Coin = tx1.additions()[0]
@@ -1914,9 +1924,7 @@ class TestBodyValidation:
             opcode: [ConditionWithArgs(opcode, args + ([b"garbage"] if with_garbage else []))]
         }
 
-        tx2: SpendBundle = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), coin1, condition_dic=conditions
-        )
+        tx2 = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
         assert coin1 in tx2.removals()
 
         bundles = SpendBundle.aggregate([tx1, tx2])
@@ -2033,9 +2041,7 @@ class TestBodyValidation:
             conditions = {opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)])]}
 
             coin = blocks[-1].get_included_reward_coins()[0]
-            tx: SpendBundle = wt.generate_signed_transaction(
-                uint64(10), wt.get_new_puzzlehash(), coin, condition_dic=conditions
-            )
+            tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin, condition_dic=conditions)
 
             blocks = bt.get_consecutive_blocks(
                 1,
@@ -2094,7 +2100,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx1: SpendBundle = wt.generate_signed_transaction(
+        tx1 = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         coin1: Coin = tx1.additions()[0]
@@ -2105,9 +2111,7 @@ class TestBodyValidation:
         args = [bytes(public_key), b"msg"] + ([b"garbage"] if with_garbage else [])
         conditions = {opcode: [ConditionWithArgs(opcode, args)]}
 
-        tx2: SpendBundle = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), coin1, condition_dic=conditions
-        )
+        tx2 = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
         assert coin1 in tx2.removals()
 
         bundles = SpendBundle.aggregate([tx1, tx2])
@@ -2219,13 +2223,11 @@ class TestBodyValidation:
                 opcode: [ConditionWithArgs(opcode, [int_to_bytes(lock_value)] + ([b"garbage"] if with_garbage else []))]
             }
 
-            tx1: SpendBundle = wt.generate_signed_transaction(
+            tx1 = wt.generate_signed_transaction(
                 uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
             )
             coin1: Coin = tx1.additions()[0]
-            tx2: SpendBundle = wt.generate_signed_transaction(
-                uint64(10), wt.get_new_puzzlehash(), coin1, condition_dic=conditions
-            )
+            tx2 = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), coin1, condition_dic=conditions)
             assert coin1 in tx2.removals()
             coin2: Coin = tx2.additions()[0]
 
@@ -2451,7 +2453,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[3])
 
         wt: WalletTool = bt.get_pool_wallet_tool()
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
@@ -2515,7 +2517,7 @@ class TestBodyValidation:
         # Hash should be correct when there is a ref list
         await _validate_and_add_block(b, blocks[-1])
         wt: WalletTool = bt.get_pool_wallet_tool()
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(5, block_list_input=blocks, guarantee_transaction_block=False)
@@ -2563,7 +2565,7 @@ class TestBodyValidation:
             output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(i)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0], condition_dic=condition_dict
         )
 
@@ -2614,7 +2616,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
@@ -2745,7 +2747,7 @@ class TestBodyValidation:
         #     output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt_2.pool_ph, int_to_bytes(2 ** 64)])
         #     condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
-        #     tx: SpendBundle = wt.generate_signed_transaction_multiple_coins(
+        #     tx = wt.generate_signed_transaction_multiple_coins(
         #         uint64(10),
         #         wt.get_new_puzzlehash(),
         #         blocks[1].get_included_reward_coins(),
@@ -2773,7 +2775,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
@@ -2824,7 +2826,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
@@ -2864,7 +2866,7 @@ class TestBodyValidation:
             output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(1)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0], condition_dic=condition_dict
         )
 
@@ -2889,10 +2891,10 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
-        tx_2: SpendBundle = wt.generate_signed_transaction(
+        tx_2 = wt.generate_signed_transaction(
             uint64(11), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         agg = SpendBundle.aggregate([tx, tx_2])
@@ -2918,7 +2920,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
@@ -2927,7 +2929,7 @@ class TestBodyValidation:
         )
         await _validate_and_add_block(b, blocks[-1])
 
-        tx_2: SpendBundle = wt.generate_signed_transaction(
+        tx_2 = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-2].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
@@ -2952,7 +2954,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
@@ -2961,7 +2963,7 @@ class TestBodyValidation:
         await _validate_and_add_block(b, blocks[-1])
 
         new_coin: Coin = tx.additions()[0]
-        tx_2: SpendBundle = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), new_coin)
+        tx_2 = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), new_coin)
         # This is fine because coin exists
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx_2
@@ -3018,7 +3020,7 @@ class TestBodyValidation:
             calculate_base_farmer_reward(blocks_reorg[-1].height),
             bt.constants.GENESIS_CHALLENGE,
         )
-        tx_3: SpendBundle = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), farmer_coin)
+        tx_3 = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), farmer_coin)
 
         blocks_reorg = bt.get_consecutive_blocks(
             1, block_list_input=blocks_reorg, guarantee_transaction_block=True, transaction_data=tx_3
@@ -3051,9 +3053,7 @@ class TestBodyValidation:
         output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(spend.amount)])
         condition_dict = {ConditionOpcode.CREATE_COIN: [output]}
 
-        tx: SpendBundle = wt.generate_signed_transaction(
-            uint64(10), wt.get_new_puzzlehash(), spend, condition_dic=condition_dict
-        )
+        tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), spend, condition_dic=condition_dict)
 
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -3082,7 +3082,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
 
@@ -3124,7 +3124,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
@@ -3352,6 +3352,7 @@ class TestReorgs:
         # can catch up
         fork_block = default_10000_blocks[num_blocks_chain_2_start - 200]
         fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
+        await b.warmup(fork_block.height)
         for block in blocks:
             if (block.height % 128) == 0:
                 peak = b.get_peak()
@@ -3480,7 +3481,7 @@ class TestReorgs:
         await _validate_and_add_block(b, blocks[1])
         await _validate_and_add_block(b, blocks[2])
         wt: WalletTool = bt.get_pool_wallet_tool()
-        tx: SpendBundle = wt.generate_signed_transaction(
+        tx = wt.generate_signed_transaction(
             uint64(10), wt.get_new_puzzlehash(), blocks[2].get_included_reward_coins()[0]
         )
         blocks = bt.get_consecutive_blocks(
@@ -3854,3 +3855,117 @@ async def test_get_tx_peak(default_400_blocks: List[FullBlock], empty_blockchain
             last_tx_block_record = block_record
 
     assert bc.get_tx_peak() == last_tx_block_record
+
+
+def to_bytes(gen: Optional[SerializedProgram]) -> bytes:
+    assert gen is not None
+    return bytes(gen)
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="block heights for generators differ between test chains in different modes")
+@pytest.mark.parametrize("clear_cache", [True, False])
+async def test_lookup_block_generators(
+    default_10000_blocks: List[FullBlock],
+    test_long_reorg_blocks_light: List[FullBlock],
+    bt: BlockTools,
+    empty_blockchain: Blockchain,
+    clear_cache: bool,
+) -> None:
+    b = empty_blockchain
+    blocks_1 = default_10000_blocks
+    blocks_2 = test_long_reorg_blocks_light
+
+    # this test blockchain is expected to have block generators at these
+    # heights:
+    # 2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+    # 24, 25, 26, 28
+
+    # default_10000_blocks and test_long_reorg_blocks_light diverge at height
+    # 500. Add blocks from both past the fork to be able to test both
+
+    # fork 1 is expected to have generators at these heights:
+    # 503, 507, 511, 517, 524, 529, 532, 533, 534, 539, 542, 543, 546, 547
+
+    # fork 2 is expected to have generators at these heights:
+    # 507, 516, 527, 535, 539, 543, 547
+
+    # start with adding some blocks to test lookups from the mainchain
+    for block in blocks_2[:550]:
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.NEW_PEAK)
+
+    for block in blocks_1[500:550]:
+        await _validate_and_add_block(b, block, expected_result=AddBlockResult.ADDED_AS_ORPHAN)
+
+    # now we have a blockchain with two forks, the peak is at blocks_2[550] and
+    # the leight weight peak is at blocks_1[550]
+    # make sure we can lookup block generators from each fork
+
+    peak_1 = blocks_1[550]
+    peak_2 = blocks_2[550]
+
+    # single generators, from the shared part of the chain
+    for peak in [peak_1, peak_2]:
+        if clear_cache:
+            b.clean_block_records()
+        generators = await b.lookup_block_generators(peak.prev_header_hash, {uint32(2)})
+        assert generators == {
+            uint32(2): to_bytes(blocks_1[2].transactions_generator),
+        }
+
+    # multiple generators from the shared part of the chain
+    for peak in [peak_1, peak_2]:
+        if clear_cache:
+            b.clean_block_records()
+        generators = await b.lookup_block_generators(peak.prev_header_hash, {uint32(2), uint32(10), uint32(26)})
+        assert generators == {
+            uint32(2): to_bytes(blocks_1[2].transactions_generator),
+            uint32(10): to_bytes(blocks_1[10].transactions_generator),
+            uint32(26): to_bytes(blocks_1[26].transactions_generator),
+        }
+
+    # lookups from the past the fork
+    if clear_cache:
+        b.clean_block_records()
+    generators = await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(503)})
+    assert generators == {uint32(503): to_bytes(blocks_1[503].transactions_generator)}
+
+    if clear_cache:
+        b.clean_block_records()
+    generators = await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(516)})
+    assert generators == {uint32(516): to_bytes(blocks_2[516].transactions_generator)}
+
+    # make sure we don't cross the forks
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+        await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(516)})
+
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+        await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(503)})
+
+    # make sure we fail when looking up a non-transaction block from the main
+    # chain, regardless of which chain we start at
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+        await b.lookup_block_generators(peak_1.prev_header_hash, {uint32(8)})
+
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(ValueError, match="Err.GENERATOR_REF_HAS_NO_GENERATOR"):
+        await b.lookup_block_generators(peak_2.prev_header_hash, {uint32(8)})
+
+    # if we try to look up generators starting from a disconnected block, we
+    # fail
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(AssertionError):
+        await b.lookup_block_generators(blocks_2[600].prev_header_hash, {uint32(3)})
+
+    if clear_cache:
+        b.clean_block_records()
+    with pytest.raises(AssertionError):
+        await b.lookup_block_generators(blocks_1[600].prev_header_hash, {uint32(3)})

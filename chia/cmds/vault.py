@@ -6,10 +6,11 @@ from typing import List, Optional, Sequence
 import click
 
 from chia.cmds import options
-from chia.cmds.cmds_util import tx_out_cmd
+from chia.cmds.cmds_util import timelock_args, tx_out_cmd
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -90,7 +91,7 @@ def vault_cmd(ctx: click.Context) -> None:
     is_flag=True,
     default=False,
 )
-@tx_out_cmd
+@tx_out_cmd()
 def vault_create_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -105,6 +106,7 @@ def vault_create_cmd(
     coins_to_exclude: Sequence[bytes32],
     reuse: bool,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .vault_funcs import create_vault
 
@@ -123,6 +125,7 @@ def vault_create_cmd(
             excluded_coin_ids=coins_to_exclude,
             reuse_puzhash=True if reuse else None,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -213,6 +216,7 @@ def vault_create_cmd(
     is_flag=True,
     default=False,
 )
+@timelock_args()
 def vault_recover_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -227,6 +231,7 @@ def vault_recover_cmd(
     max_coin_amount: CliAmount,
     coins_to_exclude: Sequence[bytes32],
     reuse: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> None:
     from .vault_funcs import recover_vault
 
@@ -245,5 +250,6 @@ def vault_recover_cmd(
             max_coin_amount=max_coin_amount,
             excluded_coin_ids=coins_to_exclude,
             reuse_puzhash=True if reuse else None,
+            condition_valid_times=condition_valid_times,
         )
     )

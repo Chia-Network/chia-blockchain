@@ -104,7 +104,14 @@ class CliAmount:
             return self.amount
         if not isinstance(self.amount, Decimal):
             raise ValueError("Amount must be a Decimal if mojos flag is not set.")
-        return uint64(self.amount * mojo_per_unit)
+        converted_amount = self.amount * mojo_per_unit
+        uint64_amount = uint64(converted_amount)
+        if uint64_amount != converted_amount:
+            raise ValueError(
+                "Too much decimal precision specified."
+                "Please use the units of the balance numbers from `chia wallet show`"
+            )
+        return uint64_amount
 
 
 class AmountParamType(click.ParamType):

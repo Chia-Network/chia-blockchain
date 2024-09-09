@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,7 +16,7 @@ def get_signage_point_vdf_info(
     finished_sub_slots: List[EndOfSubSlotBundle],
     overflow: bool,
     prev_b: Optional[BlockRecord],
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     sp_total_iters: uint128,
     sp_iters: uint64,
 ) -> Tuple[bytes32, bytes32, ClassgroupElement, ClassgroupElement, uint64, uint64]:
