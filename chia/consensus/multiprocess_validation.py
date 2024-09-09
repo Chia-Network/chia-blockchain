@@ -6,21 +6,20 @@ import time
 import traceback
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlocksProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pot_iterations import calculate_iterations_quality, is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
-from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.proof_of_space import verify_and_get_quality_string
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -58,6 +57,7 @@ def batch_pre_validate_blocks(
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
+    prev_ses_block_bytes: Optional[List[Optional[bytes]]] = None,
 ) -> List[bytes]:
     blocks: Dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
@@ -104,6 +104,10 @@ def batch_pre_validate_blocks(
                 continue
 
             header_block = get_block_header(block, tx_additions, removals)
+            prev_ses_block = None
+            if prev_ses_block_bytes is not None and len(prev_ses_block_bytes) > 0:
+                if prev_ses_block_bytes[i] is not None:
+                    prev_ses_block = BlockRecord.from_bytes_unchecked(prev_ses_block_bytes[i])
             required_iters, error = validate_finished_header_block(
                 constants,
                 BlockCache(blocks),
@@ -111,6 +115,7 @@ def batch_pre_validate_blocks(
                 check_filter,
                 expected_difficulty[i],
                 expected_sub_slot_iters[i],
+                prev_ses_block=prev_ses_block,
             )
             error_int: Optional[uint16] = None
             if error is not None:
@@ -155,13 +160,15 @@ def batch_pre_validate_blocks(
 
 async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
-    block_records: BlockchainInterface,
+    block_records: BlocksProtocol,
     blocks: Sequence[FullBlock],
     pool: Executor,
     check_filter: bool,
     npc_results: Dict[uint32, NPCResult],
-    get_block_generator: Callable[[BlockInfo, Dict[bytes32, FullBlock]], Awaitable[Optional[BlockGenerator]]],
     batch_size: int,
+    sub_slot_iters: uint64,
+    difficulty: uint64,
+    prev_ses_block: Optional[BlockRecord],
     wp_summaries: Optional[List[SubEpochSummary]] = None,
     *,
     validate_signatures: bool = True,
@@ -179,17 +186,27 @@ async def pre_validate_blocks_multiprocessing(
         block_records:
         blocks: list of full blocks to validate (must be connected to current chain)
         npc_results
-        get_block_generator
     """
     prev_b: Optional[BlockRecord] = None
     # Collects all the recent blocks (up to the previous sub-epoch)
     recent_blocks: Dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
     num_blocks_seen = 0
+
+    # keep track on what was in cache
+    block_record_was_present: List[bool] = []
+    block_hashes: List[bytes32] = []
+    for block in blocks:
+        header_hash = block.header_hash
+        block_hashes.append(header_hash)
+        block_record_was_present.append(block_records.contains_block(header_hash))
+
+    # load blocks to cache
     if blocks[0].height > 0:
-        curr = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
+        curr = block_records.block_record(blocks[0].prev_header_hash)
         if curr is None:
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
+        prev_b = curr
         num_sub_slots_to_look_for = 3 if curr.overflow else 2
         header_hash = curr.header_hash
         while (
@@ -204,29 +221,24 @@ async def pre_validate_blocks_multiprocessing(
             if curr.is_transaction_block:
                 num_blocks_seen += 1
             header_hash = curr.prev_hash
-            curr = await block_records.get_block_record_from_db(curr.prev_hash)
+            curr = block_records.block_record(curr.prev_hash)
             assert curr is not None
         recent_blocks[header_hash] = curr
-    block_record_was_present = []
-
-    block_hashes: List[bytes32] = []
-    for block in blocks:
-        header_hash = block.header_hash
-        block_hashes.append(header_hash)
-        block_record_was_present.append(block_records.contains_block(header_hash))
 
     diff_ssis: List[Tuple[uint64, uint64]] = []
+    prev_ses_block_list: List[Optional[BlockRecord]] = []
 
     if blocks[0].height != 0:
         if prev_b is None:
-            prev_b = await block_records.get_block_record_from_db(blocks[0].prev_header_hash)
+            prev_b = block_records.block_record(blocks[0].prev_header_hash)
         assert prev_b is not None
 
     for block in blocks:
-        sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-            constants, len(block.finished_sub_slots) > 0, prev_b, block_records
-        )
-
+        if len(block.finished_sub_slots) > 0:
+            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
+            if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
         challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -237,8 +249,8 @@ async def pre_validate_blocks_multiprocessing(
             block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=block.height
         )
         if q_str is None:
-            for i, block_i in enumerate(blocks):
-                if not block_record_was_present[i] and block_records.contains_block(block_hashes[i]):
+            for i, was_cached in enumerate(block_record_was_present):
+                if not was_cached and block_records.contains_block(block_hashes[i]):
                     block_records.remove_block_record(block_hashes[i])
             return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False, uint32(0))]
 
@@ -256,17 +268,21 @@ async def pre_validate_blocks_multiprocessing(
                 block_records,
                 required_iters,
                 block,
-                None,
+                sub_slot_iters=sub_slot_iters,
+                prev_ses_block=prev_ses_block,
             )
         except ValueError:
             return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
-        if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
-            idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
-            next_ses = wp_summaries[idx]
-            if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
-                log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
-                return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
+        if block_rec.sub_epoch_summary_included is not None:
+            if wp_summaries is not None:
+                idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
+                next_ses = wp_summaries[idx]
+                if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
+                    log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
+                    return [
+                        PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))
+                    ]
         # Makes sure to not override the valid blocks already in block_records
         if not block_records.contains_block(block_rec.header_hash):
             block_records.add_block_record(block_rec)  # Temporarily add block to dict
@@ -275,8 +291,12 @@ async def pre_validate_blocks_multiprocessing(
             recent_blocks[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
+        prev_ses_block_list.append(prev_ses_block)
+        if block_rec.sub_epoch_summary_included is not None:
+            prev_ses_block = block_rec
 
     block_dict: Dict[bytes32, FullBlock] = {}
+    # revert cache back
     for i, block in enumerate(blocks):
         block_dict[block_hashes[i]] = block
         if not block_record_was_present[i]:
@@ -306,10 +326,11 @@ async def pre_validate_blocks_multiprocessing(
                 prev_blocks_dict[header_hash] = curr_b
 
             assert isinstance(block, FullBlock)
-            assert get_block_generator is not None
             b_pickled.append(bytes(block))
             try:
-                block_generator: Optional[BlockGenerator] = await get_block_generator(block, prev_blocks_dict)
+                block_generator: Optional[BlockGenerator] = await get_block_generator(
+                    block_records.lookup_block_generators, block, prev_blocks_dict
+                )
             except ValueError:
                 return [
                     PreValidationResult(
@@ -320,6 +341,14 @@ async def pre_validate_blocks_multiprocessing(
                 previous_generators.append(block_generator.generator_refs)
             else:
                 previous_generators.append(None)
+
+        ses_blocks_bytes_list: List[Optional[bytes]] = []
+        for j in range(i, end_i):
+            ses_block_rec = prev_ses_block_list[j]
+            if ses_block_rec is None:
+                ses_blocks_bytes_list.append(None)
+            else:
+                ses_blocks_bytes_list.append(bytes(ses_block_rec))
 
         futures.append(
             asyncio.get_running_loop().run_in_executor(
@@ -334,6 +363,7 @@ async def pre_validate_blocks_multiprocessing(
                 [diff_ssis[j][0] for j in range(i, end_i)],
                 [diff_ssis[j][1] for j in range(i, end_i)],
                 validate_signatures,
+                ses_blocks_bytes_list,
             )
         )
     # Collect all results into one flat list

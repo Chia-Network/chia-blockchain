@@ -16,6 +16,7 @@ from chia._tests.util.constants import test_constants as TEST_CONSTANTS
 from chia.cmds.init_funcs import chia_init
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
@@ -199,7 +200,15 @@ async def run_sync_test(
                                 await full_node.add_unfinished_block(make_unfinished_block(b, constants), peer)
                                 await full_node.add_block(b, None, full_node._bls_cache)
                         else:
-                            success, summary, _ = await full_node.add_block_batch(block_batch, peer_info, None)
+                            block_record = await full_node.blockchain.get_block_record_from_db(
+                                block_batch[0].prev_header_hash
+                            )
+                            ssi, diff = get_next_sub_slot_iters_and_difficulty(
+                                full_node.constants, True, block_record, full_node.blockchain
+                            )
+                            success, summary, _, _, _, _ = await full_node.add_block_batch(
+                                block_batch, peer_info, None, current_ssi=ssi, current_difficulty=diff
+                            )
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 

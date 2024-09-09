@@ -139,11 +139,26 @@ class SplitCoinsResponse(TransactionEndpointResponse):
 
 @streamable
 @kw_only_dataclass
+class CombineCoins(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    number_of_coins: uint16 = field(default_factory=default_raise)
+    largest_first: bool = False
+    target_coin_ids: List[bytes32] = field(default_factory=list)
+    target_coin_amount: Optional[uint64] = None
+    coin_num_limit: uint16 = uint16(500)
+
+
+@streamable
+@kw_only_dataclass
 class VaultCreate(TransactionEndpointRequest):
     secp_pk: bytes = field(default_factory=default_raise)
     hp_index: uint32 = uint32(0)
     bls_pk: Optional[G1Element] = None
     timelock: Optional[uint64] = None
+
+
+class CombineCoinsResponse(TransactionEndpointResponse):
+    pass
 
 
 @streamable
