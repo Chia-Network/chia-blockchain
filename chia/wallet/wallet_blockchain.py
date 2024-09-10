@@ -195,8 +195,10 @@ class WalletBlockchain:
     def contains_block(self, header_hash: bytes32) -> bool:
         return header_hash in self._block_records
 
-    def contains_height(self, height: uint32) -> bool:
-        return height in self._height_to_hash
+    def get_peak_height(self) -> Optional[uint32]:
+        if self._peak is None:
+            return None
+        return self._peak.height
 
     def height_to_hash(self, height: uint32) -> bytes32:
         return self._height_to_hash[height]

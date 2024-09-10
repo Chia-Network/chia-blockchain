@@ -16,13 +16,19 @@ class BlockCache:
 
     _block_records: Dict[bytes32, BlockRecord]
     _height_to_hash: Dict[uint32, bytes32]
+    _peak_height: Optional[uint32]
 
     def __init__(
         self,
         blocks: Dict[bytes32, BlockRecord],
     ):
         self._block_records = blocks
-        self._height_to_hash = {block.height: hh for hh, block in blocks.items()}
+        self._height_to_hash = {}
+        self._peak_height = uint32(0)
+        for hh, block in blocks.items():
+            self._height_to_hash[block.height] = hh
+            if self._peak_height is None or block.height > self._peak_height:
+                self._peak_height = block.height
 
     def add_block(self, block: BlockRecord) -> None:
         hh = block.header_hash
@@ -46,8 +52,8 @@ class BlockCache:
     def contains_block(self, header_hash: bytes32) -> bool:
         return header_hash in self._block_records
 
-    def contains_height(self, height: uint32) -> bool:
-        return height in self._height_to_hash
+    def get_peak_height(self) -> Optional[uint32]:
+        return self._peak_height
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records.get(header_hash)

@@ -887,9 +887,6 @@ class Blockchain:
             return None
         return self.__height_map.get_hash(height)
 
-    def contains_height(self, height: uint32) -> bool:
-        return self.__height_map.contains_height(height)
-
     def get_peak_height(self) -> Optional[uint32]:
         return self._peak_height
 

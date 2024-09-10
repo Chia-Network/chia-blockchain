@@ -38,6 +38,10 @@ class BlockchainMock:
         self._sub_epoch_summaries = sub_epoch_summaries
         self._sub_epoch_segments: Dict[bytes32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
+        self._peak_height = None
+        for block in blocks.values():
+            if self._peak_height is None or block.height > self._peak_height:
+                self._peak_height = block.height
 
     def get_peak(self) -> Optional[BlockRecord]:
         return None
@@ -71,9 +75,6 @@ class BlockchainMock:
 
     async def contains_block_from_db(self, header_hash: bytes32) -> bool:
         return header_hash in self._block_records
-
-    def contains_height(self, height: uint32) -> bool:
-        return height in self._height_to_hash
 
     async def warmup(self, fork_point: uint32) -> None:
         return
