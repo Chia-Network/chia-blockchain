@@ -24,6 +24,8 @@ from chia.rpc.wallet_request_types import (
     DAOFreeCoinsFromFinishedProposalsResponse,
     DAOSendToLockupResponse,
     DAOVoteOnProposalResponse,
+    DIDGetCurrentCoinInfo,
+    DIDGetCurrentCoinInfoResponse,
     DIDGetPubkey,
     DIDGetPubkeyResponse,
     DIDGetRecoveryInfo,
@@ -601,6 +603,11 @@ class WalletRpcClient(RpcClient):
     async def did_get_recovery_info(self, request: DIDGetRecoveryInfo) -> DIDGetRecoveryInfoResponse:
         return DIDGetRecoveryInfoResponse.from_json_dict(
             await self.fetch("did_get_information_needed_for_recovery", request.to_json_dict())
+        )
+
+    async def did_get_current_coin_info(self, request: DIDGetCurrentCoinInfo) -> DIDGetCurrentCoinInfoResponse:
+        return DIDGetCurrentCoinInfoResponse.from_json_dict(
+            await self.fetch("did_get_current_coin_info", request.to_json_dict())
         )
 
     async def did_recovery_spend(self, wallet_id: int, attest_filenames: str) -> Dict[str, Any]:

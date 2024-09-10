@@ -165,6 +165,22 @@ class DIDGetRecoveryInfoResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDGetCurrentCoinInfo(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetCurrentCoinInfoResponse(Streamable):
+    wallet_id: uint32
+    my_did: str
+    did_parent: bytes32
+    did_innerpuz: bytes32
+    did_amount: uint64
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: List[Spend]
 

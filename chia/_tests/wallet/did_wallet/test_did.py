@@ -10,7 +10,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.rpc.wallet_request_types import DIDGetRecoveryInfo
+from chia.rpc.wallet_request_types import DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
@@ -268,6 +268,11 @@ class TestDIDWallet:
         )
         assert recovery_info.wallet_id == env_2.wallet_aliases["did"]
         assert recovery_info.backup_dids == backup_ids
+        current_coin_info_response = await env_0.rpc_client.did_get_current_coin_info(
+            DIDGetCurrentCoinInfo(uint32(env_0.wallet_aliases["did"]))
+        )
+        # TODO: this check is kind of weak, we should research when this endpoint might actually be useful
+        assert current_coin_info_response.wallet_id == env_0.wallet_aliases["did"]
         async with env_0.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True
         ) as action_scope:
