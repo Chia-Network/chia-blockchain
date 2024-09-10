@@ -137,7 +137,7 @@ def load_block_list(
     sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
     for full_block in block_list:
         if full_block.height != 0 and len(full_block.finished_sub_slots) > 0:
-            if full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+            if full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:  # pragma: no cover
                 sub_slot_iters = full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         blocks[full_block.header_hash] = block_to_block_record(
             constants,

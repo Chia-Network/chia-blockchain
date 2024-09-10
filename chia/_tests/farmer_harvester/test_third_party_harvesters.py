@@ -427,6 +427,7 @@ async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: Ful
     block = blocks[0]
     prev_ses_block = None
     if block.height > 0:
+        # pragma: no cover
         prev_b = await full_node.blockchain.get_block_record_from_db(block.prev_header_hash)
         assert prev_b is not None
         curr = prev_b
@@ -441,7 +442,7 @@ async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: Ful
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
     for i in range(len(blocks)):
         block = blocks[i]
-        if block.height != 0 and len(block.finished_sub_slots) > 0:
+        if block.height != 0 and len(block.finished_sub_slots) > 0:  # pragma: no cover
             if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
                 ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         r, _, _ = await full_node.blockchain.add_block(blocks[i], pre_validation_results[i], None, sub_slot_iters=ssi)
