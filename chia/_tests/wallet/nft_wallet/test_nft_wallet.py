@@ -12,7 +12,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import NFTGetByDID
+from chia.rpc.wallet_request_types import NFTGetByDID, NFTSetNFTStatus
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -2417,8 +2417,8 @@ async def test_set_nft_status(wallet_environments: WalletTestFramework) -> None:
     assert not coin.pending_transaction
     nft_coin_id = coin.nft_coin_id
     # Set status
-    res = await env.rpc_client.fetch(
-        "nft_set_nft_status", dict(wallet_id=env.wallet_aliases["nft"], coin_id=nft_coin_id.hex(), in_transaction=True)
+    await env.rpc_client.set_nft_status(
+        NFTSetNFTStatus(wallet_id=uint32(env.wallet_aliases["nft"]), coin_id=nft_coin_id, in_transaction=True)
     )
     coins = (await env.rpc_client.list_nfts(env.wallet_aliases["nft"], start_index=0, num=1))["nft_list"]
     assert len(coins) == 1

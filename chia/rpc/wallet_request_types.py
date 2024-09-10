@@ -193,6 +193,14 @@ class NFTGetByDIDResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class NFTSetNFTStatus(Streamable):
+    wallet_id: uint32
+    coin_id: bytes32
+    in_transaction: bool
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: List[Spend]
 

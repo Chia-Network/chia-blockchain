@@ -50,6 +50,7 @@ from chia.rpc.wallet_request_types import (
     NFTMintBulkResponse,
     NFTMintNFTResponse,
     NFTSetNFTDIDResponse,
+    NFTSetNFTStatus,
     NFTTransferNFTResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
@@ -1131,6 +1132,9 @@ class WalletRpcClient(RpcClient):
             request["did_id"] = did_id
         response = await self.fetch("nft_set_nft_did", request)
         return json_deserialize_with_clvm_streamable(response, NFTSetNFTDIDResponse)
+
+    async def set_nft_status(self, request: NFTSetNFTStatus) -> None:
+        await self.fetch("nft_set_nft_status", request.to_json_dict())
 
     async def get_nft_wallet_did(self, wallet_id: int) -> Dict[str, Any]:
         request = {"wallet_id": wallet_id}
