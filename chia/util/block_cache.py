@@ -34,6 +34,8 @@ class BlockCache:
         hh = block.header_hash
         self._block_records[hh] = block
         self._height_to_hash[block.height] = hh
+        if self._peak_height is None or block.height > self._peak_height:
+            self._peak_height = block.height
 
     def block_record(self, header_hash: bytes32) -> BlockRecord:
         return self._block_records[header_hash]
