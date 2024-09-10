@@ -47,6 +47,7 @@ from chia.rpc.wallet_request_types import (
     NFTAddURIResponse,
     NFTGetByDID,
     NFTGetByDIDResponse,
+    NFTGetWalletsWithDIDsResponse,
     NFTMintBulkResponse,
     NFTMintNFTResponse,
     NFTSetNFTDIDResponse,
@@ -1140,6 +1141,9 @@ class WalletRpcClient(RpcClient):
         request = {"wallet_id": wallet_id}
         response = await self.fetch("nft_get_wallet_did", request)
         return response
+
+    async def get_nft_wallets_with_dids(self) -> NFTGetWalletsWithDIDsResponse:
+        return NFTGetWalletsWithDIDsResponse.from_json_dict(await self.fetch("nft_get_wallets_with_dids", {}))
 
     async def nft_mint_bulk(
         self,

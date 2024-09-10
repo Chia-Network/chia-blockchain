@@ -12,7 +12,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import NFTGetByDID, NFTSetNFTStatus
+from chia.rpc.wallet_request_types import NFTGetByDID, NFTSetNFTStatus, NFTWalletWithDID
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -831,10 +831,8 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
         ]
     )
 
-    res = await env.rpc_client.fetch("nft_get_wallets_with_dids", {})
-    assert res.get("success")
-    assert res.get("nft_wallets") == [
-        {"wallet_id": nft_wallet.id(), "did_id": hmr_did_id, "did_wallet_id": did_wallet.id()}
+    assert (await env.rpc_client.get_nft_wallets_with_dids()).nft_wallets == [
+        NFTWalletWithDID(wallet_id=nft_wallet.id(), did_id=hmr_did_id, did_wallet_id=did_wallet.id())
     ]
 
     res = await env.rpc_client.get_nft_wallet_did(wallet_id=nft_wallet.id())

@@ -199,6 +199,21 @@ class NFTSetNFTStatus(Streamable):
     in_transaction: bool
 
 
+# utility for NFTGetWalletsWithDIDsResponse
+@streamable
+@dataclass(frozen=True)
+class NFTWalletWithDID(Streamable):
+    wallet_id: uint32
+    did_id: str
+    did_wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetWalletsWithDIDsResponse(Streamable):
+    nft_wallets: List[NFTWalletWithDID]
+
+
 @streamable
 @dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
