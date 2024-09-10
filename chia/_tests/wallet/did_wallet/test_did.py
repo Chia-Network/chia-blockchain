@@ -10,6 +10,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.rpc.wallet_request_types import DIDGetRecoveryInfo
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
@@ -262,17 +263,16 @@ class TestDIDWallet:
             backup_data=backup_data,
         )
         did_wallet_2 = env_2.wallet_state_manager.get_wallet(id=uint32(2), required_type=DIDWallet)
-        coin = await did_wallet_1.get_coin()
-        assert did_wallet_2.did_info.temp_coin == coin
-        newpuzhash = await did_wallet_2.get_new_did_inner_hash()
-        pubkey = (
-            await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
-        ).pubkey
+        recovery_info = await env_2.rpc_client.did_get_recovery_info(
+            DIDGetRecoveryInfo(uint32(env_2.wallet_aliases["did"]))
+        )
+        assert recovery_info.wallet_id == env_2.wallet_aliases["did"]
+        assert recovery_info.backup_dids == backup_ids
         async with env_0.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True
         ) as action_scope:
             message_spend_bundle, attest_data = await did_wallet_0.create_attestment(
-                did_wallet_2.did_info.temp_coin.name(), newpuzhash, pubkey, action_scope
+                recovery_info.coin_name, recovery_info.newpuzhash, recovery_info.pubkey, action_scope
             )
 
         await wallet_environments.process_pending_states(
@@ -317,11 +317,12 @@ class TestDIDWallet:
         async with env_2.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=True
         ) as action_scope:
+            assert did_wallet_2.did_info.temp_coin is not None
             await did_wallet_2.recovery_spend(
                 did_wallet_2.did_info.temp_coin,
-                newpuzhash,
+                recovery_info.newpuzhash,
                 test_info_list,
-                pubkey,
+                recovery_info.pubkey,
                 test_message_spend_bundle,
                 action_scope,
             )

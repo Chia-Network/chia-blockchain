@@ -148,6 +148,23 @@ class DIDGetPubkeyResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DIDGetRecoveryInfo(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetRecoveryInfoResponse(Streamable):
+    wallet_id: uint32
+    my_did: str
+    coin_name: bytes32
+    newpuzhash: bytes32
+    pubkey: G1Element
+    backup_dids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
     spends: List[Spend]
 
