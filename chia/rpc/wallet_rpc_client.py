@@ -54,6 +54,8 @@ from chia.rpc.wallet_request_types import (
     NFTSetDIDBulkResponse,
     NFTSetNFTDIDResponse,
     NFTSetNFTStatus,
+    NFTTransferBulk,
+    NFTTransferBulkResponse,
     NFTTransferNFTResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
@@ -1193,6 +1195,9 @@ class WalletRpcClient(RpcClient):
 
     async def set_nft_did_bulk(self, request: NFTSetDIDBulk) -> NFTSetDIDBulkResponse:
         return NFTSetDIDBulkResponse.from_json_dict(await self.fetch("nft_set_did_bulk", request.to_json_dict()))
+
+    async def transfer_nft_bulk(self, request: NFTTransferBulk) -> NFTTransferBulkResponse:
+        return NFTTransferBulkResponse.from_json_dict(await self.fetch("nft_transfer_bulk", request.to_json_dict()))
 
     # DataLayer
     async def create_new_dl(

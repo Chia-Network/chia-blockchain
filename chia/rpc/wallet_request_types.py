@@ -336,6 +336,21 @@ class NFTSetDIDBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
 
 
+@streamable
+@kw_only_dataclass
+class NFTTransferBulk(TransactionEndpointRequest):
+    nft_coin_list: List[NFTCoin] = field(default_factory=default_raise)
+    target_address: str = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTTransferBulkResponse(TransactionEndpointResponse):
+    wallet_id: List[uint32]
+    tx_num: uint16
+    spend_bundle: WalletSpendBundle
+
+
 # TODO: The section below needs corresponding request types
 # TODO: The section below should be added to the API (currently only for client)
 @streamable

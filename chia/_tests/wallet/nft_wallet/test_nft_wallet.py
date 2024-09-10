@@ -12,7 +12,14 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import NFTCoin, NFTGetByDID, NFTSetDIDBulk, NFTSetNFTStatus, NFTWalletWithDID
+from chia.rpc.wallet_request_types import (
+    NFTCoin,
+    NFTGetByDID,
+    NFTSetDIDBulk,
+    NFTSetNFTStatus,
+    NFTTransferBulk,
+    NFTWalletWithDID,
+)
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -2016,20 +2023,18 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
     nft2 = NFTInfo.from_json_dict(coins[0])
     assert nft2.owner_did is None
     nft_coin_list = [
-        {"wallet_id": env_0.wallet_aliases["nft_w_did"], "nft_coin_id": nft1.nft_coin_id.hex()},
-        {"wallet_id": env_0.wallet_aliases["nft_w_did"], "nft_coin_id": nft12.nft_coin_id.hex()},
-        {"wallet_id": env_0.wallet_aliases["nft_no_did"], "nft_coin_id": nft2.nft_coin_id.hex()},
-        {"wallet_id": env_0.wallet_aliases["nft_no_did"]},
-        {"nft_coin_id": nft2.nft_coin_id.hex()},
+        NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_w_did"]), nft_coin_id=nft1.nft_coin_id.hex()),
+        NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_w_did"]), nft_coin_id=nft12.nft_coin_id.hex()),
+        NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_no_did"]), nft_coin_id=nft2.nft_coin_id.hex()),
     ]
 
-    fee = 1000
+    fee = uint64(1000)
     address = encode_puzzle_hash(await wallet_1.get_puzzle_hash(new=False), AddressType.XCH.hrp(env_1.node.config))
-    res = await env_0.rpc_client.fetch(
-        "nft_transfer_bulk", dict(target_address=address, nft_coin_list=nft_coin_list, fee=fee)
+    bulk_transfer_resp = await env_0.rpc_client.transfer_nft_bulk(
+        NFTTransferBulk(target_address=address, nft_coin_list=nft_coin_list, fee=fee, push=True)
     )
-    assert len(res["spend_bundle"]["coin_spends"]) == 4
-    assert res["tx_num"] == 4
+    assert len(bulk_transfer_resp.spend_bundle.coin_spends) == 4
+    assert bulk_transfer_resp.tx_num == 4
 
     await wallet_environments.process_pending_states(
         [
