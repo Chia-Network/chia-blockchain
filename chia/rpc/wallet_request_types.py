@@ -214,6 +214,14 @@ class NFTGetWalletsWithDIDsResponse(Streamable):
     nft_wallets: List[NFTWalletWithDID]
 
 
+# utility for NFTSetDIDBulk
+@streamable
+@dataclass(frozen=True)
+class NFTCoin(Streamable):
+    nft_coin_id: str
+    wallet_id: uint32
+
+
 @streamable
 @dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
@@ -311,6 +319,21 @@ class CombineCoins(TransactionEndpointRequest):
 @dataclass(frozen=True)
 class CombineCoinsResponse(TransactionEndpointResponse):
     pass
+
+
+@streamable
+@kw_only_dataclass
+class NFTSetDIDBulk(TransactionEndpointRequest):
+    nft_coin_list: List[NFTCoin] = field(default_factory=default_raise)
+    did_id: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTSetDIDBulkResponse(TransactionEndpointResponse):
+    wallet_id: List[uint32]
+    tx_num: uint16
+    spend_bundle: WalletSpendBundle
 
 
 # TODO: The section below needs corresponding request types
