@@ -426,8 +426,7 @@ async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: Ful
     prev_b = None
     block = blocks[0]
     prev_ses_block = None
-    if block.height > 0:
-        # pragma: no cover
+    if block.height > 0:  # pragma: no cover
         prev_b = await full_node.blockchain.get_block_record_from_db(block.prev_header_hash)
         assert prev_b is not None
         curr = prev_b
