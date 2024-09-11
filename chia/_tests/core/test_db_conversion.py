@@ -68,11 +68,14 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                     await hint_store1.add_hints([(h[0], h[1])])
 
             bc = await Blockchain.create(coin_store1, block_store1, test_constants, Path("."), reserved_cores=0)
-
+            sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
             for block in blocks:
+                if block.height != 0 and len(block.finished_sub_slots) > 0:
+                    if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                        sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
                 # await _validate_and_add_block(bc, block)
                 results = PreValidationResult(None, uint64(1), None, False, uint32(0))
-                result, err, _ = await bc.add_block(block, results, None)
+                result, err, _ = await bc.add_block(block, results, None, sub_slot_iters=sub_slot_iters)
                 assert err is None
 
         # now, convert v1 in_file to v2 out_file
