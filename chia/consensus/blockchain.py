@@ -231,9 +231,7 @@ class Blockchain:
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return await self.block_store.get_full_block(header_hash)
 
-    async def advance_fork_info(
-        self, block: FullBlock, fork_info: ForkInfo, additional_blocks: Dict[bytes32, FullBlock]
-    ) -> None:
+    async def advance_fork_info(self, block: FullBlock, fork_info: ForkInfo) -> None:
         """
         This function is used to advance the peak_height of fork_info given the
         full block extending the chain. block is required to be the next block on
@@ -267,19 +265,15 @@ class Blockchain:
         for height in range(fork_info.peak_height + 1, block.height):
             fork_block: Optional[FullBlock] = await self.block_store.get_full_block(chain[uint32(height)])
             assert fork_block is not None
-            await self.run_single_block(fork_block, fork_info, additional_blocks)
+            await self.run_single_block(fork_block, fork_info)
 
-    async def run_single_block(
-        self, block: FullBlock, fork_info: ForkInfo, additional_blocks: Dict[bytes32, FullBlock]
-    ) -> None:
+    async def run_single_block(self, block: FullBlock, fork_info: ForkInfo) -> None:
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
         npc: Optional[NPCResult] = None
         if block.transactions_generator is not None:
-            block_generator: Optional[BlockGenerator] = await get_block_generator(
-                self.lookup_block_generators, block, additional_blocks
-            )
+            block_generator: Optional[BlockGenerator] = await get_block_generator(self.lookup_block_generators, block)
             assert block_generator is not None
             assert block.transactions_info is not None
             assert block.foliage_transaction_block is not None
@@ -403,7 +397,7 @@ class Blockchain:
                     assert fork_block is not None
                     assert fork_block.height - 1 == fork_info.peak_height
                     assert fork_block.height == 0 or fork_block.prev_header_hash == fork_info.peak_hash
-                    await self.run_single_block(fork_block, fork_info, {})
+                    await self.run_single_block(fork_block, fork_info)
                     counter += 1
                 end = time.monotonic()
                 log.info(
@@ -421,13 +415,13 @@ class Blockchain:
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
-                await self.advance_fork_info(block, fork_info, {})
+                await self.advance_fork_info(block, fork_info)
                 fork_info.include_spends(npc_result, block, header_hash)
                 self.add_block_record(block_rec)
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
             if fork_info.peak_hash != block.prev_header_hash:
-                await self.advance_fork_info(block, fork_info, {})
+                await self.advance_fork_info(block, fork_info)
 
         # if these prerequisites of the fork_info aren't met, the fork_info
         # object is invalid for this block. If the caller would have passed in

@@ -431,7 +431,6 @@ class WalletStateManager:
 
         # iterate all wallets that need derived keys and establish the start
         # index for all of them
-        start_index: int = 0
         start_index_by_wallet: Dict[uint32, int] = {}
         last_index = unused + to_generate
         for wallet_id in targets:
@@ -445,9 +444,8 @@ class WalletStateManager:
             last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
             if last is not None:
                 if last + 1 >= last_index:
-                    self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
+                    self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {last_index}")
                     continue
-                start_index = min(start_index, last + 1)
                 start_index_by_wallet[wallet_id] = last + 1
             else:
                 start_index_by_wallet[wallet_id] = 0
@@ -455,7 +453,9 @@ class WalletStateManager:
         if len(start_index_by_wallet) == 0:
             return
 
-        # now derive the keysfrom start_index to last_index
+        lowest_start_index = min(start_index_by_wallet.values())
+
+        # now derive the keysfrom lowest_start_index to last_index
         # these maps derivation index to public key
         hardened_keys: Dict[int, G1Element] = {}
         unhardened_keys: Dict[int, G1Element] = {}
@@ -463,12 +463,12 @@ class WalletStateManager:
         if self.private_key is not None:
             # Hardened
             intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
-            for index in range(start_index, last_index):
+            for index in range(lowest_start_index, last_index):
                 hardened_keys[index] = _derive_path(intermediate_sk, [index]).get_g1()
 
         # Unhardened
         intermediate_pk_un = master_pk_to_wallet_pk_unhardened_intermediate(self.root_pubkey)
-        for index in range(start_index, last_index):
+        for index in range(lowest_start_index, last_index):
             unhardened_keys[index] = _derive_pk_unhardened(intermediate_pk_un, [index])
 
         for wallet_id, start_index in start_index_by_wallet.items():
@@ -1767,6 +1767,17 @@ class WalletStateManager:
                                 wallet_identifier = WalletIdentifier.create(dl_wallet)
 
                     if wallet_identifier is None:
+                        # Confirm tx records for txs which we submitted for coins which aren't in our wallet
+                        if coin_state.created_height is not None and coin_state.spent_height is not None:
+                            all_unconfirmed = await self.tx_store.get_all_unconfirmed()
+                            tx_records_to_confirm: List[TransactionRecord] = []
+                            for out_tx_record in all_unconfirmed:
+                                if coin_state.coin in out_tx_record.removals:
+                                    tx_records_to_confirm.append(out_tx_record)
+
+                            if len(tx_records_to_confirm) > 0:
+                                for tx_record in tx_records_to_confirm:
+                                    await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
 
