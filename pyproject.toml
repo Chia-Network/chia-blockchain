@@ -83,7 +83,7 @@ black = { version = "24.8.0", optional = true }
 build = { version = "1.2.1", optional = true }
 coverage = { version = "7.6.1", optional = true }
 diff-cover = { version = "9.0.0", optional = true }
-flake8 = { version = "7.0.0", optional = true }
+flake8 = { version = "7.1.1", optional = true }
 isort = { version = "5.13.2", optional = true }
 # TODO: but...  keyrings_cryptfile goes 15 minutes without locking while this does in 75 seconds
 "keyrings.cryptfile" = { version = "1.3.9", optional = true }
