@@ -197,13 +197,12 @@ def get_keychain():
 class ConsensusMode(ComparableEnum):
     PLAIN = 0
     HARD_FORK_2_0 = 1
-    SOFT_FORK_4 = 2
-    SOFT_FORK_5 = 3
+    SOFT_FORK_5 = 2
 
 
 @pytest.fixture(
     scope="session",
-    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_4, ConsensusMode.SOFT_FORK_5],
+    params=[ConsensusMode.PLAIN, ConsensusMode.HARD_FORK_2_0, ConsensusMode.SOFT_FORK_5],
 )
 def consensus_mode(request):
     return request.param
@@ -212,10 +211,6 @@ def consensus_mode(request):
 @pytest.fixture(scope="session")
 def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
     ret: ConsensusConstants = test_constants
-    if consensus_mode >= ConsensusMode.SOFT_FORK_4:
-        ret = ret.replace(
-            SOFT_FORK4_HEIGHT=uint32(2),
-        )
     if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
         ret = ret.replace(
             HARD_FORK_HEIGHT=uint32(2),
@@ -374,6 +369,26 @@ def test_long_reorg_blocks(bt, consensus_mode, default_10000_blocks):
     )
 
 
+@pytest.fixture(scope="session")
+def test_long_reorg_1500_blocks(bt, consensus_mode, default_10000_blocks):
+    version = ""
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
+
+    from chia._tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(
+        4500,
+        f"test_blocks_long_reorg_{saved_blocks_version}{version}-2.db",
+        bt,
+        block_list_input=default_10000_blocks[:1500],
+        seed=b"reorg_blocks",
+        time_per_block=8,
+        dummy_block_references=True,
+        include_transactions=True,
+    )
+
+
 # this long reorg chain shares the first 500 blocks with "default_10000_blocks"
 # and has the same weight blocks
 @pytest.fixture(scope="session")
@@ -389,6 +404,25 @@ def test_long_reorg_blocks_light(bt, consensus_mode, default_10000_blocks):
         f"test_blocks_long_reorg_light_{saved_blocks_version}{version}.db",
         bt,
         block_list_input=default_10000_blocks[:500],
+        seed=b"reorg_blocks2",
+        dummy_block_references=True,
+        include_transactions=True,
+    )
+
+
+@pytest.fixture(scope="session")
+def test_long_reorg_1500_blocks_light(bt, consensus_mode, default_10000_blocks):
+    version = ""
+    if consensus_mode >= ConsensusMode.HARD_FORK_2_0:
+        version = "_hardfork"
+
+    from chia._tests.util.blockchain import persistent_blocks
+
+    return persistent_blocks(
+        4500,
+        f"test_blocks_long_reorg_light_{saved_blocks_version}{version}-2.db",
+        bt,
+        block_list_input=default_10000_blocks[:1500],
         seed=b"reorg_blocks2",
         dummy_block_references=True,
         include_transactions=True,

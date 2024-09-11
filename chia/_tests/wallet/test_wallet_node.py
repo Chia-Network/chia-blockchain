@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 from chia_rs import G1Element, PrivateKey
 
-from chia._tests.util.misc import CoinGenerator
+from chia._tests.util.misc import CoinGenerator, add_blocks_in_batches
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import wallet_protocol
@@ -24,7 +24,6 @@ from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import Self, api_request
-from chia.util.batches import to_batches
 from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -514,9 +513,7 @@ async def test_get_balance(
     #       with that to a KeyError when applying the race cache if there are less than WEIGHT_PROOF_RECENT_BLOCKS
     #       blocks but we still have a peak stored in the DB. So we need to add enough blocks for a weight proof here to
     #       be able to restart the wallet in this test.
-    for block_batch in to_batches(default_400_blocks, 64):
-        await full_node_api.full_node.add_block_batch(block_batch.entries, PeerInfo("0.0.0.0", 0), None)
-
+    await add_blocks_in_batches(default_400_blocks, full_node_api.full_node)
     # Initially there should be no sync and no balance
     assert not wallet_synced()
     assert await wallet_node.get_balance(wallet_id) == Balance()

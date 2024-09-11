@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
+from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 import aiosqlite
@@ -11,7 +12,6 @@ from typing_extensions import final
 from chia.data_layer.data_layer_errors import ProofIntegrityError
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2
@@ -25,7 +25,8 @@ if TYPE_CHECKING:
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
-    return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)
+    # see test for the definition this is optimized from
+    return bytes32(sha256(b"\2" + left_hash + right_hash).digest())
 
 
 def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> bytes32:
@@ -38,11 +39,13 @@ def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: by
 
 
 def leaf_hash(key: bytes, value: bytes) -> bytes32:
-    return SerializedProgram.to((key, value)).get_tree_hash()
+    # see test for the definition this is optimized from
+    return bytes32(sha256(b"\2" + sha256(b"\1" + key).digest() + sha256(b"\1" + value).digest()).digest())
 
 
 def key_hash(key: bytes) -> bytes32:
-    return SerializedProgram.to(key).get_tree_hash()
+    # see test for the definition this is optimized from
+    return bytes32(sha256(b"\1" + key).digest())
 
 
 @dataclasses.dataclass(frozen=True)

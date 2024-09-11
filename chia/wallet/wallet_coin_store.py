@@ -22,6 +22,7 @@ unspent_range = UInt32Range(stop=uint32(0))
 class CoinRecordOrder(IntEnum):
     confirmed_height = 1
     spent_height = 2
+    amount = 3
 
 
 @streamable
