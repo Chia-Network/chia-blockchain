@@ -12,6 +12,7 @@ from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.full_node import FullNode
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -191,16 +192,24 @@ async def wallet_environments(
                     )
                 )
 
-            yield WalletTestFramework(
-                full_node[0]._api,
-                trusted_full_node,
-                [
-                    WalletEnvironment(
-                        service=service,
-                        rpc_client=rpc_client,
-                        wallet_states={uint32(1): wallet_state},
-                    )
-                    for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
-                ],
-                tx_config,
-            )
+            assert full_node[0].rpc_server is not None
+            async with FullNodeRpcClient.create_as_context(
+                bt.config["self_hostname"],
+                full_node[0].rpc_server.listen_port,
+                full_node[0].root_path,
+                full_node[0].config,
+            ) as client_node:
+                yield WalletTestFramework(
+                    full_node[0]._api,
+                    client_node,
+                    trusted_full_node,
+                    [
+                        WalletEnvironment(
+                            service=service,
+                            rpc_client=rpc_client,
+                            wallet_states={uint32(1): wallet_state},
+                        )
+                        for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
+                    ],
+                    tx_config,
+                )
