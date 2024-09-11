@@ -1555,9 +1555,11 @@ class TestWalletSimulator:
             ]
         )
 
+        tx_id = None
         for coin in tx.additions:
             if coin.amount == tx_amount:
                 tx_id = coin.name()
+        assert tx_id is not None
         memos = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
         assert len(memos.coins_with_memos) == 1
         assert memos.coins_with_memos[0].memos[0] == ph_2
