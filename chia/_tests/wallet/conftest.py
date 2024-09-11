@@ -141,7 +141,7 @@ async def wallet_environments(
 
         full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **config_overrides}
 
-        rpc_clients: List[WalletRpcClient] = []
+        wallet_rpc_clients: List[WalletRpcClient] = []
         async with AsyncExitStack() as astack:
             for service in wallet_services:
                 service._node.config = {
@@ -159,7 +159,7 @@ async def wallet_environments(
                 await service._node.server.start_client(
                     PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
                 )
-                rpc_clients.append(
+                wallet_rpc_clients.append(
                     await astack.enter_async_context(
                         WalletRpcClient.create_as_context(
                             bt.config["self_hostname"],
@@ -193,23 +193,25 @@ async def wallet_environments(
                 )
 
             assert full_node[0].rpc_server is not None
-            async with FullNodeRpcClient.create_as_context(
-                bt.config["self_hostname"],
-                full_node[0].rpc_server.listen_port,
-                full_node[0].root_path,
-                full_node[0].config,
-            ) as client_node:
-                yield WalletTestFramework(
-                    full_node[0]._api,
-                    client_node,
-                    trusted_full_node,
-                    [
-                        WalletEnvironment(
-                            service=service,
-                            rpc_client=rpc_client,
-                            wallet_states={uint32(1): wallet_state},
-                        )
-                        for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
-                    ],
-                    tx_config,
+            client_node = await astack.enter_async_context(
+                FullNodeRpcClient.create_as_context(
+                    bt.config["self_hostname"],
+                    full_node[0].rpc_server.listen_port,
+                    full_node[0].root_path,
+                    full_node[0].config,
                 )
+            )
+            yield WalletTestFramework(
+                full_node[0]._api,
+                client_node,
+                trusted_full_node,
+                [
+                    WalletEnvironment(
+                        service=service,
+                        rpc_client=rpc_client,
+                        wallet_states={uint32(1): wallet_state},
+                    )
+                    for service, rpc_client, wallet_state in zip(wallet_services, wallet_rpc_clients, wallet_states)
+                ],
+                tx_config,
+            )
