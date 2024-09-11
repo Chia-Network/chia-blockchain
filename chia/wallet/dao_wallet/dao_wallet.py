@@ -390,21 +390,24 @@ class DAOWallet:
         return uint128(sum(cr.coin.amount for cr in records if not cr.spent))
 
     # if asset_id == None: then we get normal XCH
-    async def select_coins_for_asset_type(self, amount: uint64, asset_id: Optional[bytes32] = None) -> List[Coin]:
+    async def select_coins_for_asset_type(
+        self, amount: uint64, action_scope: WalletActionScope, asset_id: Optional[bytes32] = None
+    ) -> List[Coin]:
         puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
-        # TODO: smarter coin selection algorithm
-        total = 0
-        coins = []
-        for record in records:
-            if not record.spent:
-                total += record.coin.amount
-                coins.append(record.coin)
-                if total >= amount:
-                    break
-        if total < amount:  # pragma: no cover
-            raise ValueError(f"Not enough of asset {asset_id}: {total} < {amount}")
-        return coins
+        unspent_records = [r for r in records if not r.spent]
+        spendable_amount = uint128(sum(r.coin.amount for r in unspent_records))
+        async with action_scope.use() as interface:
+            return list(
+                await select_coins(
+                    spendable_amount,
+                    action_scope.config.adjust_for_side_effects(interface.side_effects).tx_config.coin_selection_config,
+                    unspent_records,
+                    {},
+                    self.log,
+                    uint128(amount),
+                )
+            )
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Any]) -> None:
         """
@@ -1326,7 +1329,7 @@ class DAOWallet:
                     if condition_statement.first().as_int() == 51:
                         sum += condition_statement.rest().rest().first().as_int()
                 if sum > 0:
-                    xch_coins = await self.select_coins_for_asset_type(uint64(sum))
+                    xch_coins = await self.select_coins_for_asset_type(uint64(sum), action_scope)
                     for xch_coin in xch_coins:
                         xch_parent_amount_list.append([xch_coin.parent_coin_info, xch_coin.amount])
                         solution = Program.to(
@@ -1349,7 +1352,9 @@ class DAOWallet:
                     for condition in conditions.as_iter():
                         if condition.first().as_int() == 51:
                             sum_of_conditions += condition.rest().rest().first().as_int()
-                    cat_coins = await self.select_coins_for_asset_type(uint64(sum_of_conditions), tail_hash)
+                    cat_coins = await self.select_coins_for_asset_type(
+                        uint64(sum_of_conditions), action_scope, tail_hash
+                    )
                     parent_amount_list = []
                     for cat_coin in cat_coins:
                         sum_of_coins += cat_coin.amount
