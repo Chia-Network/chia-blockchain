@@ -1790,11 +1790,12 @@ class WalletRpcApi:
             message_to_verify,
             G2Element.from_bytes(hexstr_to_bytes(request["signature"])),
         )
-        if request.get("address", None) is not None:
+        address = request.get("address")
+        if address is not None:
             # For signatures made by the sign_message_by_address/sign_message_by_id
             # endpoints, the "address" field should contain the p2_address of the NFT/DID
             # that was used to sign the message.
-            puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+            puzzle_hash: bytes32 = decode_puzzle_hash(address)
             expected_puzzle_hash: Optional[bytes32] = None
             if signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
                 puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(hexstr_to_bytes(request["pubkey"])))
