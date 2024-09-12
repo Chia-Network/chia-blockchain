@@ -4,7 +4,6 @@ import asyncio
 import dataclasses
 import enum
 import logging
-import time
 import traceback
 from concurrent.futures import Executor
 from concurrent.futures.process import ProcessPoolExecutor
@@ -294,7 +293,7 @@ class Blockchain:
         pre_validation_result: PreValidationResult,
         bls_cache: Optional[BLSCache],
         sub_slot_iters: uint64,
-        fork_info: Optional[ForkInfo] = None,
+        fork_info: ForkInfo,
         prev_ses_block: Optional[BlockRecord] = None,
     ) -> Tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
@@ -353,75 +352,19 @@ class Blockchain:
         # maybe fork_info should be mandatory to pass in, but we have a lot of
         # tests that make sure the Blockchain object can handle any blocks,
         # including orphaned ones, without any fork context
-        if fork_info is None:
-            block_rec = await self.get_block_record_from_db(header_hash)
-            if block_rec is not None:
-                self.add_block_record(block_rec)
-                # this means we have already seen and validated this block.
-                return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
-            elif extending_main_chain:
-                # this is the common and efficient case where we extend the main
-                # chain. The fork_info can be empty
-                prev_height = block.height - 1
-                fork_info = ForkInfo(prev_height, prev_height, block.prev_header_hash)
-            else:
-                assert peak is not None
-                # the block is extending a fork, and we don't have any fork_info
-                # for it. This can potentially be quite expensive and we should
-                # try to avoid getting here
-
-                # first, collect all the block hashes of the forked chain
-                # the block we're trying to add doesn't exist in the chain yet,
-                # so we need to start traversing from its prev_header_hash
-                fork_chain, fork_hash = await lookup_fork_chain(
-                    self,
-                    (peak.height, peak.header_hash),
-                    (block.height - 1, block.prev_header_hash),
-                    self.constants,
-                )
-                # now we know how long the fork is, and can compute the fork
-                # height.
-                fork_height = block.height - len(fork_chain) - 1
-                fork_info = ForkInfo(fork_height, fork_height, fork_hash)
-
-                log.warning(
-                    f"slow path in block validation. Building coin set for fork ({fork_height}, {block.height})"
-                )
-
-                # now run all the blocks of the fork to compute the additions
-                # and removals. They are recorded in the fork_info object
-                counter = 0
-                start = time.monotonic()
-                for height in range(fork_info.fork_height + 1, block.height):
-                    fork_block: Optional[FullBlock] = await self.block_store.get_full_block(fork_chain[uint32(height)])
-                    assert fork_block is not None
-                    assert fork_block.height - 1 == fork_info.peak_height
-                    assert fork_block.height == 0 or fork_block.prev_header_hash == fork_info.peak_hash
-                    await self.run_single_block(fork_block, fork_info)
-                    counter += 1
-                end = time.monotonic()
-                log.info(
-                    f"executed {counter} block generators in {end - start:2f} s. "
-                    f"{len(fork_info.additions_since_fork)} additions, "
-                    f"{len(fork_info.removals_since_fork)} removals"
-                )
-
-        else:
-            if extending_main_chain:
-                fork_info.reset(block.height - 1, block.prev_header_hash)
-
-            block_rec = await self.get_block_record_from_db(header_hash)
-            if block_rec is not None:
-                # We have already validated the block, but if it's not part of the
-                # main chain, we still need to re-run it to update the additions and
-                # removals in fork_info.
+        block_rec = await self.get_block_record_from_db(header_hash)
+        if block_rec is not None:
+            self.add_block_record(block_rec)
+            # this means we have already seen and validated this block.
+            if fork_info is not None:
                 await self.advance_fork_info(block, fork_info)
                 fork_info.include_spends(npc_result, block, header_hash)
-                self.add_block_record(block_rec)
-                return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
+            return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
-            if fork_info.peak_hash != block.prev_header_hash:
-                await self.advance_fork_info(block, fork_info)
+        if extending_main_chain:
+            # this is the common and efficient case where we extend the main
+            # chain. The fork_info can be empty
+            fork_info.reset(block.height - 1, block.prev_header_hash)
 
         # if these prerequisites of the fork_info aren't met, the fork_info
         # object is invalid for this block. If the caller would have passed in

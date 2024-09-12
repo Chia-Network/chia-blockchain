@@ -7,6 +7,7 @@ from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
 
 import anyio
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import BlockchainMutexPriority
@@ -181,11 +182,13 @@ class FullNodeSimulator(FullNodeAPI):
                     )
                 )
                 assert pre_validation_results is not None
+                fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(
                     genesis,
                     pre_validation_results[0],
                     self.full_node._bls_cache,
                     self.full_node.constants.SUB_SLOT_ITERS_STARTING,
+                    fork_info,
                 )
 
             peak = self.full_node.blockchain.get_peak()
@@ -243,11 +246,9 @@ class FullNodeSimulator(FullNodeAPI):
                     )
                 )
                 assert pre_validation_results is not None
+                fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(
-                    genesis,
-                    pre_validation_results[0],
-                    self.full_node._bls_cache,
-                    ssi,
+                    genesis, pre_validation_results[0], self.full_node._bls_cache, ssi, fork_info
                 )
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None

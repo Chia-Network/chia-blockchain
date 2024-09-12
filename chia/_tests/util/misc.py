@@ -55,6 +55,7 @@ import chia
 import chia._tests
 from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool import Mempool
@@ -700,12 +701,14 @@ async def add_blocks_in_batches(
     if header_hash is None:
         diff = full_node.constants.DIFFICULTY_STARTING
         ssi = full_node.constants.SUB_SLOT_ITERS_STARTING
+        header_hash = full_node.constants.GENESIS_CHALLENGE
     else:
         block_record = await full_node.blockchain.get_block_record_from_db(header_hash)
         ssi, diff = get_next_sub_slot_iters_and_difficulty(
             full_node.constants, True, block_record, full_node.blockchain
         )
     prev_ses_block = None
+    fork_info = ForkInfo(blocks[0].height - 1, blocks[0].height - 1, header_hash)
     for block_batch in to_batches(blocks, 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
@@ -713,7 +716,7 @@ async def add_blocks_in_batches(
         success, _, ssi, diff, prev_ses_block, err = await full_node.add_block_batch(
             block_batch.entries,
             PeerInfo("0.0.0.0", 0),
-            None,
+            fork_info,
             current_ssi=ssi,
             current_difficulty=diff,
             prev_ses_block=prev_ses_block,
