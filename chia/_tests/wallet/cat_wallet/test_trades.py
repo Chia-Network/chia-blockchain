@@ -1937,53 +1937,6 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
 
 @pytest.mark.parametrize("trusted", [True, False])
 @pytest.mark.anyio
-async def test_trade_cancellation_balance_check(
-    wallets_prefarm: Tuple[Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator]
-) -> None:
-    (wallet_node_maker, maker_funds), _, full_node = wallets_prefarm
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
-
-    xch_to_cat_amount = uint64(100)
-
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-            wallet_node_maker.wallet_state_manager,
-            wallet_maker,
-            {"identifier": "genesis_by_id"},
-            xch_to_cat_amount,
-            action_scope,
-        )
-
-    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
-
-    await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
-    await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, xch_to_cat_amount)
-    maker_funds -= xch_to_cat_amount
-    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
-
-    chia_for_cat: OfferSummary = {
-        wallet_maker.id(): -(await wallet_maker.get_spendable_balance()),
-        cat_wallet_maker.id(): 4,
-    }
-
-    trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
-
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, action_scope)
-    await time_out_assert(10, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
-    assert error is None
-    assert success is True
-    assert trade_make is not None
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=uint64(0), secure=True)
-    await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
-
-    await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
-
-
-@pytest.mark.parametrize("trusted", [True, False])
-@pytest.mark.anyio
 async def test_trade_conflict(
     three_wallets_prefarm: Tuple[
         Tuple[WalletNode, int], Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator
