@@ -9,6 +9,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.rpc.wallet_request_types import GetTransactionMemo
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -1512,11 +1513,9 @@ class TestWalletSimulator:
         fees = estimate_fees(tx.spend_bundle)
         assert fees == tx_fee
 
-        tx_id = tx.name.hex()
-        memos = await env_0.rpc_api.get_transaction_memo(dict(transaction_id=tx_id))
-        # test json serialization
-        assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0] == ph_2.hex()
+        memos = await env_0.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx.name))
+        assert len(memos.coins_with_memos) == 1
+        assert memos.coins_with_memos[0].memos[0] == ph_2
 
         await wallet_environments.process_pending_states(
             [
@@ -1556,12 +1555,18 @@ class TestWalletSimulator:
             ]
         )
 
+        tx_id = None
         for coin in tx.additions:
             if coin.amount == tx_amount:
-                tx_id = coin.name().hex()
-        memos = await env_1.rpc_api.get_transaction_memo(dict(transaction_id=tx_id))
-        assert len(memos[tx_id]) == 1
-        assert list(memos[tx_id].values())[0][0] == ph_2.hex()
+                tx_id = coin.name()
+        assert tx_id is not None
+        memos = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+        assert len(memos.coins_with_memos) == 1
+        assert memos.coins_with_memos[0].memos[0] == ph_2
+        # test json serialization
+        assert memos.to_json_dict() == {
+            tx_id.hex(): {memos.coins_with_memos[0].coin_id.hex(): [memos.coins_with_memos[0].memos[0].hex()]}
+        }
 
     @pytest.mark.parametrize(
         "wallet_environments",

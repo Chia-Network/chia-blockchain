@@ -9,6 +9,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.wallet_request_types import GetTransactionMemo
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -242,8 +243,6 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     env_2: WalletEnvironment = wallet_environments.environments[1]
     wallet_node = env_1.node
     wallet_node_2 = env_2.node
-    api_0 = env_1.rpc_api
-    api_1 = env_2.rpc_api
     wallet = env_1.xch_wallet
     wallet2 = env_2.xch_wallet
     full_node_api = wallet_environments.full_node
@@ -327,11 +326,11 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
         if tx_record.wallet_id == cat_wallet.id():
             assert tx_record.to_puzzle_hash == cat_2_hash
         if tx_record.spend_bundle is not None:
-            tx_id = tx_record.name.hex()
+            tx_id = tx_record.name
     assert tx_id is not None
-    memos = await api_0.get_transaction_memo({"transaction_id": tx_id})
-    assert len(memos[tx_id]) == 2  # One for tx, one for change
-    assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
+    memos = await env_1.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+    assert len(memos.coins_with_memos) == 2
+    assert memos.coins_with_memos[1].memos[0] == cat_2_hash
 
     await wallet_environments.process_pending_states(
         [
@@ -406,10 +405,10 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
         coins = await cat_wallet_2.select_coins(uint64(60), action_scope)
     assert len(coins) == 1
     coin = coins.pop()
-    tx_id = coin.name().hex()
-    memos = await api_1.get_transaction_memo(dict(transaction_id=tx_id))
-    assert len(memos[tx_id]) == 2
-    assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
+    tx_id = coin.name()
+    memos = await env_2.rpc_client.get_transaction_memo(GetTransactionMemo(transaction_id=tx_id))
+    assert len(memos.coins_with_memos) == 2
+    assert memos.coins_with_memos[1].memos[0] == cat_2_hash
     cat_hash = await cat_wallet.get_new_inner_hash()
     async with cat_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], action_scope)
