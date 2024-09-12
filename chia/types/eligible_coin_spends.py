@@ -3,12 +3,10 @@ from __future__ import annotations
 import dataclasses
 from typing import Awaitable, Callable, Dict, List, Optional, Tuple
 
-from chia_rs import fast_forward_singleton
+from chia_rs import fast_forward_singleton, get_conditions_from_spendbundle
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants
-from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,6 +14,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.internal_mempool_item import InternalMempoolItem
 from chia.types.mempool_item import BundleCoinSpend
 from chia.types.spend_bundle import SpendBundle
+from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 
 
@@ -332,17 +331,25 @@ class EligibleCoinSpends:
             coin_spends=new_coin_spends, aggregated_signature=mempool_item.spend_bundle.aggregated_signature
         )
         # We need to run the new spend bundle to make sure it remains valid
-        generator = simple_solution_generator(new_sb)
-        new_npc_result = get_name_puzzle_conditions(
-            generator=generator,
-            max_cost=mempool_item.conds.cost,
-            mempool_mode=True,
-            height=height,
-            constants=constants,
-        )
-        if new_npc_result.error is not None:
-            raise ValueError("Mempool item became invalid after singleton fast forward.")
-        assert new_npc_result.conds is not None
+        assert mempool_item.conds is not None
+        try:
+            new_conditions = get_conditions_from_spendbundle(
+                new_sb,
+                mempool_item.conds.cost,
+                constants,
+                height,
+            )
+        # validate_clvm_and_signature raises a TypeError with an error code
+        except TypeError as e:
+            # Convert that to a ValidationError
+            if len(e.args) > 0:
+                error = Err(e.args[0])
+                raise ValueError(f"Mempool item became invalid after singleton fast forward with error {error}.")
+            else:
+                raise ValueError(
+                    "Mempool item became invalid after singleton fast forward with an unspecified error."
+                )  # pragma: no cover
+
         # Update bundle_coin_spends using the collected data
         for coin_id in replaced_coin_ids:
             mempool_item.bundle_coin_spends.pop(coin_id, None)
@@ -354,4 +361,4 @@ class EligibleCoinSpends:
         # change. Still, it's good form to update the spend bundle with the
         # new coin spends
         mempool_item.spend_bundle = new_sb
-        mempool_item.conds = new_npc_result.conds
+        mempool_item.conds = new_conditions

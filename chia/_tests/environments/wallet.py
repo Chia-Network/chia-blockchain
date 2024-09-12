@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -266,6 +267,7 @@ class WalletEnvironment:
 @dataclass
 class WalletTestFramework:
     full_node: FullNodeSimulator
+    full_node_rpc_client: FullNodeRpcClient
     trusted_full_node: bool
     environments: List[WalletEnvironment]
     tx_config: TXConfig = DEFAULT_TX_CONFIG

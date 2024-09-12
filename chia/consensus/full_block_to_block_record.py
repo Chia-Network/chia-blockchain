@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Optional, Union
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -21,17 +21,12 @@ from chia.util.ints import uint8, uint32, uint64
 
 def block_to_block_record(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     required_iters: uint64,
-    full_block: Optional[Union[FullBlock, HeaderBlock]],
-    header_block: Optional[HeaderBlock],
-    sub_slot_iters: Optional[uint64] = None,
+    block: Union[FullBlock, HeaderBlock],
+    sub_slot_iters: uint64,
+    prev_ses_block: Optional[BlockRecord] = None,
 ) -> BlockRecord:
-    if full_block is None:
-        assert header_block is not None
-        block: Union[HeaderBlock, FullBlock] = header_block
-    else:
-        block = full_block
     prev_b = blocks.try_block_record(block.prev_header_hash)
     if block.height > 0:
         assert prev_b is not None
@@ -64,6 +59,7 @@ def block_to_block_record(
             blocks.block_record(prev_b.prev_hash),
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
+            prev_ses_block,
         )
         if ses.get_hash() != found_ses_hash:
             raise ValueError(Err.INVALID_SUB_EPOCH_SUMMARY)

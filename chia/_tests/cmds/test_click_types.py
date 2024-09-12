@@ -110,6 +110,8 @@ def test_click_amount_type() -> None:
         CliAmount(mojos=False, amount=uint64(100000)).convert_amount(units["chia"])
     with pytest.raises(ValueError):  # overflow
         large_decimal_amount.convert_amount(units["chia"])
+    with pytest.raises(ValueError, match="Too much decimal precision"):
+        CliAmount(mojos=False, amount=Decimal("1.01")).convert_amount(10)
 
 
 def test_click_address_type() -> None:

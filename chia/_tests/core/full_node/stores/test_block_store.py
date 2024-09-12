@@ -5,7 +5,7 @@ import logging
 import random
 import sqlite3
 from pathlib import Path
-from typing import List, cast
+from typing import List, Optional, cast
 
 import pytest
 
@@ -26,7 +26,6 @@ from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
-from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import get_host_parameter_limit
 from chia.util.full_block_utils import GeneratorBlockInfo
 from chia.util.ints import uint8, uint32, uint64
@@ -37,6 +36,13 @@ log = logging.getLogger(__name__)
 @pytest.fixture(scope="function", params=[True, False])
 def use_cache(request: SubRequest) -> bool:
     return cast(bool, request.param)
+
+
+def maybe_serialize(gen: Optional[SerializedProgram]) -> Optional[bytes]:
+    if gen is None:
+        return None
+    else:
+        return bytes(gen)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
@@ -52,7 +58,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
         time_per_block=10,
     )
     wt: WalletTool = bt.get_pool_wallet_tool()
-    tx: SpendBundle = wt.generate_signed_transaction(
+    tx = wt.generate_signed_transaction(
         uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
     )
     blocks = bt.get_consecutive_blocks(
@@ -85,7 +91,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
             assert GeneratorBlockInfo(
                 block.foliage.prev_block_hash, block.transactions_generator, block.transactions_generator_ref_list
             ) == await store.get_block_info(block.header_hash)
-            assert block.transactions_generator == await store.get_generator(block.header_hash)
+            assert maybe_serialize(block.transactions_generator) == await store.get_generator(block.header_hash)
             assert block_record == (await store.get_block_record(block_record_hh))
             await store.set_in_chain([(block_record.header_hash,)])
             await store.set_peak(block_record.header_hash)
@@ -98,10 +104,12 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
 
             assert await store.get_full_blocks_at([block.height]) == [block]
             if block.transactions_generator is not None:
-                assert await store.get_generators_at([block.height]) == [block.transactions_generator]
+                assert await store.get_generators_at({block.height}) == {
+                    block.height: bytes(block.transactions_generator)
+                }
             else:
                 with pytest.raises(ValueError, match="GENERATOR_REF_HAS_NO_GENERATOR"):
-                    await store.get_generators_at([block.height])
+                    await store.get_generators_at({block.height})
 
         assert len(await store.get_full_blocks_at([uint32(1)])) == 1
         assert len(await store.get_full_blocks_at([uint32(0)])) == 1
@@ -315,22 +323,26 @@ async def test_get_generator(bt: BlockTools, db_version: int, use_cache: bool) -
             await store.set_peak(block_record.header_hash)
             new_blocks.append(block)
 
-        expected_generators = list(map(lambda x: x.transactions_generator, new_blocks[1:10]))
-        generators = await store.get_generators_at([uint32(x) for x in range(1, 10)])
+        expected_generators = {b.height: maybe_serialize(b.transactions_generator) for b in new_blocks[1:10]}
+        generators = await store.get_generators_at({uint32(x) for x in range(1, 10)})
         assert generators == expected_generators
 
         # test out-of-order heights
-        expected_generators = list(map(lambda x: x.transactions_generator, [new_blocks[i] for i in [4, 8, 3, 9]]))
-        generators = await store.get_generators_at([uint32(4), uint32(8), uint32(3), uint32(9)])
+        expected_generators = {
+            b.height: maybe_serialize(b.transactions_generator) for b in [new_blocks[i] for i in [4, 8, 3, 9]]
+        }
+        generators = await store.get_generators_at({uint32(4), uint32(8), uint32(3), uint32(9)})
         assert generators == expected_generators
 
         with pytest.raises(KeyError):
-            await store.get_generators_at([uint32(100)])
+            await store.get_generators_at({uint32(100)})
 
-        assert await store.get_generator(blocks[2].header_hash) == new_blocks[2].transactions_generator
-        assert await store.get_generator(blocks[4].header_hash) == new_blocks[4].transactions_generator
-        assert await store.get_generator(blocks[6].header_hash) == new_blocks[6].transactions_generator
-        assert await store.get_generator(blocks[7].header_hash) == new_blocks[7].transactions_generator
+        assert await store.get_generators_at(set()) == {}
+
+        assert await store.get_generator(blocks[2].header_hash) == maybe_serialize(new_blocks[2].transactions_generator)
+        assert await store.get_generator(blocks[4].header_hash) == maybe_serialize(new_blocks[4].transactions_generator)
+        assert await store.get_generator(blocks[6].header_hash) == maybe_serialize(new_blocks[6].transactions_generator)
+        assert await store.get_generator(blocks[7].header_hash) == maybe_serialize(new_blocks[7].transactions_generator)
 
 
 @pytest.mark.limit_consensus_modes(reason="save time")
