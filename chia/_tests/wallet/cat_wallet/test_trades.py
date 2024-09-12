@@ -99,6 +99,7 @@ async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) 
     ],
     indirect=["wallet_environments"],
 )
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_cat_trades(
     wallet_environments: WalletTestFramework,
     credential_restricted: bool,
@@ -1621,54 +1622,86 @@ async def test_cat_trades(
         assert result.error is None
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [2, 1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_trade_cancellation(
-    wallets_prefarm: Tuple[Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator]
-) -> None:
-    (wallet_node_maker, maker_funds), (wallet_node_taker, taker_funds), full_node = wallets_prefarm
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
-    wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
+async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> None:
+    env_maker = wallet_environments.environments[0]
+    env_taker = wallet_environments.environments[1]
+
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+    env_taker.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
 
     xch_to_cat_amount = uint64(100)
 
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-            wallet_node_maker.wallet_state_manager,
-            wallet_maker,
+            env_maker.wallet_state_manager,
+            env_maker.xch_wallet,
             {"identifier": "genesis_by_id"},
             xch_to_cat_amount,
             action_scope,
         )
 
-    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
-
-    await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
-    await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, xch_to_cat_amount)
-    maker_funds -= xch_to_cat_amount
-    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
+    await wallet_environments.process_pending_states(
+        [
+            # tests in test_cat_wallet.py
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     cat_for_chia: OfferSummary = {
-        wallet_maker.id(): 1,
-        cat_wallet_maker.id(): -2,
+        env_maker.wallet_aliases["xch"]: 1,
+        env_maker.wallet_aliases["cat"]: -2,
     }
 
     chia_for_cat: OfferSummary = {
-        wallet_maker.id(): -3,
-        cat_wallet_maker.id(): 4,
+        env_maker.wallet_aliases["xch"]: -3,
+        env_maker.wallet_aliases["cat"]: 4,
     }
 
-    trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
-    trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
+    trade_manager_maker = env_maker.wallet_state_manager.trade_manager
+    trade_manager_taker = env_taker.wallet_state_manager.trade_manager
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, action_scope)
     assert error is None
     assert success is True
     assert trade_make is not None
 
     # Cancelling the trade and trying an ID that doesn't exist just in case
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         await trade_manager_maker.cancel_pending_offers(
             [trade_make.trade_id, bytes32([0] * 32)], action_scope, secure=False
         )
@@ -1700,10 +1733,50 @@ async def test_trade_cancellation(
 
     fee = uint64(2_000_000_000_000)
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=fee, secure=True)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -fee,
+                        "<=#spendable_balance": -fee,
+                        "<=#max_send_amount": -fee,
+                        ">=#pending_change": 0,
+                        ">=#pending_coin_removal_count": 2,
+                    },
+                    "cat": {
+                        "spendable_balance": -xch_to_cat_amount,
+                        "pending_change": xch_to_cat_amount,
+                        "max_send_amount": -xch_to_cat_amount,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -fee,
+                        ">=#spendable_balance": 0,
+                        ">=#max_send_amount": 0,
+                        "<=#pending_change": 0,
+                        "<=#pending_coin_removal_count": 1,
+                        "<=#unspent_coin_count": 0,
+                    },
+                    "cat": {
+                        "spendable_balance": xch_to_cat_amount,
+                        "pending_change": -xch_to_cat_amount,
+                        "max_send_amount": xch_to_cat_amount,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
     sum_of_outgoing = uint64(0)
     sum_of_incoming = uint64(0)
@@ -1717,20 +1790,17 @@ async def test_trade_cancellation(
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
     # await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, trade_take)
 
-    await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
-    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds - fee)
-    await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
-    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
-
-    peer = wallet_node_taker.get_full_node_peer()
+    peer = env_taker.node.get_full_node_peer()
     with pytest.raises(ValueError, match="This offer is no longer valid"):
-        async with trade_manager_taker.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=False
+        async with env_taker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=False
         ) as action_scope:
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
     # Now we're going to create the other way around for test coverage sake
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, action_scope)
     assert error is None
     assert success is True
@@ -1741,27 +1811,55 @@ async def test_trade_cancellation(
         ValueError,
         match=f"Do not have a wallet for asset ID: {cat_wallet_maker.get_asset_id()} to fulfill offer",
     ):
-        async with trade_manager_taker.wallet_state_manager.new_action_scope(
-            DEFAULT_TX_CONFIG, push=False
+        async with env_taker.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=False
         ) as action_scope:
             await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer), peer, action_scope)
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=uint64(0), secure=True)
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": chia_for_cat[env_maker.wallet_aliases["xch"]],
+                        "<=#max_send_amount": chia_for_cat[env_maker.wallet_aliases["xch"]],
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat": {},
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat": {},
+                },
+            )
+        ]
+    )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
     # Now let's test the case where two coins need to be spent in order to cancel
     chia_and_cat_for_something: OfferSummary = {
-        wallet_maker.id(): -5,
-        cat_wallet_maker.id(): -6,
+        env_maker.wallet_aliases["xch"]: -5,
+        env_maker.wallet_aliases["cat"]: -6,
         bytes32([0] * 32): 1,  # Doesn't matter
     }
 
     # Now we're going to create the other way around for test coverage sake
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             chia_and_cat_for_something,
             action_scope,
@@ -1771,7 +1869,9 @@ async def test_trade_cancellation(
     assert success is True
     assert trade_make is not None
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await trade_manager_maker.cancel_pending_offers([trade_make.trade_id], action_scope, fee=uint64(0), secure=True)
 
     # Check an announcement ring has been created
@@ -1795,7 +1895,42 @@ async def test_trade_cancellation(
         assert creation.corresponding_assertion().to_program() in all_conditions
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
+
+    await wallet_environments.process_pending_states(
+        [
+            # tests in test_cat_wallet.py
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "<=#spendable_balance": chia_and_cat_for_something[env_maker.wallet_aliases["xch"]],
+                        "<=#max_send_amount": chia_and_cat_for_something[env_maker.wallet_aliases["xch"]],
+                        ">=#pending_change": 1,
+                        "pending_coin_removal_count": 1,
+                    },
+                    "cat": {
+                        "spendable_balance": -xch_to_cat_amount,
+                        "pending_change": xch_to_cat_amount,
+                        "max_send_amount": -xch_to_cat_amount,
+                        "pending_coin_removal_count": 1,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": -1,
+                        "pending_coin_removal_count": -1,
+                    },
+                    "cat": {
+                        "spendable_balance": xch_to_cat_amount,
+                        "pending_change": -xch_to_cat_amount,
+                        "max_send_amount": xch_to_cat_amount,
+                        "pending_coin_removal_count": -1,
+                    },
+                },
+            )
+        ]
+    )
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
