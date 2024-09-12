@@ -1587,7 +1587,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert next_did_coin.puzzle_hash == last_did_coin.puzzle_hash
 
     # Test did_get_pubkey
-    assert isinstance((await wallet_2_rpc.get_did_pubkey(DIDGetPubkey(did_wallet_2.id()))).pubkey, G1Element)
+    pubkey_res = await wallet_2_rpc.get_did_pubkey(DIDGetPubkey(did_wallet_2.id()))
+    assert isinstance(pubkey_res.pubkey, G1Element)
 
 
 @pytest.mark.anyio
