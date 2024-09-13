@@ -134,7 +134,7 @@ async def test_no_callbacks_if_error() -> None:
             raise RuntimeError("This should prevent the callbacks from being called")
 
 
-# TODO: add suport, change this test to test it and add a test for nested transactionality
+# TODO: add support, change this test to test it and add a test for nested transactionality
 @pytest.mark.anyio
 async def test_nested_use_banned(action_scope: ActionScope[TestSideEffects, TestConfig]) -> None:
     async with action_scope.use():

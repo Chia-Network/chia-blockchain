@@ -890,7 +890,7 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
         assert result.output.strip() == coin_bytes.hex() + "\n" + coin_bytes.hex()
 
         result = runner.invoke(cmd, ["temp_cmd", "--output-format", "file"], catch_exceptions=False)
-        assert result.output == "--output-format=file specifed without any --output-file\n"
+        assert result.output == "--output-format=file specified without any --output-file\n"
 
         result = runner.invoke(
             cmd, ["temp_cmd", "--output-format", "file", "--output-file", "some file"], catch_exceptions=False
