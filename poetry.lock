@@ -2365,13 +2365,13 @@ reference = "chia"
 
 [[package]]
 name = "py3createtorrent"
-version = "1.1.0"
+version = "1.2.1"
 description = "Create torrents via command line!"
 optional = true
-python-versions = ">=3.5, <4"
+python-versions = "<4,>=3.5"
 files = [
-    {file = "py3createtorrent-1.1.0-py3-none-any.whl", hash = "sha256:2d2e16b49e1071f057f685aa56fab7948f7907dceed1e86731473425bf69f42d"},
-    {file = "py3createtorrent-1.1.0.tar.gz", hash = "sha256:afd8b39e04d698832819877be2b45727993cfbfe77bd22a35aa032044b1dafa2"},
+    {file = "py3createtorrent-1.2.1-py3-none-any.whl", hash = "sha256:dede7e87d869d2b013a633486f5f1fcedd6f057ff9f12d9ba9a370acfc496311"},
+    {file = "py3createtorrent-1.2.1.tar.gz", hash = "sha256:04d801adbbe8beb37547104935bd1fb81e02459341b524f85852629fa7dd326d"},
 ]
 
 [package.dependencies]
@@ -3450,4 +3450,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "7e234b89586306662441939f8d6c6e6fa4c785564fa80381774006f7f15a2c19"
+content-hash = "7a43888de578b6623e2ab2ea021c8595df4d7cd49e5c6e89490256d5c8cf918c"
