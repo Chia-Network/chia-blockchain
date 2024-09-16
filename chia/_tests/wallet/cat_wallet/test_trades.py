@@ -30,7 +30,6 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.vc_wallet.cr_cat_drivers import ProofsChecker
 from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs
@@ -618,7 +617,7 @@ async def test_cat_trades(
         await client_maker.crcat_approve_pending(
             new_cat_wallet_maker.id(),
             uint64(2),
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
         )
 
         await wallet_environments.process_pending_states(
@@ -958,7 +957,7 @@ async def test_cat_trades(
         await client_maker.crcat_approve_pending(
             new_cat_wallet_maker.id(),
             uint64(6),
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
         )
 
         await wallet_environments.process_pending_states(
@@ -1196,7 +1195,7 @@ async def test_cat_trades(
         await client_maker.crcat_approve_pending(
             cat_wallet_maker.id(),
             uint64(8),
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
         )
 
         await wallet_environments.process_pending_states(
@@ -1243,7 +1242,7 @@ async def test_cat_trades(
         await client_maker.crcat_approve_pending(
             new_cat_wallet_maker.id(),
             uint64(9),
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
         )
 
         await wallet_environments.process_pending_states(
@@ -1566,7 +1565,7 @@ async def test_cat_trades(
         await client_maker.crcat_approve_pending(
             new_cat_wallet_maker.id(),
             uint64(15),
-            DEFAULT_TX_CONFIG,
+            wallet_environments.tx_config,
         )
 
         await wallet_environments.process_pending_states(
