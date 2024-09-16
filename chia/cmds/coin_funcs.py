@@ -120,6 +120,8 @@ async def async_combine(
     max_coin_amount: CliAmount,
     min_coin_amount: CliAmount,
     excluded_amounts: Sequence[CliAmount],
+    coins_to_exclude: Sequence[bytes32],
+    reuse_puzhash: bool,
     number_of_coins: int,
     target_coin_amount: Optional[CliAmount],
     target_coin_ids: Sequence[bytes32],
@@ -142,7 +144,8 @@ async def async_combine(
             max_coin_amount=max_coin_amount,
             min_coin_amount=min_coin_amount,
             excluded_coin_amounts=list(excluded_amounts),
-            # TODO: [add TXConfig args] add excluded_coin_ids
+            excluded_coin_ids=list(coins_to_exclude),
+            reuse_puzhash=reuse_puzhash,
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
         final_target_coin_amount = (
@@ -188,7 +191,11 @@ async def async_split(
     number_of_coins: int,
     amount_per_coin: CliAmount,
     target_coin_id: bytes32,
-    # TODO: [add TXConfig args]
+    max_coin_amount: CliAmount,
+    min_coin_amount: CliAmount,
+    excluded_amounts: Sequence[CliAmount],
+    coins_to_exclude: Sequence[bytes32],
+    reuse_puzhash: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
@@ -206,7 +213,11 @@ async def async_split(
         final_amount_per_coin = amount_per_coin.convert_amount(mojo_per_unit)
 
         tx_config = CMDTXConfigLoader(
-            # TODO: [add TXConfig args]
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
+            excluded_coin_amounts=list(excluded_amounts),
+            excluded_coin_ids=list(coins_to_exclude),
+            reuse_puzhash=reuse_puzhash,
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
         transactions: List[TransactionRecord] = (

@@ -14,6 +14,7 @@ from pytest_mock import MockerFixture
 
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import AddBlockResult
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
@@ -422,12 +423,28 @@ async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: Ful
     # Inject full node with a pre-existing block to skip initial genesis sub-slot
     # so that we have blocks generated that have our farmer reward address, instead
     # of the GENESIS_PRE_FARM_FARMER_PUZZLE_HASH.
+    prev_b = None
+    block = blocks[0]
+    prev_ses_block = None
+    if block.height > 0:  # pragma: no cover
+        prev_b = await full_node.blockchain.get_block_record_from_db(block.prev_header_hash)
+        assert prev_b is not None
+        curr = prev_b
+        while curr.height > 0 and curr.sub_epoch_summary_included is None:
+            curr = full_node.blockchain.block_record(curr.prev_hash)
+        prev_ses_block = curr
+    new_slot = len(block.finished_sub_slots) > 0
+    ssi, diff = get_next_sub_slot_iters_and_difficulty(full_node.constants, new_slot, prev_b, full_node.blockchain)
     pre_validation_results: List[PreValidationResult] = await full_node.blockchain.pre_validate_blocks_multiprocessing(
-        blocks, {}, validate_signatures=True
+        blocks, {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=prev_ses_block, validate_signatures=True
     )
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
     for i in range(len(blocks)):
-        r, _, _ = await full_node.blockchain.add_block(blocks[i], pre_validation_results[i], None)
+        block = blocks[i]
+        if block.height != 0 and len(block.finished_sub_slots) > 0:  # pragma: no cover
+            if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+        r, _, _ = await full_node.blockchain.add_block(blocks[i], pre_validation_results[i], None, sub_slot_iters=ssi)
         assert r == AddBlockResult.NEW_PEAK
 
 

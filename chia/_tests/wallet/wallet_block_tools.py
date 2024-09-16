@@ -134,13 +134,17 @@ def load_block_list(
 ) -> Tuple[Dict[uint32, bytes32], uint64, Dict[bytes32, BlockRecord]]:
     height_to_hash: Dict[uint32, bytes32] = {}
     blocks: Dict[bytes32, BlockRecord] = {}
+    sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
     for full_block in block_list:
+        if full_block.height != 0 and len(full_block.finished_sub_slots) > 0:
+            if full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:  # pragma: no cover
+                sub_slot_iters = full_block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         blocks[full_block.header_hash] = block_to_block_record(
             constants,
             BlockCache(blocks),
             uint64(1),
             full_block,
-            None,
+            sub_slot_iters,
         )
         height_to_hash[uint32(full_block.height)] = full_block.header_hash
     return height_to_hash, uint64(1), blocks

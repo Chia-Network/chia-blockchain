@@ -772,9 +772,6 @@ def derive_child_key(
         current_pk = private_key.get_g1()
         current_sk = private_key
 
-    if non_observer_derivation and current_sk is None:
-        raise ValueError("Cannot perform non-observer derivation on an observer-only key")
-
     # Key type was specified
     if key_type is not None:
         path_indices: List[int] = [12381, 8444]
@@ -850,16 +847,7 @@ def private_key_for_fingerprint(fingerprint: int) -> Optional[SecretInfo[Any]]:
     return None
 
 
-def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]) -> Optional[SecretInfo[Any]]:
-    """
-    Get a private key with the specified fingerprint. If fingerprint is not
-    specified, prompt the user to select a key.
-    """
-
-    # Return the private key matching the specified fingerprint
-    if fingerprint is not None:
-        return private_key_for_fingerprint(fingerprint)
-
+def prompt_for_fingerprint() -> Optional[int]:
     fingerprints: List[int] = [pk.get_fingerprint() for pk in Keychain().get_all_public_keys()]
     while True:
         print("Choose key:")
@@ -879,7 +867,23 @@ def get_private_key_with_fingerprint_or_prompt(fingerprint: Optional[int]) -> Op
                     val = None
                     continue
                 else:
-                    return private_key_for_fingerprint(fingerprints[index])
+                    return fingerprints[index]
+
+
+def get_private_key_with_fingerprint_or_prompt(
+    fingerprint: Optional[int],
+) -> Tuple[Optional[int], Optional[SecretInfo[Any]]]:
+    """
+    Get a private key with the specified fingerprint. If fingerprint is not
+    specified, prompt the user to select a key.
+    """
+
+    # Return the private key matching the specified fingerprint
+    if fingerprint is not None:
+        return fingerprint, private_key_for_fingerprint(fingerprint)
+
+    fingerprint_prompt = prompt_for_fingerprint()
+    return fingerprint_prompt, None if fingerprint_prompt is None else private_key_for_fingerprint(fingerprint_prompt)
 
 
 def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
@@ -892,15 +896,15 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
     return AugSchemeMPL.key_gen(seed)
 
 
-def resolve_derivation_master_key(fingerprint_or_filename: Optional[Union[int, str, Path]]) -> SecretInfo[Any]:
+def resolve_derivation_master_key(
+    fingerprint_or_filename: Optional[Union[int, str, Path]]
+) -> Tuple[Optional[int], Optional[SecretInfo[Any]]]:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.
     """
 
     if fingerprint_or_filename is not None and (isinstance(fingerprint_or_filename, (str, Path))):
-        return private_key_from_mnemonic_seed_file(Path(os.fspath(fingerprint_or_filename)))
+        sk = private_key_from_mnemonic_seed_file(Path(os.fspath(fingerprint_or_filename)))
+        return sk.get_g1().get_fingerprint(), sk
     else:
-        ret = get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)
-        if ret is None:
-            raise ValueError("Abort. No private key")
-        return ret
+        return get_private_key_with_fingerprint_or_prompt(fingerprint_or_filename)

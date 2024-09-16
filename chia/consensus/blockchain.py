@@ -231,9 +231,7 @@ class Blockchain:
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return await self.block_store.get_full_block(header_hash)
 
-    async def advance_fork_info(
-        self, block: FullBlock, fork_info: ForkInfo, additional_blocks: Dict[bytes32, FullBlock]
-    ) -> None:
+    async def advance_fork_info(self, block: FullBlock, fork_info: ForkInfo) -> None:
         """
         This function is used to advance the peak_height of fork_info given the
         full block extending the chain. block is required to be the next block on
@@ -267,19 +265,15 @@ class Blockchain:
         for height in range(fork_info.peak_height + 1, block.height):
             fork_block: Optional[FullBlock] = await self.block_store.get_full_block(chain[uint32(height)])
             assert fork_block is not None
-            await self.run_single_block(fork_block, fork_info, additional_blocks)
+            await self.run_single_block(fork_block, fork_info)
 
-    async def run_single_block(
-        self, block: FullBlock, fork_info: ForkInfo, additional_blocks: Dict[bytes32, FullBlock]
-    ) -> None:
+    async def run_single_block(self, block: FullBlock, fork_info: ForkInfo) -> None:
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
         npc: Optional[NPCResult] = None
         if block.transactions_generator is not None:
-            block_generator: Optional[BlockGenerator] = await get_block_generator(
-                self.lookup_block_generators, block, additional_blocks
-            )
+            block_generator: Optional[BlockGenerator] = await get_block_generator(self.lookup_block_generators, block)
             assert block_generator is not None
             assert block.transactions_info is not None
             assert block.foliage_transaction_block is not None
@@ -299,8 +293,8 @@ class Blockchain:
         block: FullBlock,
         pre_validation_result: PreValidationResult,
         bls_cache: Optional[BLSCache],
+        sub_slot_iters: uint64,
         fork_info: Optional[ForkInfo] = None,
-        sub_slot_iters: Optional[uint64] = None,
         prev_ses_block: Optional[BlockRecord] = None,
     ) -> Tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
@@ -403,7 +397,7 @@ class Blockchain:
                     assert fork_block is not None
                     assert fork_block.height - 1 == fork_info.peak_height
                     assert fork_block.height == 0 or fork_block.prev_header_hash == fork_info.peak_hash
-                    await self.run_single_block(fork_block, fork_info, {})
+                    await self.run_single_block(fork_block, fork_info)
                     counter += 1
                 end = time.monotonic()
                 log.info(
@@ -421,13 +415,13 @@ class Blockchain:
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
-                await self.advance_fork_info(block, fork_info, {})
+                await self.advance_fork_info(block, fork_info)
                 fork_info.include_spends(npc_result, block, header_hash)
                 self.add_block_record(block_rec)
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
             if fork_info.peak_hash != block.prev_header_hash:
-                await self.advance_fork_info(block, fork_info, {})
+                await self.advance_fork_info(block, fork_info)
 
         # if these prerequisites of the fork_info aren't met, the fork_info
         # object is invalid for this block. If the caller would have passed in
@@ -806,27 +800,14 @@ class Blockchain:
         self,
         blocks: List[FullBlock],
         npc_results: Dict[uint32, NPCResult],  # A cache of the result of running CLVM, optional (you can use {})
+        sub_slot_iters: uint64,
+        difficulty: uint64,
+        prev_ses_block: Optional[BlockRecord],
         batch_size: int = 4,
         wp_summaries: Optional[List[SubEpochSummary]] = None,
         *,
-        sub_slot_iters: Optional[uint64] = None,
-        difficulty: Optional[uint64] = None,
-        prev_ses_block: Optional[BlockRecord] = None,
         validate_signatures: bool,
     ) -> List[PreValidationResult]:
-        if difficulty is None or sub_slot_iters is None:
-            block = blocks[0]
-            prev_b = await self.get_block_record_from_db(block.prev_header_hash)
-            sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
-                self.constants, len(block.finished_sub_slots) > 0, prev_b, self
-            )
-        if prev_ses_block is None and blocks[0].height > 0:
-            curr = self.try_block_record(blocks[0].prev_header_hash)
-            if curr is None:
-                return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
-            while curr.height > 0 and curr.sub_epoch_summary_included is None:
-                curr = self.block_record(curr.prev_hash)
-            prev_ses_block = curr
         return await pre_validate_blocks_multiprocessing(
             self.constants,
             self,

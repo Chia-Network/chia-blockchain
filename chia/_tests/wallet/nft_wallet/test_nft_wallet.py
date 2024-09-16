@@ -12,6 +12,14 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.rpc_client import ResponseFailureError
+from chia.rpc.wallet_request_types import (
+    NFTCoin,
+    NFTGetByDID,
+    NFTSetDIDBulk,
+    NFTSetNFTStatus,
+    NFTTransferBulk,
+    NFTWalletWithDID,
+)
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -26,7 +34,6 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -818,8 +825,8 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
     assert res["wallet_id"] != nft_wallet.id()
     nft_wallet_p2_puzzle = res["wallet_id"]
 
-    res = await env.rpc_client.fetch("nft_get_by_did", {"did_id": hmr_did_id})
-    assert nft_wallet.id() == res["wallet_id"]
+    wallet_by_did_response = await env.rpc_client.get_nft_wallet_by_did(NFTGetByDID(did_id=hmr_did_id))
+    assert nft_wallet.id() == wallet_by_did_response.wallet_id
 
     await wallet_environments.process_pending_states(
         [
@@ -830,10 +837,8 @@ async def test_nft_with_did_wallet_creation(wallet_environments: WalletTestFrame
         ]
     )
 
-    res = await env.rpc_client.fetch("nft_get_wallets_with_dids", {})
-    assert res.get("success")
-    assert res.get("nft_wallets") == [
-        {"wallet_id": nft_wallet.id(), "did_id": hmr_did_id, "did_wallet_id": did_wallet.id()}
+    assert (await env.rpc_client.get_nft_wallets_with_dids()).nft_wallets == [
+        NFTWalletWithDID(wallet_id=nft_wallet.id(), did_id=hmr_did_id, did_wallet_id=did_wallet.id())
     ]
 
     res = await env.rpc_client.get_nft_wallet_did(wallet_id=nft_wallet.id())
@@ -1273,9 +1278,8 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
     )
 
     # Check if the NFT owner DID is reset
-    res = await env_1.rpc_client.fetch("nft_get_by_did", {})
-    assert res.get("success")
-    assert env_1.wallet_aliases["nft"] == res["wallet_id"]
+    wallet_by_did_response = await env_1.rpc_client.get_nft_wallet_by_did(NFTGetByDID())
+    assert env_1.wallet_aliases["nft"] == wallet_by_did_response.wallet_id
     coins = (await env_1.rpc_client.list_nfts(env_1.wallet_aliases["nft"], start_index=0, num=1))["nft_list"]
     assert len(coins) == 1
     coin = NFTInfo.from_json_dict(coins[0])
@@ -1332,9 +1336,8 @@ async def test_nft_transfer_nft_with_did(wallet_environments: WalletTestFramewor
         ]
     )
 
-    res = await env_1.rpc_client.fetch("nft_get_by_did", {"did_id": hmr_did_id})
-    assert res.get("success")
-    assert env_1.wallet_aliases["nft_w_did"] == res["wallet_id"]
+    wallet_by_did_response = await env_1.rpc_client.get_nft_wallet_by_did(NFTGetByDID(did_id=hmr_did_id))
+    assert env_1.wallet_aliases["nft_w_did"] == wallet_by_did_response.wallet_id
     # Check NFT DID is set now
     coins = (await env_1.rpc_client.list_nfts(env_1.wallet_aliases["nft_w_did"], start_index=0, num=1))["nft_list"]
     assert len(coins) == 1
@@ -1725,19 +1728,16 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
     nft2 = NFTInfo.from_json_dict(coins[0])
     assert nft2.owner_did is None
     nft_coin_list = [
-        {"wallet_id": env.wallet_aliases["nft_w_did"], "nft_coin_id": nft1.nft_coin_id.hex()},
-        {"wallet_id": env.wallet_aliases["nft_w_did"], "nft_coin_id": nft12.nft_coin_id.hex()},
-        {"wallet_id": env.wallet_aliases["nft_no_did"], "nft_coin_id": nft2.nft_coin_id.hex()},
-        {"wallet_id": env.wallet_aliases["nft_no_did"]},
-        {"nft_coin_id": nft2.nft_coin_id.hex()},
+        NFTCoin(wallet_id=uint32(env.wallet_aliases["nft_w_did"]), nft_coin_id=nft1.nft_coin_id.hex()),
+        NFTCoin(wallet_id=uint32(env.wallet_aliases["nft_w_did"]), nft_coin_id=nft12.nft_coin_id.hex()),
+        NFTCoin(wallet_id=uint32(env.wallet_aliases["nft_no_did"]), nft_coin_id=nft2.nft_coin_id.hex()),
     ]
-    fee = 1000
-    res = await env.rpc_client.fetch("nft_set_did_bulk", dict(did_id=hmr_did_id, nft_coin_list=nft_coin_list, fee=fee))
-    sb = WalletSpendBundle.from_json_dict(res["spend_bundle"])
-    assert len(sb.coin_spends) == 5
-    tx_num = res["tx_num"]
-    assert isinstance(tx_num, int)
-    assert tx_num == 5  # 1 for each NFT being spent (3), 1 for fee tx, 1 for did tx
+    fee = uint64(1000)
+    set_did_bulk_resp = await env.rpc_client.set_nft_did_bulk(
+        NFTSetDIDBulk(did_id=hmr_did_id, nft_coin_list=nft_coin_list, fee=fee, push=True)
+    )
+    assert len(set_did_bulk_resp.spend_bundle.coin_spends) == 5
+    assert set_did_bulk_resp.tx_num == 5  # 1 for each NFT being spent (3), 1 for fee tx, 1 for did tx
     coins = (await env.rpc_client.list_nfts(env.wallet_aliases["nft_w_did"], start_index=0, num=2))["nft_list"]
     assert len(coins) == 2
     nft1 = NFTInfo.from_json_dict(coins[0])
@@ -1784,9 +1784,8 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
         ]
     )
 
-    res = await env.rpc_client.fetch("nft_get_by_did", {"did_id": hmr_did_id})
-    assert res.get("success")
-    assert env.wallet_aliases["nft_w_did"] == res.get("wallet_id")
+    wallet_by_did_response = await env.rpc_client.get_nft_wallet_by_did(NFTGetByDID(did_id=hmr_did_id))
+    assert env.wallet_aliases["nft_w_did"] == wallet_by_did_response.wallet_id
     coins = (await env.rpc_client.list_nfts(env.wallet_aliases["nft_w_did"], start_index=0, num=3))["nft_list"]
     assert len(coins) == 3
     nft1 = NFTInfo.from_json_dict(coins[0])
@@ -2024,20 +2023,18 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
     nft2 = NFTInfo.from_json_dict(coins[0])
     assert nft2.owner_did is None
     nft_coin_list = [
-        {"wallet_id": env_0.wallet_aliases["nft_w_did"], "nft_coin_id": nft1.nft_coin_id.hex()},
-        {"wallet_id": env_0.wallet_aliases["nft_w_did"], "nft_coin_id": nft12.nft_coin_id.hex()},
-        {"wallet_id": env_0.wallet_aliases["nft_no_did"], "nft_coin_id": nft2.nft_coin_id.hex()},
-        {"wallet_id": env_0.wallet_aliases["nft_no_did"]},
-        {"nft_coin_id": nft2.nft_coin_id.hex()},
+        NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_w_did"]), nft_coin_id=nft1.nft_coin_id.hex()),
+        NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_w_did"]), nft_coin_id=nft12.nft_coin_id.hex()),
+        NFTCoin(wallet_id=uint32(env_0.wallet_aliases["nft_no_did"]), nft_coin_id=nft2.nft_coin_id.hex()),
     ]
 
-    fee = 1000
+    fee = uint64(1000)
     address = encode_puzzle_hash(await wallet_1.get_puzzle_hash(new=False), AddressType.XCH.hrp(env_1.node.config))
-    res = await env_0.rpc_client.fetch(
-        "nft_transfer_bulk", dict(target_address=address, nft_coin_list=nft_coin_list, fee=fee)
+    bulk_transfer_resp = await env_0.rpc_client.transfer_nft_bulk(
+        NFTTransferBulk(target_address=address, nft_coin_list=nft_coin_list, fee=fee, push=True)
     )
-    assert len(res["spend_bundle"]["coin_spends"]) == 4
-    assert res["tx_num"] == 4
+    assert len(bulk_transfer_resp.spend_bundle.coin_spends) == 4
+    assert bulk_transfer_resp.tx_num == 4
 
     await wallet_environments.process_pending_states(
         [
@@ -2419,8 +2416,8 @@ async def test_set_nft_status(wallet_environments: WalletTestFramework) -> None:
     assert not coin.pending_transaction
     nft_coin_id = coin.nft_coin_id
     # Set status
-    res = await env.rpc_client.fetch(
-        "nft_set_nft_status", dict(wallet_id=env.wallet_aliases["nft"], coin_id=nft_coin_id.hex(), in_transaction=True)
+    await env.rpc_client.set_nft_status(
+        NFTSetNFTStatus(wallet_id=uint32(env.wallet_aliases["nft"]), coin_id=nft_coin_id, in_transaction=True)
     )
     coins = (await env.rpc_client.list_nfts(env.wallet_aliases["nft"], start_index=0, num=1))["nft_list"]
     assert len(coins) == 1

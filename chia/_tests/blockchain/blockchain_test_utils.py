@@ -6,6 +6,7 @@ from chia_rs import BLSCache
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.types.full_block import FullBlock
 from chia.util.errors import Err
@@ -57,6 +58,17 @@ async def _validate_and_add_block(
     # add_block must return Err.INVALID_BLOCK.
     # If expected_result == INVALID_BLOCK but expected_error is None, we will allow for errors to happen
 
+    prev_b = None
+    prev_ses_block = None
+    if block.height > 0:
+        prev_b = await blockchain.get_block_record_from_db(block.prev_header_hash)
+        if prev_b is not None:  # some negative tests require this
+            curr = prev_b
+            while curr.height > 0 and curr.sub_epoch_summary_included is None:
+                curr = blockchain.block_record(curr.prev_hash)
+            prev_ses_block = curr
+    new_slot = len(block.finished_sub_slots) > 0
+    ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, blockchain)
     await check_block_store_invariant(blockchain)
     if skip_prevalidation:
         results = PreValidationResult(None, uint64(1), None, False, uint32(0))
@@ -64,7 +76,7 @@ async def _validate_and_add_block(
         # validate_signatures must be False in order to trigger add_block() to
         # validate the signature.
         pre_validation_results: List[PreValidationResult] = await blockchain.pre_validate_blocks_multiprocessing(
-            [block], {}, validate_signatures=False
+            [block], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=prev_ses_block, validate_signatures=False
         )
         assert pre_validation_results is not None
         results = pre_validation_results[0]
@@ -91,7 +103,7 @@ async def _validate_and_add_block(
         result,
         err,
         _,
-    ) = await blockchain.add_block(block, results, bls_cache, fork_info=fork_info)
+    ) = await blockchain.add_block(block, results, bls_cache, ssi, fork_info=fork_info)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:
