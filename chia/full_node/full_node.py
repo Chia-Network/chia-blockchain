@@ -1264,6 +1264,7 @@ class FullNode:
                             raise ConsensusError(Err(result.error))
                         npc_results[height] = result
                     blocks_to_validate = await self.filter_blocks(
+                        blockchain,
                         blocks,
                         fork_info,
                         cs,
@@ -1340,7 +1341,7 @@ class FullNode:
                     )
                     end = time.monotonic()
                     if end - start > 1:
-                        self.log.warn(
+                        self.log.warning(
                             f"add_prevalidated_blocks ({blocks[0].height}-{blocks[-1].height}) "
                             f"took {end-start:0.2f} seconds"
                         )
@@ -1476,7 +1477,7 @@ class FullNode:
         blockchain = AugmentedBlockchain(self.blockchain)
 
         new_cs = copy.deepcopy(cs)
-        blocks_to_validate = await self.filter_blocks(all_blocks, fork_info, new_cs)
+        blocks_to_validate = await self.filter_blocks(blockchain, all_blocks, fork_info, new_cs)
 
         if len(blocks_to_validate) == 0:
             return True, None, None
@@ -1511,6 +1512,7 @@ class FullNode:
 
     async def filter_blocks(
         self,
+        blockchain: BlocksProtocol,
         all_blocks: List[FullBlock],
         fork_info: Optional[ForkInfo],
         cs: ChainState,  # in-out parameter
@@ -1519,12 +1521,12 @@ class FullNode:
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
             header_hash = block.header_hash
-            block_rec = await self.blockchain.get_block_record_from_db(header_hash)
+            block_rec = await blockchain.get_block_record_from_db(header_hash)
             if block_rec is None:
                 blocks_to_validate = all_blocks[i:]
                 break
             else:
-                self.blockchain.add_block_record(block_rec)
+                blockchain.add_block_record(block_rec)
                 if block_rec.sub_epoch_summary_included:
                     # already validated block, update sub slot iters, difficulty and prev sub epoch summary
                     cs.prev_ses_block = block_rec
@@ -1546,7 +1548,7 @@ class FullNode:
             # we have already validated this block once, no need to do it again.
             # however, if this block is not part of the main chain, we need to
             # update the fork context with its additions and removals
-            if self.blockchain.height_to_hash(block.height) == header_hash:
+            if blockchain.height_to_hash(block.height) == header_hash:
                 # we're on the main chain, just fast-forward the fork height
                 fork_info.reset(block.height, header_hash)
             else:
@@ -1607,7 +1609,7 @@ class FullNode:
 
     async def add_prevalidated_blocks(
         self,
-        blockchain: BlocksProtocol,
+        blockchain: AugmentedBlockchain,
         blocks_to_validate: List[FullBlock],
         pre_validation_results: List[PreValidationResult],
         fork_info: Optional[ForkInfo],
@@ -1616,7 +1618,9 @@ class FullNode:
     ) -> Tuple[Optional[StateChangeSummary], Optional[Err]]:
         agg_state_change_summary: Optional[StateChangeSummary] = None
         block_record = await blockchain.get_block_record_from_db(blocks_to_validate[0].prev_header_hash)
+
         for i, block in enumerate(blocks_to_validate):
+            header_hash = block.header_hash
             assert pre_validation_results[i].required_iters is not None
             state_change_summary: Optional[StateChangeSummary]
             # when adding blocks in batches, we won't have any overlapping
@@ -1638,12 +1642,14 @@ class FullNode:
             result, error, state_change_summary = await self.blockchain.add_block(
                 block, pre_validation_results[i], None, cs.current_ssi, fork_info, prev_ses_block=cs.prev_ses_block
             )
+            if error is None:
+                blockchain.remove_extra_block(header_hash)
 
             if result == AddBlockResult.NEW_PEAK:
                 # since this block just added a new peak, we've don't need any
                 # fork history from fork_info anymore
                 if fork_info is not None:
-                    fork_info.reset(block.height, block.header_hash)
+                    fork_info.reset(block.height, header_hash)
                 assert state_change_summary is not None
                 # Since all blocks are contiguous, we can simply append the rollback changes and npc results
                 if agg_state_change_summary is None:
@@ -1663,7 +1669,7 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return agg_state_change_summary, error
-            block_record = blockchain.block_record(block.header_hash)
+            block_record = blockchain.block_record(header_hash)
             assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
                 cs.prev_ses_block = block_record
