@@ -2404,16 +2404,6 @@ class WalletStateManager:
                 additional_signing_responses != [] and additional_signing_responses is not None,
             )
 
-            # Check that tx_records have additions/removals since vault txs don't have them until they're signed
-            for i, tx in enumerate(tx_records):
-                if tx.spend_bundle is not None:
-                    if tx.additions == []:
-                        tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
-                    if tx.removals == []:
-                        assert isinstance(tx.spend_bundle, WalletSpendBundle)
-                        tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
-                tx_records[i] = tx
-
         if push:
             all_coins_names = []
             async with self.db_wrapper.writer_maybe_transaction():
