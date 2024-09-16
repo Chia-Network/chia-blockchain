@@ -147,6 +147,6 @@ class TestSingletonStore:
             record_by_id = (await db.get_records_by_coin_id(record.coin.name()))[0]
             assert record_by_id.removed_height == 10
             # rollback
-            await db.rollback(5, uint32(2))
+            await db.rollback_to_block(5, uint32(2))
             reorged_record_by_id = await db.get_records_by_coin_id(record.coin.name())
             assert not reorged_record_by_id

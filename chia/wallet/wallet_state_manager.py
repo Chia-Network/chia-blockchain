@@ -1221,10 +1221,46 @@ class WalletStateManager:
         derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(hinted_coin.hint)
 
         if derivation_record is None:
+            # TODO: remove this when vault derivation records for p2_singletons are sorted out
+            if isinstance(self.observation_root, VaultRoot):
+                assert isinstance(self.main_wallet, Vault)
+                p2_singleton = self.main_wallet.get_p2_singleton_puzzle_hash()
+                for wallet in [wal for wal in self.wallets.values() if wal.type() == WalletType.CAT]:
+                    cat_p2_singleton = wallet.get_p2_singleton_puzzle_hash()  # type: ignore[attr-defined]
+                    if coin_state.coin.puzzle_hash == cat_p2_singleton:
+                        return WalletIdentifier(wallet.id(), wallet.type())
+                # check if we need to create a cat Wallet
+                if p2_singleton == hinted_coin.hint:
+                    if parent_data.tail_program_hash.hex() in self.default_cats or self.config.get(
+                        "automatically_add_unknown_cats", False
+                    ):
+                        cat_wallet = await CATWallet.get_or_create_wallet_for_cat(
+                            self, self.main_wallet, parent_data.tail_program_hash.hex()
+                        )
+                        return WalletIdentifier.create(cat_wallet)
+                    else:
+                        await self.interested_store.add_unacknowledged_token(
+                            parent_data.tail_program_hash,
+                            CATWallet.default_wallet_name_for_unknown_cat(parent_data.tail_program_hash.hex()),
+                            None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
+                            parent_coin_state.coin.puzzle_hash,
+                        )
+                        await self.interested_store.add_unacknowledged_coin_state(
+                            parent_data.tail_program_hash,
+                            coin_state,
+                            fork_height,
+                        )
+                        self.state_changed("added_stray_cat")
+                        return None
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
             return None
         else:
-            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+            if isinstance(self.observation_root, G1Element):
+                our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+            else:
+                assert isinstance(self.main_wallet, Vault)
+                our_inner_puzzle = self.main_wallet.get_p2_singleton_puzzle()
+                assert our_inner_puzzle.get_tree_hash() == derivation_record.puzzle_hash
             asset_id: bytes32 = parent_data.tail_program_hash
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
             is_crcat: bool = False
@@ -1275,7 +1311,7 @@ class WalletStateManager:
                 "automatically_add_unknown_cats", False
             ):
                 if is_crcat:
-                    cat_wallet: Union[CATWallet, CRCATWallet] = await CRCATWallet.get_or_create_wallet_for_cat(
+                    cat_wallet = await CRCATWallet.get_or_create_wallet_for_cat(
                         self,
                         self.main_wallet,
                         crcat.tail_hash.hex(),
@@ -1576,6 +1612,15 @@ class WalletStateManager:
         old_derivation_record: Optional[DerivationRecord] = (
             await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
         )
+
+        if isinstance(self.main_wallet, Vault):
+            # TODO: We may need to check for DID vs non-DID wallets
+            p2_singleton = self.main_wallet.get_p2_singleton_puzzle_hash()
+            if p2_singleton == new_p2_puzhash:
+                for wallet in self.wallets.copy().values():
+                    if isinstance(wallet, NFTWallet):
+                        new_derivation_record = wallet.derivation_for_index(0)[0]
+                        break
         if new_derivation_record is None and old_derivation_record is None:
             self.log.debug(
                 "Cannot find a P2 puzzle hash for NFT:%s, this NFT belongs to others.",
@@ -2259,6 +2304,15 @@ class WalletStateManager:
     async def get_wallet_identifier_for_coin(
         self, coin: Coin, hint_dict: Dict[bytes32, bytes32] = {}
     ) -> Optional[WalletIdentifier]:
+        # if we're in vault mode, then we want to return the vault wallet identifier for coins which
+        # have our p2_singleton puzzle hash
+        if self.main_wallet.handle_own_derivation():
+            for wallet_id in self.wallets:
+                wallet = self.wallets[wallet_id]
+                p2_singleton_puzzle_hash = wallet.get_p2_singleton_puzzle_hash()  # type: ignore[attr-defined]
+                if coin.puzzle_hash == p2_singleton_puzzle_hash:
+                    return WalletIdentifier(uint32(wallet.id()), wallet.type())
+
         wallet_identifier = await self.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
         if (
             wallet_identifier is None
@@ -2408,12 +2462,18 @@ class WalletStateManager:
 
             # Check that tx_records have additions/removals since vault txs don't have them until they're signed
             for i, tx in enumerate(tx_records):
+                new_removals = []
                 if tx.spend_bundle is not None:
                     if tx.additions == []:
                         tx = dataclasses.replace(tx, additions=tx.spend_bundle.additions())
                     if tx.removals == []:
                         assert isinstance(tx.spend_bundle, WalletSpendBundle)
-                        tx = dataclasses.replace(tx, removals=tx.spend_bundle.removals())
+                        removals = tx.spend_bundle.removals()
+                        for rem in removals:
+                            belongs = await self.does_coin_belong_to_wallet(rem, tx.wallet_id)
+                            if belongs:
+                                new_removals.append(rem)
+                        tx = dataclasses.replace(tx, removals=new_removals)
                 tx_records[i] = tx
 
         if push:
@@ -2421,9 +2481,14 @@ class WalletStateManager:
             async with self.db_wrapper.writer_maybe_transaction():
                 for tx_record in tx_records:
                     # Wallet node will use this queue to retry sending this transaction until full nodes receives it
-                    await self.tx_store.add_transaction_record(tx_record)
                     all_coins_names.extend([coin.name() for coin in tx_record.additions])
                     all_coins_names.extend([coin.name() for coin in tx_record.removals])
+                    # remove the vault coin from tx_record.removals if present
+                    removals = tx_record.removals
+                    if isinstance(self.main_wallet, Vault):
+                        new_removals = [rem for rem in removals if rem != self.main_wallet.vault_info.coin]
+                        tx_record = dataclasses.replace(tx_record, removals=new_removals)
+                    await self.tx_store.add_transaction_record(tx_record)
 
             await self.add_interested_coin_ids(all_coins_names)
 
@@ -2539,6 +2604,8 @@ class WalletStateManager:
         await self.coin_store.rollback_to_block(height)
         await self.interested_store.rollback_to_block(height)
         await self.dl_store.rollback_to_block(height)
+        if isinstance(self.observation_root, VaultRoot):
+            await self.singleton_store.rollback_to_block(height, wallet_id_arg=self.main_wallet.id())
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
@@ -2614,7 +2681,11 @@ class WalletStateManager:
 
     async def add_new_wallet(self, wallet: WalletProtocol[Any]) -> None:
         self.wallets[wallet.id()] = wallet
-        await self.create_more_puzzle_hashes()
+        if wallet.handle_own_derivation():
+            # add a derivation record for inner puzhash
+            pass
+        else:
+            await self.create_more_puzzle_hashes()
         self.state_changed("wallet_created")
 
     async def get_spendable_coins_for_wallet(

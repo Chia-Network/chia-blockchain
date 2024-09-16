@@ -206,7 +206,9 @@ async def test_nft_wallet_creation_automatically(wallet_environments: WalletTest
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
-@pytest.mark.parametrize("wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1]}], indirect=True)
+@pytest.mark.parametrize(
+    "wallet_environments", [{"num_environments": 2, "blocks_needed": [1, 1], "as_vault": True}], indirect=True
+)
 @pytest.mark.anyio
 async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestFramework) -> None:
     env_0 = wallet_environments.environments[0]
@@ -293,23 +295,35 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
     )
-    await time_out_assert(60, full_node_api.full_node.blockchain.get_peak_height, height + 1)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0)
-    await env_0.change_balances(
-        {
-            "xch": {
-                "set_remainder": True,  # Not testing XCH reorg functionality in this test
-            },
-            "nft": {
-                # State back to before confirmation
-                "unspent_coin_count": -1,
-                "pending_coin_removal_count": 1,
-            },
-        }
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "unspent_coin_count": -1,
+                        "pending_coin_removal_count": 1,
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
+                    "nft": {
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1,
+                        "set_remainder": True,
+                    },
+                },
+            ),
+            WalletStateTransition(),
+        ]
     )
-    await env_0.check_balances()
 
-    await time_out_assert(30, get_nft_count, 0, nft_wallet_0)
+    await time_out_assert(30, get_nft_count, 1, nft_wallet_0)
     await time_out_assert(30, get_wallet_number, 2, wallet_node_0.wallet_state_manager)
 
     new_metadata = Program.to([("u", ["https://www.test.net/logo.svg"]), ("h", "0xD4584AD463139FA8C0D9F68F4B59F181")])
@@ -342,17 +356,18 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
                 },
                 post_block_balance_updates={
                     "xch": {
-                        "confirmed_wallet_balance": -2,
+                        "confirmed_wallet_balance": -1,
                         "unconfirmed_wallet_balance": 0,
                         ">=#spendable_balance": 1,  # any amount increase
                         ">=#max_send_amount": 1,  # any amount increase
-                        "pending_coin_removal_count": -2,
+                        "pending_coin_removal_count": -1,
                         "<=#pending_change": -1,  # any amount decrease
                         "unspent_coin_count": 0,
                     },
                     "nft": {
-                        "pending_coin_removal_count": -2,
-                        "unspent_coin_count": 2,
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1,
+                        "set_remainder": True,
                     },
                 },
             ),
@@ -454,10 +469,13 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
                     }
                 },
                 post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
                     "nft": {
                         "pending_coin_removal_count": -1,
                         "unspent_coin_count": -1,
-                    }
+                    },
                 },
             ),
         ]
@@ -479,17 +497,19 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
 
     await env_0.change_balances(
         {
+            "xch": {"set_remainder": True},
             "nft": {
                 "unspent_coin_count": -1,
-            }
+            },
         }
     )
     await env_1.change_balances(
         {
+            "xch": {"set_remainder": True},
             "nft": {
                 "pending_coin_removal_count": 1,
                 "unspent_coin_count": 1,
-            }
+            },
         }
     )
     await env_0.check_balances()

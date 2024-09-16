@@ -28,6 +28,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_pk
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vault.vault_root import VaultRoot
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_node import WalletNode
@@ -44,6 +45,7 @@ def check_wallets(node: WalletNode) -> int:
         {
             "num_environments": 1,
             "blocks_needed": [1],
+            "as_vault": True,
         }
     ],
     indirect=True,
@@ -191,6 +193,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
             "blocks_needed": [1],
             "reuse_puzhash": True,  # irrelevant
             "trusted": True,  # irrelevant
+            "as_vault": True,
         }
     ],
     indirect=True,
@@ -232,6 +235,7 @@ async def test_cat_creation_unique_lineage_store(wallet_environments: WalletTest
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
+            "as_vault": True,
         }
     ],
     indirect=True,
@@ -258,7 +262,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
         "cat": 2,
     }
 
-    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with wallet.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         cat_wallet = await CATWallet.create_new_cat_wallet(
             wallet_node.wallet_state_manager,
             wallet,
@@ -321,7 +325,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     assert cat_wallet.cat_info.limitations_program_hash == cat_wallet_2.cat_info.limitations_program_hash
 
     cat_2_hash = await cat_wallet_2.get_new_inner_hash()
-    async with cat_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with cat_wallet.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], action_scope, fee=uint64(1))
     tx_id = None
     for tx_record in action_scope.side_effects.transactions:
@@ -329,10 +335,16 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
             assert tx_record.to_puzzle_hash == cat_2_hash
         if tx_record.spend_bundle is not None:
             tx_id = tx_record.name.hex()
+            # from chia.wallet.util.debug_spend_bundle import debug_spend_bundle as asd
+            # breakpoint()
+
     assert tx_id is not None
     memos = await api_0.get_transaction_memo({"transaction_id": tx_id})
-    assert len(memos[tx_id]) == 2  # One for tx, one for change
-    assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
+    if isinstance(wallet.wallet_state_manager.observation_root, VaultRoot):
+        assert len(memos[tx_id]) == 4  # One for tx, one for change
+    else:
+        assert len(memos[tx_id]) == 2  # One for tx, one for change
+        assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
 
     await wallet_environments.process_pending_states(
         [
@@ -412,7 +424,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     assert len(memos[tx_id]) == 2
     assert list(memos[tx_id].values())[0][0] == cat_2_hash.hex()
     cat_hash = await cat_wallet.get_new_inner_hash()
-    async with cat_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+    async with cat_wallet_2.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
         await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash], action_scope)
 
     await wallet_environments.process_pending_states(
@@ -420,6 +434,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
             WalletStateTransition(
                 pre_block_balance_updates={},
                 post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
                     "cat": {
                         "confirmed_wallet_balance": 15,
                         "unconfirmed_wallet_balance": 15,
@@ -443,6 +460,9 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
                 post_block_balance_updates={
+                    "xch": {
+                        "set_remainder": True,
+                    },
                     "cat": {
                         "confirmed_wallet_balance": -15,
                         "pending_coin_removal_count": -1,
@@ -487,6 +507,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
             "blocks_needed": [1],
             "reuse_puzhash": True,  # irrelevant
             "trusted": True,  # irrelevant
+            "as_vault": True,
         }
     ],
     indirect=True,
@@ -547,6 +568,7 @@ async def test_get_wallet_for_asset_id(wallet_environments: WalletTestFramework)
             "num_environments": 2,
             "blocks_needed": [1, 1],
             "reuse_puzhash": True,
+            "as_vault": True,
         }
     ],
     indirect=True,
@@ -741,6 +763,7 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
         {
             "num_environments": 3,
             "blocks_needed": [1, 1, 1],
+            "as_vault": True,
         }
     ],
     indirect=True,
@@ -921,6 +944,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                     "cat": {},
                 },
                 post_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {
                         "confirmed_wallet_balance": 35,
                         "unconfirmed_wallet_balance": 35,
@@ -944,6 +968,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                     },
                 },
                 post_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {
                         "confirmed_wallet_balance": -15,
                         "spendable_balance": 45,
@@ -966,6 +991,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                     },
                 },
                 post_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {
                         "confirmed_wallet_balance": -20,
                         "spendable_balance": 0,
@@ -1063,6 +1089,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
             "blocks_needed": [1],
             "reuse_puzhash": True,  # irrelevant
             "trusted": True,  # irrelevant
+            "as_vault": True,
         }
     ],
     indirect=True,
@@ -1200,11 +1227,13 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework) -> 
             "num_environments": 2,
             "blocks_needed": [1, 1],
             "config_overrides": {"automatically_add_unknown_cats": True},
+            "as_vault": True,
         },
         {
             "num_environments": 2,
             "blocks_needed": [1, 1],
             "config_overrides": {"automatically_add_unknown_cats": False},
+            "as_vault": True,
         },
     ],
     indirect=True,
@@ -1400,9 +1429,11 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
         [
             WalletStateTransition(
                 pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {},
                 },
                 post_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {
                         "confirmed_wallet_balance": 5,
                         "unconfirmed_wallet_balance": 5,
@@ -1416,6 +1447,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
             ),
             WalletStateTransition(
                 pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {
                         "unconfirmed_wallet_balance": -5,
                         "<=#spendable_balance": -5,
@@ -1426,6 +1458,7 @@ async def test_cat_hint(wallet_environments: WalletTestFramework) -> None:
                     },
                 },
                 post_block_balance_updates={
+                    "xch": {"set_remainder": True},
                     "cat": {
                         "confirmed_wallet_balance": -5,
                         ">=#spendable_balance": 1,

@@ -210,6 +210,9 @@ class AnyoneCanSpend(Wallet):
             )
         ]
 
+    def get_p2_singleton_puzzle_hash(self) -> bytes32:
+        return ACS_PH
+
 
 async def acs_setup(wallet_environments: WalletTestFramework, monkeypatch: pytest.MonkeyPatch) -> None:
     def get_main_wallet_driver(self: WalletStateManager, observation_root: ObservationRoot) -> Type[MainWalletProtocol]:

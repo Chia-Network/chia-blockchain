@@ -5,6 +5,7 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, AsyncIterator, List, Optional, cast, final
 
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.util.action_scope import ActionScope
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.signer_protocol import SigningResponse
@@ -24,6 +25,7 @@ class _StreamableWalletSideEffects(Streamable):
     signing_responses: List[SigningResponse]
     extra_spends: List[WalletSpendBundle]
     selected_coins: List[Coin]
+    solutions: List[Program]
 
 
 @dataclass
@@ -32,6 +34,7 @@ class WalletSideEffects:
     signing_responses: List[SigningResponse] = field(default_factory=list)
     extra_spends: List[WalletSpendBundle] = field(default_factory=list)
     selected_coins: List[Coin] = field(default_factory=list)
+    solutions: List[Program] = field(default_factory=list)
 
     def __bytes__(self) -> bytes:
         return bytes(_StreamableWalletSideEffects(**self.__dict__))
@@ -39,6 +42,13 @@ class WalletSideEffects:
     @classmethod
     def from_bytes(cls, blob: bytes) -> WalletSideEffects:
         return cls(**_StreamableWalletSideEffects.from_bytes(blob).__dict__)
+
+    def merge(self, other: WalletSideEffects) -> None:
+        self.transactions.extend(other.transactions)
+        self.signing_responses.extend(other.signing_responses)
+        self.extra_spends.extend(other.extra_spends)
+        self.selected_coins.extend(other.selected_coins)
+        self.solutions.extend(other.solutions)
 
 
 @final

@@ -98,6 +98,7 @@ class GenesisById(LimitationsProgram):
         origin_id = origin.name()
 
         cat_inner: Program = await wallet.get_new_inner_puzzle()
+        inner_tree_hash = cat_inner.get_tree_hash()
         tail: Program = cls.construct([Program.to(origin_id)])
 
         wallet.lineage_store = await CATLineageStore.create(
@@ -106,37 +107,42 @@ class GenesisById(LimitationsProgram):
         await wallet.add_lineage(origin_id, LineageProof())
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
+        eve_coin = Coin(origin_id, minted_cat_puzzle_hash, amount)
+
+        eve_solution = await wallet.standard_wallet.make_solution(
+            primaries=[Payment(inner_tree_hash, amount, [inner_tree_hash])],
+            action_scope=action_scope,
+            coin=eve_coin,
+        )
+
+        inner_solution = wallet.standard_wallet.add_condition_to_solution(
+            Program.to([51, 0, -113, tail, []]),
+            eve_solution,
+        )
 
         async with wallet.wallet_state_manager.new_action_scope(
             action_scope.config.tx_config, push=False
         ) as inner_action_scope:
+            async with inner_action_scope.use() as inner_interface:
+                inner_interface.side_effects.solutions.append(inner_solution)
+                inner_interface.side_effects.selected_coins.append(eve_coin)
             await wallet.standard_wallet.generate_signed_transaction(
-                amount, minted_cat_puzzle_hash, inner_action_scope, fee, coins, origin_id=origin_id
+                amount,
+                minted_cat_puzzle_hash,
+                inner_action_scope,
+                fee,
+                coins,
+                origin_id=origin_id,
             )
 
         async with action_scope.use() as interface:
             interface.side_effects.transactions = inner_action_scope.side_effects.transactions
 
-        inner_tree_hash = cat_inner.get_tree_hash()
-        inner_solution = wallet.standard_wallet.add_condition_to_solution(
-            Program.to([51, 0, -113, tail, []]),
-            (
-                await wallet.standard_wallet.make_solution(
-                    primaries=[Payment(inner_tree_hash, amount, [inner_tree_hash])],
-                    action_scope=action_scope,
-                )
-            ),
-        )
         eve_spend = unsigned_spend_bundle_for_spendable_cats(
             CAT_MOD,
             [
                 SpendableCAT(
-                    list(
-                        filter(
-                            lambda a: a.amount == amount,
-                            [add for tx in inner_action_scope.side_effects.transactions for add in tx.additions],
-                        )
-                    )[0],
+                    eve_coin,
                     tail.get_tree_hash(),
                     cat_inner,
                     inner_solution,

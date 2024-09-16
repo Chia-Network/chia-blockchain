@@ -52,6 +52,8 @@ from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_has
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.vault.vault_root import VaultRoot
+from chia.wallet.vault.vault_wallet import Vault
 from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -162,12 +164,19 @@ class CATWallet:
         non_ephemeral_coins: List[Coin] = not_ephemeral_additions(spend_bundle)
         cat_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
-        for c in non_ephemeral_coins:
-            wallet_identifier = await puzzle_store.get_wallet_identifier_for_puzzle_hash(c.puzzle_hash)
+        for coin in non_ephemeral_coins:
+            wallet_identifier = await puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
             if wallet_identifier is None:
-                raise ValueError("Internal Error")
-            if wallet_identifier.id == self.id():
-                cat_coin = c
+                if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+                    assert isinstance(self.wallet_state_manager.main_wallet, Vault)
+                    if self.match_hinted_coin(
+                        coin, self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle_hash()
+                    ):
+                        cat_coin = coin
+                else:
+                    raise ValueError("Internal Error")
+            if wallet_identifier and wallet_identifier.id == self.id():
+                cat_coin = coin
 
         if cat_coin is None:
             raise ValueError("Internal Error, unable to generate new CAT coin")
@@ -443,6 +452,8 @@ class CATWallet:
             return record.puzzle_hash
 
     def require_derivation_paths(self) -> bool:
+        if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+            return False
         return True
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
@@ -456,6 +467,8 @@ class CATWallet:
         return curry_and_treehash(QUOTED_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash)
 
     async def get_new_cat_puzzle_hash(self) -> bytes32:
+        if self.handle_own_derivation():
+            return self.get_p2_singleton_puzzle_hash()
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
     async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
@@ -537,6 +550,10 @@ class CATWallet:
         return coins
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
+        if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+            assert isinstance(self.wallet_state_manager.main_wallet, Vault)
+            puzzle: Program = self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle()
+            return puzzle
         record: Optional[DerivationRecord] = (
             await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
         )
@@ -571,7 +588,9 @@ class CATWallet:
         """
         announcement: Optional[AssertCoinAnnouncement] = None
         async with self.wallet_state_manager.new_action_scope(
-            action_scope.config.tx_config, push=False
+            action_scope.config.tx_config,
+            push=False,
+            sign=False,
         ) as inner_action_scope:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
@@ -604,6 +623,9 @@ class CATWallet:
                     negative_change_allowed=True,
                     extra_conditions=extra_conditions,
                 )
+            async with inner_action_scope.use() as inner_interface:
+                async with action_scope.use() as outer_interface:
+                    outer_interface.side_effects.merge(inner_interface.side_effects)
 
         message = None
         for tx in inner_action_scope.side_effects.transactions:
@@ -618,9 +640,6 @@ class CATWallet:
 
         assert message is not None
         announcement = AssertCoinAnnouncement(asserted_id=origin_id, asserted_msg=message)
-
-        async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
 
         return announcement
 
@@ -711,6 +730,7 @@ class CATWallet:
                             primaries=primaries,
                             action_scope=action_scope,
                             conditions=(*extra_conditions, announcement),
+                            coin=coin,
                         )
                     elif regular_chia_to_claim > fee:  # pragma: no cover
                         xch_announcement = await self.create_tandem_xch_tx(
@@ -723,6 +743,7 @@ class CATWallet:
                             primaries=primaries,
                             action_scope=action_scope,
                             conditions=(*extra_conditions, xch_announcement, announcement),
+                            coin=coin,
                         )
                     else:
                         # TODO: what about when they are equal?
@@ -732,10 +753,14 @@ class CATWallet:
                         primaries=primaries,
                         action_scope=action_scope,
                         conditions=(*extra_conditions, announcement),
+                        coin=coin,
                     )
             else:
                 innersol = await self.standard_wallet.make_solution(
-                    primaries=[], action_scope=action_scope, conditions=(announcement.corresponding_assertion(),)
+                    primaries=[],
+                    action_scope=action_scope,
+                    conditions=(announcement.corresponding_assertion(),),
+                    coin=coin,
                 )
             inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
@@ -792,6 +817,9 @@ class CATWallet:
         )
 
         async with action_scope.use() as interface:
+            if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+                assert isinstance(self.wallet_state_manager.main_wallet, Vault)
+                interface.set_callback(self.wallet_state_manager.main_wallet.vault_spend_callback)
             other_tx_removals: Set[Coin] = {
                 removal for tx in interface.side_effects.transactions for removal in tx.removals
             }
@@ -871,7 +899,27 @@ class CATWallet:
         )
 
     def handle_own_derivation(self) -> bool:
+        if isinstance(self.wallet_state_manager.observation_root, VaultRoot):
+            return True
         return False
 
     def derivation_for_index(self, index: int) -> List[DerivationRecord]:  # pragma: no cover
-        raise NotImplementedError()
+        assert isinstance(self.wallet_state_manager.main_wallet, Vault)
+        p2_singleton_puzzle_hash = self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle_hash()
+        record = DerivationRecord(
+            uint32(index),
+            p2_singleton_puzzle_hash,
+            self.wallet_state_manager.main_wallet.vault_info.pubkey,
+            self.type(),
+            self.id(),
+            False,
+        )
+        return [record]
+
+    def get_p2_singleton_puzzle_hash(self) -> bytes32:
+        assert isinstance(self.wallet_state_manager.main_wallet, Vault)
+        p2_inner = self.wallet_state_manager.main_wallet.get_p2_singleton_puzzle_hash()
+        cat_puzzle_hash = construct_cat_puzzle(
+            CAT_MOD, self.cat_info.limitations_program_hash, p2_inner
+        ).get_tree_hash_precalc(p2_inner)
+        return cat_puzzle_hash
