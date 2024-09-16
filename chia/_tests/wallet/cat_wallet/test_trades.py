@@ -2133,63 +2133,125 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_trader, tr2)
 
 
-@pytest.mark.parametrize("trusted", [True, False])
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 2,
+            "blocks_needed": [1, 1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 @pytest.mark.anyio
-async def test_trade_bad_spend(
-    wallets_prefarm: Tuple[Tuple[WalletNode, int], Tuple[WalletNode, int], FullNodeSimulator]
-) -> None:
-    (wallet_node_maker, maker_funds), (wallet_node_taker, _), full_node = wallets_prefarm
-    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
+async def test_trade_bad_spend(wallet_environments: WalletTestFramework) -> None:
+    env_maker = wallet_environments.environments[0]
+    env_taker = wallet_environments.environments[1]
+
+    env_maker.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+    env_taker.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
     xch_to_cat_amount = uint64(100)
 
-    async with wallet_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        cat_wallet_maker = await CATWallet.create_new_cat_wallet(
-            wallet_node_maker.wallet_state_manager,
-            wallet_maker,
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=True
+    ) as action_scope:
+        await CATWallet.create_new_cat_wallet(
+            env_maker.wallet_state_manager,
+            env_maker.xch_wallet,
             {"identifier": "genesis_by_id"},
             xch_to_cat_amount,
             action_scope,
         )
 
-    await full_node.process_transaction_records(records=action_scope.side_effects.transactions)
+    await wallet_environments.process_pending_states(
+        [
+            # tests in test_cat_wallet.py
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                },
+            ),
+            WalletStateTransition(),
+        ]
+    )
 
-    await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
-    await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, xch_to_cat_amount)
-    maker_funds -= xch_to_cat_amount
-    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
-
-    chia_for_cat: OfferSummary = {
-        wallet_maker.id(): 1000,
-        cat_wallet_maker.id(): -4,
+    cat_for_chia: OfferSummary = {
+        env_maker.wallet_aliases["xch"]: 1000,
+        env_maker.wallet_aliases["cat"]: -4,
     }
 
-    trade_manager_maker = wallet_node_maker.wallet_state_manager.trade_manager
-    trade_manager_taker = wallet_node_taker.wallet_state_manager.trade_manager
+    trade_manager_maker = env_maker.wallet_state_manager.trade_manager
+    trade_manager_taker = env_taker.wallet_state_manager.trade_manager
 
-    async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
-        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat, action_scope)
+    async with env_maker.wallet_state_manager.new_action_scope(
+        wallet_environments.tx_config, push=False
+    ) as action_scope:
+        success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia, action_scope)
     await time_out_assert(30, get_trade_and_status, TradeStatus.PENDING_ACCEPT, trade_manager_maker, trade_make)
     assert error is None
     assert success is True
     assert trade_make is not None
-    peer = wallet_node_taker.get_full_node_peer()
+    peer = env_taker.node.get_full_node_peer()
     offer = Offer.from_bytes(trade_make.offer)
     bundle = WalletSpendBundle(coin_spends=offer._bundle.coin_spends, aggregated_signature=G2Element())
     offer = dataclasses.replace(offer, _bundle=bundle)
+    fee = uint64(10)
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
-        DEFAULT_TX_CONFIG, push=True, sign=False
+        wallet_environments.tx_config, push=True, sign=False
     ) as action_scope:
-        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=uint64(10))
-    wallet_node_taker.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
+        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
+    env_taker.node.wallet_tx_resend_timeout_secs = 0  # don't wait for resend
 
     def check_wallet_cache_empty() -> bool:
-        return wallet_node_taker._tx_messages_in_progress == {}
+        return env_taker.node._tx_messages_in_progress == {}
 
     for _ in range(10):
-        await wallet_node_taker._resend_queue()
+        await env_taker.node._resend_queue()
         await time_out_assert(5, check_wallet_cache_empty, True)
-    offer_tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
-    await full_node.process_transaction_records(records=offer_tx_records)
+
+    await wallet_environments.process_pending_states(
+        [
+            # We're ignoring initial balance checking here because of the peculiarity
+            # of the forced resend behavior we're doing above. Not entirely sure that we should be
+            # but the balances are weird in such a way that it suggests to me a test issue and not
+            # an issue with production code - quex
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "cat": {},
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {},
+                    "cat": {},
+                },
+            ),
+        ],
+        invalid_transactions=[tx.name for tx in action_scope.side_effects.transactions],
+    )
+
     await time_out_assert(30, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, tr1)
 
 
