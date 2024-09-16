@@ -670,9 +670,13 @@ class FullNodeSimulator(FullNodeAPI):
                 return set()
 
             outputs: List[Payment] = []
+            amounts_seen: Set[uint64] = set()
             for amount in amounts:
-                puzzle_hash = await wallet.get_new_puzzlehash()
+                # We need unique puzzle hash amount combos so we'll only generate a new puzzle hash when we've already
+                # seen that amount sent to that puzzle hash
+                puzzle_hash = await wallet.get_puzzle_hash(new=amount in amounts_seen)
                 outputs.append(Payment(puzzle_hash, amount))
+                amounts_seen.add(amount)
 
             transaction_records: List[TransactionRecord] = []
             outputs_iterator = iter(outputs)
@@ -695,7 +699,8 @@ class FullNodeSimulator(FullNodeAPI):
                 else:
                     break
 
-            await self.process_transaction_records(records=transaction_records, timeout=None)
+            await self.wait_transaction_records_entered_mempool(transaction_records, timeout=None)
+            await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
             output_coins = {coin for transaction_record in transaction_records for coin in transaction_record.additions}
             puzzle_hashes = {output.puzzle_hash for output in outputs}

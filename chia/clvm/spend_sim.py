@@ -29,7 +29,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, T_SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
@@ -64,7 +64,7 @@ class CostLogger:
         self.cost_dict: Dict[str, int] = {}
         self.cost_dict_no_puzs: Dict[str, int] = {}
 
-    def add_cost(self, descriptor: str, spend_bundle: SpendBundle) -> SpendBundle:
+    def add_cost(self, descriptor: str, spend_bundle: T_SpendBundle) -> T_SpendBundle:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
         npc_result: NPCResult = get_name_puzzle_conditions(
             program,

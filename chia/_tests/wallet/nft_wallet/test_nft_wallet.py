@@ -20,7 +20,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64
@@ -34,6 +33,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -75,10 +75,10 @@ async def wait_rpc_state_condition(
 
 async def make_new_block_with(
     resp: Dict[str, Any], full_node_api: FullNodeSimulator, ph: bytes32, node_to_sync: Optional[WalletNode] = None
-) -> SpendBundle:
+) -> WalletSpendBundle:
     assert resp.get("success")
     sb = resp["spend_bundle"]
-    assert isinstance(sb, SpendBundle)
+    assert isinstance(sb, WalletSpendBundle)
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     if node_to_sync is not None:
@@ -678,7 +678,7 @@ async def test_nft_wallet_rpc_update_metadata(
     coins = coins_response["nft_list"]
     assert coins[0].pending_transaction
     sb = tr1["spend_bundle"]
-    assert isinstance(sb, SpendBundle)
+    assert isinstance(sb, WalletSpendBundle)
     transactions = [TransactionRecord.from_json_dict_convenience(tx) for tx in tr1["transactions"]]
     await full_node_api.process_transaction_records(transactions)
     # check that new URI was added
@@ -1410,7 +1410,7 @@ async def test_nft_bulk_set_did(self_hostname: str, two_wallet_nodes: OldSimulat
     ]
     resp = await api_0.nft_set_did_bulk(dict(did_id=hmr_did_id, nft_coin_list=nft_coin_list, fee=1000))
     sb = resp["spend_bundle"]
-    assert isinstance(sb, SpendBundle)
+    assert isinstance(sb, WalletSpendBundle)
     assert len(sb.coin_spends) == 5
     tx_num = resp["tx_num"]
     assert isinstance(tx_num, int)

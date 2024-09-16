@@ -4,7 +4,7 @@ import logging
 from typing import Optional, Union
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import (
@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 def make_sub_epoch_summary(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     blocks_included_height: uint32,
     prev_prev_block: BlockRecord,
     new_difficulty: Optional[uint64],
@@ -73,7 +73,7 @@ def make_sub_epoch_summary(
 
 def next_sub_epoch_summary(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     required_iters: uint64,
     block: Union[UnfinishedBlock, FullBlock],
     can_finish_soon: bool = False,

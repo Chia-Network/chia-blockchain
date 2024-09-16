@@ -7,7 +7,7 @@ import time
 from typing import Dict, List, Optional, Set, Tuple
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
 from chia.consensus.make_sub_epoch_summary import make_sub_epoch_summary
@@ -409,7 +409,7 @@ class FullNodeStore:
     def new_finished_sub_slot(
         self,
         eos: EndOfSubSlotBundle,
-        blocks: BlockchainInterface,
+        blocks: BlockRecordsProtocol,
         peak: Optional[BlockRecord],
         next_sub_slot_iters: uint64,
         next_difficulty: uint64,
@@ -680,7 +680,7 @@ class FullNodeStore:
     def new_signage_point(
         self,
         index: uint8,
-        blocks: BlockchainInterface,
+        blocks: BlockRecordsProtocol,
         peak: Optional[BlockRecord],
         next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
@@ -887,7 +887,7 @@ class FullNodeStore:
         sp_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
         fork_block: Optional[BlockRecord],
-        blocks: BlockchainInterface,
+        blocks: BlockRecordsProtocol,
         next_sub_slot_iters: uint64,
         next_difficulty: uint64,
     ) -> FullNodeStorePeakResult:
@@ -987,7 +987,7 @@ class FullNodeStore:
 
     def get_finished_sub_slots(
         self,
-        block_records: BlockchainInterface,
+        block_records: BlockRecordsProtocol,
         prev_b: Optional[BlockRecord],
         last_challenge_to_add: bytes32,
     ) -> Optional[List[EndOfSubSlotBundle]]:

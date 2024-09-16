@@ -20,7 +20,7 @@ from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, AugSchemeMPL, G1Element, G2Ele
 
 from chia.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
@@ -949,7 +949,7 @@ class BlockTools:
             if not pending_ses:  # if we just created a sub-epoch summary, we can at least skip another sub-slot
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
-                    BlockCache(blocks, height_to_hash=height_to_hash),
+                    BlockCache(blocks),
                     latest_block.required_iters,
                     block_list[-1],
                     False,
@@ -1247,7 +1247,7 @@ class BlockTools:
             for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
-                    BlockCache({}, {}),
+                    BlockCache({}),
                     None,
                     sub_slot_total_iters,
                     uint8(signage_point_index),
@@ -1477,7 +1477,7 @@ class BlockTools:
 
 def get_signage_point(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     latest_block: Optional[BlockRecord],
     sub_slot_start_total_iters: uint128,
     signage_point_index: uint8,
@@ -1940,7 +1940,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
     clvm_cost = 0
 
     if height >= constants.HARD_FORK_HEIGHT:
-        blocks = [bytes(g) for g in generator.generator_refs]
+        blocks = generator.generator_refs
         cost, result = generator.program._run(INFINITE_COST, MEMPOOL_MODE | ALLOW_BACKREFS, [DESERIALIZE_MOD, blocks])
         clvm_cost += cost
 
@@ -1955,7 +1955,7 @@ def compute_cost_test(generator: BlockGenerator, constants: ConsensusConstants, 
             condition_cost += conditions_cost(result)
 
     else:
-        block_program_args = SerializedProgram.to([[bytes(g) for g in generator.generator_refs]])
+        block_program_args = SerializedProgram.to([generator.generator_refs])
         clvm_cost, result = GENERATOR_MOD._run(INFINITE_COST, MEMPOOL_MODE, [generator.program, block_program_args])
 
         for res in result.first().as_iter():

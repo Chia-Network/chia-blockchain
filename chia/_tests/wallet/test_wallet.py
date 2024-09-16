@@ -29,7 +29,7 @@ from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import DEFAULT_COIN_SELECTION_CONFIG, DEFAULT_TX_CONFIG
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import CoinType
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 
@@ -108,7 +108,10 @@ class TestWalletSimulator:
         )
 
         # Test match_hinted_coin
-        selected_coin = list(await wallet.select_coins(uint64(0), DEFAULT_COIN_SELECTION_CONFIG))[0]
+        async with wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=False
+        ) as action_scope:
+            selected_coin = list(await wallet.select_coins(uint64(0), action_scope))[0]
         assert await wallet.match_hinted_coin(selected_coin, selected_coin.puzzle_hash)
 
     @pytest.mark.parametrize(
@@ -1721,9 +1724,10 @@ class TestWalletSimulator:
 
         # Ensure that we use a coin that we will not reorg out
         tx_amount = 1000
-        coins = await wallet.select_coins(
-            amount=uint64(tx_amount), coin_selection_config=DEFAULT_TX_CONFIG.coin_selection_config
-        )
+        async with wallet.wallet_state_manager.new_action_scope(
+            wallet_environments.tx_config, push=False
+        ) as action_scope:
+            coins = await wallet.select_coins(amount=uint64(tx_amount), action_scope=action_scope)
         coin = next(iter(coins))
 
         reorg_height = full_node_api.full_node.blockchain.get_peak_height()
@@ -2028,10 +2032,9 @@ class TestWalletSimulator:
         wallet = env.xch_wallet
 
         AMOUNT_TO_SEND = 4000000000000
-        coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND), DEFAULT_TX_CONFIG.coin_selection_config)
-        coin_list = list(coins)
-
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND), action_scope)
+            coin_list = list(coins)
             await wallet.generate_signed_transaction(
                 uint64(AMOUNT_TO_SEND),
                 bytes32([0] * 32),

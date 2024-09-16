@@ -25,7 +25,6 @@ from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcCl
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.signing_mode import SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.ints import uint8, uint16, uint32, uint64
@@ -36,6 +35,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 # Any functions that are the same for every command being tested should be below.
 # Functions that are specific to a command should be in the test file for that command.
@@ -119,7 +119,7 @@ class TestWalletRpcClient(TestRpcClient):
             fee_amount=uint64(1234567),
             confirmed=False,
             sent=uint32(0),
-            spend_bundle=SpendBundle([], G2Element()),
+            spend_bundle=WalletSpendBundle([], G2Element()),
             additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
             removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
             wallet_id=uint32(1),
@@ -269,7 +269,7 @@ class TestWalletRpcClient(TestRpcClient):
                 fee_amount=uint64(1234567),
                 confirmed=False,
                 sent=uint32(0),
-                spend_bundle=SpendBundle([], G2Element()),
+                spend_bundle=WalletSpendBundle([], G2Element()),
                 additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
                 removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
                 wallet_id=uint32(1),

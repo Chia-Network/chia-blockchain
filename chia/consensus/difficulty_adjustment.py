@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -11,7 +11,7 @@ from chia.util.significant_bits import count_significant_bits, truncate_to_signi
 
 
 def _get_blocks_at_height(
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     prev_b: BlockRecord,
     target_height: uint32,
     max_num_blocks: uint32 = uint32(1),
@@ -53,7 +53,7 @@ def _get_blocks_at_height(
 
 def _get_second_to_last_transaction_block_in_previous_epoch(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     last_b: BlockRecord,
 ) -> BlockRecord:
     """
@@ -135,7 +135,7 @@ def height_can_be_first_in_epoch(constants: ConsensusConstants, height: uint32) 
 
 def can_finish_sub_and_full_epoch(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     height: uint32,
     prev_header_hash: Optional[bytes32],
     deficit: uint8,
@@ -188,7 +188,7 @@ def can_finish_sub_and_full_epoch(
 
 def _get_next_sub_slot_iters(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     prev_header_hash: bytes32,
     height: uint32,
     curr_sub_slot_iters: uint64,
@@ -267,7 +267,7 @@ def _get_next_sub_slot_iters(
 
 def _get_next_difficulty(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     prev_header_hash: bytes32,
     height: uint32,
     current_difficulty: uint64,
@@ -353,7 +353,7 @@ def get_next_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     is_first_in_sub_slot: bool,
     prev_b: Optional[BlockRecord],
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
 ) -> Tuple[uint64, uint64]:
     """
     Retrieves the current sub_slot iters and difficulty of the next block after prev_b.

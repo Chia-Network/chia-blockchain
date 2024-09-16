@@ -247,7 +247,7 @@ def dao_get_id_cmd(
 @click.option(
     "-a",
     "--amount",
-    help="The amount of funds to send",
+    help="The amount of funds to send, in XCH or CATs",
     type=AmountParamType(),
     required=True,
 )

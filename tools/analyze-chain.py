@@ -95,7 +95,7 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: O
             ref = c.execute("SELECT block FROM full_blocks WHERE height=? and in_main_chain=1", (h,))
             generator = generator_from_block(zstd.decompress(ref.fetchone()[0]))
             assert generator is not None
-            generator_blobs.append(bytes(generator))
+            generator_blobs.append(generator)
             ref.close()
 
         ref_lookup_time = time() - start_time

@@ -19,7 +19,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, compute_additions, make_spend
 from chia.types.signing_mode import CHIP_0002_SIGN_MESSAGE_PREFIX, SigningMode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.conditions import (
@@ -52,7 +51,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action_scope import WalletActionScope
@@ -60,6 +58,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
@@ -349,9 +348,7 @@ class NFTWallet:
             percentage = uint16(percentage)
         except ValueError:
             raise ValueError("Percentage must be lower than 655%")
-        coins = await self.standard_wallet.select_coins(
-            uint64(amount + fee), action_scope.config.tx_config.coin_selection_config
-        )
+        coins = await self.standard_wallet.select_coins(uint64(amount + fee), action_scope)
         if coins is None:
             return None
         origin = coins.copy().pop()
@@ -406,7 +403,7 @@ class NFTWallet:
 
         # launcher spend to generate the singleton
         launcher_cs = make_spend(launcher_coin, genesis_launcher_puz, genesis_launcher_solution)
-        launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+        launcher_sb = WalletSpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
 
         eve_coin = Coin(launcher_coin.name(), eve_fullpuz_hash, uint64(amount))
 
@@ -581,7 +578,7 @@ class NFTWallet:
         new_owner: Optional[bytes] = kwargs.get("new_owner", None)
         new_did_inner_hash: Optional[bytes] = kwargs.get("new_did_inner_hash", None)
         trade_prices_list: Optional[Program] = kwargs.get("trade_prices_list", None)
-        additional_bundles: List[SpendBundle] = kwargs.get("additional_bundles", [])
+        additional_bundles: List[WalletSpendBundle] = kwargs.get("additional_bundles", [])
         metadata_update: Optional[Tuple[str, str]] = kwargs.get("metadata_update", None)
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -608,7 +605,7 @@ class NFTWallet:
             metadata_update=metadata_update,
             extra_conditions=extra_conditions,
         )
-        spend_bundle = SpendBundle.aggregate([unsigned_spend_bundle] + additional_bundles)
+        spend_bundle = WalletSpendBundle.aggregate([unsigned_spend_bundle] + additional_bundles)
 
         async with action_scope.use() as interface:
             other_tx_removals: Set[Coin] = {
@@ -651,7 +648,7 @@ class NFTWallet:
         metadata_update: Optional[Tuple[str, str]] = None,
         nft_coin: Optional[NFTCoinInfo] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         if nft_coin is None:
             if coins is None or not len(coins) == 1:
                 # Make sure the user is specifying which specific NFT coin to use
@@ -717,7 +714,7 @@ class NFTWallet:
         singleton_solution = Program.to([nft_coin.lineage_proof.to_program(), nft_coin.coin.amount, nft_layer_solution])
         coin_spend = make_spend(nft_coin.coin, nft_coin.full_puzzle, singleton_solution)
 
-        nft_spend_bundle = SpendBundle([coin_spend], G2Element())
+        nft_spend_bundle = WalletSpendBundle([coin_spend], G2Element())
 
         return nft_spend_bundle
 
@@ -848,9 +845,7 @@ class NFTWallet:
                     coin_amount_needed: int = abs(amount) + royalty_amount + fee
                 else:
                     coin_amount_needed = abs(amount) + royalty_amount
-                offered_coins: Set[Coin] = await wallet.get_coins_to_offer(
-                    asset, coin_amount_needed, action_scope.config.tx_config.coin_selection_config
-                )
+                offered_coins: Set[Coin] = await wallet.get_coins_to_offer(asset, coin_amount_needed, action_scope)
                 if len(offered_coins) == 0:
                     raise ValueError(f"Did not have asset ID {asset.hex() if asset is not None else 'XCH'} to offer")
                 offered_coins_by_asset[asset] = offered_coins
@@ -883,7 +878,7 @@ class NFTWallet:
 
         # Create all of the transactions
         all_transactions: List[TransactionRecord] = []
-        additional_bundles: List[SpendBundle] = []
+        additional_bundles: List[WalletSpendBundle] = []
         # standard pays the fee if possible
         fee_left_to_pay: uint64 = uint64(0) if None in offer_dict and offer_dict[None] < 0 else fee
 
@@ -1030,7 +1025,7 @@ class NFTWallet:
                             royalty_sol = solve_puzzle(driver_dict[asset], solver, OFFER_MOD, inner_royalty_sol)
 
                         new_coin_spend = make_spend(royalty_coin, offer_puzzle, royalty_sol)
-                        additional_bundles.append(SpendBundle([new_coin_spend], G2Element()))
+                        additional_bundles.append(WalletSpendBundle([new_coin_spend], G2Element()))
 
                         if duplicate_payments != []:
                             payments = duplicate_payments
@@ -1043,8 +1038,10 @@ class NFTWallet:
                             break
 
         # Finally, assemble the tx records properly
-        txs_bundle = SpendBundle.aggregate([tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None])
-        aggregate_bundle = SpendBundle.aggregate([txs_bundle, *additional_bundles])
+        txs_bundle = WalletSpendBundle.aggregate(
+            [tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None]
+        )
+        aggregate_bundle = WalletSpendBundle.aggregate([txs_bundle, *additional_bundles])
         offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
         async with action_scope.use() as interface:
             interface.side_effects.transactions.extend(all_transactions)
@@ -1235,9 +1232,7 @@ class NFTWallet:
         assert isinstance(fee, uint64)
         total_amount = len(metadata_list) + fee
         if xch_coins is None:
-            xch_coins = await self.standard_wallet.select_coins(
-                uint64(total_amount), action_scope.config.tx_config.coin_selection_config
-            )
+            xch_coins = await self.standard_wallet.select_coins(uint64(total_amount), action_scope)
         assert len(xch_coins) > 0
 
         # set the chunk size for the spend bundle we're going to create
@@ -1400,7 +1395,7 @@ class NFTWallet:
                 primaries=[], conditions=(AssertCoinAnnouncement(primary_announcement_hash),)
             )
             xch_spends.append(make_spend(xch_coin, puzzle, solution))
-        xch_spend = SpendBundle(xch_spends, G2Element())
+        xch_spend = WalletSpendBundle(xch_spends, G2Element())
 
         # Create the DID spend using the announcements collected when making the intermediate launcher coins
         did_p2_solution = self.standard_wallet.make_solution(
@@ -1443,7 +1438,7 @@ class NFTWallet:
 
         # Collect up all the coin spends and sign them
         list_of_coinspends = [did_spend] + intermediate_coin_spends + launcher_spends + xch_spend.coin_spends
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
 
         # Aggregate everything into a single spend bundle
         async with action_scope.use() as interface:
@@ -1453,7 +1448,7 @@ class NFTWallet:
             if interface.side_effects.transactions[0].spend_bundle is None:
                 new_spend = unsigned_spend_bundle
             else:
-                new_spend = SpendBundle.aggregate(
+                new_spend = WalletSpendBundle.aggregate(
                     [interface.side_effects.transactions[0].spend_bundle, unsigned_spend_bundle]
                 )
             interface.side_effects.transactions[0] = dataclasses.replace(
@@ -1496,9 +1491,7 @@ class NFTWallet:
         assert isinstance(fee, uint64)
         total_amount = len(metadata_list) + fee
         if xch_coins is None:
-            xch_coins = await self.standard_wallet.select_coins(
-                uint64(total_amount), action_scope.config.tx_config.coin_selection_config
-            )
+            xch_coins = await self.standard_wallet.select_coins(uint64(total_amount), action_scope)
         assert len(xch_coins) > 0
 
         funding_coin = xch_coins.copy().pop()
@@ -1656,7 +1649,7 @@ class NFTWallet:
 
         # Collect up all the coin spends and sign them
         list_of_coinspends = intermediate_coin_spends + launcher_spends + xch_spends
-        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
 
         # Aggregate everything into a single spend bundle
         async with action_scope.use() as interface:
@@ -1666,7 +1659,7 @@ class NFTWallet:
             if interface.side_effects.transactions[0].spend_bundle is None:
                 new_spend = unsigned_spend_bundle
             else:
-                new_spend = SpendBundle.aggregate(
+                new_spend = WalletSpendBundle.aggregate(
                     [interface.side_effects.transactions[0].spend_bundle, unsigned_spend_bundle]
                 )
             interface.side_effects.transactions[0] = dataclasses.replace(
@@ -1676,7 +1669,7 @@ class NFTWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         raise RuntimeError("NFTWallet does not support select_coins()")
 

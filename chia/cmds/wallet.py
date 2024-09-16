@@ -142,7 +142,7 @@ def get_transactions_cmd(
     )
 
 
-@wallet_cmd.command("send", help="Send chia to another wallet")
+@wallet_cmd.command("send", help="Send chia or other assets to another wallet")
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -152,7 +152,9 @@ def get_transactions_cmd(
 )
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option("-a", "--amount", help="How much chia to send, in XCH", type=AmountParamType(), required=True)
+@click.option(
+    "-a", "--amount", help="How much chia to send, in XCH or CAT units", type=AmountParamType(), required=True
+)
 @click.option("-e", "--memo", help="Additional memo for the transaction", type=str, default=None)
 @options.create_fee()
 # TODO: Fix RPC as this should take a puzzle_hash not an address.
@@ -1257,9 +1259,9 @@ def notification_cmd() -> None:
 @click.option(
     "-a",
     "--amount",
-    help="The amount to send to get the notification past the recipient's spam filter",
+    help="The amount (in XCH) to send to get the notification past the recipient's spam filter",
     type=AmountParamType(),
-    default=uint64(10000000),
+    default=CliAmount(mojos=True, amount=uint64(10000000)),
     required=True,
     show_default=True,
 )
@@ -1548,7 +1550,7 @@ def revoke_vc_cmd(
 @click.option(
     "-a",
     "--min-amount-to-claim",
-    help="The minimum amount to approve to move into the wallet",
+    help="The minimum amount (in CAT units) to approve to move into the wallet",
     type=AmountParamType(),
     required=True,
 )
@@ -1558,10 +1560,14 @@ def revoke_vc_cmd(
     "--min-coin-amount",
     type=AmountParamType(),
     default=cli_amount_none,
-    help="The minimum coin amount to select",
+    help="The minimum coin amount (in CAT units) to select",
 )
 @click.option(
-    "-l", "--max-coin-amount", type=AmountParamType(), default=cli_amount_none, help="The maximum coin amount to select"
+    "-l",
+    "--max-coin-amount",
+    type=AmountParamType(),
+    default=cli_amount_none,
+    help="The maximum coin amount (in CAT units) to select",
 )
 @click.option(
     "--reuse",

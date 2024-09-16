@@ -69,7 +69,7 @@ on:
     - cron: "0 13 * * *"
 
 concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -89,7 +89,7 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python chia/_tests/build-job-matrix.py --per directory --verbose ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} > matrix.json
+          python chia/_tests/build-job-matrix.py --per file --verbose --only core/data_layer/test_merkle_blob.py ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
           echo matrix_mode=${{

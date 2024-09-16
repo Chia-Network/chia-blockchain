@@ -41,8 +41,7 @@ on:
         default: true
 
 concurrency:
-  # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency-name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ inputs.concurrency-name }}-${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 defaults:
@@ -176,6 +175,8 @@ jobs:
             ${{ runner.os }}-node-
 
       - uses: chia-network/actions/cache-pip@main
+        with:
+          mode: poetry
 
       - name: Cache test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots
@@ -212,6 +213,22 @@ jobs:
         run: |
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
+
+      - name: Set up rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Clone chia_rs
+        uses: actions/checkout@v4
+        with:
+          repository: "Chia-Network/chia_rs"
+          path: "chia_rs"
+          ref: merkle_blob
+          fetch-depth: 1
+
+      - name: Install chia_rs with merkle blob
+        run: |
+          cd chia_rs
+          maturin develop --release -m wheel/Cargo.toml
 
       - name: Verify source and installed tests collect and match
         run: |

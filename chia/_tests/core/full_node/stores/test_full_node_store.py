@@ -8,6 +8,7 @@ import pytest
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.util.blockchain import create_blockchain
+from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -24,7 +25,6 @@ from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.recursive_replace import recursive_replace
@@ -338,7 +338,7 @@ async def test_basic_store(
 
     assert (
         store.get_finished_sub_slots(
-            BlockCache({}),
+            BlockchainMock({}),
             None,
             sub_slots[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
         )
@@ -379,11 +379,12 @@ async def test_basic_store(
         assert slot_i is not None
         assert slot_i[0] == sub_slots[i]
 
-    assert store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-1].challenge_chain.get_hash()) == sub_slots
-    assert store.get_finished_sub_slots(BlockCache({}), None, std_hash(b"not a valid hash")) is None
+    assert store.get_finished_sub_slots(BlockchainMock({}), None, sub_slots[-1].challenge_chain.get_hash()) == sub_slots
+    assert store.get_finished_sub_slots(BlockchainMock({}), None, std_hash(b"not a valid hash")) is None
 
     assert (
-        store.get_finished_sub_slots(BlockCache({}), None, sub_slots[-2].challenge_chain.get_hash()) == sub_slots[:-1]
+        store.get_finished_sub_slots(BlockchainMock({}), None, sub_slots[-2].challenge_chain.get_hash())
+        == sub_slots[:-1]
     )
 
     # Test adding genesis peak
@@ -736,7 +737,7 @@ async def test_basic_store(
     ):
         sp = get_signage_point(
             custom_block_tools.constants,
-            BlockCache({}, {}),
+            BlockchainMock({}, {}),
             None,
             uint128(0),
             uint8(i),
@@ -771,7 +772,7 @@ async def test_basic_store(
         ):
             sp = get_signage_point(
                 custom_block_tools.constants,
-                BlockCache({}, {}),
+                BlockchainMock({}, {}),
                 None,
                 uint128(slot_offset * peak.sub_slot_iters),
                 uint8(i),

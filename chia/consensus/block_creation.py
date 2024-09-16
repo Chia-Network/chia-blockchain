@@ -10,7 +10,7 @@ from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
@@ -59,7 +59,7 @@ def create_foliage(
     additions: List[Coin],
     removals: List[Coin],
     prev_block: Optional[BlockRecord],
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
@@ -291,7 +291,7 @@ def create_unfinished_block(
     get_pool_signature: Callable[[PoolTarget, Optional[G1Element]], Optional[G2Element]],
     signage_point: SignagePoint,
     timestamp: uint64,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     seed: bytes = b"",
     block_generator: Optional[BlockGenerator] = None,
     aggregate_sig: G2Element = G2Element(),
@@ -430,7 +430,7 @@ def unfinished_block_to_full_block(
     icc_ip_proof: Optional[VDFProof],
     finished_sub_slots: List[EndOfSubSlotBundle],
     prev_block: Optional[BlockRecord],
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
     difficulty: uint64,
 ) -> FullBlock:

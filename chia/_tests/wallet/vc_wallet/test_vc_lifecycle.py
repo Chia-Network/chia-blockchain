@@ -12,7 +12,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -40,6 +39,7 @@ from chia.wallet.vc_wallet.vc_drivers import (
     solve_did_tp,
     solve_viral_backdoor,
 )
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 ACS: Program = Program.to([3, (1, "entropy"), 1, None])
 ACS_2: Program = Program.to([3, (1, "entropy2"), 1, None])
@@ -77,7 +77,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         await client.push_tx(
             cost_logger.add_cost(
                 "2x ACS spends - create one coin",
-                SpendBundle(
+                WalletSpendBundle(
                     [
                         make_spend(
                             fake_acs_coin,
@@ -106,7 +106,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
 
         # With the honest coin, attempt to spend the non-eve case too soon
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
-            SpendBundle(
+            WalletSpendBundle(
                 [
                     make_spend(
                         acs_cov,
@@ -132,7 +132,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
             result = await client.push_tx(
                 cost_logger.add_cost(
                     "Covenant layer eve spend - one create coin",
-                    SpendBundle(
+                    WalletSpendBundle(
                         [
                             make_spend(
                                 cov,
@@ -162,7 +162,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         result = await client.push_tx(
             cost_logger.add_cost(
                 "Covenant layer non-eve spend - one create coin",
-                SpendBundle(
+                WalletSpendBundle(
                     [
                         make_spend(
                             new_acs_cov,
@@ -214,7 +214,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
 
         # Try to update metadata and tp without any announcement
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
-            SpendBundle(
+            WalletSpendBundle(
                 [
                     make_spend(
                         eml_coin,
@@ -249,7 +249,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
 
         # Try to pass the wrong coin id
         result = await client.push_tx(
-            SpendBundle(
+            WalletSpendBundle(
                 [
                     make_spend(
                         eml_coin,
@@ -273,9 +273,9 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_MY_COIN_ID_FAILED)
 
         # Actually use announcement
-        successful_spend: SpendBundle = cost_logger.add_cost(
+        successful_spend: WalletSpendBundle = cost_logger.add_cost(
             "Fake Ownership Layer - NFT DID TP",
-            SpendBundle(
+            WalletSpendBundle(
                 [
                     make_spend(
                         eml_coin,
@@ -328,7 +328,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
 
         # Reveal the wrong puzzle
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
-            SpendBundle(
+            WalletSpendBundle(
                 [
                     make_spend(
                         p2_either_coin,
@@ -347,7 +347,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
 
         # Spend the hidden puzzle (make announcement fail)
         result = await client.push_tx(
-            SpendBundle(
+            WalletSpendBundle(
                 [
                     make_spend(
                         p2_either_coin,
@@ -373,7 +373,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         result = await client.push_tx(
             cost_logger.add_cost(
                 "Viral backdoor spend - one create coin",
-                SpendBundle(
+                WalletSpendBundle(
                     [
                         make_spend(
                             p2_either_coin,
@@ -418,7 +418,7 @@ async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
             result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
                 cost_logger.add_cost(
                     f"Proofs Checker only - num_proofs: {num_proofs} - permutation: {i}",
-                    SpendBundle(
+                    WalletSpendBundle(
                         [
                             make_spend(
                                 proof_checker_coin,
@@ -468,7 +468,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 uint64(1),
             )
             await client.push_tx(
-                SpendBundle(
+                WalletSpendBundle(
                     [
                         make_spend(
                             fund_coin,
@@ -509,7 +509,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             cost_logger.add_cost(
                 "Launch VC",
-                SpendBundle(
+                WalletSpendBundle(
                     [
                         make_spend(
                             vc_fund_coin,
@@ -544,7 +544,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             result = await client.push_tx(
                 cost_logger.add_cost(
                     "Update VC proofs (eve covenant spend) - DID providing announcement",
-                    SpendBundle(
+                    WalletSpendBundle(
                         [
                             *(
                                 [
@@ -630,7 +630,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 proofs_checker.as_program(),
             )
             result = await client.push_tx(
-                SpendBundle(
+                WalletSpendBundle(
                     [
                         make_spend(
                             cr_coin_1,
@@ -737,7 +737,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             result = await client.push_tx(
                 cost_logger.add_cost(
                     "CR-CATx2 w/ VC announcement, Standard Proof Checker (2 flags)",
-                    SpendBundle(
+                    WalletSpendBundle(
                         [
                             *cr_cat_spends,
                             *([auth_spend] if error != "forget_vc" else []),
@@ -772,7 +772,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             result = await client.push_tx(
                 cost_logger.add_cost(
                     "VC yoink by DID provider",
-                    SpendBundle(
+                    WalletSpendBundle(
                         [
                             make_spend(
                                 new_did,
@@ -851,7 +851,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
         result = await client.push_tx(
             cost_logger.add_cost(
                 "VC clear by user",
-                SpendBundle(
+                WalletSpendBundle(
                     [clear_spend],
                     G2Element(),
                 ),
