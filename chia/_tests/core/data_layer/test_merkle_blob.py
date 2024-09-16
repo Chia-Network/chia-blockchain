@@ -70,7 +70,7 @@ def test_metadata_size_not_changed() -> None:
 
 
 def test_data_size_not_changed() -> None:
-    assert data_size == 44
+    assert data_size == 52
 
 
 def test_raw_node_struct_sizes(raw_node_class: RawMerkleNodeProtocol) -> None:
@@ -116,7 +116,8 @@ reference_raw_nodes: List[DataCase] = [
     RawNodeFromBlobCase(
         raw=RawLeafMerkleNode(
             parent=TreeIndex(0x00010203),
-            key_value=KVId(0x0405060708090A0B),
+            key=KVId(0x0405060708090A0B),
+            value=KVId(0x0405060708090A1B),
             hash=bytes(range(12, data_size)),
             index=TreeIndex(0),
         ),
@@ -144,7 +145,8 @@ def test_merkle_blob_one_leaf_loads() -> None:
     # TODO: need to persist reference data
     leaf = RawLeafMerkleNode(
         parent=null_parent,
-        key_value=KVId(0x0405060708090A0B),
+        key=KVId(0x0405060708090A0B),
+        value=KVId(0x0405060708090A1B),
         hash=bytes(range(12, data_size)),
         index=TreeIndex(0),
     )
@@ -166,13 +168,15 @@ def test_merkle_blob_two_leafs_loads() -> None:
     )
     left_leaf = RawLeafMerkleNode(
         parent=TreeIndex(0),
-        key_value=KVId(0x0405060708090A0B),
+        key=KVId(0x0405060708090A0B),
+        value=KVId(0x0405060708090A1B),
         hash=bytes(range(12, data_size)),
         index=TreeIndex(1),
     )
     right_leaf = RawLeafMerkleNode(
         parent=TreeIndex(0),
-        key_value=KVId(0x1415161718191A1B),
+        key=KVId(0x1415161718191A1B),
+        value=KVId(0x1415161718191A2B),
         hash=bytes(range(12, data_size)),
         index=TreeIndex(2),
     )
@@ -192,12 +196,16 @@ def test_merkle_blob_two_leafs_loads() -> None:
     assert merkle_blob.get_lineage(root.left) == [left_leaf, root]
 
 
-def generate_kvid(seed: int) -> KVId:
-    seed_bytes = seed.to_bytes(8, byteorder="big")
-    hash_obj = hashlib.sha256(seed_bytes)
-    hash_int = int.from_bytes(hash_obj.digest()[:8], byteorder="big")
-    return KVId(hash_int)
+def generate_kvid(seed: int) -> Tuple[KVId, KVId]:
+    kv_ids = []
 
+    for offset in range(2):
+        seed_bytes = (2 * seed + offset).to_bytes(8, byteorder="big")
+        hash_obj = hashlib.sha256(seed_bytes)
+        hash_int = int.from_bytes(hash_obj.digest()[:8], byteorder="big")
+        kv_ids.append(hash_int)
+
+    return tuple(kv_ids)
 
 def generate_hash(seed: int) -> bytes:
     seed_bytes = seed.to_bytes(8, byteorder="big")
@@ -210,32 +218,32 @@ def test_insert_delete_loads_all_keys() -> None:
     num_keys = 200000
     extra_keys = 100000
     max_height = 25
-    keys_values: Set[KVId] = set()
+    keys_values: Dict[KVId, KVId] = {}
 
     random = Random()
     random.seed(100, version=2)
     expected_num_entries = 0
     current_num_entries = 0
 
-    for key in range(num_keys):
+    for seed in range(num_keys):
         [op_type] = random.choices(["insert", "delete"], [0.7, 0.3], k=1)
         if op_type == "delete" and len(keys_values) > 0:
-            kv_id = random.choice(list(keys_values))
-            keys_values.remove(kv_id)
-            merkle_blob.delete(kv_id)
+            key = random.choice(list(keys_values.keys()))
+            del keys_values[key]
+            merkle_blob.delete(key)
             if current_num_entries == 1:
                 current_num_entries = 0
                 expected_num_entries = 0
             else:
                 current_num_entries -= 2
         else:
-            kv_id = generate_kvid(key)
-            hash = generate_hash(key)
-            merkle_blob.insert(kv_id, hash)
-            key_index = merkle_blob.kv_to_index[kv_id]
+            key, value = generate_kvid(seed)
+            hash = generate_hash(seed)
+            merkle_blob.insert(key, value, hash)
+            key_index = merkle_blob.key_to_index[key]
             lineage = merkle_blob.get_lineage(TreeIndex(key_index))
             assert len(lineage) <= max_height
-            keys_values.add(kv_id)
+            keys_values[key] = value
             if current_num_entries == 0:
                 current_num_entries = 1
             else:
@@ -244,19 +252,18 @@ def test_insert_delete_loads_all_keys() -> None:
         expected_num_entries = max(expected_num_entries, current_num_entries)
         assert len(merkle_blob.blob) // spacing == expected_num_entries
 
-    assert set(merkle_blob.get_keys_values_indexes().keys()) == keys_values
+    assert merkle_blob.get_keys_values() == keys_values
 
     merkle_blob_2 = MerkleBlob(blob=merkle_blob.blob)
-    unknown_key = KVId(42)
-    for key in range(num_keys, num_keys + extra_keys):
-        kv_id = generate_kvid(key)
-        hash = generate_hash(key)
-        merkle_blob_2.upsert(unknown_key, kv_id, hash)
-        key_index = merkle_blob_2.kv_to_index[kv_id]
+    for seed in range(num_keys, num_keys + extra_keys):
+        key, value = generate_kvid(seed)
+        hash = generate_hash(seed)
+        merkle_blob_2.upsert(key, value, hash)
+        key_index = merkle_blob_2.key_to_index[key]
         lineage = merkle_blob_2.get_lineage(TreeIndex(key_index))
         assert len(lineage) <= max_height
-        keys_values.add(kv_id)
-    assert set(merkle_blob_2.get_keys_values_indexes().keys()) == keys_values
+        keys_values[key] = value
+    assert merkle_blob.get_keys_values() == keys_values
 
 
 def test_small_insert_deletes() -> None:
@@ -269,22 +276,23 @@ def test_small_insert_deletes() -> None:
     random.seed(100, version=2)
 
     for repeats in range(num_repeats):
-        for num_inserts in range(max_inserts):
-            keys_values: List[KVId] = []
+        for num_inserts in range(1, max_inserts):
+            keys_values: Dict[KVId, KVId] = {}
             for inserts in range(num_inserts):
                 seed += 1
-                kv_id = generate_kvid(seed)
+                key, value = generate_kvid(seed)
                 hash = generate_hash(seed)
-                merkle_blob.insert(kv_id, hash)
-                keys_values.append(kv_id)
+                merkle_blob.insert(key, value, hash)
+                keys_values[key] = value
 
-            random.shuffle(keys_values)
-            remaining_keys_values = set(keys_values)
-            for kv_id in keys_values:
+            delete_order = list(keys_values.keys())
+            random.shuffle(delete_order)
+            remaining_keys_values = set(keys_values.keys())
+            for kv_id in delete_order:
                 merkle_blob.delete(kv_id)
                 remaining_keys_values.remove(kv_id)
-                assert set(merkle_blob.get_keys_values_indexes().keys()) == remaining_keys_values
-            assert remaining_keys_values == set()
+                assert set(merkle_blob.get_keys_values().keys()) == remaining_keys_values
+            assert not remaining_keys_values
 
 
 def test_proof_of_inclusion_merkle_blob() -> None:
@@ -297,41 +305,45 @@ def test_proof_of_inclusion_merkle_blob() -> None:
     random.seed(100, version=2)
 
     merkle_blob = MerkleBlob(blob=bytearray())
-    keys_values: List[KVId] = []
+    keys_values: Dict[KVId, KVId] = {}
 
     for repeats in range(num_repeats):
-        kv_ids: List[KVId] = []
+        kv_ids: List[Tuple[KVId, KVId]] = []
         hashes: List[bytes] = []
         for _ in range(num_inserts):
             seed += 1
-            kv_id = generate_kvid(seed)
-            kv_ids.append(kv_id)
+            key, value = generate_kvid(seed)
+            kv_ids.append((key, value))
             hashes.append(generate_hash(seed))
-            keys_values.append(kv_id)
+            keys_values[key] = value
 
         merkle_blob.batch_insert(kv_ids, hashes)
-        random.shuffle(keys_values)
-        for kv_id in keys_values[:num_deletes]:
-            merkle_blob.delete(kv_id)
-        keys_values = keys_values[num_deletes:]
         merkle_blob.calculate_lazy_hashes()
 
-        for kv_id in keys_values:
+        for kv_id in keys_values.keys():
             proof_of_inclusion = merkle_blob.get_proof_of_inclusion(kv_id)
             assert proof_of_inclusion.valid()
 
-        new_keys_values: List[KVId] = []
-        for old_kv in keys_values:
-            seed += 1
-            kv_id = generate_kvid(seed)
-            hash = generate_hash(seed)
-            merkle_blob.upsert(old_kv, kv_id, hash)
-            new_keys_values.append(kv_id)
+        delete_ordering = list(keys_values.keys())
+        random.shuffle(delete_ordering)
+        delete_ordering = delete_ordering[:num_deletes]
+        for kv_id in delete_ordering:
+            merkle_blob.delete(kv_id)
+            del keys_values[kv_id]
 
-        merkle_blob.calculate_lazy_hashes()
-        for kv_id in keys_values:
+        for kv_id in delete_ordering:
             with pytest.raises(Exception, match=f"Key {kv_id} not present in the store"):
                 merkle_blob.get_proof_of_inclusion(kv_id)
+
+        new_keys_values: Dict[KVId, KVId] = {}
+        for old_kv in keys_values.keys():
+            seed += 1
+            _, value = generate_kvid(seed)
+            hash = generate_hash(seed)
+            merkle_blob.upsert(old_kv, value, hash)
+            new_keys_values[old_kv] = value
+        merkle_blob.calculate_lazy_hashes()
+
         keys_values = new_keys_values
         for kv_id in keys_values:
             proof_of_inclusion = merkle_blob.get_proof_of_inclusion(kv_id)
@@ -341,7 +353,7 @@ def test_proof_of_inclusion_merkle_blob() -> None:
 @pytest.mark.parametrize(argnames="index", argvalues=[TreeIndex(-1), TreeIndex(1), TreeIndex(null_parent)])
 def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
     merkle_blob = MerkleBlob(blob=bytearray())
-    merkle_blob.insert(KVId(0x1415161718191A1B), bytes(range(12, data_size)))
+    merkle_blob.insert(KVId(0x1415161718191A1B), KVId(0x1415161718191A1B), bytes(range(12, data_size)))
 
     with pytest.raises(InvalidIndexError):
         merkle_blob.get_raw_node(index)
