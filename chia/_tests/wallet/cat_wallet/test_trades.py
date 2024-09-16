@@ -1896,7 +1896,6 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
 
     await wallet_environments.process_pending_states(
         [
-            # tests in test_cat_wallet.py
             WalletStateTransition(
                 pre_block_balance_updates={
                     "xch": {
@@ -2039,7 +2038,6 @@ async def test_trade_conflict(wallet_environments: WalletTestFramework) -> None:
     assert await trade_manager_trader.get_coins_of_interest()
     await wallet_environments.process_pending_states(
         [
-            # tests in test_cat_wallet.py
             WalletStateTransition(
                 pre_block_balance_updates={
                     "cat": {
@@ -2334,7 +2332,6 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
 
     await wallet_environments.process_pending_states(
         [
-            # tests in test_cat_wallet.py
             WalletStateTransition(
                 pre_block_balance_updates={
                     "cat": {
