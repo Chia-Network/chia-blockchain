@@ -190,48 +190,6 @@ def get_private_key_user(user: str, index: int) -> str:
     return f"wallet-{user}-{index}"
 
 
-@final
-@streamable
-@dataclass(frozen=True)
-class KeyDataSecrets(Streamable):
-    mnemonic: List[str]
-    entropy: bytes
-    private_key: PrivateKey
-
-    def __post_init__(self) -> None:
-        # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyDataSecrets`
-        # instance with an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of
-        # keys here.
-        mnemonic_str = self.mnemonic_str()
-        try:
-            bytes_from_mnemonic(mnemonic_str)
-        except Exception as e:
-            raise KeychainKeyDataMismatch("mnemonic") from e
-        if bytes_from_mnemonic(mnemonic_str) != self.entropy:
-            raise KeychainKeyDataMismatch("entropy")
-        if AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_str)) != self.private_key:
-            raise KeychainKeyDataMismatch("private_key")
-
-    @classmethod
-    def from_mnemonic(cls, mnemonic: str) -> KeyDataSecrets:
-        return cls(
-            mnemonic=mnemonic.split(),
-            entropy=bytes_from_mnemonic(mnemonic),
-            private_key=AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic)),
-        )
-
-    @classmethod
-    def from_entropy(cls, entropy: bytes) -> KeyDataSecrets:
-        return cls.from_mnemonic(bytes_to_mnemonic(entropy))
-
-    @classmethod
-    def generate(cls) -> KeyDataSecrets:
-        return cls.from_mnemonic(generate_mnemonic())
-
-    def mnemonic_str(self) -> str:
-        return " ".join(self.mnemonic)
-
-
 class KeyTypes(str, Enum):
     G1_ELEMENT = "G1 Element"
     VAULT_LAUNCHER = "Vault Launcher"
@@ -258,6 +216,73 @@ class KeyTypes(str, Enum):
         else:  # pragma: no cover
             # mypy should prevent this from ever running
             raise RuntimeError("Not all key types have been handled in KeyTypes.parse_secret_info")
+
+    @classmethod
+    def parse_secret_info_from_seed(cls: Type[KeyTypes], seed: bytes, key_type: KeyTypes) -> SecretInfo[Any]:
+        if key_type == cls.G1_ELEMENT:
+            return PrivateKey.from_seed(seed)
+        elif key_type == cls.SECP_256_R1:
+            return Secp256r1PrivateKey.from_seed(seed)
+        else:  # pragma: no cover
+            # mypy should prevent this from ever running
+            raise RuntimeError("Not all key types have been handled in KeyTypes.parse_secret_info_from_seed")
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class KeyDataSecrets(Streamable):
+    mnemonic: List[str]
+    entropy: bytes
+    secret_info_bytes: bytes
+    key_type: str = KeyTypes.G1_ELEMENT.value
+
+    @property
+    def private_key(self) -> SecretInfo[Any]:
+        return PUBLIC_TYPES_TO_PRIVATE_TYPES[KEY_TYPES_TO_TYPES[KeyTypes(self.key_type)]].from_bytes(
+            self.secret_info_bytes
+        )
+
+    def __post_init__(self) -> None:
+        # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyDataSecrets`
+        # instance with an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of
+        # keys here.
+        mnemonic_str = self.mnemonic_str()
+        try:
+            bytes_from_mnemonic(mnemonic_str)
+        except Exception as e:
+            raise KeychainKeyDataMismatch("mnemonic") from e
+        if bytes_from_mnemonic(mnemonic_str) != self.entropy:
+            raise KeychainKeyDataMismatch("entropy")
+        if (
+            PUBLIC_TYPES_TO_PRIVATE_TYPES[KEY_TYPES_TO_TYPES[KeyTypes(self.key_type)]].from_seed(
+                mnemonic_to_seed(mnemonic_str)
+            )
+            != self.private_key
+        ):
+            raise KeychainKeyDataMismatch("private_key")
+
+    @classmethod
+    def from_mnemonic(cls, mnemonic: str, key_type: KeyTypes = KeyTypes.G1_ELEMENT) -> KeyDataSecrets:
+        return cls(
+            mnemonic=mnemonic.split(),
+            entropy=bytes_from_mnemonic(mnemonic),
+            secret_info_bytes=bytes(
+                PUBLIC_TYPES_TO_PRIVATE_TYPES[KEY_TYPES_TO_TYPES[key_type]].from_seed(mnemonic_to_seed(mnemonic))
+            ),
+            key_type=key_type.value,
+        )
+
+    @classmethod
+    def from_entropy(cls, entropy: bytes) -> KeyDataSecrets:
+        return cls.from_mnemonic(bytes_to_mnemonic(entropy))
+
+    @classmethod
+    def generate(cls) -> KeyDataSecrets:
+        return cls.from_mnemonic(generate_mnemonic())
+
+    def mnemonic_str(self) -> str:
+        return " ".join(self.mnemonic)
 
 
 TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {
@@ -289,7 +314,7 @@ class KeyData(Streamable):
     def __post_init__(self) -> None:
         # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyData` instance with
         # an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of keys here.
-        if self.secrets is not None and self.observation_root != self.private_key.get_g1():
+        if self.secrets is not None and self.observation_root != self.private_key.public_key():
             raise KeychainKeyDataMismatch("public_key")
         if uint32(self.observation_root.get_fingerprint()) != self.fingerprint:
             raise KeychainKeyDataMismatch("fingerprint")
@@ -331,7 +356,7 @@ class KeyData(Streamable):
         return self.secrets.entropy
 
     @property
-    def private_key(self) -> PrivateKey:
+    def private_key(self) -> SecretInfo[Any]:
         if self.secrets is None:
             raise KeychainSecretsMissing()
         return self.secrets.private_key
@@ -339,9 +364,9 @@ class KeyData(Streamable):
 
 class Keychain:
     """
-    The keychain stores two types of keys: private keys, which are PrivateKeys from blspy,
+    The keychain stores two types of keys: private keys, which are SecretInfos,
     and private key seeds, which are bytes objects that are used as a seed to construct
-    PrivateKeys. Private key seeds are converted to mnemonics when shown to users.
+    SecretInfos. Private key seeds are converted to mnemonics when shown to users.
 
     Both types of keys are stored as hex strings in the python keyring, and the implementation of
     the keyring depends on OS. Both types of keys can be added, and get_private_keys returns a
@@ -359,7 +384,7 @@ class Keychain:
 
         self.keyring_wrapper = keyring_wrapper
 
-    def _get_key_data(self, index: int, include_secrets: bool = True) -> KeyData:
+    def _get_key_data(self, index: int, include_secrets: bool = True) -> Optional[KeyData]:
         """
         Returns the parsed keychain contents for a specific 'user' (key index). The content
         is represented by the class `KeyData`.
@@ -369,32 +394,35 @@ class Keychain:
         if key is None or len(key.secret) == 0:
             raise KeychainUserNotFound(self.service, user)
         str_bytes = key.secret
-        pk = str_bytes
-        entropy = None
-        if len(str_bytes) == 32:
-            observation_root: ObservationRoot = VaultRoot.from_bytes(str_bytes)
-            fingerprint = observation_root.get_fingerprint()
-            key_type = KeyTypes.VAULT_LAUNCHER.value
-        elif len(str_bytes) == 48:
-            observation_root = G1Element.from_bytes(str_bytes)
-            fingerprint = observation_root.get_fingerprint()
-            key_type = KeyTypes.G1_ELEMENT.value
-        elif len(str_bytes) > G1Element.SIZE:
-            pk = str_bytes[: G1Element.SIZE]
-            observation_root = G1Element.from_bytes(pk)
-            fingerprint = observation_root.get_fingerprint()
-            entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
-            key_type = KeyTypes.G1_ELEMENT.value
-        else:
-            raise ValueError(f"Public key must be either 32 or 48 bytes, got {len(pk)} bytes")
 
-        return KeyData(
-            fingerprint=uint32(fingerprint),
-            public_key=pk,
-            label=self.keyring_wrapper.keyring.get_label(fingerprint),
-            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
-            key_type=key_type,
-        )
+        if key.metadata is None or key.metadata.get("type", KeyTypes.G1_ELEMENT.value) == KeyTypes.G1_ELEMENT.value:
+            pk_bytes: bytes = str_bytes[: G1Element.SIZE]
+            observation_root: ObservationRoot = G1Element.from_bytes(pk_bytes)
+            fingerprint = observation_root.get_fingerprint()
+            if len(str_bytes) > G1Element.SIZE:
+                entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+            else:
+                entropy = None
+
+            return KeyData(
+                fingerprint=uint32(fingerprint),
+                public_key=pk_bytes,
+                label=self.keyring_wrapper.keyring.get_label(fingerprint),
+                secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets and entropy is not None else None,
+                key_type=KeyTypes.G1_ELEMENT.value,
+            )
+        elif key.metadata.get("type", KeyTypes.G1_ELEMENT.value) == KeyTypes.VAULT_LAUNCHER.value:
+            observation_root = VaultRoot.from_bytes(str_bytes)
+            fingerprint = observation_root.get_fingerprint()
+            return KeyData(
+                fingerprint=uint32(fingerprint),
+                public_key=str_bytes,
+                label=self.keyring_wrapper.keyring.get_label(fingerprint),
+                secrets=None,
+                key_type=KeyTypes.VAULT_LAUNCHER.value,
+            )
+        else:
+            return None
 
     def _get_free_private_key_index(self) -> int:
         """
@@ -410,15 +438,21 @@ class Keychain:
 
     # pylint requires these NotImplementedErrors for some reason
     @overload
-    def add_key(self, mnemonic_or_pk: str) -> Tuple[PrivateKey, KeyTypes]:
+    def add_key(self, mnemonic_or_pk: str) -> Tuple[SecretInfo[Any], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[PrivateKey, KeyTypes]:
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[SecretInfo[Any], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> Tuple[PrivateKey, KeyTypes]:
+    def add_key(self, mnemonic_or_pk: str, *, key_type: KeyTypes) -> Tuple[SecretInfo[Any], KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
+
+    @overload
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]
+    ) -> Tuple[SecretInfo[Any], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
@@ -430,27 +464,46 @@ class Keychain:
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: bool
-    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
+    ) -> Tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
+
+    @overload
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True], key_type: KeyTypes
+    ) -> Tuple[SecretInfo[Any], KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
+
+    @overload
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False], key_type: KeyTypes
+    ) -> Tuple[ObservationRoot, KeyTypes]:
+        raise NotImplementedError()  # pragma: no cover
+
+    @overload
+    def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: bool, key_type: KeyTypes
+    ) -> Tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     def add_key(
-        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
-    ) -> Tuple[Union[PrivateKey, ObservationRoot], KeyTypes]:
+        self,
+        mnemonic_or_pk: str,
+        label: Optional[str] = None,
+        private: bool = True,
+        key_type: KeyTypes = KeyTypes.G1_ELEMENT,
+    ) -> Tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
         """
         Adds a key to the keychain. The keychain itself will store the public key, and the entropy bytes (if given),
         but not the passphrase.
         """
-        key: Union[PrivateKey, ObservationRoot]
-        key_type: KeyTypes
+        key: Union[SecretInfo[Any], ObservationRoot]
         if private:
             seed = mnemonic_to_seed(mnemonic_or_pk)
             entropy = bytes_from_mnemonic(mnemonic_or_pk)
             index = self._get_free_private_key_index()
-            key = AugSchemeMPL.key_gen(seed)
-            key_type = KeyTypes.G1_ELEMENT
-            assert isinstance(key, PrivateKey)
-            pk = key.get_g1()
-            key_data = Key(bytes(pk) + entropy)
+            key = KeyTypes.parse_secret_info_from_seed(seed, key_type)
+            pk = key.public_key()
+            key_data = Key(bytes(pk) + entropy, metadata={"type": key_type.value})
             fingerprint = pk.get_fingerprint()
         else:
             index = self._get_free_private_key_index()
@@ -460,15 +513,8 @@ class Keychain:
                 pk_bytes = bytes(convertbits(data, 5, 8, False))
             else:
                 pk_bytes = hexstr_to_bytes(mnemonic_or_pk)
-            if len(pk_bytes) == 48:
-                key = G1Element.from_bytes(pk_bytes)
-                key_type = KeyTypes.G1_ELEMENT
-            elif len(pk_bytes) == 32:
-                key = VaultRoot(pk_bytes)
-                key_type = KeyTypes.VAULT_LAUNCHER
-            else:
-                raise ValueError(f"Cannot identify type of pubkey {mnemonic_or_pk}")  # pragma: no cover
-            key_data = Key(pk_bytes)
+            key = KeyTypes.parse_observation_root(pk_bytes, key_type)
+            key_data = Key(pk_bytes, metadata={"type": key_type.value})
             fingerprint = key.get_fingerprint()
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
@@ -519,15 +565,17 @@ class Keychain:
                 pass
         return None
 
-    def get_first_private_key(self) -> Optional[Tuple[PrivateKey, bytes]]:
+    def get_first_private_key(self, key_type: Optional[KeyTypes] = None) -> Optional[Tuple[SecretInfo[Any], bytes]]:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
         for key_data in self._iterate_through_key_datas(skip_public_only=True):
+            if key_type is not None and key_data.key_type != key_type.value:
+                continue
             return key_data.private_key, key_data.entropy
         return None
 
-    def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[Tuple[PrivateKey, bytes]]:
+    def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[Tuple[SecretInfo[Any], bytes]]:
         """
         Return first private key which have the given public key fingerprint.
         """
@@ -536,12 +584,12 @@ class Keychain:
                 return key_data.private_key, key_data.entropy
         return None
 
-    def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
+    def get_all_private_keys(self) -> List[Tuple[SecretInfo[Any], bytes]]:
         """
         Returns all private keys which can be retrieved, with the given passphrases.
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
         """
-        all_keys: List[Tuple[PrivateKey, bytes]] = []
+        all_keys: List[Tuple[SecretInfo[Any], bytes]] = []
         for key_data in self._iterate_through_key_datas(skip_public_only=True):
             all_keys.append((key_data.private_key, key_data.entropy))
         return all_keys
@@ -589,7 +637,7 @@ class Keychain:
         Returns the first public key.
         """
         key_data = self.get_first_private_key()
-        return None if key_data is None else key_data[0].get_g1()
+        return None if key_data is None else key_data[0].public_key()
 
     def delete_key_by_fingerprint(self, fingerprint: int) -> int:
         """
@@ -614,19 +662,6 @@ class Keychain:
             except KeychainUserNotFound:
                 pass
         return removed
-
-    def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]) -> None:
-        """
-        Deletes all keys in the list.
-        """
-        remaining_fingerprints = {x[0].get_g1().get_fingerprint() for x in keys_to_delete}
-        remaining_removals = len(remaining_fingerprints)
-        while len(remaining_fingerprints):
-            key_to_delete = remaining_fingerprints.pop()
-            if self.delete_key_by_fingerprint(key_to_delete) > 0:
-                remaining_removals -= 1
-        if remaining_removals > 0:
-            raise ValueError(f"{remaining_removals} keys could not be found for deletion")
 
     def delete_all_keys(self) -> None:
         """

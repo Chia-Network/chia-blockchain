@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
+from chia_rs import PrivateKey
 
 from chia.cmds.configure import configure
 from chia.consensus.coinbase import create_puzzlehash_for_pk
@@ -64,13 +65,13 @@ def dict_add_new_default(updated: Dict[str, Any], default: Dict[str, Any], do_no
 def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
     if keychain is None:
         keychain = Keychain()
-    all_sks = keychain.get_all_private_keys()
+    all_sks: List[PrivateKey] = [sk for sk, _ in keychain.get_all_private_keys() if isinstance(sk, PrivateKey)]
     if len(all_sks) == 0:
         print("No keys are present in the keychain. Generate them with 'chia keys generate'")
         return None
 
     with lock_and_load_config(new_root, "config.yaml") as config:
-        pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in all_sks]
+        pool_child_pubkeys = [master_sk_to_pool_sk(sk).get_g1() for sk in all_sks]
         all_targets = []
         stop_searching_for_farmer = "xch_target_address" not in config["farmer"]
         stop_searching_for_pool = "xch_target_address" not in config["pool"]
@@ -79,7 +80,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
         intermediates = {}
-        for sk, _ in all_sks:
+        for sk in all_sks:
             intermediates[bytes(sk)] = {
                 "observer": master_sk_to_wallet_sk_unhardened_intermediate(sk),
                 "non-observer": master_sk_to_wallet_sk_intermediate(sk),
@@ -88,7 +89,7 @@ def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
         for i in range(number_of_ph_to_search):
             if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
                 break
-            for sk, _ in all_sks:
+            for sk in all_sks:
                 intermediate_n = intermediates[bytes(sk)]["non-observer"]
                 intermediate_o = intermediates[bytes(sk)]["observer"]
 

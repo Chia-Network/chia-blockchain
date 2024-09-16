@@ -53,8 +53,9 @@ from chia.util.config import load_config, str2bool
 from chia.util.errors import KeychainIsLocked
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
+from chia.util.keychain import KeyTypes, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
+from chia.util.secret_info import SecretInfo
 from chia.util.streamable import Streamable, UInt32Range, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -409,7 +410,8 @@ class WalletRpcApi:
     async def get_public_keys(self, request: Dict[str, Any]) -> EndpointResult:
         try:
             fingerprints = [
-                sk.get_g1().get_fingerprint() for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
+                sk.public_key().get_fingerprint()
+                for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
             ]
         except KeychainIsLocked:
             return {"keyring_is_locked": True}
@@ -421,11 +423,11 @@ class WalletRpcApi:
         else:
             return {"public_key_fingerprints": fingerprints}
 
-    async def _get_private_key(self, fingerprint: int) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
+    async def _get_private_key(self, fingerprint: int) -> Tuple[Optional[SecretInfo[Any]], Optional[bytes]]:
         try:
             all_keys = await self.service.keychain_proxy.get_all_private_keys()
             for sk, seed in all_keys:
-                if sk.get_g1().get_fingerprint() == fingerprint:
+                if sk.public_key().get_fingerprint() == fingerprint:
                     return sk, seed
         except Exception as e:
             log.error(f"Failed to get private key by fingerprint: {e}")
@@ -436,16 +438,22 @@ class WalletRpcApi:
         sk, seed = await self._get_private_key(fingerprint)
         if sk is not None:
             s = bytes_to_mnemonic(seed) if seed is not None else None
-            return {
+            response = {
                 "private_key": {
                     "fingerprint": fingerprint,
                     "sk": bytes(sk).hex(),
-                    "pk": bytes(sk.get_g1()).hex(),
-                    "farmer_pk": bytes(master_sk_to_farmer_sk(sk).get_g1()).hex(),
-                    "pool_pk": bytes(master_sk_to_pool_sk(sk).get_g1()).hex(),
+                    "pk": bytes(sk.public_key()).hex(),
                     "seed": s,
                 },
             }
+            if isinstance(sk, PrivateKey):
+                response["private_key"].update(
+                    {
+                        "farmer_pk": bytes(master_sk_to_farmer_sk(sk).get_g1()).hex(),
+                        "pool_pk": bytes(master_sk_to_pool_sk(sk).get_g1()).hex(),
+                    }
+                )
+            return response
         return {"success": False, "private_key": {"fingerprint": fingerprint}}
 
     async def generate_mnemonic(self, request: Dict[str, Any]) -> EndpointResult:
@@ -458,7 +466,9 @@ class WalletRpcApi:
         # Adding a key from 24 word mnemonic
         mnemonic = request["mnemonic"]
         try:
-            sk, _ = await self.service.keychain_proxy.add_key(" ".join(mnemonic))
+            sk, _ = await self.service.keychain_proxy.add_key(
+                " ".join(mnemonic), KeyTypes(request["key_type"]) if "key_type" in request else None
+            )
         except KeyError as e:
             return {
                 "success": False,
@@ -468,7 +478,7 @@ class WalletRpcApi:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-        fingerprint = sk.get_g1().get_fingerprint()
+        fingerprint = sk.public_key().get_fingerprint()
         await self._stop_wallet()
 
         # Makes sure the new key is added to config properly
@@ -552,9 +562,10 @@ class WalletRpcApi:
         max_ph_to_search = request.get("max_ph_to_search", 100)
         sk, _ = await self._get_private_key(fingerprint)
         if sk is not None:
-            used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(
-                self.service.root_path, sk, max_ph_to_search
-            )
+            if isinstance(sk, PrivateKey):
+                used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(
+                    self.service.root_path, sk, max_ph_to_search
+                )
 
             if self.service.logged_in_fingerprint != fingerprint:
                 await self._stop_wallet()

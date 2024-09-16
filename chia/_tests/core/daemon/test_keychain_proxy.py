@@ -100,3 +100,15 @@ async def test_get_keys(keychain_proxy_with_keys: KeychainProxy, include_secrets
     else:
         expected_keys = [replace(TEST_KEY_1, secrets=None), replace(TEST_KEY_2, secrets=None)]
     assert keys == expected_keys
+
+
+@pytest.mark.anyio
+async def test_get_first_private_key(keychain_proxy_with_keys: KeychainProxy) -> None:
+    assert TEST_KEY_1.private_key == await keychain_proxy_with_keys.get_first_private_key()
+
+
+@pytest.mark.anyio
+async def test_get_all_private_keys(keychain_proxy_with_keys: KeychainProxy) -> None:
+    assert [TEST_KEY_1.private_key, TEST_KEY_2.private_key] == [
+        k for k, e in await keychain_proxy_with_keys.get_all_private_keys()
+    ]

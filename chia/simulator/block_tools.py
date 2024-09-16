@@ -316,20 +316,22 @@ class BlockTools:
                 await keychain_proxy.delete_all_keys()
                 self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
                 self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-                self.farmer_master_sk = (
-                    await keychain_proxy.add_key(bytes_to_mnemonic(self.farmer_master_sk_entropy))
-                )[0]
-                self.pool_master_sk = (
+                farmer_master_sk = (await keychain_proxy.add_key(bytes_to_mnemonic(self.farmer_master_sk_entropy)))[0]
+                assert isinstance(farmer_master_sk, PrivateKey)
+                self.farmer_master_sk = farmer_master_sk
+                pool_master_sk = (
                     await keychain_proxy.add_key(
                         bytes_to_mnemonic(self.pool_master_sk_entropy),
                     )
                 )[0]
+                assert isinstance(pool_master_sk, PrivateKey)
+                self.pool_master_sk = pool_master_sk
             else:
                 sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-                assert sk is not None
+                assert sk is not None and isinstance(sk, PrivateKey)
                 self.farmer_master_sk = sk
                 sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-                assert sk is not None
+                assert sk is not None and isinstance(sk, PrivateKey)
                 self.pool_master_sk = sk
 
             self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
@@ -346,7 +348,9 @@ class BlockTools:
                 self.farmer_ph = reward_ph
                 self.pool_ph = reward_ph
             if self.automated_testing:
-                self.all_sks: List[PrivateKey] = [sk for sk, _ in await keychain_proxy.get_all_private_keys()]
+                self.all_sks: List[PrivateKey] = [
+                    sk for sk, _ in await keychain_proxy.get_all_private_keys() if isinstance(sk, PrivateKey)
+                ]
             else:
                 self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
             self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]

@@ -98,7 +98,7 @@ class TestKeychain:
         entropy = bytes_from_mnemonic(mnemonic)
         assert bytes_to_mnemonic(entropy) == mnemonic
         mnemonic_2 = generate_mnemonic()
-        fingerprint_2 = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_2)).get_g1().get_fingerprint()
+        fingerprint_2 = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_2)).public_key().get_fingerprint()
 
         # misspelled words in the mnemonic
         bad_mnemonic = mnemonic.split(" ")
@@ -130,7 +130,7 @@ class TestKeychain:
 
         seed_2 = mnemonic_to_seed(mnemonic)
         seed_key_2 = AugSchemeMPL.key_gen(seed_2)
-        kc.delete_key_by_fingerprint(seed_key_2.get_g1().get_fingerprint())
+        kc.delete_key_by_fingerprint(seed_key_2.public_key().get_fingerprint())
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 1
 
@@ -201,7 +201,7 @@ class TestKeychain:
         tv_master_int = 8075452428075949470768183878078858156044736575259233735633523546099624838313
         tv_child_int = 18507161868329770878190303689452715596635858303241878571348190917018711023613
         assert master_sk == PrivateKey.from_bytes(tv_master_int.to_bytes(32, "big"))
-        child_sk = AugSchemeMPL.derive_child_sk(master_sk, 0)
+        child_sk = master_sk.derive_hardened(0)
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors(self):
@@ -279,8 +279,8 @@ def test_key_data_generate(label: Optional[str]) -> None:
     key_data = KeyData.generate(label)
     assert key_data.private_key == AugSchemeMPL.key_gen(mnemonic_to_seed(key_data.mnemonic_str()))
     assert key_data.entropy == bytes_from_mnemonic(key_data.mnemonic_str())
-    assert key_data.observation_root == key_data.private_key.get_g1()
-    assert key_data.fingerprint == key_data.private_key.get_g1().get_fingerprint()
+    assert key_data.observation_root == key_data.private_key.public_key()
+    assert key_data.fingerprint == key_data.private_key.public_key().get_fingerprint()
     assert key_data.label == label
 
 
@@ -323,10 +323,10 @@ def test_key_data_without_secrets(key_info: KeyInfo) -> None:
     [
         ((_24keyinfo.mnemonic.split()[:-1], _24keyinfo.entropy, _24keyinfo.private_key), "mnemonic"),
         ((_24keyinfo.mnemonic.split(), KeyDataSecrets.generate().entropy, _24keyinfo.private_key), "entropy"),
-        ((_24keyinfo.mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().private_key), "private_key"),
+        ((_24keyinfo.mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().secret_info_bytes), "private_key"),
     ],
 )
-def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateKey], data_type: str) -> None:
+def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, bytes], data_type: str) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyDataSecrets(*input_data)
 
@@ -339,7 +339,7 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
                 _24keyinfo.fingerprint,
                 bytes(G1Element()),
                 None,
-                KeyDataSecrets(_24keyinfo.mnemonic.split(), _24keyinfo.entropy, _24keyinfo.private_key),
+                KeyDataSecrets(_24keyinfo.mnemonic.split(), _24keyinfo.entropy, bytes(_24keyinfo.private_key)),
                 KeyTypes.G1_ELEMENT.value,
             ),
             "public_key",
@@ -548,3 +548,6 @@ def test_key_type_support(key_type: str, key_info: KeyInfo) -> None:
     assert KeyTypes.parse_observation_root(bytes(obr), KeyTypes(key_type)) == obr
     if secret_info is not None:
         assert KeyTypes.parse_secret_info(bytes(secret_info), KeyTypes(key_type)) == secret_info
+        assert (
+            KeyTypes.parse_secret_info_from_seed(mnemonic_to_seed(key_info.mnemonic), KeyTypes(key_type)) == secret_info
+        )

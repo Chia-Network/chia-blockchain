@@ -45,7 +45,7 @@ def mnemonic_fingerprint(keychain: Keychain) -> Tuple[str, int]:
         sk, _ = keychain.add_key(mnemonic)
     except KeychainFingerprintExists:
         pass
-    fingerprint = sk.get_g1().get_fingerprint()
+    fingerprint = sk.public_key().get_fingerprint()
     return mnemonic, fingerprint
 
 
@@ -54,6 +54,7 @@ def get_puzzle_hash_from_key(keychain: Keychain, fingerprint: int, key_id: int =
     if priv_key_and_entropy is None:
         raise Exception("Fingerprint not found")
     private_key = priv_key_and_entropy[0]
+    assert isinstance(private_key, PrivateKey)
     sk_for_wallet_id: PrivateKey = master_sk_to_wallet_sk(private_key, uint32(key_id))
     puzzle_hash: bytes32 = create_puzzlehash_for_pk(sk_for_wallet_id.get_g1())
     return puzzle_hash
