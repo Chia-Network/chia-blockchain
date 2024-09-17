@@ -26,6 +26,7 @@ from chia.rpc.wallet_request_types import (
     ApplySignaturesResponse,
     CombineCoins,
     CombineCoinsResponse,
+    DeleteKey,
     Empty,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
@@ -480,21 +481,21 @@ class WalletRpcApi:
             return AddKeyResponse(fingerprint=fingerprint)
         raise ValueError("Failed to start")
 
-    async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def delete_key(self, request: DeleteKey) -> Empty:
         await self._stop_wallet()
-        fingerprint = request["fingerprint"]
         try:
-            await self.service.keychain_proxy.delete_key_by_fingerprint(fingerprint)
+            await self.service.keychain_proxy.delete_key_by_fingerprint(request.fingerprint)
         except Exception as e:
             log.error(f"Failed to delete key by fingerprint: {e}")
-            return {"success": False, "error": str(e)}
+            raise e
         path = path_from_root(
             self.service.root_path,
-            f"{self.service.config['database_path']}-{fingerprint}",
+            f"{self.service.config['database_path']}-{request.fingerprint}",
         )
         if path.exists():
             path.unlink()
-        return {}
+        return Empty()
 
     async def _check_key_used_for_rewards(
         self, new_root: Path, sk: PrivateKey, max_ph_to_search: int

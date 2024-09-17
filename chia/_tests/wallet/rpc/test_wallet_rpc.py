@@ -49,6 +49,7 @@ from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_request_types import (
     AddKey,
     CombineCoins,
+    DeleteKey,
     DIDGetPubkey,
     GetNotifications,
     GetPrivateKey,
@@ -1797,7 +1798,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     assert sk_dict["used_for_farmer_rewards"] is False
     assert sk_dict["used_for_pool_rewards"] is False
 
-    await client.delete_key(pks[0])
+    await client.delete_key(DeleteKey(pks[0]))
     await client.log_in(LogIn(uint32(pks[1])))
     assert len((await client.get_public_keys()).pk_fingerprints) == 1
 

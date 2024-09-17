@@ -125,6 +125,12 @@ class AddKeyResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class DeleteKey(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[List[bytes32]] = None
     start: Optional[uint32] = None
