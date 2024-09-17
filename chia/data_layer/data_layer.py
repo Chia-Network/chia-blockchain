@@ -879,11 +879,14 @@ class DataLayer:
 
     async def periodically_manage_data(self) -> None:
         manage_data_interval = self.config.get("manage_data_interval", 60)
+        self.log.debug("DL: Starting manage data loop")
         while not self._shut_down:
+            self.log.debug("DL: Sending all DL known subscriptions to wallet.")
             async with self.subscription_lock:
                 try:
                     subscriptions = await self.data_store.get_subscriptions()
                     for subscription in subscriptions:
+                        self.log.debug(f"DL: Asking wallet to track {subscription.store_id.hex()}")
                         await self.wallet_rpc.dl_track_new(subscription.store_id)
                     break
                 except aiohttp.client_exceptions.ClientConnectorError:
@@ -900,14 +903,17 @@ class DataLayer:
                 await asyncio.sleep(0.1)
 
         while not self._shut_down:
+            self.log.debug("DL: Discover subscriptions and fetch data via worker pool.")
             # Add existing subscriptions
             async with self.subscription_lock:
                 subscriptions = await self.data_store.get_subscriptions()
 
+            self.log.debug(f"DL: Found {len(subscriptions)} subscriptions.")
             # pseudo-subscribe to all unsubscribed owned stores
             # Need this to make sure we process updates and generate DAT files
             try:
                 owned_stores = await self.get_owned_stores()
+                self.log.debug(f"DL: Found {len(owned_stores)} owned stores.")
             except ValueError:
                 # Sometimes the DL wallet isn't available, so we can't get the owned stores.
                 # We'll try again next time.
@@ -940,6 +946,7 @@ class DataLayer:
                                 f"Can't subscribe to local store {local_id}: {type(e)} {e} {traceback.format_exc()}"
                             )
 
+            self.log.debug(f"DL: Managing data for {len(subscriptions)} subscriptions.")
             work_queue: asyncio.Queue[Job[Subscription]] = asyncio.Queue()
             async with QueuedAsyncPool.managed(
                 name="DataLayer subscription update pool",
@@ -959,6 +966,7 @@ class DataLayer:
                 for unsubscribe_data in self.unsubscribe_data_queue:
                     await self.process_unsubscribe(unsubscribe_data.store_id, unsubscribe_data.retain_data)
                 self.unsubscribe_data_queue.clear()
+            self.log.debug(f"DL: Finished managing data. Next run in {manage_data_interval}s.")
             await asyncio.sleep(manage_data_interval)
 
     async def update_subscription(
@@ -968,6 +976,7 @@ class DataLayer:
     ) -> None:
         subscription = job.input
 
+        self.log.debug(f"DL: Updating subscription {subscription.store_id.hex()}")
         try:
             await self.update_subscriptions_from_wallet(subscription.store_id)
             await self.fetch_and_validate(subscription.store_id)
