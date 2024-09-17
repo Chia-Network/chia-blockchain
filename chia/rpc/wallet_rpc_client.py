@@ -148,8 +148,8 @@ class WalletRpcClient(RpcClient):
     async def check_delete_key(self, request: CheckDeleteKey) -> CheckDeleteKeyResponse:
         return CheckDeleteKeyResponse.from_json_dict(await self.fetch("add_key", request.to_json_dict()))
 
-    async def delete_all_keys(self) -> Dict[str, Any]:
-        return await self.fetch("delete_all_keys", {})
+    async def delete_all_keys(self) -> None:
+        await self.fetch("delete_all_keys", {})
 
     # Wallet Node APIs
     async def get_sync_status(self) -> bool:

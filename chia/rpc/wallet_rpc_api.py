@@ -578,17 +578,18 @@ class WalletRpcApi:
             wallet_balance=wallet_balance,
         )
 
-    async def delete_all_keys(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def delete_all_keys(self, request: Empty) -> Empty:
         await self._stop_wallet()
         try:
             await self.service.keychain_proxy.delete_all_keys()
         except Exception as e:
             log.error(f"Failed to delete all keys: {e}")
-            return {"success": False, "error": str(e)}
+            raise e
         path = path_from_root(self.service.root_path, self.service.config["database_path"])
         if path.exists():
             path.unlink()
-        return {}
+        return Empty()
 
     ##########################################################################################
     # Wallet Node
