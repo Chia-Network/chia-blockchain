@@ -335,7 +335,7 @@ class WalletTestFramework:
                 try:
                     await env.wait_for_transactions_to_settle(
                         self.full_node,
-                        _exclude_from_mempool_check=[*invalid_transactions, *(tx.name for tx in local_pending_txs)],
+                        _exclude_from_mempool_check=invalid_transactions + [tx.name for tx in local_pending_txs],
                     )
                 except TimeoutError:  # pragma: no cover
                     raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
