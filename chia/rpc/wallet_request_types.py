@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 from chia_rs import G1Element, G2Element
 from typing_extensions import dataclass_transform
@@ -12,6 +12,7 @@ from typing_extensions import dataclass_transform
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import Condition
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
@@ -26,6 +27,8 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from dabakala.chia.wallet.conditions import ConditionValidTimes
+from dabakala.chia.wallet.util.tx_config import TXConfig
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
 
@@ -280,6 +283,21 @@ class ExecuteSigningInstructionsResponse(Streamable):
 class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: Optional[bool] = None
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        raise NotImplementedError(
+            "to_json_dict is banned on TransactionEndpointRequest, please use .json_serialize_for_transport"
+        )
+
+    def json_serialize_for_transport(
+        self, tx_config: TXConfig, extra_conditions: Tuple[Condition, ...], timelock_info: ConditionValidTimes
+    ) -> Dict[str, Any]:
+        return {
+            **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
+            "extra_conditions": [condition.to_json_dict() for condition in extra_conditions],
+            **self.to_json_dict(),
+        }
 
 
 @streamable
