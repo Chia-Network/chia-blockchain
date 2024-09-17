@@ -7,6 +7,8 @@ from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_request_types import (
+    AddKey,
+    AddKeyResponse,
     ApplySignatures,
     ApplySignaturesResponse,
     CancelOfferResponse,
@@ -134,9 +136,8 @@ class WalletRpcClient(RpcClient):
     async def generate_mnemonic(self) -> GenerateMnemonicResponse:
         return GenerateMnemonicResponse.from_json_dict(await self.fetch("generate_mnemonic", {}))
 
-    async def add_key(self, mnemonic: List[str], request_type: str = "new_wallet") -> Dict[str, Any]:
-        request = {"mnemonic": mnemonic, "type": request_type}
-        return await self.fetch("add_key", request)
+    async def add_key(self, request: AddKey) -> AddKeyResponse:
+        return AddKeyResponse.from_json_dict(await self.fetch("add_key", request.to_json_dict()))
 
     async def delete_key(self, fingerprint: int) -> Dict[str, Any]:
         request = {"fingerprint": fingerprint}

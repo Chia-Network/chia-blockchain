@@ -20,6 +20,8 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import marshal, tx_endpoint
 from chia.rpc.wallet_request_types import (
+    AddKey,
+    AddKeyResponse,
     ApplySignatures,
     ApplySignaturesResponse,
     CombineCoins,
@@ -456,24 +458,15 @@ class WalletRpcApi:
     async def generate_mnemonic(self, request: Empty) -> GenerateMnemonicResponse:
         return GenerateMnemonicResponse(generate_mnemonic().split(" "))
 
-    async def add_key(self, request: Dict[str, Any]) -> EndpointResult:
-        if "mnemonic" not in request:
-            raise ValueError("Mnemonic not in request")
-
+    @marshal
+    async def add_key(self, request: AddKey) -> AddKeyResponse:
         # Adding a key from 24 word mnemonic
-        mnemonic = request["mnemonic"]
         try:
-            sk = await self.service.keychain_proxy.add_key(" ".join(mnemonic))
+            sk = await self.service.keychain_proxy.add_key(" ".join(request.mnemonic))
         except KeyError as e:
-            return {
-                "success": False,
-                "error": f"The word '{e.args[0]}' is incorrect.'",
-                "word": e.args[0],
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+            raise ValueError(f"The word '{e.args[0]}' is incorrect.")
 
-        fingerprint = sk.get_g1().get_fingerprint()
+        fingerprint = uint32(sk.get_g1().get_fingerprint())
         await self._stop_wallet()
 
         # Makes sure the new key is added to config properly
@@ -484,7 +477,7 @@ class WalletRpcApi:
             log.error(f"Failed to check_keys after adding a new key: {e}")
         started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
         if started is True:
-            return {"fingerprint": fingerprint}
+            return AddKeyResponse(fingerprint=fingerprint)
         raise ValueError("Failed to start")
 
     async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:

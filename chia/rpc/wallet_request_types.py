@@ -113,6 +113,18 @@ class GenerateMnemonicResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class AddKey(Streamable):
+    mnemonic: List[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class AddKeyResponse(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[List[bytes32]] = None
     start: Optional[uint32] = None

@@ -47,6 +47,7 @@ from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_request_types import (
+    AddKey,
     CombineCoins,
     DIDGetPubkey,
     GetNotifications,
@@ -1758,7 +1759,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     resp = await client.generate_mnemonic()
     assert len(resp.mnemonic) == 24
 
-    await client.add_key(resp.mnemonic)
+    await client.add_key(AddKey(resp.mnemonic))
 
     pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 2
