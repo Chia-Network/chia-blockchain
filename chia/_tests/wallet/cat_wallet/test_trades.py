@@ -2324,11 +2324,11 @@ async def test_trade_high_fee(wallet_environments: WalletTestFramework) -> None:
     assert trade_make is not None
     peer = env_taker.node.get_full_node_peer()
     [offer], signing_response = await env_maker.wallet_state_manager.sign_offers([Offer.from_bytes(trade_make.offer)])
-    fee = uint64(1000000000000)
+    fee = uint64(1_000_000_000_000)
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True, additional_signing_responses=signing_response
     ) as action_scope:
-        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=uint64(1000000000000))
+        tr1 = await trade_manager_taker.respond_to_offer(offer, peer, action_scope, fee=fee)
 
     await wallet_environments.process_pending_states(
         [
