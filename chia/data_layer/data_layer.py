@@ -67,6 +67,7 @@ from chia.data_layer.download_data import (
     write_files_for_root,
 )
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -242,13 +243,12 @@ class DataLayer:
         self._server = server
 
     async def wallet_log_in(self, fingerprint: int) -> int:
-        result = await self.wallet_rpc.log_in(fingerprint)
-        if not result.get("success", False):
-            wallet_error = result.get("error", "no error message provided")
-            raise Exception(f"DataLayer wallet RPC log in request failed: {wallet_error}")
+        try:
+            result = await self.wallet_rpc.log_in(LogIn(uint32(fingerprint)))
+        except ValueError as e:
+            raise Exception(f"DataLayer wallet RPC log in request failed: {e.args[0]}")
 
-        fingerprint = cast(int, result["fingerprint"])
-        return fingerprint
+        return result.fingerprint
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)

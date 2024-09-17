@@ -44,6 +44,18 @@ def default_raise() -> Any:  # pragma: no cover
 
 @streamable
 @dataclass(frozen=True)
+class LogIn(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class LogInResponse(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[List[bytes32]] = None
     start: Optional[uint32] = None

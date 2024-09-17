@@ -44,6 +44,8 @@ from chia.rpc.wallet_request_types import (
     GetOffersCountResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
+    LogIn,
+    LogInResponse,
     NFTAddURIResponse,
     NFTGetByDID,
     NFTGetByDIDResponse,
@@ -109,11 +111,8 @@ class WalletRpcClient(RpcClient):
     """
 
     # Key Management APIs
-    async def log_in(self, fingerprint: int) -> Union[Dict[str, Any], Any]:
-        try:
-            return await self.fetch("log_in", {"fingerprint": fingerprint, "type": "start"})
-        except ValueError as e:
-            return e.args[0]
+    async def log_in(self, request: LogIn) -> LogInResponse:
+        return LogInResponse.from_json_dict(await self.fetch("log_in", request.to_json_dict()))
 
     async def set_wallet_resync_on_startup(self, enable: bool = True) -> Dict[str, Any]:
         return await self.fetch(path="set_wallet_resync_on_startup", request_json={"enable": enable})

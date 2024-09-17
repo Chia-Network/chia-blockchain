@@ -30,6 +30,8 @@ from chia.rpc.wallet_request_types import (
     GatherSigningInfoResponse,
     GetNotifications,
     GetNotificationsResponse,
+    LogIn,
+    LogInResponse,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -378,21 +380,21 @@ class WalletRpcApi:
     # Key management
     ##########################################################################################
 
-    async def log_in(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def log_in(self, request: LogIn) -> LogInResponse:
         """
         Logs in the wallet with a specific key.
         """
 
-        fingerprint = request["fingerprint"]
-        if self.service.logged_in_fingerprint == fingerprint:
-            return {"fingerprint": fingerprint}
+        if self.service.logged_in_fingerprint == request.fingerprint:
+            return LogInResponse(request.fingerprint)
 
         await self._stop_wallet()
-        started = await self.service._start_with_fingerprint(fingerprint)
+        started = await self.service._start_with_fingerprint(request.fingerprint)
         if started is True:
-            return {"fingerprint": fingerprint}
+            return LogInResponse(request.fingerprint)
 
-        return {"success": False, "error": f"fingerprint {fingerprint} not found in keychain or keychain is empty"}
+        raise ValueError(f"fingerprint {request.fingerprint} not found in keychain or keychain is empty")
 
     async def get_logged_in_fingerprint(self, request: Dict[str, Any]) -> EndpointResult:
         return {"fingerprint": self.service.logged_in_fingerprint}
