@@ -32,6 +32,7 @@ from chia.rpc.wallet_request_types import (
     GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetPublicKeysResponse,
     LogIn,
     LogInResponse,
     SplitCoins,
@@ -402,20 +403,22 @@ class WalletRpcApi:
     async def get_logged_in_fingerprint(self, request: Empty) -> GetLoggedInFingerprintResponse:
         return GetLoggedInFingerprintResponse(uint32.construct_optional(self.service.logged_in_fingerprint))
 
-    async def get_public_keys(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_public_keys(self, request: Empty) -> GetPublicKeysResponse:
         try:
             fingerprints = [
-                sk.get_g1().get_fingerprint() for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
+                uint32(sk.get_g1().get_fingerprint())
+                for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
             ]
         except KeychainIsLocked:
-            return {"keyring_is_locked": True}
+            return GetPublicKeysResponse(keyring_is_locked=True)
         except Exception as e:
             raise Exception(
                 "Error while getting keys.  If the issue persists, restart all services."
                 f"  Original error: {type(e).__name__}: {e}"
             ) from e
         else:
-            return {"public_key_fingerprints": fingerprints}
+            return GetPublicKeysResponse(keyring_is_locked=False, public_key_fingerprints=fingerprints)
 
     async def _get_private_key(self, fingerprint: int) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
         try:

@@ -68,6 +68,21 @@ class GetLoggedInFingerprintResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetPublicKeysResponse(Streamable):
+    keyring_is_locked: bool
+    public_key_fingerprints: Optional[List[uint32]] = None
+
+    @property
+    def pk_fingerprints(self) -> List[uint32]:
+        if self.keyring_is_locked:
+            raise RuntimeError("get_public_keys cannot return public keys because the keyring is locked")
+        else:
+            assert self.public_key_fingerprints is not None
+            return self.public_key_fingerprints
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[List[bytes32]] = None
     start: Optional[uint32] = None

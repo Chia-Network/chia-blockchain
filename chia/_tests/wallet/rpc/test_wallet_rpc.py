@@ -1732,7 +1732,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     address = await client.get_next_address(1, True)
     assert len(address) > 10
 
-    pks = await client.get_public_keys()
+    pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 1
 
     await generate_funds(env.full_node.api, env.wallet_1)
@@ -1761,10 +1761,10 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     await client.add_key(mnemonic)
 
-    pks = await client.get_public_keys()
+    pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 2
 
-    await client.log_in(LogIn(uint32(pks[1])))
+    await client.log_in(LogIn(pks[1]))
     sk_dict = await client.get_private_key(pks[1])
     assert sk_dict["fingerprint"] == pks[1]
 
@@ -1799,7 +1799,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     await client.delete_key(pks[0])
     await client.log_in(LogIn(uint32(pks[1])))
-    assert len(await client.get_public_keys()) == 1
+    assert len((await client.get_public_keys()).pk_fingerprints) == 1
 
     assert not (await client.get_sync_status())
 
@@ -1812,7 +1812,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     # Delete all keys
     await client.delete_all_keys()
-    assert len(await client.get_public_keys()) == 0
+    assert len((await client.get_public_keys()).pk_fingerprints) == 0
 
 
 @pytest.mark.anyio
