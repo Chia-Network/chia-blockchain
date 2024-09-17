@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List
+from random import Random
+from typing import List, Tuple
 
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 
-from chia._tests.util.misc import Marks, datacases
+from chia._tests.util.misc import Marks, datacases, measure_runtime
 from chia.data_layer.data_layer_util import (
     ClearPendingRootsRequest,
     ClearPendingRootsResponse,
@@ -17,8 +18,13 @@ from chia.data_layer.data_layer_util import (
     Root,
     Side,
     Status,
+    internal_hash,
+    key_hash,
+    leaf_hash,
 )
 from chia.rpc.data_layer_rpc_util import MarshallableProtocol
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 pytestmark = pytest.mark.data_layer
@@ -131,3 +137,74 @@ def test_marshalling_round_trip(case: RoundTripCase) -> None:
     marshalled = case.instance.marshal()
     unmarshalled = type(case.instance).unmarshal(marshalled)
     assert case.instance == unmarshalled
+
+
+def test_internal_hash(seeded_random: Random) -> None:
+    def definition(left_hash: bytes32, right_hash: bytes32) -> bytes32:
+        return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)
+
+    data: List[Tuple[bytes32, bytes32, bytes32]] = []
+    for _ in range(5000):
+        left_hash = bytes32.random(r=seeded_random)
+        right_hash = bytes32.random(r=seeded_random)
+        reference = definition(left_hash=left_hash, right_hash=right_hash)
+        data.append((left_hash, right_hash, reference))
+
+    with measure_runtime(label="optimization"):
+        for left_hash, right_hash, reference in data:
+            assert internal_hash(left_hash=left_hash, right_hash=right_hash) == reference
+
+    with measure_runtime(label="definition"):
+        for left_hash, right_hash, reference in data:
+            assert definition(left_hash=left_hash, right_hash=right_hash) == reference
+
+
+def test_leaf_hash(seeded_random: Random) -> None:
+    def definition(key: bytes, value: bytes) -> bytes32:
+        return SerializedProgram.to((key, value)).get_tree_hash()
+
+    data: List[Tuple[bytes, bytes, bytes32]] = []
+    for cycle in range(20000):
+        if cycle in (0, 1):
+            length = 0
+        else:
+            length = seeded_random.randrange(100)
+        key = seeded_random.getrandbits(length * 8).to_bytes(length, "big")
+        if cycle in (1, 2):
+            length = 0
+        else:
+            length = seeded_random.randrange(100)
+        value = seeded_random.getrandbits(length * 8).to_bytes(length, "big")
+        reference = definition(key=key, value=value)
+        data.append((key, value, reference))
+
+    with measure_runtime(label="optimization"):
+        for key, value, reference in data:
+            assert leaf_hash(key=key, value=value) == reference
+
+    with measure_runtime(label="definition"):
+        for key, value, reference in data:
+            assert definition(key=key, value=value) == reference
+
+
+def test_key_hash(seeded_random: Random) -> None:
+    def definition(key: bytes) -> bytes32:
+        return SerializedProgram.to(key).get_tree_hash()
+
+    data: List[Tuple[bytes, bytes32]] = []
+    for cycle in range(30000):
+        if cycle == 0:
+            length = 0
+        else:
+            length = seeded_random.randrange(100)
+        key = seeded_random.getrandbits(length * 8).to_bytes(length, "big")
+        reference = definition(key=key)
+        data.append((key, reference))
+
+    with measure_runtime(label="optimization"):
+        for key, reference in data:
+            assert key_hash(key=key) == reference
+
+    with measure_runtime(label="definition"):
+        for key, reference in data:
+            assert definition(key=key) == reference

@@ -24,7 +24,7 @@ def block_to_block_record(
     blocks: BlockRecordsProtocol,
     required_iters: uint64,
     block: Union[FullBlock, HeaderBlock],
-    sub_slot_iters: Optional[uint64] = None,
+    sub_slot_iters: uint64,
     prev_ses_block: Optional[BlockRecord] = None,
 ) -> BlockRecord:
     prev_b = blocks.try_block_record(block.prev_header_hash)

@@ -27,6 +27,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
@@ -193,17 +194,8 @@ async def pre_validate_blocks_multiprocessing(
     num_sub_slots_found = 0
     num_blocks_seen = 0
 
-    # keep track on what was in cache
-    block_record_was_present: List[bool] = []
-    block_hashes: List[bytes32] = []
-    for block in blocks:
-        header_hash = block.header_hash
-        block_hashes.append(header_hash)
-        block_record_was_present.append(block_records.contains_block(header_hash))
-
-    # load blocks to cache
     if blocks[0].height > 0:
-        curr = block_records.block_record(blocks[0].prev_header_hash)
+        curr = block_records.try_block_record(blocks[0].prev_header_hash)
         if curr is None:
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
         prev_b = curr
@@ -225,13 +217,12 @@ async def pre_validate_blocks_multiprocessing(
             assert curr is not None
         recent_blocks[header_hash] = curr
 
+    # the agumented blockchain object will let us add temporary block records
+    # they won't actually be added to the underlying blockchain object
+    blockchain = AugmentedBlockchain(block_records)
+
     diff_ssis: List[Tuple[uint64, uint64]] = []
     prev_ses_block_list: List[Optional[BlockRecord]] = []
-
-    if blocks[0].height != 0:
-        if prev_b is None:
-            prev_b = block_records.block_record(blocks[0].prev_header_hash)
-        assert prev_b is not None
 
     for block in blocks:
         if len(block.finished_sub_slots) > 0:
@@ -249,9 +240,6 @@ async def pre_validate_blocks_multiprocessing(
             block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=block.height
         )
         if q_str is None:
-            for i, was_cached in enumerate(block_record_was_present):
-                if not was_cached and block_records.contains_block(block_hashes[i]):
-                    block_records.remove_block_record(block_hashes[i])
             return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False, uint32(0))]
 
         required_iters: uint64 = calculate_iterations_quality(
@@ -265,7 +253,7 @@ async def pre_validate_blocks_multiprocessing(
         try:
             block_rec = block_to_block_record(
                 constants,
-                block_records,
+                blockchain,
                 required_iters,
                 block,
                 sub_slot_iters=sub_slot_iters,
@@ -274,33 +262,19 @@ async def pre_validate_blocks_multiprocessing(
         except ValueError:
             return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
-        if block_rec.sub_epoch_summary_included is not None:
-            if wp_summaries is not None:
-                idx = int(block.height / constants.SUB_EPOCH_BLOCKS) - 1
-                next_ses = wp_summaries[idx]
-                if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
-                    log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
-                    return [
-                        PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))
-                    ]
-        # Makes sure to not override the valid blocks already in block_records
-        if not block_records.contains_block(block_rec.header_hash):
-            block_records.add_block_record(block_rec)  # Temporarily add block to dict
-            recent_blocks[block_rec.header_hash] = block_rec
-        else:
-            recent_blocks[block_rec.header_hash] = block_records.block_record(block_rec.header_hash)
+        if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
+            next_ses = wp_summaries[int(block.height / constants.SUB_EPOCH_BLOCKS) - 1]
+            if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
+                log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
+                return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
+
+        recent_blocks[block_rec.header_hash] = block_rec
+        blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
         prev_b = block_rec
         diff_ssis.append((difficulty, sub_slot_iters))
         prev_ses_block_list.append(prev_ses_block)
         if block_rec.sub_epoch_summary_included is not None:
             prev_ses_block = block_rec
-
-    block_dict: Dict[bytes32, FullBlock] = {}
-    # revert cache back
-    for i, block in enumerate(blocks):
-        block_dict[block_hashes[i]] = block
-        if not block_record_was_present[i]:
-            block_records.remove_block_record(block_hashes[i])
 
     npc_results_pickled = {}
     for k, v in npc_results.items():
@@ -314,22 +288,11 @@ async def pre_validate_blocks_multiprocessing(
         b_pickled: List[bytes] = []
         previous_generators: List[Optional[List[bytes]]] = []
         for block in blocks_to_validate:
-            # We ONLY add blocks which are in the past, based on header hashes (which are validated later) to the
-            # prev blocks dict. This is important since these blocks are assumed to be valid and are used as previous
-            # generator references
-            prev_blocks_dict: Dict[bytes32, FullBlock] = {}
-            curr_b: FullBlock = block
-
-            while curr_b.prev_header_hash in block_dict:
-                header_hash = curr_b.prev_header_hash
-                curr_b = block_dict[curr_b.prev_header_hash]
-                prev_blocks_dict[header_hash] = curr_b
-
             assert isinstance(block, FullBlock)
             b_pickled.append(bytes(block))
             try:
                 block_generator: Optional[BlockGenerator] = await get_block_generator(
-                    block_records.lookup_block_generators, block, prev_blocks_dict
+                    blockchain.lookup_block_generators, block
                 )
             except ValueError:
                 return [

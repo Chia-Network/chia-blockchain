@@ -170,7 +170,7 @@ class Vault(Wallet):
                     sent=uint32(0),
                     spend_bundle=spend_bundle,
                     additions=[],
-                    removals=[],
+                    removals=spend_bundle.removals(),
                     wallet_id=self.id(),
                     sent_to=[],
                     memos=[],

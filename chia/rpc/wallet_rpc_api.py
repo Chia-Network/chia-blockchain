@@ -1810,11 +1810,12 @@ class WalletRpcApi:
             message_to_verify,
             G2Element.from_bytes(hexstr_to_bytes(request["signature"])),
         )
-        if "address" in request:
+        address = request.get("address")
+        if address is not None:
             # For signatures made by the sign_message_by_address/sign_message_by_id
             # endpoints, the "address" field should contain the p2_address of the NFT/DID
             # that was used to sign the message.
-            puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+            puzzle_hash: bytes32 = decode_puzzle_hash(address)
             expected_puzzle_hash: Optional[bytes32] = None
             if signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
                 puzzle = p2_delegated_conditions.puzzle_for_pk(Program.to(hexstr_to_bytes(request["pubkey"])))
@@ -3598,7 +3599,7 @@ class WalletRpcApi:
 
     async def nft_get_by_did(self, request: Dict[str, Any]) -> EndpointResult:
         did_id: Optional[bytes32] = None
-        if "did_id" in request:
+        if request.get("did_id", None) is not None:
             did_id = decode_puzzle_hash(request["did_id"])
         for wallet in self.service.wallet_state_manager.wallets.values():
             if isinstance(wallet, NFTWallet) and wallet.get_did() == did_id:
@@ -4612,7 +4613,7 @@ class WalletRpcApi:
     ) -> EndpointResult:
         """
         Spend a verified credential
-        :param request: Required 'vc_id' launcher id of the vc we wish to spend. Optional paramaters for a 'new_puzhash'
+        :param request: Required 'vc_id' launcher id of the vc we wish to spend. Optional parameters for a 'new_puzhash'
         for the vc to end up at and 'new_proof_hash' & 'provider_inner_puzhash' which can be used to update the vc's
         proofs. Also standard 'fee' & 'reuse_puzhash' parameters for the transaction.
         :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates (VC TX + fee TX)
@@ -4721,7 +4722,7 @@ class WalletRpcApi:
     ) -> EndpointResult:
         """
         Moving any "pending approval" CR-CATs into the spendable balance of the wallet
-        :param request: Required 'wallet_id'. Optional 'min_amount_to_claim' (deafult: full balance).
+        :param request: Required 'wallet_id'. Optional 'min_amount_to_claim' (default: full balance).
         Standard transaction params 'fee' & 'reuse_puzhash'.
         :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates:
         (CRCAT TX + fee TX)

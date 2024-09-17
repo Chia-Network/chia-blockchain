@@ -12,6 +12,7 @@ from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.full_node import FullNode
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -140,7 +141,7 @@ async def wallet_environments(
 
         full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **config_overrides}
 
-        rpc_clients: List[WalletRpcClient] = []
+        wallet_rpc_clients: List[WalletRpcClient] = []
         async with AsyncExitStack() as astack:
             for service in wallet_services:
                 service._node.config = {
@@ -158,7 +159,7 @@ async def wallet_environments(
                 await service._node.server.start_client(
                     PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
                 )
-                rpc_clients.append(
+                wallet_rpc_clients.append(
                     await astack.enter_async_context(
                         WalletRpcClient.create_as_context(
                             bt.config["self_hostname"],
@@ -191,8 +192,18 @@ async def wallet_environments(
                     )
                 )
 
+            assert full_node[0].rpc_server is not None
+            client_node = await astack.enter_async_context(
+                FullNodeRpcClient.create_as_context(
+                    bt.config["self_hostname"],
+                    full_node[0].rpc_server.listen_port,
+                    full_node[0].root_path,
+                    full_node[0].config,
+                )
+            )
             yield WalletTestFramework(
                 full_node[0]._api,
+                client_node,
                 trusted_full_node,
                 [
                     WalletEnvironment(
@@ -200,7 +211,7 @@ async def wallet_environments(
                         rpc_client=rpc_client,
                         wallet_states={uint32(1): wallet_state},
                     )
-                    for service, rpc_client, wallet_state in zip(wallet_services, rpc_clients, wallet_states)
+                    for service, rpc_client, wallet_state in zip(wallet_services, wallet_rpc_clients, wallet_states)
                 ],
                 tx_config,
             )

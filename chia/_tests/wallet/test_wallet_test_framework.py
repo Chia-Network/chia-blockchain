@@ -8,6 +8,7 @@ from chia._tests.environments.wallet import (
     WalletStateTransition,
     WalletTestFramework,
 )
+from chia.consensus.block_record import BlockRecord
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 
 
@@ -43,6 +44,8 @@ async def test_basic_functionality(wallet_environments: WalletTestFramework) -> 
     assert env_0.node.config["min_mainnet_k_size"] == 2
     assert env_0.wallet_state_manager.config["min_mainnet_k_size"] == 2
     assert wallet_environments.full_node.full_node.config["min_mainnet_k_size"] == 2
+
+    assert isinstance(await wallet_environments.full_node_rpc_client.get_block_record_by_height(1), BlockRecord)
 
 
 @pytest.mark.parametrize(
