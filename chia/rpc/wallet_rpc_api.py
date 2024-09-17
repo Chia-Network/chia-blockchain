@@ -24,10 +24,12 @@ from chia.rpc.wallet_request_types import (
     ApplySignaturesResponse,
     CombineCoins,
     CombineCoinsResponse,
+    Empty,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
+    GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
     LogIn,
@@ -396,8 +398,9 @@ class WalletRpcApi:
 
         raise ValueError(f"fingerprint {request.fingerprint} not found in keychain or keychain is empty")
 
-    async def get_logged_in_fingerprint(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"fingerprint": self.service.logged_in_fingerprint}
+    @marshal
+    async def get_logged_in_fingerprint(self, request: Empty) -> GetLoggedInFingerprintResponse:
+        return GetLoggedInFingerprintResponse(uint32.construct_optional(self.service.logged_in_fingerprint))
 
     async def get_public_keys(self, request: Dict[str, Any]) -> EndpointResult:
         try:

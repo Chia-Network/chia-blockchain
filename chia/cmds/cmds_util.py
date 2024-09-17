@@ -170,7 +170,7 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                 # if only a single key is available, select it automatically
                 selected_fingerprint = fingerprints[0]
             else:
-                logged_in_fingerprint: Optional[int] = await wallet_client.get_logged_in_fingerprint()
+                logged_in_fingerprint: Optional[int] = (await wallet_client.get_logged_in_fingerprint()).fingerprint
                 logged_in_key: Optional[KeyData] = None
                 if logged_in_fingerprint is not None:
                     logged_in_key = next((key for key in all_keys if key.fingerprint == logged_in_fingerprint), None)

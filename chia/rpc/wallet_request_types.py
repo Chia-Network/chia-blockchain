@@ -44,6 +44,12 @@ def default_raise() -> Any:  # pragma: no cover
 
 @streamable
 @dataclass(frozen=True)
+class Empty(Streamable):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
 class LogIn(Streamable):
     fingerprint: uint32
 
@@ -52,6 +58,12 @@ class LogIn(Streamable):
 @dataclass(frozen=True)
 class LogInResponse(Streamable):
     fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetLoggedInFingerprintResponse(Streamable):
+    fingerprint: Optional[uint32]
 
 
 @streamable
