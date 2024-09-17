@@ -29,6 +29,7 @@ from chia.rpc.wallet_request_types import (
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
+    GenerateMnemonicResponse,
     GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
@@ -451,8 +452,9 @@ class WalletRpcApi:
 
         raise ValueError(f"Could not get a private key for fingerprint {request.fingerprint}")
 
-    async def generate_mnemonic(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"mnemonic": generate_mnemonic().split(" ")}
+    @marshal
+    async def generate_mnemonic(self, request: Empty) -> GenerateMnemonicResponse:
+        return GenerateMnemonicResponse(generate_mnemonic().split(" "))
 
     async def add_key(self, request: Dict[str, Any]) -> EndpointResult:
         if "mnemonic" not in request:

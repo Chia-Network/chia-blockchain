@@ -1755,10 +1755,10 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     assert sk_resp.private_key.fingerprint == pks[0]
     assert sk_resp.private_key.seed is not None
 
-    mnemonic = await client.generate_mnemonic()
-    assert len(mnemonic) == 24
+    resp = await client.generate_mnemonic()
+    assert len(resp.mnemonic) == 24
 
-    await client.add_key(mnemonic)
+    await client.add_key(resp.mnemonic)
 
     pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 2

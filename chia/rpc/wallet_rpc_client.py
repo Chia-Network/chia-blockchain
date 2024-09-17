@@ -38,6 +38,7 @@ from chia.rpc.wallet_request_types import (
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
+    GenerateMnemonicResponse,
     GetCATListResponse,
     GetLoggedInFingerprintResponse,
     GetNotifications,
@@ -130,10 +131,8 @@ class WalletRpcClient(RpcClient):
     async def get_private_key(self, request: GetPrivateKey) -> GetPrivateKeyResponse:
         return GetPrivateKeyResponse.from_json_dict(await self.fetch("get_private_key", request.to_json_dict()))
 
-    async def generate_mnemonic(self) -> List[str]:
-        response = await self.fetch("generate_mnemonic", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(List[str], response["mnemonic"])
+    async def generate_mnemonic(self) -> GenerateMnemonicResponse:
+        return GenerateMnemonicResponse.from_json_dict(await self.fetch("generate_mnemonic", {}))
 
     async def add_key(self, mnemonic: List[str], request_type: str = "new_wallet") -> Dict[str, Any]:
         request = {"mnemonic": mnemonic, "type": request_type}
