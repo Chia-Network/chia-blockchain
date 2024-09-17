@@ -6,7 +6,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-from chia_rs import G1Element, G2Element
+from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -79,6 +79,30 @@ class GetPublicKeysResponse(Streamable):
         else:
             assert self.public_key_fingerprints is not None
             return self.public_key_fingerprints
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKey(Streamable):
+    fingerprint: uint32
+
+
+# utility for `GetPrivateKeyResponse`
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKeyFormat(Streamable):
+    fingerprint: uint32
+    sk: PrivateKey
+    pk: G1Element
+    farmer_pk: G1Element
+    pool_pk: G1Element
+    seed: Optional[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKeyResponse(Streamable):
+    private_key: GetPrivateKeyFormat
 
 
 @streamable

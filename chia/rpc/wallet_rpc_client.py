@@ -43,6 +43,8 @@ from chia.rpc.wallet_request_types import (
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
+    GetPrivateKey,
+    GetPrivateKeyResponse,
     GetPublicKeysResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
@@ -125,11 +127,8 @@ class WalletRpcClient(RpcClient):
     async def get_public_keys(self) -> GetPublicKeysResponse:
         return GetPublicKeysResponse.from_json_dict(await self.fetch("get_public_keys", {}))
 
-    async def get_private_key(self, fingerprint: int) -> Dict[str, Any]:
-        request = {"fingerprint": fingerprint}
-        response = await self.fetch("get_private_key", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(Dict[str, Any], response["private_key"])
+    async def get_private_key(self, request: GetPrivateKey) -> GetPrivateKeyResponse:
+        return GetPrivateKeyResponse.from_json_dict(await self.fetch("get_private_key", request.to_json_dict()))
 
     async def generate_mnemonic(self) -> List[str]:
         response = await self.fetch("generate_mnemonic", {})

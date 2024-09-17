@@ -32,6 +32,9 @@ from chia.rpc.wallet_request_types import (
     GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetPrivateKey,
+    GetPrivateKeyFormat,
+    GetPrivateKeyResponse,
     GetPublicKeysResponse,
     LogIn,
     LogInResponse,
@@ -430,22 +433,23 @@ class WalletRpcApi:
             log.error(f"Failed to get private key by fingerprint: {e}")
         return None, None
 
-    async def get_private_key(self, request: Dict[str, Any]) -> EndpointResult:
-        fingerprint = request["fingerprint"]
-        sk, seed = await self._get_private_key(fingerprint)
+    @marshal
+    async def get_private_key(self, request: GetPrivateKey) -> GetPrivateKeyResponse:
+        sk, seed = await self._get_private_key(request.fingerprint)
         if sk is not None:
             s = bytes_to_mnemonic(seed) if seed is not None else None
-            return {
-                "private_key": {
-                    "fingerprint": fingerprint,
-                    "sk": bytes(sk).hex(),
-                    "pk": bytes(sk.get_g1()).hex(),
-                    "farmer_pk": bytes(master_sk_to_farmer_sk(sk).get_g1()).hex(),
-                    "pool_pk": bytes(master_sk_to_pool_sk(sk).get_g1()).hex(),
-                    "seed": s,
-                },
-            }
-        return {"success": False, "private_key": {"fingerprint": fingerprint}}
+            return GetPrivateKeyResponse(
+                private_key=GetPrivateKeyFormat(
+                    fingerprint=request.fingerprint,
+                    sk=sk,
+                    pk=sk.get_g1(),
+                    farmer_pk=master_sk_to_farmer_sk(sk).get_g1(),
+                    pool_pk=master_sk_to_pool_sk(sk).get_g1(),
+                    seed=s,
+                )
+            )
+
+        raise ValueError(f"Could not get a private key for fingerprint {request.fingerprint}")
 
     async def generate_mnemonic(self, request: Dict[str, Any]) -> EndpointResult:
         return {"mnemonic": generate_mnemonic().split(" ")}

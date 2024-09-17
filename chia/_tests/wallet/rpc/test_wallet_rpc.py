@@ -50,6 +50,7 @@ from chia.rpc.wallet_request_types import (
     CombineCoins,
     DIDGetPubkey,
     GetNotifications,
+    GetPrivateKey,
     LogIn,
     SplitCoins,
     SplitCoinsResponse,
@@ -1750,11 +1751,9 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     await client.delete_unconfirmed_transactions(1)
     assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
 
-    sk_dict = await client.get_private_key(pks[0])
-    assert sk_dict["fingerprint"] == pks[0]
-    assert sk_dict["sk"] is not None
-    assert sk_dict["pk"] is not None
-    assert sk_dict["seed"] is not None
+    sk_resp = await client.get_private_key(GetPrivateKey(pks[0]))
+    assert sk_resp.private_key.fingerprint == pks[0]
+    assert sk_resp.private_key.seed is not None
 
     mnemonic = await client.generate_mnemonic()
     assert len(mnemonic) == 24
@@ -1765,8 +1764,8 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     assert len(pks) == 2
 
     await client.log_in(LogIn(pks[1]))
-    sk_dict = await client.get_private_key(pks[1])
-    assert sk_dict["fingerprint"] == pks[1]
+    sk_resp = await client.get_private_key(GetPrivateKey(pks[1]))
+    assert sk_resp.private_key.fingerprint == pks[1]
 
     # test hardened keys
     await _check_delete_key(client=client, wallet_node=wallet_node, farmer_fp=pks[0], pool_fp=pks[1], observer=False)
