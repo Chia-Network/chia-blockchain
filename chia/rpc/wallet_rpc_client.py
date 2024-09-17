@@ -14,6 +14,8 @@ from chia.rpc.wallet_request_types import (
     CancelOfferResponse,
     CancelOffersResponse,
     CATSpendResponse,
+    CheckDeleteKey,
+    CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
     CreateNewDAOWalletResponse,
@@ -143,9 +145,8 @@ class WalletRpcClient(RpcClient):
     async def delete_key(self, request: DeleteKey) -> None:
         await self.fetch("delete_key", request)
 
-    async def check_delete_key(self, fingerprint: int, max_ph_to_search: int = 100) -> Dict[str, Any]:
-        request = {"fingerprint": fingerprint, "max_ph_to_search": max_ph_to_search}
-        return await self.fetch("check_delete_key", request)
+    async def check_delete_key(self, request: CheckDeleteKey) -> CheckDeleteKeyResponse:
+        return CheckDeleteKeyResponse.from_json_dict(await self.fetch("add_key", request.to_json_dict()))
 
     async def delete_all_keys(self) -> Dict[str, Any]:
         return await self.fetch("delete_all_keys", {})

@@ -48,6 +48,7 @@ from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_request_types import (
     AddKey,
+    CheckDeleteKey,
     CombineCoins,
     DeleteKey,
     DIDGetPubkey,
@@ -1706,22 +1707,22 @@ async def _check_delete_key(
         save_config(wallet_node.root_path, "config.yaml", test_config)
 
     # Check farmer_fp key
-    sk_dict = await client.check_delete_key(farmer_fp)
-    assert sk_dict["fingerprint"] == farmer_fp
-    assert sk_dict["used_for_farmer_rewards"] is True
-    assert sk_dict["used_for_pool_rewards"] is False
+    resp = await client.check_delete_key(CheckDeleteKey(uint32(farmer_fp)))
+    assert resp.fingerprint == farmer_fp
+    assert resp.used_for_farmer_rewards is True
+    assert resp.used_for_pool_rewards is False
 
     # Check pool_fp key
-    sk_dict = await client.check_delete_key(pool_fp)
-    assert sk_dict["fingerprint"] == pool_fp
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is True
+    resp = await client.check_delete_key(CheckDeleteKey(uint32(pool_fp)))
+    assert resp.fingerprint == pool_fp
+    assert resp.used_for_farmer_rewards is False
+    assert resp.used_for_pool_rewards is True
 
     # Check unknown key
-    sk_dict = await client.check_delete_key(123456, 10)
-    assert sk_dict["fingerprint"] == 123456
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is False
+    resp = await client.check_delete_key(CheckDeleteKey(uint32(123456), uint16(10)))
+    assert resp.fingerprint == 123456
+    assert resp.used_for_farmer_rewards is False
+    assert resp.used_for_pool_rewards is False
 
 
 @pytest.mark.anyio
@@ -1781,10 +1782,10 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
         save_config(wallet_node.root_path, "config.yaml", test_config)
 
     # Check key
-    sk_dict = await client.check_delete_key(pks[1])
-    assert sk_dict["fingerprint"] == pks[1]
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is True
+    delete_key_resp = await client.check_delete_key(CheckDeleteKey(pks[1]))
+    assert delete_key_resp.fingerprint == pks[1]
+    assert delete_key_resp.used_for_farmer_rewards is False
+    assert delete_key_resp.used_for_pool_rewards is True
 
     # set farmer and pool to empty string
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
@@ -1793,10 +1794,10 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
         save_config(wallet_node.root_path, "config.yaml", test_config)
 
     # Check key
-    sk_dict = await client.check_delete_key(pks[0])
-    assert sk_dict["fingerprint"] == pks[0]
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is False
+    delete_key_resp = await client.check_delete_key(CheckDeleteKey(pks[0]))
+    assert delete_key_resp.fingerprint == pks[0]
+    assert delete_key_resp.used_for_farmer_rewards is False
+    assert delete_key_resp.used_for_pool_rewards is False
 
     await client.delete_key(DeleteKey(pks[0]))
     await client.log_in(LogIn(uint32(pks[1])))

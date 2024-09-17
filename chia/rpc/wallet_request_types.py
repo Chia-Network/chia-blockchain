@@ -131,6 +131,22 @@ class DeleteKey(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class CheckDeleteKey(Streamable):
+    fingerprint: uint32
+    max_ph_to_search: uint16 = uint16(100)
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckDeleteKeyResponse(Streamable):
+    fingerprint: uint32
+    used_for_farmer_rewards: bool
+    used_for_pool_rewards: bool
+    wallet_balance: bool
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[List[bytes32]] = None
     start: Optional[uint32] = None
