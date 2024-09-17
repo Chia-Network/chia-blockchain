@@ -427,7 +427,7 @@ class TestFullNodeBlockCompression:
                     await _validate_and_add_block_no_error(blockchain, reorg_block)
                 for i in range(1, height):
                     results = await pre_validate_blocks_multiprocessing(
-                        bt.constants,
+                        blockchain.constants,
                         blockchain,
                         all_blocks[:i],
                         blockchain.pool,
@@ -446,7 +446,7 @@ class TestFullNodeBlockCompression:
                     await _validate_and_add_block_no_error(blockchain, block)
                 for i in range(1, height):
                     results = await pre_validate_blocks_multiprocessing(
-                        bt.constants,
+                        blockchain.constants,
                         blockchain,
                         all_blocks[:i],
                         blockchain.pool,

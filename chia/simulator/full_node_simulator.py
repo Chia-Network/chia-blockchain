@@ -170,12 +170,11 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pool = self.full_node.blockchain.pool
                 pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
-                    self.bt.constants,
+                    self.full_node.blockchain.constants,
                     self.full_node.blockchain,
                     [genesis],
-                    pool,
+                    self.full_node.blockchain.pool,
                     {},
                     sub_slot_iters=ssi,
                     difficulty=diff,
@@ -234,12 +233,11 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pool = self.full_node.blockchain.pool
                 pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
-                    self.bt.constants,
+                    self.full_node.blockchain.constants,
                     self.full_node.blockchain,
                     [genesis],
-                    pool,
+                    self.full_node.blockchain.pool,
                     {},
                     sub_slot_iters=ssi,
                     difficulty=diffculty,

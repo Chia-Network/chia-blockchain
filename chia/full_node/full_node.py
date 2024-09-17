@@ -1333,12 +1333,11 @@ class FullNode:
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.monotonic()
-        pool = self.blockchain.pool
         pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
-            self.constants,
+            self.blockchain.constants,
             self.blockchain,
             blocks_to_validate,
-            pool,
+            self.blockchain.pool,
             {},
             sub_slot_iters=current_ssi,
             difficulty=current_difficulty,
@@ -1864,12 +1863,11 @@ class FullNode:
                 prev_ses_block = curr
             new_slot = len(block.finished_sub_slots) > 0
             ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
-            pool = self.blockchain.pool
             pre_validation_results = await pre_validate_blocks_multiprocessing(
-                self.constants,
+                self.blockchain.constants,
                 self.blockchain,
                 [block],
-                pool,
+                self.blockchain.pool,
                 npc_results,
                 sub_slot_iters=ssi,
                 difficulty=diff,

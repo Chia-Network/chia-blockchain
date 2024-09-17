@@ -3949,8 +3949,8 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
 async def test_get_tx_peak(default_400_blocks: List[FullBlock], empty_blockchain: Blockchain) -> None:
     bc = empty_blockchain
     test_blocks = default_400_blocks[:100]
-    ssi = empty_blockchain.constants.SUB_SLOT_ITERS_STARTING
-    diff = empty_blockchain.constants.DIFFICULTY_STARTING
+    ssi = bc.constants.SUB_SLOT_ITERS_STARTING
+    diff = bc.constants.DIFFICULTY_STARTING
     res = await pre_validate_blocks_multiprocessing(
         bc.constants,
         bc,
