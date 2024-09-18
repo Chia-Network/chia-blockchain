@@ -4,7 +4,7 @@ import hashlib
 import struct
 from dataclasses import astuple, dataclass
 from random import Random
-from typing import Dict, Generic, List, Set, Type, TypeVar, final
+from typing import Dict, Generic, List, Set, Tuple, Type, TypeVar, final
 
 import pytest
 
@@ -206,6 +206,7 @@ def generate_kvid(seed: int) -> Tuple[KVId, KVId]:
         kv_ids.append(hash_int)
 
     return tuple(kv_ids)
+
 
 def generate_hash(seed: int) -> bytes:
     seed_bytes = seed.to_bytes(8, byteorder="big")
