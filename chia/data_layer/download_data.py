@@ -376,14 +376,16 @@ async def http_download(
         ) as resp:
             resp.raise_for_status()
             size = int(resp.headers.get("content-length", 0))
-            log.debug(f"Downloading delta file {filename}. Size {size} bytes.")
+            log.info(f"Downloading delta file {filename}. Size {size} bytes.")
+            debug_enabled = log.isEnabledFor(logging.DEBUG)
             progress_byte = 0
             progress_percentage = f"{0:.0%}"
             with target_filename_path.open(mode="wb") as f:
                 async for chunk, _ in resp.content.iter_chunks():
                     f.write(chunk)
-                    progress_byte += len(chunk)
-                    new_percentage = f"{progress_byte / size:.0%}"
-                    if new_percentage != progress_percentage:
-                        progress_percentage = new_percentage
-                        log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
+                    if debug_enabled:
+                        progress_byte += len(chunk)
+                        new_percentage = f"{progress_byte / size:.0%}"
+                        if new_percentage != progress_percentage:
+                            progress_percentage = new_percentage
+                            log.debug(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
