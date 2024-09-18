@@ -197,7 +197,7 @@ def test_merkle_blob_two_leafs_loads() -> None:
 
 
 def generate_kvid(seed: int) -> Tuple[KVId, KVId]:
-    kv_ids = []
+    kv_ids: List[KVId] = []
 
     for offset in range(2):
         seed_bytes = (2 * seed + offset).to_bytes(8, byteorder="big")
@@ -205,7 +205,7 @@ def generate_kvid(seed: int) -> Tuple[KVId, KVId]:
         hash_int = int.from_bytes(hash_obj.digest()[:8], byteorder="big")
         kv_ids.append(KVId(hash_int))
 
-    return tuple(kv_ids)
+    return kv_ids[0], kv_ids[1]
 
 
 def generate_hash(seed: int) -> bytes:
