@@ -203,7 +203,7 @@ def generate_kvid(seed: int) -> Tuple[KVId, KVId]:
         seed_bytes = (2 * seed + offset).to_bytes(8, byteorder="big")
         hash_obj = hashlib.sha256(seed_bytes)
         hash_int = int.from_bytes(hash_obj.digest()[:8], byteorder="big")
-        kv_ids.append(KVID(hash_int))
+        kv_ids.append(KVId(hash_int))
 
     return tuple(kv_ids)
 
