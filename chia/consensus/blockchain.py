@@ -282,7 +282,7 @@ class Blockchain:
             )
             assert npc.error is None
 
-        fork_info.include_spends(npc, block, block.header_hash)
+        fork_info.include_spends(None if npc is None else npc.conds, block, block.header_hash)
 
     async def add_block(
         self,
@@ -412,7 +412,7 @@ class Blockchain:
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
                 await self.advance_fork_info(block, fork_info)
-                fork_info.include_spends(npc_result, block, header_hash)
+                fork_info.include_spends(None if npc_result is None else npc_result.conds, block, header_hash)
                 self.add_block_record(block_rec)
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
@@ -444,7 +444,7 @@ class Blockchain:
         # case we're validating blocks on a fork, the next block validation will
         # need to know of these additions and removals. Also, _reconsider_peak()
         # will need these results
-        fork_info.include_spends(npc_result, block, header_hash)
+        fork_info.include_spends(None if npc_result is None else npc_result.conds, block, header_hash)
 
         # block_to_block_record() require the previous block in the cache
         if not genesis and prev_block is not None:
