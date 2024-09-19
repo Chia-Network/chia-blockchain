@@ -107,7 +107,7 @@ class PeakPostProcessingResult:
     mempool_peak_result: List[NewPeakItem]  # The new items from calling MempoolManager.new_peak
     mempool_removals: List[MempoolRemoveInfo]  # The removed mempool items from calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
-    hints: List[Tuple[bytes32, bytes]]  # The hints added to the DB
+    hints: List[Tuple[bytes32, bytes]]  # The hints for coins affected by the peak
     lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
 
 
@@ -1246,8 +1246,11 @@ class FullNode:
             subscribed_peers = self.subscriptions.peers_for_coin_id(coin_id)
             subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash))
             hint = wallet_update.hints.get(coin_id)
+            self.log.info(f"update_wallets - coin_id: {coin_id} spent at {coin_record.spent}, hint: {hint}")
             if hint is not None:
-                subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(hint))
+                new_subs = self.subscriptions.peers_for_puzzle_hash(hint)
+                self.log.info(f"hint {hint} send to peers: {new_subs}")
+                subscribed_peers.update(new_subs)
             for peer in subscribed_peers:
                 changes_for_peer.setdefault(peer, set()).add(coin_record.coin_state)
 
@@ -1604,10 +1607,19 @@ class FullNode:
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
 
+        removal_hints = dict()
+
+        for coin_id, _ in state_change_summary.removals:
+            hints = await self.hint_store.get_hints([coin_id])
+            if len(hints) != 1:
+                continue
+            removal_hints[coin_id] = hints[0]
+
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
             state_change_summary,
             self.subscriptions.has_coin_subscription,
             self.subscriptions.has_puzzle_subscription,
+            removal_hints,
         )
         await self.hint_store.add_hints(hints_to_add)
 
@@ -1672,7 +1684,7 @@ class FullNode:
             mempool_new_peak_result.items,
             mempool_new_peak_result.removals,
             fns_peak_result,
-            hints_to_add,
+            hints_to_add + [(coin_id, hint) for coin_id, hint in removal_hints.items()],
             lookup_coin_ids,
         )
 
