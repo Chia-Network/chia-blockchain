@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import sqlite3
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Deque, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import aiosqlite
 
@@ -280,6 +281,7 @@ class DataStore:
         right_hash: Optional[bytes32],
         key: Optional[bytes],
         value: Optional[bytes],
+        writer: Optional[aiosqlite.Connection] = None,
     ) -> None:
         # TODO: can we get sqlite to do this check?
         values = {
@@ -291,7 +293,10 @@ class DataStore:
             "value": value,
         }
 
-        async with self.db_wrapper.writer() as writer:
+        async with contextlib.AsyncExitStack() as stack:
+            if writer is None:
+                writer = await stack.enter_async_context(self.db_wrapper.writer())
+
             try:
                 await writer.execute(
                     """
@@ -324,15 +329,15 @@ class DataStore:
                         f"Requested insertion of node with matching hash but other values differ: {node_hash}"
                     ) from None
 
-    async def insert_node(self, node_type: NodeType, value1: bytes, value2: bytes) -> None:
+    async def insert_node(self, node_type: NodeType, value1: bytes, value2: bytes, writer: Optional[aiosqlite.Connection] = None) -> None:
         if node_type == NodeType.INTERNAL:
             left_hash = bytes32(value1)
             right_hash = bytes32(value2)
             node_hash = internal_hash(left_hash, right_hash)
-            await self._insert_node(node_hash, node_type, bytes32(value1), bytes32(value2), None, None)
+            await self._insert_node(node_hash, node_type, bytes32(value1), bytes32(value2), None, None, writer=writer)
         else:
             node_hash = leaf_hash(key=value1, value=value2)
-            await self._insert_node(node_hash, node_type, None, None, value1, value2)
+            await self._insert_node(node_hash, node_type, None, None, value1, value2, writer=writer)
 
     async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
         node_hash: bytes32 = internal_hash(left_hash=left_hash, right_hash=right_hash)
@@ -1599,16 +1604,26 @@ class DataStore:
 
             if len(pending_upsert_new_hashes) > 0:
                 to_update_hashes: Set[bytes32] = set(pending_upsert_new_hashes.keys())
-                to_update_queue: List[bytes32] = list(pending_upsert_new_hashes.keys())
+                from collections import deque
+                to_update_queue: Deque[bytes32] = deque(pending_upsert_new_hashes.keys())
                 batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
 
+                generation = await self.get_tree_generation(store_id=store_id)
+                # import itertools
+
                 while len(to_update_queue) > 0:
-                    nodes = await self._get_one_ancestor_multiple_hashes(to_update_queue[:batch_size], store_id)
-                    to_update_queue = to_update_queue[batch_size:]
-                    for node in nodes:
-                        if node.hash not in to_update_hashes:
-                            to_update_hashes.add(node.hash)
-                            to_update_queue.append(node.hash)
+                    batch = [to_update_queue.popleft() for _ in range(batch_size)]
+                    hashes = await self._get_one_ancestor_multiple_hashes(batch, store_id, generation=generation)
+                    # for _ in range(batch_size):
+                    #     to_update_queue.popleft()
+                    # to_update_queue = to_update_queue[batch_size:]
+                    new_hashes = hashes - to_update_hashes
+                    to_update_queue.extend(new_hashes)
+                    to_update_hashes.update(new_hashes)
+                    # for hash in hashes:
+                    #     if hash not in to_update_hashes:
+                    #         to_update_hashes.add(hash)
+                    #         to_update_queue.append(hash)
 
                 assert latest_local_root is not None
                 assert latest_local_root.node_hash is not None
@@ -1712,29 +1727,26 @@ class DataStore:
 
     async def _get_one_ancestor_multiple_hashes(
         self,
-        node_hashes: List[bytes32],
+        node_hashes: Iterable[bytes32],
         store_id: bytes32,
-        generation: Optional[int] = None,
-    ) -> List[InternalNode]:
+        generation: int,
+    ) -> Set[bytes32]:
         async with self.db_wrapper.reader() as reader:
-            node_hashes_place_holders = ",".join("?" for _ in node_hashes)
-            if generation is None:
-                generation = await self.get_tree_generation(store_id=store_id)
-            cursor = await reader.execute(
+            cursor = await reader.executemany(
                 f"""
-                SELECT * from node INNER JOIN (
+                SELECT hash from node INNER JOIN (
                     SELECT ancestors.ancestor AS hash, MAX(ancestors.generation) AS generation
                     FROM ancestors
-                    WHERE ancestors.hash IN ({node_hashes_place_holders})
+                    WHERE ancestors.hash == ?
                     AND ancestors.tree_id == ?
                     AND ancestors.generation <= ?
                     GROUP BY hash
-                ) asc on asc.hash == node.hash
+                )
                 """,
-                [*node_hashes, store_id, generation],
+                ((node_hash, store_id, generation) for node_hash in node_hashes),
             )
             rows = await cursor.fetchall()
-            return [InternalNode.from_row(row=row) for row in rows]
+            return {bytes32(row.hash) for row in rows}
 
     async def build_ancestor_table_for_latest_root(self, store_id: bytes32) -> None:
         async with self.db_wrapper.writer() as writer:

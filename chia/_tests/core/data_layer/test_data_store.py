@@ -1408,12 +1408,22 @@ async def test_server_http_ban(
     assert sinfo.ignore_till == start_timestamp  # we don't increase on second failure
 
 
-@pytest.mark.parametrize(
-    "test_delta",
-    [True, False],
-)
+@boolean_datacases(name="pass_writer", false="separate writers", true="passed writer")
+@boolean_datacases(name="create_writer", false="no outer writer", true="outer_writer")
+@boolean_datacases(name="test_delta", false="full", true="delta")
 @pytest.mark.anyio
-async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_delta: bool, tmp_path: Path) -> None:
+async def test_data_server_files(
+    data_store: DataStore,
+    store_id: bytes32,
+    test_delta: bool,
+    tmp_path: Path,
+    benchmark_runner: BenchmarkRunner,
+    create_writer: bool,
+    pass_writer: bool,
+) -> None:
+    if pass_writer and not create_writer:
+        pytest.skip("Can't pass writer without creating it")
+
     roots: List[Root] = []
     num_batches = 10
     num_ops_per_batch = 100
@@ -1432,7 +1442,7 @@ async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_
             for operation in range(num_ops_per_batch):
                 if random.randint(0, 4) > 0 or len(keys) == 0:
                     key = counter.to_bytes(4, byteorder="big")
-                    value = (2 * counter).to_bytes(4, byteorder="big")
+                    value = (2 * counter).to_bytes(65536, byteorder="big")
                     keys.append(key)
                     changelist.append({"action": "insert", "key": key, "value": value})
                 else:
@@ -1447,18 +1457,24 @@ async def test_data_server_files(data_store: DataStore, store_id: bytes32, test_
 
     generation = 1
     assert len(roots) == num_batches
-    for root in roots:
-        assert root.node_hash is not None
-        if not test_delta:
-            filename = get_full_tree_filename(store_id, root.node_hash, generation)
-        else:
-            filename = get_delta_filename(store_id, root.node_hash, generation)
-        assert is_filename_valid(filename)
-        await insert_into_data_store_from_file(data_store, store_id, root.node_hash, tmp_path.joinpath(filename))
-        current_root = await data_store.get_tree_root(store_id=store_id)
-        assert current_root.node_hash == root.node_hash
-        generation += 1
 
+    with benchmark_runner.print_runtime(
+        label="overall",
+        clock=time.monotonic,
+    ):
+        for root in roots:
+            assert root.node_hash is not None
+            if not test_delta:
+                filename = get_full_tree_filename(store_id, root.node_hash, generation)
+            else:
+                filename = get_delta_filename(store_id, root.node_hash, generation)
+            assert is_filename_valid(filename)
+            await insert_into_data_store_from_file(data_store, store_id, root.node_hash, tmp_path.joinpath(filename), create_writer=create_writer, pass_writer=pass_writer)
+            current_root = await data_store.get_tree_root(store_id=store_id)
+            assert current_root.node_hash == root.node_hash
+            generation += 1
+
+    # assert False, "to show output"
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("pending_status", [Status.PENDING, Status.PENDING_BATCH])
