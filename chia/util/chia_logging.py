@@ -53,11 +53,8 @@ def initialize_logging(
     file_name_length = 33 - len(service_name)
     log_date_format = "%Y-%m-%dT%H:%M:%S"
     file_log_formatter = logging.Formatter(
-        fmt=(
-            "%(asctime)s.%(msecs)03d "
-            f"{__version__} {service_name} "
-            "%(name)-{file_name_length}s: %(levelname)-8s %(message)s"
-        ),
+        fmt=f"%(asctime)s.%(msecs)03d {__version__} {service_name} %(name)-{file_name_length}s: "
+            f"%(levelname)-8s %(message)s",
         datefmt=log_date_format,
     )
     handlers: List[logging.Handler] = []
@@ -65,7 +62,7 @@ def initialize_logging(
         stdout_handler = colorlog.StreamHandler()
         stdout_handler.setFormatter(
             colorlog.ColoredFormatter(
-                f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: "
+                f"%(asctime)s.%(msecs)03d {__version__} {service_name} %(name)-{file_name_length}s: "
                 f"%(log_color)s%(levelname)-8s%(reset)s %(message)s",
                 datefmt=log_date_format,
                 reset=True,
