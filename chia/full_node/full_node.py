@@ -1246,11 +1246,8 @@ class FullNode:
             subscribed_peers = self.subscriptions.peers_for_coin_id(coin_id)
             subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(coin_record.coin.puzzle_hash))
             hint = wallet_update.hints.get(coin_id)
-            self.log.info(f"update_wallets - coin_id: {coin_id} spent at {coin_record.spent}, hint: {hint}")
             if hint is not None:
-                new_subs = self.subscriptions.peers_for_puzzle_hash(hint)
-                self.log.info(f"hint {hint} send to peers: {new_subs}")
-                subscribed_peers.update(new_subs)
+                subscribed_peers.update(self.subscriptions.peers_for_puzzle_hash(hint))
             for peer in subscribed_peers:
                 changes_for_peer.setdefault(peer, set()).add(coin_record.coin_state)
 
