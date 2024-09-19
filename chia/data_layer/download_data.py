@@ -377,6 +377,6 @@ async def http_download(
                     if debug_enabled:
                         progress_byte += len(chunk)
                         new_percentage = progress_byte / size
-                        if new_percentage > progress_percentage+0.1 and new_percentage % 0.2 < 0.009:
+                        if new_percentage > progress_percentage + 0.1 and new_percentage % 0.2 < 0.009:
                             progress_percentage = new_percentage
                             log.debug(f"Downloading delta file {filename}. {progress_percentage:.0%} of {size} bytes.")
