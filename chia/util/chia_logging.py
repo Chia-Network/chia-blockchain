@@ -52,7 +52,7 @@ def initialize_logging(
     file_name_length = 33 - len(service_name)
     log_date_format = "%Y-%m-%dT%H:%M:%S"
     file_log_formatter = logging.Formatter(
-        fmt=f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
+        fmt=f"%(asctime)s.%(msecs)03d {chia_short_version()} {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
         datefmt=log_date_format,
     )
     handlers: List[logging.Handler] = []
