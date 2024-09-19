@@ -1921,7 +1921,7 @@ async def test_insert_from_delta_file(
             proxy_url="",
             downloader=None,
             group_files_by_store=group_files_by_store,
-            maximum_full_file_count=max_full_files
+            maximum_full_file_count=max_full_files,
         )
         assert not success
 
@@ -1944,7 +1944,7 @@ async def test_insert_from_delta_file(
             proxy_url="",
             downloader=None,
             group_files_by_store=group_files_by_store,
-            maximum_full_file_count=max_full_files
+            maximum_full_file_count=max_full_files,
         )
         assert success
 

@@ -299,7 +299,7 @@ async def insert_from_delta_file(
                 f"Generation: {existing_generation}. Store id: {store_id}. Nodes inserted: {num_inserted}."
             )
 
-            if target_generation - existing_generation <= maximum_full_file_count-1:
+            if target_generation - existing_generation <= maximum_full_file_count - 1:
                 root = await data_store.get_tree_root(store_id=store_id)
                 with open(filename_full_tree, "wb") as writer:
                     await data_store.write_tree_to_file(root, root_hash, store_id, False, writer)
