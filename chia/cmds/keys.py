@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, Tuple
 
 import click
+from chia_rs import PrivateKey
 
 from chia.cmds import options
 
@@ -59,6 +60,11 @@ def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
     show_default=True,
     is_flag=True,
 )
+@click.option(
+    "--bech32m-prefix",
+    help=("Encode public keys in bech32m with a specified prefix"),
+    default=None,
+)
 @options.create_fingerprint()
 @click.pass_context
 def show_cmd(
@@ -67,10 +73,11 @@ def show_cmd(
     non_observer_derivation: bool,
     json: bool,
     fingerprint: Optional[int],
+    bech32m_prefix: Optional[str],
 ) -> None:
     from .keys_funcs import show_keys
 
-    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint)
+    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint, bech32m_prefix)
 
 
 @keys_cmd.command("add", help="Add a private key by mnemonic or public key as hex")
@@ -198,8 +205,13 @@ def sign_cmd(
 ) -> None:
     from .keys_funcs import resolve_derivation_master_key, sign
 
-    private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
-    sign(message, private_key, hd_path, as_bytes, json)
+    _, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+
+    if resolved_sk is None:
+        print("Could not resolve a secret key to sign with.")
+        return
+
+    sign(message, resolved_sk, hd_path, as_bytes, json)
 
 
 def parse_signature_json(json_str: str) -> Tuple[str, str, str, str]:
@@ -324,9 +336,11 @@ def search_cmd(
     filename: Optional[str] = ctx.obj.get("filename", None)
 
     # Specifying the master key is optional for the search command. If not specified, we'll search all keys.
-    sk = None
-    if fingerprint is None and filename is not None:
-        sk = resolve_derivation_master_key(filename)
+    resolved_sk = None
+    if fingerprint is not None or filename is not None:
+        _, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+        if resolved_sk is None:
+            print("Could not resolve private key from fingerprint/mnemonic file")
 
     found: bool = search_derive(
         ctx.obj["root_path"],
@@ -338,10 +352,34 @@ def search_cmd(
         ("all",) if "all" in search_type else search_type,
         derive_from_hd_path,
         prefix,
-        sk,
+        resolved_sk,
     )
 
     sys.exit(0 if found else 1)
+
+
+class ResolutionError(Exception):
+    pass
+
+
+def _resolve_fingerprint_and_sk(
+    filename: Optional[str], fingerprint: Optional[int], non_observer_derivation: bool
+) -> Tuple[Optional[int], Optional[PrivateKey]]:
+    from .keys_funcs import resolve_derivation_master_key
+
+    reolved_fp, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
+
+    if non_observer_derivation and resolved_sk is None:
+        print("Could not resolve private key for non-observer derivation")
+        raise ResolutionError()
+    else:
+        pass
+
+    if reolved_fp is None:
+        print("A fingerprint of a root key to derive from is required")
+        raise ResolutionError()
+
+    return reolved_fp, resolved_sk
 
 
 @derive_cmd.command("wallet-address", help="Derive wallet receive addresses")
@@ -370,14 +408,15 @@ def search_cmd(
 def wallet_address_cmd(
     ctx: click.Context, index: int, count: int, prefix: Optional[str], non_observer_derivation: bool, show_hd_path: bool
 ) -> None:
-    from .keys_funcs import derive_wallet_address, resolve_derivation_master_key
+    from .keys_funcs import derive_wallet_address
 
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
 
-    sk = None
-    if fingerprint is None and filename is not None:
-        sk = resolve_derivation_master_key(filename)
+    try:
+        fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)
+    except ResolutionError:
+        return
 
     derive_wallet_address(
         ctx.obj["root_path"], fingerprint, index, count, prefix, non_observer_derivation, show_hd_path, sk
@@ -427,6 +466,11 @@ def wallet_address_cmd(
     show_default=True,
     is_flag=True,
 )
+@click.option(
+    "--bech32m-prefix",
+    help=("Encode public keys in bech32m with a specified prefix"),
+    default=None,
+)
 @click.pass_context
 def child_key_cmd(
     ctx: click.Context,
@@ -437,8 +481,9 @@ def child_key_cmd(
     non_observer_derivation: bool,
     show_private_keys: bool,
     show_hd_path: bool,
+    bech32m_prefix: Optional[str],
 ) -> None:
-    from .keys_funcs import derive_child_key, resolve_derivation_master_key
+    from .keys_funcs import derive_child_key
 
     if key_type is None and derive_from_hd_path is None:
         ctx.fail("--type or --derive-from-hd-path is required")
@@ -446,9 +491,10 @@ def child_key_cmd(
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
 
-    sk = None
-    if fingerprint is None and filename is not None:
-        sk = resolve_derivation_master_key(filename)
+    try:
+        fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)
+    except ResolutionError:
+        return
 
     derive_child_key(
         fingerprint,
@@ -460,4 +506,5 @@ def child_key_cmd(
         show_private_keys,
         show_hd_path,
         sk,
+        bech32m_prefix,
     )

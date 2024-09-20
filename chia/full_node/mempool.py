@@ -234,10 +234,9 @@ class Mempool:
             yield self._row_to_item(row)
 
     def size(self) -> int:
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT Count(name) FROM tx")
-            val = cursor.fetchone()
-            return 0 if val is None else int(val[0])
+        cursor = self._db_conn.execute("SELECT COUNT(name) FROM tx")
+        row = cursor.fetchone()
+        return int(row[0])
 
     def get_item_by_id(self, item_id: bytes32) -> Optional[MempoolItem]:
         with self._db_conn:
@@ -495,8 +494,7 @@ class Mempool:
         sigs: List[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         bundle_creation_start = monotonic()
-        with self._db_conn:
-            cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
+        cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")
         skipped_items = 0
         for row in cursor:
             name = bytes32(row[0])

@@ -11,6 +11,7 @@ from click.testing import CliRunner, Result
 
 from chia.cmds.chia import cli
 from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, sign_cmd, verify_cmd
+from chia.cmds.keys_funcs import get_private_key_with_fingerprint_or_prompt
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
@@ -22,6 +23,7 @@ TEST_MNEMONIC_SEED = (
     "tomato remind jaguar original blur embody project can"
 )
 TEST_PUBLIC_KEY = "8a37cad4c5edf0a7544cbdb9f9383f7c5e82567d0236dc4f5b0547137afff9a5ce33aece3358d0202cafb9a12607ab53"
+TEST_BECH32_PUBKEY = "bls123814rygqxr4ryyadg0tx9cprt55vzpamcumr34v3ys66cynl6qx43emhm35nlz8clfxnujzkhpvkvqf5n2fxpd"
 TEST_PK_FINGERPRINT = 2167729070
 TEST_FINGERPRINT = 2877570395
 
@@ -339,6 +341,10 @@ class TestKeysCommands:
         assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
         assert result.output.find(f"Fingerprint: {TEST_PK_FINGERPRINT}") != -1
         assert result.output.find("First wallet address (non-observer): N/A") != -1
+
+        # Try with bech32 formatting
+        result = runner.invoke(cli, [*base_params, *cmd_params, "--bech32m-prefix", "bls1238"])
+        assert result.output.find(TEST_BECH32_PUBKEY) != -1
 
     def test_show_fingerprint(self, keyring_with_one_public_one_private_key, tmp_path):
         """
@@ -1342,7 +1348,7 @@ class TestKeysCommands:
             ],
         )
         assert result.exit_code == 0
-        assert result.output.find("Need a private key for non observer derivation of wallet addresses") != -1
+        assert result.output.find("Could not resolve private key for non-observer derivation") != -1
 
     def test_derive_wallet_testnet_address(self, tmp_path, keyring_with_one_public_one_private_key):
         """
@@ -1643,6 +1649,8 @@ class TestKeysCommands:
                 "--count",
                 "1",
                 "--show-hd-path",
+                "--bech32m-prefix",
+                "bls1238",
             ],
         )
 
@@ -1650,7 +1658,7 @@ class TestKeysCommands:
         assert (
             result.output.find(
                 "Wallet public key 9 (m/12381/8444/2/9): "
-                "a272d5aaa6046e64bd7fd69bae288b9f9e5622c13058ec7d1b85e3d4d1acfa5d63d6542336c7b24d2fceab991919e989"
+                "bls123815fedt24xq3hxf0tl66d6u2ytn709vgkpxpvwclgmsh3af5dvlfwk84j5yvmv0vjd9l82hxger85cjly2r27"
             )
             != -1
         )
@@ -1678,9 +1686,7 @@ class TestKeysCommands:
             ],
         )
 
-        assert isinstance(result.exception, ValueError) and result.exception.args == (
-            "Cannot perform non-observer derivation on an observer-only key",
-        )
+        assert result.output.find("Could not resolve private key for non-observer derivation") != -1
 
         result: Result = runner.invoke(
             cli,
@@ -1707,3 +1713,22 @@ class TestKeysCommands:
         assert isinstance(result.exception, ValueError) and result.exception.args == (
             "Hardened path specified for observer key",
         )
+
+    @pytest.mark.anyio
+    async def test_get_private_key_with_fingerprint_or_prompt(
+        self, monkeypatch, keyring_with_one_public_one_private_key
+    ) -> None:
+        [sk1_plus_ent] = keyring_with_one_public_one_private_key.get_all_private_keys()
+        sk1, _ = sk1_plus_ent
+        [pk1, pk2] = keyring_with_one_public_one_private_key.get_all_public_keys()
+        assert pk1.get_fingerprint() == TEST_FINGERPRINT
+        assert pk2.get_fingerprint() == TEST_PK_FINGERPRINT
+
+        assert get_private_key_with_fingerprint_or_prompt(TEST_FINGERPRINT) == (TEST_FINGERPRINT, sk1)
+        assert get_private_key_with_fingerprint_or_prompt(TEST_PK_FINGERPRINT) == (TEST_PK_FINGERPRINT, None)
+
+        monkeypatch.setattr("builtins.input", lambda _: "1")
+        assert get_private_key_with_fingerprint_or_prompt(None) == (TEST_FINGERPRINT, sk1)
+
+        monkeypatch.setattr("builtins.input", lambda _: "2")
+        assert get_private_key_with_fingerprint_or_prompt(None) == (TEST_PK_FINGERPRINT, None)

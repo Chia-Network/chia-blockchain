@@ -332,7 +332,7 @@ async def run_add_block_benchmark(version: int) -> None:
 
         start = monotonic()
         for i in tx_block_heights:
-            gens = await block_store.get_generators_at([i])
+            gens = await block_store.get_generators_at({i})
             assert len(gens) == 1
 
         stop = monotonic()

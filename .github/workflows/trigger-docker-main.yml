@@ -1,0 +1,37 @@
+name: 📦🚀 Trigger Main Docker Build
+
+on:
+  push:
+    paths-ignore:
+      - "**.md"
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  trigger:
+    name: Trigger building a new `main` tag for the chia-docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger docker main workflow via github-glue
+        uses: Chia-Network/actions/github/glue@main
+        with:
+          json_data: "{}"
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "docker-build-main/${{ github.sha }}"
+          glue_path: "start"
+
+      - name: Trigger docker main success via github-glue
+        uses: Chia-Network/actions/github/glue@main
+        with:
+          json_data: "{}"
+          glue_url: "${{ secrets.GLUE_API_URL }}"
+          glue_project: "docker-build-main/${{ github.sha }}"
+          glue_path: "success/build-main"
