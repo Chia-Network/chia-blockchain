@@ -6,6 +6,8 @@ import inspect
 import sys
 from contextlib import asynccontextmanager
 from dataclasses import MISSING, dataclass, field, fields
+from functools import cached_property
+from pathlib import Path
 from typing import (
     Any,
     AsyncIterator,
@@ -24,11 +26,12 @@ from typing import (
 import click
 from typing_extensions import dataclass_transform
 
-from chia.cmds.cmds_util import get_wallet_client
+from chia.cmds.cmds_util import TransactionBundle, get_wallet_client
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import is_type_SpecificOptional
+from chia.wallet.transaction_record import TransactionRecord
 
 SyncCmd = Callable[..., None]
 
@@ -313,3 +316,34 @@ class NeedsWalletRPC:
                 config,
             ):
                 yield WalletClientInfo(wallet_client, fp, config)
+
+
+@command_helper
+class TransactionsIn:
+    transaction_file_in: str = option(
+        "--transaction-file-in",
+        "-i",
+        type=str,
+        help="Transaction file to use as input",
+        required=True,
+    )
+
+    @cached_property
+    def transaction_bundle(self) -> TransactionBundle:
+        with open(Path(self.transaction_file_in), "rb") as file:
+            return TransactionBundle.from_bytes(file.read())
+
+
+@command_helper
+class TransactionsOut:
+    transaction_file_out: str = option(
+        "--transaction-file-out",
+        "-o",
+        type=str,
+        help="Transaction filename to use as output",
+        required=True,
+    )
+
+    def handle_transaction_output(self, output: List[TransactionRecord]) -> None:
+        with open(Path(self.transaction_file_out), "wb") as file:
+            file.write(bytes(TransactionBundle(output)))
