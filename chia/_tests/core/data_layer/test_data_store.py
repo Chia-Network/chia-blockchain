@@ -6,6 +6,7 @@ import os
 import random
 import re
 import statistics
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -1553,27 +1554,36 @@ def process_big_o(
     simplicity_bias = simplicity_bias_percentage * fitted[best_class]
     best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations, simplicity_bias=simplicity_bias)
 
-    print(f"allowed simplicity bias: {simplicity_bias}")
-    print(big_o.reports.big_o_report(best=best_class, others=fitted))
+    lines: List[str] = []
+    try:
+        lines.append(f"allowed simplicity bias: {simplicity_bias}")
+        lines.append(big_o.reports.big_o_report(best=best_class, others=fitted))
 
-    required_class, required_residuals = next((k, v) for k, v in fitted.items() if isinstance(k, required_complexity))
-    best_residuals = fitted[best_class]
-    close_enough = abs(best_residuals - required_residuals) < simplicity_bias
+        required_class, required_residuals = next(
+            (k, v) for k, v in fitted.items() if isinstance(k, required_complexity)
+        )
+        best_residuals = fitted[best_class]
+        close_enough = abs(best_residuals - required_residuals) < simplicity_bias
 
-    if best_class.order == required_complexity.order:
-        return
-    elif best_class.order > required_complexity.order:
-        if not close_enough:
-            assert False, f"must be at least {required_complexity.__name__} got: {best_class}"
-    elif best_class.order < required_complexity.order:
-        if not close_enough:
-            assert (
-                best_class.order == required_complexity.order
-            ), f"performance improved from {required_complexity.__name__} got: {best_class}"
+        if best_class.order == required_complexity.order:
+            return
+        elif best_class.order > required_complexity.order:
+            if not close_enough:
+                lines.append(f"must be at least {required_complexity.__name__} got: {best_class}")
+                assert False
+        elif best_class.order < required_complexity.order:
+            if not close_enough:
+                lines.append(f"performance improved from {required_complexity.__name__} got: {best_class}")
+                assert False
 
-    # not equal but close enough
-    assert close_enough
-    print(f"expected {required_complexity.__name__} and got close enough, best: {best_class}")
+        # not equal but close enough
+        assert close_enough
+        lines.append(f"expected {required_complexity.__name__} and got close enough, best: {best_class}")
+    except Exception:
+        print("\n".join(lines), file=sys.stderr)
+        raise
+    else:
+        print("\n".join(lines), file=sys.stderr)
 
     # TODO: restore this for some actual runtime limits?
     # coefficient_maximums = [0.65, 0.000_25, *(10**-n for n in range(5, 100))]
