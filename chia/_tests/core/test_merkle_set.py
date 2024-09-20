@@ -93,7 +93,7 @@ async def test_merkle_set_duplicate() -> None:
 async def test_merkle_set_0() -> None:
     merkle_set = MerkleSet([])
     assert merkle_set.get_root() == bytes32(compute_merkle_set_root([]))
-    assert merkle_set.get_root() == bytes32([0] * 32)
+    assert merkle_set.get_root() == bytes32.zeros
 
 
 @pytest.mark.anyio
@@ -155,7 +155,7 @@ async def test_merkle_set_4() -> None:
 
 @pytest.mark.anyio
 async def test_merkle_set_5() -> None:
-    BLANK = bytes32([0] * 32)
+    BLANK = bytes32.zeros
 
     a = bytes32([0x58] + [0] * 31)
     b = bytes32([0x23] + [0] * 31)
@@ -202,7 +202,7 @@ async def test_merkle_set_5() -> None:
 
 @pytest.mark.anyio
 async def test_merkle_left_edge() -> None:
-    BLANK = bytes32([0] * 32)
+    BLANK = bytes32.zeros
     a = bytes32([0x80] + [0] * 31)
     b = bytes32([0] * 31 + [1])
     c = bytes32([0] * 31 + [2])
@@ -241,7 +241,7 @@ async def test_merkle_left_edge() -> None:
 
 @pytest.mark.anyio
 async def test_merkle_right_edge() -> None:
-    BLANK = bytes32([0] * 32)
+    BLANK = bytes32.zeros
     a = bytes32([0x40] + [0] * 31)
     b = bytes32([0xFF] * 31 + [0xFF])
     c = bytes32([0xFF] * 31 + [0xFE])

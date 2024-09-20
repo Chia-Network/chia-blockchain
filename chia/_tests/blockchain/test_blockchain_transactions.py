@@ -21,7 +21,7 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 
-BURN_PUZZLE_HASH = bytes32(b"0" * 32)
+BURN_PUZZLE_HASH = bytes32.zeros
 
 WALLET_A = WalletTool(test_constants)
 WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]

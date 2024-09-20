@@ -25,7 +25,7 @@ from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 
 from .make_block_generator import make_block_generator
 
-BURN_PUZZLE_HASH = bytes32(b"0" * 32)
+BURN_PUZZLE_HASH = bytes32.zeros
 SMALL_BLOCK_GENERATOR = make_block_generator(1)
 
 log = logging.getLogger(__name__)

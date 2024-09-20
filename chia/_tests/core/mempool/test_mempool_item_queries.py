@@ -32,7 +32,7 @@ IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 OTHER_PUZZLE = Program.to(2)
 OTHER_PUZZLE_HASH = OTHER_PUZZLE.get_tree_hash()
 
-IDENTITY_COIN_1 = Coin(bytes32(b"0" * 32), IDENTITY_PUZZLE_HASH, uint64(1000))
+IDENTITY_COIN_1 = Coin(bytes32.zeros, IDENTITY_PUZZLE_HASH, uint64(1000))
 IDENTITY_COIN_2 = Coin(bytes32(b"1" * 32), IDENTITY_PUZZLE_HASH, uint64(1000))
 IDENTITY_COIN_3 = Coin(bytes32(b"2" * 32), IDENTITY_PUZZLE_HASH, uint64(1000))
 
@@ -136,7 +136,7 @@ def test_by_spend_puzzle_hashes() -> None:
     ]
 
     # And an unrelated puzzle hash.
-    assert mempool.items_with_puzzle_hashes({bytes32(b"0" * 32)}, False) == []
+    assert mempool.items_with_puzzle_hashes({bytes32.zeros}, False) == []
 
 
 def test_by_created_coin_id() -> None:

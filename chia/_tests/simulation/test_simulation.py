@@ -313,7 +313,7 @@ class TestSimulation:
             peak = full_node_api.full_node.blockchain.get_peak()
             assert isinstance(peak, BlockRecord)
             start_time = peak.timestamp
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
             peak = full_node_api.full_node.blockchain.get_peak()
             assert isinstance(peak, BlockRecord)
             end_time = peak.timestamp

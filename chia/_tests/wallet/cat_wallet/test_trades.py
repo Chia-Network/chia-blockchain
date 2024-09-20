@@ -1670,7 +1670,7 @@ async def test_trade_cancellation(
     # Cancelling the trade and trying an ID that doesn't exist just in case
     async with trade_manager_maker.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
         await trade_manager_maker.cancel_pending_offers(
-            [trade_make.trade_id, bytes32([0] * 32)], action_scope, secure=False
+            [trade_make.trade_id, bytes32.zeros], action_scope, secure=False
         )
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
@@ -1757,7 +1757,7 @@ async def test_trade_cancellation(
     chia_and_cat_for_something: OfferSummary = {
         wallet_maker.id(): -5,
         cat_wallet_maker.id(): -6,
-        bytes32([0] * 32): 1,  # Doesn't matter
+        bytes32.zeros: 1,  # Doesn't matter
     }
 
     # Now we're going to create the other way around for test coverage sake
@@ -1765,7 +1765,7 @@ async def test_trade_cancellation(
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             chia_and_cat_for_something,
             action_scope,
-            driver_dict={bytes32([0] * 32): PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
+            driver_dict={bytes32.zeros: PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
         )
     assert error is None
     assert success is True

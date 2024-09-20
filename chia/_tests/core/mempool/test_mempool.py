@@ -66,7 +66,7 @@ from chia.util.ints import uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
 
-BURN_PUZZLE_HASH = bytes32(b"0" * 32)
+BURN_PUZZLE_HASH = bytes32.zeros
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
 
 log = logging.getLogger(__name__)

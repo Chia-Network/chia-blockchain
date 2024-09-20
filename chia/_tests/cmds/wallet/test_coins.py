@@ -107,7 +107,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         wallet_id=uint32(1),
         number_of_coins=uint16(500),
         largest_first=True,
-        target_coin_ids=[bytes32([0] * 32)],
+        target_coin_ids=[bytes32.zeros],
         target_coin_amount=uint64(1_000_000_000_000),
         fee=uint64(1_000_000_000),
         push=False,

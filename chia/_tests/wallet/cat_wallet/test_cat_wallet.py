@@ -1170,14 +1170,14 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework) -> 
     async with cat_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
     ) as action_scope:
-        await cat_wallet.generate_signed_transaction([uint64(max_sent_amount - 1)], [bytes32([0] * 32)], action_scope)
+        await cat_wallet.generate_signed_transaction([uint64(max_sent_amount - 1)], [bytes32.zeros], action_scope)
     assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount - 1)
 
     # 2) Generate transaction that is equal to limit
     async with cat_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=False
     ) as action_scope:
-        await cat_wallet.generate_signed_transaction([uint64(max_sent_amount)], [bytes32([0] * 32)], action_scope)
+        await cat_wallet.generate_signed_transaction([uint64(max_sent_amount)], [bytes32.zeros], action_scope)
     assert action_scope.side_effects.transactions[0].amount == uint64(max_sent_amount)
 
     # 3) Generate transaction that is greater than limit
@@ -1185,9 +1185,7 @@ async def test_cat_max_amount_send(wallet_environments: WalletTestFramework) -> 
         async with cat_wallet.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=False
         ) as action_scope:
-            await cat_wallet.generate_signed_transaction(
-                [uint64(max_sent_amount + 1)], [bytes32([0] * 32)], action_scope
-            )
+            await cat_wallet.generate_signed_transaction([uint64(max_sent_amount + 1)], [bytes32.zeros], action_scope)
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
@@ -1537,7 +1535,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework) ->
                                 1,
                                 [
                                     [51, inner_puzhash, cat_amount_1],
-                                    [51, bytes32([0] * 32), cat_amount_0 - cat_amount_1],
+                                    [51, bytes32.zeros, cat_amount_0 - cat_amount_1],
                                 ],
                             ),
                             None,
@@ -1590,7 +1588,7 @@ async def test_unacknowledged_cat_table() -> None:
                 return bytes32([i] * 32)
 
             def coin_state(i: int) -> CoinState:
-                return CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(i)), None, None)
+                return CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(i)), None, None)
 
             await interested_store.add_unacknowledged_coin_state(asset_id(0), coin_state(0), None)
             await interested_store.add_unacknowledged_coin_state(asset_id(1), coin_state(1), 100)

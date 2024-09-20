@@ -30,14 +30,14 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 
 DEFAULT_PROOF_OF_SPACE = ProofOfSpace(
-    bytes32([0] * 32),
+    bytes32.zeros,
     G1Element(),
     None,
     G1Element(),
     uint8(20),
     bytes(32 * 5),
 )
-DEFAULT_VDF_INFO = VDFInfo(bytes32([0] * 32), uint64(1), ClassgroupElement(bytes100([0] * 100)))
+DEFAULT_VDF_INFO = VDFInfo(bytes32.zeros, uint64(1), ClassgroupElement(bytes100.zeros))
 DEFAULT_VDF_PROOF = VDFProof(uint8(0), bytes(100), False)
 
 
@@ -170,7 +170,7 @@ def finish_block(
             new_height,
             uint128(1),
             uint8(1),
-            bytes32([0] * 32),
+            bytes32.zeros,
             unfinished_block.reward_chain_block.proof_of_space,
             DEFAULT_VDF_INFO,
             G2Element(),
@@ -263,21 +263,21 @@ def get_full_block_and_block_record(
     additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
     removals_root = bytes32(compute_merkle_set_root(removal_ids))
 
-    generator_hash = bytes32([0] * 32)
+    generator_hash = bytes32.zeros
     if block_generator is not None:
         generator_hash = std_hash(block_generator.program)
 
     foliage_data = FoliageBlockData(
-        bytes32([0] * 32),
+        bytes32.zeros,
         pool_target,
         G2Element(),
         farmer_reward_puzzlehash,
-        bytes32([0] * 32),
+        bytes32.zeros,
     )
 
     transactions_info = TransactionsInfo(
         generator_hash,
-        bytes32([0] * 32),
+        bytes32.zeros,
         G2Element(),
         fees,
         uint64(constants.MAX_BLOCK_COST_CLVM),
@@ -295,7 +295,7 @@ def get_full_block_and_block_record(
 
     foliage = Foliage(
         prev_block_hash,
-        bytes32([0] * 32),
+        bytes32.zeros,
         foliage_data,
         G2Element(),
         foliage_transaction_block.get_hash(),
@@ -306,7 +306,7 @@ def get_full_block_and_block_record(
         RewardChainBlockUnfinished(
             uint128(1),
             uint8(1),
-            bytes32([0] * 32),
+            bytes32.zeros,
             DEFAULT_PROOF_OF_SPACE,
             None,
             G2Element(),

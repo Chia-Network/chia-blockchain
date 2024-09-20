@@ -229,7 +229,7 @@ class SpendSim:
 
     async def farm_block(
         self,
-        puzzle_hash: bytes32 = bytes32(b"0" * 32),
+        puzzle_hash: bytes32 = bytes32.zeros,
         item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
     ) -> Tuple[List[Coin], List[Coin]]:
         # Fees get calculated

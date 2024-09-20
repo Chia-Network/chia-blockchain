@@ -634,7 +634,7 @@ async def test_coin_state_batches(
 @pytest.mark.parametrize("cut_off_middle", [True, False])
 async def test_batch_many_coin_states(db_version: int, cut_off_middle: bool) -> None:
     async with DBConnection(db_version) as db_wrapper:
-        ph = bytes32(b"0" * 32)
+        ph = bytes32.zeros
 
         # Generate coin records.
         coin_records: List[CoinRecord] = []

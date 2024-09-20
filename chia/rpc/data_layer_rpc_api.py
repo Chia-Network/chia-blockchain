@@ -199,7 +199,7 @@ class DataLayerRpcApi:
             keys = keys_paginated.keys
 
         # NOTE: here we do support zeros as the empty root
-        if keys == [] and resolved_root_hash is not unspecified and resolved_root_hash != bytes32([0] * 32):
+        if keys == [] and resolved_root_hash is not unspecified and resolved_root_hash != bytes32.zeros:
             raise Exception(f"Can't find keys for {resolved_root_hash}")
 
         response: EndpointResult = {"keys": [f"0x{key.hex()}" for key in keys]}
@@ -239,7 +239,7 @@ class DataLayerRpcApi:
 
         json_nodes = [recurse_jsonify(dataclasses.asdict(node)) for node in keys_values]
         # NOTE: here we do support zeros as the empty root
-        if not json_nodes and resolved_root_hash is not unspecified and resolved_root_hash != bytes32([0] * 32):
+        if not json_nodes and resolved_root_hash is not unspecified and resolved_root_hash != bytes32.zeros:
             raise Exception(f"Can't find keys and values for {resolved_root_hash}")
 
         response: EndpointResult = {"keys_values": json_nodes}

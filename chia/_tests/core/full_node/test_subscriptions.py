@@ -20,7 +20,7 @@ OTHER_PUZZLE_HASH = OTHER_PUZZLE.get_tree_hash()
 HINT_PUZZLE = Program.to(3)
 HINT_PUZZLE_HASH = HINT_PUZZLE.get_tree_hash()
 
-IDENTITY_COIN = Coin(bytes32(b"0" * 32), IDENTITY_PUZZLE_HASH, uint64(1000))
+IDENTITY_COIN = Coin(bytes32.zeros, IDENTITY_PUZZLE_HASH, uint64(1000))
 OTHER_COIN = Coin(bytes32(b"3" * 32), OTHER_PUZZLE_HASH, uint64(1000))
 
 EMPTY_SIGNATURE = AugSchemeMPL.aggregate([])

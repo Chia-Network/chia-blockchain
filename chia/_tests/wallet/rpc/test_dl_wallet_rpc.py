@@ -77,11 +77,11 @@ class TestWalletRpc:
         await validate_get_routes(client_2, wallet_services[1].rpc_server.rpc_api)
 
         try:
-            merkle_root: bytes32 = bytes32([0] * 32)
+            merkle_root: bytes32 = bytes32.zeros
             txs, launcher_id = await client.create_new_dl(merkle_root, uint64(50))
 
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
             async def is_singleton_confirmed(rpc_client: WalletRpcClient, lid: bytes32) -> bool:
@@ -99,7 +99,7 @@ class TestWalletRpc:
             await client.dl_update_root(launcher_id, new_root, uint64(100))
 
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
             new_singleton_record = await client.dl_latest_singleton(launcher_id)
@@ -163,7 +163,7 @@ class TestWalletRpc:
             txs, launcher_id_3 = await client.create_new_dl(merkle_root, uint64(50))
 
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id_2)
@@ -180,7 +180,7 @@ class TestWalletRpc:
             )
 
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
 
             await time_out_assert(15, is_singleton_confirmed, True, client, launcher_id)
@@ -204,7 +204,7 @@ class TestWalletRpc:
             height = full_node_api.full_node.blockchain.get_peak_height()
             assert height is not None
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
             additions = []
             for tx in txs:
@@ -222,7 +222,7 @@ class TestWalletRpc:
             await time_out_assert(15, client.dl_get_mirrors, [mirror], launcher_id)
             await client.dl_delete_mirror(mirror_coin.name(), fee=uint64(2000000000000))
             for i in range(0, 5):
-                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
             await time_out_assert(15, client.dl_get_mirrors, [], launcher_id)
 

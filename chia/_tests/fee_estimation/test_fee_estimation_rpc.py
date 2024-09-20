@@ -184,8 +184,8 @@ async def test_tx(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi], 
     client, full_node_rpc_api = setup_node_and_rpc
     wallet_a: WalletTool = bt.get_pool_wallet_tool()
     my_puzzle_hash = wallet_a.get_new_puzzlehash()
-    recevier_puzzle_hash = bytes32(b"0" * 32)
-    coin_to_spend = Coin(bytes32(b"0" * 32), my_puzzle_hash, uint64(1750000000000))
+    recevier_puzzle_hash = bytes32.zeros
+    coin_to_spend = Coin(bytes32.zeros, my_puzzle_hash, uint64(1750000000000))
     spend_bundle = wallet_a.generate_signed_transaction(
         uint64(coin_to_spend.amount), recevier_puzzle_hash, coin_to_spend
     )
@@ -207,8 +207,8 @@ async def test_multiple(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpc
 def get_test_spendbundle(bt: BlockTools) -> SpendBundle:
     wallet_a: WalletTool = bt.get_pool_wallet_tool()
     my_puzzle_hash = wallet_a.get_new_puzzlehash()
-    recevier_puzzle_hash = bytes32(b"0" * 32)
-    coin_to_spend = Coin(bytes32(b"0" * 32), my_puzzle_hash, uint64(1750000000000))
+    recevier_puzzle_hash = bytes32.zeros
+    coin_to_spend = Coin(bytes32.zeros, my_puzzle_hash, uint64(1750000000000))
     return wallet_a.generate_signed_transaction(uint64(coin_to_spend.amount), recevier_puzzle_hash, coin_to_spend)
 
 

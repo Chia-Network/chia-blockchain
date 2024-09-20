@@ -1011,7 +1011,7 @@ class FullNodeAPI:
             if unfinished_block.is_transaction_block():
                 foliage_transaction_block_hash = unfinished_block.foliage.foliage_transaction_block_hash
             else:
-                foliage_transaction_block_hash = bytes32([0] * 32)
+                foliage_transaction_block_hash = bytes32.zeros
             assert foliage_transaction_block_hash is not None
 
             foliage_block_data: Optional[FoliageBlockData] = None

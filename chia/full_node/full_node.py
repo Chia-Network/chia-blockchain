@@ -2370,7 +2370,7 @@ class FullNode:
                 full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
                     end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                     uint8(0),
-                    bytes32([0] * 32),
+                    bytes32.zeros,
                 )
                 return (
                     make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request),

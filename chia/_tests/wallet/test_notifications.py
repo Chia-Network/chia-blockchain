@@ -36,7 +36,7 @@ async def test_notification_store_backwards_compat() -> None:
                 cursor = await conn.execute(
                     "INSERT OR REPLACE INTO notifications (coin_id, msg, amount) VALUES(?, ?, ?)",
                     (
-                        bytes32([0] * 32),
+                        bytes32.zeros,
                         bytes([0] * 10),
                         bytes([0]),
                     ),

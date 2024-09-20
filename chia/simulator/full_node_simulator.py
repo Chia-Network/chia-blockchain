@@ -309,7 +309,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_blocks_to_puzzlehash(
         self,
         count: int,
-        farm_to: bytes32 = bytes32([0] * 32),
+        farm_to: bytes32 = bytes32.zeros,
         guarantee_transaction_blocks: bool = False,
         timeout: Union[None, _Default, float] = default,
         _wait_for_synced: bool = True,

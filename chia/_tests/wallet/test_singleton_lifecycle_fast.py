@@ -508,7 +508,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     now = CoinTimestamp(10012300, uint32(1))
 
     DELAY_SECONDS = 86400
-    DELAY_PUZZLE_HASH = bytes32([0] * 32)
+    DELAY_PUZZLE_HASH = bytes32.zeros
 
     #######
     # spend coin to a singleton

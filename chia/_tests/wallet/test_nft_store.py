@@ -89,8 +89,8 @@ class TestNftStore:
             assert nft == (await db.get_nft_by_coin_id(nft.coin.name()))
             assert await db.exists(nft.coin.name())
             # negative tests
-            assert (await db.get_nft_by_coin_id(bytes32(b"0" * 32))) is None
-            assert not await db.exists(bytes32(b"0" * 32))
+            assert (await db.get_nft_by_coin_id(bytes32.zeros)) is None
+            assert not await db.exists(bytes32.zeros)
 
     @pytest.mark.anyio
     async def test_nft_remove(self) -> None:

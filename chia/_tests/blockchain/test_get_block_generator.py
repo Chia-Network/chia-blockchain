@@ -53,20 +53,20 @@ DUMMY_PROGRAM = SerializedProgram.from_bytes(b"\x80")
 
 @pytest.mark.anyio
 async def test_failing_lookup() -> None:
-    br = BR(bytes32([0] * 32), DUMMY_PROGRAM, [uint32(1)])
+    br = BR(bytes32.zeros, DUMMY_PROGRAM, [uint32(1)])
     with pytest.raises(KeyError):
         await get_block_generator(zero_hits, br)
 
 
 @pytest.mark.anyio
 async def test_no_generator() -> None:
-    br = BR(bytes32([0] * 32), None, [uint32(1)])
+    br = BR(bytes32.zeros, None, [uint32(1)])
     with pytest.raises(AssertionError):
         await get_block_generator(zero_hits, br)
 
 
 @pytest.mark.anyio
 async def test_no_refs() -> None:
-    br = BR(bytes32([0] * 32), DUMMY_PROGRAM, [])
+    br = BR(bytes32.zeros, DUMMY_PROGRAM, [])
     bg = await get_block_generator(never_called, br)
     assert bg == BlockGenerator(DUMMY_PROGRAM, [])

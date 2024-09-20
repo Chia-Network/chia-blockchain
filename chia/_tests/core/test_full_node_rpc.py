@@ -713,7 +713,7 @@ async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
             full_node_service.config,
         )
 
-        empty_coin_name = bytes32([0] * 32)
+        empty_coin_name = bytes32.zeros
         mempool_item = await client.get_mempool_items_by_coin_name(empty_coin_name)
         assert mempool_item["success"] == True
         assert "mempool_items" in mempool_item

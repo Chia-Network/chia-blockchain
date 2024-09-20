@@ -152,7 +152,7 @@ class DAOWallet:
             raise ValueError(f"Your balance of {bal} mojos is not enough to create {amount_of_cats} CATs")
 
         self.dao_info = DAOInfo(
-            treasury_id=bytes32([0] * 32),
+            treasury_id=bytes32.zeros,
             cat_wallet_id=uint32(0),
             dao_cat_wallet_id=uint32(0),
             proposals_list=[],

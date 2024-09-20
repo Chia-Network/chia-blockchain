@@ -71,7 +71,7 @@ async def setup_chain(
 ) -> None:
     height = start_height
     peak_hash = gen_block_hash(height + chain_id * 65536)
-    parent_hash = bytes32([0] * 32)
+    parent_hash = bytes32.zeros
     while height < length:
         ses = None
         if ses_every is not None and height % ses_every == 0:

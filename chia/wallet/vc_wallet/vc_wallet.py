@@ -556,7 +556,7 @@ class VCWallet:
                             *(
                                 spend
                                 for spend in offer.to_spend_bundle().coin_spends
-                                if spend.coin.parent_coin_info == bytes32([0] * 32)
+                                if spend.coin.parent_coin_info == bytes32.zeros
                             ),
                             *other_spends,
                         ],

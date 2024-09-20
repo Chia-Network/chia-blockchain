@@ -106,7 +106,7 @@ class RoundTripCase:
     RoundTripCase(
         id="Root",
         instance=Root(
-            store_id=bytes32(b"\x00" * 32),
+            store_id=bytes32.zeros,
             node_hash=bytes32(b"\x01" * 32),
             generation=3,
             status=Status.PENDING,
@@ -121,7 +121,7 @@ class RoundTripCase:
         instance=ClearPendingRootsResponse(
             success=True,
             root=Root(
-                store_id=bytes32(b"\x00" * 32),
+                store_id=bytes32.zeros,
                 node_hash=bytes32(b"\x01" * 32),
                 generation=3,
                 status=Status.PENDING,

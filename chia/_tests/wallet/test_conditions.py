@@ -75,7 +75,7 @@ class ConditionSerializations:
         return prog
 
 
-HASH: bytes32 = bytes32([0] * 32)
+HASH: bytes32 = bytes32.zeros
 HASH_HEX: str = HASH.hex()
 PK: bytes = b"\xc0" + bytes(47)
 PK_HEX: str = PK.hex()

@@ -17,7 +17,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 def test_ownership_outer_puzzle() -> None:
     ACS = Program.to(1)
     NIL = Program.to([])
-    owner = bytes32([0] * 32)
+    owner = bytes32.zeros
     # (mod (current_owner conditions solution)
     #     (list current_owner () conditions)
     # )
