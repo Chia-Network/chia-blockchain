@@ -283,10 +283,13 @@ class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: Optional[bool] = None
 
-    def to_json_dict(self) -> Dict[str, Any]:
-        raise NotImplementedError(
-            "to_json_dict is banned on TransactionEndpointRequest, please use .json_serialize_for_transport"
-        )
+    def to_json_dict(self, _avoid_ban: bool = False) -> Dict[str, Any]:
+        if not _avoid_ban:
+            raise NotImplementedError(
+                "to_json_dict is banned on TransactionEndpointRequest, please use .json_serialize_for_transport"
+            )
+        else:
+            return super().to_json_dict()
 
     def json_serialize_for_transport(
         self, tx_config: TXConfig, extra_conditions: Tuple[Condition, ...], timelock_info: ConditionValidTimes
@@ -295,7 +298,7 @@ class TransactionEndpointRequest(Streamable):
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
             "extra_conditions": [condition.to_json_dict() for condition in extra_conditions],
-            **self.to_json_dict(),
+            **self.to_json_dict(_avoid_ban=True),
         }
 
 
