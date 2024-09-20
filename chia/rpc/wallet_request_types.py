@@ -12,7 +12,7 @@ from typing_extensions import dataclass_transform
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
@@ -25,10 +25,9 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-from dabakala.chia.wallet.conditions import ConditionValidTimes
-from dabakala.chia.wallet.util.tx_config import TXConfig
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
 
