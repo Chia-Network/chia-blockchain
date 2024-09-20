@@ -71,7 +71,7 @@ def initialize_logging(
     log_level = logging_config.get("log_level", default_log_level)
     file_name_length = 33 - len(service_name)
     file_log_formatter = ISO8601Formatter(
-        fmt=f"%(asctime)s {__version__} {service_name} %(name)-{file_name_length}s: " f"%(levelname)-8s %(message)s",
+        fmt=f"%(asctime)s {__version__} {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
     )
     handlers: List[logging.Handler] = []
     if logging_config["log_stdout"]:
