@@ -143,10 +143,10 @@ class WalletRpcClient(RpcClient):
         return AddKeyResponse.from_json_dict(await self.fetch("add_key", request.to_json_dict()))
 
     async def delete_key(self, request: DeleteKey) -> None:
-        await self.fetch("delete_key", request)
+        await self.fetch("delete_key", request.to_json_dict())
 
     async def check_delete_key(self, request: CheckDeleteKey) -> CheckDeleteKeyResponse:
-        return CheckDeleteKeyResponse.from_json_dict(await self.fetch("add_key", request.to_json_dict()))
+        return CheckDeleteKeyResponse.from_json_dict(await self.fetch("check_delete_key", request.to_json_dict()))
 
     async def delete_all_keys(self) -> None:
         await self.fetch("delete_all_keys", {})
