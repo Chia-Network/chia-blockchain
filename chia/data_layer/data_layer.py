@@ -624,7 +624,8 @@ class DataLayer:
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {store_id}: {e} {traceback.format_exc()}.")
 
-        if not success:
+        # if there aren't any servers then don't try to write the full tree
+        if not success and len(servers_info) > 0:
             root = await self.data_store.get_tree_root(store_id=store_id)
             if root.node_hash is None:
                 return
@@ -637,15 +638,18 @@ class DataLayer:
             )
             # Had trouble with this generation, so generate full file for the generation we currently have
             if not os.path.exists(filename_full_tree):
-                with open(filename_full_tree, "wb") as writer:
-                    await self.data_store.write_tree_to_file(
-                        root=root,
-                        node_hash=root.node_hash,
-                        store_id=store_id,
-                        deltas_only=False,
-                        writer=writer,
-                    )
-                    self.log.info(f"Successfully written full tree filename {filename_full_tree}.")
+                try:
+                    with open(filename_full_tree, "wb") as writer:
+                        await self.data_store.write_tree_to_file(
+                            root=root,
+                            node_hash=root.node_hash,
+                            store_id=store_id,
+                            deltas_only=False,
+                            writer=writer,
+                        )
+                        self.log.info(f"Successfully written full tree filename {filename_full_tree}.")
+                except FileNotFoundError:
+                    pass  # ignore any problems with writing the file
 
     async def get_downloader(self, store_id: bytes32, url: str) -> Optional[PluginRemote]:
         request_json = {"store_id": store_id.hex(), "url": url}
