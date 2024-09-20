@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from blspy import G1Element, PrivateKey
+from chia_rs import G1Element, PrivateKey
 from chiapos import DiskProver
+from typing_extensions import final
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config, lock_and_load_config, save_config
@@ -13,6 +16,16 @@ from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
+
+DEFAULT_PARALLEL_DECOMPRESSOR_COUNT = 0
+DEFAULT_DECOMPRESSOR_THREAD_COUNT = 0
+DEFAULT_DECOMPRESSOR_TIMEOUT = 20
+DEFAULT_DISABLE_CPU_AFFINITY = False
+DEFAULT_MAX_COMPRESSION_LEVEL_ALLOWED = 7
+DEFAULT_USE_GPU_HARVESTING = False
+DEFAULT_GPU_INDEX = 0
+DEFAULT_ENFORCE_GPU_INDEX = False
+DEFAULT_RECURSIVE_PLOT_SCAN = False
 
 
 @streamable
@@ -64,19 +77,45 @@ class PlotRefreshResult:
     duration: float = 0
 
 
+@final
+@dataclass
+class Params:
+    size: int
+    num: int
+    buffer: int
+    num_threads: int
+    buckets: int
+    tmp_dir: Path
+    tmp2_dir: Optional[Path]
+    final_dir: Path
+    plotid: Optional[str]
+    memo: Optional[str]
+    nobitfield: bool
+    stripe_size: int = 65536
+
+
+class HarvestingMode(IntEnum):
+    CPU = 1
+    GPU = 2
+
+
 def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:
     if config is None:
         config = load_config(root_path, "config.yaml")
-    return config["harvester"]["plot_directories"]
+    return config["harvester"]["plot_directories"] or []
 
 
 def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
     # Returns a map from directory to a list of all plots in the directory
     all_files: Dict[Path, List[Path]] = {}
     config = load_config(root_path, "config.yaml")
-    recursive_scan: bool = config["harvester"].get("recursive_plot_scan", False)
+    recursive_scan: bool = config["harvester"].get("recursive_plot_scan", DEFAULT_RECURSIVE_PLOT_SCAN)
     for directory_name in get_plot_directories(root_path, config):
-        directory = Path(directory_name).resolve()
+        try:
+            directory = Path(directory_name).resolve()
+        except (OSError, RuntimeError):
+            log.exception(f"Failed to resolve {directory_name}")
+            continue
         all_files[directory] = get_filenames(directory, recursive_scan)
     return all_files
 
@@ -91,6 +130,8 @@ def add_plot_directory(root_path: Path, str_path: str) -> Dict:
     with lock_and_load_config(root_path, "config.yaml") as config:
         if str(Path(str_path).resolve()) in get_plot_directories(root_path, config):
             raise ValueError(f"Path already added: {path}")
+        if not config["harvester"]["plot_directories"]:
+            config["harvester"]["plot_directories"] = []
         config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
         save_config(root_path, "config.yaml", config)
     return config
@@ -118,6 +159,64 @@ def remove_plot(path: Path):
     # Remove absolute and relative paths
     if path.exists():
         path.unlink()
+
+
+def get_harvester_config(root_path: Path) -> Dict[str, Any]:
+    config = load_config(root_path, "config.yaml")
+
+    plots_refresh_parameter = (
+        config["harvester"].get("plots_refresh_parameter")
+        if config["harvester"].get("plots_refresh_parameter") is not None
+        else PlotsRefreshParameter().to_json_dict()
+    )
+
+    return {
+        "use_gpu_harvesting": config["harvester"].get("use_gpu_harvesting", DEFAULT_USE_GPU_HARVESTING),
+        "gpu_index": config["harvester"].get("gpu_index", DEFAULT_GPU_INDEX),
+        "enforce_gpu_index": config["harvester"].get("enforce_gpu_index", DEFAULT_ENFORCE_GPU_INDEX),
+        "disable_cpu_affinity": config["harvester"].get("disable_cpu_affinity", DEFAULT_DISABLE_CPU_AFFINITY),
+        "parallel_decompressor_count": config["harvester"].get(
+            "parallel_decompressor_count", DEFAULT_PARALLEL_DECOMPRESSOR_COUNT
+        ),
+        "decompressor_thread_count": config["harvester"].get(
+            "decompressor_thread_count", DEFAULT_DECOMPRESSOR_THREAD_COUNT
+        ),
+        "recursive_plot_scan": config["harvester"].get("recursive_plot_scan", DEFAULT_RECURSIVE_PLOT_SCAN),
+        "plots_refresh_parameter": plots_refresh_parameter,
+    }
+
+
+def update_harvester_config(
+    root_path: Path,
+    *,
+    use_gpu_harvesting: Optional[bool] = None,
+    gpu_index: Optional[int] = None,
+    enforce_gpu_index: Optional[bool] = None,
+    disable_cpu_affinity: Optional[bool] = None,
+    parallel_decompressor_count: Optional[int] = None,
+    decompressor_thread_count: Optional[int] = None,
+    recursive_plot_scan: Optional[bool] = None,
+    refresh_parameter: Optional[PlotsRefreshParameter] = None,
+):
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        if use_gpu_harvesting is not None:
+            config["harvester"]["use_gpu_harvesting"] = use_gpu_harvesting
+        if gpu_index is not None:
+            config["harvester"]["gpu_index"] = gpu_index
+        if enforce_gpu_index is not None:
+            config["harvester"]["enforce_gpu_index"] = enforce_gpu_index
+        if disable_cpu_affinity is not None:
+            config["harvester"]["disable_cpu_affinity"] = disable_cpu_affinity
+        if parallel_decompressor_count is not None:
+            config["harvester"]["parallel_decompressor_count"] = parallel_decompressor_count
+        if decompressor_thread_count is not None:
+            config["harvester"]["decompressor_thread_count"] = decompressor_thread_count
+        if recursive_plot_scan is not None:
+            config["harvester"]["recursive_plot_scan"] = recursive_plot_scan
+        if refresh_parameter is not None:
+            config["harvester"]["plots_refresh_parameter"] = refresh_parameter.to_json_dict()
+
+        save_config(root_path, "config.yaml", config)
 
 
 def get_filenames(directory: Path, recursive: bool) -> List[Path]:

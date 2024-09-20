@@ -6,16 +6,19 @@ on:
   # We recommend `pull_request_target` so that github secrets are available.
   # In `pull_request` we wouldn't be able to change labels of fork PRs
   pull_request_target:
-    types: [synchronize]
+    types: [opened, synchronize, reopened]
 
 jobs:
   main:
     runs-on: ubuntu-latest
     steps:
       - name: check if prs are behind main
-        uses: eps1lon/actions-label-merge-conflict@v2.0.1
+        uses: Chia-Network/actions/label-conflict@main
         with:
-          dirtyLabel: "merge_conflict"
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          commentOnDirty: "This pull request has conflicts, please resolve those before we can evaluate the pull request."
-          commentOnClean: "Conflicts have been resolved. A maintainer will review the pull request shortly."
+          labelToAddOnConflict: "merge_conflict"
+          secretToken: "${{ secrets.GITHUB_TOKEN }}"
+          # targeting 2 minutes of retry, longest observed window thus far is ~30 seconds
+          retryIntervalSec: 5
+          retryMax: 24
+          commentToAddOnConflict: "This pull request has conflicts, please resolve those before we can evaluate the pull request."
+          commentToAddOnClean: "Conflicts have been resolved. A maintainer will review the pull request shortly."

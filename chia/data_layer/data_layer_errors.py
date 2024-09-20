@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterable, List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -12,11 +14,11 @@ def build_message_with_hashes(message: str, bytes_objects: Iterable[bytes]) -> s
 
 
 class TreeGenerationIncrementingError(IntegrityError):
-    def __init__(self, tree_ids: List[bytes32]) -> None:
+    def __init__(self, store_ids: List[bytes32]) -> None:
         super().__init__(
             build_message_with_hashes(
                 message="Found trees with generations not properly incrementing:",
-                bytes_objects=tree_ids,
+                bytes_objects=store_ids,
             )
         )
 
@@ -37,4 +39,12 @@ class KeyNotFoundError(Exception):
 
 
 class OfferIntegrityError(Exception):
+    pass
+
+
+class ProofIntegrityError(Exception):
+    pass
+
+
+class LauncherCoinNotFoundError(Exception):
     pass

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import os
 import random
@@ -11,9 +13,10 @@ import click
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.get_block_generator import get_block_generator
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_version import lookup_db_version
 from chia.util.db_wrapper import DBWrapper2
@@ -24,10 +27,11 @@ from chia.util.ints import uint32
 transaction_block_heights = []
 last = 225698
 file_path = os.path.realpath(__file__)
-for delta in open(Path(file_path).parent / "transaction_height_delta", "rb").read():
-    new = last + delta
-    transaction_block_heights.append(new)
-    last = new
+with open(Path(file_path).parent / "transaction_height_delta", "rb") as f:
+    for delta in f.read():
+        new = last + delta
+        transaction_block_heights.append(new)
+        last = new
 
 
 @dataclass(frozen=True)
@@ -46,8 +50,7 @@ def random_refs() -> List[uint32]:
 REPETITIONS = 100
 
 
-async def main(db_path: Path):
-
+async def main(db_path: Path) -> None:
     random.seed(0x213FB154)
 
     async with aiosqlite.connect(db_path) as connection:
@@ -78,7 +81,7 @@ async def main(db_path: Path):
             )
 
             start_time = monotonic()
-            gen = await blockchain.get_block_generator(block)
+            gen = await get_block_generator(blockchain.lookup_block_generators, block)
             one_call = monotonic() - start_time
             timing += one_call
             assert gen is not None
@@ -90,7 +93,7 @@ async def main(db_path: Path):
 
 @click.command()
 @click.argument("db-path", type=click.Path())
-def entry_point(db_path: Path):
+def entry_point(db_path: Path) -> None:
     asyncio.run(main(Path(db_path)))
 
 

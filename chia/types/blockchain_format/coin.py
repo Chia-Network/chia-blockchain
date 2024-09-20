@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Union
 
 from chia_rs import Coin

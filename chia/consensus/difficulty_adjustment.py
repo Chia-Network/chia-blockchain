@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from typing import List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -9,7 +11,7 @@ from chia.util.significant_bits import count_significant_bits, truncate_to_signi
 
 
 def _get_blocks_at_height(
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     prev_b: BlockRecord,
     target_height: uint32,
     max_num_blocks: uint32 = uint32(1),
@@ -51,7 +53,7 @@ def _get_blocks_at_height(
 
 def _get_second_to_last_transaction_block_in_previous_epoch(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     last_b: BlockRecord,
 ) -> BlockRecord:
     """
@@ -88,11 +90,6 @@ def _get_second_to_last_transaction_block_in_previous_epoch(
         # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
         # a block in the previous epoch, which would be height < 0
         return _get_blocks_at_height(blocks, last_b, uint32(0))[0]
-
-    # If the prev slot is the first slot, the iterations start at 0
-    # We will compute the timestamps of the 2nd to last block in epoch, as well as the total iterations at infusion
-    prev_slot_start_iters: uint128
-    prev_slot_time_start: uint64
 
     # The target block must be in this range. Either the surpass block must be a transaction block, or something
     # in it's sub slot must be a transaction block. If that is the only transaction block in the sub-slot, the last
@@ -138,11 +135,12 @@ def height_can_be_first_in_epoch(constants: ConsensusConstants, height: uint32) 
 
 def can_finish_sub_and_full_epoch(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     height: uint32,
     prev_header_hash: Optional[bytes32],
     deficit: uint8,
     block_at_height_included_ses: bool,
+    prev_ses_block: Optional[BlockRecord] = None,
 ) -> Tuple[bool, bool]:
     """
     Returns a bool tuple
@@ -176,14 +174,18 @@ def can_finish_sub_and_full_epoch(
     # If it's 0, height+1 is the first place that a sub-epoch can be included
     # If it's 1, we just checked whether 0 included it in the previous check
     if (height + 1) % constants.SUB_EPOCH_BLOCKS > 1:
-        curr: BlockRecord = blocks.block_record(prev_header_hash)
-        while curr.height % constants.SUB_EPOCH_BLOCKS > 0:
+        if prev_ses_block is not None:
+            if height - height % constants.SUB_EPOCH_BLOCKS <= prev_ses_block.height:
+                return False, False
+        else:
+            curr: BlockRecord = blocks.block_record(prev_header_hash)
+            while curr.height % constants.SUB_EPOCH_BLOCKS > 0:
+                if curr.sub_epoch_summary_included is not None:
+                    return False, False
+                curr = blocks.block_record(curr.prev_hash)
+
             if curr.sub_epoch_summary_included is not None:
                 return False, False
-            curr = blocks.block_record(curr.prev_hash)
-
-        if curr.sub_epoch_summary_included is not None:
-            return False, False
 
     # For checking new epoch, make sure the epoch blocks are aligned
     return True, height_can_be_first_in_epoch(constants, uint32(height + 1))
@@ -191,7 +193,7 @@ def can_finish_sub_and_full_epoch(
 
 def _get_next_sub_slot_iters(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     prev_header_hash: bytes32,
     height: uint32,
     curr_sub_slot_iters: uint64,
@@ -270,7 +272,7 @@ def _get_next_sub_slot_iters(
 
 def _get_next_difficulty(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     prev_header_hash: bytes32,
     height: uint32,
     current_difficulty: uint64,
@@ -356,7 +358,7 @@ def get_next_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     is_first_in_sub_slot: bool,
     prev_b: Optional[BlockRecord],
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
 ) -> Tuple[uint64, uint64]:
     """
     Retrieves the current sub_slot iters and difficulty of the next block after prev_b.

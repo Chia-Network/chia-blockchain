@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -12,9 +14,12 @@ from chia.cmds.beta_funcs import (
     prepare_plotting_log,
     prompt_beta_warning,
     prompt_for_beta_path,
+    prompt_for_metrics_log_interval,
     update_beta_config,
     validate_beta_path,
+    validate_metrics_log_interval,
 )
+from chia.util.beta_metrics import metrics_log_interval_default
 from chia.util.config import lock_and_load_config, save_config
 
 
@@ -29,12 +34,13 @@ def beta_cmd() -> None:
 
 @beta_cmd.command("configure", help="Configure the beta test mode parameters")
 @click.option("-p", "--path", help="The beta mode root path", type=str, required=False)
+@click.option("-i", "--interval", help="System metrics will be logged based on this interval", type=int, required=False)
 @click.pass_context
-def configure(ctx: click.Context, path: Optional[str]) -> None:
+def configure(ctx: click.Context, path: Optional[str], interval: Optional[int]) -> None:
     root_path = ctx.obj["root_path"]
     with lock_and_load_config(root_path, "config.yaml") as config:
         if "beta" not in config:
-            ctx.exit("beta test mode is not enabled, enable it first with `chia beta enable`")
+            raise click.ClickException("beta test mode is not enabled, enable it first with `chia beta enable`")
 
         # Adjust the path
         if path is None:
@@ -43,7 +49,19 @@ def configure(ctx: click.Context, path: Optional[str]) -> None:
             beta_root_path = Path(path)
             validate_beta_path(beta_root_path)
 
-        update_beta_config(True, beta_root_path, config)
+        # Adjust the metrics log interval
+        if interval is None:
+            metrics_log_interval = prompt_for_metrics_log_interval(
+                int(config["beta"].get("metrics_log_interval", metrics_log_interval_default))
+            )
+        else:
+            metrics_log_interval = interval
+            try:
+                validate_metrics_log_interval(metrics_log_interval)
+            except ValueError as e:
+                raise click.ClickException(str(e))
+
+        update_beta_config(True, beta_root_path, metrics_log_interval, config)
         save_config(root_path, "config.yaml", config)
 
     print("\nbeta config updated")
@@ -64,7 +82,7 @@ def enable_cmd(ctx: click.Context, force: bool, path: Optional[str]) -> None:
     root_path = ctx.obj["root_path"]
     with lock_and_load_config(root_path, "config.yaml") as config:
         if config.get("beta", {}).get("enabled", False):
-            ctx.exit("beta test mode is already enabled")
+            raise click.ClickException("beta test mode is already enabled")
 
         if not force and not prompt_beta_warning():
             ctx.abort()
@@ -79,7 +97,7 @@ def enable_cmd(ctx: click.Context, force: bool, path: Optional[str]) -> None:
             beta_root_path = Path(path or current_path)
             validate_beta_path(beta_root_path)
 
-        update_beta_config(True, beta_root_path, config)
+        update_beta_config(True, beta_root_path, metrics_log_interval_default, config)
         save_config(root_path, "config.yaml", config)
 
     print(f"\nbeta test mode enabled with path {str(beta_root_path)!r}")
@@ -92,7 +110,7 @@ def disable_cmd(ctx: click.Context) -> None:
     root_path = ctx.obj["root_path"]
     with lock_and_load_config(root_path, "config.yaml") as config:
         if not config.get("beta", {}).get("enabled", False):
-            ctx.exit("beta test mode is not enabled")
+            raise click.ClickException("beta test mode is not enabled")
         config["beta"]["enabled"] = False
         save_config(root_path, "config.yaml", config)
 
@@ -106,12 +124,12 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
     with lock_and_load_config(ctx.obj["root_path"], "config.yaml") as config:
         beta_root_path = config.get("beta", {}).get("path", None)
         if beta_root_path is None:
-            ctx.exit("beta test mode not enabled. Run `chia beta enable` first.")
+            raise click.ClickException("beta test mode not enabled. Run `chia beta enable` first.")
     beta_root_path = Path(beta_root_path)
     validate_beta_path(beta_root_path)
     available_results = sorted([path for path in beta_root_path.iterdir() if path.is_dir()])
     if len(available_results) == 0:
-        ctx.exit(f"No beta logs found in {str(beta_root_path)!r}.")
+        raise click.ClickException(f"No beta logs found in {str(beta_root_path)!r}.")
     print("Available versions:")
     for i in range(len(available_results)):
         print(f"    [{i + 1}] {available_results[i].name}")
@@ -122,7 +140,7 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
             raise IndexError()
         prepare_result = available_results[int(user_input) - 1]
     except IndexError:
-        ctx.exit(f"Invalid choice: {user_input}")
+        raise click.ClickException(f"Invalid choice: {user_input}")
     plotting_path = Path(prepare_result / "plotting")
     chia_blockchain_path = Path(prepare_result / "chia-blockchain")
     chia_logs = prepare_logs(plotting_path, prepare_chia_blockchain_log)
@@ -146,7 +164,8 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
 
     if files_added == 0:
         submission_file_path.unlink()
-        ctx.exit(f"No logs files found in {str(plotting_path)!r} and {str(chia_blockchain_path)!r}.")
+        message = f"No logs files found in {str(plotting_path)!r} and {str(chia_blockchain_path)!r}."
+        raise click.ClickException(message)
 
     print(f"\nDone. You can find the prepared submission data in {submission_file_path}.")
 
@@ -157,7 +176,8 @@ def status(ctx: click.Context) -> None:
     with lock_and_load_config(ctx.obj["root_path"], "config.yaml") as config:
         beta_config = config.get("beta")
         if beta_config is None:
-            ctx.exit("beta test mode is not enabled, enable it first with `chia beta enable`")
+            raise click.ClickException("beta test mode is not enabled, enable it first with `chia beta enable`")
 
     print(f"enabled: {beta_config['enabled']}")
     print(f"path: {beta_config['path']}")
+    print(f"metrics log interval: {beta_config['metrics_log_interval']}s")

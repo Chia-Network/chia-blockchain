@@ -1,3 +1,7 @@
-from chia_rs import Spend, SpendBundleConditions
+from __future__ import annotations
 
-__all__ = ["Spend", "SpendBundleConditions"]
+import chia_rs
+
+ELIGIBLE_FOR_DEDUP = chia_rs.ELIGIBLE_FOR_DEDUP
+SpendConditions = chia_rs.SpendConditions
+SpendBundleConditions = chia_rs.SpendBundleConditions

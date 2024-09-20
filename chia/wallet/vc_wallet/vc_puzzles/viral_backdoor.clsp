@@ -1,0 +1,64 @@
+; This layer ensures that a second puzzle hash or "backdoor" that can be used without the inner puzzle's permission
+; travels with each generation of a coin.
+
+; The hidden puzzle is responsible for recreating this layer if it wishes, this layer will not wrap its outputs.
+(mod
+  (
+    THIS_MOD_HASH
+    HIDDEN_PUZZLE_HASH
+    INNER_PUZZLE_HASH  ; must be a hash so that the backdoor has enough info to create a puzzle reveal to spend the coin
+    hidden  ; bool for whether or not to run the hidden puzzle
+    inner_or_hidden_puzzle_reveal
+    inner_or_hidden_solution
+  )
+
+  (include condition_codes.clib)
+  (include curry.clib)
+  (include sha256tree.clib)
+  (include utility_macros.clib)
+
+  (defconstant ONE 1)
+
+  (defun-inline wrap_puzhash
+    (
+      THIS_MOD_HASH
+      HIDDEN_PUZZLE_HASH
+      new_inner_puzzle_hash
+    )
+
+    (curry_hashes_inline THIS_MOD_HASH
+      (sha256 ONE THIS_MOD_HASH)
+      (sha256 ONE HIDDEN_PUZZLE_HASH)
+      (sha256 ONE new_inner_puzzle_hash)
+    )
+  )
+
+  (defun wrap_create_coins
+    (
+      THIS_MOD_HASH
+      HIDDEN_PUZZLE_HASH
+      conditions
+    )
+    (if conditions
+        (if (= (f (f conditions)) CREATE_COIN)
+            (c
+              (c CREATE_COIN (c (wrap_puzhash THIS_MOD_HASH HIDDEN_PUZZLE_HASH (f (r (f conditions)))) (r (r (f conditions)))))
+              (wrap_create_coins THIS_MOD_HASH HIDDEN_PUZZLE_HASH (r conditions))
+            )
+            (c (f conditions) (wrap_create_coins THIS_MOD_HASH HIDDEN_PUZZLE_HASH (r conditions)))
+        )
+        ()
+    )
+  )
+
+  (if hidden
+      (assert (= HIDDEN_PUZZLE_HASH (sha256tree inner_or_hidden_puzzle_reveal))
+        ; then
+        (a inner_or_hidden_puzzle_reveal inner_or_hidden_solution)
+      )
+      (assert (= INNER_PUZZLE_HASH (sha256tree inner_or_hidden_puzzle_reveal))
+        ; then
+        (wrap_create_coins THIS_MOD_HASH HIDDEN_PUZZLE_HASH (a inner_or_hidden_puzzle_reveal inner_or_hidden_solution))
+      )
+  )
+)

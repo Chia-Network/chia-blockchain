@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -114,6 +116,20 @@ class NewUnfinishedBlock(Streamable):
 @dataclass(frozen=True)
 class RequestUnfinishedBlock(Streamable):
     unfinished_reward_hash: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class NewUnfinishedBlock2(Streamable):
+    unfinished_reward_hash: bytes32
+    foliage_hash: Optional[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestUnfinishedBlock2(Streamable):
+    unfinished_reward_hash: bytes32
+    foliage_hash: Optional[bytes32]
 
 
 @streamable

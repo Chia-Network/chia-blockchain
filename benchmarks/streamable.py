@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import sys
 from dataclasses import dataclass
@@ -7,12 +9,16 @@ from time import process_time as clock
 from typing import Any, Callable, Dict, List, Optional, TextIO, Tuple, Type, Union
 
 import click
-from utils import EnumType, get_commit_hash, rand_bytes, rand_full_block, rand_hash
 
+from benchmarks.utils import EnumType, get_commit_hash
+from chia._tests.util.benchmarks import rand_bytes, rand_full_block, rand_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
+
+# to run this benchmark:
+# python -m benchmarks.streamable
 
 _version = 1
 
@@ -78,12 +84,18 @@ def print_row(
     stdev_iterations: Union[str, float],
     end: str = "\n",
 ) -> None:
-    mode = "{0:<10}".format(f"{mode}")
-    us_per_iteration = "{0:<12}".format(f"{us_per_iteration}")
-    stdev_us_per_iteration = "{0:>20}".format(f"{stdev_us_per_iteration}")
-    avg_iterations = "{0:>18}".format(f"{avg_iterations}")
-    stdev_iterations = "{0:>22}".format(f"{stdev_iterations}")
-    print(f"{mode} | {us_per_iteration} | {stdev_us_per_iteration} | {avg_iterations} | {stdev_iterations}", end=end)
+    print(
+        " | ".join(
+            [
+                f"{mode:<10}",
+                f"{us_per_iteration:<12}",
+                f"{stdev_us_per_iteration:>20}",
+                f"{avg_iterations:>18}",
+                f"{stdev_iterations:>22}",
+            ]
+        ),
+        end=end,
+    )
 
 
 @dataclass
@@ -190,11 +202,7 @@ def pop_data(key: str, *, old: Dict[str, Any], new: Dict[str, Any]) -> Tuple[Any
 
 
 def print_compare_row(c0: str, c1: Union[str, float], c2: Union[str, float], c3: Union[str, float]) -> None:
-    c0 = "{0:<12}".format(f"{c0}")
-    c1 = "{0:<16}".format(f"{c1}")
-    c2 = "{0:<16}".format(f"{c2}")
-    c3 = "{0:<12}".format(f"{c3}")
-    print(f"{c0} | {c1} | {c2} | {c3}")
+    print(f"{c0:<12} | {c1:<16} | {c2:<16} | {c3:<12}")
 
 
 def compare_results(
@@ -202,7 +210,7 @@ def compare_results(
 ) -> None:
     old_version, new_version = pop_data("version", old=old, new=new)
     if old_version != new_version:
-        sys.exit(f"version missmatch: old: {old_version} vs new: {new_version}")
+        sys.exit(f"version mismatch: old: {old_version} vs new: {new_version}")
     old_commit_hash, new_commit_hash = pop_data("commit_hash", old=old, new=new)
     for data, modes in new.items():
         if data not in old:

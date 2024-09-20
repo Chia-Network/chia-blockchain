@@ -1,0 +1,29 @@
+name: 🚨 Check commit signing
+
+on:
+  push:
+    branches:
+      - long_lived/**
+      - main
+      - release/**
+  pull_request:
+    branches:
+      - "**"
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  check-commit-signing:
+    name: Check commit signing
+    runs-on: [ubuntu-latest]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: chia-network/actions/check-commit-signing@main

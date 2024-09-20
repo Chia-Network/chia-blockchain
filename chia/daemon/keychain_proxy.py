@@ -1,37 +1,37 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import ssl
 import traceback
+from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
 
-from aiohttp import ClientSession, ClientConnectorError
-from blspy import AugSchemeMPL, PrivateKey
+from aiohttp import ClientConnectorError, ClientSession
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
 from chia.daemon.keychain_server import (
+    KEYCHAIN_ERR_KEY_NOT_FOUND,
     KEYCHAIN_ERR_KEYERROR,
     KEYCHAIN_ERR_LOCKED,
     KEYCHAIN_ERR_MALFORMED_REQUEST,
     KEYCHAIN_ERR_NO_KEYS,
-    KEYCHAIN_ERR_KEY_NOT_FOUND,
 )
 from chia.server.server import ssl_context_for_client
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.errors import (
-    KeychainIsLocked,
     KeychainIsEmpty,
+    KeychainIsLocked,
     KeychainKeyNotFound,
     KeychainMalformedRequest,
     KeychainMalformedResponse,
     KeychainProxyConnectionTimeout,
 )
-from chia.util.keychain import (
-    Keychain,
-    bytes_to_mnemonic,
-    mnemonic_to_seed,
-)
+from chia.util.keychain import Keychain, KeyData, bytes_to_mnemonic, mnemonic_to_seed
 from chia.util.ws_message import WsRpcMessage
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 
 
 class KeychainProxy(DaemonProxy):
@@ -50,8 +50,9 @@ class KeychainProxy(DaemonProxy):
         local_keychain: Optional[Keychain] = None,
         user: Optional[str] = None,
         service: Optional[str] = None,
+        heartbeat: int = 300,
     ):
-        super().__init__(uri, ssl_context)
+        super().__init__(uri, ssl_context, heartbeat=heartbeat)
         self.log = log
         if local_keychain:
             self.keychain = local_keychain
@@ -109,8 +110,8 @@ class KeychainProxy(DaemonProxy):
                     self._uri,
                     autoclose=True,
                     autoping=True,
-                    heartbeat=60,
-                    ssl_context=self.ssl_context,
+                    heartbeat=self.heartbeat,
+                    ssl=self.ssl_context if self.ssl_context is not None else True,
                     max_msg_size=self.max_message_size,
                 )
                 await self.listener()
@@ -169,18 +170,42 @@ class KeychainProxy(DaemonProxy):
                     raise Exception(f"{err}")
                 raise Exception(f"{error}")
 
-    async def add_private_key(self, mnemonic: str) -> PrivateKey:
+    @overload
+    async def add_key(self, mnemonic_or_pk: str) -> PrivateKey: ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> PrivateKey: ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]) -> PrivateKey: ...
+
+    @overload
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]) -> G1Element: ...
+
+    @overload
+    async def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str], private: bool
+    ) -> Union[PrivateKey, G1Element]: ...
+
+    async def add_key(
+        self, mnemonic_or_pk: str, label: Optional[str] = None, private: bool = True
+    ) -> Union[PrivateKey, G1Element]:
         """
-        Forwards to Keychain.add_private_key()
+        Forwards to Keychain.add_key()
         """
-        key: PrivateKey
+        key: Union[PrivateKey, G1Element]
         if self.use_local_keychain():
-            key = self.keychain.add_private_key(mnemonic)
+            key = self.keychain.add_key(mnemonic_or_pk, label, private)
         else:
-            response, success = await self.get_response_for_request("add_private_key", {"mnemonic": mnemonic})
+            response, success = await self.get_response_for_request(
+                "add_key", {"mnemonic_or_pk": mnemonic_or_pk, "label": label, "private": private}
+            )
             if success:
-                seed = mnemonic_to_seed(mnemonic)
-                key = AugSchemeMPL.key_gen(seed)
+                if private:
+                    seed = mnemonic_to_seed(mnemonic_or_pk)
+                    key = AugSchemeMPL.key_gen(seed)
+                else:
+                    key = G1Element.from_bytes(hexstr_to_bytes(mnemonic_or_pk))
             else:
                 error = response["data"].get("error", None)
                 if error == KEYCHAIN_ERR_KEYERROR:
@@ -302,37 +327,62 @@ class KeychainProxy(DaemonProxy):
 
         return key
 
-    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+    @overload
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]: ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: Literal[True]
+    ) -> Optional[PrivateKey]: ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: Literal[False]
+    ) -> Optional[G1Element]: ...
+
+    @overload
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool
+    ) -> Optional[Union[PrivateKey, G1Element]]: ...
+
+    async def get_key_for_fingerprint(
+        self, fingerprint: Optional[int], private: bool = True
+    ) -> Optional[Union[PrivateKey, G1Element]]:
         """
         Locates and returns a private key matching the provided fingerprint
         """
-        key: Optional[PrivateKey] = None
+        key: Optional[Union[PrivateKey, G1Element]] = None
         if self.use_local_keychain():
-            private_keys = self.keychain.get_all_private_keys()
-            if len(private_keys) == 0:
+            keys = self.keychain.get_keys(include_secrets=private)
+            if len(keys) == 0:
                 raise KeychainIsEmpty()
             else:
+                selected_key = keys[0]
                 if fingerprint is not None:
-                    for sk, _ in private_keys:
-                        if sk.get_g1().get_fingerprint() == fingerprint:
-                            key = sk
+                    for key_data in keys:
+                        if key_data.public_key.get_fingerprint() == fingerprint:
+                            selected_key = key_data
                             break
-                    if key is None:
+                    else:
                         raise KeychainKeyNotFound(fingerprint)
+                if private and selected_key.secrets is not None:
+                    key = selected_key.private_key
+                elif not private:
+                    key = selected_key.public_key
                 else:
-                    key = private_keys[0][0]
+                    return None
         else:
             response, success = await self.get_response_for_request(
-                "get_key_for_fingerprint", {"fingerprint": fingerprint}
+                "get_key_for_fingerprint", {"fingerprint": fingerprint, "private": private}
             )
             if success:
                 pk = response["data"].get("pk", None)
                 ent = response["data"].get("entropy", None)
-                if pk is None or ent is None:
+                if pk is None or (private and ent is None):
                     err = f"Missing pk and/or ent in {response.get('command')} response"
                     self.log.error(f"{err}")
                     raise KeychainMalformedResponse(f"{err}")
-                else:
+                elif private:
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)
@@ -341,10 +391,44 @@ class KeychainProxy(DaemonProxy):
                     else:
                         err = "G1Elements don't match"
                         self.log.error(f"{err}")
+                else:
+                    key = G1Element.from_bytes(bytes.fromhex(pk))
             else:
                 self.handle_error(response)
 
         return key
+
+    async def get_key(self, fingerprint: int, include_secrets: bool = False) -> Optional[KeyData]:
+        """
+        Locates and returns KeyData matching the provided fingerprint
+        """
+        key_data: Optional[KeyData] = None
+        if self.use_local_keychain():
+            key_data = self.keychain.get_key(fingerprint, include_secrets)
+        else:
+            response, success = await self.get_response_for_request(
+                "get_key", {"fingerprint": fingerprint, "include_secrets": include_secrets}
+            )
+            if success:
+                key_data = KeyData.from_json_dict(response["data"]["key"])
+            else:
+                self.handle_error(response)
+        return key_data
+
+    async def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
+        """
+        Returns all KeyData
+        """
+        keys: List[KeyData] = []
+        if self.use_local_keychain():
+            keys = self.keychain.get_keys(include_secrets)
+        else:
+            response, success = await self.get_response_for_request("get_keys", {"include_secrets": include_secrets})
+            if success:
+                keys = [KeyData.from_json_dict(key) for key in response["data"]["keys"]]
+            else:
+                self.handle_error(response)
+        return keys
 
 
 def wrap_local_keychain(keychain: Keychain, log: logging.Logger) -> KeychainProxy:
@@ -358,6 +442,7 @@ def wrap_local_keychain(keychain: Keychain, log: logging.Logger) -> KeychainProx
 async def connect_to_keychain(
     self_hostname: str,
     daemon_port: int,
+    daemon_heartbeat: int,
     ssl_context: Optional[ssl.SSLContext],
     log: logging.Logger,
     user: Optional[str] = None,
@@ -368,7 +453,12 @@ async def connect_to_keychain(
     """
 
     client = KeychainProxy(
-        uri=f"wss://{self_hostname}:{daemon_port}", ssl_context=ssl_context, log=log, user=user, service=service
+        uri=f"wss://{self_hostname}:{daemon_port}",
+        heartbeat=daemon_heartbeat,
+        ssl_context=ssl_context,
+        log=log,
+        user=user,
+        service=service,
     )
     # Connect to the service if the proxy isn't using a local keychain
     if not client.use_local_keychain():
@@ -393,8 +483,9 @@ async def connect_to_keychain_and_validate(
         ca_crt_path = root_path / net_config["private_ssl_ca"]["crt"]
         ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
         ssl_context = ssl_context_for_client(ca_crt_path, ca_key_path, crt_path, key_path, log=log)
+        daemon_heartbeat = net_config.get("daemon_heartbeat", 300)
         connection = await connect_to_keychain(
-            net_config["self_hostname"], net_config["daemon_port"], ssl_context, log, user, service
+            net_config["self_hostname"], net_config["daemon_port"], daemon_heartbeat, ssl_context, log, user, service
         )
 
         # If proxying to a local keychain, don't attempt to ping

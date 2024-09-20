@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 from typing import Any, Dict, List, Tuple
 
@@ -45,6 +47,8 @@ def build_merkle_tree_from_binary_tree(tuples: TupleTree) -> Tuple[bytes32, Dict
 
 def list_to_binary_tree(objects: List[Any]) -> Any:
     size = len(objects)
+    if size == 0:
+        raise ValueError("Cannot build a tree out of 0 objects")
     if size == 1:
         return objects[0]
     midpoint = (size + 1) >> 1
