@@ -46,7 +46,7 @@ def test_primitives() -> None:
         "set optional",
         "foobar",
         b"\0\1",
-        bytes32([0] * 32),
+        bytes32.zeros,
         False,
     )
 

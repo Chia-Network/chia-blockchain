@@ -574,14 +574,14 @@ def validate_unfinished_header_block(
     sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (expected_sub_slot_iters if overflow else 0))
     if overflow and skip_overflow_last_ss_validation:
         dummy_vdf_info = VDFInfo(
-            bytes32([0] * 32),
+            bytes32.zeros,
             uint64(1),
             ClassgroupElement.get_default_element(),
         )
         dummy_sub_slot = EndOfSubSlotBundle(
             ChallengeChainSubSlot(dummy_vdf_info, None, None, None, None),
             None,
-            RewardChainSubSlot(dummy_vdf_info, bytes32([0] * 32), None, uint8(0)),
+            RewardChainSubSlot(dummy_vdf_info, bytes32.zeros, None, uint8(0)),
             SubSlotProofs(VDFProof(uint8(0), b"", False), None, VDFProof(uint8(0), b"", False)),
         )
         sub_slots_to_pass_in = header_block.finished_sub_slots + [dummy_sub_slot]

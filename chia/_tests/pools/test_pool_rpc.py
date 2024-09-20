@@ -681,7 +681,7 @@ class TestPoolWalletRpc:
             pytest.skip("need to fix this test for non-zero fees")
 
         full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
-        pool_ph = bytes32([0] * 32)
+        pool_ph = bytes32.zeros
 
         assert wallet_node._wallet_state_manager is not None
 
@@ -762,7 +762,7 @@ class TestPoolWalletRpc:
     async def test_leave_pool(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """This tests self-pooling -> pooling -> escaping -> self pooling"""
         full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
-        pool_ph = bytes32([0] * 32)
+        pool_ph = bytes32.zeros
 
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
@@ -861,8 +861,8 @@ class TestPoolWalletRpc:
     async def test_change_pools(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """This tests Pool A -> escaping -> Pool B"""
         full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
-        pool_a_ph = bytes32([0] * 32)
-        pool_b_ph = bytes32([0] * 32)
+        pool_a_ph = bytes32.zeros
+        pool_b_ph = bytes32.zeros
 
         WAIT_SECS = 200
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
@@ -929,8 +929,8 @@ class TestPoolWalletRpc:
     async def test_change_pools_reorg(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
         full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
-        pool_a_ph = bytes32([0] * 32)
-        pool_b_ph = bytes32([0] * 32)
+        pool_a_ph = bytes32.zeros
+        pool_b_ph = bytes32.zeros
         WAIT_SECS = 30
 
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0

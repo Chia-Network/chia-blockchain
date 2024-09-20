@@ -190,7 +190,7 @@ def test_translation_layer() -> None:
         ]
     )
 
-    coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+    coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
     spend = Spend(
         coin,
         Program.to("puzzle"),

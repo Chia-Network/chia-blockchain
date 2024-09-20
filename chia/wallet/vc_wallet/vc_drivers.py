@@ -810,7 +810,7 @@ class VerifiedCredential(Streamable):
         Private method that creates the next VC class instance.
         """
         slightly_incomplete_vc: VerifiedCredential = VerifiedCredential(
-            Coin(self.coin.name(), bytes32([0] * 32), next_amount),
+            Coin(self.coin.name(), bytes32.zeros, next_amount),
             LineageProof(
                 self.coin.parent_coin_info,
                 self.construct_exigent_metadata_layer().get_tree_hash(),

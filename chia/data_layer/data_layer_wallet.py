@@ -1108,9 +1108,7 @@ class DataLayerWallet:
 
         # create some dummy requested payments
         requested_payments = {
-            k: [NotarizedPayment(bytes32([0] * 32), uint64(v), [], bytes32([0] * 32))]
-            for k, v in offer_dict.items()
-            if v > 0
+            k: [NotarizedPayment(bytes32.zeros, uint64(v), [], bytes32.zeros)] for k, v in offer_dict.items() if v > 0
         }
 
         async with action_scope.use() as interface:

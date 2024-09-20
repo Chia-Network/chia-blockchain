@@ -1244,7 +1244,7 @@ async def test_retry_store(
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.full_node.server
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -1285,7 +1285,7 @@ async def test_retry_store(
             if not request_puzzle_solution_failure_tested:
                 request_puzzle_solution_failure_tested = True
                 # This can just return None if we have `none_response` enabled.
-                reject = wallet_protocol.RejectPuzzleSolution(bytes32([0] * 32), uint32(0))
+                reject = wallet_protocol.RejectPuzzleSolution(bytes32.zeros, uint32(0))
                 return make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
             else:
                 return await func(request)
@@ -1362,7 +1362,7 @@ async def test_retry_store(
             wallet = wallet_node.wallet_state_manager.main_wallet
             ph = await wallet.get_new_puzzlehash()
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
 
             async def retry_store_empty() -> bool:
                 return len(await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry()) == 0
@@ -1377,7 +1377,7 @@ async def test_retry_store(
 
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
-                    uint64(1_000_000_000_000), bytes32([0] * 32), action_scope, memos=[ph]
+                    uint64(1_000_000_000_000), bytes32.zeros, action_scope, memos=[ph]
                 )
             [tx] = action_scope.side_effects.transactions
             await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
@@ -1386,7 +1386,7 @@ async def test_retry_store(
                 return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
 
             await time_out_assert(15, tx_in_mempool)
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
 
             await assert_coin_state_retry()
 

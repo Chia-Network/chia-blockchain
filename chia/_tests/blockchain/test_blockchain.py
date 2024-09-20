@@ -608,7 +608,7 @@ class TestBlockHeaderValidation:
             "infused_challenge_chain",
             InfusedChallengeChainSubSlot(
                 VDFInfo(
-                    bytes32([0] * 32),
+                    bytes32.zeros,
                     uint64(1200),
                     ClassgroupElement.get_default_element(),
                 )
@@ -679,7 +679,7 @@ class TestBlockHeaderValidation:
                             block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.replace(
-                                challenge=bytes32([0] * 32)
+                                challenge=bytes32.zeros
                             )
                         ),
                     )
@@ -1101,7 +1101,7 @@ class TestBlockHeaderValidation:
             recursive_replace(
                 block.finished_sub_slots[0].challenge_chain,
                 "subepoch_summary_hash",
-                bytes32([0] * 32),
+                bytes32.zeros,
             ),
         )
 
@@ -1136,7 +1136,7 @@ class TestBlockHeaderValidation:
                     recursive_replace(
                         blocks[-1].finished_sub_slots[0].challenge_chain,
                         "subepoch_summary_hash",
-                        bytes32([0] * 32),
+                        bytes32.zeros,
                     ),
                 )
 

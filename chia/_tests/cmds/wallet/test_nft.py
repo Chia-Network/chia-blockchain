@@ -129,7 +129,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 [STD_TX],
                 uint32(wallet_id),
                 WalletSpendBundle([], G2Element()),
-                bytes32([0] * 32).hex(),
+                bytes32.zeros.hex(),
             )
 
     inst_rpc_client = NFTCreateRpcClient()  # pylint: disable=no-value-for-parameter

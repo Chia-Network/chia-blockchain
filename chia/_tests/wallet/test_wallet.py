@@ -78,7 +78,7 @@ class TestWalletSimulator:
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 uint64(tx_amount),
-                bytes32([0] * 32),
+                bytes32.zeros,
                 action_scope,
                 uint64(0),
             )
@@ -133,7 +133,7 @@ class TestWalletSimulator:
         ) as action_scope:
             await wallet.generate_signed_transaction(
                 uint64(tx_amount),
-                bytes32([0] * 32),
+                bytes32.zeros,
                 action_scope,
                 uint64(0),
             )
@@ -777,7 +777,7 @@ class TestWalletSimulator:
         height = full_node_api.full_node.blockchain.get_peak_height()
         assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 2), uint32(height + 1), bytes32([0] * 32), None)
+            ReorgProtocol(uint32(height - 2), uint32(height + 1), bytes32.zeros, None)
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
@@ -859,7 +859,7 @@ class TestWalletSimulator:
         height = full_node_api.full_node.blockchain.get_peak_height()
         assert height is not None
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
+            ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
         )
 
         await time_out_assert(20, wsm.coin_store.count_small_unspent, 1, 1000, CoinType.CLAWBACK)
@@ -916,7 +916,7 @@ class TestWalletSimulator:
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 uint64(tx_amount),
-                bytes32([0] * 32),
+                bytes32.zeros,
                 action_scope,
                 uint64(0),
                 puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 500}],
@@ -1666,7 +1666,7 @@ class TestWalletSimulator:
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
             await wallet.generate_signed_transaction(
                 uint64(tx_amount),
-                bytes32([0] * 32),
+                bytes32.zeros,
                 action_scope,
                 uint64(tx_fee),
             )
@@ -2042,7 +2042,7 @@ class TestWalletSimulator:
             coin_list = list(coins)
             await wallet.generate_signed_transaction(
                 uint64(AMOUNT_TO_SEND),
-                bytes32([0] * 32),
+                bytes32.zeros,
                 action_scope,
                 uint64(0),
                 coins=coins,

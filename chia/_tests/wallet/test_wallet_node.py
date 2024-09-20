@@ -638,7 +638,7 @@ async def test_transaction_send_cache(
 
     # Generate the transaction
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), action_scope)
+        await wallet.generate_signed_transaction(uint64(0), bytes32.zeros, action_scope)
     [tx] = action_scope.side_effects.transactions
 
     # Make sure it is sent to the peer
@@ -695,7 +695,7 @@ async def test_wallet_node_bad_coin_state_ignore(
         return make_msg(
             ProtocolMessageTypes.respond_to_coin_update,
             wallet_protocol.RespondToCoinUpdates(
-                [], uint32(0), [CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0)), uint32(0), uint32(0))]
+                [], uint32(0), [CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), uint32(0), uint32(0))]
             ),
         )
 
