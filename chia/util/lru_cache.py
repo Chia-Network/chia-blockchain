@@ -27,10 +27,3 @@ class LRUCache(Generic[K, V]):
 
     def remove(self, key: K) -> None:
         self.cache.pop(key)
-
-    def maybe_remove(self, key: K) -> None:
-        if key in self.cache:
-            self.cache.pop(key)
-
-    def clear(self) -> None:
-        self.cache.clear()

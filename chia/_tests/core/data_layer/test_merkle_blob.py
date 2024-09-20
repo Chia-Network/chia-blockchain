@@ -94,7 +94,8 @@ reference_blob = bytes(range(data_size))
 class RawNodeFromBlobCase(Generic[RawMerkleNodeT]):
     raw: RawMerkleNodeT
     blob_to_unpack: bytes = reference_blob
-    packed_blob_reference: bytes = reference_blob
+    packed_blob_reference_leaf: bytes = reference_blob
+    packed_blob_reference_internal: bytes = reference_blob[:44] + bytes([0] * 8)
 
     marks: Marks = ()
 
@@ -106,19 +107,19 @@ class RawNodeFromBlobCase(Generic[RawMerkleNodeT]):
 reference_raw_nodes: List[DataCase] = [
     RawNodeFromBlobCase(
         raw=RawInternalMerkleNode(
-            parent=TreeIndex(0x00010203),
-            left=TreeIndex(0x04050607),
-            right=TreeIndex(0x08090A0B),
-            hash=bytes(range(12, data_size)),
+            hash=bytes(range(32)),
+            parent=TreeIndex(0x20212223),
+            left=TreeIndex(0x24252627),
+            right=TreeIndex(0x28292A2B),
             index=TreeIndex(0),
         ),
     ),
     RawNodeFromBlobCase(
         raw=RawLeafMerkleNode(
-            parent=TreeIndex(0x00010203),
-            key=KVId(0x0405060708090A0B),
-            value=KVId(0x0405060708090A1B),
-            hash=bytes(range(12, data_size)),
+            hash=bytes(range(32)),
+            parent=TreeIndex(0x20212223),
+            key=KVId(0x2425262728292A2B),
+            value=KVId(0x2C2D2E2F30313233),
             index=TreeIndex(0),
         ),
     ),
@@ -138,16 +139,22 @@ def test_raw_node_from_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) ->
 @datacases(*reference_raw_nodes)
 def test_raw_node_to_blob(case: RawNodeFromBlobCase[RawMerkleNodeProtocol]) -> None:
     blob = pack_raw_node(case.raw)
-    assert blob == case.packed_blob_reference
+    expected_blob = (
+        case.packed_blob_reference_leaf
+        if isinstance(case.raw, RawLeafMerkleNode)
+        else case.packed_blob_reference_internal
+    )
+
+    assert blob == expected_blob
 
 
 def test_merkle_blob_one_leaf_loads() -> None:
     # TODO: need to persist reference data
     leaf = RawLeafMerkleNode(
+        hash=bytes(range(32)),
         parent=null_parent,
         key=KVId(0x0405060708090A0B),
         value=KVId(0x0405060708090A1B),
-        hash=bytes(range(12, data_size)),
         index=TreeIndex(0),
     )
     blob = bytearray(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(leaf))
@@ -160,24 +167,24 @@ def test_merkle_blob_two_leafs_loads() -> None:
     # TODO: break this test down into some reusable data and multiple tests
     # TODO: need to persist reference data
     root = RawInternalMerkleNode(
+        hash=bytes(range(32)),
         parent=null_parent,
         left=TreeIndex(1),
         right=TreeIndex(2),
-        hash=bytes(range(12, data_size)),
         index=TreeIndex(0),
     )
     left_leaf = RawLeafMerkleNode(
+        hash=bytes(range(32)),
         parent=TreeIndex(0),
         key=KVId(0x0405060708090A0B),
         value=KVId(0x0405060708090A1B),
-        hash=bytes(range(12, data_size)),
         index=TreeIndex(1),
     )
     right_leaf = RawLeafMerkleNode(
+        hash=bytes(range(32)),
         parent=TreeIndex(0),
         key=KVId(0x1415161718191A1B),
         value=KVId(0x1415161718191A2B),
-        hash=bytes(range(12, data_size)),
         index=TreeIndex(2),
     )
     blob = bytearray()
