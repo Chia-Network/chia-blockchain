@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from chia_rs import ENABLE_FIXED_DIV
 from clvm.EvalError import EvalError
 from clvm.operators import KEYWORD_TO_ATOM
 from clvm_tools.binutils import assemble, disassemble
@@ -123,7 +122,7 @@ def test_run() -> None:
     with pytest.raises(ValueError, match="div operator with negative operands is deprecated"):
         cost, ret = div.run_with_cost(100000, [10, -5], 0)
 
-    cost, ret = div.run_with_cost(100000, [10, -5], ENABLE_FIXED_DIV)
+    cost, ret = div.run_with_cost(100000, [10, -5], 0)
     assert cost == 1107
     print(ret)
     assert ret.atom == bytes([0xFE])
@@ -132,7 +131,7 @@ def test_run() -> None:
     with pytest.raises(ValueError, match="div operator with negative operands is deprecated"):
         cost, ret = div.run_with_flags(100000, 0, [10, -5])
 
-    cost, ret = div.run_with_flags(100000, ENABLE_FIXED_DIV, [10, -5])
+    cost, ret = div.run_with_flags(100000, 0, [10, -5])
     assert cost == 1107
     print(ret)
     assert ret.atom == bytes([0xFE])
@@ -141,6 +140,6 @@ def test_run() -> None:
     with pytest.raises(ValueError, match="div operator with negative operands is deprecated"):
         ret = div.run([10, -5], 100000, 0)
 
-    ret = div.run([10, -5], 100000, ENABLE_FIXED_DIV)
+    ret = div.run([10, -5], 100000, 0)
     print(ret)
     assert ret.atom == bytes([0xFE])
