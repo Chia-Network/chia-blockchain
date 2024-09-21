@@ -480,10 +480,7 @@ class TestConditions:
         )
 
         # infinity is disallowed after soft-fork-5 activates
-        if consensus_mode >= ConsensusMode.SOFT_FORK_5:
-            expected_error = Err.INVALID_CONDITION
-        else:
-            expected_error = None
+        expected_error = Err.INVALID_CONDITION
         await check_conditions(bt, conditions, expected_error)
 
     @pytest.mark.anyio
