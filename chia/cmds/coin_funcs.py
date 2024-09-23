@@ -1,114 +1,17 @@
 from __future__ import annotations
 
 import dataclasses
-import sys
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence
 
-from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
+from chia.cmds.cmds_util import CMDTXConfigLoader, cli_confirm, get_wallet_client
 from chia.cmds.param_types import CliAmount
-from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
+from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
 from chia.rpc.wallet_request_types import CombineCoins, SplitCoins
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
-
-
-async def async_list(
-    *,
-    wallet_rpc_port: Optional[int],
-    fingerprint: Optional[int],
-    wallet_id: int,
-    max_coin_amount: CliAmount,
-    min_coin_amount: CliAmount,
-    excluded_amounts: Sequence[CliAmount],
-    excluded_coin_ids: Sequence[bytes32],
-    show_unconfirmed: bool,
-    paginate: Optional[bool],
-) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, _, config):
-        addr_prefix = selected_network_address_prefix(config)
-        if paginate is None:
-            paginate = sys.stdout.isatty()
-        try:
-            wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
-            mojo_per_unit = get_mojo_per_unit(wallet_type)
-        except LookupError:
-            print(f"Wallet id: {wallet_id} not found.")
-            return
-        if not await wallet_client.get_synced():
-            print("Wallet not synced. Please wait.")
-            return
-        conf_coins, unconfirmed_removals, unconfirmed_additions = await wallet_client.get_spendable_coins(
-            wallet_id=wallet_id,
-            coin_selection_config=CMDCoinSelectionConfigLoader(
-                max_coin_amount=max_coin_amount,
-                min_coin_amount=min_coin_amount,
-                excluded_coin_amounts=list(excluded_amounts),
-                excluded_coin_ids=list(excluded_coin_ids),
-            ).to_coin_selection_config(mojo_per_unit),
-        )
-        print(f"There are a total of {len(conf_coins) + len(unconfirmed_additions)} coins in wallet {wallet_id}.")
-        print(f"{len(conf_coins)} confirmed coins.")
-        print(f"{len(unconfirmed_additions)} unconfirmed additions.")
-        print(f"{len(unconfirmed_removals)} unconfirmed removals.")
-        print("Confirmed coins:")
-        print_coins(
-            "\tAddress: {} Amount: {}, Confirmed in block: {}\n",
-            [(cr.coin, str(cr.confirmed_block_index)) for cr in conf_coins],
-            mojo_per_unit,
-            addr_prefix,
-            paginate,
-        )
-        if show_unconfirmed:
-            print("\nUnconfirmed Removals:")
-            print_coins(
-                "\tPrevious Address: {} Amount: {}, Confirmed in block: {}\n",
-                [(cr.coin, str(cr.confirmed_block_index)) for cr in unconfirmed_removals],
-                mojo_per_unit,
-                addr_prefix,
-                paginate,
-            )
-            print("\nUnconfirmed Additions:")
-            print_coins(
-                "\tNew Address: {} Amount: {}, Not yet confirmed in a block.{}\n",
-                [(coin, "") for coin in unconfirmed_additions],
-                mojo_per_unit,
-                addr_prefix,
-                paginate,
-            )
-
-
-def print_coins(
-    target_string: str, coins: List[Tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
-) -> None:
-    if len(coins) == 0:
-        print("\tNo Coins.")
-        return
-    num_per_screen = 5 if paginate else len(coins)
-    for i in range(0, len(coins), num_per_screen):
-        for j in range(0, num_per_screen):
-            if i + j >= len(coins):
-                break
-            coin, conf_height = coins[i + j]
-            address = encode_puzzle_hash(coin.puzzle_hash, addr_prefix)
-            amount_str = print_balance(coin.amount, mojo_per_unit, "", decimal_only=True)
-            print(f"Coin ID: 0x{coin.name().hex()}")
-            print(target_string.format(address, amount_str, conf_height))
-
-        if i + num_per_screen >= len(coins):
-            return None
-        print("Press q to quit, or c to continue")
-        while True:
-            entered_key = sys.stdin.read(1)
-            if entered_key.lower() == "q":
-                return None
-            elif entered_key.lower() == "c":
-                break
 
 
 async def async_combine(
