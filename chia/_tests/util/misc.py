@@ -402,6 +402,14 @@ class BenchmarkRunner:
         kwargs.setdefault("overhead", self.overhead)
         return _AssertRuntime(*args, **kwargs)
 
+    def record_runtime(self, *args: Any, **kwargs: Any) -> _AssertRuntime:
+        kwargs.setdefault("enable_assertion", False)
+        kwargs.setdefault("print", False)
+        # TODO: ick
+        kwargs.setdefault("seconds", 1)
+        kwargs.setdefault("overhead", self.overhead)
+        return _AssertRuntime(*args, **kwargs)
+
     def record_value(self, value: float, limit: float, label: str) -> None:
         if ether.record_property is not None:
             file, line = caller_file_and_line(

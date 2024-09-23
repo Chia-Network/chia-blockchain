@@ -1555,6 +1555,7 @@ def process_big_o(
     best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations, simplicity_bias=simplicity_bias)
 
     lines: List[str] = []
+    file = sys.stdout
     try:
         lines.append(f"allowed simplicity bias: {simplicity_bias}")
         lines.append(big_o.reports.big_o_report(best=best_class, others=fitted))
@@ -1580,12 +1581,12 @@ def process_big_o(
         assert close_enough
         lines.append(f"expected {required_complexity.__name__} and got close enough, best: {best_class}")
     except Exception:
-        print("\n".join(lines), file=sys.stderr)
+        file = sys.stderr
         raise
-    else:
-        print("\n".join(lines), file=sys.stderr)
+    finally:
+        print("\n".join(lines), file=file)
 
-    # TODO: restore this for some actual runtime limits?
+    # TODO: restore this (outside this function) for some actual runtime limits?
     # coefficient_maximums = [0.65, 0.000_25, *(10**-n for n in range(5, 100))]
     # coefficients = best_class.coefficients()
     # paired = list(zip(coefficients, coefficient_maximums))
@@ -1608,7 +1609,7 @@ async def test_benchmark_batch_insert_complexity(
     test_size = 100
     step_size = 100
     assert step_size >= test_size
-    max_pre_size = 20_000
+    max_pre_size = 10_000
 
     batch_count, remainder = divmod(max_pre_size, test_size)
     assert remainder == 0, "the last batch would be a different size"
@@ -1619,13 +1620,13 @@ async def test_benchmark_batch_insert_complexity(
 
     total_inserted = 0
     changelist_iter = iter(generate_changelist(r=r, size=max_pre_size))
-    with benchmark_runner.print_runtime(label="overall", clock=clock):
+    with benchmark_runner.record_runtime(label="overall", clock=clock):
         while True:
             batch = list(itertools.islice(changelist_iter, test_size))
             if len(batch) == 0:
                 break
 
-            with benchmark_runner.print_runtime(label="count", clock=clock) as f:
+            with benchmark_runner.record_runtime(label="count", clock=clock) as f:
                 await data_store.insert_batch(
                     store_id=store_id,
                     changelist=batch,
