@@ -18,6 +18,8 @@ from chia.full_node.mempool import MAX_SKIPPED_ITEMS, PRIORITY_TX_THRESHOLD
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, mempool_check_time_locks
 from chia.full_node.mempool_manager import (
     MEMPOOL_MIN_FEE_INCREASE,
+    QUOTE_BYTES,
+    QUOTE_EXECUTION_COST,
     MempoolManager,
     TimelockConditions,
     can_replace,
@@ -1943,8 +1945,8 @@ async def test_mempool_timelocks(cond1: List[object], cond2: List[object], expec
 
 
 TEST_FILL_RATE_ITEM_COST = 144_720_020
-QUOTE_BYTE_COST = 2 * DEFAULT_CONSTANTS.COST_PER_BYTE
-QUOTE_EXECUTION_COST = 20
+TEST_COST_PER_BYTE = 12_000
+TEST_BLOCK_OVERHEAD = QUOTE_BYTES * TEST_COST_PER_BYTE + QUOTE_EXECUTION_COST
 
 
 @pytest.mark.anyio
@@ -1962,8 +1964,8 @@ QUOTE_EXECUTION_COST = 20
         # Here we set the block cost limit to twice the test items' cost - 1,
         # so we expect only one of the two test items to get included in the block.
         # NOTE: The cost difference here is because get_conditions_from_spendbundle
-        # does not include the overhead to make a block (quote byte cost  + quote runtime cost).
-        (TEST_FILL_RATE_ITEM_COST * 2 - 1, 1, TEST_FILL_RATE_ITEM_COST + QUOTE_BYTE_COST + QUOTE_EXECUTION_COST),
+        # does not include the block overhead.
+        (TEST_FILL_RATE_ITEM_COST * 2 - 1, 1, TEST_FILL_RATE_ITEM_COST + TEST_BLOCK_OVERHEAD),
     ],
 )
 async def test_fill_rate_block_validation(
