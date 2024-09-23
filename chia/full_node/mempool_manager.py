@@ -301,7 +301,7 @@ class MempoolManager:
             self._worker_queue_size -= 1
 
         if bls_cache is not None:
-            bls_cache.update([(e[0], bytes(e[1])) for e in new_cache_entries])
+            bls_cache.update(new_cache_entries)
 
         ret = NPCResult(None, sbc)
 
