@@ -16,6 +16,7 @@ from typing import (
     List,
     Optional,
     Protocol,
+    Sequence,
     Type,
     Union,
     get_args,
@@ -26,12 +27,14 @@ from typing import (
 import click
 from typing_extensions import dataclass_transform
 
-from chia.cmds.cmds_util import TransactionBundle, get_wallet_client
+from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, TransactionBundle, get_wallet_client
+from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import is_type_SpecificOptional
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.tx_config import CoinSelectionConfig
 
 SyncCmd = Callable[..., None]
 
@@ -347,3 +350,47 @@ class TransactionsOut:
     def handle_transaction_output(self, output: List[TransactionRecord]) -> None:
         with open(Path(self.transaction_file_out), "wb") as file:
             file.write(bytes(TransactionBundle(output)))
+
+
+@command_helper
+class NeedsCoinSelectionConfig:
+    min_coin_amount: CliAmount = option(
+        "-ma",
+        "--min-coin-amount",
+        "--min-amount",
+        help="Ignore coins worth less then this much XCH or CAT units",
+        type=AmountParamType(),
+        required=False,
+        default=cli_amount_none,
+    )
+    max_coin_amount: CliAmount = option(
+        "-l",
+        "--max-coin-amount",
+        "--max-amount",
+        help="Ignore coins worth more then this much XCH or CAT units",
+        type=AmountParamType(),
+        required=False,
+        default=cli_amount_none,
+    )
+    coins_to_exclude: Sequence[bytes32] = option(
+        "--exclude-coin",
+        "coins_to_exclude",
+        multiple=True,
+        type=Bytes32ParamType(),
+        help="Exclude this coin from being spent.",
+    )
+    amounts_to_exclude: Sequence[CliAmount] = option(
+        "--exclude-amount",
+        "amounts_to_exclude",
+        multiple=True,
+        type=AmountParamType(),
+        help="Exclude any coins with this XCH or CAT amount from being included.",
+    )
+
+    def load(self, mojo_per_unit: int) -> CoinSelectionConfig:
+        return CMDCoinSelectionConfigLoader(
+            min_coin_amount=self.min_coin_amount,
+            max_coin_amount=self.max_coin_amount,
+            excluded_coin_amounts=list(_ for _ in self.coins_to_exclude),
+            excluded_coin_ids=list(_ for _ in self.amounts_to_exclude),
+        ).to_coin_selection_config(mojo_per_unit)
