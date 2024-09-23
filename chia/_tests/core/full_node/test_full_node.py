@@ -23,6 +23,7 @@ from chia._tests.util.misc import add_blocks_in_batches, wallet_height_at_least
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
@@ -425,37 +426,39 @@ class TestFullNodeBlockCompression:
                 for reorg_block in reog_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, reorg_block)
                 for i in range(1, height):
-                    for batch_size in range(1, height, 3):
-                        results = await blockchain.pre_validate_blocks_multiprocessing(
-                            all_blocks[:i],
-                            {},
-                            sub_slot_iters=ssi,
-                            difficulty=diff,
-                            prev_ses_block=None,
-                            batch_size=batch_size,
-                            validate_signatures=False,
-                        )
-                        assert results is not None
-                        for result in results:
-                            assert result.error is None
+                    results = await pre_validate_blocks_multiprocessing(
+                        blockchain.constants,
+                        blockchain,
+                        all_blocks[:i],
+                        blockchain.pool,
+                        {},
+                        sub_slot_iters=ssi,
+                        difficulty=diff,
+                        prev_ses_block=None,
+                        validate_signatures=False,
+                    )
+                    assert results is not None
+                    for result in results:
+                        assert result.error is None
 
             for r in range(0, len(all_blocks), 3):
                 for block in all_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, block)
                 for i in range(1, height):
-                    for batch_size in range(1, height, 3):
-                        results = await blockchain.pre_validate_blocks_multiprocessing(
-                            all_blocks[:i],
-                            {},
-                            sub_slot_iters=ssi,
-                            difficulty=diff,
-                            prev_ses_block=None,
-                            batch_size=batch_size,
-                            validate_signatures=False,
-                        )
-                        assert results is not None
-                        for result in results:
-                            assert result.error is None
+                    results = await pre_validate_blocks_multiprocessing(
+                        blockchain.constants,
+                        blockchain,
+                        all_blocks[:i],
+                        blockchain.pool,
+                        {},
+                        sub_slot_iters=ssi,
+                        difficulty=diff,
+                        prev_ses_block=None,
+                        validate_signatures=False,
+                    )
+                    assert results is not None
+                    for result in results:
+                        assert result.error is None
 
 
 class TestFullNodeProtocol:

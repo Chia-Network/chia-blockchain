@@ -29,7 +29,7 @@ from chia.consensus.coinbase import create_farmer_coin
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
@@ -1819,8 +1819,11 @@ class TestPreValidation:
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_block.total_iters", blocks[-1].reward_chain_block.total_iters + 1
         )
-        res = await empty_blockchain.pre_validate_blocks_multiprocessing(
+        res = await pre_validate_blocks_multiprocessing(
+            empty_blockchain.constants,
+            empty_blockchain,
             [blocks[0], block_bad],
+            empty_blockchain.pool,
             {},
             sub_slot_iters=ssi,
             difficulty=difficulty,
@@ -1845,8 +1848,11 @@ class TestPreValidation:
             end_i = min(i + n_at_a_time, len(blocks))
             blocks_to_validate = blocks[i:end_i]
             start_pv = time.time()
-            res = await empty_blockchain.pre_validate_blocks_multiprocessing(
+            res = await pre_validate_blocks_multiprocessing(
+                empty_blockchain.constants,
+                empty_blockchain,
                 blocks_to_validate,
+                empty_blockchain.pool,
                 {},
                 sub_slot_iters=ssi,
                 difficulty=difficulty,
@@ -1950,8 +1956,16 @@ class TestBodyValidation:
         )
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [blocks[-1]], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=False
+        pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            b.constants,
+            b,
+            [blocks[-1]],
+            b.pool,
+            {},
+            sub_slot_iters=ssi,
+            difficulty=diff,
+            prev_ses_block=None,
+            validate_signatures=False,
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
@@ -2066,8 +2080,16 @@ class TestBodyValidation:
             )
             ssi = b.constants.SUB_SLOT_ITERS_STARTING
             diff = b.constants.DIFFICULTY_STARTING
-            pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-                [blocks[-1]], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=True
+            pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                b.constants,
+                b,
+                [blocks[-1]],
+                b.pool,
+                {},
+                sub_slot_iters=ssi,
+                difficulty=diff,
+                prev_ses_block=None,
+                validate_signatures=True,
             )
             assert pre_validation_results is not None
             assert (await b.add_block(blocks[-1], pre_validation_results[0], None, sub_slot_iters=ssi))[0] == expected
@@ -2139,8 +2161,16 @@ class TestBodyValidation:
         )
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [blocks[-1]], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=False
+        pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            b.constants,
+            b,
+            [blocks[-1]],
+            b.pool,
+            {},
+            sub_slot_iters=ssi,
+            difficulty=diff,
+            prev_ses_block=None,
+            validate_signatures=False,
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
@@ -2257,8 +2287,16 @@ class TestBodyValidation:
             )
             ssi = b.constants.SUB_SLOT_ITERS_STARTING
             diff = b.constants.DIFFICULTY_STARTING
-            pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-                [blocks[-1]], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=True
+            pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                b.constants,
+                b,
+                [blocks[-1]],
+                b.pool,
+                {},
+                sub_slot_iters=ssi,
+                difficulty=diff,
+                prev_ses_block=None,
+                validate_signatures=True,
             )
             assert pre_validation_results is not None
             assert (await b.add_block(blocks[-1], pre_validation_results[0], None, sub_slot_iters=ssi))[0] == expected
@@ -2607,8 +2645,16 @@ class TestBodyValidation:
             )
         )[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
-        results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [blocks[-1]], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=False
+        results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            b.constants,
+            b,
+            [blocks[-1]],
+            b.pool,
+            {},
+            sub_slot_iters=ssi,
+            difficulty=diff,
+            prev_ses_block=None,
+            validate_signatures=False,
         )
         assert results is not None
         assert Err(results[0].error) == Err.BLOCK_COST_EXCEEDS_MAX
@@ -3178,8 +3224,16 @@ class TestBodyValidation:
         # Bad signature also fails in prevalidation
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        preval_results = await b.pre_validate_blocks_multiprocessing(
-            [last_block], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=True
+        preval_results = await pre_validate_blocks_multiprocessing(
+            b.constants,
+            b,
+            [last_block],
+            b.pool,
+            {},
+            sub_slot_iters=ssi,
+            difficulty=diff,
+            prev_ses_block=None,
+            validate_signatures=True,
         )
         assert preval_results is not None
         assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE.value
@@ -3288,8 +3342,16 @@ class TestReorgs:
         print(f"pre-validating {len(blocks)} blocks")
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        pre_validation_results: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            blocks, {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=False
+        pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            b.constants,
+            b,
+            blocks,
+            b.pool,
+            {},
+            sub_slot_iters=ssi,
+            difficulty=diff,
+            prev_ses_block=None,
+            validate_signatures=False,
         )
         for i, block in enumerate(blocks):
             if block.height != 0 and len(block.finished_sub_slots) > 0:
@@ -3841,13 +3903,29 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
             block1, block2 = b1, b2
         counter += 1
 
-        preval: List[PreValidationResult] = await b.pre_validate_blocks_multiprocessing(
-            [block1], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=False
+        preval: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            b.constants,
+            b,
+            [block1],
+            b.pool,
+            {},
+            sub_slot_iters=ssi,
+            difficulty=diff,
+            prev_ses_block=None,
+            validate_signatures=False,
         )
         _, err, _ = await b.add_block(block1, preval[0], None, sub_slot_iters=ssi)
         assert err is None
-        preval = await b.pre_validate_blocks_multiprocessing(
-            [block2], {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=False
+        preval = await pre_validate_blocks_multiprocessing(
+            b.constants,
+            b,
+            [block2],
+            b.pool,
+            {},
+            sub_slot_iters=ssi,
+            difficulty=diff,
+            prev_ses_block=None,
+            validate_signatures=False,
         )
         _, err, _ = await b.add_block(block2, preval[0], None, sub_slot_iters=ssi)
         assert err is None
@@ -3871,10 +3949,18 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
 async def test_get_tx_peak(default_400_blocks: List[FullBlock], empty_blockchain: Blockchain) -> None:
     bc = empty_blockchain
     test_blocks = default_400_blocks[:100]
-    ssi = empty_blockchain.constants.SUB_SLOT_ITERS_STARTING
-    diff = empty_blockchain.constants.DIFFICULTY_STARTING
-    res = await bc.pre_validate_blocks_multiprocessing(
-        test_blocks, {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=None, validate_signatures=False
+    ssi = bc.constants.SUB_SLOT_ITERS_STARTING
+    diff = bc.constants.DIFFICULTY_STARTING
+    res = await pre_validate_blocks_multiprocessing(
+        bc.constants,
+        bc,
+        test_blocks,
+        bc.pool,
+        {},
+        sub_slot_iters=ssi,
+        difficulty=diff,
+        prev_ses_block=None,
+        validate_signatures=False,
     )
 
     last_tx_block_record = None
