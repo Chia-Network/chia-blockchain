@@ -1756,7 +1756,7 @@ class DataStore:
                 store_id=store_id,
                 root_hash=root.node_hash,
             )
-            insert_ancestors_cache: List[Tuple[bytes32, bytes23]] = [
+            insert_ancestors_cache: List[Tuple[bytes32, bytes32]] = [
                 (node.left_hash, node.right_hash) for node in internal_nodes if node.hash not in known_hashes
             ]
             await self._insert_ancestor_table(
