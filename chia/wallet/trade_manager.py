@@ -379,7 +379,7 @@ class TradeManager:
                     confirmed=False,
                     sent=uint32(10),
                     spend_bundle=None,
-                    additions=cancellation_additions,
+                    additions=[],
                     removals=[coin],
                     wallet_id=wallet.id(),
                     sent_to=[],

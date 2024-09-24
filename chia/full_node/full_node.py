@@ -2444,12 +2444,7 @@ class FullNode:
         return None, False
 
     async def add_transaction(
-        self,
-        transaction: SpendBundle,
-        spend_name: bytes32,
-        peer: Optional[WSChiaConnection] = None,
-        test: bool = False,
-        tx_bytes: Optional[bytes] = None,
+        self, transaction: SpendBundle, spend_name: bytes32, peer: Optional[WSChiaConnection] = None, test: bool = False
     ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
         if self.sync_store.get_sync_mode():
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
