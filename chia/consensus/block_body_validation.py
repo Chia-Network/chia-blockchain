@@ -367,8 +367,8 @@ async def validate_block_body(
 
     # 14. Check for duplicate spends inside block
     removal_counter = collections.Counter(removals)
-    for k, v in removal_counter.items():
-        if v > 1:
+    for count in removal_counter.values():
+        if count > 1:
             return Err.DOUBLE_SPEND, None
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
