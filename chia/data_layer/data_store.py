@@ -350,58 +350,58 @@ class DataStore:
 
     async def _insert_ancestor_table(
         self,
-        left_hash: bytes32,
-        right_hash: bytes32,
+        hashes: List[Tuple[bytes32, bytes32]],
         store_id: bytes32,
         generation: int,
+        foreign_key_enforcement_enabled: bool = True,
     ) -> None:
-        node_hash = internal_hash(left_hash=left_hash, right_hash=right_hash)
+        async with self.db_wrapper.writer(foreign_key_enforcement_enabled=foreign_key_enforcement_enabled) as writer:
+            for left_hash, right_hash in hashes:
+                node_hash = internal_hash(left_hash=left_hash, right_hash=right_hash)
+                for hash in (left_hash, right_hash):
+                    values = {
+                        "hash": hash,
+                        "ancestor": node_hash,
+                        "tree_id": store_id,
+                        "generation": generation,
+                    }
+                    try:
+                        await writer.execute(
+                            """
+                            INSERT INTO ancestors(hash, ancestor, tree_id, generation)
+                            VALUES (:hash, :ancestor, :tree_id, :generation)
+                            """,
+                            values,
+                        )
+                    except aiosqlite.IntegrityError as e:
+                        if not e.args[0].startswith("UNIQUE constraint"):
+                            # UNIQUE constraint failed: ancestors.hash, ancestors.tree_id, ancestors.generation
+                            raise
 
-        async with self.db_wrapper.writer() as writer:
-            for hash in (left_hash, right_hash):
-                values = {
-                    "hash": hash,
-                    "ancestor": node_hash,
-                    "tree_id": store_id,
-                    "generation": generation,
-                }
-                try:
-                    await writer.execute(
-                        """
-                        INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                        VALUES (:hash, :ancestor, :tree_id, :generation)
-                        """,
-                        values,
-                    )
-                except aiosqlite.IntegrityError as e:
-                    if not e.args[0].startswith("UNIQUE constraint"):
-                        # UNIQUE constraint failed: ancestors.hash, ancestors.tree_id, ancestors.generation
-                        raise
+                        async with writer.execute(
+                            """
+                            SELECT *
+                            FROM ancestors
+                            WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
+                            LIMIT 1
+                            """,
+                            {"hash": hash, "generation": generation, "tree_id": store_id},
+                        ) as cursor:
+                            result = await cursor.fetchone()
 
-                    async with writer.execute(
-                        """
-                        SELECT *
-                        FROM ancestors
-                        WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id
-                        LIMIT 1
-                        """,
-                        {"hash": hash, "generation": generation, "tree_id": store_id},
-                    ) as cursor:
-                        result = await cursor.fetchone()
+                        if result is None:
+                            # some ideas for causes:
+                            #   an sqlite bug
+                            #   bad queries in this function
+                            #   unexpected db constraints
+                            raise Exception("Unable to find conflicting row") from e  # pragma: no cover
 
-                    if result is None:
-                        # some ideas for causes:
-                        #   an sqlite bug
-                        #   bad queries in this function
-                        #   unexpected db constraints
-                        raise Exception("Unable to find conflicting row") from e  # pragma: no cover
-
-                    result_dict = dict(result)
-                    if result_dict != values:
-                        raise Exception(
-                            "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
-                            f"{hash} {generation} {store_id}"
-                        ) from None
+                        result_dict = dict(result)
+                        if result_dict != values:
+                            raise Exception(
+                                "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
+                                f"{hash} {generation} {store_id}"
+                            ) from None
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
         # forcing type hint here for:
@@ -1141,11 +1141,11 @@ class DataStore:
         root: Root,
     ) -> Root:
         # update ancestors after inserting root, to keep table constraints.
-        insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
+        insert_ancestors_cache: List[Tuple[bytes32, bytes32]] = []
         new_generation = root.generation + 1
         # create first new internal node
         new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
-        insert_ancestors_cache.append((left, right, store_id))
+        insert_ancestors_cache.append((left, right))
 
         # create updated replacements for the rest of the internal nodes
         for ancestor in ancestors:
@@ -1162,7 +1162,7 @@ class DataStore:
             traversal_node_hash = ancestor.hash
 
             new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
-            insert_ancestors_cache.append((left, right, store_id))
+            insert_ancestors_cache.append((left, right))
 
         new_root = await self._insert_root(
             store_id=store_id,
@@ -1172,8 +1172,7 @@ class DataStore:
         )
 
         if status == Status.COMMITTED:
-            for left_hash, right_hash, store_id in insert_ancestors_cache:
-                await self._insert_ancestor_table(left_hash, right_hash, store_id, new_generation)
+            await self._insert_ancestor_table(insert_ancestors_cache, store_id, new_generation)
 
         return new_root
 
@@ -1306,7 +1305,7 @@ class DataStore:
             else:
                 new_generation = root.generation + 1
             # update ancestors after inserting root, to keep table constraints.
-            insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
+            insert_ancestors_cache: List[Tuple[bytes32, bytes32]] = []
             # more parents to handle so let's traverse them
             for ancestor in ancestors[1:]:
                 if ancestor.left_hash == old_child_hash:
@@ -1319,7 +1318,7 @@ class DataStore:
                     raise Exception("Internal error.")
 
                 new_child_hash = await self._insert_internal_node(left_hash=left_hash, right_hash=right_hash)
-                insert_ancestors_cache.append((left_hash, right_hash, store_id))
+                insert_ancestors_cache.append((left_hash, right_hash))
                 old_child_hash = ancestor.hash
 
             new_root = await self._insert_root(
@@ -1329,8 +1328,7 @@ class DataStore:
                 generation=new_generation,
             )
             if status == Status.COMMITTED:
-                for left_hash, right_hash, store_id in insert_ancestors_cache:
-                    await self._insert_ancestor_table(left_hash, right_hash, store_id, new_generation)
+                await self._insert_ancestor_table(insert_ancestors_cache, store_id, new_generation)
 
         return new_root
 
@@ -1758,11 +1756,12 @@ class DataStore:
                 store_id=store_id,
                 root_hash=root.node_hash,
             )
-            for node in internal_nodes:
-                # We already have the same values in ancestor tables, if we have the same internal node.
-                # Don't reinsert it so we can save DB space.
-                if node.hash not in known_hashes:
-                    await self._insert_ancestor_table(node.left_hash, node.right_hash, store_id, root.generation)
+            insert_ancestors_cache: List[Tuple[bytes32, bytes23]] = [
+                (node.left_hash, node.right_hash) for node in internal_nodes if node.hash not in known_hashes
+            ]
+            await self._insert_ancestor_table(
+                insert_ancestors_cache, store_id, root.generation, foreign_key_enforcement_enabled=False
+            )
 
     async def insert_root_with_ancestor_table(
         self, store_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING

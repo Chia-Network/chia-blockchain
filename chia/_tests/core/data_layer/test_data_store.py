@@ -591,11 +591,11 @@ async def test_ancestor_table_unique_inserts(data_store: DataStore, store_id: by
     await add_0123_example(data_store=data_store, store_id=store_id)
     hash_1 = bytes32.from_hexstr("0763561814685fbf92f6ca71fbb1cb11821951450d996375c239979bd63e9535")
     hash_2 = bytes32.from_hexstr("924be8ff27e84cba17f5bc918097f8410fab9824713a4668a21c8e060a8cab40")
-    await data_store._insert_ancestor_table(hash_1, hash_2, store_id, 2)
-    await data_store._insert_ancestor_table(hash_1, hash_2, store_id, 2)
+    await data_store._insert_ancestor_table([(hash_1, hash_2)], store_id, 2)
+    await data_store._insert_ancestor_table([(hash_1, hash_2)], store_id, 2)
     with pytest.raises(Exception, match="^Requested insertion of ancestor"):
-        await data_store._insert_ancestor_table(hash_1, hash_1, store_id, 2)
-    await data_store._insert_ancestor_table(hash_1, hash_2, store_id, 2)
+        await data_store._insert_ancestor_table([(hash_1, hash_1)], store_id, 2)
+    await data_store._insert_ancestor_table([(hash_1, hash_2)], store_id, 2)
 
 
 @pytest.mark.anyio
@@ -685,8 +685,7 @@ async def test_inserting_invalid_length_ancestor_hash_raises_original_exception(
     with pytest.raises(aiosqlite.IntegrityError):
         # casting since we are testing an invalid case
         await data_store._insert_ancestor_table(
-            left_hash=bytes32(b"\x01" * 32),
-            right_hash=bytes32(b"\x02" * 32),
+            hashes=[(bytes32(b"\x01" * 32), bytes32(b"\x02" * 32))],
             store_id=store_id,
             generation=0,
         )
