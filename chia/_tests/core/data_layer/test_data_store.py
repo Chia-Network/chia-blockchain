@@ -1540,16 +1540,14 @@ def generate_changelist(r: random.Random, size: int) -> List[Dict[str, Any]]:
 
 def process_big_o(
     required_complexity: big_o.complexities.ComplexityClass,
-    lowest_considered_n: int,
     records: Dict[int, float],
     # 1 is 100%
     simplicity_bias_percentage: float,
 ) -> None:
     __tracebackhide__ = True
 
-    considered_durations = {n: duration for n, duration in records.items() if n >= lowest_considered_n}
-    ns = list(considered_durations.keys())
-    durations = list(considered_durations.values())
+    ns = list(records.keys())
+    durations = list(records.values())
     best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations)
     simplicity_bias = simplicity_bias_percentage * fitted[best_class]
     best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations, simplicity_bias=simplicity_bias)
@@ -1570,7 +1568,7 @@ def process_big_o(
             return
         elif best_class.order > required_complexity.order:
             if not close_enough:
-                lines.append(f"must be at least {required_complexity.__name__} got: {best_class}")
+                lines.append(f"must be {required_complexity.__name__} got: {best_class}")
                 assert False
         elif best_class.order < required_complexity.order:
             if not close_enough:
@@ -1607,11 +1605,13 @@ async def test_benchmark_batch_insert_complexity(
     r.seed("shadowlands", version=2)
 
     test_size = 100
-    step_size = 100
+    step_size = 1000
     assert step_size >= test_size
     max_pre_size = 10_000
+    # TODO: must be > 0 to avoid an issue with the log complexity class?
+    initial_batch_size = step_size
 
-    batch_count, remainder = divmod(max_pre_size, test_size)
+    batch_count, remainder = divmod(max_pre_size - initial_batch_size, step_size)
     assert remainder == 0, "the last batch would be a different size"
 
     records: Dict[int, float] = {}
@@ -1620,11 +1620,21 @@ async def test_benchmark_batch_insert_complexity(
 
     total_inserted = 0
     changelist_iter = iter(generate_changelist(r=r, size=max_pre_size))
+
     with benchmark_runner.record_runtime(label="overall", clock=clock):
+        initial_batch = list(itertools.islice(changelist_iter, initial_batch_size))
+        if len(initial_batch) > 0:
+            await data_store.insert_batch(
+                store_id=store_id,
+                changelist=initial_batch,
+                # TODO: does this mess up test accuracy?
+                status=Status.COMMITTED,
+            )
+            total_inserted += len(initial_batch)
+
         while True:
             batch = list(itertools.islice(changelist_iter, test_size))
-            if len(batch) == 0:
-                break
+            assert len(batch) == test_size
 
             with benchmark_runner.record_runtime(label="count", clock=clock) as f:
                 await data_store.insert_batch(
@@ -1638,6 +1648,8 @@ async def test_benchmark_batch_insert_complexity(
             total_inserted += len(batch)
 
             step_batch = list(itertools.islice(changelist_iter, step_size - test_size))
+            if total_inserted + len(step_batch) >= max_pre_size:
+                break
             if len(step_batch) > 0:
                 await data_store.insert_batch(
                     store_id=store_id,
@@ -1649,9 +1661,6 @@ async def test_benchmark_batch_insert_complexity(
 
     process_big_o(
         required_complexity=big_o.complexities.Linearithmic,
-        # may not be needed if big_o already considers the effect
-        # TODO: must be > 0 to avoid an issue with the log complexity class?
-        lowest_considered_n=500,
         records=records,
         simplicity_bias_percentage=10 / 100,
     )
