@@ -399,8 +399,8 @@ class DataStore:
                         result_dict = dict(result)
                         if result_dict != values:
                             raise Exception(
-                                "Requested insertion of ancestor, where ancestor differ, but other values are identical: "
-                                f"{hash} {generation} {store_id}"
+                                "Requested insertion of ancestor, where ancestor differ, but other values are"
+                                f" identical: {hash} {generation} {store_id}"
                             ) from None
 
     async def _insert_terminal_node(self, key: bytes, value: bytes) -> bytes32:
