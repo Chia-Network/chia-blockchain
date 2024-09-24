@@ -50,6 +50,7 @@ from chia.rpc.wallet_request_types import (
     AddKey,
     CheckDeleteKey,
     CombineCoins,
+    DefaultCAT,
     DeleteKey,
     DIDGetPubkey,
     GetNotifications,
@@ -1171,7 +1172,13 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert len(selected_coins) > 0
 
     # Test get_cat_list
-    assert len(DEFAULT_CATS) == len((await client.get_cat_list()).cat_list)
+    cat_list = (await client.get_cat_list()).cat_list
+    assert len(DEFAULT_CATS) == len(cat_list)
+    default_cats_set = {
+        DefaultCAT(asset_id=bytes32.from_hexstr(cat["asset_id"]), name=cat["name"], symbol=cat["symbol"])
+        for cat in DEFAULT_CATS.values()
+    }
+    assert default_cats_set == set(cat_list)
 
 
 @pytest.mark.anyio

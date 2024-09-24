@@ -24,11 +24,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.multiprocess_validation import (
-    PreValidationResult,
-    _run_generator,
-    pre_validate_blocks_multiprocessing,
-)
+from chia.consensus.multiprocess_validation import PreValidationResult, _run_generator
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -795,33 +791,6 @@ class Blockchain:
             return PreValidationResult(uint16(error_code.value), None, None, False, uint32(0))
 
         return PreValidationResult(None, required_iters, cost_result, False, uint32(0))
-
-    async def pre_validate_blocks_multiprocessing(
-        self,
-        blocks: List[FullBlock],
-        npc_results: Dict[uint32, NPCResult],  # A cache of the result of running CLVM, optional (you can use {})
-        sub_slot_iters: uint64,
-        difficulty: uint64,
-        prev_ses_block: Optional[BlockRecord],
-        batch_size: int = 4,
-        wp_summaries: Optional[List[SubEpochSummary]] = None,
-        *,
-        validate_signatures: bool,
-    ) -> List[PreValidationResult]:
-        return await pre_validate_blocks_multiprocessing(
-            self.constants,
-            self,
-            blocks,
-            self.pool,
-            True,
-            npc_results,
-            batch_size,
-            sub_slot_iters,
-            difficulty,
-            prev_ses_block,
-            wp_summaries,
-            validate_signatures=validate_signatures,
-        )
 
     async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator, height: uint32) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
