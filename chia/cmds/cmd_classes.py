@@ -27,14 +27,16 @@ from typing import (
 import click
 from typing_extensions import dataclass_transform
 
-from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, TransactionBundle, get_wallet_client
-from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
+from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, TransactionBundle, get_wallet_client
+from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, TransactionFeeParamType, cli_amount_none
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint64
 from chia.util.streamable import is_type_SpecificOptional
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.tx_config import CoinSelectionConfig
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 SyncCmd = Callable[..., None]
 
@@ -339,17 +341,21 @@ class TransactionsIn:
 
 @command_helper
 class TransactionsOut:
-    transaction_file_out: str = option(
+    transaction_file_out: Optional[str] = option(
         "--transaction-file-out",
         "-o",
         type=str,
+        default=None,
         help="Transaction filename to use as output",
-        required=True,
+        required=False,
     )
 
     def handle_transaction_output(self, output: List[TransactionRecord]) -> None:
-        with open(Path(self.transaction_file_out), "wb") as file:
-            file.write(bytes(TransactionBundle(output)))
+        if self.transaction_file_out is None:
+            return
+        else:
+            with open(Path(self.transaction_file_out), "wb") as file:
+                file.write(bytes(TransactionBundle(output)))
 
 
 @command_helper
@@ -387,10 +393,88 @@ class NeedsCoinSelectionConfig:
         help="Exclude any coins with this XCH or CAT amount from being included.",
     )
 
-    def load(self, mojo_per_unit: int) -> CoinSelectionConfig:
+    def load_coin_selection_config(self, mojo_per_unit: int) -> CoinSelectionConfig:
         return CMDCoinSelectionConfigLoader(
             min_coin_amount=self.min_coin_amount,
             max_coin_amount=self.max_coin_amount,
             excluded_coin_amounts=list(_ for _ in self.coins_to_exclude),
             excluded_coin_ids=list(_ for _ in self.amounts_to_exclude),
         ).to_coin_selection_config(mojo_per_unit)
+
+
+@command_helper
+class NeedsTXConfig(NeedsCoinSelectionConfig):
+    reuse: Optional[bool] = option(
+        "--reuse/--new-address",
+        "--reuse-puzhash/--generate-new-puzhash",
+        help="Reuse existing address for the change.",
+        is_flag=True,
+        default=None,
+    )
+
+    def load_tx_config(self, mojo_per_unit: int, config: Dict[str, Any], fingerprint: int) -> TXConfig:
+        return CMDTXConfigLoader(
+            min_coin_amount=self.min_coin_amount,
+            max_coin_amount=self.max_coin_amount,
+            excluded_coin_amounts=list(_ for _ in self.coins_to_exclude),
+            excluded_coin_ids=list(_ for _ in self.amounts_to_exclude),
+            reuse_puzhash=self.reuse,
+        ).to_tx_config(mojo_per_unit, config, fingerprint)
+
+
+@dataclass(frozen=True)
+class TransactionEndpoint:
+    tx_config_loader: NeedsTXConfig
+    transaction_writer: TransactionsOut
+    fee: uint64 = option(
+        "-m",
+        "--fee",
+        help="Set the fees for the transaction, in XCH",
+        type=TransactionFeeParamType(),
+        default="0",
+        show_default=True,
+        required=True,
+    )
+    push: bool = option(
+        "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
+    )
+    valid_at: Optional[int] = option(
+        "--valid-at",
+        help="UNIX timestamp at which the associated transactions become valid",
+        type=int,
+        required=False,
+        default=None,
+        hidden=True,
+    )
+    expires_at: Optional[int] = option(
+        "--expires-at",
+        help="UNIX timestamp at which the associated transactions expire",
+        type=int,
+        required=False,
+        default=None,
+        hidden=True,
+    )
+
+    def load_condition_valid_times(self) -> ConditionValidTimes:
+        return ConditionValidTimes(
+            min_time=uint64.construct_optional(self.valid_at),
+            max_time=uint64.construct_optional(self.expires_at),
+        )
+
+
+@dataclass(frozen=True)
+class TransactionEndpointWithTimelocks(TransactionEndpoint):
+    valid_at: Optional[int] = option(
+        "--valid-at",
+        help="UNIX timestamp at which the associated transactions become valid",
+        type=int,
+        required=False,
+        default=None,
+    )
+    expires_at: Optional[int] = option(
+        "--expires-at",
+        help="UNIX timestamp at which the associated transactions expire",
+        type=int,
+        required=False,
+        default=None,
+    )
