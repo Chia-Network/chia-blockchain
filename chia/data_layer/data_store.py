@@ -179,8 +179,8 @@ class DataStore:
             yield self
 
     @asynccontextmanager
-    async def transaction(self) -> AsyncIterator[None]:
-        async with self.db_wrapper.writer():
+    async def transaction(self, foreign_key_enforcement_enabled: Optional[bool] = None) -> AsyncIterator[None]:
+        async with self.db_wrapper.writer(foreign_key_enforcement_enabled=foreign_key_enforcement_enabled):
             yield
 
     async def migrate_db(self) -> None:
