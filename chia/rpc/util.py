@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, Tuple, get_type_hints
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import aiohttp
 from chia_rs import AugSchemeMPL
@@ -36,6 +37,20 @@ MarshallableRpcEndpoint = Callable[..., Awaitable[Streamable]]
 
 
 ALL_TRANSLATION_LAYERS: Dict[str, TranslationLayer] = {"CHIP-0028": BLIND_SIGNER_TRANSLATION}
+
+
+class AcknowledgedError(Exception):
+    def __init__(self, original: Exception) -> None:
+        super().__init__(f"Acknowledged error: {original}")
+        self.original = original
+
+
+@contextlib.contextmanager
+def acknowledge(*exceptions: Type[Exception]):
+    try:
+        yield
+    except exceptions as e:
+        raise AcknowledgedError(e) from e
 
 
 def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
@@ -87,8 +102,17 @@ def wrap_http_handler(f) -> Callable:
             if "success" not in res_object:
                 res_object["success"] = True
         except Exception as e:
+            if isinstance(e, AcknowledgedError):
+                acknowledged = True
+                e = e.original
+            else:
+                acknowledged = False
+
             tb = traceback.format_exc()
-            log.warning(f"Error while handling message: {tb}")
+
+            if not acknowledged:
+                log.warning(f"Error while handling message: {tb}")
+
             if len(e.args) > 0:
                 res_object = {"success": False, "error": f"{e.args[0]}", "traceback": f"{tb}"}
             else:
