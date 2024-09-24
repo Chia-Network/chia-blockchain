@@ -8,7 +8,6 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
 from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_command, option
@@ -328,7 +327,7 @@ def test_typing() -> None:
     assert "not a valid 32-byte hex string" in result.output
 
 
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="doesn't matter")
+@pytest.mark.limit_consensus_modes(reason="doesn't matter")
 @pytest.mark.parametrize(
     "wallet_environments",
     [
