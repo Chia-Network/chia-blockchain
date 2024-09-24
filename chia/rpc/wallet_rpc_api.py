@@ -1177,20 +1177,18 @@ class WalletRpcApi:
         if not isinstance(wallet, (Wallet, CATWallet)):
             raise ValueError("Cannot combine coins from non-fungible wallet types")
 
-        coins = []
+        coins: List[Coin] = []
 
         # First get the coin IDs specified
         if request.target_coin_ids != []:
             coins.extend(
-                [
-                    cr.coin
-                    for cr in (
-                        await self.service.wallet_state_manager.coin_store.get_coin_records(
-                            wallet_id=request.wallet_id,
-                            coin_id_filter=HashFilter(request.target_coin_ids, mode=uint8(FilterMode.include.value)),
-                        )
-                    ).records
-                ]
+                cr.coin
+                for cr in (
+                    await self.service.wallet_state_manager.coin_store.get_coin_records(
+                        wallet_id=request.wallet_id,
+                        coin_id_filter=HashFilter(request.target_coin_ids, mode=uint8(FilterMode.include.value)),
+                    )
+                ).records
             )
 
         async with action_scope.use() as interface:
@@ -1204,11 +1202,8 @@ class WalletRpcApi:
             amount_selected = sum(c.amount for c in coins)
             if amount_selected < fungible_amount_needed:
                 coins.extend(
-                    list(
-                        await wallet.select_coins(
-                            amount=uint64(fungible_amount_needed - amount_selected),
-                            action_scope=action_scope,
-                        )
+                    await wallet.select_coins(
+                        amount=uint64(fungible_amount_needed - amount_selected), action_scope=action_scope
                     )
                 )
 
@@ -1216,21 +1211,19 @@ class WalletRpcApi:
         if len(coins) < request.number_of_coins:
             async with action_scope.use() as interface:
                 coins.extend(
-                    [
-                        cr.coin
-                        for cr in (
-                            await self.service.wallet_state_manager.coin_store.get_coin_records(
-                                wallet_id=request.wallet_id,
-                                limit=uint32(request.number_of_coins - len(coins)),
-                                order=CoinRecordOrder.amount,
-                                coin_id_filter=HashFilter(
-                                    [c.name() for c in interface.side_effects.selected_coins],
-                                    mode=uint8(FilterMode.exclude.value),
-                                ),
-                                reverse=request.largest_first,
-                            )
-                        ).records
-                    ]
+                    cr.coin
+                    for cr in (
+                        await self.service.wallet_state_manager.coin_store.get_coin_records(
+                            wallet_id=request.wallet_id,
+                            limit=uint32(request.number_of_coins - len(coins)),
+                            order=CoinRecordOrder.amount,
+                            coin_id_filter=HashFilter(
+                                [c.name() for c in interface.side_effects.selected_coins],
+                                mode=uint8(FilterMode.exclude.value),
+                            ),
+                            reverse=request.largest_first,
+                        )
+                    ).records
                 )
 
         async with action_scope.use() as interface:
