@@ -6,7 +6,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-from chia_rs import G1Element, G2Element
+from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -40,6 +40,109 @@ def kw_only_dataclass(cls: Type[Any]) -> Type[Any]:
 
 def default_raise() -> Any:  # pragma: no cover
     raise RuntimeError("This should be impossible to hit and is just for < 3.10 compatibility")
+
+
+@streamable
+@dataclass(frozen=True)
+class Empty(Streamable):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class LogIn(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class LogInResponse(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetLoggedInFingerprintResponse(Streamable):
+    fingerprint: Optional[uint32]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeysResponse(Streamable):
+    keyring_is_locked: bool
+    public_key_fingerprints: Optional[List[uint32]] = None
+
+    @property
+    def pk_fingerprints(self) -> List[uint32]:
+        if self.keyring_is_locked:
+            raise RuntimeError("get_public_keys cannot return public keys because the keyring is locked")
+        else:
+            assert self.public_key_fingerprints is not None
+            return self.public_key_fingerprints
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKey(Streamable):
+    fingerprint: uint32
+
+
+# utility for `GetPrivateKeyResponse`
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKeyFormat(Streamable):
+    fingerprint: uint32
+    sk: PrivateKey
+    pk: G1Element
+    farmer_pk: G1Element
+    pool_pk: G1Element
+    seed: Optional[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKeyResponse(Streamable):
+    private_key: GetPrivateKeyFormat
+
+
+@streamable
+@dataclass(frozen=True)
+class GenerateMnemonicResponse(Streamable):
+    mnemonic: List[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class AddKey(Streamable):
+    mnemonic: List[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class AddKeyResponse(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DeleteKey(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckDeleteKey(Streamable):
+    fingerprint: uint32
+    max_ph_to_search: uint16 = uint16(100)
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckDeleteKeyResponse(Streamable):
+    fingerprint: uint32
+    used_for_farmer_rewards: bool
+    used_for_pool_rewards: bool
+    wallet_balance: bool
 
 
 @streamable

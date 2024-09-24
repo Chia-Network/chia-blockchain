@@ -7,11 +7,15 @@ from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_request_types import (
+    AddKey,
+    AddKeyResponse,
     ApplySignatures,
     ApplySignaturesResponse,
     CancelOfferResponse,
     CancelOffersResponse,
     CATSpendResponse,
+    CheckDeleteKey,
+    CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
     CreateNewDAOWalletResponse,
@@ -24,6 +28,7 @@ from chia.rpc.wallet_request_types import (
     DAOFreeCoinsFromFinishedProposalsResponse,
     DAOSendToLockupResponse,
     DAOVoteOnProposalResponse,
+    DeleteKey,
     DIDGetCurrentCoinInfo,
     DIDGetCurrentCoinInfoResponse,
     DIDGetPubkey,
@@ -38,12 +43,19 @@ from chia.rpc.wallet_request_types import (
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
+    GenerateMnemonicResponse,
     GetCATListResponse,
+    GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
+    GetPrivateKey,
+    GetPrivateKeyResponse,
+    GetPublicKeysResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
+    LogIn,
+    LogInResponse,
     NFTAddURIResponse,
     NFTGetByDID,
     NFTGetByDIDResponse,
@@ -109,50 +121,35 @@ class WalletRpcClient(RpcClient):
     """
 
     # Key Management APIs
-    async def log_in(self, fingerprint: int) -> Union[Dict[str, Any], Any]:
-        try:
-            return await self.fetch("log_in", {"fingerprint": fingerprint, "type": "start"})
-        except ValueError as e:
-            return e.args[0]
+    async def log_in(self, request: LogIn) -> LogInResponse:
+        return LogInResponse.from_json_dict(await self.fetch("log_in", request.to_json_dict()))
 
     async def set_wallet_resync_on_startup(self, enable: bool = True) -> Dict[str, Any]:
         return await self.fetch(path="set_wallet_resync_on_startup", request_json={"enable": enable})
 
-    async def get_logged_in_fingerprint(self) -> Optional[int]:
-        response = await self.fetch("get_logged_in_fingerprint", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(Optional[int], response["fingerprint"])
+    async def get_logged_in_fingerprint(self) -> GetLoggedInFingerprintResponse:
+        return GetLoggedInFingerprintResponse.from_json_dict(await self.fetch("get_logged_in_fingerprint", {}))
 
-    async def get_public_keys(self) -> List[int]:
-        response = await self.fetch("get_public_keys", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(List[int], response["public_key_fingerprints"])
+    async def get_public_keys(self) -> GetPublicKeysResponse:
+        return GetPublicKeysResponse.from_json_dict(await self.fetch("get_public_keys", {}))
 
-    async def get_private_key(self, fingerprint: int) -> Dict[str, Any]:
-        request = {"fingerprint": fingerprint}
-        response = await self.fetch("get_private_key", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(Dict[str, Any], response["private_key"])
+    async def get_private_key(self, request: GetPrivateKey) -> GetPrivateKeyResponse:
+        return GetPrivateKeyResponse.from_json_dict(await self.fetch("get_private_key", request.to_json_dict()))
 
-    async def generate_mnemonic(self) -> List[str]:
-        response = await self.fetch("generate_mnemonic", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(List[str], response["mnemonic"])
+    async def generate_mnemonic(self) -> GenerateMnemonicResponse:
+        return GenerateMnemonicResponse.from_json_dict(await self.fetch("generate_mnemonic", {}))
 
-    async def add_key(self, mnemonic: List[str], request_type: str = "new_wallet") -> Dict[str, Any]:
-        request = {"mnemonic": mnemonic, "type": request_type}
-        return await self.fetch("add_key", request)
+    async def add_key(self, request: AddKey) -> AddKeyResponse:
+        return AddKeyResponse.from_json_dict(await self.fetch("add_key", request.to_json_dict()))
 
-    async def delete_key(self, fingerprint: int) -> Dict[str, Any]:
-        request = {"fingerprint": fingerprint}
-        return await self.fetch("delete_key", request)
+    async def delete_key(self, request: DeleteKey) -> None:
+        await self.fetch("delete_key", request.to_json_dict())
 
-    async def check_delete_key(self, fingerprint: int, max_ph_to_search: int = 100) -> Dict[str, Any]:
-        request = {"fingerprint": fingerprint, "max_ph_to_search": max_ph_to_search}
-        return await self.fetch("check_delete_key", request)
+    async def check_delete_key(self, request: CheckDeleteKey) -> CheckDeleteKeyResponse:
+        return CheckDeleteKeyResponse.from_json_dict(await self.fetch("check_delete_key", request.to_json_dict()))
 
-    async def delete_all_keys(self) -> Dict[str, Any]:
-        return await self.fetch("delete_all_keys", {})
+    async def delete_all_keys(self) -> None:
+        await self.fetch("delete_all_keys", {})
 
     # Wallet Node APIs
     async def get_sync_status(self) -> bool:
