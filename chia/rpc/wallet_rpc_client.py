@@ -1190,11 +1190,31 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_mint_bulk", request)
         return json_deserialize_with_clvm_streamable(response, NFTMintBulkResponse)
 
-    async def set_nft_did_bulk(self, request: NFTSetDIDBulk) -> NFTSetDIDBulkResponse:
-        return NFTSetDIDBulkResponse.from_json_dict(await self.fetch("nft_set_did_bulk", request.to_json_dict()))
+    async def set_nft_did_bulk(
+        self,
+        request: NFTSetDIDBulk,
+        tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> NFTSetDIDBulkResponse:
+        return NFTSetDIDBulkResponse.from_json_dict(
+            await self.fetch(
+                "nft_set_did_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
-    async def transfer_nft_bulk(self, request: NFTTransferBulk) -> NFTTransferBulkResponse:
-        return NFTTransferBulkResponse.from_json_dict(await self.fetch("nft_transfer_bulk", request.to_json_dict()))
+    async def transfer_nft_bulk(
+        self,
+        request: NFTTransferBulk,
+        tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> NFTTransferBulkResponse:
+        return NFTTransferBulkResponse.from_json_dict(
+            await self.fetch(
+                "nft_transfer_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     # DataLayer
     async def create_new_dl(
@@ -1801,11 +1821,12 @@ class WalletRpcClient(RpcClient):
         self,
         args: SplitCoins,
         tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> SplitCoinsResponse:
         return SplitCoinsResponse.from_json_dict(
             await self.fetch(
-                "split_coins", {**args.to_json_dict(), **tx_config.to_json_dict(), **timelock_info.to_json_dict()}
+                "split_coins", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )
 
@@ -1813,10 +1834,11 @@ class WalletRpcClient(RpcClient):
         self,
         args: CombineCoins,
         tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> CombineCoinsResponse:
         return CombineCoinsResponse.from_json_dict(
             await self.fetch(
-                "combine_coins", {**args.to_json_dict(), **tx_config.to_json_dict(), **timelock_info.to_json_dict()}
+                "combine_coins", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )
