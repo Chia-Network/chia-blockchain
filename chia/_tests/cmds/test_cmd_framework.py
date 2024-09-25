@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import textwrap
 from dataclasses import asdict
+from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence
 
 import click
@@ -10,8 +11,19 @@ from click.testing import CliRunner
 
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
-from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_command, option
+from chia.cmds.cmd_classes import (
+    ChiaCommand,
+    Context,
+    NeedsCoinSelectionConfig,
+    NeedsTXConfig,
+    NeedsWalletRPC,
+    chia_command,
+    option,
+)
+from chia.cmds.param_types import CliAmount
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
+from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 
 def check_click_parsing(cmd: ChiaCommand, *args: str) -> None:
@@ -397,3 +409,82 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
     test_present_client_info = TempCMD(rpc_info=NeedsWalletRPC(client_info="hello world"))  # type: ignore[arg-type]
     async with test_present_client_info.rpc_info.wallet_rpc(consume_errors=False) as client_info:
         assert client_info == "hello world"  # type: ignore[comparison-overlap]
+
+
+def test_tx_config_helper() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass
+
+    @chia_command(cmd, "cs_cmd", "blah")
+    class CsCMD:
+        coin_selection_loader: NeedsCoinSelectionConfig
+
+        def run(self) -> None:
+            assert self.coin_selection_loader.load_coin_selection_config(100) == CoinSelectionConfig(
+                min_coin_amount=uint64(1),
+                max_coin_amount=uint64(1),
+                excluded_coin_amounts=[uint64(1)],
+                excluded_coin_ids=[bytes32([0] * 32)],
+            )
+
+    example_cs_cmd = CsCMD(
+        coin_selection_loader=NeedsCoinSelectionConfig(
+            min_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
+            max_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
+            amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
+            coins_to_exclude=(bytes32([0] * 32),),
+        )
+    )
+
+    check_click_parsing(
+        example_cs_cmd,
+        "--min-coin-amount",
+        "0.01",
+        "--max-coin-amount",
+        "0.01",
+        "--exclude-amount",
+        "0.01",
+        "--exclude-coin",
+        bytes32([0] * 32).hex(),
+    )
+
+    example_cs_cmd.run()  # trigger inner assert
+
+    @chia_command(cmd, "tx_confg_cmd", "blah")
+    class TXConfigCMD:
+        tx_config_loader: NeedsTXConfig
+
+        def run(self) -> None:
+            assert self.tx_config_loader.load_tx_config(100, {}, 0) == TXConfig(
+                min_coin_amount=uint64(1),
+                max_coin_amount=uint64(1),
+                excluded_coin_amounts=[uint64(1)],
+                excluded_coin_ids=[bytes32([0] * 32)],
+                reuse_puzhash=False,
+            )
+
+    example_tx_config_cmd = TXConfigCMD(
+        tx_config_loader=NeedsTXConfig(
+            min_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
+            max_coin_amount=CliAmount(amount=Decimal("0.01"), mojos=False),
+            amounts_to_exclude=(CliAmount(amount=Decimal("0.01"), mojos=False),),
+            coins_to_exclude=(bytes32([0] * 32),),
+            reuse=False,
+        )
+    )
+
+    check_click_parsing(
+        example_tx_config_cmd,
+        "--min-coin-amount",
+        "0.01",
+        "--max-coin-amount",
+        "0.01",
+        "--exclude-amount",
+        "0.01",
+        "--exclude-coin",
+        bytes32([0] * 32).hex(),
+        "--new-address",
+    )
+
+    example_tx_config_cmd.run()  # trigger inner assert

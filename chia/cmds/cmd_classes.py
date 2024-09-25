@@ -397,8 +397,8 @@ class NeedsCoinSelectionConfig:
         return CMDCoinSelectionConfigLoader(
             min_coin_amount=self.min_coin_amount,
             max_coin_amount=self.max_coin_amount,
-            excluded_coin_amounts=list(_ for _ in self.coins_to_exclude),
-            excluded_coin_ids=list(_ for _ in self.amounts_to_exclude),
+            excluded_coin_amounts=list(_ for _ in self.amounts_to_exclude),
+            excluded_coin_ids=list(_ for _ in self.coins_to_exclude),
         ).to_coin_selection_config(mojo_per_unit)
 
 
@@ -416,8 +416,8 @@ class NeedsTXConfig(NeedsCoinSelectionConfig):
         return CMDTXConfigLoader(
             min_coin_amount=self.min_coin_amount,
             max_coin_amount=self.max_coin_amount,
-            excluded_coin_amounts=list(_ for _ in self.coins_to_exclude),
-            excluded_coin_ids=list(_ for _ in self.amounts_to_exclude),
+            excluded_coin_amounts=list(_ for _ in self.amounts_to_exclude),
+            excluded_coin_ids=list(_ for _ in self.coins_to_exclude),
             reuse_puzhash=self.reuse,
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
