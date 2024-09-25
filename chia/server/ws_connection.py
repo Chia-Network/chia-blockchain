@@ -708,7 +708,7 @@ class WSChiaConnection:
             return full_message_loaded
         elif message.type == WSMsgType.ERROR:
             self.log.error(f"WebSocket Error: {message}")
-            if message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
+            if isinstance(message.data, WebSocketError) and message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
                 asyncio.create_task(self.close(300))
             else:
                 asyncio.create_task(self.close())
