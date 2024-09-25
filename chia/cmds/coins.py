@@ -12,7 +12,7 @@ from chia.cmds.cmd_classes import NeedsCoinSelectionConfig, NeedsWalletRPC, Tran
 from chia.cmds.cmds_util import cli_confirm, tx_config_args, tx_out_cmd
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
-from chia.rpc.wallet_request_types import CombineCoins
+from chia.rpc.wallet_request_types import CombineCoins, SplitCoins
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
@@ -20,6 +20,7 @@ from chia.util.config import selected_network_address_prefix
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.wallet_types import WalletType
 
 
 @click.group("coins", help="Manage your wallets coins")
@@ -280,3 +281,90 @@ class CombineCMD(TransactionEndpoint):
                         "To get status, use command: chia wallet get_transaction "
                         f"-f {wallet_rpc.fingerprint} -tx 0x{tx.name}"
                     )
+
+
+@chia_command(
+    coins_cmd,
+    "split",
+    "Split up larger coins",
+)
+class SplitCMD(TransactionEndpoint):
+    id: int = option(
+        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+    )
+    number_of_coins: int = option(
+        "-n",
+        "--number-of-coins",
+        type=int,
+        help="The number of coins we are creating.",
+        required=True,
+    )
+    amount_per_coin: CliAmount = option(
+        "-a",
+        "--amount-per-coin",
+        help="The amount of each newly created coin, in XCH or CAT units",
+        type=AmountParamType(),
+        required=True,
+    )
+    target_coin_id: bytes32 = option(
+        "-t",
+        "--target-coin-id",
+        type=Bytes32ParamType(),
+        required=True,
+        help="The coin id of the coin we are splitting.",
+    )
+
+    async def run(self) -> None:
+        async with self.rpc_info.wallet_rpc() as wallet_rpc:
+            try:
+                wallet_type = await get_wallet_type(wallet_id=self.id, wallet_client=wallet_rpc.client)
+                mojo_per_unit = get_mojo_per_unit(wallet_type)
+            except LookupError:
+                print(f"Wallet id: {self.id} not found.")
+                return
+            if not await wallet_rpc.client.get_synced():
+                print("Wallet not synced. Please wait.")
+                return
+
+            final_amount_per_coin = self.amount_per_coin.convert_amount(mojo_per_unit)
+
+            tx_config = self.tx_config_loader.load_tx_config(mojo_per_unit, wallet_rpc.config, wallet_rpc.fingerprint)
+
+            transactions: List[TransactionRecord] = (
+                await wallet_rpc.client.split_coins(
+                    SplitCoins(
+                        wallet_id=uint32(self.id),
+                        number_of_coins=uint16(self.number_of_coins),
+                        amount_per_coin=uint64(final_amount_per_coin),
+                        target_coin_id=self.target_coin_id,
+                        fee=self.fee,
+                        push=self.push,
+                    ),
+                    tx_config=tx_config,
+                    timelock_info=self.load_condition_valid_times(),
+                )
+            ).transactions
+
+            if self.push:
+                for tx in transactions:
+                    print(f"Transaction sent: {tx.name}")
+                    print(
+                        "To get status, use command: "
+                        f"chia wallet get_transaction -f {wallet_rpc.fingerprint} -tx 0x{tx.name}"
+                    )
+            dust_threshold = wallet_rpc.config.get("xch_spam_amount", 1000000)  # min amount per coin in mojo
+            spam_filter_after_n_txs = wallet_rpc.config.get(
+                "spam_filter_after_n_txs", 200
+            )  # how many txs to wait before filtering
+            if final_amount_per_coin < dust_threshold and wallet_type == WalletType.STANDARD_WALLET:
+                print(
+                    f"WARNING: The amount per coin: {self.amount_per_coin.amount} is less than the dust threshold: "
+                    f"{dust_threshold / (1 if self.amount_per_coin.mojos else mojo_per_unit)}. "
+                    "Some or all of the Coins "
+                    f"{'will' if self.number_of_coins > spam_filter_after_n_txs else 'may'} "
+                    "not show up in your wallet unless "
+                    f"you decrease the dust limit to below {final_amount_per_coin} "
+                    "mojos or disable it by setting it to 0."
+                )
+
+            self.transaction_writer.handle_transaction_output(transactions)

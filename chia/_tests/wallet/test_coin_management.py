@@ -12,10 +12,10 @@ import pytest
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletStateTransition, WalletTestFramework
 from chia.cmds.cmd_classes import NeedsCoinSelectionConfig, NeedsWalletRPC, WalletClientInfo
-from chia.cmds.coins import CombineCMD, ListCMD
+from chia.cmds.coins import CombineCMD, ListCMD, SplitCMD
 from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import CombineCoins
+from chia.rpc.wallet_request_types import CombineCoins, SplitCoins
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -506,6 +506,218 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
                         "pending_coin_removal_count": -2,
                         "unspent_coin_count": -1,
                     },
+                },
+            )
+        ]
+    )
+
+
+@pytest.mark.parametrize(
+    "id",
+    [ValueAndArgs(1, []), ValueAndArgs(123, ["--id", "123"])],
+)
+@pytest.mark.parametrize(
+    "number_of_coins",
+    [ValueAndArgs(1, ["--number-of-coins", "1"])],
+)
+@pytest.mark.parametrize(
+    "amount_per_coin",
+    [ValueAndArgs(CliAmount(amount=Decimal("0.01"), mojos=False), ["--amount-per-coin", "0.01"])],
+)
+@pytest.mark.parametrize(
+    "target_coin_id",
+    [
+        ValueAndArgs(bytes32([0] * 32), ["--target-coin-id", bytes32([0] * 32).hex()]),
+    ],
+)
+def test_split_parsing(
+    id: ValueAndArgs,
+    number_of_coins: ValueAndArgs,
+    amount_per_coin: ValueAndArgs,
+    target_coin_id: ValueAndArgs,
+) -> None:
+    check_click_parsing(
+        SplitCMD(
+            **STANDARD_TX_ENDPOINT_ARGS,
+            id=id.value,
+            number_of_coins=number_of_coins.value,
+            amount_per_coin=amount_per_coin.value,
+            target_coin_id=target_coin_id.value,
+        ),
+        *id.args,
+        *number_of_coins.args,
+        *amount_per_coin.args,
+        *target_coin_id.args,
+    )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pytest.CaptureFixture[str]) -> None:
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
+    # Test XCH first
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
+        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        assert target_coin.amount == 250_000_000_000
+
+    xch_request = SplitCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=env.wallet_aliases["xch"],
+                number_of_coins=100,
+                amount_per_coin=CliAmount(amount=uint64(100), mojos=True),
+                target_coin_id=target_coin.name(),
+                fee=ONE_TRILLION,  # 1 XCH
+                push=True,
+            ),
+        }
+    )
+
+    with pytest.raises(ResponseFailureError, match="501 coins is greater then the maximum limit of 500 coins"):
+        await replace(xch_request, number_of_coins=501).run()
+
+    with pytest.raises(ResponseFailureError, match="Could not find coin with ID 00000000000000000"):
+        await replace(xch_request, target_coin_id=bytes32([0] * 32)).run()
+
+    with pytest.raises(ResponseFailureError, match="is less than the total amount of the split"):
+        await replace(xch_request, amount_per_coin=CliAmount(amount=uint64(1_000_000_000_000), mojos=True)).run()
+
+    # We catch this one
+    capsys.readouterr()
+    await replace(xch_request, id=50).run()
+    output = (capsys.readouterr()).out
+    assert "Wallet id: 50 not found" in output
+
+    # This one only "works"" on the RPC
+    env.wallet_state_manager.wallets[uint32(42)] = object()  # type: ignore[assignment]
+    with pytest.raises(ResponseFailureError, match="Cannot split coins from non-fungible wallet types"):
+        assert xch_request.amount_per_coin is not None  # hey there mypy
+        rpc_request = SplitCoins(
+            wallet_id=uint32(42),
+            number_of_coins=uint16(xch_request.number_of_coins),
+            amount_per_coin=xch_request.amount_per_coin.convert_amount(1),
+            target_coin_id=xch_request.target_coin_id,
+            fee=xch_request.fee,
+            push=xch_request.push,
+        )
+        await env.rpc_client.split_coins(rpc_request, wallet_environments.tx_config)
+
+    del env.wallet_state_manager.wallets[uint32(42)]
+
+    await replace(xch_request, number_of_coins=0).run()
+    output = (capsys.readouterr()).out
+    assert "Transaction sent" not in output
+
+    await replace(xch_request).run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -1_000_000_000_000,  # just the fee
+                        "spendable_balance": -2_000_000_000_000,
+                        "pending_change": 1_000_000_000_000,
+                        "max_send_amount": -2_000_000_000_000,
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -1_000_000_000_000,  # just the fee
+                        "spendable_balance": 1_000_000_000_000,
+                        "pending_change": -1_000_000_000_000,
+                        "max_send_amount": 1_000_000_000_000,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": 99,  # split 1 into 100 i.e. +99
+                    }
+                },
+            )
+        ]
+    )
+
+    # Now do CATs
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            env.wallet_state_manager,
+            env.xch_wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(50),
+            action_scope,
+        )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                # no need to test this, it is tested elsewhere
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"set_remainder": True},
+                },
+            )
+        ]
+    )
+
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
+        target_coin = list(await cat_wallet.select_coins(uint64(50), action_scope))[0]
+        assert target_coin.amount == 50
+
+    cat_request = SplitCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=env.wallet_aliases["cat"],
+                number_of_coins=50,
+                amount_per_coin=CliAmount(amount=uint64(1), mojos=True),
+                target_coin_id=target_coin.name(),
+                push=True,
+            ),
+        }
+    )
+
+    await replace(cat_request).run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "cat": {
+                        "unconfirmed_wallet_balance": 0,
+                        "spendable_balance": -50,
+                        "pending_change": 50,
+                        "max_send_amount": -50,
+                        "pending_coin_removal_count": 1,
+                    }
+                },
+                post_block_balance_updates={
+                    "cat": {
+                        "confirmed_wallet_balance": 0,
+                        "spendable_balance": 50,
+                        "pending_change": -50,
+                        "max_send_amount": 50,
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 49,  # split 1 into 50 i.e. +49
+                    }
                 },
             )
         ]
