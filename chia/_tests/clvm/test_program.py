@@ -100,7 +100,7 @@ def test_uncurry_top_level_garbage():
 
 
 def test_uncurry_not_pair():
-    # the second item in the list is expected to be a pair, with a qoute
+    # the second item in the list is expected to be a pair, with a quote
     plus = Program.to(assemble("(2 1 (c (q . 1) (q . 1)))"))
     assert plus.uncurry() == (plus, Program.to(0))
 

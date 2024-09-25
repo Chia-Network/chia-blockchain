@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiosqlite
 import pytest
-from chia_rs import G2Element
+from chia_rs import G1Element, G2Element
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
@@ -46,7 +46,21 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
 from chia.rpc.rpc_server import RpcServer
-from chia.rpc.wallet_request_types import CombineCoins, GetNotifications, SplitCoins, SplitCoinsResponse
+from chia.rpc.wallet_request_types import (
+    AddKey,
+    CheckDeleteKey,
+    CombineCoins,
+    DefaultCAT,
+    DeleteKey,
+    DIDGetPubkey,
+    GetNotifications,
+    GetPrivateKey,
+    LogIn,
+    SplitCoins,
+    SplitCoinsResponse,
+    VerifySignature,
+    VerifySignatureResponse,
+)
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -79,6 +93,7 @@ from chia.wallet.conditions import (
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.signer_protocol import UnsignedTransaction
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
@@ -287,13 +302,6 @@ async def get_confirmed_balance(client: WalletRpcClient, wallet_id: int):
 
 async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int):
     return (await client.get_wallet_balance(wallet_id))["unconfirmed_wallet_balance"]
-
-
-def update_verify_signature_request(request: Dict[str, Any], prefix_hex_values: bool):
-    updated_request = request.copy()
-    updated_request["pubkey"] = ("0x" if prefix_hex_values else "") + updated_request["pubkey"]
-    updated_request["signature"] = ("0x" if prefix_hex_values else "") + updated_request["signature"]
-    return updated_request
 
 
 @pytest.mark.anyio
@@ -836,7 +844,14 @@ async def test_spend_clawback_coins(wallet_rpc_environment: WalletRpcTestEnviron
     resp = await wallet_1_rpc.spend_clawback_coins([fake_coin.name()], 100)
     assert resp["transaction_ids"] == []
     # Test claim spend
-    await wallet_2_api.set_auto_claim({"enabled": False, "tx_fee": 100, "min_amount": 0, "batch_size": 1})
+    await wallet_2_rpc.set_auto_claim(
+        AutoClaimSettings(
+            enabled=False,
+            tx_fee=uint64(100),
+            min_amount=uint64(0),
+            batch_size=uint16(1),
+        )
+    )
     resp = await wallet_2_rpc.spend_clawback_coins([clawback_coin_id_1, clawback_coin_id_2], 100)
     assert resp["success"]
     assert len(resp["transaction_ids"]) == 2
@@ -1156,6 +1171,15 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     )
     assert len(selected_coins) > 0
 
+    # Test get_cat_list
+    cat_list = (await client.get_cat_list()).cat_list
+    assert len(DEFAULT_CATS) == len(cat_list)
+    default_cats_set = {
+        DefaultCAT(asset_id=bytes32.from_hexstr(cat["asset_id"]), name=cat["name"], symbol=cat["symbol"])
+        for cat in DEFAULT_CATS.values()
+    }
+    assert default_cats_set == set(cat_list)
+
 
 @pytest.mark.anyio
 async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
@@ -1245,6 +1269,11 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert TradeStatus(all_offers[0].status) == TradeStatus.PENDING_ACCEPT
     assert all_offers[0].offer == bytes(offer)
 
+    offer_count = await wallet_1_rpc.get_offers_count()
+    assert offer_count.total == 1
+    assert offer_count.my_offers_count == 1
+    assert offer_count.taken_offers_count == 0
+
     trade_record = (await wallet_2_rpc.take_offer(offer, DEFAULT_TX_CONFIG, fee=uint64(1))).trade_record
     assert TradeStatus(trade_record.status) == TradeStatus.PENDING_CONFIRM
 
@@ -1264,6 +1293,10 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     )
     all_offers = await wallet_1_rpc.get_all_offers()
     assert len(all_offers) == 2
+    offer_count = await wallet_1_rpc.get_offers_count()
+    assert offer_count.total == 2
+    assert offer_count.my_offers_count == 2
+    assert offer_count.taken_offers_count == 0
     new_trade_record = create_res.trade_record
 
     await farm_transaction_block(full_node_api, wallet_node)
@@ -1565,6 +1598,10 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert next_did_coin.parent_coin_info == last_did_coin.name()
     assert next_did_coin.puzzle_hash == last_did_coin.puzzle_hash
 
+    # Test did_get_pubkey
+    pubkey_res = await wallet_2_rpc.get_did_pubkey(DIDGetPubkey(did_wallet_2.id()))
+    assert isinstance(pubkey_res.pubkey, G1Element)
+
 
 @pytest.mark.anyio
 async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
@@ -1677,22 +1714,22 @@ async def _check_delete_key(
         save_config(wallet_node.root_path, "config.yaml", test_config)
 
     # Check farmer_fp key
-    sk_dict = await client.check_delete_key(farmer_fp)
-    assert sk_dict["fingerprint"] == farmer_fp
-    assert sk_dict["used_for_farmer_rewards"] is True
-    assert sk_dict["used_for_pool_rewards"] is False
+    resp = await client.check_delete_key(CheckDeleteKey(uint32(farmer_fp)))
+    assert resp.fingerprint == farmer_fp
+    assert resp.used_for_farmer_rewards is True
+    assert resp.used_for_pool_rewards is False
 
     # Check pool_fp key
-    sk_dict = await client.check_delete_key(pool_fp)
-    assert sk_dict["fingerprint"] == pool_fp
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is True
+    resp = await client.check_delete_key(CheckDeleteKey(uint32(pool_fp)))
+    assert resp.fingerprint == pool_fp
+    assert resp.used_for_farmer_rewards is False
+    assert resp.used_for_pool_rewards is True
 
     # Check unknown key
-    sk_dict = await client.check_delete_key(123456, 10)
-    assert sk_dict["fingerprint"] == 123456
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is False
+    resp = await client.check_delete_key(CheckDeleteKey(uint32(123456), uint16(10)))
+    assert resp.fingerprint == 123456
+    assert resp.used_for_farmer_rewards is False
+    assert resp.used_for_pool_rewards is False
 
 
 @pytest.mark.anyio
@@ -1706,7 +1743,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     address = await client.get_next_address(1, True)
     assert len(address) > 10
 
-    pks = await client.get_public_keys()
+    pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 1
 
     await generate_funds(env.full_node.api, env.wallet_1)
@@ -1724,23 +1761,21 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     await client.delete_unconfirmed_transactions(1)
     assert len(await wallet.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(1)) == 0
 
-    sk_dict = await client.get_private_key(pks[0])
-    assert sk_dict["fingerprint"] == pks[0]
-    assert sk_dict["sk"] is not None
-    assert sk_dict["pk"] is not None
-    assert sk_dict["seed"] is not None
+    sk_resp = await client.get_private_key(GetPrivateKey(pks[0]))
+    assert sk_resp.private_key.fingerprint == pks[0]
+    assert sk_resp.private_key.seed is not None
 
-    mnemonic = await client.generate_mnemonic()
-    assert len(mnemonic) == 24
+    resp = await client.generate_mnemonic()
+    assert len(resp.mnemonic) == 24
 
-    await client.add_key(mnemonic)
+    await client.add_key(AddKey(resp.mnemonic))
 
-    pks = await client.get_public_keys()
+    pks = (await client.get_public_keys()).pk_fingerprints
     assert len(pks) == 2
 
-    await client.log_in(pks[1])
-    sk_dict = await client.get_private_key(pks[1])
-    assert sk_dict["fingerprint"] == pks[1]
+    await client.log_in(LogIn(pks[1]))
+    sk_resp = await client.get_private_key(GetPrivateKey(pks[1]))
+    assert sk_resp.private_key.fingerprint == pks[1]
 
     # test hardened keys
     await _check_delete_key(client=client, wallet_node=wallet_node, farmer_fp=pks[0], pool_fp=pks[1], observer=False)
@@ -1754,10 +1789,10 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
         save_config(wallet_node.root_path, "config.yaml", test_config)
 
     # Check key
-    sk_dict = await client.check_delete_key(pks[1])
-    assert sk_dict["fingerprint"] == pks[1]
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is True
+    delete_key_resp = await client.check_delete_key(CheckDeleteKey(pks[1]))
+    assert delete_key_resp.fingerprint == pks[1]
+    assert delete_key_resp.used_for_farmer_rewards is False
+    assert delete_key_resp.used_for_pool_rewards is True
 
     # set farmer and pool to empty string
     with lock_and_load_config(wallet_node.root_path, "config.yaml") as test_config:
@@ -1766,14 +1801,14 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
         save_config(wallet_node.root_path, "config.yaml", test_config)
 
     # Check key
-    sk_dict = await client.check_delete_key(pks[0])
-    assert sk_dict["fingerprint"] == pks[0]
-    assert sk_dict["used_for_farmer_rewards"] is False
-    assert sk_dict["used_for_pool_rewards"] is False
+    delete_key_resp = await client.check_delete_key(CheckDeleteKey(pks[0]))
+    assert delete_key_resp.fingerprint == pks[0]
+    assert delete_key_resp.used_for_farmer_rewards is False
+    assert delete_key_resp.used_for_pool_rewards is False
 
-    await client.delete_key(pks[0])
-    await client.log_in(pks[1])
-    assert len(await client.get_public_keys()) == 1
+    await client.delete_key(DeleteKey(pks[0]))
+    await client.log_in(LogIn(uint32(pks[1])))
+    assert len((await client.get_public_keys()).pk_fingerprints) == 1
 
     assert not (await client.get_sync_status())
 
@@ -1786,7 +1821,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     # Delete all keys
     await client.delete_all_keys()
-    assert len(await client.get_public_keys()) == 0
+    assert len((await client.get_public_keys()).pk_fingerprints) == 0
 
 
 @pytest.mark.anyio
@@ -2170,7 +2205,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                     "6034d8782d10ef148d"
                 ),
             },
-            {"isValid": True},
+            VerifySignatureResponse(isValid=True),
         ),
         (
             # chia wallet sign_message -m $(echo -n 'Happy happy joy joy' | xxd -p)
@@ -2188,7 +2223,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 ),
                 "signing_mode": SigningMode.CHIP_0002.value,
             },
-            {"isValid": True},
+            VerifySignatureResponse(isValid=True),
         ),
         (
             # chia wallet sign_message -m $(echo -n 'Happy happy joy joy' | xxd -p)
@@ -2207,7 +2242,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 "signing_mode": SigningMode.CHIP_0002.value,
                 "address": "xch1e2pcue5q7t4sg8gygz3aht369sk78rzzs92zx65ktn9a9qurw35saajvkh",
             },
-            {"isValid": True},
+            VerifySignatureResponse(isValid=True),
         ),
         (
             {
@@ -2224,7 +2259,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 "signing_mode": SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS.value,
                 "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
             },
-            {"isValid": True},
+            VerifySignatureResponse(isValid=True),
         ),
         # Negative tests
         (
@@ -2241,7 +2276,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                     "6034d8782d10ef148d"
                 ),
             },
-            {"isValid": False, "error": "Signature is invalid."},
+            VerifySignatureResponse(isValid=False, error="Signature is invalid."),
         ),
         (
             # Valid signature but address doesn't match pubkey
@@ -2259,7 +2294,7 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 "signing_mode": SigningMode.CHIP_0002.value,
                 "address": "xch1d0rekc2javy5gpruzmcnk4e4qq834jzlvxt5tcgl2ylt49t26gdsjen7t0",
             },
-            {"isValid": False, "error": "Public key doesn't match the address"},
+            VerifySignatureResponse(isValid=False, error="Public key doesn't match the address"),
         ),
         (
             {
@@ -2275,12 +2310,13 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
                 ),
                 "address": "xch1hh9phcc8tt703dla70qthlhrxswy88va04zvc7vd8cx2v6a5ywyst8mgul",
             },
-            {"isValid": False, "error": "Public key doesn't match the address"},
+            VerifySignatureResponse(isValid=False, error="Public key doesn't match the address"),
         ),
     ],
 )
 @pytest.mark.parametrize("prefix_hex_strings", [True, False], ids=["with 0x", "no 0x"])
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_verify_signature(
     wallet_rpc_environment: WalletRpcTestEnvironment,
     rpc_request: Dict[str, Any],
@@ -2289,13 +2325,17 @@ async def test_verify_signature(
 ):
     rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
     assert rpc_server is not None
-    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
-    req = update_verify_signature_request(rpc_request, prefix_hex_strings)
-    res = await api.verify_signature(req)
+    updated_request = rpc_request.copy()
+    updated_request["pubkey"] = ("0x" if prefix_hex_strings else "") + updated_request["pubkey"]
+    updated_request["signature"] = ("0x" if prefix_hex_strings else "") + updated_request["signature"]
+    res = await wallet_rpc_environment.wallet_1.rpc_client.verify_signature(
+        VerifySignature.from_json_dict(updated_request)
+    )
     assert res == rpc_response
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
@@ -2306,31 +2346,34 @@ async def test_set_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
     req = {"enabled": False, "tx_fee": -1, "min_amount": 100}
     has_exception = False
     try:
-        res = await api.set_auto_claim(req)
+        # Manually using API to test error condition
+        await api.set_auto_claim(req)
     except ConversionError:
         has_exception = True
     assert has_exception
     req = {"enabled": False, "batch_size": 0, "min_amount": 100}
-    res = await api.set_auto_claim(req)
-    assert not res["enabled"]
-    assert res["tx_fee"] == 0
-    assert res["min_amount"] == 100
-    assert res["batch_size"] == 50
+    res = await env.wallet_1.rpc_client.set_auto_claim(
+        AutoClaimSettings(enabled=False, batch_size=uint16(0), min_amount=uint64(100))
+    )
+    assert not res.enabled
+    assert res.tx_fee == 0
+    assert res.min_amount == 100
+    assert res.batch_size == 50
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_get_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
     rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server
     await generate_funds(full_node_api, env.wallet_1)
     assert rpc_server is not None
-    api: WalletRpcApi = cast(WalletRpcApi, rpc_server.rpc_api)
-    res = await api.get_auto_claim({})
-    assert not res["enabled"]
-    assert res["tx_fee"] == 0
-    assert res["min_amount"] == 0
-    assert res["batch_size"] == 50
+    res = await env.wallet_1.rpc_client.get_auto_claim()
+    assert not res.enabled
+    assert res.tx_fee == 0
+    assert res.min_amount == 0
+    assert res.batch_size == 50
 
 
 @pytest.mark.anyio

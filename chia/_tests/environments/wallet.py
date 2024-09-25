@@ -272,7 +272,9 @@ class WalletTestFramework:
     environments: List[WalletEnvironment]
     tx_config: TXConfig = DEFAULT_TX_CONFIG
 
-    async def process_pending_states(self, state_transitions: List[WalletStateTransition]) -> None:
+    async def process_pending_states(
+        self, state_transitions: List[WalletStateTransition], invalid_transactions: List[bytes32] = []
+    ) -> None:
         """
         This is the main entry point for processing state in wallet tests. It does the following things:
 
@@ -302,7 +304,11 @@ class WalletTestFramework:
             for i, env in enumerate(self.environments):
                 await self.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
                 try:
-                    pending_txs.append(await env.wait_for_transactions_to_settle(self.full_node))
+                    pending_txs.append(
+                        await env.wait_for_transactions_to_settle(
+                            self.full_node, _exclude_from_mempool_check=invalid_transactions
+                        )
+                    )
                 except TimeoutError:  # pragma: no cover
                     raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
             for i, (env, transition) in enumerate(zip(self.environments, state_transitions)):
@@ -328,7 +334,8 @@ class WalletTestFramework:
                 )
                 try:
                     await env.wait_for_transactions_to_settle(
-                        self.full_node, _exclude_from_mempool_check=[tx.name for tx in local_pending_txs]
+                        self.full_node,
+                        _exclude_from_mempool_check=invalid_transactions + [tx.name for tx in local_pending_txs],
                     )
                 except TimeoutError:  # pragma: no cover
                     raise TimeoutError(f"All TXs for env-{i} were not found in mempool or marked as in mempool")
