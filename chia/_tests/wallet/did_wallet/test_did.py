@@ -163,8 +163,8 @@ class TestDIDWallet:
                         "did": {
                             "init": True,
                             "unconfirmed_wallet_balance": 101,
-                            "pending_change": 202,  # TODO: this is not correct, fix this
-                            "pending_coin_removal_count": 2,  # TODO: this might not be correct
+                            "pending_change": 101,
+                            "pending_coin_removal_count": 1,
                         },
                     },
                     post_block_balance_updates={
@@ -180,8 +180,8 @@ class TestDIDWallet:
                             "spendable_balance": 101,
                             "max_send_amount": 101,
                             "unspent_coin_count": 1,
-                            "pending_change": -202,  # TODO: this is not correct, fix this
-                            "pending_coin_removal_count": -2,  # TODO: this might not be correct
+                            "pending_change": -101,
+                            "pending_coin_removal_count": -1,
                         },
                     },
                 ),
@@ -224,8 +224,8 @@ class TestDIDWallet:
                         "did": {
                             "init": True,
                             "unconfirmed_wallet_balance": 201,
-                            "pending_change": 402,  # TODO: this is not correct, fix this
-                            "pending_coin_removal_count": 2,  # TODO: this might not be correct
+                            "pending_change": 201,
+                            "pending_coin_removal_count": 1,
                         },
                     },
                     post_block_balance_updates={
@@ -241,8 +241,8 @@ class TestDIDWallet:
                             "spendable_balance": 201,
                             "max_send_amount": 201,
                             "unspent_coin_count": 1,
-                            "pending_change": -402,  # TODO: this is not correct, fix this
-                            "pending_coin_removal_count": -2,  # TODO: this might not be correct
+                            "pending_change": -201,
+                            "pending_coin_removal_count": -1,
                         },
                     },
                 ),
@@ -288,6 +288,7 @@ class TestDIDWallet:
                             "spendable_balance": -101,
                             "pending_change": 101,
                             "pending_coin_removal_count": 1,
+                            "max_send_amount": -101,
                         }
                     },
                     post_block_balance_updates={
@@ -295,6 +296,7 @@ class TestDIDWallet:
                             "spendable_balance": 101,
                             "pending_change": -101,
                             "pending_coin_removal_count": -1,
+                            "max_send_amount": 101,
                         }
                     },
                 ),
@@ -394,14 +396,13 @@ class TestDIDWallet:
                         "did": {
                             "unconfirmed_wallet_balance": -201,
                             "spendable_balance": -201,
-                            # "max_send_amount": -201,  # TODO: Uncomment this
+                            "max_send_amount": -201,
                             "pending_coin_removal_count": 1,
                         }
                     },
                     post_block_balance_updates={
                         "did": {
                             "confirmed_wallet_balance": -201,
-                            "max_send_amount": -201,  # TODO: Delete this when uncommented above
                             "unspent_coin_count": -1,
                             "pending_coin_removal_count": -1,
                         }
