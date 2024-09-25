@@ -348,17 +348,11 @@ class Blockchain:
         assert required_iters is not None
 
         header_hash: bytes32 = block.header_hash
-
-        # maybe fork_info should be mandatory to pass in, but we have a lot of
-        # tests that make sure the Blockchain object can handle any blocks,
-        # including orphaned ones, without any fork context
         block_rec = await self.get_block_record_from_db(header_hash)
         if block_rec is not None:
             self.add_block_record(block_rec)
             # this means we have already seen and validated this block.
-            if fork_info is not None:
-                await self.advance_fork_info(block, fork_info)
-                fork_info.include_spends(npc_result, block, header_hash)
+            assert fork_info is not None
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if extending_main_chain:

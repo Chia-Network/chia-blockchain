@@ -7,6 +7,7 @@ from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
 
 import anyio
 
+from chia._tests.util.misc import add_blocks_in_batches
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -303,9 +304,7 @@ class FullNodeSimulator(FullNodeAPI):
             guarantee_transaction_block=True,
             seed=seed,
         )
-
-        for block in more_blocks:
-            await self.full_node.add_block(block)
+        await add_blocks_in_batches(more_blocks, self.full_node, more_blocks[0].prev_header_hash)
 
     async def farm_blocks_to_puzzlehash(
         self,

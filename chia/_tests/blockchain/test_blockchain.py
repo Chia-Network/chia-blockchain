@@ -1857,12 +1857,12 @@ class TestPreValidation:
             end_pv = time.time()
             times_pv.append(end_pv - start_pv)
             assert res is not None
-            fork_info = ForkInfo(-1, -1, empty_blockchain.constants.GENESIS_CHALLENGE)
             for n in range(end_i - i):
                 assert res[n] is not None
                 assert res[n].error is None
                 block = blocks_to_validate[n]
                 start_rb = time.time()
+                fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
                 result, err, _ = await empty_blockchain.add_block(block, res[n], None, ssi, fork_info=fork_info)
                 end_rb = time.time()
                 times_rb.append(end_rb - start_rb)
@@ -4086,8 +4086,6 @@ async def get_fork_info(blockchain: Blockchain, block: FullBlock, peak: BlockRec
     # height.
     fork_height = block.height - len(fork_chain) - 1
     fork_info = ForkInfo(fork_height, fork_height, fork_hash)
-
-    log.warning(f"slow path in block validation. Building coin set for fork ({fork_height}, {block.height})")
 
     # now run all the blocks of the fork to compute the additions
     # and removals. They are recorded in the fork_info object
