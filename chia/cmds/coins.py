@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import sys
 from typing import List, Optional, Sequence, Tuple
 
 import click
 
 from chia.cmds import options
-from chia.cmds.cmd_classes import NeedsCoinSelectionConfig, NeedsWalletRPC, chia_command, option
-from chia.cmds.cmds_util import tx_config_args, tx_out_cmd
+from chia.cmds.cmd_classes import NeedsCoinSelectionConfig, NeedsWalletRPC, TransactionEndpoint, chia_command, option
+from chia.cmds.cmds_util import cli_confirm, tx_config_args, tx_out_cmd
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
+from chia.rpc.wallet_request_types import CombineCoins
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
-from chia.util.ints import uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 
@@ -24,88 +26,6 @@ from chia.wallet.transaction_record import TransactionRecord
 @click.pass_context
 def coins_cmd(ctx: click.Context) -> None:
     pass
-
-
-@coins_cmd.command("combine", help="Combine dust coins")
-@click.option(
-    "-p",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
-@options.create_fingerprint()
-@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
-@click.option(
-    "-a",
-    "--target-amount",
-    help="Select coins until this amount (in XCH or CAT) is reached. \
-    Combine all selected coins into one coin, which will have a value of at least target-amount",
-    type=AmountParamType(),
-    default=None,
-)
-@click.option(
-    "-n",
-    "--number-of-coins",
-    type=int,
-    default=500,
-    show_default=True,
-    help="The number of coins we are combining.",
-)
-@tx_config_args
-@options.create_fee()
-@click.option(
-    "--input-coin",
-    "input_coins",
-    multiple=True,
-    help="Only combine coins with these ids.",
-    type=Bytes32ParamType(),
-)
-@click.option(
-    "--largest-first/--smallest-first",
-    "largest_first",
-    default=False,
-    help="Sort coins from largest to smallest or smallest to largest.",
-)
-@tx_out_cmd()
-def combine_cmd(
-    wallet_rpc_port: Optional[int],
-    fingerprint: int,
-    id: int,
-    target_amount: Optional[CliAmount],
-    min_coin_amount: CliAmount,
-    amounts_to_exclude: Sequence[CliAmount],
-    coins_to_exclude: Sequence[bytes32],
-    number_of_coins: int,
-    max_coin_amount: CliAmount,
-    fee: uint64,
-    input_coins: Sequence[bytes32],
-    largest_first: bool,
-    reuse: bool,
-    push: bool,
-    condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .coin_funcs import async_combine
-
-    return asyncio.run(
-        async_combine(
-            wallet_rpc_port=wallet_rpc_port,
-            fingerprint=fingerprint,
-            wallet_id=id,
-            fee=fee,
-            max_coin_amount=max_coin_amount,
-            min_coin_amount=min_coin_amount,
-            excluded_amounts=amounts_to_exclude,
-            coins_to_exclude=coins_to_exclude,
-            reuse_puzhash=reuse,
-            number_of_coins=number_of_coins,
-            target_coin_amount=target_amount,
-            target_coin_ids=input_coins,
-            largest_first=largest_first,
-            push=push,
-            condition_valid_times=condition_valid_times,
-        )
-    )
 
 
 @coins_cmd.command("split", help="Split up larger coins")
@@ -242,7 +162,7 @@ class ListCMD:
                 return
             conf_coins, unconfirmed_removals, unconfirmed_additions = await wallet_rpc.client.get_spendable_coins(
                 wallet_id=self.id,
-                coin_selection_config=self.coin_selection_config.load(mojo_per_unit),
+                coin_selection_config=self.coin_selection_config.load_coin_selection_config(mojo_per_unit),
             )
             print(f"There are a total of {len(conf_coins) + len(unconfirmed_additions)} coins in wallet {self.id}.")
             print(f"{len(conf_coins)} confirmed coins.")
@@ -273,3 +193,90 @@ class ListCMD:
                     addr_prefix,
                     paginate,
                 )
+
+
+@chia_command(
+    coins_cmd,
+    "combine",
+    "Combine dust coins",
+)
+class CombineCMD(TransactionEndpoint):
+    id: int = option(
+        "-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True
+    )
+    target_amount: Optional[CliAmount] = option(
+        "-a",
+        "--target-amount",
+        help="Select coins until this amount (in XCH or CAT) is reached. \
+        Combine all selected coins into one coin, which will have a value of at least target-amount",
+        type=AmountParamType(),
+        default=None,
+    )
+    number_of_coins: int = option(
+        "-n",
+        "--number-of-coins",
+        type=int,
+        default=500,
+        show_default=True,
+        help="The number of coins we are combining.",
+    )
+    input_coins: Sequence[bytes32] = option(
+        "--input-coin",
+        "input_coins",
+        multiple=True,
+        help="Only combine coins with these ids.",
+        type=Bytes32ParamType(),
+    )
+    largest_first: bool = option(
+        "--largest-first/--smallest-first",
+        "largest_first",
+        default=False,
+        help="Sort coins from largest to smallest or smallest to largest.",
+    )
+
+    async def run(self) -> None:
+        async with self.rpc_info.wallet_rpc() as wallet_rpc:
+            try:
+                wallet_type = await get_wallet_type(wallet_id=self.id, wallet_client=wallet_rpc.client)
+                mojo_per_unit = get_mojo_per_unit(wallet_type)
+            except LookupError:
+                print(f"Wallet id: {self.id} not found.")
+                return
+            if not await wallet_rpc.client.get_synced():
+                print("Wallet not synced. Please wait.")
+
+            tx_config = self.tx_config_loader.load_tx_config(mojo_per_unit, wallet_rpc.config, wallet_rpc.fingerprint)
+
+            final_target_coin_amount = (
+                None if self.target_amount is None else self.target_amount.convert_amount(mojo_per_unit)
+            )
+
+            combine_request = CombineCoins(
+                wallet_id=uint32(self.id),
+                target_coin_amount=final_target_coin_amount,
+                number_of_coins=uint16(self.number_of_coins),
+                target_coin_ids=list(self.input_coins),
+                largest_first=self.largest_first,
+                fee=self.fee,
+                push=False,
+            )
+            resp = await wallet_rpc.client.combine_coins(
+                combine_request,
+                tx_config,
+                timelock_info=self.load_condition_valid_times(),
+            )
+
+            print(f"Transactions would combine up to {self.number_of_coins} coins.")
+            if self.push:
+                cli_confirm("Would you like to Continue? (y/n): ")
+                resp = await wallet_rpc.client.combine_coins(
+                    dataclasses.replace(combine_request, push=True),
+                    tx_config,
+                    timelock_info=self.load_condition_valid_times(),
+                )
+                for tx in resp.transactions:
+                    print(f"Transaction sent: {tx.name}")
+                    print(
+                        "To get status, use command: chia wallet get_transaction "
+                        f"-f {wallet_rpc.fingerprint} -tx 0x{tx.name}"
+                    )

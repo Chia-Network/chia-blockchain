@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import operator
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
+from chia.cmds.cmd_classes import NeedsTXConfig, NeedsWalletRPC, TransactionsOut, WalletClientInfo
+from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -14,7 +16,7 @@ from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
@@ -23,6 +25,22 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
 from chia.wallet.wallet_state_manager import WalletStateManager
+
+STANDARD_TX_ENDPOINT_ARGS: Dict[str, Any] = dict(
+    rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
+    tx_config_loader=NeedsTXConfig(
+        min_coin_amount=cli_amount_none,
+        max_coin_amount=cli_amount_none,
+        coins_to_exclude=(),
+        amounts_to_exclude=(),
+        reuse=None,
+    ),
+    transaction_writer=TransactionsOut(transaction_file_out=None),
+    fee=uint64(0),
+    push=True,
+    valid_at=None,
+    expires_at=None,
+)
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
 
@@ -271,6 +289,27 @@ class WalletTestFramework:
     trusted_full_node: bool
     environments: List[WalletEnvironment]
     tx_config: TXConfig = DEFAULT_TX_CONFIG
+
+    def cmd_tx_endpoint_args(self, env: WalletEnvironment) -> Dict[str, Any]:
+        return {
+            **STANDARD_TX_ENDPOINT_ARGS,
+            "rpc_info": NeedsWalletRPC(
+                client_info=WalletClientInfo(
+                    env.rpc_client,
+                    env.wallet_state_manager.root_pubkey.get_fingerprint(),
+                    env.wallet_state_manager.config,
+                )
+            ),
+            "tx_config_loader": NeedsTXConfig(
+                min_coin_amount=CliAmount(amount=self.tx_config.min_coin_amount, mojos=True),
+                max_coin_amount=CliAmount(amount=self.tx_config.max_coin_amount, mojos=True),
+                coins_to_exclude=tuple(self.tx_config.excluded_coin_ids),
+                amounts_to_exclude=tuple(
+                    CliAmount(amount=amt, mojos=True) for amt in self.tx_config.excluded_coin_amounts
+                ),
+                reuse=self.tx_config.reuse_puzhash,
+            ),
+        }
 
     async def process_pending_states(
         self, state_transitions: List[WalletStateTransition], invalid_transactions: List[bytes32] = []

@@ -244,7 +244,7 @@ def _convert_class_to_function(cls: Type[ChiaCommand]) -> SyncCmd:
     return command_parser.apply_decorators(command_parser)
 
 
-@dataclass_transform()
+@dataclass_transform(frozen_default=True)
 def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[Type[ChiaCommand]], Type[ChiaCommand]]:
     def _chia_command(cls: Type[ChiaCommand]) -> Type[ChiaCommand]:
         # The type ignores here are largely due to the fact that the class information is not preserved after being
@@ -266,7 +266,7 @@ def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[Type[ChiaC
     return _chia_command
 
 
-@dataclass_transform()
+@dataclass_transform(frozen_default=True)
 def command_helper(cls: Type[Any]) -> Type[Any]:
     if sys.version_info < (3, 10):  # stuff below 3.10 doesn't support kw_only
         new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
@@ -424,6 +424,7 @@ class NeedsTXConfig(NeedsCoinSelectionConfig):
 
 @dataclass(frozen=True)
 class TransactionEndpoint:
+    rpc_info: NeedsWalletRPC
     tx_config_loader: NeedsTXConfig
     transaction_writer: TransactionsOut
     fee: uint64 = option(
