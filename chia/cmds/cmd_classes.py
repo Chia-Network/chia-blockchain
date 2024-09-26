@@ -327,7 +327,6 @@ class NeedsWalletRPC:
 class TransactionsIn:
     transaction_file_in: str = option(
         "--transaction-file-in",
-        "-i",
         type=str,
         help="Transaction file to use as input",
         required=True,
@@ -343,10 +342,9 @@ class TransactionsIn:
 class TransactionsOut:
     transaction_file_out: Optional[str] = option(
         "--transaction-file-out",
-        "-o",
         type=str,
         default=None,
-        help="Transaction filename to use as output",
+        help="A file to write relevant transactions to",
         required=False,
     )
 

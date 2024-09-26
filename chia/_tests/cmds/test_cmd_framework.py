@@ -18,9 +18,11 @@ from chia.cmds.cmd_classes import (
     NeedsTXConfig,
     NeedsWalletRPC,
     TransactionEndpoint,
+    TransactionEndpointWithTimelocks,
     chia_command,
     option,
 )
+from chia.cmds.cmds_util import coin_selection_args, tx_config_args, tx_out_cmd
 from chia.cmds.param_types import CliAmount
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -534,3 +536,62 @@ def test_transaction_endpoint_mixin() -> None:
     )
 
     example_tx_cmd.run()  # trigger inner assert
+
+
+# While we sit in between two paradigms, this test is in place to ensure they remain in sync.
+# Delete this if the old decorators are deleted.
+def test_old_decorator_support() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass  # pragma: no cover
+
+    @chia_command(cmd, "cs_cmd", "blah")
+    class CsCMD:
+        coin_selection_loader: NeedsCoinSelectionConfig
+
+        def run(self) -> None:
+            pass
+
+    @chia_command(cmd, "tx_config_cmd", "blah")
+    class TXConfigCMD:
+        tx_config_loader: NeedsTXConfig
+
+        def run(self) -> None:
+            pass
+
+    @chia_command(cmd, "tx_cmd", "blah")
+    class TxCMD(TransactionEndpoint):
+        def run(self) -> None:
+            pass
+
+    @chia_command(cmd, "tx_w_tl_cmd", "blah")
+    class TxWTlCMD(TransactionEndpointWithTimelocks):
+        def run(self) -> None:
+            pass
+
+    @cmd.command("cs_cmd_dec")
+    @coin_selection_args
+    def cs_cmd(**kwargs: Any) -> None:
+        pass
+
+    @cmd.command("tx_config_cmd_dec")
+    @tx_config_args
+    def tx_config_cmd(**kwargs: Any) -> None:
+        pass
+
+    @cmd.command("tx_cmd_dec")  # type: ignore[arg-type]
+    @tx_out_cmd(enable_timelock_args=False)
+    def tx_cmd(**kwargs: Any) -> None:
+        pass
+
+    @cmd.command("tx_w_tl_cmd_dec")  # type: ignore[arg-type]
+    @tx_out_cmd(enable_timelock_args=True)
+    def tx_w_tl_cmd(**kwargs: Any) -> None:
+        pass
+
+    for command_name, command in cmd.commands.items():
+        if "_dec" in command_name:
+            continue
+        params = [param.to_info_dict() for param in cmd.commands[command_name].params]
+        for param in cmd.commands[f"{command_name}_dec"].params:
+            assert param.to_info_dict() in params

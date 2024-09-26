@@ -370,7 +370,7 @@ def tx_out_cmd(
             "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
         )(
             click.option(
-                "--transaction-file",
+                "--transaction-file-out",
                 help="A file to write relevant transactions to",
                 type=str,
                 required=False,
