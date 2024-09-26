@@ -1532,7 +1532,7 @@ def generate_changelist(r: random.Random, size: int) -> List[Dict[str, Any]]:
         {
             "action": "insert",
             "key": x.to_bytes(32, byteorder="big", signed=False),
-            "value": bytes(r.getrandbits(8) for _ in range(4)),
+            "value": bytes(r.getrandbits(8) for _ in range(1200)),
         }
         for x in range(size)
     ]
@@ -1604,11 +1604,10 @@ async def test_benchmark_batch_insert_complexity(
     r = random.Random()
     r.seed("shadowlands", version=2)
 
-    repeats = 5
     test_size = 100
     step_size = 1000
     assert step_size >= test_size
-    max_pre_size = 50_000
+    max_pre_size = 10_000
     # TODO: must be > 0 to avoid an issue with the log complexity class?
     initial_batch_size = step_size
 
@@ -1620,7 +1619,7 @@ async def test_benchmark_batch_insert_complexity(
     clock = time.monotonic
 
     total_inserted = 0
-    changelist_iter = iter(generate_changelist(r=r, size=max_pre_size + test_size))
+    changelist_iter = iter(generate_changelist(r=r, size=max_pre_size))
 
     with benchmark_runner.record_runtime(label="overall", clock=clock):
         initial_batch = list(itertools.islice(changelist_iter, initial_batch_size))
@@ -1637,30 +1636,19 @@ async def test_benchmark_batch_insert_complexity(
             batch = list(itertools.islice(changelist_iter, test_size))
             assert len(batch) == test_size
 
-            import contextlib
+            with benchmark_runner.record_runtime(label="count", clock=clock) as f:
+                await data_store.insert_batch(
+                    store_id=store_id,
+                    changelist=batch,
+                    # TODO: does this mess up test accuracy?
+                    status=Status.COMMITTED,
+                )
 
-            for repeat in range(repeats):
+            records[total_inserted] = f.result().duration
+            total_inserted += len(batch)
 
-                class RollbackError(Exception):
-                    pass
-
-                with contextlib.suppress(RollbackError):
-                    async with data_store.transaction():
-                        with benchmark_runner.record_runtime(label="count", clock=clock) as f:
-                            await data_store.insert_batch(
-                                store_id=store_id,
-                                changelist=batch,
-                                # TODO: does this mess up test accuracy?
-                                status=Status.COMMITTED,
-                            )
-
-                        raise RollbackError()
-
-                # TODO: yeah no, don't induce this offset, just lazy to quickly get unique entries
-                records[total_inserted + repeat] = f.result().duration
-
-            step_batch = [*batch, *itertools.islice(changelist_iter, step_size - len(batch))]
-            if total_inserted >= max_pre_size:
+            step_batch = list(itertools.islice(changelist_iter, step_size - test_size))
+            if total_inserted + len(step_batch) >= max_pre_size:
                 break
             if len(step_batch) > 0:
                 await data_store.insert_batch(
@@ -1670,17 +1658,6 @@ async def test_benchmark_batch_insert_complexity(
                     status=Status.COMMITTED,
                 )
                 total_inserted += len(step_batch)
-
-    # async with data_store.db_wrapper.reader() as reader:
-    #     with tempfile.TemporaryDirectory() as d:
-    #         db_path = Path(d) / "test.db"
-    #         async with aiosqlite.connect(db_path) as db:
-    #             await reader.backup(db)
-    #
-    #         assert db_path.stat().st_size < 0
-    #     assert sum([len(line) async for line in reader.iterdump()]) + 1 == -1
-    #     # s = "\n".join([line async for line in reader.iterdump()]) + "\n"
-    #     # assert len(s) == -1
 
     process_big_o(
         required_complexity=big_o.complexities.Linearithmic,
