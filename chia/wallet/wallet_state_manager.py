@@ -160,11 +160,21 @@ from chia.wallet.wallet_user_store import WalletUserStore
 
 TWalletType = TypeVar("TWalletType", bound=WalletProtocol[Any])
 
+
+class WalletError(Exception):
+    pass
+
+
 if TYPE_CHECKING:
     from chia.wallet.wallet_node import WalletNode
 
 
 PendingTxCallback = Callable[[], None]
+
+
+class WalletOfTypeNotFoundError(WalletError):
+    def __init__(self, wallet_type: WalletType):
+        super().__init__(f"Wallet type {wallet_type.name} not found")
 
 
 class WalletStateManager:
@@ -1757,7 +1767,7 @@ class WalletStateManager:
                         wallet_identifier, coin_data = await self.determine_coin_type(peer, coin_state, fork_height)
                         try:
                             dl_wallet = self.get_dl_wallet()
-                        except ValueError:
+                        except WalletOfTypeNotFoundError:
                             pass
                         else:
                             if (
@@ -2634,7 +2644,7 @@ class WalletStateManager:
                     wallet, DataLayerWallet
                 ), f"WalletType.DATA_LAYER should be a DataLayerWallet instance got: {type(wallet).__name__}"
                 return wallet
-        raise ValueError("DataLayerWallet not available")
+        raise WalletOfTypeNotFoundError(WalletType.DATA_LAYER)
 
     async def get_or_create_vc_wallet(self) -> VCWallet:
         for _, wallet in self.wallets.items():

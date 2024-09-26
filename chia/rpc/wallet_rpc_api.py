@@ -18,7 +18,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
-from chia.rpc.util import marshal, tx_endpoint
+from chia.rpc.util import acknowledge, marshal, tx_endpoint
 from chia.rpc.wallet_request_types import (
     AddKey,
     AddKeyResponse,
@@ -147,6 +147,7 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+from chia.wallet.wallet_state_manager import WalletOfTypeNotFoundError
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -4258,7 +4259,7 @@ class WalletRpcApi:
 
         try:
             dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
-        except ValueError:
+        except WalletOfTypeNotFoundError:
             async with self.service.wallet_state_manager.lock:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(self.service.wallet_state_manager)
 
@@ -4285,7 +4286,7 @@ class WalletRpcApi:
             raise ValueError("The wallet service is not currently initialized")
         try:
             dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
-        except ValueError:
+        except WalletOfTypeNotFoundError:
             async with self.service.wallet_state_manager.lock:
                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                     self.service.wallet_state_manager,
@@ -4309,7 +4310,8 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
         await dl_wallet.stop_tracking_singleton(bytes32.from_hexstr(request["launcher_id"]))
         return {}
 
@@ -4321,7 +4323,8 @@ class WalletRpcApi:
         only_confirmed = request.get("only_confirmed")
         if only_confirmed is None:
             only_confirmed = False
-        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
         record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]), only_confirmed)
         return {"singleton": None if record is None else record.to_json_dict()}
 
@@ -4330,7 +4333,8 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
         records = await wallet.get_singletons_by_root(
             bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"])
         )
@@ -4348,7 +4352,8 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
             await wallet.create_update_state_spend(
                 bytes32.from_hexstr(request["launcher_id"]),
@@ -4374,7 +4379,8 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             return {"success": False, "error": "not_initialized"}
 
-        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
             # TODO: This method should optionally link the singletons with announcements.
             #       Otherwise spends are vulnerable to signature subtraction.
@@ -4397,7 +4403,8 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
         additional_kwargs = {}
 
         if "min_generation" in request:
@@ -4416,7 +4423,8 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
         singletons = await wallet.get_owned_singletons()
         singletons_json = [singleton.to_json_dict() for singleton in singletons]
 
@@ -4427,7 +4435,8 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
         mirrors_json = []
         for mirror in await wallet.get_mirrors_for_launcher(bytes32.from_hexstr(request["launcher_id"])):
             mirrors_json.append(mirror.to_json_dict())
@@ -4445,7 +4454,8 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
         async with self.service.wallet_state_manager.lock:
             await dl_wallet.create_new_mirror(
                 bytes32.from_hexstr(request["launcher_id"]),
@@ -4471,7 +4481,8 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        with acknowledge(WalletOfTypeNotFoundError):
+            dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
 
         async with self.service.wallet_state_manager.lock:
             await dl_wallet.delete_mirror(
