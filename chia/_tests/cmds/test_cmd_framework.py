@@ -416,7 +416,7 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
 def test_tx_config_helper() -> None:
     @click.group()
     def cmd() -> None:
-        pass
+        pass  # pragma: no cover
 
     @chia_command(cmd, "cs_cmd", "blah")
     class CsCMD:
@@ -495,7 +495,7 @@ def test_tx_config_helper() -> None:
 def test_transaction_endpoint_mixin() -> None:
     @click.group()
     def cmd() -> None:
-        pass
+        pass  # pragma: no cover
 
     @chia_command(cmd, "cs_cmd", "blah")
     class TxCMD(TransactionEndpoint):
