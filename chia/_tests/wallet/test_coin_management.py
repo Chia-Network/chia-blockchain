@@ -100,8 +100,13 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
         ),
         id=env.wallet_aliases["xch"],
         show_unconfirmed=True,
-        paginate=False,
+        paginate=None,
     )
+
+    # Test an error real quick
+    await replace(base_command, id=50).run()
+    output = (capsys.readouterr()).out
+    assert "Wallet id: 50 not found" in output
 
     await base_command.run()
 
@@ -247,6 +252,17 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     )
     assert cat_coin.name().hex() in output
     assert str(CAT_AMOUNT) in output
+
+    # Test a not synced error
+    assert base_command.rpc_info.client_info is not None
+
+    async def not_synced() -> bool:
+        return False
+
+    base_command.rpc_info.client_info.client.get_synced = not_synced  # type: ignore[method-assign]
+    await base_command.run()
+    output = (capsys.readouterr()).out
+    assert "Wallet not synced. Please wait." in output
 
 
 @pytest.mark.parametrize(
@@ -477,7 +493,6 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
 
     with patch("sys.stdin", new=io.StringIO("y\n")):
         await cat_combine_request.run()
-    # await cat_combine_request.run()
 
     await wallet_environments.process_pending_states(
         [
@@ -510,6 +525,17 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
             )
         ]
     )
+
+    # Test a not synced error
+    assert xch_combine_request.rpc_info.client_info is not None
+
+    async def not_synced() -> bool:
+        return False
+
+    xch_combine_request.rpc_info.client_info.client.get_synced = not_synced  # type: ignore[method-assign]
+    await xch_combine_request.run()
+    output = (capsys.readouterr()).out
+    assert "Wallet not synced. Please wait." in output
 
 
 @pytest.mark.parametrize(
@@ -722,3 +748,14 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
             )
         ]
     )
+
+    # Test a not synced error
+    assert xch_request.rpc_info.client_info is not None
+
+    async def not_synced() -> bool:
+        return False
+
+    xch_request.rpc_info.client_info.client.get_synced = not_synced  # type: ignore[method-assign]
+    await xch_request.run()
+    output = (capsys.readouterr()).out
+    assert "Wallet not synced. Please wait." in output

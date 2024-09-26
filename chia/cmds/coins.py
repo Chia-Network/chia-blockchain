@@ -174,6 +174,7 @@ class CombineCMD(TransactionEndpoint):
                 return
             if not await wallet_rpc.client.get_synced():
                 print("Wallet not synced. Please wait.")
+                return
 
             tx_config = self.tx_config_loader.load_tx_config(mojo_per_unit, wallet_rpc.config, wallet_rpc.fingerprint)
 
