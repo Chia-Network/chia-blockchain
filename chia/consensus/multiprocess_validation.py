@@ -106,8 +106,9 @@ def batch_pre_validate_blocks(
             header_block = get_block_header(block, tx_additions, removals)
             prev_ses_block = None
             if prev_ses_block_bytes is not None and len(prev_ses_block_bytes) > 0:
-                if prev_ses_block_bytes[i] is not None:
-                    prev_ses_block = BlockRecord.from_bytes_unchecked(prev_ses_block_bytes[i])
+                buffer = prev_ses_block_bytes[i]
+                if buffer is not None:
+                    prev_ses_block = BlockRecord.from_bytes_unchecked(buffer)
             required_iters, error = validate_finished_header_block(
                 constants,
                 BlockCache(blocks),
