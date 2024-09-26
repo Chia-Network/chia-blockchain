@@ -1605,9 +1605,9 @@ async def test_benchmark_batch_insert_complexity(
     r.seed("shadowlands", version=2)
 
     test_size = 100
-    step_size = 1000
+    step_size = 200
     assert step_size >= test_size
-    max_pre_size = 10_000
+    max_pre_size = 30_000
     # TODO: must be > 0 to avoid an issue with the log complexity class?
     initial_batch_size = step_size
 
