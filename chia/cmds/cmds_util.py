@@ -359,11 +359,11 @@ def tx_out_cmd(
 
     def _tx_out_cmd(func: Callable[..., List[TransactionRecord]]) -> Callable[..., None]:
         @timelock_args(enable=enable_timelock_args)
-        def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
+        def original_cmd(transaction_file_out: Optional[str] = None, **kwargs: Any) -> None:
             txs: List[TransactionRecord] = func(**kwargs)
-            if transaction_file is not None:
-                print(f"Writing transactions to file {transaction_file}:")
-                with open(Path(transaction_file), "wb") as file:
+            if transaction_file_out is not None:
+                print(f"Writing transactions to file {transaction_file_out}:")
+                with open(Path(transaction_file_out), "wb") as file:
                     file.write(bytes(TransactionBundle(txs)))
 
         return click.option(

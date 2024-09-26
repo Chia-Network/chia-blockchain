@@ -12,6 +12,7 @@ from click.testing import CliRunner
 from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
 from chia.cmds.cmd_classes import (
+    _DECORATOR_APPLIED,
     ChiaCommand,
     Context,
     NeedsCoinSelectionConfig,
@@ -21,12 +22,14 @@ from chia.cmds.cmd_classes import (
     TransactionEndpointWithTimelocks,
     chia_command,
     option,
+    transaction_endpoint_runner,
 )
 from chia.cmds.cmds_util import coin_selection_args, tx_config_args, tx_out_cmd
 from chia.cmds.param_types import CliAmount
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 
@@ -49,6 +52,9 @@ def check_click_parsing(cmd: ChiaCommand, *args: str) -> None:
     def new_run(self: Any) -> None:
         # cmd is appropriately not recognized as a dataclass but I'm not sure how to hint that something is a dataclass
         dict_compare_with_ignore_context(asdict(cmd), asdict(self))  # type: ignore[call-overload]
+
+    # We hack this in because more robust solutions are harder and probably not worth it
+    setattr(new_run, _DECORATOR_APPLIED, True)
 
     setattr(mock_type, "run", new_run)
     chia_command(_cmd, "_", "")(mock_type)
@@ -494,24 +500,35 @@ def test_tx_config_helper() -> None:
     example_tx_config_cmd.run()  # trigger inner assert
 
 
-def test_transaction_endpoint_mixin() -> None:
+@pytest.mark.anyio
+async def test_transaction_endpoint_mixin() -> None:
     @click.group()
     def cmd() -> None:
         pass  # pragma: no cover
 
+    with pytest.raises(TypeError, match="transaction_endpoint_runner"):
+
+        @chia_command(cmd, "bad_cmd", "blah")
+        class BadCMD(TransactionEndpoint):
+
+            def run(self) -> None:
+                pass
+
+        BadCMD(**STANDARD_TX_ENDPOINT_ARGS)
+
     @chia_command(cmd, "cs_cmd", "blah")
     class TxCMD(TransactionEndpoint):
 
-        def run(self) -> None:
+        @transaction_endpoint_runner
+        async def run(self) -> List[TransactionRecord]:
             assert self.load_condition_valid_times() == ConditionValidTimes(
                 min_time=uint64(10),
                 max_time=uint64(20),
             )
+            return []
 
     # Check that our default object lines up with the default options
-    check_click_parsing(
-        TxCMD(**STANDARD_TX_ENDPOINT_ARGS),
-    )
+    check_click_parsing(TxCMD(**STANDARD_TX_ENDPOINT_ARGS))
 
     example_tx_cmd = TxCMD(
         **{
@@ -535,7 +552,7 @@ def test_transaction_endpoint_mixin() -> None:
         "20",
     )
 
-    example_tx_cmd.run()  # trigger inner assert
+    await example_tx_cmd.run()  # trigger inner assert
 
 
 # While we sit in between two paradigms, this test is in place to ensure they remain in sync.

@@ -6,7 +6,14 @@ from typing import List, Optional, Sequence, Tuple
 
 import click
 
-from chia.cmds.cmd_classes import NeedsCoinSelectionConfig, NeedsWalletRPC, TransactionEndpoint, chia_command, option
+from chia.cmds.cmd_classes import (
+    NeedsCoinSelectionConfig,
+    NeedsWalletRPC,
+    TransactionEndpoint,
+    chia_command,
+    option,
+    transaction_endpoint_runner,
+)
 from chia.cmds.cmds_util import cli_confirm
 from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
@@ -164,17 +171,18 @@ class CombineCMD(TransactionEndpoint):
         help="Sort coins from largest to smallest or smallest to largest.",
     )
 
-    async def run(self) -> None:
+    @transaction_endpoint_runner
+    async def run(self) -> List[TransactionRecord]:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
             try:
                 wallet_type = await get_wallet_type(wallet_id=self.id, wallet_client=wallet_rpc.client)
                 mojo_per_unit = get_mojo_per_unit(wallet_type)
             except LookupError:
                 print(f"Wallet id: {self.id} not found.")
-                return
+                return []
             if not await wallet_rpc.client.get_synced():
                 print("Wallet not synced. Please wait.")
-                return
+                return []
 
             tx_config = self.tx_config_loader.load_tx_config(mojo_per_unit, wallet_rpc.config, wallet_rpc.fingerprint)
 
@@ -212,6 +220,8 @@ class CombineCMD(TransactionEndpoint):
                         f"-f {wallet_rpc.fingerprint} -tx 0x{tx.name}"
                     )
 
+            return resp.transactions
+
 
 @chia_command(
     coins_cmd,
@@ -244,17 +254,18 @@ class SplitCMD(TransactionEndpoint):
         help="The coin id of the coin we are splitting.",
     )
 
-    async def run(self) -> None:
+    @transaction_endpoint_runner
+    async def run(self) -> List[TransactionRecord]:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
             try:
                 wallet_type = await get_wallet_type(wallet_id=self.id, wallet_client=wallet_rpc.client)
                 mojo_per_unit = get_mojo_per_unit(wallet_type)
             except LookupError:
                 print(f"Wallet id: {self.id} not found.")
-                return
+                return []
             if not await wallet_rpc.client.get_synced():
                 print("Wallet not synced. Please wait.")
-                return
+                return []
 
             final_amount_per_coin = self.amount_per_coin.convert_amount(mojo_per_unit)
 
@@ -297,4 +308,4 @@ class SplitCMD(TransactionEndpoint):
                     "mojos or disable it by setting it to 0."
                 )
 
-            self.transaction_writer.handle_transaction_output(transactions)
+            return transactions
