@@ -808,9 +808,7 @@ class DataLayerWallet:
             )[0]
             parent_spend = await fetch_coin_spend(height, parent_state.coin, peer)
             assert parent_spend is not None
-            launcher_id, urls = get_mirror_info(
-                parent_spend.puzzle_reveal.to_program(), parent_spend.solution.to_program()
-            )
+            launcher_id, urls = get_mirror_info(parent_spend.puzzle_reveal, parent_spend.solution)
             # Don't track mirrors with empty url list.
             if not urls:
                 return
