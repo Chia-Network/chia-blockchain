@@ -9,7 +9,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from chia._tests.environments.wallet import WalletTestFramework
+from chia._tests.environments.wallet import STANDARD_TX_ENDPOINT_ARGS, WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
 from chia.cmds.cmd_classes import (
     ChiaCommand,
@@ -17,12 +17,14 @@ from chia.cmds.cmd_classes import (
     NeedsCoinSelectionConfig,
     NeedsTXConfig,
     NeedsWalletRPC,
+    TransactionEndpoint,
     chia_command,
     option,
 )
 from chia.cmds.param_types import CliAmount
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 
 
@@ -488,3 +490,47 @@ def test_tx_config_helper() -> None:
     )
 
     example_tx_config_cmd.run()  # trigger inner assert
+
+
+def test_transaction_endpoint_mixin() -> None:
+    @click.group()
+    def cmd() -> None:
+        pass
+
+    @chia_command(cmd, "cs_cmd", "blah")
+    class TxCMD(TransactionEndpoint):
+
+        def run(self) -> None:
+            assert self.load_condition_valid_times() == ConditionValidTimes(
+                min_time=uint64(10),
+                max_time=uint64(20),
+            )
+
+    # Check that our default object lines up with the default options
+    check_click_parsing(
+        TxCMD(**STANDARD_TX_ENDPOINT_ARGS),
+    )
+
+    example_tx_cmd = TxCMD(
+        **{
+            **STANDARD_TX_ENDPOINT_ARGS,
+            **dict(
+                fee=uint64(1_000_000_000_000 / 100),
+                push=False,
+                valid_at=10,
+                expires_at=20,
+            ),
+        }
+    )
+    check_click_parsing(
+        example_tx_cmd,
+        "--fee",
+        "0.01",
+        "--no-push",
+        "--valid-at",
+        "10",
+        "--expires-at",
+        "20",
+    )
+
+    example_tx_cmd.run()  # trigger inner assert
