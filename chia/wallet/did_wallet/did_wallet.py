@@ -463,7 +463,14 @@ class DIDWallet:
         parent_info = None
         assert did_info.origin_coin is not None
         assert did_info.current_inner is not None
-        new_did_inner_puzhash, new_pubkey = await self.standard_wallet.get_new_puzzlehash_and_key()
+        new_puzhash, new_pubkey = await self.standard_wallet.get_new_puzzlehash_and_key()
+        new_did_inner_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
+            p2_puzhash=new_puzhash,
+            recovery_list=did_info.backup_ids,
+            num_of_backup_ids_needed=did_info.num_of_backup_ids_needed,
+            launcher_id=did_info.origin_coin.name(),
+            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+        )
         wallet_node = self.wallet_state_manager.wallet_node
         parent_coin: Coin = did_info.origin_coin
         while True:
@@ -538,6 +545,18 @@ class DIDWallet:
             metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         return create_singleton_puzzle_hash(innerpuz_hash, origin_coin_name)
+    
+    async def get_new_puzzle(self) -> Program:
+        new_puzhash, _ = await self.standard_wallet.get_new_puzzlehash_and_key()
+        innerpuz = did_wallet_puzzles.create_innerpuz(
+            p2_puzhash=new_puzhash,
+            recovery_list=self.did_info.backup_ids,
+            num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
+            launcher_id=self.did_info.origin_coin.name(),
+            metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+        )
+        return create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
+
 
     def get_my_DID(self) -> str:
         assert self.did_info.origin_coin is not None
@@ -1017,7 +1036,7 @@ class DIDWallet:
     ) -> List[TransactionRecord]:
         assert self.did_info.origin_coin is not None
 
-        # innersol is mode new_amount_or_p2_solution new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal my_id)  # noqa
+        # innersol is (mode new_amount_or_p2_solution new_inner_puzhash parent_innerpuzhash_amounts_for_recovery_ids pubkey recovery_list_reveal my_id)  # noqa
         innersol: Program = Program.to(
             [
                 0,
@@ -1036,6 +1055,7 @@ class DIDWallet:
             innerpuz,
             self.did_info.origin_coin.name(),
         )
+        assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         parent_info = self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to(
@@ -1136,6 +1156,7 @@ class DIDWallet:
         assert record is None
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
+        
         uncurried_args = uncurry_innerpuz(self.did_info.current_inner)
         assert uncurried_args is not None
         old_recovery_list_hash: Optional[Program] = None
