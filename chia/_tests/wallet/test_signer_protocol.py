@@ -694,7 +694,7 @@ def test_signer_command_default_parsing() -> None:
             ),
             txs_in=TransactionsIn(transaction_file_in="in"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
     )
 
@@ -725,9 +725,9 @@ def test_signer_command_default_parsing() -> None:
             ),
             txs_out=TransactionsOut(transaction_file_out="out"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
-        "-o",
+        "--transaction-file-out",
         "out",
         "-p",
         "sp-in",
@@ -738,7 +738,7 @@ def test_signer_command_default_parsing() -> None:
             rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None),
             txs_in=TransactionsIn(transaction_file_in="in"),
         ),
-        "-i",
+        "--transaction-file-in",
         "in",
     )
 
