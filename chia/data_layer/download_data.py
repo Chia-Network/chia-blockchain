@@ -377,4 +377,4 @@ async def http_download(
                     new_percentage = f"{progress_byte / size:.0%}"
                     if new_percentage != progress_percentage:
                         progress_percentage = new_percentage
-                        log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
+                        log.debug(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
