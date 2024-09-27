@@ -930,37 +930,37 @@ files = [
 
 [[package]]
 name = "chiavdf"
-version = "1.1.4"
+version = "1.1.6"
 description = "Chia vdf verification (wraps C++)"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "chiavdf-1.1.4-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f0256d93be3e4921596576aff22254ab1810c5092c78c5d87f39a229df3fa6ca"},
-    {file = "chiavdf-1.1.4-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:11a36b6f9f7752b0beb6e525cb1ea483cc78c513b0e7066dedfe6feb5eafd44a"},
-    {file = "chiavdf-1.1.4-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:986673742982baa3afb7ff0e9580e23b7b7c60e367eac8c63ffbceb07bf702b1"},
-    {file = "chiavdf-1.1.4-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:787e7fc55f4b54b1d1b9779b1abecf58142c30c9a19607e4277e4bd4ada5fb4b"},
-    {file = "chiavdf-1.1.4-cp310-cp310-win_amd64.whl", hash = "sha256:7732c8731081c132ef14acab134646c91b956267310af822a0ecd03aa884647b"},
-    {file = "chiavdf-1.1.4-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:5301ca8f5f02c7d77732a5b04d0620fef3667246494b8cb7ec95155069855d58"},
-    {file = "chiavdf-1.1.4-cp311-cp311-macosx_11_0_x86_64.whl", hash = "sha256:5b98ce04bd15295c79b88c4ba53d21fe76b2412b59e57e7c1e7352755978a084"},
-    {file = "chiavdf-1.1.4-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:29d8f0d5426f6cd1ec90d8634a97e18a468ac9c12674c64d48cdb3872f38e8b1"},
-    {file = "chiavdf-1.1.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e8231d3b8eaa384fda651efc20089c5ada1227c19e36212b5ad98cb7dc7c57cb"},
-    {file = "chiavdf-1.1.4-cp311-cp311-win_amd64.whl", hash = "sha256:b1fc151af42e09fd2b613fe639375b8baa21dde792a3899aa1f5aa22bf2ab898"},
-    {file = "chiavdf-1.1.4-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:debe6cca2f6f7963e815ff00a9c9b12a0159b89e1d1962269c3da7ad342af45d"},
-    {file = "chiavdf-1.1.4-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:d1575d0b4eb9065d82566c4cae9aaa153fa0ebba7fd21fc7b5407fa3a8ec0819"},
-    {file = "chiavdf-1.1.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d2bef1c3173b3ec0c6b34cbc1bbc32dfbb2801e048acccf732b9fb2bb6c0ac70"},
-    {file = "chiavdf-1.1.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:55fc997e41e95cd24e54d308f23312d73c2759bddbcf338bd74a359359db6f6f"},
-    {file = "chiavdf-1.1.4-cp312-cp312-win_amd64.whl", hash = "sha256:ac8c5ffc4a90992c05ded68a882776bdc2c916794f687f142b755aa7e7bf59cc"},
-    {file = "chiavdf-1.1.4-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:2b5cf9322da348b48d2dd0546a384a5574ffd37fd10a8c3c6d19ccfc279237fa"},
-    {file = "chiavdf-1.1.4-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:99245e171be8ca34600d7f3286928bb11b53f4d29f7c0211d1767675f514791f"},
-    {file = "chiavdf-1.1.4-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:a5355c71598d6764a5225a13b45ea73bdfaf586e3765ba91e0b348a2456729bc"},
-    {file = "chiavdf-1.1.4-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d48bdc419d544e068a71ab76f0d56ca6201fd4dd7269f137b8bb4521d494f12e"},
-    {file = "chiavdf-1.1.4-cp38-cp38-win_amd64.whl", hash = "sha256:24269407dfb37a674f016babdb410b61c05e0d04383487acdaa78cab8df15d91"},
-    {file = "chiavdf-1.1.4-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:e9dcdf1fdfc6d0c223f662098595cd697a674de224ce9d9fa00fc574f68f2868"},
-    {file = "chiavdf-1.1.4-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:90b3e21e30227c71ef012c55b0625cd19852fcfa3a080054779039d0478c1f8a"},
-    {file = "chiavdf-1.1.4-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:e62e809294dbed49f4ac61ffda5d4e86a6b585d6cb29710ba6b630f90702de52"},
-    {file = "chiavdf-1.1.4-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:892d82aae2871ed9e57dd5efa42f53a91c6c12c9d46e45e1d224ae1a9a4e6a78"},
-    {file = "chiavdf-1.1.4-cp39-cp39-win_amd64.whl", hash = "sha256:e68c6a5610b5a451ce1d1ea058f34320b35419b53b11da4a9affd8ab4c86e325"},
-    {file = "chiavdf-1.1.4.tar.gz", hash = "sha256:17588eff94437a99640e568b7ef4ebcc76596b925f332b47f74f29b50622c98c"},
+    {file = "chiavdf-1.1.6-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:0e7c7a0032d14ef11ed12bb6144437d4057d1c2ce435e1da7165659422e8e486"},
+    {file = "chiavdf-1.1.6-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:728fe9fa328e134f9b08c46d4e535e6d24e55a0fbbf98c1008a32d63b22e1a3b"},
+    {file = "chiavdf-1.1.6-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:34b682795f5c1348cf6b95fb60acf69649a7bd9fac8b890c9cecff8654798f36"},
+    {file = "chiavdf-1.1.6-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:89eb391a43ee804bf410a76748d5a725fdb18989e17e9dffec4de5f57413c0f4"},
+    {file = "chiavdf-1.1.6-cp310-cp310-win_amd64.whl", hash = "sha256:ca57ceb1e0410bcde5d7b6fdcfa1d9a5b05fb0c6e6d78d6a6cc6df6518eb6e09"},
+    {file = "chiavdf-1.1.6-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:a1b109417191071590f36268bd8f7c633b708f023dfe52372756ee3ef9f2466a"},
+    {file = "chiavdf-1.1.6-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:c7766e94c84fae64b95e4af16c63a9a44a3e9ba382f896ff268048e40be8f9f6"},
+    {file = "chiavdf-1.1.6-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:8ac0719cd64b22895121fdbc5a3497ce96ef7e5ba88b0d57c4a6146114a80c11"},
+    {file = "chiavdf-1.1.6-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:b3b3fd2631b3e3b795b14d1d6143bad6aa73ca6f8cd67824da551a9a8ba95435"},
+    {file = "chiavdf-1.1.6-cp311-cp311-win_amd64.whl", hash = "sha256:c517489d01b7fe775f7230aebea57cfdd2257300b5855c27fb39b5818f912138"},
+    {file = "chiavdf-1.1.6-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:3f0c662d45aa99a1121ac4b79588f328bdd88fe9739d06785a5a18454bb16388"},
+    {file = "chiavdf-1.1.6-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:523125900b3909aeaeca11e4fe3406316f1f7b00f5323f60035bdece7c27d247"},
+    {file = "chiavdf-1.1.6-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:481457538da7f71e46f7823e1f092a4768cf379e06d2b29e0e2fa167045b5ce6"},
+    {file = "chiavdf-1.1.6-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:0a4ec91e53729c966f6fb43c63e3355dc585dd9c00d020176d214f86afa0af87"},
+    {file = "chiavdf-1.1.6-cp312-cp312-win_amd64.whl", hash = "sha256:2db5542a7e11af42a03c63709e1e71ac119b25f694cae640e450369deee32003"},
+    {file = "chiavdf-1.1.6-cp38-cp38-macosx_13_0_arm64.whl", hash = "sha256:d30c6ef55d8bbccda0fc96fdca295acb47673fb729287e58691c5da2248ce264"},
+    {file = "chiavdf-1.1.6-cp38-cp38-macosx_13_0_x86_64.whl", hash = "sha256:978311d09e07bbd0c807fd8dee8d243a01b8f9b6bebe909b5a33a75a6e6fd244"},
+    {file = "chiavdf-1.1.6-cp38-cp38-manylinux_2_28_aarch64.whl", hash = "sha256:de4d4e5123724b23259bb3fbc9d89e8e225e129e518b3325446b994624bfd880"},
+    {file = "chiavdf-1.1.6-cp38-cp38-manylinux_2_28_x86_64.whl", hash = "sha256:9f32049e97b407bc5e7e2536c91589026272a4c608fb0f22dd4e8e982fa740c8"},
+    {file = "chiavdf-1.1.6-cp38-cp38-win_amd64.whl", hash = "sha256:88a752a9f3b4cc7cfec517af0b74eee15581474d6f27c4f21cd468ba1a29878d"},
+    {file = "chiavdf-1.1.6-cp39-cp39-macosx_13_0_arm64.whl", hash = "sha256:9b7f6cd025cc71128f0a467d07eb1ea0b76a074892a50ae76c2094fc8deb93d4"},
+    {file = "chiavdf-1.1.6-cp39-cp39-macosx_13_0_x86_64.whl", hash = "sha256:cbdd824114d28e4c0c17ba1e14492b04f440b7cf6697ad582d541b9f7e01e79b"},
+    {file = "chiavdf-1.1.6-cp39-cp39-manylinux_2_28_aarch64.whl", hash = "sha256:183f8380170ac749d2b479172394118d2536b0a4d02ef56c0e630d22d545e7a3"},
+    {file = "chiavdf-1.1.6-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:612518b22da3339d2a1f42711d53d4f0353c21aad1683ad8b86c5ef0e2e49871"},
+    {file = "chiavdf-1.1.6-cp39-cp39-win_amd64.whl", hash = "sha256:5cc41e58f751ed156f475905d8d4415e6f8285ce3ee64127496325ea62af20c2"},
+    {file = "chiavdf-1.1.6.tar.gz", hash = "sha256:bf32ad4f114db49c9839ff18b7fc704582e162923780751420838830cd92bac6"},
 ]
 
 [[package]]
@@ -3457,4 +3457,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "0d1bba535311a5b058758bcae6a8f720de7c31e9688ed5388b96a1edbb2acb9d"
+content-hash = "dace0d72adc211850f2bcf7c41177908240702ee7aedb45683ccd5610ed12e7e"
