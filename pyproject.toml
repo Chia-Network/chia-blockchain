@@ -96,6 +96,7 @@ pytest-cov = { version = "5.0.0", optional = true }
 pytest-mock = { version = "3.14.0", optional = true }
 pytest-monitor = { version = "1.6.6", platform = "linux", optional = true }
 pytest-xdist = { version = "3.6.1", optional = true }
+ruff = { version = "0.6.8", optional = true }
 types-aiofiles = { version = "23.2.0.20240311", optional = true }
 types-cryptography = { version = "3.3.23.2", optional = true }
 types-pyyaml = { version = "6.0.12.20240311", optional = true }
@@ -103,7 +104,6 @@ types-setuptools = { version = "70.0.0.20240524", optional = true }
 lxml = { version = "5.2.2", optional = true }
 miniupnpc = { version = "2.2.2", source = "chia", optional = true }
 pyupgrade = { version = "3.16.0", optional = true }
-ruff = { version = "0.0.291", optional = true }
 # big-o = {version = "0.11.0", optional = true}
 # numpy = [
 #     {version="1.24.4", python = "<3.9", optional = true},
@@ -150,19 +150,27 @@ build-backend = "poetry_dynamic_versioning.backend"
 [tool.black]
 line-length = 120
 target-version =  ['py38', 'py39', 'py310', 'py311', 'py312']
-include = '''
-^/(
-    [^/]*.py
-    | (benchmarks|build_scripts|chia|tests|tools)/.*\.pyi?
-)$
-'''
-exclude = ''
+#include = '''
+#^/(
+#    [^/]*.py
+#    | (benchmarks|build_scripts|chia|tests|tools)/.*\.pyi?
+#)$
+#'''
+#exclude = ''
 
 [tool.ruff]
 line-length = 120
-select = ["E", "F", "W", "C", "N", "PL"]
+# Replacing extend-allow-list
+#builtins = [
+#    "lxml",
+#    "zstd"
+#]
+
+[tool.ruff.lint]
+preview = true
+select = ["E", "F", "W", "C", "N", "PL", "R"]
+explicit-preview-rules = false
 ignore = [
-    # Disabled Pylint messages mapped to Ruff codes
     "F401",     # unused-import
     "F841",     # unused-variable
     "PLR0915",  # too-many-statements
@@ -171,58 +179,39 @@ ignore = [
     "PLR0912",  # too-many-branches
     "PLR1702",  # too-many-nested-blocks
     "PLR0904",  # too-many-public-methods
-    "PLR0902",  # too-many-instance-attributes
-    "PLW0613",  # unused-argument
-    "PLW0612",  # unused-variable
-    "PLW0404",  # reimported
-    "PLW0611",  # unused-import
-    "PLR0201",  # method could be a function
-    "PLE0110",  # abstract-method
-    "PLC0116",  # missing-function-docstring
-    "PLC0115",  # missing-class-docstring
-    "PLC0114",  # missing-module-docstring
+    "PLR6301",  # no-self-use
     "E501",     # line-too-long (handled by black)
-    "E203",     # whitespace before ':'
+    "E203"     # whitespace before ':'
 ]
-extend-allow-list = ["lxml", "zstd"]
-ignore-imports = [
-    "chiabip158",
-    "chiapos",
-    "chiavdf",
-    "chia_rs",
-    "cryptography",
-    "aiohttp",
-    "keyring",
-    "bitstring",
-    "clvm_tools",
-    "clvm_tools_rs",
-    "setproctitle",
-    "clvm",
-    "colorlog",
-    "concurrent_log_handler",
-    "aiosqlite",
-    "sortedcontainers",
-    "aiter",
-    "miniupnpc",
-    "pytest",
-    "setuptools_scm",
-]
+# No rule for:
+#   "PLR0902",  # too-many-instance-attributes
+#   "PLW0613",  # unused-argument
+#   "PLW0612",  # unused-variable
+#   "PLW0404",  # reimported
+#   "PLW0611",  # unused-import
+#   "PLR0201",  # method could be a function
+#   "PLE0110",  # abstract-method
+#   "PLC0116",  # missing-function-docstring
+#   "PLC0115",  # missing-class-docstring
+#   "PLC0114",  # missing-module-docstring
 
-[tool.ruff.per-file-ignores]
-"__init__.py" = [
-    "F401",
-    "F403"
-]
 
-[tool.ruff.pylint]
-"variable-rgx" = "[a-z_][a-z0-9_]{0,30}$"
-"argument-rgx" = "[a-z_][a-z0-9_]{0,30}$"
-"function-rgx" = "[a-z_][a-z0-9_]{0,30}$"
-"method-rgx" = "[a-z_][a-z0-9_]{0,30}$"
-"module-rgx" = "(([a-z_][a-z0-9_]*)|(__init__))$"
-"class-rgx" = "[A-Z_][a-zA-Z0-9]+$"
-"const-rgx" = "([A-Z_][A-Z0-9_]{2,30}|(__version__))$"
-"attr-rgx" = "[a-z_][a-z0-9_]{0,30}$"
-"inlinevar-rgx" = "[A-Za-z_][A-Za-z0-9_]*$"
-good-names = ["i", "j", "k", "ex", "Run", "_"]
-bad-names = ["foo", "bar", "baz", "toto", "tutu", "tata"]
+
+# No direct replacement for ignore-imports; consider handling specific rules
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+
+[tool.ruff.lint.pep8-naming]
+ignore-names = ["i", "j", "k", "ex", "Run", "_"]
+extend-ignore-names = ["foo", "bar", "baz", "toto", "tutu", "tata"]
+
+[tool.ruff.lint.pylint]
+max-args = 5
+max-locals = 15
+max-returns = 6
+max-branches = 12
+max-statements = 50
+max-nested-blocks = 5
+max-public-methods = 20
+max-bool-expr = 5
