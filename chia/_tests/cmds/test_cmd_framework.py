@@ -512,7 +512,7 @@ async def test_transaction_endpoint_mixin() -> None:
         class BadCMD(TransactionEndpoint):
 
             def run(self) -> None:
-                pass
+                pass  # pragma: no cover
 
         BadCMD(**STANDARD_TX_ENDPOINT_ARGS)
 
@@ -567,44 +567,44 @@ def test_old_decorator_support() -> None:
         coin_selection_loader: NeedsCoinSelectionConfig
 
         def run(self) -> None:
-            pass
+            pass  # pragma: no cover
 
     @chia_command(cmd, "tx_config_cmd", "blah")
     class TXConfigCMD:
         tx_config_loader: NeedsTXConfig
 
         def run(self) -> None:
-            pass
+            pass  # pragma: no cover
 
     @chia_command(cmd, "tx_cmd", "blah")
     class TxCMD(TransactionEndpoint):
         def run(self) -> None:
-            pass
+            pass  # pragma: no cover
 
     @chia_command(cmd, "tx_w_tl_cmd", "blah")
     class TxWTlCMD(TransactionEndpointWithTimelocks):
         def run(self) -> None:
-            pass
+            pass  # pragma: no cover
 
     @cmd.command("cs_cmd_dec")
     @coin_selection_args
     def cs_cmd(**kwargs: Any) -> None:
-        pass
+        pass  # pragma: no cover
 
     @cmd.command("tx_config_cmd_dec")
     @tx_config_args
     def tx_config_cmd(**kwargs: Any) -> None:
-        pass
+        pass  # pragma: no cover
 
     @cmd.command("tx_cmd_dec")  # type: ignore[arg-type]
     @tx_out_cmd(enable_timelock_args=False)
     def tx_cmd(**kwargs: Any) -> None:
-        pass
+        pass  # pragma: no cover
 
     @cmd.command("tx_w_tl_cmd_dec")  # type: ignore[arg-type]
     @tx_out_cmd(enable_timelock_args=True)
     def tx_w_tl_cmd(**kwargs: Any) -> None:
-        pass
+        pass  # pragma: no cover
 
     for command_name, command in cmd.commands.items():
         if "_dec" in command_name:
