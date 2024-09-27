@@ -71,6 +71,7 @@ from chia.rpc.wallet_request_types import (
     NFTTransferNFTResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
+    SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -124,9 +125,6 @@ class WalletRpcClient(RpcClient):
     async def log_in(self, request: LogIn) -> LogInResponse:
         return LogInResponse.from_json_dict(await self.fetch("log_in", request.to_json_dict()))
 
-    async def set_wallet_resync_on_startup(self, enable: bool = True) -> Dict[str, Any]:
-        return await self.fetch(path="set_wallet_resync_on_startup", request_json={"enable": enable})
-
     async def get_logged_in_fingerprint(self) -> GetLoggedInFingerprintResponse:
         return GetLoggedInFingerprintResponse.from_json_dict(await self.fetch("get_logged_in_fingerprint", {}))
 
@@ -152,6 +150,9 @@ class WalletRpcClient(RpcClient):
         await self.fetch("delete_all_keys", {})
 
     # Wallet Node APIs
+    async def set_wallet_resync_on_startup(self, request: SetWalletResyncOnStartup) -> None:
+        await self.fetch("set_wallet_resync_on_startup", request.to_json_dict())
+
     async def get_sync_status(self) -> bool:
         response = await self.fetch("get_sync_status", {})
         # TODO: casting due to lack of type checked deserialization

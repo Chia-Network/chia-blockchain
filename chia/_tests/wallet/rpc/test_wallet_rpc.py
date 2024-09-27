@@ -56,6 +56,7 @@ from chia.rpc.wallet_request_types import (
     GetNotifications,
     GetPrivateKey,
     LogIn,
+    SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
     VerifySignature,
@@ -2432,7 +2433,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     wallet_node_2._close()
     await wallet_node_2._await_closed()
     # set flag to reset wallet sync data on start
-    await client.set_wallet_resync_on_startup()
+    await client.set_wallet_resync_on_startup(SetWalletResyncOnStartup())
     fingerprint = wallet_node.logged_in_fingerprint
     assert wallet_node._wallet_state_manager
     # 2 reward coins, 1 DID, 1 NFT, 1 clawbacked coin
@@ -2484,12 +2485,12 @@ async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: Wall
     wallet_node_2._close()
     await wallet_node_2._await_closed()
     # set flag to reset wallet sync data on start
-    await client.set_wallet_resync_on_startup()
+    await client.set_wallet_resync_on_startup(SetWalletResyncOnStartup())
     fingerprint = wallet_node.logged_in_fingerprint
     assert wallet_node._wallet_state_manager
     assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
     before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
-    await client.set_wallet_resync_on_startup(False)
+    await client.set_wallet_resync_on_startup(SetWalletResyncOnStartup(False))
     wallet_node._close()
     await wallet_node._await_closed()
     config = load_config(wallet_node.root_path, "config.yaml")
