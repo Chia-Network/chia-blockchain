@@ -150,21 +150,18 @@ build-backend = "poetry_dynamic_versioning.backend"
 [tool.black]
 line-length = 120
 target-version =  ['py38', 'py39', 'py310', 'py311', 'py312']
-#include = '''
-#^/(
-#    [^/]*.py
-#    | (benchmarks|build_scripts|chia|tests|tools)/.*\.pyi?
-#)$
-#'''
-#exclude = ''
+include = '''
+^/(
+    [^/]*.py
+    | (benchmarks|build_scripts|chia|tests|tools)/.*\.pyi?
+)$
+'''
+exclude = ''
 
 [tool.ruff]
 line-length = 120
 # Replacing extend-allow-list
-#builtins = [
-#    "lxml",
-#    "zstd"
-#]
+builtins = ["*.lxml","*.zstd"]
 
 [tool.ruff.lint]
 preview = true
@@ -183,7 +180,8 @@ ignore = [
     "E501",     # line-too-long (handled by black)
     "E203"     # whitespace before ':'
 ]
-# No rule for:
+
+# No rules for:
 #   "PLR0902",  # too-many-instance-attributes
 #   "PLW0613",  # unused-argument
 #   "PLW0612",  # unused-variable
@@ -195,16 +193,10 @@ ignore = [
 #   "PLC0115",  # missing-class-docstring
 #   "PLC0114",  # missing-module-docstring
 
-
-
 # No direct replacement for ignore-imports; consider handling specific rules
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "F403"]
-
-[tool.ruff.lint.pep8-naming]
-ignore-names = ["i", "j", "k", "ex", "Run", "_"]
-extend-ignore-names = ["foo", "bar", "baz", "toto", "tutu", "tata"]
 
 [tool.ruff.lint.pylint]
 max-args = 5
