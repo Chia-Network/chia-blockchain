@@ -120,7 +120,7 @@ jobs:
       concurrency-name: macos-intel
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: macos-12
+      runs-on: macos-13
       arch: intel
   macos-arm:
     if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
