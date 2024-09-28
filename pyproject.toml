@@ -73,8 +73,8 @@ sortedcontainers = "2.4.0"  # For maintaining sorted mempools
 typing-extensions = "4.11.0"  # typing backports like Protocol and TypedDict
 watchdog = "4.0.1"  # Filesystem event watching - watches keyring.yaml
 zstd = [
-	{version="1.5.5.1", python = "<3.12"},
-	{version="1.5.5.1", python = "3.12", source="chia"},
+    {version="1.5.5.1", python = "<3.12"},
+    {version="1.5.5.1", python = "3.12", source="chia"},
 ]
 importlib-resources = "6.4.0"
 hsms = "0.3.1"
@@ -91,12 +91,12 @@ mypy = { version = "1.11.1", optional = true }
 pre-commit = [ { version = "3.5.0", python = "<3.9", optional = true }, { version = "3.7.1", python = ">=3.9", optional = true } ]
 py3createtorrent = { version = "1.2.1", optional = true }
 pyinstaller = { version = "6.9.0", optional = true }
-pylint = { version = "3.2.6", optional = true }
 pytest = { version = "8.3.3", optional = true }
 pytest-cov = { version = "5.0.0", optional = true }
 pytest-mock = { version = "3.14.0", optional = true }
 pytest-monitor = { version = "1.6.6", platform = "linux", optional = true }
 pytest-xdist = { version = "3.6.1", optional = true }
+ruff = { version = "0.6.8", optional = true }
 types-aiofiles = { version = "23.2.0.20240311", optional = true }
 types-cryptography = { version = "3.3.23.2", optional = true }
 types-pyyaml = { version = "6.0.12.20240311", optional = true }
@@ -106,12 +106,11 @@ miniupnpc = { version = "2.2.2", source = "chia", optional = true }
 pyupgrade = { version = "3.16.0", optional = true }
 # big-o = {version = "0.11.0", optional = true}
 # numpy = [
-# 	{version="1.24.4", python = "<3.9", optional = true},
-# 	{version="1.26.4", python = ">=3.9", optional = true}]
-
+#     {version="1.24.4", python = "<3.9", optional = true},
+#     {version="1.26.4", python = ">=3.9", optional = true}]
 
 [tool.poetry.extras]
-dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "pyupgrade", "lxml"]
+dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "pyupgrade", "lxml", "ruff"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]
 
@@ -158,3 +157,53 @@ include = '''
 )$
 '''
 exclude = ''
+
+[tool.ruff]
+line-length = 120
+# Replacing extend-allow-list
+builtins = ["*.lxml","*.zstd"]
+
+[tool.ruff.lint]
+preview = true
+select = ["E", "F", "W", "C", "N", "PL", "R"]
+explicit-preview-rules = false
+ignore = [
+    "F401",     # unused-import
+    "F841",     # unused-variable
+    "PLR0915",  # too-many-statements
+    "PLR0914",  # too-many-locals
+    "PLR0913",  # too-many-arguments
+    "PLR0912",  # too-many-branches
+    "PLR1702",  # too-many-nested-blocks
+    "PLR0904",  # too-many-public-methods
+    "PLR6301",  # no-self-use
+    "E501",     # line-too-long (handled by black)
+    "E203"     # whitespace before ':'
+]
+
+# No rules for:
+#   "PLR0902",  # too-many-instance-attributes
+#   "PLW0613",  # unused-argument
+#   "PLW0612",  # unused-variable
+#   "PLW0404",  # reimported
+#   "PLW0611",  # unused-import
+#   "PLR0201",  # method could be a function
+#   "PLE0110",  # abstract-method
+#   "PLC0116",  # missing-function-docstring
+#   "PLC0115",  # missing-class-docstring
+#   "PLC0114",  # missing-module-docstring
+
+# No direct replacement for ignore-imports; consider handling specific rules
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+
+[tool.ruff.lint.pylint]
+max-args = 5
+max-locals = 15
+max-returns = 6
+max-branches = 12
+max-statements = 50
+max-nested-blocks = 5
+max-public-methods = 20
+max-bool-expr = 5
