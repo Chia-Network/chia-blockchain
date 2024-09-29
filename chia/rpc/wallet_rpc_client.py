@@ -7,11 +7,15 @@ from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_request_types import (
+    AddKey,
+    AddKeyResponse,
     ApplySignatures,
     ApplySignaturesResponse,
     CancelOfferResponse,
     CancelOffersResponse,
     CATSpendResponse,
+    CheckDeleteKey,
+    CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
     CreateNewDAOWalletResponse,
@@ -24,6 +28,13 @@ from chia.rpc.wallet_request_types import (
     DAOFreeCoinsFromFinishedProposalsResponse,
     DAOSendToLockupResponse,
     DAOVoteOnProposalResponse,
+    DeleteKey,
+    DIDGetCurrentCoinInfo,
+    DIDGetCurrentCoinInfoResponse,
+    DIDGetPubkey,
+    DIDGetPubkeyResponse,
+    DIDGetRecoveryInfo,
+    DIDGetRecoveryInfoResponse,
     DIDMessageSpendResponse,
     DIDTransferDIDResponse,
     DIDUpdateMetadataResponse,
@@ -32,12 +43,31 @@ from chia.rpc.wallet_request_types import (
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
+    GenerateMnemonicResponse,
+    GetCATListResponse,
+    GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetOffersCountResponse,
+    GetPrivateKey,
+    GetPrivateKeyResponse,
+    GetPublicKeysResponse,
+    GetTransactionMemo,
+    GetTransactionMemoResponse,
+    LogIn,
+    LogInResponse,
     NFTAddURIResponse,
+    NFTGetByDID,
+    NFTGetByDIDResponse,
+    NFTGetWalletsWithDIDsResponse,
     NFTMintBulkResponse,
     NFTMintNFTResponse,
+    NFTSetDIDBulk,
+    NFTSetDIDBulkResponse,
     NFTSetNFTDIDResponse,
+    NFTSetNFTStatus,
+    NFTTransferBulk,
+    NFTTransferBulkResponse,
     NFTTransferNFTResponse,
     SendTransactionMultiResponse,
     SendTransactionResponse,
@@ -49,6 +79,8 @@ from chia.rpc.wallet_request_types import (
     VCMintResponse,
     VCRevokeResponse,
     VCSpendResponse,
+    VerifySignature,
+    VerifySignatureResponse,
 )
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -57,6 +89,7 @@ from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
+from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -88,50 +121,35 @@ class WalletRpcClient(RpcClient):
     """
 
     # Key Management APIs
-    async def log_in(self, fingerprint: int) -> Union[Dict[str, Any], Any]:
-        try:
-            return await self.fetch("log_in", {"fingerprint": fingerprint, "type": "start"})
-        except ValueError as e:
-            return e.args[0]
+    async def log_in(self, request: LogIn) -> LogInResponse:
+        return LogInResponse.from_json_dict(await self.fetch("log_in", request.to_json_dict()))
 
     async def set_wallet_resync_on_startup(self, enable: bool = True) -> Dict[str, Any]:
         return await self.fetch(path="set_wallet_resync_on_startup", request_json={"enable": enable})
 
-    async def get_logged_in_fingerprint(self) -> Optional[int]:
-        response = await self.fetch("get_logged_in_fingerprint", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(Optional[int], response["fingerprint"])
+    async def get_logged_in_fingerprint(self) -> GetLoggedInFingerprintResponse:
+        return GetLoggedInFingerprintResponse.from_json_dict(await self.fetch("get_logged_in_fingerprint", {}))
 
-    async def get_public_keys(self) -> List[int]:
-        response = await self.fetch("get_public_keys", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(List[int], response["public_key_fingerprints"])
+    async def get_public_keys(self) -> GetPublicKeysResponse:
+        return GetPublicKeysResponse.from_json_dict(await self.fetch("get_public_keys", {}))
 
-    async def get_private_key(self, fingerprint: int) -> Dict[str, Any]:
-        request = {"fingerprint": fingerprint}
-        response = await self.fetch("get_private_key", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(Dict[str, Any], response["private_key"])
+    async def get_private_key(self, request: GetPrivateKey) -> GetPrivateKeyResponse:
+        return GetPrivateKeyResponse.from_json_dict(await self.fetch("get_private_key", request.to_json_dict()))
 
-    async def generate_mnemonic(self) -> List[str]:
-        response = await self.fetch("generate_mnemonic", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(List[str], response["mnemonic"])
+    async def generate_mnemonic(self) -> GenerateMnemonicResponse:
+        return GenerateMnemonicResponse.from_json_dict(await self.fetch("generate_mnemonic", {}))
 
-    async def add_key(self, mnemonic: List[str], request_type: str = "new_wallet") -> Dict[str, Any]:
-        request = {"mnemonic": mnemonic, "type": request_type}
-        return await self.fetch("add_key", request)
+    async def add_key(self, request: AddKey) -> AddKeyResponse:
+        return AddKeyResponse.from_json_dict(await self.fetch("add_key", request.to_json_dict()))
 
-    async def delete_key(self, fingerprint: int) -> Dict[str, Any]:
-        request = {"fingerprint": fingerprint}
-        return await self.fetch("delete_key", request)
+    async def delete_key(self, request: DeleteKey) -> None:
+        await self.fetch("delete_key", request.to_json_dict())
 
-    async def check_delete_key(self, fingerprint: int, max_ph_to_search: int = 100) -> Dict[str, Any]:
-        request = {"fingerprint": fingerprint, "max_ph_to_search": max_ph_to_search}
-        return await self.fetch("check_delete_key", request)
+    async def check_delete_key(self, request: CheckDeleteKey) -> CheckDeleteKeyResponse:
+        return CheckDeleteKeyResponse.from_json_dict(await self.fetch("check_delete_key", request.to_json_dict()))
 
-    async def delete_all_keys(self) -> Dict[str, Any]:
-        return await self.fetch("delete_all_keys", {})
+    async def delete_all_keys(self) -> None:
+        await self.fetch("delete_all_keys", {})
 
     # Wallet Node APIs
     async def get_sync_status(self) -> bool:
@@ -167,6 +185,12 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("get_timestamp_for_height", request)
         # TODO: casting due to lack of type checked deserialization
         return cast(uint64, response["timestamp"])
+
+    async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
+        return AutoClaimSettings.from_json_dict(await self.fetch("set_auto_claim", {**request.to_json_dict()}))
+
+    async def get_auto_claim(self) -> AutoClaimSettings:
+        return AutoClaimSettings.from_json_dict(await self.fetch("get_auto_claim", {}))
 
     # Wallet Management APIs
     async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Any]]:
@@ -426,19 +450,22 @@ class WalletRpcClient(RpcClient):
         name: Optional[str] = "DID Wallet",
         backup_ids: List[str] = [],
         required_num: int = 0,
+        type: str = "new",
+        backup_data: str = "",
         push: bool = True,
         extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> Dict[str, Any]:
         request = {
             "wallet_type": "did_wallet",
-            "did_type": "new",
+            "did_type": type,
             "backup_dids": backup_ids,
             "num_of_backup_ids_needed": required_num,
             "amount": amount,
             "fee": fee,
             "wallet_name": name,
             "push": push,
+            "backup_data": backup_data,
             "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
@@ -526,6 +553,9 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_update_metadata", request)
         return json_deserialize_with_clvm_streamable(response, DIDUpdateMetadataResponse)
 
+    async def get_did_pubkey(self, request: DIDGetPubkey) -> DIDGetPubkeyResponse:
+        return DIDGetPubkeyResponse.from_json_dict(await self.fetch("did_get_pubkey", request.to_json_dict()))
+
     async def get_did_metadata(self, wallet_id: int) -> Dict[str, Any]:
         request = {"wallet_id": wallet_id}
         response = await self.fetch("did_get_metadata", request)
@@ -574,6 +604,16 @@ class WalletRpcClient(RpcClient):
         }
         response = await self.fetch("did_create_attest", request)
         return response
+
+    async def did_get_recovery_info(self, request: DIDGetRecoveryInfo) -> DIDGetRecoveryInfoResponse:
+        return DIDGetRecoveryInfoResponse.from_json_dict(
+            await self.fetch("did_get_information_needed_for_recovery", request.to_json_dict())
+        )
+
+    async def did_get_current_coin_info(self, request: DIDGetCurrentCoinInfo) -> DIDGetCurrentCoinInfoResponse:
+        return DIDGetCurrentCoinInfoResponse.from_json_dict(
+            await self.fetch("did_get_current_coin_info", request.to_json_dict())
+        )
 
     async def did_recovery_spend(self, wallet_id: int, attest_filenames: str) -> Dict[str, Any]:
         request = {"wallet_id": wallet_id, "attest_filenames": attest_filenames}
@@ -875,6 +915,9 @@ class WalletRpcClient(RpcClient):
 
         return records
 
+    async def get_offers_count(self) -> GetOffersCountResponse:
+        return GetOffersCountResponse.from_json_dict(await self.fetch("get_offers_count", {}))
+
     async def cancel_offer(
         self,
         trade_id: bytes32,
@@ -929,6 +972,9 @@ class WalletRpcClient(RpcClient):
         )
 
         return json_deserialize_with_clvm_streamable(res, CancelOffersResponse)
+
+    async def get_cat_list(self) -> GetCATListResponse:
+        return GetCATListResponse.from_json_dict(await self.fetch("get_cat_list", {}))
 
     # NFT wallet
     async def create_new_nft_wallet(self, did_id: Optional[str], name: Optional[str] = None) -> Dict[str, Any]:
@@ -1061,6 +1107,9 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_get_nfts", request)
         return response
 
+    async def get_nft_wallet_by_did(self, request: NFTGetByDID) -> NFTGetByDIDResponse:
+        return NFTGetByDIDResponse.from_json_dict(await self.fetch("nft_get_by_did", request.to_json_dict()))
+
     async def set_nft_did(
         self,
         wallet_id: int,
@@ -1086,10 +1135,16 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_set_nft_did", request)
         return json_deserialize_with_clvm_streamable(response, NFTSetNFTDIDResponse)
 
+    async def set_nft_status(self, request: NFTSetNFTStatus) -> None:
+        await self.fetch("nft_set_nft_status", request.to_json_dict())
+
     async def get_nft_wallet_did(self, wallet_id: int) -> Dict[str, Any]:
         request = {"wallet_id": wallet_id}
         response = await self.fetch("nft_get_wallet_did", request)
         return response
+
+    async def get_nft_wallets_with_dids(self) -> NFTGetWalletsWithDIDsResponse:
+        return NFTGetWalletsWithDIDsResponse.from_json_dict(await self.fetch("nft_get_wallets_with_dids", {}))
 
     async def nft_mint_bulk(
         self,
@@ -1134,6 +1189,32 @@ class WalletRpcClient(RpcClient):
         }
         response = await self.fetch("nft_mint_bulk", request)
         return json_deserialize_with_clvm_streamable(response, NFTMintBulkResponse)
+
+    async def set_nft_did_bulk(
+        self,
+        request: NFTSetDIDBulk,
+        tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> NFTSetDIDBulkResponse:
+        return NFTSetDIDBulkResponse.from_json_dict(
+            await self.fetch(
+                "nft_set_did_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
+
+    async def transfer_nft_bulk(
+        self,
+        request: NFTTransferBulk,
+        tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> NFTTransferBulkResponse:
+        return NFTTransferBulkResponse.from_json_dict(
+            await self.fetch(
+                "nft_transfer_bulk", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     # DataLayer
     async def create_new_dl(
@@ -1328,6 +1409,14 @@ class WalletRpcClient(RpcClient):
             "sign_message_by_id", {"id": id, "message": message, "is_hex": is_hex, "safe_mode": safe_mode}
         )
         return response["pubkey"], response["signature"], response["signing_mode"]
+
+    async def verify_signature(self, request: VerifySignature) -> VerifySignatureResponse:
+        return VerifySignatureResponse.from_json_dict(await self.fetch("verify_signature", {**request.to_json_dict()}))
+
+    async def get_transaction_memo(self, request: GetTransactionMemo) -> GetTransactionMemoResponse:
+        return GetTransactionMemoResponse.from_json_dict(
+            await self.fetch("get_transaction_memo", {**request.to_json_dict()})
+        )
 
     # DAOs
     async def create_new_dao_wallet(
@@ -1732,11 +1821,12 @@ class WalletRpcClient(RpcClient):
         self,
         args: SplitCoins,
         tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> SplitCoinsResponse:
         return SplitCoinsResponse.from_json_dict(
             await self.fetch(
-                "split_coins", {**args.to_json_dict(), **tx_config.to_json_dict(), **timelock_info.to_json_dict()}
+                "split_coins", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )
 
@@ -1744,10 +1834,11 @@ class WalletRpcClient(RpcClient):
         self,
         args: CombineCoins,
         tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> CombineCoinsResponse:
         return CombineCoinsResponse.from_json_dict(
             await self.fetch(
-                "combine_coins", {**args.to_json_dict(), **tx_config.to_json_dict(), **timelock_info.to_json_dict()}
+                "combine_coins", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )

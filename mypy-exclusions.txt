@@ -95,6 +95,5 @@ chia._tests.wallet.did_wallet.test_did
 chia._tests.wallet.rpc.test_wallet_rpc
 chia._tests.wallet.test_taproot
 chia._tests.wallet.test_wallet_interested_store
-chia._tests.wallet.test_wallet_key_val_store
 tools.analyze-chain
 tools.run_block

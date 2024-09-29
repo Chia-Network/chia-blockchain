@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
+from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
@@ -23,6 +25,7 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -43,6 +46,109 @@ def default_raise() -> Any:  # pragma: no cover
 
 @streamable
 @dataclass(frozen=True)
+class Empty(Streamable):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class LogIn(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class LogInResponse(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetLoggedInFingerprintResponse(Streamable):
+    fingerprint: Optional[uint32]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeysResponse(Streamable):
+    keyring_is_locked: bool
+    public_key_fingerprints: Optional[List[uint32]] = None
+
+    @property
+    def pk_fingerprints(self) -> List[uint32]:
+        if self.keyring_is_locked:
+            raise RuntimeError("get_public_keys cannot return public keys because the keyring is locked")
+        else:
+            assert self.public_key_fingerprints is not None
+            return self.public_key_fingerprints
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKey(Streamable):
+    fingerprint: uint32
+
+
+# utility for `GetPrivateKeyResponse`
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKeyFormat(Streamable):
+    fingerprint: uint32
+    sk: PrivateKey
+    pk: G1Element
+    farmer_pk: G1Element
+    pool_pk: G1Element
+    seed: Optional[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKeyResponse(Streamable):
+    private_key: GetPrivateKeyFormat
+
+
+@streamable
+@dataclass(frozen=True)
+class GenerateMnemonicResponse(Streamable):
+    mnemonic: List[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class AddKey(Streamable):
+    mnemonic: List[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class AddKeyResponse(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DeleteKey(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckDeleteKey(Streamable):
+    fingerprint: uint32
+    max_ph_to_search: uint16 = uint16(100)
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckDeleteKeyResponse(Streamable):
+    fingerprint: uint32
+    used_for_farmer_rewards: bool
+    used_for_pool_rewards: bool
+    wallet_balance: bool
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[List[bytes32]] = None
     start: Optional[uint32] = None
@@ -53,6 +159,172 @@ class GetNotifications(Streamable):
 @dataclass(frozen=True)
 class GetNotificationsResponse(Streamable):
     notifications: List[Notification]
+
+
+@streamable
+@dataclass(frozen=True)
+class VerifySignature(Streamable):
+    message: str
+    pubkey: G1Element
+    signature: G2Element
+    signing_mode: Optional[str] = None
+    address: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VerifySignatureResponse(Streamable):
+    isValid: bool
+    error: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionMemo(Streamable):
+    transaction_id: bytes32
+
+
+# utility type for GetTransactionMemoResponse
+@streamable
+@dataclass(frozen=True)
+class CoinIDWithMemos(Streamable):
+    coin_id: bytes32
+    memos: List[bytes]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionMemoResponse(Streamable):
+    transaction_id: bytes32
+    coins_with_memos: List[CoinIDWithMemos]
+
+    # TODO: deprecate the kinda silly format of this RPC and delete these functions
+    def to_json_dict(self) -> Dict[str, Any]:
+        return {
+            self.transaction_id.hex(): {
+                cwm.coin_id.hex(): [memo.hex() for memo in cwm.memos] for cwm in self.coins_with_memos
+            }
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: Dict[str, Any]) -> GetTransactionMemoResponse:
+        return cls(
+            bytes32.from_hexstr(list(json_dict.keys())[0]),
+            [
+                CoinIDWithMemos(bytes32.from_hexstr(coin_id), [bytes32.from_hexstr(memo) for memo in memos])
+                for coin_id, memos in list(json_dict.values())[0].items()
+            ],
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetOffersCountResponse(Streamable):
+    total: uint16
+    my_offers_count: uint16
+    taken_offers_count: uint16
+
+
+@streamable
+@dataclass(frozen=True)
+class DefaultCAT(Streamable):
+    asset_id: bytes32
+    name: str
+    symbol: str
+
+
+@streamable
+@dataclass(frozen=True)
+class GetCATListResponse(Streamable):
+    cat_list: List[DefaultCAT]
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetPubkey(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetPubkeyResponse(Streamable):
+    pubkey: G1Element
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetRecoveryInfo(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetRecoveryInfoResponse(Streamable):
+    wallet_id: uint32
+    my_did: str
+    coin_name: bytes32
+    newpuzhash: bytes32
+    pubkey: G1Element
+    backup_dids: List[bytes32]
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetCurrentCoinInfo(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DIDGetCurrentCoinInfoResponse(Streamable):
+    wallet_id: uint32
+    my_did: str
+    did_parent: bytes32
+    did_innerpuz: bytes32
+    did_amount: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetByDID(Streamable):
+    did_id: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetByDIDResponse(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTSetNFTStatus(Streamable):
+    wallet_id: uint32
+    coin_id: bytes32
+    in_transaction: bool
+
+
+# utility for NFTGetWalletsWithDIDsResponse
+@streamable
+@dataclass(frozen=True)
+class NFTWalletWithDID(Streamable):
+    wallet_id: uint32
+    did_id: str
+    did_wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTGetWalletsWithDIDsResponse(Streamable):
+    nft_wallets: List[NFTWalletWithDID]
+
+
+# utility for NFTSetDIDBulk
+@streamable
+@dataclass(frozen=True)
+class NFTCoin(Streamable):
+    nft_coin_id: str
+    wallet_id: uint32
 
 
 @streamable
@@ -114,6 +386,24 @@ class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: Optional[bool] = None
 
+    def to_json_dict(self, _avoid_ban: bool = False) -> Dict[str, Any]:
+        if not _avoid_ban:
+            raise NotImplementedError(
+                "to_json_dict is banned on TransactionEndpointRequest, please use .json_serialize_for_transport"
+            )
+        else:
+            return super().to_json_dict()
+
+    def json_serialize_for_transport(
+        self, tx_config: TXConfig, extra_conditions: Tuple[Condition, ...], timelock_info: ConditionValidTimes
+    ) -> Dict[str, Any]:
+        return {
+            **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
+            "extra_conditions": [condition.to_json_dict() for condition in extra_conditions],
+            **self.to_json_dict(_avoid_ban=True),
+        }
+
 
 @streamable
 @dataclass(frozen=True)
@@ -152,6 +442,36 @@ class CombineCoins(TransactionEndpointRequest):
 @dataclass(frozen=True)
 class CombineCoinsResponse(TransactionEndpointResponse):
     pass
+
+
+@streamable
+@kw_only_dataclass
+class NFTSetDIDBulk(TransactionEndpointRequest):
+    nft_coin_list: List[NFTCoin] = field(default_factory=default_raise)
+    did_id: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTSetDIDBulkResponse(TransactionEndpointResponse):
+    wallet_id: List[uint32]
+    tx_num: uint16
+    spend_bundle: WalletSpendBundle
+
+
+@streamable
+@kw_only_dataclass
+class NFTTransferBulk(TransactionEndpointRequest):
+    nft_coin_list: List[NFTCoin] = field(default_factory=default_raise)
+    target_address: str = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class NFTTransferBulkResponse(TransactionEndpointResponse):
+    wallet_id: List[uint32]
+    tx_num: uint16
+    spend_bundle: WalletSpendBundle
 
 
 # TODO: The section below needs corresponding request types

@@ -42,7 +42,7 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -1324,8 +1324,11 @@ class FullNode:
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
         pre_validate_start = time.monotonic()
-        pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
+        pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            self.blockchain.constants,
+            self.blockchain,
             blocks_to_validate,
+            self.blockchain.pool,
             {},
             sub_slot_iters=current_ssi,
             difficulty=current_difficulty,
@@ -1850,8 +1853,11 @@ class FullNode:
                 prev_ses_block = curr
             new_slot = len(block.finished_sub_slots) > 0
             ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
-            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
+            pre_validation_results = await pre_validate_blocks_multiprocessing(
+                self.blockchain.constants,
+                self.blockchain,
                 [block],
+                self.blockchain.pool,
                 npc_results,
                 sub_slot_iters=ssi,
                 difficulty=diff,
@@ -2435,12 +2441,7 @@ class FullNode:
         return None, False
 
     async def add_transaction(
-        self,
-        transaction: SpendBundle,
-        spend_name: bytes32,
-        peer: Optional[WSChiaConnection] = None,
-        test: bool = False,
-        tx_bytes: Optional[bytes] = None,
+        self, transaction: SpendBundle, spend_name: bytes32, peer: Optional[WSChiaConnection] = None, test: bool = False
     ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
         if self.sync_store.get_sync_mode():
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
