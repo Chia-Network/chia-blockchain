@@ -348,17 +348,19 @@ class Blockchain:
         assert required_iters is not None
 
         header_hash: bytes32 = block.header_hash
-        block_rec = await self.get_block_record_from_db(header_hash)
-        if block_rec is not None:
-            self.add_block_record(block_rec)
-            # this means we have already seen and validated this block.
-            assert fork_info is not None
-            return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if extending_main_chain:
-            # this is the common and efficient case where we extend the main
-            # chain. The fork_info can be empty
             fork_info.reset(block.height - 1, block.prev_header_hash)
+
+        block_rec = await self.get_block_record_from_db(header_hash)
+        if block_rec is not None:
+            await self.advance_fork_info(block, fork_info)
+            fork_info.include_spends(npc_result, block, header_hash)
+            self.add_block_record(block_rec)
+            return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
+
+        if fork_info.peak_hash != block.prev_header_hash:
+            await self.advance_fork_info(block, fork_info)
 
         # if these prerequisites of the fork_info aren't met, the fork_info
         # object is invalid for this block. If the caller would have passed in
