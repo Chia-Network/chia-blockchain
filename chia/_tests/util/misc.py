@@ -723,3 +723,4 @@ async def add_blocks_in_batches(
         )
         assert err is None
         assert success is True
+    await full_node._finish_sync()
