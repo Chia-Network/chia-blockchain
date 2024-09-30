@@ -412,7 +412,10 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
         )
     ).signed_tx
 
-    resp_client = await client.push_transactions(PushTransactions(transactions=[tx], fee=uint64(10)), DEFAULT_TX_CONFIG)
+    resp_client = await client.push_transactions(
+        PushTransactions(transactions=[tx], fee=uint64(10)),  # pylint: disable=unexpected-keyword-arg
+        DEFAULT_TX_CONFIG,
+    )
     resp = await client.fetch(
         "push_transactions", {"transactions": [tx.to_json_dict_convenience(wallet_node.config)], "fee": 10}
     )
