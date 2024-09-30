@@ -1538,18 +1538,27 @@ def generate_changelist(r: random.Random, size: int) -> List[Dict[str, Any]]:
     ]
 
 
+@dataclass
+class BigOResult:
+    real_best: big_o.complexities.ComplexityClass
+    simple_best: big_o.complexities.ComplexityClass
+    all: Dict[big_o.complexities.ComplexityClass, float]
+
+
 def process_big_o(
     required_complexity: big_o.complexities.ComplexityClass,
     records: Dict[int, float],
     # 1 is 100%
     simplicity_bias_percentage: float,
-) -> None:
+    fail: bool = True,
+    print_lines: bool = True,
+) -> BigOResult:
     __tracebackhide__ = True
 
     ns = list(records.keys())
     durations = list(records.values())
-    best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations)
-    simplicity_bias = simplicity_bias_percentage * fitted[best_class]
+    real_best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations)
+    simplicity_bias = simplicity_bias_percentage * fitted[real_best_class]
     best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations, simplicity_bias=simplicity_bias)
 
     lines: List[str] = []
@@ -1565,7 +1574,7 @@ def process_big_o(
         close_enough = abs(best_residuals - required_residuals) < simplicity_bias
 
         if best_class.order == required_complexity.order:
-            return
+            return BigOResult(real_best=real_best_class, simple_best=best_class, all=fitted)
         elif best_class.order > required_complexity.order:
             if not close_enough:
                 lines.append(f"must be {required_complexity.__name__} got: {best_class}")
@@ -1580,9 +1589,15 @@ def process_big_o(
         lines.append(f"expected {required_complexity.__name__} and got close enough, best: {best_class}")
     except Exception:
         file = sys.stderr
-        raise
+        if fail:
+            raise
+        else:
+            return BigOResult(real_best=real_best_class, simple_best=best_class, all=fitted)
     finally:
-        print("\n".join(lines), file=file)
+        if print_lines:
+            print("\n".join(lines), file=file)
+
+    return BigOResult(real_best=real_best_class, simple_best=best_class, all=fitted)
 
     # TODO: restore this (outside this function) for some actual runtime limits?
     # coefficient_maximums = [0.65, 0.000_25, *(10**-n for n in range(5, 100))]
@@ -1609,7 +1624,7 @@ async def test_benchmark_batch_insert_complexity(
     # NOTE: only useful if more than double the test size
     step_size = 2_000
     assert step_size >= test_size
-    max_pre_size = 20_000
+    max_pre_size = 100_000
     # TODO: must be > 0 to avoid an issue with the log complexity class?
     initial_batch_size = step_size
 
@@ -1617,6 +1632,7 @@ async def test_benchmark_batch_insert_complexity(
     assert remainder == 0, "the last batch would be a different size"
 
     records: Dict[int, float] = {}
+    results: Dict[int, BigOResult] = {}
     # this benchmark is checking thread and disk (?) access so we use monotonic
     clock = time.monotonic
 
@@ -1633,6 +1649,8 @@ async def test_benchmark_batch_insert_complexity(
                 status=Status.COMMITTED,
             )
             total_inserted += len(initial_batch)
+
+        previous_complexities = None
 
         while True:
             batch = list(itertools.islice(changelist_iter, test_size))
@@ -1660,6 +1678,25 @@ async def test_benchmark_batch_insert_complexity(
                 # TODO: yeah no, don't induce this offset, just lazy to quickly get unique entries
                 records[total_inserted + repeat] = f.result().duration
 
+            results[total_inserted] = process_big_o(
+                required_complexity=big_o.complexities.Linearithmic,
+                records=records,
+                simplicity_bias_percentage=10 / 100,
+                fail=False,
+                print_lines=False,
+            )
+            sorted_result = sorted(
+                (residual, complexity) for complexity, residual in results[total_inserted].all.items()
+            )
+            top_sorted_complexities = [complexity for _, complexity in sorted_result][:2]
+            same = top_sorted_complexities == previous_complexities
+            previous_complexities = top_sorted_complexities
+            first_second_percent = 100 * ((sorted_result[1][0] / sorted_result[0][0]) - 1)
+            print(
+                f" {'+' if same else ' '} results for {total_inserted} ({first_second_percent:.0f}%):",
+                " | ".join(f"{type(complexity).__name__} - {residual:f}" for (residual, complexity) in sorted_result),
+            )
+
             step_batch = [*batch, *itertools.islice(changelist_iter, step_size - len(batch))]
             if total_inserted >= max_pre_size:
                 break
@@ -1682,6 +1719,8 @@ async def test_benchmark_batch_insert_complexity(
     #     assert sum([len(line) async for line in reader.iterdump()]) + 1 == -1
     #     # s = "\n".join([line async for line in reader.iterdump()]) + "\n"
     #     # assert len(s) == -1
+
+    assert False, "forcing output"
 
     process_big_o(
         required_complexity=big_o.complexities.Linearithmic,
