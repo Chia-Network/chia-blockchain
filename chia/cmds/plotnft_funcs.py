@@ -181,7 +181,7 @@ async def pprint_all_pool_wallet_state(
     address_prefix: str,
     pool_state_dict: Dict[bytes32, Dict[str, Any]],
 ) -> None:
-    print(f"Wallet height: {await wallet_client.get_height_info()}")
+    print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
     print(f"Sync status: {'Synced' if (await wallet_client.get_sync_status()).synced else 'Not synced'}")
     for wallet_info in get_wallets_response:
         pool_wallet_id = wallet_info["id"]

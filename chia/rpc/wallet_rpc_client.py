@@ -45,6 +45,7 @@ from chia.rpc.wallet_request_types import (
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
     GetCATListResponse,
+    GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
@@ -157,10 +158,8 @@ class WalletRpcClient(RpcClient):
     async def get_sync_status(self) -> GetSyncStatusResponse:
         return GetSyncStatusResponse.from_json_dict(await self.fetch("get_sync_status", {}))
 
-    async def get_height_info(self) -> uint32:
-        response = await self.fetch("get_height_info", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(uint32, response["height"])
+    async def get_height_info(self) -> GetHeightInfoResponse:
+        return GetHeightInfoResponse.from_json_dict(await self.fetch("get_height_info", {}))
 
     async def push_tx(self, spend_bundle: WalletSpendBundle) -> Dict[str, Any]:
         return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})

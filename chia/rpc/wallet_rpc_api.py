@@ -35,6 +35,7 @@ from chia.rpc.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
@@ -619,9 +620,10 @@ class WalletRpcApi:
         synced = await self.service.wallet_state_manager.synced()
         return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
-    async def get_height_info(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_height_info(self, request: Empty) -> GetHeightInfoResponse:
         height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        return {"height": height}
+        return GetHeightInfoResponse(height=height)
 
     async def push_tx(self, request: Dict[str, Any]) -> EndpointResult:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)

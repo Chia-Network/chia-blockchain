@@ -1753,7 +1753,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     await generate_funds(env.full_node.api, env.wallet_1)
 
-    assert (await client.get_height_info()) > 0
+    assert (await client.get_height_info()).height > 0
 
     ph = await wallet.get_new_puzzlehash()
     addr = encode_puzzle_hash(ph, "txch")

@@ -860,7 +860,7 @@ async def print_balances(
 
         sync_response = await wallet_client.get_sync_status()
 
-        print(f"Wallet height: {await wallet_client.get_height_info()}")
+        print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
         if sync_response.syncing:
             print("Sync status: Syncing...")
         elif sync_response.synced:
