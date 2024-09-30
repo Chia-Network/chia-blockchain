@@ -152,7 +152,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     )
     assert derivation_record is not None
     pubkey: G1Element = derivation_record.pubkey
-    synthetic_pubkey: G1Element = G1Element.from_bytes(puzzle.uncurry()[1].at("f").atom)
+    atom = puzzle.uncurry()[1].at("f").atom
+    assert atom is not None
+    synthetic_pubkey: G1Element = G1Element.from_bytes(atom)
     message: bytes = delegated_puzzle_hash + coin.name() + wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
 
     utx: UnsignedTransaction = UnsignedTransaction(

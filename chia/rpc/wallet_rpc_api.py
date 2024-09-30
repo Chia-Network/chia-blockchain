@@ -20,16 +20,30 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.rpc.util import marshal, tx_endpoint
 from chia.rpc.wallet_request_types import (
+    AddKey,
+    AddKeyResponse,
     ApplySignatures,
     ApplySignaturesResponse,
+    CheckDeleteKey,
+    CheckDeleteKeyResponse,
     CombineCoins,
     CombineCoinsResponse,
+    DeleteKey,
+    Empty,
     ExecuteSigningInstructions,
     ExecuteSigningInstructionsResponse,
     GatherSigningInfo,
     GatherSigningInfoResponse,
+    GenerateMnemonicResponse,
+    GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
+    GetPrivateKey,
+    GetPrivateKeyFormat,
+    GetPrivateKeyResponse,
+    GetPublicKeysResponse,
+    LogIn,
+    LogInResponse,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -388,40 +402,42 @@ class WalletRpcApi:
     # Key management
     ##########################################################################################
 
-    async def log_in(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def log_in(self, request: LogIn) -> LogInResponse:
         """
         Logs in the wallet with a specific key.
         """
 
-        fingerprint = request["fingerprint"]
-        if self.service.logged_in_fingerprint == fingerprint:
-            return {"fingerprint": fingerprint}
+        if self.service.logged_in_fingerprint == request.fingerprint:
+            return LogInResponse(request.fingerprint)
 
         await self._stop_wallet()
-        started = await self.service._start_with_fingerprint(fingerprint)
+        started = await self.service._start_with_fingerprint(request.fingerprint)
         if started is True:
-            return {"fingerprint": fingerprint}
+            return LogInResponse(request.fingerprint)
 
-        return {"success": False, "error": f"fingerprint {fingerprint} not found in keychain or keychain is empty"}
+        raise ValueError(f"fingerprint {request.fingerprint} not found in keychain or keychain is empty")
 
-    async def get_logged_in_fingerprint(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"fingerprint": self.service.logged_in_fingerprint}
+    @marshal
+    async def get_logged_in_fingerprint(self, request: Empty) -> GetLoggedInFingerprintResponse:
+        return GetLoggedInFingerprintResponse(uint32.construct_optional(self.service.logged_in_fingerprint))
 
-    async def get_public_keys(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_public_keys(self, request: Empty) -> GetPublicKeysResponse:
         try:
             fingerprints = [
-                sk.public_key().get_fingerprint()
+                uint32(sk.public_key().get_fingerprint())
                 for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
             ]
         except KeychainIsLocked:
-            return {"keyring_is_locked": True}
+            return GetPublicKeysResponse(keyring_is_locked=True)
         except Exception as e:
             raise Exception(
                 "Error while getting keys.  If the issue persists, restart all services."
                 f"  Original error: {type(e).__name__}: {e}"
             ) from e
         else:
-            return {"public_key_fingerprints": fingerprints}
+            return GetPublicKeysResponse(keyring_is_locked=False, public_key_fingerprints=fingerprints)
 
     async def _get_private_key(self, fingerprint: int) -> Tuple[Optional[SecretInfo[Any]], Optional[bytes]]:
         try:
@@ -433,52 +449,39 @@ class WalletRpcApi:
             log.error(f"Failed to get private key by fingerprint: {e}")
         return None, None
 
-    async def get_private_key(self, request: Dict[str, Any]) -> EndpointResult:
-        fingerprint = request["fingerprint"]
-        sk, seed = await self._get_private_key(fingerprint)
+    @marshal
+    async def get_private_key(self, request: GetPrivateKey) -> GetPrivateKeyResponse:
+        sk, seed = await self._get_private_key(request.fingerprint)
         if sk is not None:
             s = bytes_to_mnemonic(seed) if seed is not None else None
-            response = {
-                "private_key": {
-                    "fingerprint": fingerprint,
-                    "sk": bytes(sk).hex(),
-                    "pk": bytes(sk.public_key()).hex(),
-                    "seed": s,
-                },
-            }
-            if isinstance(sk, PrivateKey):
-                response["private_key"].update(
-                    {
-                        "farmer_pk": bytes(master_sk_to_farmer_sk(sk).get_g1()).hex(),
-                        "pool_pk": bytes(master_sk_to_pool_sk(sk).get_g1()).hex(),
-                    }
+            return GetPrivateKeyResponse(
+                private_key=GetPrivateKeyFormat(
+                    fingerprint=request.fingerprint,
+                    sk=bytes(sk),
+                    pk=bytes(sk.public_key()),
+                    farmer_pk=master_sk_to_farmer_sk(sk).get_g1() if isinstance(sk, PrivateKey) else None,
+                    pool_pk=master_sk_to_pool_sk(sk).get_g1() if isinstance(sk, PrivateKey) else None,
+                    seed=s,
                 )
-            return response
-        return {"success": False, "private_key": {"fingerprint": fingerprint}}
+            )
 
-    async def generate_mnemonic(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"mnemonic": generate_mnemonic().split(" ")}
+        raise ValueError(f"Could not get a private key for fingerprint {request.fingerprint}")
 
-    async def add_key(self, request: Dict[str, Any]) -> EndpointResult:
-        if "mnemonic" not in request:
-            raise ValueError("Mnemonic not in request")
+    @marshal
+    async def generate_mnemonic(self, request: Empty) -> GenerateMnemonicResponse:
+        return GenerateMnemonicResponse(generate_mnemonic().split(" "))
 
+    @marshal
+    async def add_key(self, request: AddKey) -> AddKeyResponse:
         # Adding a key from 24 word mnemonic
-        mnemonic = request["mnemonic"]
         try:
             sk, _ = await self.service.keychain_proxy.add_key(
-                " ".join(mnemonic), KeyTypes(request["key_type"]) if "key_type" in request else None
+                " ".join(request.mnemonic), KeyTypes(request.key_type) if request.key_type is not None else None
             )
         except KeyError as e:
-            return {
-                "success": False,
-                "error": f"The word '{e.args[0]}' is incorrect.'",
-                "word": e.args[0],
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+            raise ValueError(f"The word '{e.args[0]}' is incorrect.")
 
-        fingerprint = sk.public_key().get_fingerprint()
+        fingerprint = uint32(sk.public_key().get_fingerprint())
         await self._stop_wallet()
 
         # Makes sure the new key is added to config properly
@@ -489,24 +492,24 @@ class WalletRpcApi:
             log.error(f"Failed to check_keys after adding a new key: {e}")
         started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
         if started is True:
-            return {"fingerprint": fingerprint}
+            return AddKeyResponse(fingerprint=fingerprint)
         raise ValueError("Failed to start")
 
-    async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def delete_key(self, request: DeleteKey) -> Empty:
         await self._stop_wallet()
-        fingerprint = request["fingerprint"]
         try:
-            await self.service.keychain_proxy.delete_key_by_fingerprint(fingerprint)
+            await self.service.keychain_proxy.delete_key_by_fingerprint(request.fingerprint)
         except Exception as e:
             log.error(f"Failed to delete key by fingerprint: {e}")
-            return {"success": False, "error": str(e)}
+            raise e
         path = path_from_root(
             self.service.root_path,
-            f"{self.service.config['database_path']}-{fingerprint}",
+            f"{self.service.config['database_path']}-{request.fingerprint}",
         )
         if path.exists():
             path.unlink()
-        return {}
+        return Empty()
 
     async def _check_key_used_for_rewards(
         self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
@@ -549,27 +552,26 @@ class WalletRpcApi:
 
         return found_farmer, found_pool
 
-    async def check_delete_key(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def check_delete_key(self, request: CheckDeleteKey) -> CheckDeleteKeyResponse:
         """Check the key use prior to possible deletion
         checks whether key is used for either farm or pool rewards
         checks if any wallets have a non-zero balance
         """
         used_for_farmer: bool = False
         used_for_pool: bool = False
-        walletBalance: bool = False
+        wallet_balance: bool = False
 
-        fingerprint = request["fingerprint"]
-        max_ph_to_search = request.get("max_ph_to_search", 100)
-        sk, _ = await self._get_private_key(fingerprint)
+        sk, _ = await self._get_private_key(request.fingerprint)
         if sk is not None:
             if isinstance(sk, PrivateKey):
                 used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(
-                    self.service.root_path, sk, max_ph_to_search
+                    self.service.root_path, sk, request.max_ph_to_search
                 )
 
-            if self.service.logged_in_fingerprint != fingerprint:
+            if self.service.logged_in_fingerprint != request.fingerprint:
                 await self._stop_wallet()
-                await self.service._start_with_fingerprint(fingerprint=fingerprint)
+                await self.service._start_with_fingerprint(fingerprint=request.fingerprint)
 
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:
@@ -579,27 +581,28 @@ class WalletRpcApi:
                 pending_balance = await wallet.get_unconfirmed_balance(unspent)
 
                 if (balance + pending_balance) > 0:
-                    walletBalance = True
+                    wallet_balance = True
                     break
 
-        return {
-            "fingerprint": fingerprint,
-            "used_for_farmer_rewards": used_for_farmer,
-            "used_for_pool_rewards": used_for_pool,
-            "wallet_balance": walletBalance,
-        }
+        return CheckDeleteKeyResponse(
+            fingerprint=request.fingerprint,
+            used_for_farmer_rewards=used_for_farmer,
+            used_for_pool_rewards=used_for_pool,
+            wallet_balance=wallet_balance,
+        )
 
-    async def delete_all_keys(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def delete_all_keys(self, request: Empty) -> Empty:
         await self._stop_wallet()
         try:
             await self.service.keychain_proxy.delete_all_keys()
         except Exception as e:
             log.error(f"Failed to delete all keys: {e}")
-            return {"success": False, "error": str(e)}
+            raise e
         path = path_from_root(self.service.root_path, self.service.config["database_path"])
         if path.exists():
             path.unlink()
-        return {}
+        return Empty()
 
     ##########################################################################################
     # Wallet Node
@@ -1197,20 +1200,18 @@ class WalletRpcApi:
         if not isinstance(wallet, (Wallet, CATWallet)):
             raise ValueError("Cannot combine coins from non-fungible wallet types")
 
-        coins = []
+        coins: List[Coin] = []
 
         # First get the coin IDs specified
         if request.target_coin_ids != []:
             coins.extend(
-                [
-                    cr.coin
-                    for cr in (
-                        await self.service.wallet_state_manager.coin_store.get_coin_records(
-                            wallet_id=request.wallet_id,
-                            coin_id_filter=HashFilter(request.target_coin_ids, mode=uint8(FilterMode.include.value)),
-                        )
-                    ).records
-                ]
+                cr.coin
+                for cr in (
+                    await self.service.wallet_state_manager.coin_store.get_coin_records(
+                        wallet_id=request.wallet_id,
+                        coin_id_filter=HashFilter(request.target_coin_ids, mode=uint8(FilterMode.include.value)),
+                    )
+                ).records
             )
 
         async with action_scope.use() as interface:
@@ -1224,11 +1225,8 @@ class WalletRpcApi:
             amount_selected = sum(c.amount for c in coins)
             if amount_selected < fungible_amount_needed:
                 coins.extend(
-                    list(
-                        await wallet.select_coins(
-                            amount=uint64(fungible_amount_needed - amount_selected),
-                            action_scope=action_scope,
-                        )
+                    await wallet.select_coins(
+                        amount=uint64(fungible_amount_needed - amount_selected), action_scope=action_scope
                     )
                 )
 
@@ -1236,21 +1234,19 @@ class WalletRpcApi:
         if len(coins) < request.number_of_coins:
             async with action_scope.use() as interface:
                 coins.extend(
-                    [
-                        cr.coin
-                        for cr in (
-                            await self.service.wallet_state_manager.coin_store.get_coin_records(
-                                wallet_id=request.wallet_id,
-                                limit=uint32(request.number_of_coins - len(coins)),
-                                order=CoinRecordOrder.amount,
-                                coin_id_filter=HashFilter(
-                                    [c.name() for c in interface.side_effects.selected_coins],
-                                    mode=uint8(FilterMode.exclude.value),
-                                ),
-                                reverse=request.largest_first,
-                            )
-                        ).records
-                    ]
+                    cr.coin
+                    for cr in (
+                        await self.service.wallet_state_manager.coin_store.get_coin_records(
+                            wallet_id=request.wallet_id,
+                            limit=uint32(request.number_of_coins - len(coins)),
+                            order=CoinRecordOrder.amount,
+                            coin_id_filter=HashFilter(
+                                [c.name() for c in interface.side_effects.selected_coins],
+                                mode=uint8(FilterMode.exclude.value),
+                            ),
+                            reverse=request.largest_first,
+                        )
+                    ).records
                 )
 
         async with action_scope.use() as interface:
@@ -4433,7 +4429,11 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        try:
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
+        except ValueError:
+            return {"success": False, "error": "no DataLayer wallet available"}
+
         singletons = await wallet.get_owned_singletons()
         singletons_json = [singleton.to_json_dict() for singleton in singletons]
 

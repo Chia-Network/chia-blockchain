@@ -859,11 +859,8 @@ class FullNodeRpcApi:
             raise ValueError(f"Request must contain exactly one of {ns}")
 
         if "spend_bundle" in request:
-            spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
-            spend_name = spend_bundle.name()
-            conds: SpendBundleConditions = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, spend_name
-            )
+            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+            conds: SpendBundleConditions = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle)
             cost = conds.cost
         elif "cost" in request:
             cost = request["cost"]

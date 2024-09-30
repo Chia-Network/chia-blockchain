@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 from chia_rs import G1Element, G2Element
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
+from chia.util.keychain import KeyTypes
+from chia.util.observation_root import ObservationRoot
+from chia.util.secret_info import SecretInfo
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
@@ -24,6 +28,7 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -41,6 +46,116 @@ def kw_only_dataclass(cls: Type[Any]) -> Type[Any]:
 
 def default_raise() -> Any:  # pragma: no cover
     raise RuntimeError("This should be impossible to hit and is just for < 3.10 compatibility")
+
+
+@streamable
+@dataclass(frozen=True)
+class Empty(Streamable):
+    pass
+
+
+@streamable
+@dataclass(frozen=True)
+class LogIn(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class LogInResponse(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetLoggedInFingerprintResponse(Streamable):
+    fingerprint: Optional[uint32]
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPublicKeysResponse(Streamable):
+    keyring_is_locked: bool
+    public_key_fingerprints: Optional[List[uint32]] = None
+
+    @property
+    def pk_fingerprints(self) -> List[uint32]:
+        if self.keyring_is_locked:
+            raise RuntimeError("get_public_keys cannot return public keys because the keyring is locked")
+        else:
+            assert self.public_key_fingerprints is not None
+            return self.public_key_fingerprints
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKey(Streamable):
+    fingerprint: uint32
+
+
+# utility for `GetPrivateKeyResponse`
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKeyFormat(Streamable):
+    fingerprint: uint32
+    sk: bytes
+    pk: bytes
+    farmer_pk: Optional[G1Element]
+    pool_pk: Optional[G1Element]
+    seed: Optional[str]
+
+    def secret_info(self, key_type: KeyTypes = KeyTypes.G1_ELEMENT) -> SecretInfo[Any]:
+        return KeyTypes.parse_secret_info(self.sk, key_type)
+
+    def observation_root(self, key_type: KeyTypes = KeyTypes.G1_ELEMENT) -> ObservationRoot:
+        return KeyTypes.parse_observation_root(self.pk, key_type)
+
+
+@streamable
+@dataclass(frozen=True)
+class GetPrivateKeyResponse(Streamable):
+    private_key: GetPrivateKeyFormat
+
+
+@streamable
+@dataclass(frozen=True)
+class GenerateMnemonicResponse(Streamable):
+    mnemonic: List[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class AddKey(Streamable):
+    mnemonic: List[str]
+    key_type: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class AddKeyResponse(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class DeleteKey(Streamable):
+    fingerprint: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckDeleteKey(Streamable):
+    fingerprint: uint32
+    max_ph_to_search: uint16 = uint16(100)
+
+
+@streamable
+@dataclass(frozen=True)
+class CheckDeleteKeyResponse(Streamable):
+    fingerprint: uint32
+    used_for_farmer_rewards: bool
+    used_for_pool_rewards: bool
+    wallet_balance: bool
 
 
 @streamable
@@ -281,6 +396,24 @@ class ExecuteSigningInstructionsResponse(Streamable):
 class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: Optional[bool] = None
+
+    def to_json_dict(self, _avoid_ban: bool = False) -> Dict[str, Any]:
+        if not _avoid_ban:
+            raise NotImplementedError(
+                "to_json_dict is banned on TransactionEndpointRequest, please use .json_serialize_for_transport"
+            )
+        else:
+            return super().to_json_dict()
+
+    def json_serialize_for_transport(
+        self, tx_config: TXConfig, extra_conditions: Tuple[Condition, ...], timelock_info: ConditionValidTimes
+    ) -> Dict[str, Any]:
+        return {
+            **tx_config.to_json_dict(),
+            **timelock_info.to_json_dict(),
+            "extra_conditions": [condition.to_json_dict() for condition in extra_conditions],
+            **self.to_json_dict(_avoid_ban=True),
+        }
 
 
 @streamable

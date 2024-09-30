@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, Union
 
-from chia_rs import AugSchemeMPL, BLSCache, G1Element
+from chia_rs import AugSchemeMPL, BLSCache, G1Element, SpendBundleConditions
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -85,7 +85,7 @@ class ForkInfo:
         self.removals_since_fork = {}
         self.block_hashes = []
 
-    def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock, header_hash: bytes32) -> None:
+    def include_spends(self, conds: Optional[SpendBundleConditions], block: FullBlock, header_hash: bytes32) -> None:
         height = block.height
 
         assert self.peak_height == height - 1
@@ -97,11 +97,10 @@ class ForkInfo:
         self.peak_height = int(block.height)
         self.peak_hash = header_hash
 
-        if npc_result is not None:
-            assert npc_result.conds is not None
+        if conds is not None:
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
-            for spend in npc_result.conds.spends:
+            for spend in conds.spends:
                 self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), height)
                 for puzzle_hash, amount, hint in spend.create_coin:
                     coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
@@ -367,8 +366,8 @@ async def validate_block_body(
 
     # 14. Check for duplicate spends inside block
     removal_counter = collections.Counter(removals)
-    for k, v in removal_counter.items():
-        if v > 1:
+    for count in removal_counter.values():
+        if count > 1:
             return Err.DOUBLE_SPEND, None
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
