@@ -1604,12 +1604,12 @@ async def test_benchmark_batch_insert_complexity(
     r = random.Random()
     r.seed("shadowlands", version=2)
 
-    repeats = 5
-    test_size = 100
+    repeats = 20
+    test_size = 10
     # NOTE: only useful if more than double the test size
-    step_size = 100
+    step_size = 2_000
     assert step_size >= test_size
-    max_pre_size = 30_000
+    max_pre_size = 20_000
     # TODO: must be > 0 to avoid an issue with the log complexity class?
     initial_batch_size = step_size
 
