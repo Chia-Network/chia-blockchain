@@ -699,15 +699,17 @@ class WalletRpcApi:
     async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
         return GetTimestampForHeightResponse(await self.service.get_timestamp_for_height(request.height))
 
-    async def set_auto_claim(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
         """
         Set auto claim merkle coins config
         :param request: Example {"enable": true, "tx_fee": 100000, "min_amount": 0, "batch_size": 50}
         :return:
         """
-        return self.service.set_auto_claim(AutoClaimSettings.from_json_dict(request))
+        return AutoClaimSettings.from_json_dict(self.service.set_auto_claim(request))
 
-    async def get_auto_claim(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_auto_claim(self, request: Empty) -> AutoClaimSettings:
         """
         Get auto claim merkle coins config
         :param request: None
@@ -716,7 +718,7 @@ class WalletRpcApi:
         auto_claim_settings = AutoClaimSettings.from_json_dict(
             self.service.wallet_state_manager.config.get("auto_claim", {})
         )
-        return auto_claim_settings.to_json_dict()
+        return auto_claim_settings
 
     ##########################################################################################
     # Wallet Management
