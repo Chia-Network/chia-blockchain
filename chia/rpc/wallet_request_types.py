@@ -176,6 +176,18 @@ class PushTX(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetTimestampForHeight(Streamable):
+    height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTimestampForHeightResponse(Streamable):
+    timestamp: uint64
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[List[bytes32]] = None
     start: Optional[uint32] = None

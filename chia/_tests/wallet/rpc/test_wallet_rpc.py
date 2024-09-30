@@ -55,6 +55,7 @@ from chia.rpc.wallet_request_types import (
     DIDGetPubkey,
     GetNotifications,
     GetPrivateKey,
+    GetTimestampForHeight,
     LogIn,
     PushTransactions,
     SetWalletResyncOnStartup,
@@ -460,7 +461,9 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
     await full_node_api.farm_blocks_to_wallet(2, wallet)
 
     get_farmed_amount_result = await wallet_rpc_client.get_farmed_amount()
-    get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(uint32(3))  # genesis + 2
+    get_timestamp_for_height_result = await wallet_rpc_client.get_timestamp_for_height(
+        GetTimestampForHeight(uint32(3))
+    )  # genesis + 2
 
     expected_result = {
         "blocks_won": 2,
@@ -468,7 +471,7 @@ async def test_get_farmed_amount(wallet_rpc_environment: WalletRpcTestEnvironmen
         "farmer_reward_amount": 500_000_000_000,
         "fee_amount": 0,
         "last_height_farmed": 3,
-        "last_time_farmed": get_timestamp_for_height_result,
+        "last_time_farmed": get_timestamp_for_height_result.timestamp,
         "pool_reward_amount": 3_500_000_000_000,
         "success": True,
     }
@@ -512,8 +515,8 @@ async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnv
 
     await generate_funds(full_node_api, env.wallet_1)
 
-    # This tests that the client returns a uint64, rather than raising or returning something unexpected
-    uint64(await client.get_timestamp_for_height(uint32(1)))
+    # This tests that the client returns a sucessfully, rather than raising or returning something unexpected
+    await client.get_timestamp_for_height(GetTimestampForHeight(uint32(1)))
 
 
 @pytest.mark.parametrize(

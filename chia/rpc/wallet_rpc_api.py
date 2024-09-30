@@ -44,6 +44,8 @@ from chia.rpc.wallet_request_types import (
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
     GetSyncStatusResponse,
+    GetTimestampForHeight,
+    GetTimestampForHeightResponse,
     LogIn,
     LogInResponse,
     PushTransactions,
@@ -693,8 +695,9 @@ class WalletRpcApi:
 
         return PushTransactionsResponse([], [])  # tx_endpoint takes care of this
 
-    async def get_timestamp_for_height(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"timestamp": await self.service.get_timestamp_for_height(uint32(request["height"]))}
+    @marshal
+    async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
+        return GetTimestampForHeightResponse(await self.service.get_timestamp_for_height(request.height))
 
     async def set_auto_claim(self, request: Dict[str, Any]) -> EndpointResult:
         """

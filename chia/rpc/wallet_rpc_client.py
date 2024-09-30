@@ -54,6 +54,8 @@ from chia.rpc.wallet_request_types import (
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
     GetSyncStatusResponse,
+    GetTimestampForHeight,
+    GetTimestampForHeightResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
     LogIn,
@@ -179,11 +181,10 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def get_timestamp_for_height(self, height: uint32) -> uint64:
-        request = {"height": height}
-        response = await self.fetch("get_timestamp_for_height", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(uint64, response["timestamp"])
+    async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
+        return GetTimestampForHeightResponse.from_json_dict(
+            await self.fetch("get_timestamp_for_height", request.to_json_dict())
+        )
 
     async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
         return AutoClaimSettings.from_json_dict(await self.fetch("set_auto_claim", {**request.to_json_dict()}))
