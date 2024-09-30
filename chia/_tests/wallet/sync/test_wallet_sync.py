@@ -18,6 +18,7 @@ from chia._tests.util.misc import add_blocks_in_batches, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.weight_proof.test_weight_proof import load_blocks_dont_validate
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.constants import ConsensusConstants
@@ -358,10 +359,11 @@ async def test_long_sync_wallet(
     sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
         full_node.constants, True, block_record, full_node.blockchain
     )
+    fork_height = blocks_reorg[-num_blocks - 10].height - 1
     await full_node.add_block_batch(
         blocks_reorg[-num_blocks - 10 : -1],
         PeerInfo("0.0.0.0", 0),
-        None,
+        ForkInfo(fork_height, fork_height, blocks_reorg[-num_blocks - 10].prev_header_hash),
         current_ssi=sub_slot_iters,
         current_difficulty=difficulty,
     )
@@ -481,7 +483,7 @@ async def test_wallet_reorg_get_coinbase(
     await full_node.add_block_batch(
         blocks_reorg_2[-44:],
         PeerInfo("0.0.0.0", 0),
-        None,
+        ForkInfo(blocks_reorg_2[-45].height, blocks_reorg_2[-45].height, blocks_reorg_2[-45].header_hash),
         current_ssi=sub_slot_iters,
         current_difficulty=difficulty,
     )
