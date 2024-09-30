@@ -4416,7 +4416,11 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
-        wallet = self.service.wallet_state_manager.get_dl_wallet()
+        try:
+            wallet = self.service.wallet_state_manager.get_dl_wallet()
+        except ValueError:
+            return {"success": False, "error": "no DataLayer wallet available"}
+
         singletons = await wallet.get_owned_singletons()
         singletons_json = [singleton.to_json_dict() for singleton in singletons]
 

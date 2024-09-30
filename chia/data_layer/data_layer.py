@@ -568,6 +568,7 @@ class DataLayer:
         servers_info = await self.data_store.get_available_servers_for_store(store_id, timestamp)
         # TODO: maybe append a random object to the whole DataLayer class?
         random.shuffle(servers_info)
+        success = False
         for server_info in servers_info:
             url = server_info.url
 
@@ -600,14 +601,16 @@ class DataLayer:
                     self.data_store,
                     store_id,
                     root.generation,
-                    [record.root for record in reversed(to_download)],
-                    server_info,
-                    self.server_files_location,
-                    self.client_timeout,
-                    self.log,
-                    proxy_url,
-                    await self.get_downloader(store_id, url),
-                    self.group_files_by_store,
+                    target_generation=singleton_record.generation,
+                    root_hashes=[record.root for record in reversed(to_download)],
+                    server_info=server_info,
+                    client_foldername=self.server_files_location,
+                    timeout=self.client_timeout,
+                    log=self.log,
+                    proxy_url=proxy_url,
+                    downloader=await self.get_downloader(store_id, url),
+                    group_files_by_store=self.group_files_by_store,
+                    maximum_full_file_count=self.maximum_full_file_count,
                 )
                 if success:
                     self.log.info(
@@ -620,6 +623,30 @@ class DataLayer:
                 self.log.warning(f"Server {url} unavailable for {store_id}.")
             except Exception as e:
                 self.log.warning(f"Exception while downloading files for {store_id}: {e} {traceback.format_exc()}.")
+
+        # if there aren't any servers then don't try to write the full tree
+        if not success and len(servers_info) > 0:
+            root = await self.data_store.get_tree_root(store_id=store_id)
+            if root.node_hash is None:
+                return
+            filename_full_tree = get_full_tree_filename_path(
+                foldername=self.server_files_location,
+                store_id=store_id,
+                node_hash=root.node_hash,
+                generation=root.generation,
+                group_by_store=self.group_files_by_store,
+            )
+            # Had trouble with this generation, so generate full file for the generation we currently have
+            if not os.path.exists(filename_full_tree):
+                with open(filename_full_tree, "wb") as writer:
+                    await self.data_store.write_tree_to_file(
+                        root=root,
+                        node_hash=root.node_hash,
+                        store_id=store_id,
+                        deltas_only=False,
+                        writer=writer,
+                    )
+                    self.log.info(f"Successfully written full tree filename {filename_full_tree}.")
 
     async def get_downloader(self, store_id: bytes32, url: str) -> Optional[PluginRemote]:
         request_json = {"store_id": store_id.hex(), "url": url}
