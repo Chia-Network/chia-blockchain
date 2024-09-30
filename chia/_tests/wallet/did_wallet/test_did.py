@@ -1353,6 +1353,71 @@ class TestDIDWallet:
             await did_wallet_2.get_coin(),
             new_puzhash,
         )
+    
+    async def test_did_auto_transfer_limit(self, self_hostname, two_wallet_nodes, trusted):
+        fee = uint64(1000)
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await full_node_api.farm_blocks_to_wallet(1, wallet)
+
+        for i in range(0, 14):
+            async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+                did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
+                    wallet_node.wallet_state_manager,
+                    wallet,
+                    uint64(101),
+                    action_scope,
+                    [bytes(ph)],
+                    uint64(1),
+                    {"Twitter": "Test", "GitHub": "测试"},
+                    fee=fee,
+                )
+            assert did_wallet_1.get_name() == "Profile 1"
+            await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+            await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
+            await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
+            await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
+            # Transfer DID
+            new_puzhash = await wallet2.get_new_puzzlehash()
+            async with did_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+                await did_wallet_1.transfer_did(new_puzhash, fee, False, action_scope)
+            await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+            await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
+            # Check if the DID wallet is created in the wallet2
+
+            await time_out_assert(
+                30, get_wallet_num, min(2 + i, 11), wallet_node_2.wallet_state_manager
+            )  # check we haven't made more than 10 DID wallets
+            await time_out_assert(30, get_wallet_num, 1, wallet_node.wallet_state_manager)
+        # Get the new DID wallets
+        did_wallets = list(
+            filter(
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+                await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+            )
+        )
+
+        assert len(did_wallets) == 10
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
     @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)

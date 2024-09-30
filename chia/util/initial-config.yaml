@@ -564,6 +564,9 @@ wallet:
   # the user accepts the risk/responsibility of verifying the authenticity and origin of unknown CATs
   automatically_add_unknown_cats: False
 
+  # if an unknown DID is sent to us, a wallet will be automatically created
+  did_auto_add_limit: 10
+
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
 
