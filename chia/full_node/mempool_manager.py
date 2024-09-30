@@ -264,17 +264,14 @@ class MempoolManager:
             self.seen_bundle_hashes.pop(bundle_hash)
 
     async def pre_validate_spendbundle(
-        self,
-        new_spend: SpendBundle,
-        spend_name: bytes32,
-        bls_cache: Optional[BLSCache] = None,
+        self, spend_bundle: SpendBundle, spend_bundle_id: Optional[bytes32] = None, bls_cache: Optional[BLSCache] = None
     ) -> SpendBundleConditions:
         """
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
         """
 
-        if new_spend.coin_spends == []:
+        if spend_bundle.coin_spends == []:
             raise ValidationError(Err.INVALID_SPEND_BUNDLE, "Empty SpendBundle")
 
         assert self.peak is not None
@@ -284,7 +281,7 @@ class MempoolManager:
             sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
                 self.pool,
                 validate_clvm_and_signature,
-                new_spend,
+                spend_bundle,
                 self.max_tx_clvm_cost,
                 self.constants,
                 self.peak.height,
@@ -305,10 +302,13 @@ class MempoolManager:
 
         ret = NPCResult(None, sbc)
 
+        if spend_bundle_id is None:
+            spend_bundle_id = spend_bundle.name()
+
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
             f"pre_validate_spendbundle took {duration:0.4f} seconds "
-            f"for {spend_name} (queue-size: {self._worker_queue_size})",
+            f"for {spend_bundle_id} (queue-size: {self._worker_queue_size})",
         )
         if ret.error is not None:
             raise ValidationError(Err(ret.error), "pre_validate_spendbundle failed")
