@@ -179,9 +179,6 @@ class WalletRpcClient(RpcClient):
             )
         )
 
-    async def farm_block(self, address: str) -> Dict[str, Any]:
-        return await self.fetch("farm_block", {"address": address})
-
     async def get_timestamp_for_height(self, height: uint32) -> uint64:
         request = {"height": height}
         response = await self.fetch("get_timestamp_for_height", request)
