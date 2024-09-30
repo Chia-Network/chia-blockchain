@@ -43,7 +43,7 @@ log = logging.getLogger(__name__)
 class PreValidationResult(Streamable):
     error: Optional[uint16]
     required_iters: Optional[uint64]  # Iff error is None
-    npc_result: Optional[NPCResult]  # Iff error is None and block is a transaction block
+    conds: Optional[SpendBundleConditions]  # Iff error is None and block is a transaction block
     validated_signature: bool
     timing: uint32  # the time (in milliseconds) it took to pre-validate the block
 
@@ -95,7 +95,7 @@ def batch_pre_validate_blocks(
                     validation_time = time.monotonic() - validation_start
                     results.append(
                         PreValidationResult(
-                            uint16(npc_result.error), None, npc_result, False, uint32(validation_time * 1000)
+                            uint16(npc_result.error), None, npc_result.conds, False, uint32(validation_time * 1000)
                         )
                     )
                     continue
@@ -144,7 +144,7 @@ def batch_pre_validate_blocks(
                 PreValidationResult(
                     error_int,
                     required_iters,
-                    None if conds is None else NPCResult(None, conds),
+                    conds,
                     successfully_validated_signatures,
                     uint32(validation_time * 1000),
                 )
@@ -164,7 +164,7 @@ async def pre_validate_blocks_multiprocessing(
     block_records: BlocksProtocol,
     blocks: Sequence[FullBlock],
     pool: Executor,
-    npc_results: Dict[uint32, NPCResult],
+    block_height_conds_map: Dict[uint32, SpendBundleConditions],
     *,
     sub_slot_iters: uint64,
     difficulty: uint64,
@@ -275,10 +275,8 @@ async def pre_validate_blocks_multiprocessing(
             prev_ses_block = block_rec
 
     conditions_pickled = {}
-    for k, v in npc_results.items():
-        assert v.error is None
-        assert v.conds is not None
-        conditions_pickled[k] = bytes(v.conds)
+    for k, v in block_height_conds_map.items():
+        conditions_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
     recent_blocks_bytes = {bytes(k): bytes(v) for k, v in recent_blocks.items()}  # convert to bytes

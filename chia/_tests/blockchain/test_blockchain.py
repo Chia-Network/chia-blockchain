@@ -2641,7 +2641,10 @@ class TestBodyValidation:
         diff = b.constants.DIFFICULTY_STARTING
         err = (
             await b.add_block(
-                blocks[-1], PreValidationResult(None, uint64(1), npc_result, True, uint32(0)), None, sub_slot_iters=ssi
+                blocks[-1],
+                PreValidationResult(None, uint64(1), npc_result.conds, True, uint32(0)),
+                None,
+                sub_slot_iters=ssi,
             )
         )[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
@@ -2717,7 +2720,7 @@ class TestBodyValidation:
         )
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         _, err, _ = await b.add_block(
-            block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)), None, sub_slot_iters=ssi
+            block_2, PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)), None, sub_slot_iters=ssi
         )
         assert err == Err.INVALID_BLOCK_COST
 
@@ -2746,7 +2749,7 @@ class TestBodyValidation:
             constants=bt.constants,
         )
         _, err, _ = await b.add_block(
-            block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)), None, sub_slot_iters=ssi
+            block_2, PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)), None, sub_slot_iters=ssi
         )
         assert err == Err.INVALID_BLOCK_COST
 
@@ -2777,7 +2780,7 @@ class TestBodyValidation:
         )
 
         result, err, _ = await b.add_block(
-            block_2, PreValidationResult(None, uint64(1), npc_result, False, uint32(0)), None, sub_slot_iters=ssi
+            block_2, PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)), None, sub_slot_iters=ssi
         )
         assert err == Err.INVALID_BLOCK_COST
 

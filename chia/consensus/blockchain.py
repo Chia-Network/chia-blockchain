@@ -338,7 +338,6 @@ class Blockchain:
             if prev_block.height + 1 != block.height:
                 return AddBlockResult.INVALID_BLOCK, Err.INVALID_HEIGHT, None
 
-        npc_result: Optional[NPCResult] = pre_validation_result.npc_result
         required_iters = pre_validation_result.required_iters
         if pre_validation_result.error is not None:
             return AddBlockResult.INVALID_BLOCK, Err(pre_validation_result.error), None
@@ -412,7 +411,7 @@ class Blockchain:
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
                 await self.advance_fork_info(block, fork_info)
-                fork_info.include_spends(None if npc_result is None else npc_result.conds, block, header_hash)
+                fork_info.include_spends(pre_validation_result.conds, block, header_hash)
                 self.add_block_record(block_rec)
                 return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
@@ -431,7 +430,7 @@ class Blockchain:
             self.coin_store.get_coin_records,
             block,
             block.height,
-            npc_result,
+            pre_validation_result.conds,
             fork_info,
             bls_cache,
             # If we did not already validate the signature, validate it now
@@ -444,7 +443,7 @@ class Blockchain:
         # case we're validating blocks on a fork, the next block validation will
         # need to know of these additions and removals. Also, _reconsider_peak()
         # will need these results
-        fork_info.include_spends(None if npc_result is None else npc_result.conds, block, header_hash)
+        fork_info.include_spends(pre_validation_result.conds, block, header_hash)
 
         # block_to_block_record() require the previous block in the cache
         if not genesis and prev_block is not None:
@@ -781,7 +780,7 @@ class Blockchain:
             self.coin_store.get_coin_records,
             block,
             uint32(prev_height + 1),
-            npc_result,
+            None if npc_result is None else npc_result.conds,
             fork_info,
             None,
             validate_signature=False,  # Signature was already validated before calling this method, no need to validate
