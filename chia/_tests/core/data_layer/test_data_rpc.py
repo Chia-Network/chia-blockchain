@@ -250,6 +250,7 @@ def create_mnemonic(seed: bytes = b"ab") -> str:
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_create_insert_get(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:

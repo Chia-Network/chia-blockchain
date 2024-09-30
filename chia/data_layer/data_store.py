@@ -39,6 +39,7 @@ from chia.data_layer.data_layer_util import (
     row_to_node,
     unspecified,
 )
+from chia.data_layer.util.merkle_blob import KVId, MerkleBlob
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
@@ -79,43 +80,6 @@ class DataStore:
             async with db_wrapper.writer() as writer:
                 await writer.execute(
                     f"""
-                    CREATE TABLE IF NOT EXISTS node(
-                        hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
-                        node_type INTEGER NOT NULL CHECK(
-                            (
-                                node_type == {int(NodeType.INTERNAL)}
-                                AND left IS NOT NULL
-                                AND right IS NOT NULL
-                                AND key IS NULL
-                                AND value IS NULL
-                            )
-                            OR
-                            (
-                                node_type == {int(NodeType.TERMINAL)}
-                                AND left IS NULL
-                                AND right IS NULL
-                                AND key IS NOT NULL
-                                AND value IS NOT NULL
-                            )
-                        ),
-                        left BLOB REFERENCES node,
-                        right BLOB REFERENCES node,
-                        key BLOB,
-                        value BLOB
-                    )
-                    """
-                )
-                await writer.execute(
-                    """
-                    CREATE TRIGGER IF NOT EXISTS no_node_updates
-                    BEFORE UPDATE ON node
-                    BEGIN
-                        SELECT RAISE(FAIL, 'updates not allowed to the node table');
-                    END
-                    """
-                )
-                await writer.execute(
-                    f"""
                     CREATE TABLE IF NOT EXISTS root(
                         tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
                         generation INTEGER NOT NULL CHECK(generation >= 0),
@@ -123,25 +87,7 @@ class DataStore:
                         status INTEGER NOT NULL CHECK(
                             {" OR ".join(f"status == {status}" for status in Status)}
                         ),
-                        PRIMARY KEY(tree_id, generation),
-                        FOREIGN KEY(node_hash) REFERENCES node(hash)
-                    )
-                    """
-                )
-                # TODO: Add ancestor -> hash relationship, this might involve temporarily
-                # deferring the foreign key enforcement due to the insertion order
-                # and the node table also enforcing a similar relationship in the
-                # other direction.
-                # FOREIGN KEY(ancestor) REFERENCES ancestors(ancestor)
-                await writer.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS ancestors(
-                        hash BLOB NOT NULL REFERENCES node,
-                        ancestor BLOB CHECK(length(ancestor) == 32),
-                        tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
-                        generation INTEGER NOT NULL,
-                        PRIMARY KEY(hash, tree_id, generation),
-                        FOREIGN KEY(ancestor) REFERENCES node(hash)
+                        PRIMARY KEY(tree_id, generation)
                     )
                     """
                 )
@@ -172,7 +118,35 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE INDEX IF NOT EXISTS node_key_index ON node(key)
+                    CREATE TABLE IF NOT EXISTS merkleblob(
+                        hash BLOB,
+                        blob BLOB,
+                        PRIMARY KEY(hash)
+                    )
+                    """
+                )
+                await writer.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS ids(
+                        kv_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        blob BLOB
+                    )
+                    """
+                )
+                await writer.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS hashes(
+                        hash BLOB PRIMARY KEY,
+                        kid INTEGER,
+                        vid INTEGER,
+                        FOREIGN KEY (kid) REFERENCES ids(kv_id),
+                        FOREIGN KEY (vid) REFERENCES ids(kv_id)
+                    )
+                    """
+                )
+                await writer.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_ids ON ids(blob)
                     """
                 )
 
@@ -217,6 +191,106 @@ class DataStore:
             await writer.execute("INSERT INTO schema (version_id) VALUES (?)", (version,))
         log.info(f"Finished migrating DB to version {version}")
 
+    async def get_merkle_blob(self, root_hash: Optional[bytes32]) -> MerkleBlob:
+        if root_hash is None:
+            return MerkleBlob(blob=bytearray())
+
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
+                "SELECT blob FROM merkleblob WHERE hash == :root_hash",
+                {
+                    "root_hash": root_hash,
+                },
+            )
+
+            row = await cursor.fetchone()
+
+            if row is None:
+                raise Exception(f"Cannot find merkle blob for root hash {root_hash.hex()}")
+
+            merkle_blob = MerkleBlob(blob=bytearray(row["blob"]))
+            return merkle_blob
+
+    async def insert_root_from_merkle_blob(self, merkle_blob: MerkleBlob, store_id: bytes32, status: Status) -> Root:
+        if not merkle_blob.empty():
+            merkle_blob.calculate_lazy_hashes()
+
+        root_hash = merkle_blob.get_root_hash()
+
+        if root_hash is not None:
+            async with self.db_wrapper.writer() as writer:
+                await writer.execute(
+                    """
+                    INSERT OR REPLACE INTO merkleblob (hash, blob) 
+                    VALUES (?, ?)
+                    """,
+                    (root_hash, merkle_blob.blob)
+                )
+
+        return await self._insert_root(store_id, root_hash, status)
+
+    async def get_kvid(self, blob: bytes) -> Optional[KVId]:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT kv_id FROM ids WHERE blob = ?", (blob,))
+            row = await cursor.fetchone()
+
+            if row is None:
+                return None
+
+            return row[0]
+
+    async def get_blob_from_kvid(self, kv_id: KVId) -> bytes:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT blob FROM ids WHERE kv_id = ?", (kv_id,))
+            row = await cursor.fetchone()
+
+            if row is None:
+                return None
+
+            return row[0]
+
+    async def get_terminal_node(self, kid: KVId, vid: KVId) -> TerminalNode:
+        key = await self.get_blob_from_kvid(kid)
+        value = await self.get_blob_from_kvid(vid)
+        if kid is None or vid is None:
+            raise Exception("Cannot find the key/value pair")
+
+        return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
+
+    async def add_kvid(self, blob: bytes) -> KVId:
+        kv_id = await self.get_kvid(blob)
+        if kv_id is not None:
+            return kv_id
+
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute("INSERT INTO ids (blob) VALUES (?)", (blob,))
+
+        kv_id = await self.get_kvid(blob)
+        if kv_id is None:
+            raise Exception("Internal error")
+        return kv_id
+
+    async def add_key_value(self, key: bytes, value: bytes) -> Tuple[KVId, KVId]:
+        kid = await self.add_kvid(key)
+        vid = await self.add_kvid(value)
+        hash = leaf_hash(key, value)
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute("INSERT INTO hashes (hash, kid, vid) VALUES (?, ?, ?)", (hash,kid,vid,))
+        return (kid, vid)
+
+    async def get_node_by_hash(self, hash: bytes32) -> Tuple[KVId, KVId]:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT * FROM hashes WHERE hash = ?", (hash,))
+
+            row = await cursor.fetchone()
+
+            if row is None:
+                raise Exception(f"Cannot find node by hash {hash.hex()}")
+
+            kid = KVId(row["kid"])
+            vid = KVId(row["vid"])
+            return (kid, vid)
+
     async def _insert_root(
         self,
         store_id: bytes32,
@@ -253,23 +327,6 @@ class DataStore:
                 """,
                 new_root.to_row(),
             )
-
-            # `node_hash` is now a root, so it has no ancestor.
-            # Don't change the ancestor table unless the root is committed.
-            if node_hash is not None and status == Status.COMMITTED:
-                values = {
-                    "hash": node_hash,
-                    "tree_id": store_id,
-                    "generation": generation,
-                }
-                await writer.execute(
-                    """
-                    INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                    VALUES (:hash, NULL, :tree_id, :generation)
-                    """,
-                    values,
-                )
-
             return new_root
 
     async def _insert_node(
@@ -477,21 +534,6 @@ class DataStore:
                     root.generation,
                 ),
             )
-            # `node_hash` is now a root, so it has no ancestor.
-            # Don't change the ancestor table unless the root is committed.
-            if root.node_hash is not None and status == Status.COMMITTED:
-                values = {
-                    "hash": root.node_hash,
-                    "tree_id": root.store_id,
-                    "generation": root.generation,
-                }
-                await writer.execute(
-                    """
-                    INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                    VALUES (:hash, NULL, :tree_id, :generation)
-                    """,
-                    values,
-                )
 
     async def check(self) -> None:
         for check in self._checks:
@@ -518,29 +560,8 @@ class DataStore:
             if len(bad_trees) > 0:
                 raise TreeGenerationIncrementingError(store_ids=bad_trees)
 
-    async def _check_hashes(self) -> None:
-        async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT * FROM node")
-
-            bad_node_hashes: List[bytes32] = []
-            async for row in cursor:
-                node = row_to_node(row=row)
-                if isinstance(node, InternalNode):
-                    expected_hash = internal_hash(left_hash=node.left_hash, right_hash=node.right_hash)
-                elif isinstance(node, TerminalNode):
-                    expected_hash = Program.to((node.key, node.value)).get_tree_hash()
-                else:
-                    raise Exception(f"Internal error, unknown node type: {node!r}")
-
-                if node.hash != expected_hash:
-                    bad_node_hashes.append(node.hash)
-
-        if len(bad_node_hashes) > 0:
-            raise NodeHashError(node_hashes=bad_node_hashes)
-
     _checks: Tuple[Callable[[DataStore], Awaitable[None]], ...] = (
         _check_roots_are_incrementing,
-        _check_hashes,
     )
 
     async def create_tree(self, store_id: bytes32, status: Status = Status.PENDING) -> bool:
@@ -754,39 +775,6 @@ class DataStore:
 
         return internal_nodes
 
-    async def get_keys_values_cursor(
-        self,
-        reader: aiosqlite.Connection,
-        root_hash: Optional[bytes32],
-        only_keys: bool = False,
-    ) -> aiosqlite.Cursor:
-        select_clause = "SELECT hash, key" if only_keys else "SELECT *"
-        maybe_value = "" if only_keys else "value, "
-        select_node_clause = "node.hash, node.node_type, node.left, node.right, node.key" if only_keys else "node.*"
-        return await reader.execute(
-            f"""
-            WITH RECURSIVE
-                tree_from_root_hash(hash, node_type, left, right, key, {maybe_value}depth, rights) AS (
-                    SELECT {select_node_clause}, 0 AS depth, 0 AS rights FROM node WHERE node.hash == :root_hash
-                    UNION ALL
-                    SELECT
-                        {select_node_clause},
-                        tree_from_root_hash.depth + 1 AS depth,
-                        CASE
-                            WHEN node.hash == tree_from_root_hash.right
-                            THEN tree_from_root_hash.rights + (1 << (62 - tree_from_root_hash.depth))
-                            ELSE tree_from_root_hash.rights
-                            END AS rights
-                        FROM node, tree_from_root_hash
-                    WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
-                )
-            {select_clause} FROM tree_from_root_hash
-            WHERE node_type == :node_type
-            ORDER BY depth ASC, rights ASC
-            """,
-            {"root_hash": root_hash, "node_type": NodeType.TERMINAL},
-        )
-
     async def get_keys_values(
         self,
         store_id: bytes32,
@@ -800,25 +788,19 @@ class DataStore:
             else:
                 resolved_root_hash = root_hash
 
-            cursor = await self.get_keys_values_cursor(reader, resolved_root_hash)
-            terminal_nodes: List[TerminalNode] = []
-            async for row in cursor:
-                if row["depth"] > 62:
-                    # TODO: Review the value and implementation of left-to-right order
-                    #       reporting.  Initial use is for balanced insertion with the
-                    #       work done in the query.
+            try:
+                merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
+            except Exception as e:
+                if str(e).startswith("Cannot find merkle blob for root hash"):
+                    return []
+                raise
 
-                    # This is limited based on the choice of 63 for the maximum left
-                    # shift in the query.  This is in turn based on the SQLite integers
-                    # ranging in size up to signed 8 bytes, 64 bits.  If we exceed this then
-                    # we no longer guarantee the left-to-right ordering of the node
-                    # list.  While 63 allows for a lot of nodes in a balanced tree, in
-                    # the worst case it allows only 62 terminal nodes.
-                    raise Exception("Tree depth exceeded 62, unable to guarantee left-to-right node order.")
-                node = row_to_node(row=row)
-                if not isinstance(node, TerminalNode):
-                    raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
-                terminal_nodes.append(node)
+            kv_ids = merkle_blob.get_keys_values()
+
+            terminal_nodes: List[TerminalNode] = []
+            for kid, vid in kv_ids.items():
+                terminal_node = await self.get_terminal_node(kid, vid)
+                terminal_nodes.append(terminal_node)
 
         return terminal_nodes
 
@@ -835,19 +817,18 @@ class DataStore:
             else:
                 resolved_root_hash = root_hash
 
-            cursor = await self.get_keys_values_cursor(reader, resolved_root_hash)
             keys_values_hashed: Dict[bytes32, bytes32] = {}
             key_hash_to_length: Dict[bytes32, int] = {}
             leaf_hash_to_length: Dict[bytes32, int] = {}
-            async for row in cursor:
-                if row["depth"] > 62:
-                    raise Exception("Tree depth exceeded 62, unable to guarantee left-to-right node order.")
-                node = row_to_node(row=row)
-                if not isinstance(node, TerminalNode):
-                    raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
-                keys_values_hashed[key_hash(node.key)] = leaf_hash(node.key, node.value)
-                key_hash_to_length[key_hash(node.key)] = len(node.key)
-                leaf_hash_to_length[leaf_hash(node.key, node.value)] = len(node.key) + len(node.value)
+            if resolved_root_hash is not None:
+                merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
+                kv_ids = merkle_blob.get_keys_values()
+                for kid, vid in kv_ids.items():
+                    node = await self.get_terminal_node(kid, vid)
+
+                    keys_values_hashed[key_hash(node.key)] = leaf_hash(node.key, node.value)
+                    key_hash_to_length[key_hash(node.key)] = len(node.key)
+                    leaf_hash_to_length[leaf_hash(node.key, node.value)] = len(node.key) + len(node.value)
 
             return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, resolved_root_hash)
 
@@ -1030,34 +1011,18 @@ class DataStore:
         key: bytes,
         value: bytes,
         store_id: bytes32,
-        use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> InsertResult:
-        async with self.db_wrapper.writer():
-            if root is None:
-                root = await self.get_tree_root(store_id=store_id)
-
-            was_empty = root.node_hash is None
-
-            if was_empty:
-                reference_node_hash = None
-                side = None
-            else:
-                seed = leaf_hash(key=key, value=value)
-                reference_node_hash = await self.get_terminal_node_for_seed(store_id, seed, root_hash=root.node_hash)
-                side = self.get_side_for_seed(seed)
-
-            return await self.insert(
-                key=key,
-                value=value,
-                store_id=store_id,
-                reference_node_hash=reference_node_hash,
-                side=side,
-                use_optimized=use_optimized,
-                status=status,
-                root=root,
-            )
+        return await self.insert(
+            key=key,
+            value=value,
+            store_id=store_id,
+            reference_node_hash=None,
+            side=None,
+            status=status,
+            root=root,
+        )
 
     async def get_keys_values_dict(
         self,
@@ -1182,155 +1147,43 @@ class DataStore:
         key: bytes,
         value: bytes,
         store_id: bytes32,
-        reference_node_hash: Optional[bytes32],
-        side: Optional[Side],
-        use_optimized: bool = True,
+        reference_node_hash: Optional[bytes32] = None,
+        side: Optional[Side] = None,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> InsertResult:
         async with self.db_wrapper.writer():
             if root is None:
                 root = await self.get_tree_root(store_id=store_id)
+            merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
-            try:
-                await self.get_node_by_key(key=key, store_id=store_id)
-                raise Exception(f"Key already present: {key.hex()}")
-            except KeyNotFoundError:
-                pass
+            kid, vid = await self.add_key_value(key, value)
+            hash = leaf_hash(key, value)
+            reference_kid: Optional[KVId] = None
+            if reference_node_hash is not None:
+                reference_kid, _ = await self.get_node_by_hash(reference_node_hash)
+            merkle_blob.insert(kid, vid, hash, reference_kid, side)
 
-            was_empty = root.node_hash is None
-            if reference_node_hash is None:
-                if not was_empty:
-                    raise Exception(f"Reference node hash must be specified for non-empty tree: {store_id.hex()}")
-            else:
-                reference_node_type = await self.get_node_type(node_hash=reference_node_hash)
-                if reference_node_type == NodeType.INTERNAL:
-                    raise Exception("can not insert a new key/value on an internal node")
-
-            # create new terminal node
-            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=value)
-
-            if was_empty:
-                if side is not None:
-                    raise Exception("Tree was empty so side must be unspecified, got: {side!r}")
-
-                new_root = await self._insert_root(
-                    store_id=store_id,
-                    node_hash=new_terminal_node_hash,
-                    status=status,
-                )
-            else:
-                if side is None:
-                    raise Exception("Tree was not empty, side must be specified.")
-                if reference_node_hash is None:
-                    raise Exception("Tree was not empty, reference node hash must be specified.")
-                if root.node_hash is None:
-                    raise Exception("Internal error.")
-
-                if side == Side.LEFT:
-                    left = new_terminal_node_hash
-                    right = reference_node_hash
-                elif side == Side.RIGHT:
-                    left = reference_node_hash
-                    right = new_terminal_node_hash
-                else:
-                    raise Exception(f"Internal error, unknown side: {side!r}")
-
-                ancestors = await self.get_ancestors_common(
-                    node_hash=reference_node_hash,
-                    store_id=store_id,
-                    root_hash=root.node_hash,
-                    generation=root.generation,
-                    use_optimized=use_optimized,
-                )
-                new_root = await self.update_ancestor_hashes_on_insert(
-                    store_id=store_id,
-                    left=left,
-                    right=right,
-                    traversal_node_hash=reference_node_hash,
-                    ancestors=ancestors,
-                    status=status,
-                    root=root,
-                )
-
-            return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
+            new_root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, status)
+            return InsertResult(node_hash=hash, root=new_root)
 
     async def delete(
         self,
         key: bytes,
         store_id: bytes32,
-        use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> Optional[Root]:
-        root_hash = None if root is None else root.node_hash
         async with self.db_wrapper.writer():
-            try:
-                node = await self.get_node_by_key(key=key, store_id=store_id)
-                node_hash = node.hash
-                assert isinstance(node, TerminalNode)
-            except KeyNotFoundError:
-                log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
-                return root
-
-            ancestors: List[InternalNode] = await self.get_ancestors_common(
-                node_hash=node_hash,
-                store_id=store_id,
-                root_hash=root_hash,
-                use_optimized=use_optimized,
-            )
-
-            if len(ancestors) == 0:
-                # the only node is being deleted
-                return await self._insert_root(
-                    store_id=store_id,
-                    node_hash=None,
-                    status=status,
-                )
-
-            parent = ancestors[0]
-            other_hash = parent.other_child_hash(hash=node_hash)
-
-            if len(ancestors) == 1:
-                # the parent is the root so the other side will become the new root
-                return await self._insert_root(
-                    store_id=store_id,
-                    node_hash=other_hash,
-                    status=status,
-                )
-
-            old_child_hash = parent.hash
-            new_child_hash = other_hash
             if root is None:
-                new_generation = await self.get_tree_generation(store_id) + 1
-            else:
-                new_generation = root.generation + 1
-            # update ancestors after inserting root, to keep table constraints.
-            insert_ancestors_cache: List[Tuple[bytes32, bytes32, bytes32]] = []
-            # more parents to handle so let's traverse them
-            for ancestor in ancestors[1:]:
-                if ancestor.left_hash == old_child_hash:
-                    left_hash = new_child_hash
-                    right_hash = ancestor.right_hash
-                elif ancestor.right_hash == old_child_hash:
-                    left_hash = ancestor.left_hash
-                    right_hash = new_child_hash
-                else:
-                    raise Exception("Internal error.")
+                root = await self.get_tree_root(store_id=store_id)
+            merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
-                new_child_hash = await self._insert_internal_node(left_hash=left_hash, right_hash=right_hash)
-                insert_ancestors_cache.append((left_hash, right_hash, store_id))
-                old_child_hash = ancestor.hash
+            kid = await self.get_kvid(key)
+            if kid is not None:
+                merkle_blob.delete(kid)
 
-            new_root = await self._insert_root(
-                store_id=store_id,
-                node_hash=new_child_hash,
-                status=status,
-                generation=new_generation,
-            )
-            if status == Status.COMMITTED:
-                for left_hash, right_hash, store_id in insert_ancestors_cache:
-                    await self._insert_ancestor_table(left_hash, right_hash, store_id, new_generation)
+            new_root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, status)
 
         return new_root
 
@@ -1339,70 +1192,20 @@ class DataStore:
         key: bytes,
         new_value: bytes,
         store_id: bytes32,
-        use_optimized: bool = True,
         status: Status = Status.PENDING,
         root: Optional[Root] = None,
     ) -> InsertResult:
         async with self.db_wrapper.writer():
             if root is None:
                 root = await self.get_tree_root(store_id=store_id)
+            merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+            
+            kid, vid = await self.add_key_value(key, new_value)
+            hash = leaf_hash(key, new_value)
+            merkle_blob.upsert(kid, vid, hash)
 
-            try:
-                old_node = await self.get_node_by_key(key=key, store_id=store_id)
-            except KeyNotFoundError:
-                log.debug(f"Key not found: {key.hex()}. Doing an autoinsert instead")
-                return await self.autoinsert(
-                    key=key,
-                    value=new_value,
-                    store_id=store_id,
-                    use_optimized=use_optimized,
-                    status=status,
-                    root=root,
-                )
-            if old_node.value == new_value:
-                log.debug(f"New value matches old value in upsert operation: {key.hex()}. Ignoring upsert")
-                return InsertResult(leaf_hash(key, new_value), root)
-
-            # create new terminal node
-            new_terminal_node_hash = await self._insert_terminal_node(key=key, value=new_value)
-
-            ancestors = await self.get_ancestors_common(
-                node_hash=old_node.hash,
-                store_id=store_id,
-                root_hash=root.node_hash,
-                generation=root.generation,
-                use_optimized=use_optimized,
-            )
-
-            # Store contains only the old root, replace it with a new root having the terminal node.
-            if len(ancestors) == 0:
-                new_root = await self._insert_root(
-                    store_id=store_id,
-                    node_hash=new_terminal_node_hash,
-                    status=status,
-                )
-            else:
-                parent = ancestors[0]
-                if parent.left_hash == old_node.hash:
-                    left = new_terminal_node_hash
-                    right = parent.right_hash
-                elif parent.right_hash == old_node.hash:
-                    left = parent.left_hash
-                    right = new_terminal_node_hash
-                else:
-                    raise Exception("Internal error.")
-
-                new_root = await self.update_ancestor_hashes_on_insert(
-                    store_id=store_id,
-                    left=left,
-                    right=right,
-                    traversal_node_hash=parent.hash,
-                    ancestors=ancestors[1:],
-                    status=status,
-                    root=root,
-                )
-
-            return InsertResult(node_hash=new_terminal_node_hash, root=new_root)
+            new_root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, status)
+            return InsertResult(node_hash=hash, root=new_root)
 
     async def clean_node_table(self, writer: Optional[aiosqlite.Connection] = None) -> None:
         query = """
@@ -1490,198 +1293,40 @@ class DataStore:
         store_id: bytes32,
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
-        enable_batch_autoinsert: bool = True,
     ) -> Optional[bytes32]:
         async with self.transaction():
-            old_root = await self.get_tree_root(store_id)
-            pending_root = await self.get_pending_root(store_id=store_id)
-            if pending_root is None:
-                latest_local_root: Optional[Root] = old_root
-            else:
-                if pending_root.status == Status.PENDING_BATCH:
-                    # We have an unfinished batch, continue the current batch on top of it.
-                    if pending_root.generation != old_root.generation + 1:
-                        raise Exception("Internal error")
-                    await self.change_root_status(pending_root, Status.COMMITTED)
-                    await self.build_ancestor_table_for_latest_root(store_id=store_id)
-                    latest_local_root = pending_root
-                else:
-                    raise Exception("Internal error")
-
-            assert latest_local_root is not None
-
-            key_hash_frequency: Dict[bytes32, int] = {}
-            first_action: Dict[bytes32, str] = {}
-            last_action: Dict[bytes32, str] = {}
-
-            for change in changelist:
-                key = change["key"]
-                hash = key_hash(key)
-                key_hash_frequency[hash] = key_hash_frequency.get(hash, 0) + 1
-                if hash not in first_action:
-                    first_action[hash] = change["action"]
-                last_action[hash] = change["action"]
-
-            pending_autoinsert_hashes: List[bytes32] = []
-            pending_upsert_new_hashes: Dict[bytes32, bytes32] = {}
-            leaf_hashes = await self.get_leaf_hashes_by_hashed_key(store_id)
-
+            root = await self.get_tree_root(store_id=store_id)
+            merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
             for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
                     value = change["value"]
+
                     reference_node_hash = change.get("reference_node_hash", None)
                     side = change.get("side", None)
-                    if reference_node_hash is None and side is None:
-                        hash = key_hash(key)
-                        # The key is not referenced in any other operation but this autoinsert, hence the order
-                        # of performing these should not matter. We perform all these autoinserts as a batch
-                        # at the end, to speed up the tree processing operations.
-                        # Additionally, if the first action is a delete, we can still perform the autoinsert at the
-                        # end, since the order will be preserved.
-                        if enable_batch_autoinsert:
-                            if key_hash_frequency[hash] == 1 or (
-                                key_hash_frequency[hash] == 2 and first_action[hash] == "delete"
-                            ):
-                                old_node = await self.maybe_get_node_from_key_hash(leaf_hashes, hash)
-                                terminal_node_hash = await self._insert_terminal_node(key, value)
+                    reference_kid: Optional[KVId] = None
+                    if reference_node_hash is not None:
+                        reference_kid, _ = await self.get_node_by_hash(reference_node_hash)
 
-                                if old_node is None:
-                                    pending_autoinsert_hashes.append(terminal_node_hash)
-                                else:
-                                    if key_hash_frequency[hash] == 1:
-                                        raise Exception(f"Key already present: {key.hex()}")
-                                    else:
-                                        pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
-                                continue
-                        insert_result = await self.autoinsert(
-                            key, value, store_id, True, Status.COMMITTED, root=latest_local_root
-                        )
-                        latest_local_root = insert_result.root
-                    else:
-                        if reference_node_hash is None or side is None:
-                            raise Exception("Provide both reference_node_hash and side or neither.")
-                        insert_result = await self.insert(
-                            key,
-                            value,
-                            store_id,
-                            reference_node_hash,
-                            side,
-                            True,
-                            Status.COMMITTED,
-                            root=latest_local_root,
-                        )
-                        latest_local_root = insert_result.root
+                    kid, vid = await self.add_key_value(key, value)
+                    hash = leaf_hash(key, value)
+                    merkle_blob.insert(kid, vid, hash, reference_kid, side)
                 elif change["action"] == "delete":
                     key = change["key"]
-                    hash = key_hash(key)
-                    if key_hash_frequency[hash] == 2 and last_action[hash] == "insert" and enable_batch_autoinsert:
-                        continue
-                    latest_local_root = await self.delete(key, store_id, True, Status.COMMITTED, root=latest_local_root)
+                    kid = await self.get_kvid(key)
+                    if kid is not None:
+                        merkle_blob.delete(kid)
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
-                    hash = key_hash(key)
-                    if key_hash_frequency[hash] == 1 and enable_batch_autoinsert:
-                        terminal_node_hash = await self._insert_terminal_node(key, new_value)
-                        old_node = await self.maybe_get_node_from_key_hash(leaf_hashes, hash)
-                        if old_node is not None:
-                            pending_upsert_new_hashes[old_node.hash] = terminal_node_hash
-                        else:
-                            pending_autoinsert_hashes.append(terminal_node_hash)
-                        continue
-                    insert_result = await self.upsert(
-                        key, new_value, store_id, True, Status.COMMITTED, root=latest_local_root
-                    )
-                    latest_local_root = insert_result.root
+                    kid, vid = await self.add_key_value(key, new_value)
+                    hash = leaf_hash(key, new_value)
+                    merkle_blob.upsert(kid, vid, hash)
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
-            if len(pending_upsert_new_hashes) > 0:
-                to_update_hashes: Set[bytes32] = set(pending_upsert_new_hashes.keys())
-                to_update_queue: List[bytes32] = list(pending_upsert_new_hashes.keys())
-                batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
-
-                while len(to_update_queue) > 0:
-                    nodes = await self._get_one_ancestor_multiple_hashes(to_update_queue[:batch_size], store_id)
-                    to_update_queue = to_update_queue[batch_size:]
-                    for node in nodes:
-                        if node.hash not in to_update_hashes:
-                            to_update_hashes.add(node.hash)
-                            to_update_queue.append(node.hash)
-
-                assert latest_local_root is not None
-                assert latest_local_root.node_hash is not None
-                new_root_hash = await self.batch_upsert(
-                    latest_local_root.node_hash,
-                    to_update_hashes,
-                    pending_upsert_new_hashes,
-                )
-                latest_local_root = await self._insert_root(store_id, new_root_hash, Status.COMMITTED)
-
-            # Start with the leaf nodes and pair them to form new nodes at the next level up, repeating this process
-            # in a bottom-up fashion until a single root node remains. This constructs a balanced tree from the leaves.
-            while len(pending_autoinsert_hashes) > 1:
-                new_hashes: List[bytes32] = []
-                for i in range(0, len(pending_autoinsert_hashes) - 1, 2):
-                    internal_node_hash = await self._insert_internal_node(
-                        pending_autoinsert_hashes[i], pending_autoinsert_hashes[i + 1]
-                    )
-                    new_hashes.append(internal_node_hash)
-                if len(pending_autoinsert_hashes) % 2 != 0:
-                    new_hashes.append(pending_autoinsert_hashes[-1])
-
-                pending_autoinsert_hashes = new_hashes
-
-            if len(pending_autoinsert_hashes):
-                subtree_hash = pending_autoinsert_hashes[0]
-                if latest_local_root is None or latest_local_root.node_hash is None:
-                    await self._insert_root(store_id=store_id, node_hash=subtree_hash, status=Status.COMMITTED)
-                else:
-                    hash_to_parent: Dict[bytes32, InternalNode] = {}
-                    min_height_leaf = await self.get_leaf_at_minimum_height(latest_local_root.node_hash, hash_to_parent)
-                    ancestors: List[InternalNode] = []
-                    hash = min_height_leaf.hash
-                    while hash in hash_to_parent:
-                        node = hash_to_parent[hash]
-                        ancestors.append(node)
-                        hash = node.hash
-
-                    await self.update_ancestor_hashes_on_insert(
-                        store_id=store_id,
-                        left=min_height_leaf.hash,
-                        right=subtree_hash,
-                        traversal_node_hash=min_height_leaf.hash,
-                        ancestors=ancestors,
-                        status=Status.COMMITTED,
-                        root=latest_local_root,
-                    )
-
-            root = await self.get_tree_root(store_id=store_id)
-            if root.node_hash == old_root.node_hash:
-                if len(changelist) != 0:
-                    await self.rollback_to_generation(store_id, old_root.generation)
-                raise ValueError("Changelist resulted in no change to tree data")
-            # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
-            await self.rollback_to_generation(store_id, old_root.generation)
-            await self.insert_root_with_ancestor_table(store_id=store_id, node_hash=root.node_hash, status=status)
-            if status in (Status.PENDING, Status.PENDING_BATCH):
-                new_root = await self.get_pending_root(store_id=store_id)
-                assert new_root is not None
-            elif status == Status.COMMITTED:
-                new_root = await self.get_tree_root(store_id=store_id)
-            else:
-                raise Exception(f"No known status: {status}")
-            if new_root.node_hash != root.node_hash:
-                raise RuntimeError(
-                    f"Tree root mismatches after batch update: Expected: {root.node_hash}. Got: {new_root.node_hash}"
-                )
-            if new_root.generation != old_root.generation + 1:
-                raise RuntimeError(
-                    "Didn't get the expected generation after batch update: "
-                    f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
-                )
-            return root.node_hash
+            new_root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, status)
+            return new_root.node_hash
 
     async def _get_one_ancestor(
         self,
@@ -1782,41 +1427,6 @@ class DataStore:
             if status == Status.COMMITTED:
                 await self.build_ancestor_table_for_latest_root(store_id=store_id)
 
-    async def get_node_by_key_latest_generation(self, key: bytes, store_id: bytes32) -> TerminalNode:
-        async with self.db_wrapper.reader() as reader:
-            root = await self.get_tree_root(store_id=store_id)
-            if root.node_hash is None:
-                raise KeyNotFoundError(key=key)
-
-            cursor = await reader.execute(
-                """
-                SELECT a.hash FROM ancestors a
-                JOIN node n ON a.hash = n.hash
-                WHERE n.key = :key
-                AND a.tree_id = :tree_id
-                ORDER BY a.generation DESC
-                LIMIT 1
-                """,
-                {"key": key, "tree_id": store_id},
-            )
-
-            row = await cursor.fetchone()
-            if row is None:
-                raise KeyNotFoundError(key=key)
-
-            node = await self.get_node(row["hash"])
-            node_hash = node.hash
-            while True:
-                internal_node = await self._get_one_ancestor(node_hash, store_id)
-                if internal_node is None:
-                    break
-                node_hash = internal_node.hash
-
-            if node_hash != root.node_hash:
-                raise KeyNotFoundError(key=key)
-            assert isinstance(node, TerminalNode)
-            return node
-
     async def maybe_get_node_from_key_hash(
         self, leaf_hashes: Dict[bytes32, bytes32], hash: bytes32
     ) -> Optional[TerminalNode]:
@@ -1842,7 +1452,8 @@ class DataStore:
         root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> TerminalNode:
         if root_hash is unspecified:
-            return await self.get_node_by_key_latest_generation(key, store_id)
+            root = await self.get_tree_root(store_id=store_id)
+            root_hash = root.node_hash
 
         nodes = await self.get_keys_values(store_id=store_id, root_hash=root_hash)
 
@@ -1901,51 +1512,22 @@ class DataStore:
         root_hash: Optional[bytes32] = None,
         use_optimized: bool = False,
     ) -> ProofOfInclusion:
-        """Collect the information for a proof of inclusion of a hash in the Merkle
-        tree.
-        """
-
-        # Ideally this would use get_ancestors_common, but this _common function has this interesting property
-        # when used with use_optimized=False - it will compare both methods in this case and raise an exception.
-        # this is undesirable in the DL Offers flow where PENDING roots can cause the optimized code to fail.
-        if use_optimized:
-            ancestors = await self.get_ancestors_optimized(node_hash=node_hash, store_id=store_id, root_hash=root_hash)
-        else:
-            ancestors = await self.get_ancestors(node_hash=node_hash, store_id=store_id, root_hash=root_hash)
-
-        layers: List[ProofOfInclusionLayer] = []
-        child_hash = node_hash
-        for parent in ancestors:
-            layer = ProofOfInclusionLayer.from_internal_node(internal_node=parent, traversal_child_hash=child_hash)
-            layers.append(layer)
-            child_hash = parent.hash
-
-        proof_of_inclusion = ProofOfInclusion(node_hash=node_hash, layers=layers)
-
-        if len(ancestors) > 0:
-            expected_root = ancestors[-1].hash
-        else:
-            expected_root = node_hash
-
-        if expected_root != proof_of_inclusion.root_hash:
-            raise Exception(
-                f"Incorrect root, expected: {expected_root.hex()}"
-                f"\n                     has: {proof_of_inclusion.root_hash.hex()}"
-            )
-
-        return proof_of_inclusion
+        if root_hash is None:
+            root = await self.get_tree_root(store_id=store_id)
+            root_hash = root.node_hash
+        merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
+        kid, _ = await self.get_node_by_hash(node_hash)
+        return merkle_blob.get_proof_of_inclusion(kid)
 
     async def get_proof_of_inclusion_by_key(
         self,
         key: bytes,
         store_id: bytes32,
     ) -> ProofOfInclusion:
-        """Collect the information for a proof of inclusion of a key and its value in
-        the Merkle tree.
-        """
-        async with self.db_wrapper.reader():
-            node = await self.get_node_by_key(key=key, store_id=store_id)
-            return await self.get_proof_of_inclusion_by_hash(node_hash=node.hash, store_id=store_id)
+        root = await self.get_tree_root(store_id=store_id)
+        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+        kid = await self.get_kvid(key)
+        return merkle_blob.get_proof_of_inclusion(kid)
 
     async def get_first_generation(self, node_hash: bytes32, store_id: bytes32) -> int:
         async with self.db_wrapper.reader() as reader:

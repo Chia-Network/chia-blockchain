@@ -369,21 +369,16 @@ async def test_get_ancestors_optimized(data_store: DataStore, store_id: bytes32)
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "use_optimized",
-    [True, False],
-)
-@pytest.mark.parametrize(
     "num_batches",
     [1, 5, 10, 25],
 )
-async def test_batch_update(
+async def test_batch_update_against_single_operations(
     data_store: DataStore,
     store_id: bytes32,
-    use_optimized: bool,
     tmp_path: Path,
     num_batches: int,
 ) -> None:
-    total_operations = 1000 if use_optimized else 100
+    total_operations = 1000
     num_ops_per_batch = total_operations // num_batches
     saved_batches: List[List[Dict[str, Any]]] = []
     saved_kv: List[List[TerminalNode]] = []
@@ -411,7 +406,6 @@ async def test_batch_update(
                         key=key,
                         value=value,
                         store_id=store_id,
-                        use_optimized=use_optimized,
                         status=Status.COMMITTED,
                     )
                 else:
@@ -419,7 +413,6 @@ async def test_batch_update(
                         key=key,
                         new_value=value,
                         store_id=store_id,
-                        use_optimized=use_optimized,
                         status=Status.COMMITTED,
                     )
                 action = "insert" if op_type == "insert" else "upsert"
@@ -431,7 +424,6 @@ async def test_batch_update(
                 await single_op_data_store.delete(
                     key=key,
                     store_id=store_id,
-                    use_optimized=use_optimized,
                     status=Status.COMMITTED,
                 )
                 batch.append({"action": "delete", "key": key})
@@ -445,7 +437,6 @@ async def test_batch_update(
                     key=key,
                     new_value=new_value,
                     store_id=store_id,
-                    use_optimized=use_optimized,
                     status=Status.COMMITTED,
                 )
                 keys_values[key] = new_value
@@ -468,23 +459,6 @@ async def test_batch_update(
         assert {node.key: node.value for node in current_kv} == {
             node.key: node.value for node in saved_kv[batch_number]
         }
-        queue: List[bytes32] = [root.node_hash]
-        ancestors: Dict[bytes32, bytes32] = {}
-        while len(queue) > 0:
-            node_hash = queue.pop(0)
-            expected_ancestors = []
-            ancestor = node_hash
-            while ancestor in ancestors:
-                ancestor = ancestors[ancestor]
-                expected_ancestors.append(ancestor)
-            result_ancestors = await data_store.get_ancestors_optimized(node_hash, store_id)
-            assert [node.hash for node in result_ancestors] == expected_ancestors
-            node = await data_store.get_node(node_hash)
-            if isinstance(node, InternalNode):
-                queue.append(node.left_hash)
-                queue.append(node.right_hash)
-                ancestors[node.left_hash] = node_hash
-                ancestors[node.right_hash] = node_hash
 
     all_kv = await data_store.get_keys_values(store_id)
     assert {node.key: node.value for node in all_kv} == keys_values
@@ -1126,28 +1100,27 @@ async def test_kv_diff(data_store: DataStore, store_id: bytes32) -> None:
     insertions = 0
     expected_diff: Set[DiffData] = set()
     root_start = None
+    keys: List[bytes] = []
+
     for i in range(500):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
-        seed = leaf_hash(key=key, value=value)
-        node_hash = await data_store.get_terminal_node_for_seed(store_id, seed)
+
         if random.randint(0, 4) > 0 or insertions < 10:
             insertions += 1
-            side = None if node_hash is None else data_store.get_side_for_seed(seed)
-
-            await data_store.insert(
+            await data_store.autoinsert(
                 key=key,
                 value=value,
                 store_id=store_id,
-                reference_node_hash=node_hash,
-                side=side,
                 status=Status.COMMITTED,
             )
+            keys.append(key)
             if i > 200:
                 expected_diff.add(DiffData(OperationType.INSERT, key, value))
         else:
-            assert node_hash is not None
-            node = await data_store.get_node(node_hash)
+            key = random.choice(keys)
+            keys.remove(key)
+            node = await data_store.get_node_by_key(key, store_id)
             assert isinstance(node, TerminalNode)
             await data_store.delete(key=node.key, store_id=store_id, status=Status.COMMITTED)
             if i > 200:
