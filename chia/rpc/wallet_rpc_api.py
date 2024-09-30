@@ -42,6 +42,7 @@ from chia.rpc.wallet_request_types import (
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
+    GetSyncStatusResponse,
     LogIn,
     LogInResponse,
     SetWalletResyncOnStartup,
@@ -610,12 +611,13 @@ class WalletRpcApi:
             raise ValueError("You need to login into wallet to use this RPC call")
         return Empty()
 
-    async def get_sync_status(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_sync_status(self, request: Empty) -> GetSyncStatusResponse:
         sync_mode = self.service.wallet_state_manager.sync_mode
         has_pending_queue_items = self.service.new_peak_queue.has_pending_data_process_items()
         syncing = sync_mode or has_pending_queue_items
         synced = await self.service.wallet_state_manager.synced()
-        return {"synced": synced, "syncing": syncing, "genesis_initialized": True}
+        return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
     async def get_height_info(self, request: Dict[str, Any]) -> EndpointResult:
         height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()

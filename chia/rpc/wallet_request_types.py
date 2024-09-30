@@ -155,6 +155,14 @@ class SetWalletResyncOnStartup(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetSyncStatusResponse(Streamable):
+    synced: bool
+    syncing: bool
+    genesis_initialized: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[List[bytes32]] = None
     start: Optional[uint32] = None

@@ -52,6 +52,7 @@ from chia.rpc.wallet_request_types import (
     GetPrivateKey,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
+    GetSyncStatusResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
     LogIn,
@@ -153,15 +154,8 @@ class WalletRpcClient(RpcClient):
     async def set_wallet_resync_on_startup(self, request: SetWalletResyncOnStartup) -> None:
         await self.fetch("set_wallet_resync_on_startup", request.to_json_dict())
 
-    async def get_sync_status(self) -> bool:
-        response = await self.fetch("get_sync_status", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(bool, response["syncing"])
-
-    async def get_synced(self) -> bool:
-        response = await self.fetch("get_sync_status", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(bool, response["synced"])
+    async def get_sync_status(self) -> GetSyncStatusResponse:
+        return GetSyncStatusResponse.from_json_dict(await self.fetch("get_sync_status", {}))
 
     async def get_height_info(self) -> uint32:
         response = await self.fetch("get_height_info", {})

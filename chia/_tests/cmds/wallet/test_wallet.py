@@ -291,7 +291,6 @@ def test_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
     # these are various things that should be in the output
     expected_calls: logType = {
         "get_wallets": [(None,), (WalletType.CAT,)],
-        "get_synced": [(), ()],
         "get_sync_status": [(), ()],
         "get_height_info": [(), ()],
         "get_wallet_balance": [(1,), (2,), (3,), (2,)],

@@ -140,6 +140,10 @@ class WalletRpcTestEnvironment:
     full_node: FullNodeBundle
 
 
+async def check_client_synced(wallet_client: WalletRpcClient) -> bool:
+    return (await wallet_client.get_sync_status()).synced
+
+
 async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode):
     await full_node_api.farm_blocks_to_puzzlehash(count=1)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
@@ -175,7 +179,7 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
     expected_unconfirmed = initial_balances["unconfirmed_wallet_balance"] + generated_funds
     await time_out_assert(20, get_confirmed_balance, expected_confirmed, wallet_bundle.rpc_client, wallet_id)
     await time_out_assert(20, get_unconfirmed_balance, expected_unconfirmed, wallet_bundle.rpc_client, wallet_id)
-    await time_out_assert(20, wallet_bundle.rpc_client.get_synced)
+    await time_out_assert(20, check_client_synced, True, wallet_bundle.rpc_client)
 
     return generated_funds
 
@@ -1045,7 +1049,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos and fee=10
     await client.create_new_cat_and_wallet(uint64(100), fee=uint64(10), test=True)
-    await time_out_assert(20, client.get_synced)
+    await time_out_assert(20, check_client_synced, True, client)
 
     res = await client.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
@@ -1811,7 +1815,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     await client.log_in(LogIn(uint32(pks[1])))
     assert len((await client.get_public_keys()).pk_fingerprints) == 1
 
-    assert not (await client.get_sync_status())
+    assert not (await client.get_sync_status()).synced
 
     wallets = await client.get_wallets()
     assert len(wallets) == 1
@@ -2387,7 +2391,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     await wc.create_new_did_wallet(1, DEFAULT_TX_CONFIG, 0)
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, env.wallet_1.node)
-    await time_out_assert(20, wc.get_synced)
+    await time_out_assert(20, check_client_synced, True, wc)
 
     nft_wallet = await wc.create_new_nft_wallet(None)
     nft_wallet_id = nft_wallet["wallet_id"]
@@ -2402,7 +2406,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     )
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, env.wallet_1.node)
-    await time_out_assert(20, wc.get_synced)
+    await time_out_assert(20, check_client_synced, True, wc)
 
     wallet_node: WalletNode = env.wallet_1.node
     wallet_node_2: WalletNode = env.wallet_2.node
@@ -2420,7 +2424,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     clawback_coin_id = tx.additions[0].name()
     assert tx.spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
-    await time_out_assert(20, wc.get_synced)
+    await time_out_assert(20, check_client_synced, True, wc)
     await asyncio.sleep(10)
     resp = await wc.spend_clawback_coins([clawback_coin_id], 0)
     assert resp["success"]
@@ -2429,7 +2433,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
         10, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][0])
     )
     await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(20, wc.get_synced)
+    await time_out_assert(20, check_client_synced, True, wc)
     wallet_node_2._close()
     await wallet_node_2._await_closed()
     # set flag to reset wallet sync data on start
@@ -2626,16 +2630,16 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     await generate_funds(full_node_api, env.wallet_1, 1)
 
-    await time_out_assert(20, client.get_synced)
+    await time_out_assert(20, check_client_synced, True, client)
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
     await client.create_new_cat_and_wallet(uint64(100), test=True)
 
-    await time_out_assert(20, client.get_synced)
+    await time_out_assert(20, check_client_synced, True, client)
     res = await client.create_new_cat_and_wallet(uint64(20), test=True)
     assert res["success"]
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
     await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(20, client.get_synced)
+    await time_out_assert(20, check_client_synced, True, client)
     bal = await client.get_wallet_balances()
     assert len(bal) == 3
     assert bal["1"]["confirmed_wallet_balance"] == 1999999999880

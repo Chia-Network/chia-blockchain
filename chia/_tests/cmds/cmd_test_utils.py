@@ -19,7 +19,7 @@ from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.wallet_request_types import SendTransactionMultiResponse
+from chia.rpc.wallet_request_types import GetSyncStatusResponse, SendTransactionMultiResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -82,13 +82,9 @@ class TestWalletRpcClient(TestRpcClient):
     fingerprint: int = field(init=False, default=0)
     wallet_index: int = field(init=False, default=0)
 
-    async def get_sync_status(self) -> bool:
+    async def get_sync_status(self) -> GetSyncStatusResponse:
         self.add_to_log("get_sync_status", ())
-        return False
-
-    async def get_synced(self) -> bool:
-        self.add_to_log("get_synced", ())
-        return True
+        return GetSyncStatusResponse(synced=True, syncing=False)
 
     async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
         self.add_to_log("get_wallets", (wallet_type,))
