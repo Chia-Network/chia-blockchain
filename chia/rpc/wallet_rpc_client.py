@@ -1851,11 +1851,12 @@ class WalletRpcClient(RpcClient):
         self,
         args: VaultCreate,
         tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> VaultCreateResponse:
         return VaultCreateResponse.from_json_dict(
             await self.fetch(
-                "vault_create", {**args.to_json_dict(), **tx_config.to_json_dict(), **timelock_info.to_json_dict()}
+                "vault_create", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )
 
@@ -1863,10 +1864,11 @@ class WalletRpcClient(RpcClient):
         self,
         args: VaultRecovery,
         tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
     ) -> VaultRecoveryResponse:
         return VaultRecoveryResponse.from_json_dict(
             await self.fetch(
-                "vault_recovery", {**args.to_json_dict(), **tx_config.to_json_dict(), **timelock_info.to_json_dict()}
+                "vault_recovery", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )

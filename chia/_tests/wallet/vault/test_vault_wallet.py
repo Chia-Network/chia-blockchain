@@ -36,7 +36,8 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
     if with_recovery:
         bls_pk = (await client.get_private_key(GetPrivateKey(fingerprint))).private_key.observation_root()
         timelock = uint64(10)
-    assert isinstance(bls_pk, G1Element)
+    if bls_pk is not None:
+        assert isinstance(bls_pk, G1Element)
     hidden_puzzle_index = uint32(0)
     res = await client.vault_create(
         VaultCreate(
