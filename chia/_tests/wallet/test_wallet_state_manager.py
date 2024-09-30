@@ -226,7 +226,11 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
         )
 
     await env_2.rpc_client.push_transactions(
-        PushTransactions(transactions=action_scope.side_effects.transactions, sign=False), wallet_environments.tx_config
+        PushTransactions(  # pylint: disable=unexpected-keyword-arg
+            transactions=action_scope.side_effects.transactions,
+            sign=False,
+        ),
+        wallet_environments.tx_config,
     )
 
     await wallet_environments.process_pending_states(
