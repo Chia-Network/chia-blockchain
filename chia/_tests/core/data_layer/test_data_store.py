@@ -1369,6 +1369,7 @@ async def test_server_http_ban(
             data_store=data_store,
             store_id=store_id,
             existing_generation=3,
+            target_generation=4,
             root_hashes=[bytes32.random(seeded_random)],
             server_info=sinfo,
             client_foldername=tmp_path,
@@ -1392,6 +1393,7 @@ async def test_server_http_ban(
             data_store=data_store,
             store_id=store_id,
             existing_generation=3,
+            target_generation=4,
             root_hashes=[bytes32.random(seeded_random)],
             server_info=sinfo,
             client_foldername=tmp_path,
@@ -1830,6 +1832,7 @@ async def test_delete_store_data_protects_pending_roots(raw_data_store: DataStor
 
 @pytest.mark.anyio
 @boolean_datacases(name="group_files_by_store", true="group by singleton", false="don't group by singleton")
+@pytest.mark.parametrize("max_full_files", [1, 2, 5])
 async def test_insert_from_delta_file(
     data_store: DataStore,
     store_id: bytes32,
@@ -1837,6 +1840,7 @@ async def test_insert_from_delta_file(
     tmp_path: Path,
     seeded_random: random.Random,
     group_files_by_store: bool,
+    max_full_files: int,
 ) -> None:
     await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     num_files = 5
@@ -1908,6 +1912,7 @@ async def test_insert_from_delta_file(
             data_store=data_store,
             store_id=store_id,
             existing_generation=0,
+            target_generation=num_files + 1,
             root_hashes=root_hashes,
             server_info=sinfo,
             client_foldername=tmp_path_1,
@@ -1916,6 +1921,7 @@ async def test_insert_from_delta_file(
             proxy_url="",
             downloader=None,
             group_files_by_store=group_files_by_store,
+            maximum_full_file_count=max_full_files,
         )
         assert not success
 
@@ -1929,6 +1935,7 @@ async def test_insert_from_delta_file(
             data_store=data_store,
             store_id=store_id,
             existing_generation=0,
+            target_generation=num_files + 1,
             root_hashes=root_hashes,
             server_info=sinfo,
             client_foldername=tmp_path_1,
@@ -1937,6 +1944,7 @@ async def test_insert_from_delta_file(
             proxy_url="",
             downloader=None,
             group_files_by_store=group_files_by_store,
+            maximum_full_file_count=max_full_files,
         )
         assert success
 
@@ -1944,7 +1952,7 @@ async def test_insert_from_delta_file(
     assert root.generation == num_files + 1
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
-        assert len(filenames) == 2 * (num_files + 1)
+        assert len(filenames) == num_files + 1 + max_full_files  # 6 deltas and max_full_files full files
     kv = await data_store.get_keys_values(store_id=store_id)
     assert kv == kv_before
 
@@ -2032,6 +2040,7 @@ async def test_insert_from_delta_file_correct_file_exists(
         data_store=data_store,
         store_id=store_id,
         existing_generation=0,
+        target_generation=num_files + 1,
         root_hashes=root_hashes,
         server_info=sinfo,
         client_foldername=tmp_path,
@@ -2047,7 +2056,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     assert root.generation == num_files + 1
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
-        assert len(filenames) == 2 * (num_files + 1)
+        assert len(filenames) == num_files + 2  # 1 full and 6 deltas
     kv = await data_store.get_keys_values(store_id=store_id)
     assert kv == kv_before
 
@@ -2094,6 +2103,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
         data_store=data_store,
         store_id=store_id,
         existing_generation=1,
+        target_generation=6,
         root_hashes=[incorrect_root_hash],
         server_info=sinfo,
         client_foldername=tmp_path,
