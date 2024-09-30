@@ -52,6 +52,7 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfi
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.chain_state import ChainState
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -60,6 +61,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -428,13 +430,11 @@ class TestFullNodeBlockCompression:
                 for i in range(1, height):
                     results = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
-                        blockchain,
+                        AugmentedBlockchain(blockchain),
                         all_blocks[:i],
                         blockchain.pool,
                         {},
-                        sub_slot_iters=ssi,
-                        difficulty=diff,
-                        prev_ses_block=None,
+                        ChainState(ssi, diff, None),
                         validate_signatures=False,
                     )
                     assert results is not None
@@ -447,13 +447,11 @@ class TestFullNodeBlockCompression:
                 for i in range(1, height):
                     results = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
-                        blockchain,
+                        AugmentedBlockchain(blockchain),
                         all_blocks[:i],
                         blockchain.pool,
                         {},
-                        sub_slot_iters=ssi,
-                        difficulty=diff,
-                        prev_ses_block=None,
+                        ChainState(ssi, diff, None),
                         validate_signatures=False,
                     )
                     assert results is not None
