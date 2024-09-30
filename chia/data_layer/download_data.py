@@ -94,31 +94,32 @@ async def insert_into_data_store_from_file(
     filename: Path,
 ) -> None:
     with open(filename, "rb") as reader:
-        while True:
-            chunk = b""
-            while len(chunk) < 4:
-                size_to_read = 4 - len(chunk)
-                cur_chunk = reader.read(size_to_read)
-                if cur_chunk is None or cur_chunk == b"":
-                    if size_to_read < 4:
-                        raise Exception("Incomplete read of length.")
+        async with data_store.transaction():
+            while True:
+                chunk = b""
+                while len(chunk) < 4:
+                    size_to_read = 4 - len(chunk)
+                    cur_chunk = reader.read(size_to_read)
+                    if cur_chunk is None or cur_chunk == b"":
+                        if size_to_read < 4:
+                            raise Exception("Incomplete read of length.")
+                        break
+                    chunk += cur_chunk
+                if chunk == b"":
                     break
-                chunk += cur_chunk
-            if chunk == b"":
-                break
 
-            size = int.from_bytes(chunk, byteorder="big")
-            serialize_nodes_bytes = b""
-            while len(serialize_nodes_bytes) < size:
-                size_to_read = size - len(serialize_nodes_bytes)
-                cur_chunk = reader.read(size_to_read)
-                if cur_chunk is None or cur_chunk == b"":
-                    raise Exception("Incomplete read of blob.")
-                serialize_nodes_bytes += cur_chunk
-            serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
+                size = int.from_bytes(chunk, byteorder="big")
+                serialize_nodes_bytes = b""
+                while len(serialize_nodes_bytes) < size:
+                    size_to_read = size - len(serialize_nodes_bytes)
+                    cur_chunk = reader.read(size_to_read)
+                    if cur_chunk is None or cur_chunk == b"":
+                        raise Exception("Incomplete read of blob.")
+                    serialize_nodes_bytes += cur_chunk
+                serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
-            node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
-            await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
+                node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
+                await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
 
     await data_store.insert_root_with_ancestor_table(store_id=store_id, node_hash=root_hash, status=Status.COMMITTED)
 
