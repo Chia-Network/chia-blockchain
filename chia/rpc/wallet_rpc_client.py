@@ -71,6 +71,8 @@ from chia.rpc.wallet_request_types import (
     NFTTransferBulk,
     NFTTransferBulkResponse,
     NFTTransferNFTResponse,
+    PushTransactions,
+    PushTransactionsResponse,
     PushTX,
     SendTransactionMultiResponse,
     SendTransactionResponse,
@@ -165,11 +167,17 @@ class WalletRpcClient(RpcClient):
         await self.fetch("push_tx", request.to_json_dict())
 
     async def push_transactions(
-        self, txs: List[TransactionRecord], fee: uint64 = uint64(0), sign: bool = False
-    ) -> Dict[str, Any]:
-        transactions = [bytes(tx).hex() for tx in txs]
-
-        return await self.fetch("push_transactions", {"transactions": transactions, "fee": fee, "sign": sign})
+        self,
+        request: PushTransactions,
+        tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PushTransactionsResponse:
+        return PushTransactionsResponse.from_json_dict(
+            await self.fetch(
+                "push_transactions", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def farm_block(self, address: str) -> Dict[str, Any]:
         return await self.fetch("farm_block", {"address": address})

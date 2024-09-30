@@ -46,6 +46,8 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     LogIn,
     LogInResponse,
+    PushTransactions,
+    PushTransactionsResponse,
     PushTX,
     SetWalletResyncOnStartup,
     SplitCoins,
@@ -635,27 +637,18 @@ class WalletRpcApi:
         return Empty()
 
     @tx_endpoint(push=True)
+    @marshal
     async def push_transactions(
         self,
-        request: Dict[str, Any],
+        request: PushTransactions,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> PushTransactionsResponse:
         if not action_scope.config.push:
             raise ValueError("Cannot push transactions if push is False")
         async with action_scope.use() as interface:
-            for transaction_hexstr_or_json in request["transactions"]:
-                if isinstance(transaction_hexstr_or_json, str):
-                    tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr_or_json))
-                    interface.side_effects.transactions.append(tx)
-                else:
-                    try:
-                        tx = TransactionRecord.from_json_dict_convenience(transaction_hexstr_or_json)
-                    except AttributeError:
-                        tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
-                    interface.side_effects.transactions.append(tx)
-
-            if request.get("fee", 0) != 0:
+            interface.side_effects.transactions.extend(request.transactions)
+            if request.fee != 0:
                 all_conditions_and_origins = [
                     (condition, cs.coin.name())
                     for tx in interface.side_effects.transactions
@@ -686,7 +679,7 @@ class WalletRpcApi:
                     push=False,
                 ) as inner_action_scope:
                     await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                        uint64(request["fee"]),
+                        request.fee,
                         inner_action_scope,
                         (
                             *extra_conditions,
@@ -698,7 +691,7 @@ class WalletRpcApi:
 
                 interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
 
-        return {}
+        return PushTransactionsResponse([], [])  # tx_endpoint takes care of this
 
     async def get_timestamp_for_height(self, request: Dict[str, Any]) -> EndpointResult:
         return {"timestamp": await self.service.get_timestamp_for_height(uint32(request["height"]))}

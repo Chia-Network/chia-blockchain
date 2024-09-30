@@ -56,6 +56,7 @@ from chia.rpc.wallet_request_types import (
     GetNotifications,
     GetPrivateKey,
     LogIn,
+    PushTransactions,
     SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
@@ -410,29 +411,22 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
         )
     ).signed_tx
 
-    resp_client = await client.push_transactions([tx], fee=uint64(10))
+    resp_client = await client.push_transactions(PushTransactions(transactions=[tx], fee=uint64(10)), DEFAULT_TX_CONFIG)
     resp = await client.fetch(
         "push_transactions", {"transactions": [tx.to_json_dict_convenience(wallet_node.config)], "fee": 10}
     )
     assert resp["success"]
-    resp = await client.fetch("push_transactions", {"transactions": [tx.to_json_dict()], "fee": 10})
+    resp = await client.fetch("push_transactions", {"transactions": [bytes(tx).hex()], "fee": 10})
     assert resp["success"]
 
     spend_bundle = WalletSpendBundle.aggregate(
-        [
-            # We ARE checking that the spend bundle is not None but mypy can't recognize this
-            TransactionRecord.from_json_dict_convenience(tx).spend_bundle  # type: ignore[type-var]
-            for tx in resp_client["transactions"]
-            if tx["spend_bundle"] is not None
-        ]
+        [tx.spend_bundle for tx in resp_client.transactions if tx.spend_bundle is not None]
     )
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
-    for tx_json in resp_client["transactions"]:
-        tx = TransactionRecord.from_json_dict_convenience(tx_json)
-        tx = await client.get_transaction(transaction_id=tx.name)
-        assert tx.confirmed
+    for tx in resp_client.transactions:
+        assert (await client.get_transaction(transaction_id=tx.name)).confirmed
 
 
 @pytest.mark.anyio
