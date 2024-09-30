@@ -169,6 +169,12 @@ class GetHeightInfoResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class PushTX(Streamable):
+    spend_bundle: bytes
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[List[bytes32]] = None
     start: Optional[uint32] = None

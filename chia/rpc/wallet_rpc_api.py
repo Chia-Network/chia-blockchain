@@ -46,6 +46,7 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     LogIn,
     LogInResponse,
+    PushTX,
     SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
@@ -625,12 +626,13 @@ class WalletRpcApi:
         height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
         return GetHeightInfoResponse(height=height)
 
-    async def push_tx(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def push_tx(self, request: PushTX) -> Empty:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(WalletSpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
-        return {}
+        await self.service.push_tx(WalletSpendBundle.from_bytes(request.spend_bundle))
+        return Empty()
 
     @tx_endpoint(push=True)
     async def push_transactions(

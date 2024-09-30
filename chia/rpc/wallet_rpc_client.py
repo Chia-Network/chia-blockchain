@@ -71,6 +71,7 @@ from chia.rpc.wallet_request_types import (
     NFTTransferBulk,
     NFTTransferBulkResponse,
     NFTTransferNFTResponse,
+    PushTX,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -103,7 +104,6 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
-from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -161,8 +161,8 @@ class WalletRpcClient(RpcClient):
     async def get_height_info(self) -> GetHeightInfoResponse:
         return GetHeightInfoResponse.from_json_dict(await self.fetch("get_height_info", {}))
 
-    async def push_tx(self, spend_bundle: WalletSpendBundle) -> Dict[str, Any]:
-        return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
+    async def push_tx(self, request: PushTX) -> None:
+        await self.fetch("push_tx", request.to_json_dict())
 
     async def push_transactions(
         self, txs: List[TransactionRecord], fee: uint64 = uint64(0), sign: bool = False
