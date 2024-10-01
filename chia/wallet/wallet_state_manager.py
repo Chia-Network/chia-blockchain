@@ -1334,7 +1334,7 @@ class WalletStateManager:
                 # This means the wallet is in a resync process, skip the coin
                 return None
             # check we aren't above the auto-add wallet limit
-            if did_wallet_count < self.config.get("did_auto_add_limit"):
+            if did_wallet_count < self.config.get("did_auto_add_limit", 10):
                 did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                     self,
                     self.main_wallet,
