@@ -774,7 +774,7 @@ class TestDIDWallet:
             ]
         )
         coin = await did_wallet.get_coin()
-        info = Program.to([])
+        info = []
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         with pytest.raises(Exception):  # We expect a CLVM 80 error for this test
             async with did_wallet.wallet_state_manager.new_action_scope(
@@ -1404,7 +1404,7 @@ class TestDIDWallet:
                     wallet,
                     uint64(101),
                     action_scope,
-                    [bytes(ph)],
+                    [bytes32(bytes(ph))],
                     uint64(1),
                     {"Twitter": "Test", "GitHub": "测试"},
                     fee=fee,
@@ -1415,6 +1415,7 @@ class TestDIDWallet:
             await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
             await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
             # Transfer DID
+            assert did_wallet_1.did_info.origin_coin is not None
             origin_coin = did_wallet_1.did_info.origin_coin
             new_puzhash = await wallet2.get_new_puzzlehash()
             async with did_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1455,6 +1456,7 @@ class TestDIDWallet:
                 wallet2,
                 backup_data,
             )
+        assert did_wallet_10.did_info.origin_coin is not None
         resp = await api_1.did_find_lost_did({"coin_id": did_wallet_10.did_info.origin_coin.name().hex()})
         assert resp["success"]
         await time_out_assert(15, did_wallet_10.get_confirmed_balance, 101)
@@ -1498,7 +1500,7 @@ class TestDIDWallet:
                 wallet2,
                 uint64(101),
                 action_scope,
-                [bytes(ph)],
+                [bytes32(bytes(ph))],
                 uint64(1),
                 {"Twitter": "Test", "GitHub": "测试"},
                 fee=fee,
@@ -1973,6 +1975,7 @@ class TestDIDWallet:
         # Test general string
         assert did_wallet_1.did_info.origin_coin is not None  # mypy
         message = "Hello World"
+        assert did_wallet_1.did_info.origin_coin is not None
         response = await api_0.sign_message_by_id(
             {
                 "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
@@ -2004,6 +2007,7 @@ class TestDIDWallet:
 
         # Test BLS sign string
         message = "Hello World"
+        assert did_wallet_1.did_info.origin_coin is not None
         response = await api_0.sign_message_by_id(
             {
                 "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
@@ -2020,6 +2024,7 @@ class TestDIDWallet:
         )
         # Test BLS sign hex
         message = "0123456789ABCDEF"
+        assert did_wallet_1.did_info.origin_coin is not None
         response = await api_0.sign_message_by_id(
             {
                 "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
@@ -2086,7 +2091,7 @@ class TestDIDWallet:
 
         # Node 0 sets up a DID Wallet with a backup set, but num_of_backup_ids_needed=0
         # (a malformed solution, but legal for the clvm puzzle)
-        recovery_list = [bytes.fromhex("00" * 32)]
+        recovery_list = [bytes32(bytes.fromhex("00" * 32))]
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_0.wallet_state_manager,
@@ -2094,7 +2099,7 @@ class TestDIDWallet:
                 uint64(101),
                 action_scope,
                 backups_ids=recovery_list,
-                num_of_backup_ids_needed=0,
+                num_of_backup_ids_needed=uint64(0),
             )
 
         await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
@@ -2149,6 +2154,7 @@ class TestDIDWallet:
         else:
             wallet_node_1.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
+        assert full_node_server._port is not None
         await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
@@ -2198,6 +2204,7 @@ class TestDIDWallet:
         # Start resync
         await wallet_node_1._start_with_fingerprint(fingerprint_1)
         await wallet_node_2._start_with_fingerprint(fingerprint_2)
+        assert full_node_server._port is not None
         await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
