@@ -24,6 +24,7 @@ from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_po
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
+from chia.rpc.wallet_request_types import GetWallets, WalletInfoResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -178,15 +179,15 @@ async def pprint_pool_wallet_state(
 
 async def pprint_all_pool_wallet_state(
     wallet_client: WalletRpcClient,
-    get_wallets_response: list[dict[str, Any]],
+    get_wallets_response: list[WalletInfoResponse],
     address_prefix: str,
     pool_state_dict: dict[bytes32, dict[str, Any]],
 ) -> None:
     print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
     print(f"Sync status: {'Synced' if (await wallet_client.get_sync_status()).synced else 'Not synced'}")
     for wallet_info in get_wallets_response:
-        pool_wallet_id = wallet_info["id"]
-        typ = WalletType(int(wallet_info["type"]))
+        pool_wallet_id = wallet_info.id
+        typ = WalletType(int(wallet_info.type))
         if typ == WalletType.POOLING_WALLET:
             pool_wallet_info, _ = await wallet_client.pw_status(pool_wallet_id)
             await pprint_pool_wallet_state(
@@ -204,16 +205,16 @@ async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_pass
         try:
             async with get_any_service_client(FarmerRpcClient) as (farmer_client, config):
                 address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-                summaries_response = await wallet_client.get_wallets()
+                summaries_response = await wallet_client.get_wallets(GetWallets())
                 pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
                 pool_state_dict: dict[bytes32, dict[str, Any]] = {
                     bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
                     for pool_state_item in pool_state_list
                 }
                 if wallet_id_passed_in is not None:
-                    for summary in summaries_response:
-                        typ = WalletType(int(summary["type"]))
-                        if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
+                    for summary in summaries_response.wallets:
+                        typ = WalletType(summary.type)
+                        if summary.id == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
                             print(
                                 f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet."
                                 " Please provide a different id."
@@ -229,10 +230,12 @@ async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_pass
                     )
                 else:
                     await pprint_all_pool_wallet_state(
-                        wallet_client, summaries_response, address_prefix, pool_state_dict
+                        wallet_client, summaries_response.wallets, address_prefix, pool_state_dict
                     )
         except CliRpcConnectionError:  # we want to output this if we can't connect to the farmer
-            await pprint_all_pool_wallet_state(wallet_client, summaries_response, address_prefix, pool_state_dict)
+            await pprint_all_pool_wallet_state(
+                wallet_client, summaries_response.wallets, address_prefix, pool_state_dict
+            )
 
 
 async def get_login_link(launcher_id: bytes32) -> None:

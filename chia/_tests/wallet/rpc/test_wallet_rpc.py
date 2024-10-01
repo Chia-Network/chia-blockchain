@@ -56,6 +56,7 @@ from chia.rpc.wallet_request_types import (
     GetNotifications,
     GetPrivateKey,
     GetTimestampForHeight,
+    GetWallets,
     LogIn,
     PushTransactions,
     PushTX,
@@ -245,12 +246,12 @@ async def create_tx_outputs(wallet: Wallet, output_args: list[tuple[int, Optiona
 
 async def assert_wallet_types(client: WalletRpcClient, expected: dict[WalletType, int]) -> None:
     for wallet_type in WalletType:
-        wallets = await client.get_wallets(wallet_type)
+        wallets = (await client.get_wallets(GetWallets(uint16(wallet_type.value)))).wallets
         wallet_count = len(wallets)
         if wallet_type in expected:
             assert wallet_count == expected.get(wallet_type, 0)
             for wallet in wallets:
-                assert wallet["type"] == wallet_type.value
+                assert wallet.type == wallet_type.value
 
 
 def assert_tx_amounts(
@@ -1823,12 +1824,12 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
 
     assert not (await client.get_sync_status()).synced
 
-    wallets = await client.get_wallets()
+    wallets = (await client.get_wallets(GetWallets())).wallets
     assert len(wallets) == 1
-    assert await get_unconfirmed_balance(client, int(wallets[0]["id"])) == 0
+    assert await get_unconfirmed_balance(client, int(wallets[0].id)) == 0
 
     with pytest.raises(ValueError):
-        await client.send_transaction(wallets[0]["id"], uint64(100), addr, DEFAULT_TX_CONFIG)
+        await client.send_transaction(wallets[0].id, uint64(100), addr, DEFAULT_TX_CONFIG)
 
     # Delete all keys
     await client.delete_all_keys()

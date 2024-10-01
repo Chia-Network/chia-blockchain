@@ -59,6 +59,8 @@ from chia.rpc.wallet_request_types import (
     GetTimestampForHeightResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
+    GetWallets,
+    GetWalletsResponse,
     LogIn,
     LogInResponse,
     NFTAddURIResponse,
@@ -106,7 +108,6 @@ from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
-from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
 
@@ -194,14 +195,8 @@ class WalletRpcClient(RpcClient):
         return AutoClaimSettings.from_json_dict(await self.fetch("get_auto_claim", {}))
 
     # Wallet Management APIs
-    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Any]]:
-        if wallet_type is None:
-            request = {}
-        else:
-            request = {"type": wallet_type}
-        response = await self.fetch("get_wallets", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(list[dict[str, Any]], response["wallets"])
+    async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
+        return GetWalletsResponse.from_json_dict(await self.fetch("get_wallets", request.to_json_dict()))
 
     # Wallet APIs
     async def get_wallet_balance(self, wallet_id: int) -> dict[str, Any]:

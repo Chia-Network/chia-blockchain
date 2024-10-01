@@ -21,6 +21,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
+from chia.rpc.wallet_request_types import GetWallets
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -32,7 +33,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -194,16 +195,17 @@ class TestPoolWalletRpc:
 
         our_ph = await wallet.get_new_puzzlehash()
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET.value)))
+        assert len(summaries_response.wallets) == 0
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
         await full_node_api.process_transaction_records(records=[creation_tx])
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=30)
 
-        summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
-        assert len(summaries_response) == 1
-        wallet_id: int = summaries_response[0]["id"]
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET.value)))
+        assert len(summaries_response.wallets) == 1
+        wallet_id: int = summaries_response.wallets[0].id
         status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -246,7 +248,8 @@ class TestPoolWalletRpc:
 
         our_ph = await wallet.get_new_puzzlehash()
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 0
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "http://pool.example.com", uint32(10), f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
@@ -254,9 +257,9 @@ class TestPoolWalletRpc:
         await full_node_api.process_transaction_records(records=[creation_tx])
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
-        assert len(summaries_response) == 1
-        wallet_id: int = summaries_response[0]["id"]
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 1
+        wallet_id: int = summaries_response.wallets[0].id
         status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
         assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
@@ -302,7 +305,8 @@ class TestPoolWalletRpc:
         our_ph_1 = await wallet.get_new_puzzlehash()
         our_ph_2 = await wallet.get_new_puzzlehash()
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 0
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph_1, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
@@ -342,8 +346,8 @@ class TestPoolWalletRpc:
         # Doing a reorg reverts and removes the pool wallets
         await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(0), uint32(20), our_ph_2, None))
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=30)
-        summaries_response = await client.get_wallets()
-        assert len(summaries_response) == 1
+        summaries_response = await client.get_wallets(GetWallets())
+        assert len(summaries_response.wallets) == 1
 
         with pytest.raises(ValueError):
             await client.pw_status(2)
@@ -411,7 +415,8 @@ class TestPoolWalletRpc:
 
         our_ph = await wallet.get_new_puzzlehash()
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 0
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
@@ -492,7 +497,8 @@ class TestPoolWalletRpc:
 
         our_ph = await wallet.get_new_puzzlehash()
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 0
 
         main_expected_confirmed_balance = total_block_rewards
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
@@ -563,7 +569,8 @@ class TestPoolWalletRpc:
 
         our_ph = await wallet.get_new_puzzlehash()
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 0
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "http://123.45.67.89", uint32(10), f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
         )
@@ -685,7 +692,8 @@ class TestPoolWalletRpc:
 
         assert wallet_node._wallet_state_manager is not None
 
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 0
 
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph, "", uint32(0), f"{self_hostname}:5000", "new", "SELF_POOLING", fee
@@ -703,10 +711,10 @@ class TestPoolWalletRpc:
         assert not full_node_api.txs_in_mempool(txs=[creation_tx])
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
-        assert len(summaries_response) == 2
-        wallet_id: int = summaries_response[0]["id"]
-        wallet_id_2: int = summaries_response[1]["id"]
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 2
+        wallet_id: int = summaries_response.wallets[0].id
+        wallet_id_2: int = summaries_response.wallets[1].id
         status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
         status_2: PoolWalletInfo = (await client.pw_status(wallet_id_2))[0]
 
@@ -764,7 +772,8 @@ class TestPoolWalletRpc:
         full_node_api, wallet_node, our_ph, _total_block_rewards, client = setup
         pool_ph = bytes32.zeros
 
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 0
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
@@ -779,9 +788,9 @@ class TestPoolWalletRpc:
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
-        assert len(summaries_response) == 1
-        wallet_id: int = summaries_response[0]["id"]
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 1
+        wallet_id: int = summaries_response.wallets[0].id
         status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -865,7 +874,8 @@ class TestPoolWalletRpc:
         pool_b_ph = bytes32.zeros
 
         WAIT_SECS = 200
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 0
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
@@ -880,9 +890,9 @@ class TestPoolWalletRpc:
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
-        assert len(summaries_response) == 1
-        wallet_id: int = summaries_response[0]["id"]
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 1
+        wallet_id: int = summaries_response.wallets[0].id
         status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
         assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value
@@ -933,7 +943,8 @@ class TestPoolWalletRpc:
         pool_b_ph = bytes32.zeros
         WAIT_SECS = 30
 
-        assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 0
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
@@ -948,9 +959,9 @@ class TestPoolWalletRpc:
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-        summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
-        assert len(summaries_response) == 1
-        wallet_id: int = summaries_response[0]["id"]
+        summaries_response = await client.get_wallets(GetWallets(uint16(WalletType.POOLING_WALLET)))
+        assert len(summaries_response.wallets) == 1
+        wallet_id: int = summaries_response.wallets[0].id
         status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
 
         assert status.current.state == PoolSingletonState.FARMING_TO_POOL.value

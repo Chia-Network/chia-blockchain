@@ -46,6 +46,8 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
+    GetWallets,
+    GetWalletsResponse,
     LogIn,
     LogInResponse,
     PushTransactions,
@@ -56,6 +58,7 @@ from chia.rpc.wallet_request_types import (
     SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    WalletInfoResponse,
 )
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -729,39 +732,35 @@ class WalletRpcApi:
     # Wallet Management
     ##########################################################################################
 
-    async def get_wallets(self, request: dict[str, Any]) -> EndpointResult:
-        include_data: bool = request.get("include_data", True)
+    @marshal
+    async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
         wallet_type: Optional[WalletType] = None
-        if "type" in request:
-            wallet_type = WalletType(request["type"])
+        if request.type is not None:
+            wallet_type = WalletType(request.type)
 
         wallets: list[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
-        if not include_data:
-            result: list[WalletInfo] = []
-            for wallet in wallets:
-                result.append(WalletInfo(wallet.id, wallet.name, wallet.type, ""))
-            wallets = result
-        response: EndpointResult = {"wallets": wallets}
-        if include_data:
-            response = {
-                "wallets": [
+        wallet_infos: list[WalletInfoResponse] = []
+        for wallet in wallets:
+            wallet_infos.append(
+                WalletInfoResponse(
+                    wallet.id,
+                    wallet.name,
+                    wallet.type,
+                    wallet.data if request.include_data else "",
                     (
-                        wallet
-                        if wallet.type != WalletType.CRCAT
-                        else {
-                            **wallet.to_json_dict(),
-                            "authorized_providers": [
-                                p.hex() for p in CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).authorized_providers
-                            ],
-                            "flags_needed": CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).proofs_checker.flags,
-                        }
-                    )
-                    for wallet in response["wallets"]
-                ]
-            }
-        if self.service.logged_in_fingerprint is not None:
-            response["fingerprint"] = self.service.logged_in_fingerprint
-        return response
+                        CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).authorized_providers
+                        if request.include_data
+                        else []
+                    ),
+                    (
+                        CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).proofs_checker.flags
+                        if request.include_data
+                        else []
+                    ),
+                )
+            )
+
+        return GetWalletsResponse(wallet_infos, uint32.construct_optional(self.service.logged_in_fingerprint))
 
     @tx_endpoint(push=True)
     async def create_new_wallet(
