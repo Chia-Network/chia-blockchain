@@ -20,7 +20,7 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
-from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse
+from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, GetWallets, SendTransactionResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
@@ -113,10 +113,10 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:
 
 
 async def get_wallet_type(wallet_id: int, wallet_client: WalletRpcClient) -> WalletType:
-    summaries_response = await wallet_client.get_wallets()
-    for summary in summaries_response:
-        summary_id: int = summary["id"]
-        summary_type: int = summary["type"]
+    summaries_response = await wallet_client.get_wallets(GetWallets())
+    for summary in summaries_response.wallets:
+        summary_id: int = summary.id
+        summary_type: int = summary.type
         if wallet_id == summary_id:
             return WalletType(summary_type)
 
@@ -855,7 +855,7 @@ async def print_balances(
     wallet_rpc_port: Optional[int], fp: Optional[int], wallet_type: Optional[WalletType] = None
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        summaries_response = await wallet_client.get_wallets(wallet_type)
+        summaries_response = await wallet_client.get_wallets(GetWallets(uint16.construct_optional(wallet_type)))
         address_prefix = selected_network_address_prefix(config)
 
         sync_response = await wallet_client.get_sync_status()
@@ -869,19 +869,19 @@ async def print_balances(
             print("Sync status: Not synced")
 
         if not sync_response.syncing and sync_response.synced:
-            if len(summaries_response) == 0:
+            if len(summaries_response.wallets) == 0:
                 type_hint = " " if wallet_type is None else f" from type {wallet_type.name} "
                 print(f"\nNo wallets{type_hint}available for fingerprint: {fingerprint}")
             else:
                 print(f"Balances, fingerprint: {fingerprint}")
-            for summary in summaries_response:
+            for summary in summaries_response.wallets:
                 indent: str = "   "
                 # asset_id currently contains both the asset ID and TAIL program bytes concatenated together.
                 # A future RPC update may split them apart, but for now we'll show the first 32 bytes (64 chars)
-                asset_id = summary["data"][:64]
-                wallet_id = summary["id"]
+                asset_id = summary.data[:64]
+                wallet_id = summary.id
                 balances = await wallet_client.get_wallet_balance(wallet_id)
-                typ = WalletType(int(summary["type"]))
+                typ = WalletType(int(summary.type))
                 address_prefix, scale = wallet_coin_unit(typ, address_prefix)
                 total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
                 unconfirmed_wallet_balance: str = print_balance(
@@ -893,7 +893,7 @@ async def print_balances(
                 if typ == WalletType.CRCAT:
                     ljust = 36
                 print()
-                print(f"{summary['name']}:")
+                print(f"{summary.name}:")
                 print(f"{indent}{'-Total Balance:'.ljust(ljust)} {total_balance}")
                 if typ == WalletType.CRCAT:
                     print(
@@ -917,7 +917,7 @@ async def print_balances(
                     treasury_id = get_id_response["treasury_id"][2:]
                     print(f"{indent}{'-Treasury ID:'.ljust(ljust)} {treasury_id}")
                 elif typ == WalletType.DAO_CAT:
-                    cat_asset_id = summary["data"][32:96]
+                    cat_asset_id = summary.data[32:96]
                     print(f"{indent}{'-Asset ID:'.ljust(ljust)} {cat_asset_id}")
                 elif len(asset_id) > 0:
                     print(f"{indent}{'-Asset ID:'.ljust(ljust)} {asset_id}")
