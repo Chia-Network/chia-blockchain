@@ -1846,9 +1846,9 @@ class FullNode:
                 return None
             validation_start = time.monotonic()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
-            npc_results = {}
-            if pre_validation_result is not None and pre_validation_result.npc_result is not None:
-                npc_results[block.height] = pre_validation_result.npc_result
+            block_height_conds_map = {}
+            if pre_validation_result is not None and pre_validation_result.conds is not None:
+                block_height_conds_map[block.height] = pre_validation_result.conds
 
             # Don't validate signatures because we want to validate them in the main thread later, since we have a
             # cache available
@@ -1868,7 +1868,7 @@ class FullNode:
                 self.blockchain,
                 [block],
                 self.blockchain.pool,
-                npc_results,
+                block_height_conds_map,
                 sub_slot_iters=ssi,
                 difficulty=diff,
                 prev_ses_block=prev_ses_block,

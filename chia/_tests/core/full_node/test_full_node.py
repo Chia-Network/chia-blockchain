@@ -741,9 +741,8 @@ class TestFullNodeProtocol:
         assert entry is not None
         result = entry.result
         assert result is not None
-        assert result.npc_result is not None
-        assert result.npc_result.conds is not None
-        assert result.npc_result.conds.cost > 0
+        assert result.conds is not None
+        assert result.conds.cost > 0
 
         assert not full_node_1.full_node.blockchain.contains_block(block.header_hash)
         assert block.transactions_generator is not None
