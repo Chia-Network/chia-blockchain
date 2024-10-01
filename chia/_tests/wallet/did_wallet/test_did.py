@@ -1342,9 +1342,10 @@ class TestDIDWallet:
                 await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(),
             )
         )
-        did_wallet_2 = wallet_node_1.wallet_state_manager.wallets[did_wallets[0].id]
-        assert isinstance(did_wallet_2, DIDWallet)  # mypy
-        assert len(wallet_node_0.wallet_state_manager.wallets) == 1
+        did_wallet_2: DIDWallet = wallet_node.wallet_state_manager.get_wallet(
+            id=uint32(did_wallets[0].id), required_type=DIDWallet
+        )
+        assert len(wallet_node.wallet_state_manager.wallets) == 1
         assert did_wallet_1.did_info.origin_coin == did_wallet_2.did_info.origin_coin
         if with_recovery:
             assert did_wallet_1.did_info.backup_ids[0] == did_wallet_2.did_info.backup_ids[0]

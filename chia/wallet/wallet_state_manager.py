@@ -1348,7 +1348,9 @@ class WalletStateManager:
                 self.state_changed("wallet_created", wallet_identifier.id, {"did_id": did_wallet.get_my_DID()})
                 return wallet_identifier
             # we are over the limit
-            self.log.warning(f"You are at the max configured limit of {limit} DIDs. Ignoring received DID {launch_id.hex()}")
+            self.log.warning(
+                f"You are at the max configured limit of {limit} DIDs. Ignoring received DID {launch_id.hex()}"
+            )
             return None
 
     async def get_minter_did(self, launcher_coin: Coin, peer: WSChiaConnection) -> Optional[bytes32]:
