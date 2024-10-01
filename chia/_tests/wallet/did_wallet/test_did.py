@@ -1381,6 +1381,7 @@ class TestDIDWallet:
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
 
+        # Check that we cap out at 10 DID Wallets automatically created upon transfer received
         for i in range(0, 14):
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
@@ -1399,9 +1400,10 @@ class TestDIDWallet:
             await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
             await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
             # Transfer DID
+            origin_coin = did_wallet_1.did_info.origin_coin
             new_puzhash = await wallet2.get_new_puzzlehash()
             async with did_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-                await did_wallet_1.transfer_did(new_puzhash, fee, True, action_scope)
+                await did_wallet_1.transfer_did(new_puzhash, fee, False, action_scope)
             await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
             await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
             # Check if the DID wallet is created in the wallet2
@@ -1442,6 +1444,62 @@ class TestDIDWallet:
         assert resp["success"]
         await time_out_assert(15, did_wallet_10.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_10.get_unconfirmed_balance, 101)
+
+        # Check we can recover an auto-discarded DID
+        did_wallet_9 = wallet_node_2.wallet_state_manager.get_wallet(
+            id=uint32(did_wallets[8].id), required_type=DIDWallet
+        )
+        # Delete the coin and wallet to make space for a auto-discarded DID
+        coin = await did_wallet_9.get_coin()
+        await wallet_node_2.wallet_state_manager.coin_store.delete_coin_record(coin.name())
+        await time_out_assert(15, did_wallet_9.get_confirmed_balance, 0)
+        await wallet_node_2.wallet_state_manager.user_store.delete_wallet(did_wallet_9.wallet_info.id)
+        wallet_node_2.wallet_state_manager.wallets.pop(did_wallet_9.wallet_info.id)
+
+        did_wallets = list(
+            filter(
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+                await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+            )
+        )
+        assert len(did_wallets) == 9
+
+        # Try and find lost coin
+        resp = await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
+        did_wallets = list(
+            filter(
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+                await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+            )
+        )
+        assert len(did_wallets) == 10
+
+        # Check we can still manually add new DIDs while at cap
+        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        ph = await wallet2.get_new_puzzlehash()
+        async with wallet2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            did_wallet_11: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node_2.wallet_state_manager,
+                wallet2,
+                uint64(101),
+                action_scope,
+                [bytes(ph)],
+                uint64(1),
+                {"Twitter": "Test", "GitHub": "测试"},
+                fee=fee,
+            )
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
+        await time_out_assert(15, did_wallet_11.get_confirmed_balance, 101)
+        await time_out_assert(15, did_wallet_11.get_unconfirmed_balance, 101)
+
+        did_wallets = list(
+            filter(
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+                await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+            )
+        )
+        assert len(did_wallets) == 11
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
     @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
