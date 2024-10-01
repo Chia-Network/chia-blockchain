@@ -1334,7 +1334,8 @@ class WalletStateManager:
                 # This means the wallet is in a resync process, skip the coin
                 return None
             # check we aren't above the auto-add wallet limit
-            if did_wallet_count < self.config.get("did_auto_add_limit", 10):
+            limit = self.config.get("did_auto_add_limit", 10)
+            if did_wallet_count < limit:
                 did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                     self,
                     self.main_wallet,
@@ -1347,6 +1348,7 @@ class WalletStateManager:
                 self.state_changed("wallet_created", wallet_identifier.id, {"did_id": did_wallet.get_my_DID()})
                 return wallet_identifier
             # we are over the limit
+            self.log.warning(f"You are at the max configured limit of {limit} DIDs. Ignoring received DID {launch_id.hex()}")
             return None
 
     async def get_minter_did(self, launcher_coin: Coin, peer: WSChiaConnection) -> Optional[bytes32]:
