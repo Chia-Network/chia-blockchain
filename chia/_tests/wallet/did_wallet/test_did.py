@@ -774,7 +774,7 @@ class TestDIDWallet:
             ]
         )
         coin = await did_wallet.get_coin()
-        info = []
+        info: List[Tuple[bytes, bytes, int]] = []
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         with pytest.raises(Exception):  # We expect a CLVM 80 error for this test
             async with did_wallet.wallet_state_manager.new_action_scope(
