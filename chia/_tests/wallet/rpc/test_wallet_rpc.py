@@ -518,7 +518,7 @@ async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnv
 
     await generate_funds(full_node_api, env.wallet_1)
 
-    # This tests that the client returns a sucessfully, rather than raising or returning something unexpected
+    # This tests that the client returns successfully, rather than raising or returning something unexpected
     await client.get_timestamp_for_height(GetTimestampForHeight(uint32(1)))
 
 
