@@ -298,7 +298,7 @@ class PushTransactionsCMD:
 
     async def run(self) -> None:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
-            # TODO: no default here
+            # TODO: provide access to additional parameters instead of filling with the defaults constant
             await wallet_rpc.client.push_transactions(
                 PushTransactions(transactions=self.txs_in.transaction_bundle.txs), DEFAULT_TX_CONFIG
             )
