@@ -53,7 +53,7 @@ class PreValidationResult(Streamable):
 def batch_pre_validate_blocks(
     constants: ConsensusConstants,
     blocks: Dict[bytes32, BlockRecord],
-    full_blocks_pickled: List[bytes],
+    full_blocks: Sequence[FullBlock],
     prev_transaction_generators: List[Optional[List[bytes]]],
     conditions: Dict[uint32, bytes],
     expected_difficulty: List[uint64],
@@ -64,10 +64,10 @@ def batch_pre_validate_blocks(
     results: List[PreValidationResult] = []
 
     # In this case, we are validating full blocks, not headers
-    for i in range(len(full_blocks_pickled)):
+    for i in range(len(full_blocks)):
         try:
             validation_start = time.monotonic()
-            block: FullBlock = FullBlock.from_bytes_unchecked(full_blocks_pickled[i])
+            block: FullBlock = full_blocks[i]
             tx_additions: List[Coin] = []
             removals: List[bytes32] = []
             conds: Optional[SpendBundleConditions] = None
@@ -282,11 +282,9 @@ async def pre_validate_blocks_multiprocessing(
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
-        b_pickled: List[bytes] = []
         previous_generators: List[Optional[List[bytes]]] = []
         for block in blocks_to_validate:
             assert isinstance(block, FullBlock)
-            b_pickled.append(bytes(block))
             try:
                 block_generator: Optional[BlockGenerator] = await get_block_generator(
                     blockchain.lookup_block_generators, block
@@ -316,7 +314,7 @@ async def pre_validate_blocks_multiprocessing(
                 batch_pre_validate_blocks,
                 constants,
                 recent_blocks,
-                b_pickled,
+                blocks_to_validate,
                 previous_generators,
                 conditions_pickled,
                 [diff_ssis[j].current_difficulty for j in range(i, end_i)],
