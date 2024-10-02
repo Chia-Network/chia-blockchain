@@ -60,7 +60,7 @@ def batch_pre_validate_blocks(
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
     prev_ses_blocks: List[Optional[BlockRecord]],
-) -> List[bytes]:
+) -> List[PreValidationResult]:
     results: List[PreValidationResult] = []
 
     # In this case, we are validating full blocks, not headers
@@ -152,7 +152,7 @@ def batch_pre_validate_blocks(
             results.append(
                 PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False, uint32(validation_time * 1000))
             )
-    return [bytes(r) for r in results]
+    return results
 
 
 async def pre_validate_blocks_multiprocessing(
@@ -310,11 +310,7 @@ async def pre_validate_blocks_multiprocessing(
             )
         )
     # Collect all results into one flat list
-    return [
-        PreValidationResult.from_bytes(result)
-        for batch_result in (await asyncio.gather(*futures))
-        for result in batch_result
-    ]
+    return [result for batch_result in (await asyncio.gather(*futures)) for result in batch_result]
 
 
 def _run_generator(
