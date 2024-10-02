@@ -1334,7 +1334,7 @@ class DIDWallet:
         spendable: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
-        max_send_amount = sum([cr.coin.amount for cr in spendable])
+        max_send_amount = sum(cr.coin.amount for cr in spendable)
         return max_send_amount
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]):
