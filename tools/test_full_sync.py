@@ -166,7 +166,7 @@ async def run_sync_checkpoint(
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
                 if not success:
-                    raise RuntimeError(f"failed to ingest block batch: {err}")
+                    raise RuntimeError("failed to ingest block batch")
 
                 height += len(block_batch)
                 print(f"\rheight {height}    ", end="")
@@ -181,7 +181,7 @@ async def run_sync_checkpoint(
                     block_batch, peer_info, None, ChainState(ssi, diff, None)
                 )
                 if not success:
-                    raise RuntimeError(f"failed to ingest block batch: {err}")
+                    raise RuntimeError("failed to ingest block batch")
 
 
 main.add_command(run)

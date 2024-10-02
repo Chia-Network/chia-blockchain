@@ -614,9 +614,7 @@ class FullNode:
                         response.blocks, peer_info, None, cs
                     )
                     if not success:
-                        raise ValueError(
-                            f"Error short batch syncing, failed to validate blocks {height}-{end_height}: {err}"
-                        )
+                        raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
                         try:
                             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
@@ -1179,6 +1177,8 @@ class FullNode:
                             assert fork_hash is not None
                             fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
+                # The ChainState object (cs) is an in-out parameter. the add_block_batch()
+                # call will update it
                 success, state_change_summary, err = await self.add_block_batch(
                     blocks,
                     peer.get_peer_logging(),
@@ -1342,7 +1342,7 @@ class FullNode:
             blocks_to_validate,
             self.blockchain.pool,
             {},
-            copy.deepcopy(cs),
+            copy.copy(cs),
             wp_summaries=wp_summaries,
             validate_signatures=True,
         )

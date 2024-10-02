@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import logging
 import time
 import traceback
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence
 
 from chia_rs import AugSchemeMPL, SpendBundleConditions
 
@@ -218,7 +219,7 @@ async def pre_validate_blocks_multiprocessing(
     # they won't actually be added to the underlying blockchain object
     blockchain = AugmentedBlockchain(block_records)
 
-    diff_ssis: List[Tuple[uint64, uint64]] = []
+    diff_ssis: List[ChainState] = []
     prev_ses_block_list: List[Optional[BlockRecord]] = []
 
     for block in blocks:
@@ -269,7 +270,7 @@ async def pre_validate_blocks_multiprocessing(
         recent_blocks[block_rec.header_hash] = block_rec
         blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
         prev_b = block_rec
-        diff_ssis.append((cs.current_difficulty, cs.current_ssi))
+        diff_ssis.append(copy.copy(cs))
         prev_ses_block_list.append(cs.prev_ses_block)
         if block_rec.sub_epoch_summary_included is not None:
             cs.prev_ses_block = block_rec
@@ -322,8 +323,8 @@ async def pre_validate_blocks_multiprocessing(
                 b_pickled,
                 previous_generators,
                 conditions_pickled,
-                [diff_ssis[j][0] for j in range(i, end_i)],
-                [diff_ssis[j][1] for j in range(i, end_i)],
+                [diff_ssis[j].current_difficulty for j in range(i, end_i)],
+                [diff_ssis[j].current_ssi for j in range(i, end_i)],
                 validate_signatures,
                 ses_blocks_bytes_list,
             )

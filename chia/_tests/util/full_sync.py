@@ -214,7 +214,7 @@ async def run_sync_test(
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
 
                             if not success:
-                                raise RuntimeError(f"failed to ingest block batch: {err}")
+                                raise RuntimeError("failed to ingest block batch")
 
                             assert summary is not None
 
