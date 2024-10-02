@@ -55,7 +55,7 @@ def batch_pre_validate_blocks(
     blocks: Dict[bytes32, BlockRecord],
     full_blocks: Sequence[FullBlock],
     prev_transaction_generators: List[Optional[List[bytes]]],
-    conditions: Dict[uint32, bytes],
+    conditions: Dict[uint32, SpendBundleConditions],
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
@@ -70,9 +70,8 @@ def batch_pre_validate_blocks(
             block: FullBlock = full_blocks[i]
             tx_additions: List[Coin] = []
             removals: List[bytes32] = []
-            conds: Optional[SpendBundleConditions] = None
-            if block.height in conditions:
-                conds = SpendBundleConditions.from_bytes(conditions[block.height])
+            conds: Optional[SpendBundleConditions] = conditions.get(block.height)
+            if conds is not None:
                 removals, tx_additions = tx_removals_and_additions(conds)
             elif block.transactions_generator is not None:
                 # TODO: this function would be simpler if conditions were
@@ -272,9 +271,6 @@ async def pre_validate_blocks_multiprocessing(
         if block_rec.sub_epoch_summary_included is not None:
             vs.prev_ses_block = block_rec
 
-    conditions_pickled = {}
-    for k, v in block_height_conds_map.items():
-        conditions_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
 
@@ -316,7 +312,7 @@ async def pre_validate_blocks_multiprocessing(
                 recent_blocks,
                 blocks_to_validate,
                 previous_generators,
-                conditions_pickled,
+                block_height_conds_map,
                 [diff_ssis[j].current_difficulty for j in range(i, end_i)],
                 [diff_ssis[j].current_ssi for j in range(i, end_i)],
                 validate_signatures,
