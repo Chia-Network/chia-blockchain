@@ -971,6 +971,8 @@ class TestDIDWallet:
             ]
         )
 
+        await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
+        await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         recovery_list = [bytes32.from_hexstr(did_wallet.get_my_DID())]
 
         async with wallet_1.wallet_state_manager.new_action_scope(
