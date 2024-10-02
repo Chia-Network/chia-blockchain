@@ -269,7 +269,6 @@ class DataLayer:
     ) -> Optional[TransactionRecord]:
         status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
         await self.batch_insert(store_id=store_id, changelist=changelist, status=status)
-        await self.data_store.clean_node_table()
 
         if submit_on_chain:
             return await self.publish_update(store_id=store_id, fee=fee)
@@ -302,8 +301,6 @@ class DataLayer:
 
             status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
             await self.batch_insert(store_id=store_id, changelist=changelist, status=status)
-
-        await self.data_store.clean_node_table()
 
         if submit_on_chain:
             update_dictionary: Dict[bytes32, bytes32] = {}
@@ -547,7 +544,6 @@ class DataLayer:
                     and pending_root.status == Status.PENDING
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
-                    await self.data_store.build_ancestor_table_for_latest_root(store_id=store_id)
             await self.data_store.clear_pending_roots(store_id=store_id)
 
     async def fetch_and_validate(self, store_id: bytes32) -> None:
@@ -1125,7 +1121,6 @@ class DataLayer:
 
             verify_offer(maker=offer.maker, taker=offer.taker, summary=summary)
 
-        await self.data_store.clean_node_table()
         return offer
 
     async def take_offer(
@@ -1184,8 +1179,6 @@ class DataLayer:
                     for our_offer_store in taker
                 },
             }
-
-        await self.data_store.clean_node_table()
 
         # Excluding wallet from transaction since failures in the wallet may occur
         # after the transaction is submitted to the chain.  If we roll back data we

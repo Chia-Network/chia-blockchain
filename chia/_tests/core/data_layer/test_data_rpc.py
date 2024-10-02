@@ -330,6 +330,7 @@ async def test_create_insert_get(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_upsert(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -360,6 +361,7 @@ async def test_upsert(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_create_double_insert(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -397,6 +399,7 @@ async def test_create_double_insert(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_keys_values_ancestors(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -473,6 +476,7 @@ async def test_keys_values_ancestors(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_roots(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -526,6 +530,7 @@ async def test_get_roots(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_root_history(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -580,6 +585,7 @@ async def test_get_root_history(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_kv_diff(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -647,6 +653,7 @@ async def test_get_kv_diff(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_batch_update_matches_single_operations(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -719,6 +726,7 @@ async def test_batch_update_matches_single_operations(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_owned_stores(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -759,6 +767,7 @@ async def test_get_owned_stores(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_subscriptions(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
@@ -1703,6 +1712,7 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
 
@@ -1721,6 +1731,7 @@ async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> N
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
     broken_taker_offer = copy.deepcopy(reference.make_offer_response)
@@ -1741,6 +1752,7 @@ async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) ->
 
 
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None:
     # TODO: only needs the maker and db?  wallet?
     reference = make_one_take_one_reference
@@ -1783,6 +1795,7 @@ async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None
     ],
 )
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
@@ -1859,6 +1872,7 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     ],
 )
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_and_cancel_offer_then_update(
     offer_setup: OfferSetup, reference: MakeAndTakeReference, secure: bool
 ) -> None:
@@ -1948,6 +1962,7 @@ async def test_make_and_cancel_offer_then_update(
     ],
 )
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
     offer_setup: OfferSetup,
     reference: MakeAndTakeReference,
@@ -1990,6 +2005,7 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_get_sync_status(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:

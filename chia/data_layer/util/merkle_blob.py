@@ -19,7 +19,7 @@ from typing import (
     final,
 )
 
-from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
+from chia.data_layer.data_layer_util import InternalNode, ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 
@@ -175,6 +175,16 @@ class MerkleBlob:
             node = self.get_raw_node(node.parent)
             lineage.append(node)
         return lineage
+
+    def get_lineage_by_key_id(self, kid: KVId) -> List[InternalNode]:
+        index = self.key_to_index[kid]
+        lineage = self.get_lineage(index)
+        internal_nodes: List[InternalNode] = []
+        for node in lineage[1:]:
+            assert isinstance(node, RawInternalMerkleNode)
+            internal_nodes.append(InternalNode(bytes32(node.hash), node.left, node.right))
+
+        return internal_nodes
 
     def update_entry(
         self,
