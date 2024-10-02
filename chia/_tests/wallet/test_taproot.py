@@ -8,7 +8,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 
 
-def test_1():
+def test_1() -> None:
     for main_secret_exponent in range(500, 600):
         hidden_puzzle_hash = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()
         main_pubkey = int_to_public_key(main_secret_exponent)
