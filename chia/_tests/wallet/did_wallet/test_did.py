@@ -1344,7 +1344,7 @@ class TestDIDWallet:
                 await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(),
             )
         )
-        did_wallet_2: DIDWallet = wallet_node.wallet_state_manager.get_wallet(
+        did_wallet_2: DIDWallet = wallet_node_2.wallet_state_manager.get_wallet(
             id=uint32(did_wallets[0].id), required_type=DIDWallet
         )
         assert len(wallet_node.wallet_state_manager.wallets) == 1
