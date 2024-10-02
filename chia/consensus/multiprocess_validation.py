@@ -272,27 +272,23 @@ async def pre_validate_blocks_multiprocessing(
     futures = []
     # Pool of workers to validate blocks concurrently
 
-    batch_size = 4
-    for i in range(0, len(blocks), batch_size):
-        end_i = min(i + batch_size, len(blocks))
-        blocks_to_validate = blocks[i:end_i]
-        previous_generators: List[Optional[List[bytes]]] = []
-        for block in blocks_to_validate:
-            assert isinstance(block, FullBlock)
-            try:
-                block_generator: Optional[BlockGenerator] = await get_block_generator(
-                    blockchain.lookup_block_generators, block
-                )
-            except ValueError:
-                return [
-                    PreValidationResult(
-                        uint16(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING.value), None, None, False, uint32(0)
-                    )
-                ]
+    for i in range(0, len(blocks)):
+        block = blocks[i]
+        previous_generator: Optional[List[bytes]] = None
+        assert isinstance(block, FullBlock)
+
+        try:
+            block_generator: Optional[BlockGenerator] = await get_block_generator(
+                blockchain.lookup_block_generators, block
+            )
             if block_generator is not None:
-                previous_generators.append(block_generator.generator_refs)
-            else:
-                previous_generators.append(None)
+                previous_generator = block_generator.generator_refs
+        except ValueError:
+            return [
+                PreValidationResult(
+                    uint16(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING.value), None, None, False, uint32(0)
+                )
+            ]
 
         futures.append(
             asyncio.get_running_loop().run_in_executor(
@@ -300,13 +296,13 @@ async def pre_validate_blocks_multiprocessing(
                 batch_pre_validate_blocks,
                 constants,
                 recent_blocks,
-                blocks_to_validate,
-                previous_generators,
+                [block],
+                [previous_generator],
                 block_height_conds_map,
-                [diff_ssis[j].current_difficulty for j in range(i, end_i)],
-                [diff_ssis[j].current_ssi for j in range(i, end_i)],
+                [diff_ssis[i].current_difficulty],
+                [diff_ssis[i].current_ssi],
                 validate_signatures,
-                prev_ses_block_list[i:end_i],
+                [prev_ses_block_list[i]],
             )
         )
     # Collect all results into one flat list
