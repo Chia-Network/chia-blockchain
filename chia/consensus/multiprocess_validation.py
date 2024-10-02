@@ -59,7 +59,7 @@ def batch_pre_validate_blocks(
     expected_difficulty: List[uint64],
     expected_sub_slot_iters: List[uint64],
     validate_signatures: bool,
-    prev_ses_block_bytes: Optional[List[Optional[bytes]]] = None,
+    prev_ses_blocks: List[Optional[BlockRecord]],
 ) -> List[bytes]:
     results: List[PreValidationResult] = []
 
@@ -103,10 +103,8 @@ def batch_pre_validate_blocks(
 
             header_block = get_block_header(block, tx_additions, removals)
             prev_ses_block = None
-            if prev_ses_block_bytes is not None and len(prev_ses_block_bytes) > 0:
-                buffer = prev_ses_block_bytes[i]
-                if buffer is not None:
-                    prev_ses_block = BlockRecord.from_bytes_unchecked(buffer)
+            if len(prev_ses_blocks) > 0:
+                prev_ses_block = prev_ses_blocks[i]
             required_iters, error = validate_finished_header_block(
                 constants,
                 BlockCache(blocks),
@@ -296,14 +294,6 @@ async def pre_validate_blocks_multiprocessing(
             else:
                 previous_generators.append(None)
 
-        ses_blocks_bytes_list: List[Optional[bytes]] = []
-        for j in range(i, end_i):
-            ses_block_rec = prev_ses_block_list[j]
-            if ses_block_rec is None:
-                ses_blocks_bytes_list.append(None)
-            else:
-                ses_blocks_bytes_list.append(bytes(ses_block_rec))
-
         futures.append(
             asyncio.get_running_loop().run_in_executor(
                 pool,
@@ -316,7 +306,7 @@ async def pre_validate_blocks_multiprocessing(
                 [diff_ssis[j].current_difficulty for j in range(i, end_i)],
                 [diff_ssis[j].current_ssi for j in range(i, end_i)],
                 validate_signatures,
-                ses_blocks_bytes_list,
+                prev_ses_block_list[i:end_i],
             )
         )
     # Collect all results into one flat list
