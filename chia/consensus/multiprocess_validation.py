@@ -50,109 +50,90 @@ class PreValidationResult(Streamable):
     timing: uint32  # the time (in milliseconds) it took to pre-validate the block
 
 
-def batch_pre_validate_blocks(
+def pre_validate_block(
     constants: ConsensusConstants,
     blocks: Dict[bytes32, BlockRecord],
-    full_blocks: Sequence[FullBlock],
-    prev_transaction_generators: List[Optional[List[bytes]]],
-    conditions: Dict[uint32, SpendBundleConditions],
-    expected_difficulty: List[uint64],
-    expected_sub_slot_iters: List[uint64],
+    block: FullBlock,
+    prev_generators: Optional[List[bytes]],
+    conds: Optional[SpendBundleConditions],
+    expected_difficulty: uint64,
+    expected_sub_slot_iters: uint64,
     validate_signatures: bool,
-    prev_ses_blocks: List[Optional[BlockRecord]],
-) -> List[PreValidationResult]:
-    results: List[PreValidationResult] = []
+    prev_ses_block: Optional[BlockRecord],
+) -> PreValidationResult:
 
-    # In this case, we are validating full blocks, not headers
-    for i in range(len(full_blocks)):
-        try:
-            validation_start = time.monotonic()
-            block: FullBlock = full_blocks[i]
-            tx_additions: List[Coin] = []
-            removals: List[bytes32] = []
-            conds: Optional[SpendBundleConditions] = conditions.get(block.height)
-            if conds is not None:
-                removals, tx_additions = tx_removals_and_additions(conds)
-            elif block.transactions_generator is not None:
-                # TODO: this function would be simpler if conditions were
-                # required to be passed in for all transaction blocks. We would
-                # no longer need prev_transaction_generators
-                prev_generators = prev_transaction_generators[i]
-                assert prev_generators is not None
-                assert block.transactions_info is not None
-                block_generator = BlockGenerator(block.transactions_generator, prev_generators)
-                assert block_generator.program == block.transactions_generator
-                npc_result = get_name_puzzle_conditions(
-                    block_generator,
-                    min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
-                    mempool_mode=False,
-                    height=block.height,
-                    constants=constants,
+    try:
+        validation_start = time.monotonic()
+        tx_additions: List[Coin] = []
+        removals: List[bytes32] = []
+        if conds is not None:
+            removals, tx_additions = tx_removals_and_additions(conds)
+        elif block.transactions_generator is not None:
+            # TODO: this function would be simpler if conds was
+            # required to be passed in for all transaction blocks. We would
+            # no longer need prev_generators
+            assert prev_generators is not None
+            assert block.transactions_info is not None
+            block_generator = BlockGenerator(block.transactions_generator, prev_generators)
+            assert block_generator.program == block.transactions_generator
+            npc_result = get_name_puzzle_conditions(
+                block_generator,
+                min(constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
+                mempool_mode=False,
+                height=block.height,
+                constants=constants,
+            )
+            if npc_result.error is not None:
+                validation_time = time.monotonic() - validation_start
+                return PreValidationResult(
+                    uint16(npc_result.error), None, npc_result.conds, False, uint32(validation_time * 1000)
                 )
-                if npc_result.error is not None:
-                    validation_time = time.monotonic() - validation_start
-                    results.append(
-                        PreValidationResult(
-                            uint16(npc_result.error), None, npc_result.conds, False, uint32(validation_time * 1000)
-                        )
-                    )
-                    continue
-                assert npc_result.conds is not None
-                conds = npc_result.conds
-                removals, tx_additions = tx_removals_and_additions(conds)
+            assert npc_result.conds is not None
+            conds = npc_result.conds
+            removals, tx_additions = tx_removals_and_additions(conds)
 
-            header_block = get_block_header(block, tx_additions, removals)
-            prev_ses_block = None
-            if len(prev_ses_blocks) > 0:
-                prev_ses_block = prev_ses_blocks[i]
-            required_iters, error = validate_finished_header_block(
-                constants,
-                BlockCache(blocks),
-                header_block,
-                True,  # check_filter
-                expected_difficulty[i],
-                expected_sub_slot_iters[i],
-                prev_ses_block=prev_ses_block,
-            )
-            error_int: Optional[uint16] = None
-            if error is not None:
-                error_int = uint16(error.code.value)
+        header_block = get_block_header(block, tx_additions, removals)
+        required_iters, error = validate_finished_header_block(
+            constants,
+            BlockCache(blocks),
+            header_block,
+            True,  # check_filter
+            expected_difficulty,
+            expected_sub_slot_iters,
+            prev_ses_block=prev_ses_block,
+        )
+        error_int: Optional[uint16] = None
+        if error is not None:
+            error_int = uint16(error.code.value)
 
-            successfully_validated_signatures = False
-            # If we failed header block validation, no need to validate
-            # signature, the block is already invalid If this is False, it means
-            # either we don't have a signature (not a tx block) or we have an
-            # invalid signature (which also puts in an error) or we didn't
-            # validate the signature because we want to validate it later.
-            # add_block will attempt to validate the signature later.
-            if error_int is None and validate_signatures and conds is not None:
-                assert block.transactions_info is not None
-                pairs_pks, pairs_msgs = pkm_pairs(conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
-                if not AugSchemeMPL.aggregate_verify(
-                    pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature
-                ):
-                    error_int = uint16(Err.BAD_AGGREGATE_SIGNATURE.value)
-                else:
-                    successfully_validated_signatures = True
+        successfully_validated_signatures = False
+        # If we failed header block validation, no need to validate
+        # signature, the block is already invalid If this is False, it means
+        # either we don't have a signature (not a tx block) or we have an
+        # invalid signature (which also puts in an error) or we didn't
+        # validate the signature because we want to validate it later.
+        # add_block will attempt to validate the signature later.
+        if error_int is None and validate_signatures and conds is not None:
+            assert block.transactions_info is not None
+            pairs_pks, pairs_msgs = pkm_pairs(conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+            if not AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
+                error_int = uint16(Err.BAD_AGGREGATE_SIGNATURE.value)
+            else:
+                successfully_validated_signatures = True
 
-            validation_time = time.monotonic() - validation_start
-            results.append(
-                PreValidationResult(
-                    error_int,
-                    required_iters,
-                    conds,
-                    successfully_validated_signatures,
-                    uint32(validation_time * 1000),
-                )
-            )
-        except Exception:
-            error_stack = traceback.format_exc()
-            log.error(f"Exception: {error_stack}")
-            validation_time = time.monotonic() - validation_start
-            results.append(
-                PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False, uint32(validation_time * 1000))
-            )
-    return results
+        validation_time = time.monotonic() - validation_start
+        return PreValidationResult(
+            error_int,
+            required_iters,
+            conds,
+            successfully_validated_signatures,
+            uint32(validation_time * 1000),
+        )
+    except Exception:
+        error_stack = traceback.format_exc()
+        log.error(f"Exception: {error_stack}")
+        validation_time = time.monotonic() - validation_start
+        return PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False, uint32(validation_time * 1000))
 
 
 async def pre_validate_blocks_multiprocessing(
@@ -274,7 +255,7 @@ async def pre_validate_blocks_multiprocessing(
 
     for i in range(0, len(blocks)):
         block = blocks[i]
-        previous_generator: Optional[List[bytes]] = None
+        previous_generators: Optional[List[bytes]] = None
         assert isinstance(block, FullBlock)
 
         try:
@@ -282,7 +263,7 @@ async def pre_validate_blocks_multiprocessing(
                 blockchain.lookup_block_generators, block
             )
             if block_generator is not None:
-                previous_generator = block_generator.generator_refs
+                previous_generators = block_generator.generator_refs
         except ValueError:
             return [
                 PreValidationResult(
@@ -293,20 +274,20 @@ async def pre_validate_blocks_multiprocessing(
         futures.append(
             asyncio.get_running_loop().run_in_executor(
                 pool,
-                batch_pre_validate_blocks,
+                pre_validate_block,
                 constants,
                 recent_blocks,
-                [block],
-                [previous_generator],
-                block_height_conds_map,
-                [diff_ssis[i].current_difficulty],
-                [diff_ssis[i].current_ssi],
+                block,
+                previous_generators,
+                block_height_conds_map.get(block.height),
+                diff_ssis[i].current_difficulty,
+                diff_ssis[i].current_ssi,
                 validate_signatures,
-                [prev_ses_block_list[i]],
+                prev_ses_block_list[i],
             )
         )
     # Collect all results into one flat list
-    return [result for batch_result in (await asyncio.gather(*futures)) for result in batch_result]
+    return list(await asyncio.gather(*futures))
 
 
 def _run_generator(
