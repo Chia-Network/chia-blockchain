@@ -52,7 +52,7 @@ class PreValidationResult(Streamable):
 
 def batch_pre_validate_blocks(
     constants: ConsensusConstants,
-    blocks_pickled: Dict[bytes, bytes],
+    blocks: Dict[bytes32, BlockRecord],
     full_blocks_pickled: List[bytes],
     prev_transaction_generators: List[Optional[List[bytes]]],
     conditions: Dict[uint32, bytes],
@@ -61,9 +61,6 @@ def batch_pre_validate_blocks(
     validate_signatures: bool,
     prev_ses_block_bytes: Optional[List[Optional[bytes]]] = None,
 ) -> List[bytes]:
-    blocks: Dict[bytes32, BlockRecord] = {}
-    for k, v in blocks_pickled.items():
-        blocks[bytes32(k)] = BlockRecord.from_bytes_unchecked(v)
     results: List[PreValidationResult] = []
 
     # In this case, we are validating full blocks, not headers
@@ -280,7 +277,6 @@ async def pre_validate_blocks_multiprocessing(
         conditions_pickled[k] = bytes(v)
     futures = []
     # Pool of workers to validate blocks concurrently
-    recent_blocks_bytes = {bytes(k): bytes(v) for k, v in recent_blocks.items()}  # convert to bytes
 
     batch_size = 4
     for i in range(0, len(blocks), batch_size):
@@ -319,7 +315,7 @@ async def pre_validate_blocks_multiprocessing(
                 pool,
                 batch_pre_validate_blocks,
                 constants,
-                recent_blocks_bytes,
+                recent_blocks,
                 b_pickled,
                 previous_generators,
                 conditions_pickled,
