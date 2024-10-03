@@ -8,7 +8,7 @@ import traceback
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
-from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
+from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
 from packaging.version import Version
