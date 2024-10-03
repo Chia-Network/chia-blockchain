@@ -55,10 +55,8 @@ def pre_validate_block(
     block: FullBlock,
     prev_generators: Optional[List[bytes]],
     conds: Optional[SpendBundleConditions],
-    expected_difficulty: uint64,
-    expected_sub_slot_iters: uint64,
+    vs: ValidationState,
     validate_signatures: bool,
-    prev_ses_block: Optional[BlockRecord],
 ) -> PreValidationResult:
 
     try:
@@ -97,9 +95,9 @@ def pre_validate_block(
             blockchain,
             header_block,
             True,  # check_filter
-            expected_difficulty,
-            expected_sub_slot_iters,
-            prev_ses_block=prev_ses_block,
+            vs.current_difficulty,
+            vs.current_ssi,
+            prev_ses_block=vs.prev_ses_block,
         )
         error_int: Optional[uint16] = None
         if error is not None:
@@ -171,10 +169,11 @@ async def pre_validate_blocks_multiprocessing(
     # they won't actually be added to the underlying blockchain object
     blockchain = AugmentedBlockchain(block_records)
 
-    diff_ssis: List[ValidationState] = []
-    prev_ses_block_list: List[Optional[BlockRecord]] = []
+    futures = []
+    # Pool of workers to validate blocks concurrently
 
     for block in blocks:
+        assert isinstance(block, FullBlock)
         if len(block.finished_sub_slots) > 0:
             if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                 vs.current_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
@@ -221,18 +220,8 @@ async def pre_validate_blocks_multiprocessing(
 
         blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
         prev_b = block_rec
-        diff_ssis.append(copy.copy(vs))
-        prev_ses_block_list.append(vs.prev_ses_block)
-        if block_rec.sub_epoch_summary_included is not None:
-            vs.prev_ses_block = block_rec
 
-    futures = []
-    # Pool of workers to validate blocks concurrently
-
-    for i in range(0, len(blocks)):
-        block = blocks[i]
         previous_generators: Optional[List[bytes]] = None
-        assert isinstance(block, FullBlock)
 
         try:
             block_generator: Optional[BlockGenerator] = await get_block_generator(
@@ -256,12 +245,14 @@ async def pre_validate_blocks_multiprocessing(
                 block,
                 previous_generators,
                 block_height_conds_map.get(block.height),
-                diff_ssis[i].current_difficulty,
-                diff_ssis[i].current_ssi,
+                copy.copy(vs),
                 validate_signatures,
-                prev_ses_block_list[i],
             )
         )
+
+        if block_rec.sub_epoch_summary_included is not None:
+            vs.prev_ses_block = block_rec
+
     # Collect all results into one flat list
     return list(await asyncio.gather(*futures))
 
