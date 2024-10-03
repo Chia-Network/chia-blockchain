@@ -1072,7 +1072,7 @@ class Blockchain:
         try:
             height_hash = self.height_to_hash(peak_block.height)
         except Exception:
-            log.info(f"No header hash found for heigh {peak_block.height}. We must be on a fork.")
+            log.info(f"No header hash found for height {peak_block.height}. We must be on a fork.")
         if height_hash != header_hash:  # we are on a fork
             peak: Optional[BlockRecord] = self.get_peak()
             assert peak is not None
