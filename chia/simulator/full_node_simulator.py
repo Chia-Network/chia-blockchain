@@ -19,10 +19,10 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.chain_state import ChainState
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
+from chia.types.validation_state import ValidationState
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -177,7 +177,7 @@ class FullNodeSimulator(FullNodeAPI):
                     [genesis],
                     self.full_node.blockchain.pool,
                     {},
-                    ChainState(ssi, diff, None),
+                    ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
                 assert pre_validation_results is not None
@@ -238,7 +238,7 @@ class FullNodeSimulator(FullNodeAPI):
                     [genesis],
                     self.full_node.blockchain.pool,
                     {},
-                    ChainState(ssi, diff, None),
+                    ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
                 assert pre_validation_results is not None

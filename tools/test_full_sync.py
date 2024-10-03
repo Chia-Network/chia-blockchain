@@ -18,8 +18,8 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.full_node.full_node import FullNode
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.chain_state import ChainState
 from chia.types.full_block import FullBlock
+from chia.types.validation_state import ValidationState
 from chia.util.config import load_config
 
 
@@ -160,7 +160,7 @@ async def run_sync_checkpoint(
                     full_node.constants, True, block_record, full_node.blockchain
                 )
                 success, _, err = await full_node.add_block_batch(
-                    block_batch, peer_info, None, ChainState(ssi, diff, None)
+                    block_batch, peer_info, None, ValidationState(ssi, diff, None)
                 )
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
@@ -178,7 +178,7 @@ async def run_sync_checkpoint(
                     full_node.constants, True, block_record, full_node.blockchain
                 )
                 success, _, err = await full_node.add_block_batch(
-                    block_batch, peer_info, None, ChainState(ssi, diff, None)
+                    block_batch, peer_info, None, ValidationState(ssi, diff, None)
                 )
                 if not success:
                     raise RuntimeError("failed to ingest block batch")

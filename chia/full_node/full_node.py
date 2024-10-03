@@ -74,7 +74,6 @@ from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFProof, validate_vdf
-from chia.types.chain_state import ChainState
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
@@ -86,6 +85,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
@@ -609,9 +609,9 @@ class FullNode:
                     ssi, diff = get_next_sub_slot_iters_and_difficulty(
                         self.constants, new_slot, prev_b, self.blockchain
                     )
-                    cs = ChainState(ssi, diff, None)
+                    vs = ValidationState(ssi, diff, None)
                     success, state_change_summary, err = await self.add_block_batch(
-                        response.blocks, peer_info, None, cs
+                        response.blocks, peer_info, None, vs
                     )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
@@ -1099,7 +1099,7 @@ class FullNode:
             prev_b = await self.blockchain.get_full_block(prev_b_hash)
             assert prev_b is not None
             ssi, diff, prev_ses_block = await self.get_sub_slot_iters_difficulty_ses_block(prev_b, None, None)
-        cs = ChainState(ssi, diff, prev_ses_block)
+        vs = ValidationState(ssi, diff, prev_ses_block)
 
         async def fetch_block_batches(
             batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
@@ -1177,13 +1177,13 @@ class FullNode:
                             assert fork_hash is not None
                             fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
-                # The ChainState object (cs) is an in-out parameter. the add_block_batch()
+                # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
                 # call will update it
                 success, state_change_summary, err = await self.add_block_batch(
                     blocks,
                     peer.get_peer_logging(),
                     fork_info,
-                    cs,
+                    vs,
                     summaries,
                 )
                 if success is False:
@@ -1284,7 +1284,7 @@ class FullNode:
         all_blocks: List[FullBlock],
         peer_info: PeerInfo,
         fork_info: Optional[ForkInfo],
-        cs: ChainState,  # in-out parameter
+        vs: ValidationState,  # in-out parameter
         wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
@@ -1301,11 +1301,11 @@ class FullNode:
                 self.blockchain.add_block_record(block_rec)
                 if block_rec.sub_epoch_summary_included:
                     # already validated block, update sub slot iters, difficulty and prev sub epoch summary
-                    cs.prev_ses_block = block_rec
+                    vs.prev_ses_block = block_rec
                     if block_rec.sub_epoch_summary_included.new_sub_slot_iters is not None:
-                        cs.current_ssi = block_rec.sub_epoch_summary_included.new_sub_slot_iters
+                        vs.current_ssi = block_rec.sub_epoch_summary_included.new_sub_slot_iters
                     if block_rec.sub_epoch_summary_included.new_difficulty is not None:
-                        cs.current_difficulty = block_rec.sub_epoch_summary_included.new_difficulty
+                        vs.current_difficulty = block_rec.sub_epoch_summary_included.new_difficulty
 
             if fork_info is None:
                 continue
@@ -1335,6 +1335,9 @@ class FullNode:
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
+        # We have to copy the ValidationState object to preserve it for the add_block()
+        # call below. pre_validate_blocks_multiprocessing() will update the
+        # object we pass in.
         pre_validate_start = time.monotonic()
         pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             self.blockchain.constants,
@@ -1342,7 +1345,7 @@ class FullNode:
             blocks_to_validate,
             self.blockchain.pool,
             {},
-            copy.copy(cs),
+            copy.copy(vs),
             wp_summaries=wp_summaries,
             validate_signatures=True,
         )
@@ -1370,7 +1373,7 @@ class FullNode:
         agg_state_change_summary: Optional[StateChangeSummary] = None
         block_record = await self.blockchain.get_block_record_from_db(blocks_to_validate[0].prev_header_hash)
         for i, block in enumerate(blocks_to_validate):
-            assert cs.prev_ses_block is None or cs.prev_ses_block.height < block.height
+            assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
             assert pre_validation_results[i].required_iters is not None
             state_change_summary: Optional[StateChangeSummary]
             # when adding blocks in batches, we won't have any overlapping
@@ -1384,13 +1387,13 @@ class FullNode:
                         self.constants, True, block_record, self.blockchain
                     )
                     assert cc_sub_slot.new_sub_slot_iters is not None
-                    cs.current_ssi = cc_sub_slot.new_sub_slot_iters
+                    vs.current_ssi = cc_sub_slot.new_sub_slot_iters
                     assert cc_sub_slot.new_difficulty is not None
-                    cs.current_difficulty = cc_sub_slot.new_difficulty
-                    assert expected_sub_slot_iters == cs.current_ssi
-                    assert expected_difficulty == cs.current_difficulty
+                    vs.current_difficulty = cc_sub_slot.new_difficulty
+                    assert expected_sub_slot_iters == vs.current_ssi
+                    assert expected_difficulty == vs.current_difficulty
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], None, cs.current_ssi, fork_info, prev_ses_block=cs.prev_ses_block
+                block, pre_validation_results[i], None, vs.current_ssi, fork_info, prev_ses_block=vs.prev_ses_block
             )
 
             if result == AddBlockResult.NEW_PEAK:
@@ -1420,7 +1423,7 @@ class FullNode:
             block_record = self.blockchain.block_record(block.header_hash)
             assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
-                cs.prev_ses_block = block_record
+                vs.prev_ses_block = block_record
                 if self.weight_proof_handler is not None:
                     await self.weight_proof_handler.create_prev_sub_epoch_segments()
         if agg_state_change_summary is not None:
@@ -1868,7 +1871,7 @@ class FullNode:
                 [block],
                 self.blockchain.pool,
                 block_height_conds_map,
-                ChainState(ssi, diff, prev_ses_block),
+                ValidationState(ssi, diff, prev_ses_block),
                 validate_signatures=False,
             )
             added: Optional[AddBlockResult] = None

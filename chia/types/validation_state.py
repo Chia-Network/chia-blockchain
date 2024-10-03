@@ -8,7 +8,7 @@ from chia.util.ints import uint64
 
 
 @dataclasses.dataclass
-class ChainState:
+class ValidationState:
     current_ssi: uint64
     current_difficulty: uint64
     prev_ses_block: Optional[BlockRecord] = None

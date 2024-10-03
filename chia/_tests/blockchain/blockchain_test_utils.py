@@ -8,8 +8,8 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
-from chia.types.chain_state import ChainState
 from chia.types.full_block import FullBlock
+from chia.types.validation_state import ValidationState
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 
@@ -82,7 +82,7 @@ async def _validate_and_add_block(
             [block],
             blockchain.pool,
             {},
-            ChainState(ssi, diff, prev_ses_block),
+            ValidationState(ssi, diff, prev_ses_block),
             validate_signatures=False,
         )
         assert pre_validation_results is not None

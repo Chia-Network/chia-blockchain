@@ -23,9 +23,9 @@ from chia.server.server import ChiaServer
 from chia.server.ws_connection import ConnectionCallback, WSChiaConnection
 from chia.simulator.block_tools import make_unfinished_block
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.chain_state import ChainState
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
+from chia.types.validation_state import ValidationState
 from chia.util.config import load_config
 from chia.util.ints import uint16
 
@@ -208,7 +208,7 @@ async def run_sync_test(
                                 full_node.constants, True, block_record, full_node.blockchain
                             )
                             success, summary, err = await full_node.add_block_batch(
-                                block_batch, peer_info, None, ChainState(ssi, diff, None)
+                                block_batch, peer_info, None, ValidationState(ssi, diff, None)
                             )
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
