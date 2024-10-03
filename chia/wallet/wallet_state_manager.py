@@ -779,7 +779,8 @@ class WalletStateManager:
                 # That is reserved for when the action to actually claw a tx back or forward is initiated.
                 continue
             for coin in record.removals:
-                removals[coin.name()] = coin
+                if coin not in record.additions:
+                    removals[coin.name()] = coin
         trade_removals: Dict[bytes32, WalletCoinRecord] = await self.trade_manager.get_locked_coins()
         return {**removals, **{coin_id: cr.coin for coin_id, cr in trade_removals.items() if cr.wallet_id == wallet_id}}
 
