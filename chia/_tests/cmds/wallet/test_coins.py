@@ -35,7 +35,7 @@ def test_coins_get_info(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_wallets": [(None,)],
-        "get_synced": [()],
+        "get_sync_status": [()],
         "get_spendable_coins": [
             (
                 1,
@@ -114,7 +114,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
     )
     expected_calls: logType = {
         "get_wallets": [(None,)],
-        "get_synced": [()],
+        "get_sync_status": [()],
         "combine_coins": [
             (
                 expected_request,
@@ -168,7 +168,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_wallets": [(None,)],
-        "get_synced": [()],
+        "get_sync_status": [()],
         "split_coins": [
             (
                 SplitCoins(

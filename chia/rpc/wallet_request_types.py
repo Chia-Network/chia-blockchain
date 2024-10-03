@@ -10,6 +10,7 @@ from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
@@ -145,6 +146,44 @@ class CheckDeleteKeyResponse(Streamable):
     used_for_farmer_rewards: bool
     used_for_pool_rewards: bool
     wallet_balance: bool
+
+
+@streamable
+@dataclass(frozen=True)
+class SetWalletResyncOnStartup(Streamable):
+    enable: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class GetSyncStatusResponse(Streamable):
+    synced: bool
+    syncing: bool
+    genesis_initialized: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class GetHeightInfoResponse(Streamable):
+    height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class PushTX(Streamable):
+    spend_bundle: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTimestampForHeight(Streamable):
+    height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTimestampForHeightResponse(Streamable):
+    timestamp: uint64
 
 
 @streamable
@@ -385,6 +424,7 @@ class ExecuteSigningInstructionsResponse(Streamable):
 class TransactionEndpointRequest(Streamable):
     fee: uint64 = uint64(0)
     push: Optional[bool] = None
+    sign: Optional[bool] = None
 
     def to_json_dict(self, _avoid_ban: bool = False) -> Dict[str, Any]:
         if not _avoid_ban:
@@ -410,6 +450,36 @@ class TransactionEndpointRequest(Streamable):
 class TransactionEndpointResponse(Streamable):
     unsigned_transactions: List[UnsignedTransaction]
     transactions: List[TransactionRecord]
+
+
+@streamable
+@dataclass(frozen=True)
+class PushTransactions(TransactionEndpointRequest):
+    transactions: List[TransactionRecord] = field(default_factory=default_raise)
+    push: Optional[bool] = True
+
+    # We allow for flexibility in transaction parsing here so we need to override
+    @classmethod
+    def from_json_dict(cls, json_dict: Dict[str, Any]) -> PushTransactions:
+        transactions: List[TransactionRecord] = []
+        for transaction_hexstr_or_json in json_dict["transactions"]:
+            if isinstance(transaction_hexstr_or_json, str):
+                tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr_or_json))
+            else:
+                try:
+                    tx = TransactionRecord.from_json_dict_convenience(transaction_hexstr_or_json)
+                except AttributeError:
+                    tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
+            transactions.append(tx)
+
+        json_dict["transactions"] = [tx.to_json_dict() for tx in transactions]
+        return super().from_json_dict(json_dict)
+
+
+@streamable
+@dataclass(frozen=True)
+class PushTransactionsResponse(TransactionEndpointResponse):
+    pass
 
 
 @streamable

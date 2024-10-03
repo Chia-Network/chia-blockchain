@@ -40,7 +40,7 @@ async def async_list(
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
             return
-        if not await wallet_client.get_synced():
+        if not (await wallet_client.get_sync_status()).synced:
             print("Wallet not synced. Please wait.")
             return
         conf_coins, unconfirmed_removals, unconfirmed_additions = await wallet_client.get_spendable_coins(
@@ -136,7 +136,7 @@ async def async_combine(
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
             return []
-        if not await wallet_client.get_synced():
+        if not (await wallet_client.get_sync_status()).synced:
             print("Wallet not synced. Please wait.")
             return []
 
@@ -206,7 +206,7 @@ async def async_split(
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
             return []
-        if not await wallet_client.get_synced():
+        if not (await wallet_client.get_sync_status()).synced:
             print("Wallet not synced. Please wait.")
             return []
 
