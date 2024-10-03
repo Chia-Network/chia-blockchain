@@ -20,7 +20,7 @@ def test_tx_out_cmd() -> None:
 
     runner: CliRunner = CliRunner()
     with runner.isolated_filesystem():
-        runner.invoke(test_cmd, ["--transaction-file", "./temp.transaction"])
+        runner.invoke(test_cmd, ["--transaction-file-out", "./temp.transaction"])
         with open("./temp.transaction", "rb") as file:
             assert TransactionBundle.from_bytes(file.read()) == TransactionBundle([STD_TX, STD_TX])
         with open("./temp.push") as file2:

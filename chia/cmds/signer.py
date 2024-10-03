@@ -4,7 +4,6 @@ import itertools
 import os
 import time
 from dataclasses import replace
-from functools import cached_property
 from pathlib import Path
 from threading import Event, Thread
 from typing import List, Sequence, Type, TypeVar
@@ -14,8 +13,7 @@ from chia_rs import AugSchemeMPL, G2Element
 from hsms.util.byte_chunks import create_chunks_for_blob, optimal_chunk_size_for_max_chunk_size
 from segno import QRCode, make_qr
 
-from chia.cmds.cmd_classes import NeedsWalletRPC, chia_command, command_helper, option
-from chia.cmds.cmds_util import TransactionBundle
+from chia.cmds.cmd_classes import NeedsWalletRPC, TransactionsIn, TransactionsOut, chia_command, command_helper, option
 from chia.cmds.wallet import wallet_cmd
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
 from chia.rpc.wallet_request_types import ApplySignatures, ExecuteSigningInstructions, GatherSigningInfo
@@ -84,37 +82,6 @@ class QrCodeDisplay:
                 stop_event.set()
                 t.join()
                 stop_event.clear()
-
-
-@command_helper
-class TransactionsIn:
-    transaction_file_in: str = option(
-        "--transaction-file-in",
-        "-i",
-        type=str,
-        help="Transaction file to use as input",
-        required=True,
-    )
-
-    @cached_property
-    def transaction_bundle(self) -> TransactionBundle:
-        with open(Path(self.transaction_file_in), "rb") as file:
-            return TransactionBundle.from_bytes(file.read())
-
-
-@command_helper
-class TransactionsOut:
-    transaction_file_out: str = option(
-        "--transaction-file-out",
-        "-o",
-        type=str,
-        help="Transaction filename to use as output",
-        required=True,
-    )
-
-    def handle_transaction_output(self, output: List[TransactionRecord]) -> None:
-        with open(Path(self.transaction_file_out), "wb") as file:
-            file.write(bytes(TransactionBundle(output)))
 
 
 @command_helper
