@@ -13,7 +13,7 @@ from chia_rs import AugSchemeMPL, SpendBundleConditions
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlocksProtocol
+from chia.consensus.blockchain_interface import BlockRecordsProtocol, BlocksProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.full_block_to_block_record import block_to_block_record
@@ -30,7 +30,6 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
-from chia.util.block_cache import BlockCache
 from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
@@ -52,7 +51,7 @@ class PreValidationResult(Streamable):
 
 def pre_validate_block(
     constants: ConsensusConstants,
-    blocks: Dict[bytes32, BlockRecord],
+    blockchain: BlockRecordsProtocol,
     block: FullBlock,
     prev_generators: Optional[List[bytes]],
     conds: Optional[SpendBundleConditions],
@@ -95,7 +94,7 @@ def pre_validate_block(
         header_block = get_block_header(block, tx_additions, removals)
         required_iters, error = validate_finished_header_block(
             constants,
-            BlockCache(blocks),
+            blockchain,
             header_block,
             True,  # check_filter
             expected_difficulty,
@@ -162,33 +161,11 @@ async def pre_validate_blocks_multiprocessing(
     """
     prev_b: Optional[BlockRecord] = None
 
-    # Collects all the recent blocks (up to the previous sub-epoch)
-    recent_blocks: Dict[bytes32, BlockRecord] = {}
-    num_sub_slots_found = 0
-    num_blocks_seen = 0
-
     if blocks[0].height > 0:
         curr = block_records.try_block_record(blocks[0].prev_header_hash)
         if curr is None:
             return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
         prev_b = curr
-        num_sub_slots_to_look_for = 3 if curr.overflow else 2
-        header_hash = curr.header_hash
-        while (
-            curr.sub_epoch_summary_included is None
-            or num_blocks_seen < constants.NUMBER_OF_TIMESTAMPS
-            or num_sub_slots_found < num_sub_slots_to_look_for
-        ) and curr.height > 0:
-            if curr.first_in_sub_slot:
-                assert curr.finished_challenge_slot_hashes is not None
-                num_sub_slots_found += len(curr.finished_challenge_slot_hashes)
-            recent_blocks[header_hash] = curr
-            if curr.is_transaction_block:
-                num_blocks_seen += 1
-            header_hash = curr.prev_hash
-            curr = block_records.block_record(curr.prev_hash)
-            assert curr is not None
-        recent_blocks[header_hash] = curr
 
     # the agumented blockchain object will let us add temporary block records
     # they won't actually be added to the underlying blockchain object
@@ -204,7 +181,7 @@ async def pre_validate_blocks_multiprocessing(
             if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
                 vs.current_ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
-        challenge = get_block_challenge(constants, block, BlockCache(recent_blocks), prev_b is None, overflow, False)
+        challenge = get_block_challenge(constants, block, blockchain, prev_b is None, overflow, False)
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             cc_sp_hash: bytes32 = challenge
         else:
@@ -242,7 +219,6 @@ async def pre_validate_blocks_multiprocessing(
                 log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
                 return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
 
-        recent_blocks[block_rec.header_hash] = block_rec
         blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
         prev_b = block_rec
         diff_ssis.append(copy.copy(vs))
@@ -276,7 +252,7 @@ async def pre_validate_blocks_multiprocessing(
                 pool,
                 pre_validate_block,
                 constants,
-                recent_blocks,
+                blockchain,
                 block,
                 previous_generators,
                 block_height_conds_map.get(block.height),
