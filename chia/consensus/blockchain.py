@@ -1068,12 +1068,12 @@ class Blockchain:
         # need to find the fork point
         peak_block = await self.get_block_record_from_db(header_hash)
         assert peak_block is not None
-        height_hash = None
+        height_hash: Optional[bytes32] = None
         try:
             height_hash = self.height_to_hash(peak_block.height)
         except Exception:
             log.info(f"No header hash found for heigh {peak_block.height}. We must be on a fork.")
-        if height_hash != header_hash:
+        if height_hash != header_hash:  # we are on a fork
             peak: Optional[BlockRecord] = self.get_peak()
             assert peak is not None
             reorg_chain: Dict[uint32, bytes32]
