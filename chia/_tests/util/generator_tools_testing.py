@@ -19,7 +19,7 @@ def run_and_get_removals_and_additions(
     *,
     height: uint32,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
-    mempool_mode=False,
+    mempool_mode: bool = False,
 ) -> Tuple[List[bytes32], List[Coin]]:
     removals: List[bytes32] = []
     additions: List[Coin] = []
