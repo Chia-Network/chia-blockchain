@@ -35,7 +35,7 @@ ANY_PROGRAM = Program.to(None)
     ],
 )
 @pytest.mark.parametrize(
-    "custody",
+    "puzzle",
     [
         UnknownPuzzle(PuzzleHint(ANY_HASH, ANY_PROGRAM)),
         MofN(
@@ -65,11 +65,11 @@ ANY_PROGRAM = Program.to(None)
         ),
     ],
 )
-def test_back_and_forth_hint_parsing(restrictions: List[Restriction], custody: Puzzle) -> None:
+def test_back_and_forth_hint_parsing(restrictions: List[Restriction], puzzle: Puzzle) -> None:
     cwr = PuzzleWithRestrictions(
         nonce=0,
         restrictions=restrictions,
-        custody=custody,
+        puzzle=puzzle,
     )
 
     assert PuzzleWithRestrictions.from_memo(cwr.memo()) == cwr
@@ -125,7 +125,7 @@ def test_unknown_puzzle_behavior() -> None:
     unknown_puzzle_3 = UnknownPuzzle(PuzzleHint(BUNCH_OF_THREES, ANY_PROGRAM))
     pwr = replace(
         pwr,
-        custody=MofN(
+        puzzle=MofN(
             m=1,
             members=[PuzzleWithRestrictions(0, [], unknown_puzzle_0), PuzzleWithRestrictions(0, [], unknown_puzzle_3)],
         ),

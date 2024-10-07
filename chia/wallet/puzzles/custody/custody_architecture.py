@@ -39,16 +39,16 @@ class PuzzleHint:
 @dataclass(frozen=True)
 class UnknownPuzzle:
 
-    custody_hint: PuzzleHint
+    puzzle_hint: PuzzleHint
 
     def memo(self, nonce: int) -> Program:
-        return self.custody_hint.memo
+        return self.puzzle_hint.memo
 
     def puzzle(self, nonce: int) -> Program:
-        raise NotImplementedError("An unknown custody type cannot generate a puzzle reveal")
+        raise NotImplementedError("An unknown puzzle type cannot generate a puzzle reveal")
 
     def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.custody_hint.puzhash
+        return self.puzzle_hint.puzhash
 
 
 # A spec for "restrictions" on specific inner puzzles
@@ -145,7 +145,7 @@ class MofN:
 class PuzzleWithRestrictions:
     nonce: int
     restrictions: List[Restriction]
-    custody: Puzzle
+    puzzle: Puzzle
 
     def memo(self) -> Program:
         restriction_hints: List[RestrictionHint] = [
@@ -155,42 +155,42 @@ class PuzzleWithRestrictions:
             for restriction in self.restrictions
         ]
 
-        custody_hint: Union[MofNHint, PuzzleHint]
-        if isinstance(self.custody, MofN):
-            custody_hint = MofNHint(self.custody.m, [member.memo() for member in self.custody.members])
+        puzzle_hint: Union[MofNHint, PuzzleHint]
+        if isinstance(self.puzzle, MofN):
+            puzzle_hint = MofNHint(self.puzzle.m, [member.memo() for member in self.puzzle.members])
         else:
-            custody_hint = PuzzleHint(
-                self.custody.puzzle_hash(self.nonce),
-                self.custody.memo(self.nonce),
+            puzzle_hint = PuzzleHint(
+                self.puzzle.puzzle_hash(self.nonce),
+                self.puzzle.memo(self.nonce),
             )
 
         return Program.to(
             [
                 self.nonce,
                 [hint.to_program() for hint in restriction_hints],
-                1 if isinstance(self.custody, MofN) else 0,
-                custody_hint.to_program(),
+                1 if isinstance(self.puzzle, MofN) else 0,
+                puzzle_hint.to_program(),
             ]
         )
 
     @classmethod
     def from_memo(cls, memo: Program) -> PuzzleWithRestrictions:
-        nonce, restriction_hints_prog, further_branching_prog, custody_hint_prog = memo.as_iter()
+        nonce, restriction_hints_prog, further_branching_prog, puzzle_hint_prog = memo.as_iter()
         restriction_hints = [RestrictionHint.from_program(hint) for hint in restriction_hints_prog.as_iter()]
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
-            m_of_n_hint = MofNHint.from_program(custody_hint_prog)
-            custody: Puzzle = MofN(
+            m_of_n_hint = MofNHint.from_program(puzzle_hint_prog)
+            puzzle: Puzzle = MofN(
                 m_of_n_hint.m, [PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
             )
         else:
-            custody_hint = PuzzleHint.from_program(custody_hint_prog)
-            custody = UnknownPuzzle(custody_hint)
+            puzzle_hint = PuzzleHint.from_program(puzzle_hint_prog)
+            puzzle = UnknownPuzzle(puzzle_hint)
 
         return PuzzleWithRestrictions(
             nonce.as_int(),
             [UnknownRestriction(hint) for hint in restriction_hints],
-            custody,
+            puzzle,
         )
 
     @property
@@ -200,12 +200,12 @@ class PuzzleWithRestrictions:
         }
 
         unknown_puzzles: Mapping[bytes32, Union[UnknownPuzzle, UnknownRestriction]]
-        if isinstance(self.custody, UnknownPuzzle):
-            unknown_puzzles = {self.custody.custody_hint.puzhash: self.custody}
-        elif isinstance(self.custody, MofN):
+        if isinstance(self.puzzle, UnknownPuzzle):
+            unknown_puzzles = {self.puzzle.puzzle_hint.puzhash: self.puzzle}
+        elif isinstance(self.puzzle, MofN):
             unknown_puzzles = {
                 uph: up
-                for puz_w_restriction in self.custody.members
+                for puz_w_restriction in self.puzzle.members
                 for uph, up in puz_w_restriction.unknown_puzzles.items()
             }
         else:
@@ -226,14 +226,14 @@ class PuzzleWithRestrictions:
                 new_restrictions.append(restriction)
 
         new_puzzle: Puzzle
-        if isinstance(self.custody, UnknownPuzzle) and self.custody.custody_hint.puzhash in puzzle_dict:
-            new_puzzle = puzzle_dict[self.custody.custody_hint.puzhash]
-        elif isinstance(self.custody, MofN):
+        if isinstance(self.puzzle, UnknownPuzzle) and self.puzzle.puzzle_hint.puzhash in puzzle_dict:
+            new_puzzle = puzzle_dict[self.puzzle.puzzle_hint.puzhash]
+        elif isinstance(self.puzzle, MofN):
             new_puzzle = replace(
-                self.custody, members=[puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.custody.members]
+                self.puzzle, members=[puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.puzzle.members]
             )
         else:
-            new_puzzle = self.custody
+            new_puzzle = self.puzzle
 
         return PuzzleWithRestrictions(
             self.nonce,
@@ -241,6 +241,6 @@ class PuzzleWithRestrictions:
             new_puzzle,
         )
 
-    def puzzle(self) -> Program: ...  # type: ignore[empty-body]
+    def puzzle_reveal(self) -> Program: ...  # type: ignore[empty-body]
 
     def puzzle_hash(self) -> bytes32: ...  # type: ignore[empty-body]
