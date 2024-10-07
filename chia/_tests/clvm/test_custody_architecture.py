@@ -7,10 +7,10 @@ import pytest
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.custody.custody_architecture import (
-    CustodyHint,
     CustodyWithRestrictions,
     MofN,
     Puzzle,
+    PuzzleHint,
     Restriction,
     RestrictionHint,
     UnknownPuzzle,
@@ -36,18 +36,18 @@ ANY_PROGRAM = Program.to(None)
 @pytest.mark.parametrize(
     "custody",
     [
-        UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM)),
+        UnknownPuzzle(PuzzleHint(ANY_HASH, ANY_PROGRAM)),
         MofN(
             1,
             [
-                CustodyWithRestrictions(1, [], UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM))),
+                CustodyWithRestrictions(1, [], UnknownPuzzle(PuzzleHint(ANY_HASH, ANY_PROGRAM))),
                 CustodyWithRestrictions(
                     2,
                     [
                         UnknownRestriction(RestrictionHint(True, ANY_HASH, ANY_PROGRAM)),
                         UnknownRestriction(RestrictionHint(True, ANY_HASH, ANY_PROGRAM)),
                     ],
-                    UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM)),
+                    UnknownPuzzle(PuzzleHint(ANY_HASH, ANY_PROGRAM)),
                 ),
             ],
         ),
@@ -55,10 +55,10 @@ ANY_PROGRAM = Program.to(None)
             2,
             [
                 CustodyWithRestrictions(
-                    1, [], MofN(1, [CustodyWithRestrictions(3, [], UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM)))])
+                    1, [], MofN(1, [CustodyWithRestrictions(3, [], UnknownPuzzle(PuzzleHint(ANY_HASH, ANY_PROGRAM)))])
                 ),
                 CustodyWithRestrictions(
-                    4, [], MofN(1, [CustodyWithRestrictions(5, [], UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM)))])
+                    4, [], MofN(1, [CustodyWithRestrictions(5, [], UnknownPuzzle(PuzzleHint(ANY_HASH, ANY_PROGRAM)))])
                 ),
             ],
         ),

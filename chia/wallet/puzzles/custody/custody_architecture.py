@@ -19,7 +19,7 @@ class Puzzle(Protocol):
 @dataclass(frozen=True)
 class UnknownPuzzle:
 
-    custody_hint: CustodyHint
+    custody_hint: PuzzleHint
 
     def memo(self, nonce: int) -> Program:
         return self.custody_hint.memo
@@ -101,7 +101,7 @@ class MofNHint:
 
 
 @dataclass(frozen=True)
-class CustodyHint:
+class PuzzleHint:
     puzhash: bytes32
     memo: Program
 
@@ -109,9 +109,9 @@ class CustodyHint:
         return Program.to([self.puzhash, self.memo])
 
     @classmethod
-    def from_program(cls, prog: Program) -> CustodyHint:
+    def from_program(cls, prog: Program) -> PuzzleHint:
         puzhash, memo = prog.as_iter()
-        return CustodyHint(
+        return PuzzleHint(
             bytes32(puzhash.as_atom()),
             memo,
         )
@@ -131,11 +131,11 @@ class CustodyWithRestrictions:
             for restriction in self.restrictions
         ]
 
-        custody_hint: Union[MofNHint, CustodyHint]
+        custody_hint: Union[MofNHint, PuzzleHint]
         if isinstance(self.custody, MofN):
             custody_hint = MofNHint(self.custody.m, [member.memo() for member in self.custody.members])
         else:
-            custody_hint = CustodyHint(
+            custody_hint = PuzzleHint(
                 self.custody.puzzle_hash(self.nonce),
                 self.custody.memo(self.nonce),
             )
@@ -160,7 +160,7 @@ class CustodyWithRestrictions:
                 m_of_n_hint.m, [CustodyWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
             )
         else:
-            custody_hint = CustodyHint.from_program(custody_hint_prog)
+            custody_hint = PuzzleHint.from_program(custody_hint_prog)
             custody = UnknownPuzzle(custody_hint)
 
         return CustodyWithRestrictions(
