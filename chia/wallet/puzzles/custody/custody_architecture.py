@@ -7,6 +7,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
+# General (inner) puzzle driver spec
 class Puzzle(Protocol):
 
     def memo(self, nonce: int) -> Program: ...
@@ -14,6 +15,23 @@ class Puzzle(Protocol):
     def puzzle(self, nonce: int) -> Program: ...
 
     def puzzle_hash(self, nonce: int) -> bytes32: ...
+
+
+@dataclass(frozen=True)
+class PuzzleHint:
+    puzhash: bytes32
+    memo: Program
+
+    def to_program(self) -> Program:
+        return Program.to([self.puzhash, self.memo])
+
+    @classmethod
+    def from_program(cls, prog: Program) -> PuzzleHint:
+        puzhash, memo = prog.as_iter()
+        return PuzzleHint(
+            bytes32(puzhash.as_atom()),
+            memo,
+        )
 
 
 @dataclass(frozen=True)
@@ -31,6 +49,7 @@ class UnknownPuzzle:
         return self.custody_hint.puzhash
 
 
+# A spec for "restrictions" on specific inner puzzles
 class Restriction(Puzzle, Protocol):
     @property
     def _morpher_not_validator(self) -> bool: ...
@@ -44,24 +63,6 @@ def morpher(cls: Type[Puzzle]) -> Type[Restriction]:
 def validator(cls: Type[Puzzle]) -> Type[Restriction]:
     setattr(cls, "_morpher_not_validator", False)
     return cast(Type[Restriction], cls)
-
-
-@dataclass(frozen=True)
-class UnknownRestriction:
-    restriction_hint: RestrictionHint
-
-    @property
-    def _morpher_not_validator(self) -> bool:
-        return self.restriction_hint.morpher_not_validator
-
-    def memo(self, nonce: int) -> Program:
-        return self.restriction_hint.memo
-
-    def puzzle(self, nonce: int) -> Program:
-        raise NotImplementedError("An unknown restriction type cannot generate a puzzle reveal")
-
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.restriction_hint.puzhash
 
 
 @dataclass(frozen=True)
@@ -84,6 +85,25 @@ class RestrictionHint:
 
 
 @dataclass(frozen=True)
+class UnknownRestriction:
+    restriction_hint: RestrictionHint
+
+    @property
+    def _morpher_not_validator(self) -> bool:
+        return self.restriction_hint.morpher_not_validator
+
+    def memo(self, nonce: int) -> Program:
+        return self.restriction_hint.memo
+
+    def puzzle(self, nonce: int) -> Program:
+        raise NotImplementedError("An unknown restriction type cannot generate a puzzle reveal")
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.restriction_hint.puzhash
+
+
+# MofN puzzle drivers which are a fundamental component of the architecture
+@dataclass(frozen=True)
 class MofNHint:
     m: int
     member_memos: List[Program]
@@ -101,22 +121,23 @@ class MofNHint:
 
 
 @dataclass(frozen=True)
-class PuzzleHint:
-    puzhash: bytes32
-    memo: Program
+class MofN:
+    m: int
+    members: List[PuzzleWithRestrictions]
 
-    def to_program(self) -> Program:
-        return Program.to([self.puzhash, self.memo])
+    @property
+    def n(self) -> int:
+        return len(self.members)
 
-    @classmethod
-    def from_program(cls, prog: Program) -> PuzzleHint:
-        puzhash, memo = prog.as_iter()
-        return PuzzleHint(
-            bytes32(puzhash.as_atom()),
-            memo,
-        )
+    def memo(self, nonce: int) -> Program:
+        raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
+
+    def puzzle(self, nonce: int) -> Program: ...  # type: ignore[empty-body]
+
+    def puzzle_hash(self, nonce: int) -> bytes32: ...  # type: ignore[empty-body]
 
 
+# The top-level object inside every "outer" puzzle
 @dataclass(frozen=True)
 class PuzzleWithRestrictions:
     nonce: int
@@ -172,20 +193,3 @@ class PuzzleWithRestrictions:
     def puzzle(self) -> Program: ...  # type: ignore[empty-body]
 
     def puzzle_hash(self) -> bytes32: ...  # type: ignore[empty-body]
-
-
-@dataclass(frozen=True)
-class MofN:
-    m: int
-    members: List[PuzzleWithRestrictions]
-
-    @property
-    def n(self) -> int:
-        return len(self.members)
-
-    def memo(self, nonce: int) -> Program:
-        raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
-
-    def puzzle(self, nonce: int) -> Program: ...  # type: ignore[empty-body]
-
-    def puzzle_hash(self, nonce: int) -> bytes32: ...  # type: ignore[empty-body]
