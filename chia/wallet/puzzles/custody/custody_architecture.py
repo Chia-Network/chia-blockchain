@@ -118,7 +118,7 @@ class PuzzleHint:
 
 
 @dataclass(frozen=True)
-class CustodyWithRestrictions:
+class PuzzleWithRestrictions:
     nonce: int
     restrictions: List[Restriction]
     custody: Puzzle
@@ -150,20 +150,20 @@ class CustodyWithRestrictions:
         )
 
     @classmethod
-    def from_memo(cls, memo: Program) -> CustodyWithRestrictions:
+    def from_memo(cls, memo: Program) -> PuzzleWithRestrictions:
         nonce, restriction_hints_prog, further_branching_prog, custody_hint_prog = memo.as_iter()
         restriction_hints = [RestrictionHint.from_program(hint) for hint in restriction_hints_prog.as_iter()]
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
             m_of_n_hint = MofNHint.from_program(custody_hint_prog)
             custody: Puzzle = MofN(
-                m_of_n_hint.m, [CustodyWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
+                m_of_n_hint.m, [PuzzleWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
             )
         else:
             custody_hint = PuzzleHint.from_program(custody_hint_prog)
             custody = UnknownPuzzle(custody_hint)
 
-        return CustodyWithRestrictions(
+        return PuzzleWithRestrictions(
             nonce.as_int(),
             [UnknownRestriction(hint) for hint in restriction_hints],
             custody,
@@ -177,14 +177,14 @@ class CustodyWithRestrictions:
 @dataclass(frozen=True)
 class MofN:
     m: int
-    members: List[CustodyWithRestrictions]
+    members: List[PuzzleWithRestrictions]
 
     @property
     def n(self) -> int:
         return len(self.members)
 
     def memo(self, nonce: int) -> Program:
-        raise NotImplementedError("CustodyWithRestrictions handles MofN memos, this method should not be called")
+        raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
 
     def puzzle(self, nonce: int) -> Program: ...  # type: ignore[empty-body]
 
