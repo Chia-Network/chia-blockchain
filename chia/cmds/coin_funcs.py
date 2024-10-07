@@ -128,6 +128,7 @@ async def async_combine(
     largest_first: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
+    override: bool,
 ) -> List[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         try:
@@ -166,6 +167,14 @@ async def async_combine(
             tx_config,
             timelock_info=condition_valid_times,
         )
+
+        if (
+            not override
+            and wallet_id == 1
+            and fee >= sum(coin.amount for tx in resp.transactions for coin in tx.removals)
+        ):
+            print("Fee is >= the amount of coins selected. To continue, please use --override flag.")
+            return []
 
         print(f"Transactions would combine up to {number_of_coins} coins.")
         if push:
