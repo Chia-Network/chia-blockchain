@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from typing import List, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -12,6 +13,9 @@ from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.rpc.wallet_request_types import DIDGetCurrentCoinInfo, DIDGetRecoveryInfo
 from chia.rpc.wallet_rpc_api import WalletRpcApi
+from chia.server.server import ChiaServer
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -26,6 +30,7 @@ from chia.wallet.singleton import create_singleton_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -46,8 +51,8 @@ class TestDIDWallet:
     )
     @pytest.mark.anyio
     async def test_creation_from_coin_spend(
-        self, self_hostname, two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets, trusted
-    ):
+        self, self_hostname: str, two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets, trusted: bool
+    ) -> None:
         """
         Verify that DIDWallet.create_new_did_wallet_from_coin_spend() is called after Singleton creation on
         the blockchain, and that the wallet is created in the second wallet node.
@@ -769,7 +774,7 @@ class TestDIDWallet:
             ]
         )
         coin = await did_wallet.get_coin()
-        info = Program.to([])
+        info: List[Tuple[bytes, bytes, int]] = []
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         with pytest.raises(Exception):  # We expect a CLVM 80 error for this test
             async with did_wallet.wallet_state_manager.new_action_scope(
@@ -778,7 +783,7 @@ class TestDIDWallet:
                 await did_wallet.recovery_spend(
                     coin,
                     ph,
-                    info,  # type: ignore
+                    info,
                     pubkey,
                     WalletSpendBundle([], AugSchemeMPL.aggregate([])),
                     action_scope,
@@ -966,6 +971,8 @@ class TestDIDWallet:
             ]
         )
 
+        await time_out_assert(15, did_wallet.get_confirmed_balance, 101)
+        await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         recovery_list = [bytes32.from_hexstr(did_wallet.get_my_DID())]
 
         async with wallet_1.wallet_state_manager.new_action_scope(
@@ -1353,6 +1360,165 @@ class TestDIDWallet:
             await did_wallet_2.get_coin(),
             new_puzhash,
         )
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.anyio
+    async def test_did_auto_transfer_limit(
+        self,
+        self_hostname: str,
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        trusted: bool,
+    ) -> None:
+        fee = uint64(1000)
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+        api_1 = WalletRpcApi(wallet_node_2)
+        ph = await wallet.get_new_puzzlehash()
+
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
+        await full_node_api.farm_blocks_to_wallet(1, wallet)
+
+        # Check that we cap out at 10 DID Wallets automatically created upon transfer received
+        for i in range(0, 14):
+            async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+                did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
+                    wallet_node.wallet_state_manager,
+                    wallet,
+                    uint64(101),
+                    action_scope,
+                    [bytes32(bytes(ph))],
+                    uint64(1),
+                    {"Twitter": "Test", "GitHub": "测试"},
+                    fee=fee,
+                )
+            assert did_wallet_1.get_name() == "Profile 1"
+            await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+            await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
+            await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
+            await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
+            # Transfer DID
+            assert did_wallet_1.did_info.origin_coin is not None
+            origin_coin = did_wallet_1.did_info.origin_coin
+            new_puzhash = await wallet2.get_new_puzzlehash()
+            async with did_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+                await did_wallet_1.transfer_did(new_puzhash, fee, False, action_scope)
+            await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+            await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
+            # Check if the DID wallet is created in the wallet2
+
+            await time_out_assert(
+                30, get_wallet_num, min(2 + i, 11), wallet_node_2.wallet_state_manager
+            )  # check we haven't made more than 10 DID wallets
+            await time_out_assert(30, get_wallet_num, 1, wallet_node.wallet_state_manager)
+        # Get the new DID wallets
+        did_wallets = list(
+            filter(
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+                await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+            )
+        )
+
+        assert len(did_wallets) == 10
+        # Test we can use the DID
+        did_wallet_10 = wallet_node_2.wallet_state_manager.get_wallet(
+            id=uint32(did_wallets[9].id), required_type=DIDWallet
+        )
+        # Delete the coin and change inner puzzle
+        coin = await did_wallet_10.get_coin()
+        # origin_coin = did_wallet_10.did_info.origin_coin
+        backup_data = did_wallet_10.create_backup()
+        await wallet_node_2.wallet_state_manager.coin_store.delete_coin_record(coin.name())
+        await time_out_assert(15, did_wallet_10.get_confirmed_balance, 0)
+        await wallet_node_2.wallet_state_manager.user_store.delete_wallet(did_wallet_10.wallet_info.id)
+        wallet_node_2.wallet_state_manager.wallets.pop(did_wallet_10.wallet_info.id)
+        # Recover the coin
+        async with wallet_node_2.wallet_state_manager.lock:
+            did_wallet_10 = await DIDWallet.create_new_did_wallet_from_recovery(
+                wallet_node_2.wallet_state_manager,
+                wallet2,
+                backup_data,
+            )
+        assert did_wallet_10.did_info.origin_coin is not None
+        resp = await api_1.did_find_lost_did({"coin_id": did_wallet_10.did_info.origin_coin.name().hex()})
+        assert resp["success"]
+        await time_out_assert(15, did_wallet_10.get_confirmed_balance, 101)
+        await time_out_assert(15, did_wallet_10.get_unconfirmed_balance, 101)
+
+        # Check we can recover an auto-discarded DID
+        did_wallet_9 = wallet_node_2.wallet_state_manager.get_wallet(
+            id=uint32(did_wallets[8].id), required_type=DIDWallet
+        )
+        # Delete the coin and wallet to make space for a auto-discarded DID
+        coin = await did_wallet_9.get_coin()
+        await wallet_node_2.wallet_state_manager.coin_store.delete_coin_record(coin.name())
+        await time_out_assert(15, did_wallet_9.get_confirmed_balance, 0)
+        await wallet_node_2.wallet_state_manager.user_store.delete_wallet(did_wallet_9.wallet_info.id)
+        wallet_node_2.wallet_state_manager.wallets.pop(did_wallet_9.wallet_info.id)
+
+        did_wallets = list(
+            filter(
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+                await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+            )
+        )
+        assert len(did_wallets) == 9
+
+        # Try and find lost coin
+        resp = await api_1.did_find_lost_did({"coin_id": origin_coin.name().hex()})
+        did_wallets = list(
+            filter(
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+                await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+            )
+        )
+        assert len(did_wallets) == 10
+
+        # Check we can still manually add new DIDs while at cap
+        await full_node_api.farm_blocks_to_wallet(1, wallet2)
+        ph = await wallet2.get_new_puzzlehash()
+        async with wallet2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+            did_wallet_11: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node_2.wallet_state_manager,
+                wallet2,
+                uint64(101),
+                action_scope,
+                [bytes32(bytes(ph))],
+                uint64(1),
+                {"Twitter": "Test", "GitHub": "测试"},
+                fee=fee,
+            )
+        await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
+        await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node, wallet_node_2])
+        await time_out_assert(15, did_wallet_11.get_confirmed_balance, 101)
+        await time_out_assert(15, did_wallet_11.get_unconfirmed_balance, 101)
+
+        did_wallets = list(
+            filter(
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+                await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
+            )
+        )
+        assert len(did_wallets) == 11
 
     @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")
     @pytest.mark.parametrize("wallet_environments", [{"num_environments": 1, "blocks_needed": [1]}], indirect=True)
@@ -1811,6 +1977,7 @@ class TestDIDWallet:
         # Test general string
         assert did_wallet_1.did_info.origin_coin is not None  # mypy
         message = "Hello World"
+        assert did_wallet_1.did_info.origin_coin is not None
         response = await api_0.sign_message_by_id(
             {
                 "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
@@ -1842,6 +2009,7 @@ class TestDIDWallet:
 
         # Test BLS sign string
         message = "Hello World"
+        assert did_wallet_1.did_info.origin_coin is not None
         response = await api_0.sign_message_by_id(
             {
                 "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
@@ -1858,6 +2026,7 @@ class TestDIDWallet:
         )
         # Test BLS sign hex
         message = "0123456789ABCDEF"
+        assert did_wallet_1.did_info.origin_coin is not None
         response = await api_0.sign_message_by_id(
             {
                 "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
@@ -1878,7 +2047,9 @@ class TestDIDWallet:
         [True, False],
     )
     @pytest.mark.anyio
-    async def test_create_did_with_recovery_list(self, self_hostname, two_nodes_two_wallets_with_same_keys, trusted):
+    async def test_create_did_with_recovery_list(
+        self, self_hostname: str, two_nodes_two_wallets_with_same_keys: OldSimulatorsAndWallets, trusted: bool
+    ) -> None:
         """
         A DID is created on-chain in client0, causing a DID Wallet to be created in client1, which shares the same key.
         This can happen if someone uses the same key on multiple computers, or is syncing a wallet from scratch.
@@ -1922,7 +2093,7 @@ class TestDIDWallet:
 
         # Node 0 sets up a DID Wallet with a backup set, but num_of_backup_ids_needed=0
         # (a malformed solution, but legal for the clvm puzzle)
-        recovery_list = [bytes.fromhex("00" * 32)]
+        recovery_list = [bytes32(bytes.fromhex("00" * 32))]
         async with wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             did_wallet_0: DIDWallet = await DIDWallet.create_new_did_wallet(
                 wallet_node_0.wallet_state_manager,
@@ -1930,7 +2101,7 @@ class TestDIDWallet:
                 uint64(101),
                 action_scope,
                 backups_ids=recovery_list,
-                num_of_backup_ids_needed=0,
+                num_of_backup_ids_needed=uint64(0),
             )
 
         await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
@@ -1962,7 +2133,12 @@ class TestDIDWallet:
         [True, False],
     )
     @pytest.mark.anyio
-    async def test_did_resync(self, self_hostname, two_wallet_nodes, trusted) -> None:
+    async def test_did_resync(
+        self,
+        self_hostname: str,
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        trusted: bool,
+    ) -> None:
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
@@ -1980,6 +2156,7 @@ class TestDIDWallet:
         else:
             wallet_node_1.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
+        assert full_node_server._port is not None
         await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_blocks_to_wallet(1, wallet)
@@ -2029,6 +2206,7 @@ class TestDIDWallet:
         # Start resync
         await wallet_node_1._start_with_fingerprint(fingerprint_1)
         await wallet_node_2._start_with_fingerprint(fingerprint_2)
+        assert full_node_server._port is not None
         await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await wallet_server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))

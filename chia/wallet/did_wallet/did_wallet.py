@@ -1445,7 +1445,11 @@ class DIDWallet:
         if num_of_backup_ids_needed > len(backup_ids):
             raise Exception
         innerpuz: Program = Program.from_bytes(bytes.fromhex(details[4]))
-        metadata: str = details[6]
+        metadata: str = ""
+        for d in details[6:]:
+            metadata = metadata + d + ":"
+        if len(metadata) > 0:
+            metadata = metadata[:-1]
         did_info = DIDInfo(
             origin_coin=origin,
             backup_ids=backup_ids,

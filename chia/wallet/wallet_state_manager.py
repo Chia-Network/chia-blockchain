@@ -1321,27 +1321,37 @@ class WalletStateManager:
             launch_coin: CoinState = response[0]
             origin_coin = launch_coin.coin
 
+            did_wallet_count = 0
             for wallet in self.wallets.values():
                 if wallet.type() == WalletType.DECENTRALIZED_ID:
                     assert isinstance(wallet, DIDWallet)
                     assert wallet.did_info.origin_coin is not None
                     if origin_coin.name() == wallet.did_info.origin_coin.name():
                         return WalletIdentifier.create(wallet)
+                    did_wallet_count += 1
             if coin_state.spent_height is not None:
                 # The first coin we received for DID wallet is spent.
                 # This means the wallet is in a resync process, skip the coin
                 return None
-            did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
-                self,
-                self.main_wallet,
-                launch_coin.coin,
-                did_puzzle,
-                coin_spend,
-                f"DID {encode_puzzle_hash(launch_id, AddressType.DID.hrp(self.config))}",
+            # check we aren't above the auto-add wallet limit
+            limit = self.config.get("did_auto_add_limit", 10)
+            if did_wallet_count < limit:
+                did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
+                    self,
+                    self.main_wallet,
+                    launch_coin.coin,
+                    did_puzzle,
+                    coin_spend,
+                    f"DID {encode_puzzle_hash(launch_id, AddressType.DID.hrp(self.config))}",
+                )
+                wallet_identifier = WalletIdentifier.create(did_wallet)
+                self.state_changed("wallet_created", wallet_identifier.id, {"did_id": did_wallet.get_my_DID()})
+                return wallet_identifier
+            # we are over the limit
+            self.log.warning(
+                f"You are at the max configured limit of {limit} DIDs. Ignoring received DID {launch_id.hex()}"
             )
-            wallet_identifier = WalletIdentifier.create(did_wallet)
-            self.state_changed("wallet_created", wallet_identifier.id, {"did_id": did_wallet.get_my_DID()})
-            return wallet_identifier
+            return None
 
     async def get_minter_did(self, launcher_coin: Coin, peer: WSChiaConnection) -> Optional[bytes32]:
         # Get minter DID

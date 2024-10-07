@@ -2553,16 +2553,17 @@ class WalletRpcApi:
             if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
                 hint = hinted_coin.hint
                 break
-        if hint is None:
+        derivation_record = None
+        if hint is not None:
+            derivation_record = (
+                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
+            )
+        if derivation_record is None:
             # This is an invalid DID, check if we are owner
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     p2_puzzle.get_tree_hash()
                 )
-            )
-        else:
-            derivation_record = (
-                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
             )
 
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
