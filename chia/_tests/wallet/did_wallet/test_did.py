@@ -783,7 +783,7 @@ class TestDIDWallet:
                 await did_wallet.recovery_spend(
                     coin,
                     ph,
-                    info,  # type: ignore
+                    info,
                     pubkey,
                     WalletSpendBundle([], AugSchemeMPL.aggregate([])),
                     action_scope,
