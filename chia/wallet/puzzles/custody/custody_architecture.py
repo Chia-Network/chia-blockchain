@@ -17,7 +17,7 @@ class Puzzle(Protocol):
 
 
 @dataclass(frozen=True)
-class UnknownCustody:
+class UnknownPuzzle:
 
     custody_hint: CustodyHint
 
@@ -161,7 +161,7 @@ class CustodyWithRestrictions:
             )
         else:
             custody_hint = CustodyHint.from_program(custody_hint_prog)
-            custody = UnknownCustody(custody_hint)
+            custody = UnknownPuzzle(custody_hint)
 
         return CustodyWithRestrictions(
             nonce.as_int(),

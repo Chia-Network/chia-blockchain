@@ -13,7 +13,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     Puzzle,
     Restriction,
     RestrictionHint,
-    UnknownCustody,
+    UnknownPuzzle,
     UnknownRestriction,
 )
 
@@ -36,18 +36,18 @@ ANY_PROGRAM = Program.to(None)
 @pytest.mark.parametrize(
     "custody",
     [
-        UnknownCustody(CustodyHint(ANY_HASH, ANY_PROGRAM)),
+        UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM)),
         MofN(
             1,
             [
-                CustodyWithRestrictions(1, [], UnknownCustody(CustodyHint(ANY_HASH, ANY_PROGRAM))),
+                CustodyWithRestrictions(1, [], UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM))),
                 CustodyWithRestrictions(
                     2,
                     [
                         UnknownRestriction(RestrictionHint(True, ANY_HASH, ANY_PROGRAM)),
                         UnknownRestriction(RestrictionHint(True, ANY_HASH, ANY_PROGRAM)),
                     ],
-                    UnknownCustody(CustodyHint(ANY_HASH, ANY_PROGRAM)),
+                    UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM)),
                 ),
             ],
         ),
@@ -55,10 +55,10 @@ ANY_PROGRAM = Program.to(None)
             2,
             [
                 CustodyWithRestrictions(
-                    1, [], MofN(1, [CustodyWithRestrictions(3, [], UnknownCustody(CustodyHint(ANY_HASH, ANY_PROGRAM)))])
+                    1, [], MofN(1, [CustodyWithRestrictions(3, [], UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM)))])
                 ),
                 CustodyWithRestrictions(
-                    4, [], MofN(1, [CustodyWithRestrictions(5, [], UnknownCustody(CustodyHint(ANY_HASH, ANY_PROGRAM)))])
+                    4, [], MofN(1, [CustodyWithRestrictions(5, [], UnknownPuzzle(CustodyHint(ANY_HASH, ANY_PROGRAM)))])
                 ),
             ],
         ),
