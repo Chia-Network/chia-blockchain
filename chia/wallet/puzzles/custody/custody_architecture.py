@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List, Protocol, Type, Union, cast
+from dataclasses import dataclass, replace
+from typing import List, Mapping, Protocol, Type, Union, cast
+
+from typing_extensions import runtime_checkable
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -50,6 +52,7 @@ class UnknownPuzzle:
 
 
 # A spec for "restrictions" on specific inner puzzles
+@runtime_checkable
 class Restriction(Puzzle, Protocol):
     @property
     def _morpher_not_validator(self) -> bool: ...
@@ -188,6 +191,54 @@ class PuzzleWithRestrictions:
             nonce.as_int(),
             [UnknownRestriction(hint) for hint in restriction_hints],
             custody,
+        )
+
+    @property
+    def unknown_puzzles(self) -> Mapping[bytes32, Union[UnknownPuzzle, UnknownRestriction]]:
+        unknown_restrictions = {
+            ur.restriction_hint.puzhash: ur for ur in self.restrictions if isinstance(ur, UnknownRestriction)
+        }
+
+        unknown_puzzles: Mapping[bytes32, Union[UnknownPuzzle, UnknownRestriction]]
+        if isinstance(self.custody, UnknownPuzzle):
+            unknown_puzzles = {self.custody.custody_hint.puzhash: self.custody}
+        elif isinstance(self.custody, MofN):
+            unknown_puzzles = {
+                uph: up
+                for puz_w_restriction in self.custody.members
+                for uph, up in puz_w_restriction.unknown_puzzles.items()
+            }
+        else:
+            unknown_puzzles = {}
+        return {
+            **unknown_puzzles,
+            **unknown_restrictions,
+        }
+
+    def fill_in_unknown_puzzles(self, puzzle_dict: Mapping[bytes32, Puzzle]) -> PuzzleWithRestrictions:
+        new_restrictions: List[Restriction] = []
+        for restriction in self.restrictions:
+            if isinstance(restriction, UnknownRestriction) and restriction.restriction_hint.puzhash in puzzle_dict:
+                new = puzzle_dict[restriction.restriction_hint.puzhash]
+                assert isinstance(new, Restriction)
+                new_restrictions.append(new)
+            else:
+                new_restrictions.append(restriction)
+
+        new_puzzle: Puzzle
+        if isinstance(self.custody, UnknownPuzzle) and self.custody.custody_hint.puzhash in puzzle_dict:
+            new_puzzle = puzzle_dict[self.custody.custody_hint.puzhash]
+        elif isinstance(self.custody, MofN):
+            new_puzzle = replace(
+                self.custody, members=[puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.custody.members]
+            )
+        else:
+            new_puzzle = self.custody
+
+        return PuzzleWithRestrictions(
+            self.nonce,
+            new_restrictions,
+            new_puzzle,
         )
 
     def puzzle(self) -> Program: ...  # type: ignore[empty-body]
