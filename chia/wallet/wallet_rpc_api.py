@@ -416,6 +416,10 @@ def tx_endpoint(
                 # unfortunately, this API isn't solely a tx endpoint
                 return response
 
+            if func.__name__ == "create_offer_for_ids" and request.get("offer_only", False):
+                response.pop("trade_record", None)
+                return response
+
             if "action_scope_override" in kwargs:
                 # deferring to parent action scope
                 return response
