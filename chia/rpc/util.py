@@ -169,6 +169,9 @@ def tx_endpoint(
                 # unfortunately, this API isn't solely a tx endpoint
                 return response
 
+            if func.__name__ == "create_offer_for_ids" and request.get("offer_only", False):
+                return response
+
             unsigned_txs = await self.service.wallet_state_manager.gather_signing_info_for_txs(
                 action_scope.side_effects.transactions
             )

@@ -2095,6 +2095,13 @@ class WalletRpcApi:
             )
         if result[0]:
             success, trade_record, error = result
+
+            if request.get("offer_only", False):
+                return {
+                    "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
+                    "trade_record": trade_record.to_json_dict_convenience(),
+                }
+
             return {
                 "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
                 "trade_record": trade_record.to_json_dict_convenience(),
