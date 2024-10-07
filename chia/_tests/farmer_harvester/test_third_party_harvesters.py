@@ -39,6 +39,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChainSubSlot
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import UnresolvedPeerInfo
+from chia.types.validation_state import ValidationState
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
@@ -441,9 +442,7 @@ async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: Ful
         blocks,
         full_node.blockchain.pool,
         {},
-        sub_slot_iters=ssi,
-        difficulty=diff,
-        prev_ses_block=prev_ses_block,
+        ValidationState(ssi, diff, prev_ses_block),
         validate_signatures=True,
     )
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)

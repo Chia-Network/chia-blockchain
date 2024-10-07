@@ -60,6 +60,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.validation_state import ValidationState
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -432,9 +433,7 @@ class TestFullNodeBlockCompression:
                         all_blocks[:i],
                         blockchain.pool,
                         {},
-                        sub_slot_iters=ssi,
-                        difficulty=diff,
-                        prev_ses_block=None,
+                        ValidationState(ssi, diff, None),
                         validate_signatures=False,
                     )
                     assert results is not None
@@ -451,9 +450,7 @@ class TestFullNodeBlockCompression:
                         all_blocks[:i],
                         blockchain.pool,
                         {},
-                        sub_slot_iters=ssi,
-                        difficulty=diff,
-                        prev_ses_block=None,
+                        ValidationState(ssi, diff, None),
                         validate_signatures=False,
                     )
                     assert results is not None
