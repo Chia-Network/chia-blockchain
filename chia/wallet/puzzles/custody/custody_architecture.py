@@ -7,7 +7,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-class CustodyType(Protocol):
+class Puzzle(Protocol):
 
     def memo(self, nonce: int) -> Program: ...
 
@@ -31,17 +31,17 @@ class UnknownCustody:
         return self.custody_hint.puzhash
 
 
-class Restriction(CustodyType, Protocol):
+class Restriction(Puzzle, Protocol):
     @property
     def _morpher_not_validator(self) -> bool: ...
 
 
-def morpher(cls: Type[CustodyType]) -> Type[Restriction]:
+def morpher(cls: Type[Puzzle]) -> Type[Restriction]:
     setattr(cls, "_morpher_not_validator", True)
     return cast(Type[Restriction], cls)
 
 
-def validator(cls: Type[CustodyType]) -> Type[Restriction]:
+def validator(cls: Type[Puzzle]) -> Type[Restriction]:
     setattr(cls, "_morpher_not_validator", False)
     return cast(Type[Restriction], cls)
 
@@ -121,7 +121,7 @@ class CustodyHint:
 class CustodyWithRestrictions:
     nonce: int
     restrictions: List[Restriction]
-    custody: CustodyType
+    custody: Puzzle
 
     def memo(self) -> Program:
         restriction_hints: List[RestrictionHint] = [
@@ -156,7 +156,7 @@ class CustodyWithRestrictions:
         further_branching = further_branching_prog != Program.to(None)
         if further_branching:
             m_of_n_hint = MofNHint.from_program(custody_hint_prog)
-            custody: CustodyType = MofN(
+            custody: Puzzle = MofN(
                 m_of_n_hint.m, [CustodyWithRestrictions.from_memo(memo) for memo in m_of_n_hint.member_memos]
             )
         else:

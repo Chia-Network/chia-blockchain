@@ -8,9 +8,9 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.custody.custody_architecture import (
     CustodyHint,
-    CustodyType,
     CustodyWithRestrictions,
     MofN,
+    Puzzle,
     Restriction,
     RestrictionHint,
     UnknownCustody,
@@ -64,7 +64,7 @@ ANY_PROGRAM = Program.to(None)
         ),
     ],
 )
-def test_back_and_forth_hint_parsing(restrictions: List[Restriction], custody: CustodyType) -> None:
+def test_back_and_forth_hint_parsing(restrictions: List[Restriction], custody: Puzzle) -> None:
     cwr = CustodyWithRestrictions(
         nonce=0,
         restrictions=restrictions,
