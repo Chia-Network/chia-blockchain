@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia.rpc.wallet_request_types import VaultCreate, VaultRecovery
+from chia.rpc.wallet_request_types import GetPrivateKey, VaultCreate, VaultRecovery
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyTypes
@@ -30,13 +30,14 @@ async def vault_setup(wallet_environments: WalletTestFramework, with_recovery: b
     # Temporary hack so execute_signing_instructions can access the key
     env.wallet_state_manager.config["test_sk"] = SECP_SK
     client = wallet_environments.environments[1].rpc_client
-    fingerprint = (await client.get_public_keys())[0]
+    fingerprint = (await client.get_public_keys()).pk_fingerprints[0]
     bls_pk = None
     timelock = None
     if with_recovery:
-        bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
-        bls_pk = G1Element.from_bytes(bytes.fromhex(bls_pk_hex))
+        bls_pk = (await client.get_private_key(GetPrivateKey(fingerprint))).private_key.observation_root()
         timelock = uint64(10)
+    if bls_pk is not None:
+        assert isinstance(bls_pk, G1Element)
     hidden_puzzle_index = uint32(0)
     res = await client.vault_create(
         VaultCreate(
@@ -224,9 +225,9 @@ async def test_vault_recovery(
     RECOVERY_SECP_SK = ec.derive_private_key(recovery_seed, ec.SECP256R1(), default_backend())
     RECOVERY_SECP_PK = RECOVERY_SECP_SK.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
     client = wallet_environments.environments[1].rpc_client
-    fingerprint = (await client.get_public_keys())[0]
-    bls_pk_hex = (await client.get_private_key(fingerprint))["pk"]
-    bls_pk = G1Element.from_bytes(bytes.fromhex(bls_pk_hex))
+    fingerprint = (await client.get_public_keys()).pk_fingerprints[0]
+    bls_pk = (await client.get_private_key(GetPrivateKey(fingerprint))).private_key.observation_root()
+    assert isinstance(bls_pk, G1Element)
     timelock = uint64(10)
 
     wallet: Vault = env.xch_wallet

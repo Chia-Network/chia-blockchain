@@ -1734,7 +1734,8 @@ async def test_nft_bulk_set_did(wallet_environments: WalletTestFramework) -> Non
     ]
     fee = uint64(1000)
     set_did_bulk_resp = await env.rpc_client.set_nft_did_bulk(
-        NFTSetDIDBulk(did_id=hmr_did_id, nft_coin_list=nft_coin_list, fee=fee, push=True)
+        NFTSetDIDBulk(did_id=hmr_did_id, nft_coin_list=nft_coin_list, fee=fee, push=True),
+        wallet_environments.tx_config,
     )
     assert len(set_did_bulk_resp.spend_bundle.coin_spends) == 5
     assert set_did_bulk_resp.tx_num == 5  # 1 for each NFT being spent (3), 1 for fee tx, 1 for did tx
@@ -2031,7 +2032,8 @@ async def test_nft_bulk_transfer(wallet_environments: WalletTestFramework) -> No
     fee = uint64(1000)
     address = encode_puzzle_hash(await wallet_1.get_puzzle_hash(new=False), AddressType.XCH.hrp(env_1.node.config))
     bulk_transfer_resp = await env_0.rpc_client.transfer_nft_bulk(
-        NFTTransferBulk(target_address=address, nft_coin_list=nft_coin_list, fee=fee, push=True)
+        NFTTransferBulk(target_address=address, nft_coin_list=nft_coin_list, fee=fee, push=True),
+        wallet_environments.tx_config,
     )
     assert len(bulk_transfer_resp.spend_bundle.coin_spends) == 4
     assert bulk_transfer_resp.tx_num == 4

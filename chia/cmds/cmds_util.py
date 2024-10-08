@@ -18,6 +18,7 @@ from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_client import ResponseFailureError, RpcClient
+from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -25,7 +26,7 @@ from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError, InvalidPathError
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import KeyData
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import ConditionValidTimes
@@ -169,7 +170,7 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                 # if only a single key is available, select it automatically
                 selected_fingerprint = fingerprints[0]
             else:
-                logged_in_fingerprint: Optional[int] = await wallet_client.get_logged_in_fingerprint()
+                logged_in_fingerprint: Optional[int] = (await wallet_client.get_logged_in_fingerprint()).fingerprint
                 logged_in_key: Optional[KeyData] = None
                 if logged_in_fingerprint is not None:
                     logged_in_key = next((key for key in all_keys if key.fingerprint == logged_in_fingerprint), None)
@@ -227,10 +228,11 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                 selected_fingerprint = fp
 
         if selected_fingerprint is not None:
-            log_in_response = await wallet_client.log_in(selected_fingerprint)
+            try:
+                await wallet_client.log_in(LogIn(uint32(selected_fingerprint)))
+            except ValueError as e:
+                raise CliRpcConnectionError(f"Login failed for fingerprint {selected_fingerprint}: {e.args[0]}")
 
-            if log_in_response["success"] is False:
-                raise CliRpcConnectionError(f"Login failed for fingerprint {selected_fingerprint}: {log_in_response}")
     finally:
         # Closing the keychain proxy takes a moment, so we wait until after the login is complete
         if keychain_proxy is not None:

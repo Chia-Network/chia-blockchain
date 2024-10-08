@@ -119,6 +119,11 @@ class NewPeakItem:
     conds: SpendBundleConditions
 
 
+# For block overhead cost calculation
+QUOTE_BYTES = 2
+QUOTE_EXECUTION_COST = 20
+
+
 class MempoolManager:
     pool: Executor
     constants: ConsensusConstants
@@ -158,7 +163,11 @@ class MempoolManager:
         self.nonzero_fee_minimum_fpc = 5
 
         BLOCK_SIZE_LIMIT_FACTOR = 0.7
-        self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM * BLOCK_SIZE_LIMIT_FACTOR)
+        # We need to deduct the block overhead, which consists of the wrapping
+        # quote opcode's bytes cost as well as its execution cost.
+        BLOCK_OVERHEAD = QUOTE_BYTES * self.constants.COST_PER_BYTE + QUOTE_EXECUTION_COST
+
+        self.max_block_clvm_cost = uint64(self.constants.MAX_BLOCK_COST_CLVM * BLOCK_SIZE_LIMIT_FACTOR - BLOCK_OVERHEAD)
         self.max_tx_clvm_cost = (
             max_tx_clvm_cost if max_tx_clvm_cost is not None else uint64(self.constants.MAX_BLOCK_COST_CLVM // 2)
         )
@@ -255,17 +264,14 @@ class MempoolManager:
             self.seen_bundle_hashes.pop(bundle_hash)
 
     async def pre_validate_spendbundle(
-        self,
-        new_spend: SpendBundle,
-        spend_name: bytes32,
-        bls_cache: Optional[BLSCache] = None,
+        self, spend_bundle: SpendBundle, spend_bundle_id: Optional[bytes32] = None, bls_cache: Optional[BLSCache] = None
     ) -> SpendBundleConditions:
         """
         Errors are included within the cached_result.
         This runs in another process so we don't block the main thread
         """
 
-        if new_spend.coin_spends == []:
+        if spend_bundle.coin_spends == []:
             raise ValidationError(Err.INVALID_SPEND_BUNDLE, "Empty SpendBundle")
 
         assert self.peak is not None
@@ -275,7 +281,7 @@ class MempoolManager:
             sbc, new_cache_entries, duration = await asyncio.get_running_loop().run_in_executor(
                 self.pool,
                 validate_clvm_and_signature,
-                new_spend,
+                spend_bundle,
                 self.max_tx_clvm_cost,
                 self.constants,
                 self.peak.height,
@@ -292,14 +298,17 @@ class MempoolManager:
             self._worker_queue_size -= 1
 
         if bls_cache is not None:
-            bls_cache.update([(e[0], bytes(e[1])) for e in new_cache_entries])
+            bls_cache.update(new_cache_entries)
 
         ret = NPCResult(None, sbc)
+
+        if spend_bundle_id is None:
+            spend_bundle_id = spend_bundle.name()
 
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
             f"pre_validate_spendbundle took {duration:0.4f} seconds "
-            f"for {spend_name} (queue-size: {self._worker_queue_size})",
+            f"for {spend_bundle_id} (queue-size: {self._worker_queue_size})",
         )
         if ret.error is not None:
             raise ValidationError(Err(ret.error), "pre_validate_spendbundle failed")

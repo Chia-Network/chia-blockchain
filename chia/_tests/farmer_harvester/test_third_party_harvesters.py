@@ -15,7 +15,7 @@ from pytest_mock import MockerFixture
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node import FullNode
@@ -435,8 +435,16 @@ async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: Ful
         prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
     ssi, diff = get_next_sub_slot_iters_and_difficulty(full_node.constants, new_slot, prev_b, full_node.blockchain)
-    pre_validation_results: List[PreValidationResult] = await full_node.blockchain.pre_validate_blocks_multiprocessing(
-        blocks, {}, sub_slot_iters=ssi, difficulty=diff, prev_ses_block=prev_ses_block, validate_signatures=True
+    pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        full_node.blockchain.constants,
+        full_node.blockchain,
+        blocks,
+        full_node.blockchain.pool,
+        {},
+        sub_slot_iters=ssi,
+        difficulty=diff,
+        prev_ses_block=prev_ses_block,
+        validate_signatures=True,
     )
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
     for i in range(len(blocks)):

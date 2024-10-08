@@ -31,7 +31,7 @@ async def test_basic_functionality(wallet_environments: WalletTestFramework) -> 
     env_0: WalletEnvironment = wallet_environments.environments[0]
     env_1: WalletEnvironment = wallet_environments.environments[1]
 
-    assert await env_0.rpc_client.get_logged_in_fingerprint() is not None
+    assert (await env_0.rpc_client.get_logged_in_fingerprint()).fingerprint is not None
     # assert await env_1.rpc_client.get_logged_in_fingerprint() is not None
 
     assert await env_0.xch_wallet.get_confirmed_balance() == 2_000_000_000_000

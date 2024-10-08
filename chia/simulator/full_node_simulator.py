@@ -10,7 +10,7 @@ import anyio
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import BlockchainMutexPriority
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.rpc_server import default_get_connections
@@ -170,15 +170,16 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[PreValidationResult] = (
-                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                        [genesis],
-                        {},
-                        sub_slot_iters=ssi,
-                        difficulty=diff,
-                        prev_ses_block=None,
-                        validate_signatures=True,
-                    )
+                pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                    self.full_node.blockchain.constants,
+                    self.full_node.blockchain,
+                    [genesis],
+                    self.full_node.blockchain.pool,
+                    {},
+                    sub_slot_iters=ssi,
+                    difficulty=diff,
+                    prev_ses_block=None,
+                    validate_signatures=True,
                 )
                 assert pre_validation_results is not None
                 await self.full_node.blockchain.add_block(
@@ -232,15 +233,16 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[PreValidationResult] = (
-                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                        [genesis],
-                        {},
-                        sub_slot_iters=ssi,
-                        difficulty=diffculty,
-                        prev_ses_block=None,
-                        validate_signatures=True,
-                    )
+                pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                    self.full_node.blockchain.constants,
+                    self.full_node.blockchain,
+                    [genesis],
+                    self.full_node.blockchain.pool,
+                    {},
+                    sub_slot_iters=ssi,
+                    difficulty=diffculty,
+                    prev_ses_block=None,
+                    validate_signatures=True,
                 )
                 assert pre_validation_results is not None
                 await self.full_node.blockchain.add_block(

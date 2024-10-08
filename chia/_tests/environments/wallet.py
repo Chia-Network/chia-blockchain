@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Union, 
 from chia._tests.environments.common import ServiceEnvironment
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
+from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -102,9 +103,9 @@ class WalletEnvironment:
     async def restart(self, new_fingerprint: Optional[int]) -> None:
         old_peer_info = next(v for v in self.node.server.all_connections.values()).peer_info
         await self.rpc_client.log_in(
-            new_fingerprint
+            LogIn(uint32(new_fingerprint))
             if new_fingerprint is not None
-            else self.wallet_state_manager.observation_root.get_fingerprint()
+            else LogIn(uint32(self.wallet_state_manager.observation_root.get_fingerprint()))
         )
 
         await self.node.server.start_client(old_peer_info, None)
