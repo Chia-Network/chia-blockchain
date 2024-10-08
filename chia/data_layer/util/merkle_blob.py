@@ -364,7 +364,7 @@ class MerkleBlob:
 
         seed = std_hash(key.to_bytes(8, byteorder="big"))
         if reference_kid is None:
-            old_leaf = self.get_random_leaf_node(bytes(seed))
+            old_leaf: RawMerkleNodeProtocol = self.get_random_leaf_node(bytes(seed))
         else:
             leaf_index = self.key_to_index[reference_kid]
             old_leaf = self.get_raw_node(leaf_index)
@@ -490,6 +490,7 @@ class MerkleBlob:
         if isinstance(node, RawLeafMerkleNode):
             return [node]
 
+        assert isinstance(node, RawInternalMerkleNode)
         left_nodes = self.get_nodes(node.left)
         right_nodes = self.get_nodes(node.right)
 
