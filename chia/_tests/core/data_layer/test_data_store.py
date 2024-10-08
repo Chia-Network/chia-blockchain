@@ -6,6 +6,7 @@ import os
 import random
 import re
 import statistics
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,8 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, c
 
 import aiohttp
 import aiosqlite
+import big_o
+import big_o.complexities
 import pytest
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
@@ -1526,16 +1529,206 @@ async def test_clear_pending_roots_returns_root(
     assert cleared_root == pending_root
 
 
-@dataclass
-class BatchInsertBenchmarkCase:
-    pre: int
-    count: int
-    limit: float
-    marks: Marks = ()
+def generate_changelist(r: random.Random, size: int) -> List[Dict[str, Any]]:
+    return [
+        {
+            "action": "insert",
+            "key": x.to_bytes(32, byteorder="big", signed=False),
+            "value": bytes(r.getrandbits(8) for _ in range(4)),
+        }
+        for x in range(size)
+    ]
 
-    @property
-    def id(self) -> str:
-        return f"pre={self.pre},count={self.count}"
+
+@dataclass
+class BigOResult:
+    real_best: big_o.complexities.ComplexityClass
+    simple_best: big_o.complexities.ComplexityClass
+    all: Dict[big_o.complexities.ComplexityClass, float]
+
+
+def process_big_o(
+    required_complexity: big_o.complexities.ComplexityClass,
+    records: Dict[int, float],
+    # 1 is 100%
+    simplicity_bias_percentage: float,
+    fail: bool = True,
+    print_lines: bool = True,
+) -> BigOResult:
+    __tracebackhide__ = True
+
+    ns = list(records.keys())
+    durations = list(records.values())
+    real_best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations)
+    simplicity_bias = simplicity_bias_percentage * fitted[real_best_class]
+    best_class, fitted = big_o.infer_big_o_class(ns=ns, time=durations, simplicity_bias=simplicity_bias)
+
+    lines: List[str] = []
+    file = sys.stdout
+    try:
+        lines.append(f"allowed simplicity bias: {simplicity_bias}")
+        lines.append(big_o.reports.big_o_report(best=best_class, others=fitted))
+
+        required_class, required_residuals = next(
+            (k, v) for k, v in fitted.items() if isinstance(k, required_complexity)
+        )
+        best_residuals = fitted[best_class]
+        close_enough = abs(best_residuals - required_residuals) < simplicity_bias
+
+        if best_class.order == required_complexity.order:
+            return BigOResult(real_best=real_best_class, simple_best=best_class, all=fitted)
+        elif best_class.order > required_complexity.order:
+            if not close_enough:
+                lines.append(f"must be {required_complexity.__name__} got: {best_class}")
+                assert False
+        elif best_class.order < required_complexity.order:
+            if not close_enough:
+                lines.append(f"performance improved from {required_complexity.__name__} got: {best_class}")
+                assert False
+
+        # not equal but close enough
+        assert close_enough
+        lines.append(f"expected {required_complexity.__name__} and got close enough, best: {best_class}")
+    except Exception:
+        file = sys.stderr
+        if fail:
+            raise
+        else:
+            return BigOResult(real_best=real_best_class, simple_best=best_class, all=fitted)
+    finally:
+        if print_lines:
+            print("\n".join(lines), file=file)
+
+    return BigOResult(real_best=real_best_class, simple_best=best_class, all=fitted)
+
+    # TODO: restore this (outside this function) for some actual runtime limits?
+    # coefficient_maximums = [0.65, 0.000_25, *(10**-n for n in range(5, 100))]
+    # coefficients = best_class.coefficients()
+    # paired = list(zip(coefficients, coefficient_maximums))
+    # assert len(paired) == len(coefficients)
+    # for index, [actual, maximum] in enumerate(paired):
+    #     assert actual <= maximum, f"(coefficient {index}) {actual} > {maximum}: {paired}"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("n", range(10))
+async def test_benchmark_batch_insert_complexity(
+    n: int,
+    data_store: DataStore,
+    store_id: bytes32,
+    benchmark_runner: BenchmarkRunner,
+) -> None:
+    r = random.Random()
+    r.seed("shadowlands", version=2)
+
+    repeats = 20
+    test_size = 10
+    # NOTE: only useful if more than double the test size
+    step_size = 2_000
+    assert step_size >= test_size
+    max_pre_size = 100_000
+    # TODO: must be > 0 to avoid an issue with the log complexity class?
+    initial_batch_size = step_size
+
+    batch_count, remainder = divmod(max_pre_size - initial_batch_size, step_size)
+    assert remainder == 0, "the last batch would be a different size"
+
+    records: Dict[int, float] = {}
+    results: Dict[int, BigOResult] = {}
+    # this benchmark is checking thread and disk (?) access so we use monotonic
+    clock = time.monotonic
+
+    total_inserted = 0
+    changelist_iter = iter(generate_changelist(r=r, size=max_pre_size + test_size))
+
+    with benchmark_runner.record_runtime(label="overall", clock=clock):
+        initial_batch = list(itertools.islice(changelist_iter, initial_batch_size))
+        if len(initial_batch) > 0:
+            await data_store.insert_batch(
+                store_id=store_id,
+                changelist=initial_batch,
+                # TODO: does this mess up test accuracy?
+                status=Status.COMMITTED,
+            )
+            total_inserted += len(initial_batch)
+
+        previous_complexities = None
+
+        while True:
+            batch = list(itertools.islice(changelist_iter, test_size))
+            assert len(batch) == test_size
+
+            import contextlib
+
+            for repeat in range(repeats):
+
+                class RollbackError(Exception):
+                    pass
+
+                with contextlib.suppress(RollbackError):
+                    async with data_store.transaction():
+                        with benchmark_runner.record_runtime(label="count", clock=clock) as f:
+                            await data_store.insert_batch(
+                                store_id=store_id,
+                                changelist=batch,
+                                # TODO: does this mess up test accuracy?
+                                status=Status.COMMITTED,
+                            )
+
+                        raise RollbackError()
+
+                # TODO: yeah no, don't induce this offset, just lazy to quickly get unique entries
+                records[total_inserted + repeat] = f.result().duration
+
+            results[total_inserted] = process_big_o(
+                required_complexity=big_o.complexities.Linearithmic,
+                records=records,
+                simplicity_bias_percentage=10 / 100,
+                fail=False,
+                print_lines=False,
+            )
+            sorted_result = sorted(
+                (residual, complexity) for complexity, residual in results[total_inserted].all.items()
+            )
+            top_sorted_complexities = [complexity for _, complexity in sorted_result][:2]
+            same = top_sorted_complexities == previous_complexities
+            previous_complexities = top_sorted_complexities
+            first_second_percent = 100 * ((sorted_result[1][0] / sorted_result[0][0]) - 1)
+            print(
+                f" {'+' if same else ' '} results for {total_inserted} ({first_second_percent:.0f}%):",
+                " | ".join(f"{type(complexity).__name__} - {residual:f}" for (residual, complexity) in sorted_result),
+            )
+
+            step_batch = [*batch, *itertools.islice(changelist_iter, step_size - len(batch))]
+            if total_inserted >= max_pre_size:
+                break
+            if len(step_batch) > 0:
+                await data_store.insert_batch(
+                    store_id=store_id,
+                    changelist=step_batch,
+                    # TODO: does this mess up test accuracy?
+                    status=Status.COMMITTED,
+                )
+                total_inserted += len(step_batch)
+
+    # async with data_store.db_wrapper.reader() as reader:
+    #     with tempfile.TemporaryDirectory() as d:
+    #         db_path = Path(d) / "test.db"
+    #         async with aiosqlite.connect(db_path) as db:
+    #             await reader.backup(db)
+    #
+    #         assert db_path.stat().st_size < 0
+    #     assert sum([len(line) async for line in reader.iterdump()]) + 1 == -1
+    #     # s = "\n".join([line async for line in reader.iterdump()]) + "\n"
+    #     # assert len(s) == -1
+
+    assert False, "forcing output"
+
+    process_big_o(
+        required_complexity=big_o.complexities.Linearithmic,
+        records=records,
+        simplicity_bias_percentage=10 / 100,
+    )
 
 
 @dataclass
@@ -1548,69 +1741,6 @@ class BatchesInsertBenchmarkCase:
     @property
     def id(self) -> str:
         return f"count={self.count},batch_count={self.batch_count}"
-
-
-@datacases(
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=100,
-        limit=2.2,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=1_000,
-        count=100,
-        limit=4,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=0,
-        count=1_000,
-        limit=30,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=1_000,
-        count=1_000,
-        limit=36,
-    ),
-    BatchInsertBenchmarkCase(
-        pre=10_000,
-        count=25_000,
-        limit=52,
-    ),
-)
-@pytest.mark.anyio
-async def test_benchmark_batch_insert_speed(
-    data_store: DataStore,
-    store_id: bytes32,
-    benchmark_runner: BenchmarkRunner,
-    case: BatchInsertBenchmarkCase,
-) -> None:
-    r = random.Random()
-    r.seed("shadowlands", version=2)
-
-    changelist = [
-        {
-            "action": "insert",
-            "key": x.to_bytes(32, byteorder="big", signed=False),
-            "value": bytes(r.getrandbits(8) for _ in range(1200)),
-        }
-        for x in range(case.pre + case.count)
-    ]
-
-    pre = changelist[: case.pre]
-    batch = changelist[case.pre : case.pre + case.count]
-
-    if case.pre > 0:
-        await data_store.insert_batch(
-            store_id=store_id,
-            changelist=pre,
-            status=Status.COMMITTED,
-        )
-
-    with benchmark_runner.assert_runtime(seconds=case.limit):
-        await data_store.insert_batch(
-            store_id=store_id,
-            changelist=batch,
-        )
 
 
 @datacases(

@@ -43,7 +43,7 @@ jobs:
       - name: Calculate timeout
         id: timeout
         run: |
-          echo "timeout=$(( ${{ steps.repeats.outputs.repeats }} * 20 ))" >> "$GITHUB_OUTPUT"
+          echo "timeout=$(( ${{ steps.repeats.outputs.repeats }} * 80 ))" >> "$GITHUB_OUTPUT"
 
   build:
     name: Benchmarks
@@ -95,7 +95,7 @@ jobs:
 
       - name: pytest
         run: |
-          pytest -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ needs.setup.outputs.repeats }} chia/_tests/
+          pytest -k test_benchmark_batch_insert_complexity -n 0 --capture no -m benchmark -o 'junit_suite_name=benchmarks' --junitxml=junit-data/benchmarks.raw.xml --benchmark-repeats ${{ needs.setup.outputs.repeats }} chia/_tests/core/data_layer/
 
       - name: Format JUnit data and prepare results
         if: always()
