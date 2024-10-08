@@ -182,7 +182,9 @@ class MerkleBlob:
         internal_nodes: List[InternalNode] = []
         for node in lineage[1:]:
             assert isinstance(node, RawInternalMerkleNode)
-            internal_nodes.append(InternalNode(bytes32(node.hash), node.left, node.right))
+            left_node = self.get_raw_node(node.left)
+            right_node = self.get_raw_node(node.right)
+            internal_nodes.append(InternalNode(bytes32(node.hash), bytes32(left_node.hash), bytes32(right_node.hash)))
 
         return internal_nodes
 
@@ -348,6 +350,8 @@ class MerkleBlob:
         reference_kid: Optional[KVId] = None,
         side: Optional[Side] = None,
     ) -> None:
+        if key in self.key_to_index:
+            raise Exception("Key already present")
         if len(self.blob) == 0:
             self.blob.extend(
                 NodeMetadata(type=NodeType.leaf, dirty=False).pack()
@@ -476,6 +480,20 @@ class MerkleBlob:
                 queue.append(node.right)
 
         raise Exception("Cannot find a leaf in the tree")
+
+    def get_hash_at_index(self, index: TreeIndex) -> bytes32:
+        node = self.get_raw_node(index)
+        return bytes32(node.hash)
+
+    def get_nodes(self, index: TreeIndex = TreeIndex(0)) -> List[RawMerkleNodeProtocol]:
+        node = self.get_raw_node(index)
+        if isinstance(node, RawLeafMerkleNode):
+            return [node]
+
+        left_nodes = self.get_nodes(node.left)
+        right_nodes = self.get_nodes(node.right)
+
+        return [node] + left_nodes + right_nodes
 
     def batch_insert(self, keys_values: List[Tuple[KVId, KVId]], hashes: List[bytes]) -> None:
         indexes: List[TreeIndex] = []
