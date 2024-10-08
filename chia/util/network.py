@@ -6,7 +6,7 @@ import logging
 import socket
 import ssl
 from dataclasses import dataclass
-from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
+from ipaddress import IPv4Network, IPv6Network, ip_address
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
 
 from aiohttp import web
@@ -16,40 +16,7 @@ from typing_extensions import final
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
-
-
-@dataclass(frozen=True)
-class IPAddress:
-    _inner: Union[IPv4Address, IPv6Address]
-
-    @classmethod
-    def create(cls, ip: str) -> IPAddress:
-        return cls(ip_address(ip))
-
-    def __int__(self) -> int:
-        return int(self._inner)
-
-    def __str__(self) -> str:
-        return str(self._inner)
-
-    def __repr__(self) -> str:
-        return repr(self._inner)
-
-    @property
-    def packed(self) -> bytes:
-        return self._inner.packed
-
-    @property
-    def is_private(self) -> bool:
-        return self._inner.is_private
-
-    @property
-    def is_v4(self) -> bool:
-        return self._inner.version == 4
-
-    @property
-    def is_v6(self) -> bool:
-        return self._inner.version == 6
+from chia.util.ip_address import IPAddress
 
 
 @final
@@ -69,7 +36,8 @@ class WebServer:
         hostname: str,
         port: uint16,
         routes: Iterable[web.RouteDef] = (),
-        max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
+        max_request_body_size: int = 1024
+        ** 2,  # Default `client_max_size` from web.Application
         ssl_context: Optional[ssl.SSLContext] = None,
         keepalive_timeout: int = 75,  # Default from aiohttp.web
         shutdown_timeout: int = 60,  # Default `shutdown_timeout` from aiohttp.web_runner.BaseRunner
@@ -138,7 +106,9 @@ class WebServer:
         await self._close_task
 
 
-def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
+def is_in_network(
+    peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]
+) -> bool:
     try:
         peer_host_ip = ip_address(peer_host)
         return any(peer_host_ip in network for network in networks)
@@ -165,9 +135,18 @@ def is_localhost(peer_host: str) -> bool:
 
 
 def is_trusted_peer(
-    host: str, node_id: bytes32, trusted_peers: Dict[str, Any], trusted_cidrs: List[str], testing: bool = False
+    host: str,
+    node_id: bytes32,
+    trusted_peers: Dict[str, Any],
+    trusted_cidrs: List[str],
+    testing: bool = False,
 ) -> bool:
-    return not testing and is_localhost(host) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
+    return (
+        not testing
+        and is_localhost(host)
+        or node_id.hex() in trusted_peers
+        or is_trusted_cidr(host, trusted_cidrs)
+    )
 
 
 def class_for_type(type: NodeType) -> Any:
@@ -204,7 +183,13 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     except ValueError:
         pass
     addrset: List[
-        Tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
+        Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[Tuple[str, int], Tuple[str, int, int, int]],
+        ]
     ] = await asyncio.get_event_loop().getaddrinfo(host, None)
     # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
     ips_v4 = []
@@ -235,6 +220,8 @@ def select_port(prefer_ipv6: bool, addresses: List[Any]) -> uint16:
             selected_port = port
             break
     else:
-        selected_port = addresses[0][1]  # no matches, just use the first one in the list
+        selected_port = addresses[0][
+            1
+        ]  # no matches, just use the first one in the list
 
     return selected_port
