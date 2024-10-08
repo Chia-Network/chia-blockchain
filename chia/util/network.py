@@ -13,7 +13,6 @@ from aiohttp import web
 from aiohttp.log import web_logger
 from typing_extensions import final
 
-from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
 from chia.util.ip_address import IPAddress
@@ -36,8 +35,7 @@ class WebServer:
         hostname: str,
         port: uint16,
         routes: Iterable[web.RouteDef] = (),
-        max_request_body_size: int = 1024
-        ** 2,  # Default `client_max_size` from web.Application
+        max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
         ssl_context: Optional[ssl.SSLContext] = None,
         keepalive_timeout: int = 75,  # Default from aiohttp.web
         shutdown_timeout: int = 60,  # Default `shutdown_timeout` from aiohttp.web_runner.BaseRunner
@@ -106,9 +104,7 @@ class WebServer:
         await self._close_task
 
 
-def is_in_network(
-    peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]
-) -> bool:
+def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
     try:
         peer_host_ip = ip_address(peer_host)
         return any(peer_host_ip in network for network in networks)
@@ -141,40 +137,7 @@ def is_trusted_peer(
     trusted_cidrs: List[str],
     testing: bool = False,
 ) -> bool:
-    return (
-        not testing
-        and is_localhost(host)
-        or node_id.hex() in trusted_peers
-        or is_trusted_cidr(host, trusted_cidrs)
-    )
-
-
-def class_for_type(type: NodeType) -> Any:
-    if type is NodeType.FULL_NODE:
-        from chia.full_node.full_node_api import FullNodeAPI
-
-        return FullNodeAPI
-    elif type is NodeType.WALLET:
-        from chia.wallet.wallet_node_api import WalletNodeAPI
-
-        return WalletNodeAPI
-    elif type is NodeType.INTRODUCER:
-        from chia.introducer.introducer_api import IntroducerAPI
-
-        return IntroducerAPI
-    elif type is NodeType.TIMELORD:
-        from chia.timelord.timelord_api import TimelordAPI
-
-        return TimelordAPI
-    elif type is NodeType.FARMER:
-        from chia.farmer.farmer_api import FarmerAPI
-
-        return FarmerAPI
-    elif type is NodeType.HARVESTER:
-        from chia.harvester.harvester_api import HarvesterAPI
-
-        return HarvesterAPI
-    raise ValueError("No class for type")
+    return not testing and is_localhost(host) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
 
 
 async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
@@ -220,8 +183,6 @@ def select_port(prefer_ipv6: bool, addresses: List[Any]) -> uint16:
             selected_port = port
             break
     else:
-        selected_port = addresses[0][
-            1
-        ]  # no matches, just use the first one in the list
+        selected_port = addresses[0][1]  # no matches, just use the first one in the list
 
     return selected_port
