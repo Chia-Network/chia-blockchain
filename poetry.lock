@@ -1224,13 +1224,13 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "diff-cover"
-version = "9.0.0"
+version = "9.2.0"
 description = "Run coverage and linting reports on diffs"
 optional = true
 python-versions = "<4.0.0,>=3.8.10"
 files = [
-    {file = "diff_cover-9.0.0-py3-none-any.whl", hash = "sha256:31b308259b79e2cab5f30aff499a3ea3ba9475f0d495d82ba9b6caa7487bca03"},
-    {file = "diff_cover-9.0.0.tar.gz", hash = "sha256:1dc851d3f3f320c048d03618e4c0d9861fa4a1506b425d2d09a564b20c95674a"},
+    {file = "diff_cover-9.2.0-py3-none-any.whl", hash = "sha256:1e24edc51c39e810c47dd9986e76c333ed95859655c091f572e590c39cabbdbe"},
+    {file = "diff_cover-9.2.0.tar.gz", hash = "sha256:85a0b353ebbb678f9e87ea303f75b545bd0baca38f563219bb72f2ae862bba36"},
 ]
 
 [package.dependencies]
@@ -3457,4 +3457,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "dace0d72adc211850f2bcf7c41177908240702ee7aedb45683ccd5610ed12e7e"
+content-hash = "5be9babd631b77da5f1138624143705399975e3ad0246378b2e69f312c6d5dc8"
