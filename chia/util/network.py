@@ -7,7 +7,7 @@ import socket
 import ssl
 from collections.abc import Iterable
 from dataclasses import dataclass
-from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
+from ipaddress import IPv4Network, IPv6Network, ip_address
 from typing import Any, Literal, Optional, Union
 
 from aiohttp import web
@@ -17,40 +17,7 @@ from typing_extensions import final
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
-
-
-@dataclass(frozen=True)
-class IPAddress:
-    _inner: Union[IPv4Address, IPv6Address]
-
-    @classmethod
-    def create(cls, ip: str) -> IPAddress:
-        return cls(ip_address(ip))
-
-    def __int__(self) -> int:
-        return int(self._inner)
-
-    def __str__(self) -> str:
-        return str(self._inner)
-
-    def __repr__(self) -> str:
-        return repr(self._inner)
-
-    @property
-    def packed(self) -> bytes:
-        return self._inner.packed
-
-    @property
-    def is_private(self) -> bool:
-        return self._inner.is_private
-
-    @property
-    def is_v4(self) -> bool:
-        return self._inner.version == 4
-
-    @property
-    def is_v6(self) -> bool:
-        return self._inner.version == 6
+from chia.util.ip_address import IPAddress
 
 
 @final
