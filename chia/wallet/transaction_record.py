@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 from dataclasses import dataclass
 from typing import Any, Generic, Optional, TypeVar
 
@@ -82,7 +83,9 @@ class TransactionRecordOld(Streamable):
         return {coin_id: ms for coin_id, ms in self.memos}
 
     @classmethod
-    def from_json_dict_convenience(cls: type[_T_TransactionRecord], modified_tx_input: dict) -> _T_TransactionRecord:
+    def from_json_dict_convenience(
+        cls: builtins.type[_T_TransactionRecord], modified_tx_input: dict
+    ) -> _T_TransactionRecord:
         modified_tx = modified_tx_input.copy()
         if "to_address" in modified_tx:
             modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
@@ -102,7 +105,7 @@ class TransactionRecordOld(Streamable):
         return cls.from_json_dict(modified_tx)
 
     @classmethod
-    def from_json_dict(cls: type[_T_TransactionRecord], json_dict: dict[str, Any]) -> _T_TransactionRecord:
+    def from_json_dict(cls: builtins.type[_T_TransactionRecord], json_dict: dict[str, Any]) -> _T_TransactionRecord:
         try:
             return super().from_json_dict(json_dict)
         except Exception:
