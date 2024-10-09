@@ -425,6 +425,7 @@ def test_insert_with_reference_key_and_side() -> None:
                 assert parent.left == index
             else:
                 assert parent.right == index
+            assert len(merkle_blob.get_lineage(index)) == operation + 1
         side = Side.LEFT if operation % 2 == 0 else Side.RIGHT
         reference_kid = key
 
