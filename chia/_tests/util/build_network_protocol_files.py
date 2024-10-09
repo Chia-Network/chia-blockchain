@@ -194,7 +194,7 @@ from chia._tests.util.network_protocol_data import *  # noqa: F403
 from chia._tests.util.protocol_messages_json import *  # noqa: F403
 
 
-def parse_blob(input_bytes: bytes) -> Tuple[bytes, bytes]:
+def parse_blob(input_bytes: bytes) -> tuple[bytes, bytes]:
     size_bytes = input_bytes[:4]
     input_bytes = input_bytes[4:]
     size = int.from_bytes(size_bytes, "big")
@@ -242,7 +242,7 @@ from typing import Any
     def visitor(obj: Any, name: str) -> None:
         nonlocal result
         nonlocal counter
-        result += f"\n{name}_json: Dict[str, Any] = {obj.to_json_dict()}\n"
+        result += f"\n{name}_json: dict[str, Any] = {obj.to_json_dict()}\n"
         counter += 1
 
     visit_all_messages(visitor)
