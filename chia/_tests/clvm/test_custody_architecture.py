@@ -105,7 +105,7 @@ def test_unknown_puzzle_behavior() -> None:
             raise NotImplementedError()
 
         def puzzle_hash(self, nonce: int) -> bytes32:
-            raise NotImplementedError()
+            return bytes32([nonce] * 32)
 
     # First a simple PuzzleWithRestrictions that is really just a Puzzle
     unknown_puzzle_0 = UnknownPuzzle(PuzzleHint(BUNCH_OF_ZEROS, ANY_PROGRAM))
@@ -138,7 +138,7 @@ def test_unknown_puzzle_behavior() -> None:
         pwr,
         puzzle=MofN(
             m=1,
-            members=[PuzzleWithRestrictions(0, [], unknown_puzzle_0), PuzzleWithRestrictions(0, [], unknown_puzzle_3)],
+            members=[PuzzleWithRestrictions(0, [], unknown_puzzle_0), PuzzleWithRestrictions(1, [], unknown_puzzle_3)],
         ),
     )
     assert pwr.unknown_puzzles == {
@@ -160,7 +160,7 @@ def test_unknown_puzzle_behavior() -> None:
             m=1,
             members=[
                 PuzzleWithRestrictions(0, [], PlaceholderPuzzle()),
-                PuzzleWithRestrictions(0, [], PlaceholderPuzzle()),
+                PuzzleWithRestrictions(1, [], PlaceholderPuzzle()),
             ],
         ),
     )
