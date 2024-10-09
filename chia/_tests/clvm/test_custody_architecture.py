@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import itertools
-from dataclasses import dataclass, replace
-from typing import List
+from dataclasses import dataclass, field, replace
+from typing import List, Literal
 
 import pytest
 from chia_rs import G2Element
@@ -15,6 +15,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.conditions import CreateCoinAnnouncement
 from chia.wallet.puzzles.custody.custody_architecture import (
     MofN,
+    MorpherOrValidator,
     ProvenSpend,
     Puzzle,
     PuzzleHint,
@@ -80,7 +81,7 @@ ANY_PROGRAM = Program.to(None)
         ),
     ],
 )
-def test_back_and_forth_hint_parsing(restrictions: List[Restriction], puzzle: Puzzle) -> None:
+def test_back_and_forth_hint_parsing(restrictions: List[Restriction[MorpherOrValidator]], puzzle: Puzzle) -> None:
     cwr = PuzzleWithRestrictions(
         nonce=0,
         restrictions=restrictions,
@@ -94,7 +95,7 @@ def test_unknown_puzzle_behavior() -> None:
     @dataclass(frozen=True)
     class PlaceholderPuzzle:
         @property
-        def _morpher_not_validator(self) -> bool:
+        def morpher_not_validator(self) -> bool:
             raise NotImplementedError()
 
         def memo(self, nonce: int) -> Program:
@@ -166,18 +167,18 @@ def test_unknown_puzzle_behavior() -> None:
 
 
 # (mod (delegated_puzzle . rest) rest)
-ACS = Program.to(3)
-ACS_PH = ACS.get_tree_hash()
+ACS_MEMBER = Program.to(3)
+ACS_MEMBER_PH = ACS_MEMBER.get_tree_hash()
 
 
 @dataclass(frozen=True)
-class ACSPuzzle:
+class ACSMember:
     def memo(self, nonce: int) -> Program:
         return Program.to(None)
 
     def puzzle(self, nonce: int) -> Program:
-        # (r (c (q . nonce) ACS_PH))
-        return Program.to([6, [4, (1, nonce), ACS]])
+        # (r (c (q . nonce) ACS_MEMBER_PH))
+        return Program.to([6, [4, (1, nonce), ACS_MEMBER]])
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
@@ -188,7 +189,7 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         for m in range(1, 6):  # 1 - 5 inclusive
             for n in range(1, 6):
-                m_of_n = MofN(m, [PuzzleWithRestrictions(n_i, [], ACSPuzzle()) for n_i in range(0, n)])
+                m_of_n = MofN(m, [PuzzleWithRestrictions(n_i, [], ACSMember()) for n_i in range(0, n)])
 
                 # Farm and find coin
                 await sim.farm_block(m_of_n.puzzle_hash(0))
@@ -204,8 +205,8 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
                 # Test a spend of every combination of m of n
                 for indexes in itertools.combinations(range(0, n), m):
                     proven_spends = {
-                        ACSPuzzle().puzzle_hash(index): ProvenSpend(
-                            ACSPuzzle().puzzle(index),
+                        ACSMember().puzzle_hash(index): ProvenSpend(
+                            ACSMember().puzzle(index),
                             Program.to(
                                 [announcement_1.to_program(), announcement_2.corresponding_assertion().to_program()]
                             ),
@@ -240,3 +241,106 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
                     assert result == (MempoolInclusionStatus.SUCCESS, None)
                     await sim.farm_block()
                     await sim.rewind(block_height)
+
+
+@dataclass(frozen=True)
+class ACSPuzzle:
+    def memo(self, nonce: int) -> Program:
+        return Program.to(None)
+
+    def puzzle(self, nonce: int) -> Program:
+        return Program.to(1)
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()
+
+
+@dataclass(frozen=True)
+class ACSMorpher:
+    morpher_not_validator: Literal[True] = field(init=False, default=True)
+
+    def memo(self, nonce: int) -> Program:
+        return Program.to(None)
+
+    def puzzle(self, nonce: int) -> Program:
+        # (mod (conditions . solution) solution)
+        return Program.to(3)
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()
+
+
+@dataclass(frozen=True)
+class ACSValidator:
+    morpher_not_validator: Literal[False] = field(init=False, default=False)
+
+    def memo(self, nonce: int) -> Program:
+        return Program.to(None)
+
+    def puzzle(self, nonce: int) -> Program:
+        # (mod (conditions . program) (a program conditions))
+        return Program.to([2, 3, 2])
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()
+
+
+@pytest.mark.anyio
+async def test_restriction_layer(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        pwr = PuzzleWithRestrictions(0, [ACSMorpher(), ACSMorpher(), ACSValidator(), ACSValidator()], ACSPuzzle())
+
+        # Farm coin with puzzle inside
+        await sim.farm_block(pwr.puzzle_hash())
+        pwr_coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[
+            0
+        ].coin
+
+        # Some announcements to make a ring between the two morphers and the inner puzzle
+        announcement_1 = CreateCoinAnnouncement(msg=b"foo", coin_id=pwr_coin.name())
+        announcement_2 = CreateCoinAnnouncement(msg=b"bar", coin_id=pwr_coin.name())
+        announcement_3 = CreateCoinAnnouncement(msg=b"qux", coin_id=pwr_coin.name())
+
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "Puzzle with 4 restrictions (2 morphers & 2 validators) all ACS",
+                WalletSpendBundle(
+                    [
+                        make_spend(
+                            pwr_coin,
+                            pwr.puzzle_reveal(),
+                            pwr.solve(
+                                [
+                                    Program.to(
+                                        [
+                                            announcement_1.to_program(),
+                                            announcement_2.corresponding_assertion().to_program(),
+                                        ]
+                                    ),
+                                    Program.to(
+                                        [
+                                            announcement_2.to_program(),
+                                            announcement_3.corresponding_assertion().to_program(),
+                                        ]
+                                    ),
+                                ],
+                                [
+                                    Program.to(None),
+                                    # (mod conditions (r (r (r (r (r (r conditions)))))))
+                                    # checks length >= 6
+                                    Program.to(127),
+                                ],
+                                Program.to(
+                                    [
+                                        announcement_3.to_program(),
+                                        announcement_1.corresponding_assertion().to_program(),
+                                    ]
+                                ),
+                            ),
+                        )
+                    ],
+                    G2Element(),
+                ),
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)

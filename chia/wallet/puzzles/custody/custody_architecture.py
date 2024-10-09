@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Dict, List, Mapping, Protocol, Type, Union, cast
+from typing import Dict, List, Literal, Mapping, Protocol, TypeVar, Union
 
 from typing_extensions import runtime_checkable
 
@@ -13,6 +13,10 @@ from chia.wallet.util.merkle_tree import MerkleTree, hash_a_pair, hash_an_atom
 MofN_MOD = load_clvm_maybe_recompile(
     "m_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
 )
+RESTRICTION_MOD = load_clvm_maybe_recompile(
+    "restrictions.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
+)
+RESTRICTION_MOD_HASH = RESTRICTION_MOD.get_tree_hash()
 
 
 # General (inner) puzzle driver spec
@@ -58,20 +62,15 @@ class UnknownPuzzle:
 
 
 # A spec for "restrictions" on specific inner puzzles
+MorpherOrValidator = Literal[True, False]
+
+_T_MorpherNotValidator = TypeVar("_T_MorpherNotValidator", bound=MorpherOrValidator, covariant=True)
+
+
 @runtime_checkable
-class Restriction(Puzzle, Protocol):
+class Restriction(Puzzle, Protocol[_T_MorpherNotValidator]):
     @property
-    def _morpher_not_validator(self) -> bool: ...
-
-
-def morpher(cls: Type[Puzzle]) -> Type[Restriction]:
-    setattr(cls, "_morpher_not_validator", True)
-    return cast(Type[Restriction], cls)
-
-
-def validator(cls: Type[Puzzle]) -> Type[Restriction]:
-    setattr(cls, "_morpher_not_validator", False)
-    return cast(Type[Restriction], cls)
+    def morpher_not_validator(self) -> _T_MorpherNotValidator: ...
 
 
 @dataclass(frozen=True)
@@ -98,7 +97,7 @@ class UnknownRestriction:
     restriction_hint: RestrictionHint
 
     @property
-    def _morpher_not_validator(self) -> bool:
+    def morpher_not_validator(self) -> bool:
         return self.restriction_hint.morpher_not_validator
 
     def memo(self, nonce: int) -> Program:
@@ -190,13 +189,13 @@ class MofN:
 @dataclass(frozen=True)
 class PuzzleWithRestrictions:
     nonce: int
-    restrictions: List[Restriction]
+    restrictions: List[Restriction[MorpherOrValidator]]
     puzzle: Puzzle
 
     def memo(self) -> Program:
         restriction_hints: List[RestrictionHint] = [
             RestrictionHint(
-                restriction._morpher_not_validator, restriction.puzzle_hash(self.nonce), restriction.memo(self.nonce)
+                restriction.morpher_not_validator, restriction.puzzle_hash(self.nonce), restriction.memo(self.nonce)
             )
             for restriction in self.restrictions
         ]
@@ -262,7 +261,7 @@ class PuzzleWithRestrictions:
         }
 
     def fill_in_unknown_puzzles(self, puzzle_dict: Mapping[bytes32, Puzzle]) -> PuzzleWithRestrictions:
-        new_restrictions: List[Restriction] = []
+        new_restrictions: List[Restriction[MorpherOrValidator]] = []
         for restriction in self.restrictions:
             if isinstance(restriction, UnknownRestriction) and restriction.restriction_hint.puzhash in puzzle_dict:
                 new = puzzle_dict[restriction.restriction_hint.puzhash]
@@ -288,13 +287,54 @@ class PuzzleWithRestrictions:
         )
 
     def puzzle_reveal(self) -> Program:
-        # TODO: restriction layer
         # TODO: indexing
         # TODO: optimizations on specific cases
-        return self.puzzle.puzzle(self.nonce)
+        inner_puzzle = self.puzzle.puzzle(self.nonce)
+        if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
+            return RESTRICTION_MOD.curry(
+                [
+                    restriction.puzzle(self.nonce)
+                    for restriction in self.restrictions
+                    if restriction.morpher_not_validator
+                ],
+                [
+                    restriction.puzzle(self.nonce)
+                    for restriction in self.restrictions
+                    if not restriction.morpher_not_validator
+                ],
+                inner_puzzle,
+            )
+        else:
+            return inner_puzzle
 
     def puzzle_hash(self) -> bytes32:
-        # TODO: restriction layer
         # TODO: indexing
         # TODO: optimizations on specific cases
-        return self.puzzle.puzzle_hash(self.nonce)
+        inner_puzzle_hash = self.puzzle.puzzle_hash(self.nonce)
+        if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
+            morpher_hashes = [
+                restriction.puzzle_hash(self.nonce)
+                for restriction in self.restrictions
+                if restriction.morpher_not_validator
+            ]
+            validator_hashes = [
+                restriction.puzzle_hash(self.nonce)
+                for restriction in self.restrictions
+                if not restriction.morpher_not_validator
+            ]
+            return (
+                Program.to(RESTRICTION_MOD_HASH)
+                .curry(
+                    morpher_hashes,
+                    validator_hashes,
+                    inner_puzzle_hash,
+                )
+                .get_tree_hash_precalc(*morpher_hashes, *validator_hashes, RESTRICTION_MOD_HASH, inner_puzzle_hash)
+            )
+        else:
+            return inner_puzzle_hash
+
+    def solve(
+        self, morpher_solutions: List[Program], validator_solutions: List[Program], inner_solution: Program
+    ) -> Program:
+        return Program.to([morpher_solutions, validator_solutions, inner_solution])
