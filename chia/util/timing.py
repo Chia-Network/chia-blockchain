@@ -3,8 +3,8 @@ from __future__ import annotations
 import os
 import sys
 import time
-from typing import Callable, Optional, overload
 from collections.abc import Iterator
+from typing import Callable, Optional, overload
 
 system_delays = {
     # based on data from https://github.com/Chia-Network/chia-blockchain/pull/13724

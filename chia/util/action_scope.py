@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import contextlib
+from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass, field
 from typing import Callable, Generic, Optional, Protocol, Type, TypeVar, final
-from collections.abc import AsyncIterator, Awaitable
 
 import aiosqlite
 

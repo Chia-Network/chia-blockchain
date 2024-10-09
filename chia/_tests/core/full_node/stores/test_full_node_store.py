@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Dict, List, Optional, Tuple
 from collections.abc import AsyncIterator
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 

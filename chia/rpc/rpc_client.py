@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
 from typing import Any, Dict, List, Optional, Type, TypeVar
-from collections.abc import AsyncIterator
 
 import aiohttp
 

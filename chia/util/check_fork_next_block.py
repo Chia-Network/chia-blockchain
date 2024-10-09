@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Callable, List
 from collections.abc import Awaitable
+from typing import Callable, List
 
 from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.server.ws_connection import WSChiaConnection

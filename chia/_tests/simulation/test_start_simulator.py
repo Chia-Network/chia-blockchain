@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any, Dict, Tuple
-from collections.abc import AsyncGenerator
 
 import pytest
 

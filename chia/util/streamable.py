@@ -5,6 +5,7 @@ import io
 import os
 import pprint
 import traceback
+from collections.abc import Collection
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -21,7 +22,6 @@ from typing import (
     Union,
     get_type_hints,
 )
-from collections.abc import Collection
 
 from typing_extensions import Literal, get_args, get_origin
 

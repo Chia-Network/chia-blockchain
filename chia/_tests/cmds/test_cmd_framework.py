@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import textwrap
+from collections.abc import Sequence
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional
-from collections.abc import Sequence
 
 import click
 import pytest

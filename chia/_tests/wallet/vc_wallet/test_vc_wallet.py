@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Callable, List, Optional
 from collections.abc import Awaitable
+from typing import Any, Callable, List, Optional
 
 import pytest
 from chia_rs import G2Element

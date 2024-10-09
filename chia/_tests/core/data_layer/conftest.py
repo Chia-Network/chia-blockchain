@@ -4,8 +4,8 @@ import os
 import pathlib
 import sys
 import time
-from typing import Any, Callable, Dict
 from collections.abc import AsyncIterable, Awaitable, Iterator
+from typing import Any, Callable, Dict
 
 import pytest
 

@@ -3,11 +3,11 @@ from __future__ import annotations
 import logging
 import time
 import traceback
+from collections.abc import ItemsView, KeysView, ValuesView
 from dataclasses import dataclass, field
 from math import ceil
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from collections.abc import ItemsView, KeysView, ValuesView
 
 from chia_rs import G1Element
 from chiapos import DiskProver

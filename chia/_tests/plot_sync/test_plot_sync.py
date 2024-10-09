@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from shutil import copy
 from typing import Any, Callable, List, Optional, Tuple
-from collections.abc import AsyncIterator
 
 import pytest
 from chia_rs import G1Element

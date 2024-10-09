@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import itertools
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from collections.abc import Collection
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import anyio
 

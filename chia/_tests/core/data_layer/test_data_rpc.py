@@ -11,12 +11,12 @@ import random
 import sqlite3
 import sys
 import time
+from collections.abc import AsyncIterator
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
-from collections.abc import AsyncIterator
 
 import anyio
 import pytest

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple, Union
 from collections.abc import Iterator
+from typing import Dict, List, Optional, Tuple, Union
 
 from chia_rs import G1Element
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
 from collections.abc import Iterator
+from typing import List, Optional, Tuple
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

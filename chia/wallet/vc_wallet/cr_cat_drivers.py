@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from enum import IntEnum
 from typing import List, Optional, Tuple, Type, TypeVar
-from collections.abc import Iterable
 
 from clvm.casts import int_to_bytes
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Any, Callable, Optional, Tuple
 from collections.abc import Coroutine
+from typing import Any, Callable, Optional, Tuple
 
 import pytest
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 import dataclasses
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, get_type_hints
 from collections.abc import Awaitable
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, get_type_hints
 
 import aiohttp
 from chia_rs import AugSchemeMPL

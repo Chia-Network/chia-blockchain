@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import random
-from typing import List, Optional
 from collections.abc import Generator, Iterator
+from typing import List, Optional
 
 import pytest
 from chia_rs import G1Element, G2Element

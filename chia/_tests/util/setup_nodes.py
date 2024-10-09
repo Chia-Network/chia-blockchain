@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
-from collections.abc import AsyncIterator
 
 import anyio
 

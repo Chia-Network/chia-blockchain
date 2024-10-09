@@ -6,11 +6,11 @@ import logging
 import signal
 import sqlite3
 import time
+from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from types import FrameType
 from typing import Any, Dict, List, Optional, Tuple, Union
-from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes

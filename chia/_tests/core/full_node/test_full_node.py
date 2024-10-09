@@ -6,8 +6,8 @@ import dataclasses
 import logging
 import random
 import time
-from typing import Dict, List, Optional, Tuple
 from collections.abc import Coroutine
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import cProfile
+from collections.abc import Collection, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
 from time import monotonic
 from typing import Dict, List, Optional, Tuple
-from collections.abc import Collection, Iterator
 
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

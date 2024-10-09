@@ -5,10 +5,10 @@ import random
 import sqlite3
 import sys
 import time
+from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import List, Optional
-from collections.abc import Iterator
 
 import click
 import zstd

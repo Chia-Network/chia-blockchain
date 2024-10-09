@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Tuple, Union
 from collections.abc import Iterator
+from typing import List, Tuple, Union
 
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram

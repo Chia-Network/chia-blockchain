@@ -6,9 +6,9 @@ import dataclasses
 import functools
 import signal
 import sys
+from collections.abc import AsyncIterator
 from types import FrameType
 from typing import List, Optional, final
-from collections.abc import AsyncIterator
 
 from typing_extensions import Protocol
 

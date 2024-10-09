@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Callable, Dict, List, Optional, Tuple
 from collections.abc import Sequence
+from typing import Callable, Dict, List, Optional, Tuple
 
 import chia_rs
 from chia_rs import G1Element, G2Element, compute_merkle_set_root

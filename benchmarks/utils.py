@@ -5,9 +5,9 @@ import enum
 import os
 import subprocess
 import sys
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any, Generic, Optional, Type, TypeVar, Union
-from collections.abc import AsyncIterator
 
 import click
 

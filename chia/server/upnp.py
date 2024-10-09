@@ -3,10 +3,10 @@ from __future__ import annotations
 import contextlib
 import logging
 import threading
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from queue import Queue
 from typing import List, Optional, Tuple, Union
-from collections.abc import Iterator
 
 from typing_extensions import Literal
 

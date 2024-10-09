@@ -5,9 +5,9 @@ import collections
 import contextlib
 import dataclasses
 import logging
+from collections.abc import AsyncIterator
 from enum import IntEnum
 from typing import Dict, Generic, Optional, Type, TypeVar
-from collections.abc import AsyncIterator
 
 from typing_extensions import final
 

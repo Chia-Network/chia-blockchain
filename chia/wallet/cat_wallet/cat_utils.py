@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional, Union
 from collections.abc import Iterator
+from typing import List, Optional, Union
 
 from chia_rs import G2Element
 

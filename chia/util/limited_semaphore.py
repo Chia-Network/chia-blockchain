@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from dataclasses import dataclass
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 
 from typing_extensions import final
 

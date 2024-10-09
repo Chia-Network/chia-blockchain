@@ -6,9 +6,9 @@ import inspect
 import os
 import sys
 import time
+from collections.abc import Iterator
 from types import FrameType
 from typing import Any, Dict, List
-from collections.abc import Iterator
 
 # This is a development utility that instruments tasks (coroutines) and records
 # wall-clock time they spend in various functions. Since it relies on

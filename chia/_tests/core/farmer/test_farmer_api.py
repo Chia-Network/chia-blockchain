@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from asyncio import Task, create_task, gather, sleep
-from typing import Any, Optional, TypeVar
 from collections.abc import Coroutine
+from typing import Any, Optional, TypeVar
 
 import pytest
 

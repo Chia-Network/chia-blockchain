@@ -5,10 +5,10 @@ import copy
 import logging
 import time
 import traceback
+from collections.abc import Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Dict, List, Optional
-from collections.abc import Sequence
 
 from chia_rs import AugSchemeMPL, SpendBundleConditions
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Callable, Dict, List, Optional, Tuple
 from collections.abc import Awaitable
+from typing import Callable, Dict, List, Optional, Tuple
 
 from chia_rs import fast_forward_singleton, get_conditions_from_spendbundle
 

@@ -6,10 +6,10 @@ import os
 import pathlib
 import sys
 import time
+from collections.abc import Awaitable, Sequence
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-from collections.abc import Awaitable, Sequence
 
 from chia.cmds.cmds_util import (
     CMDTXConfigLoader,

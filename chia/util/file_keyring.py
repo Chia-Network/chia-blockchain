@@ -6,12 +6,12 @@ import os
 import shutil
 import sys
 import threading
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Dict, Optional, Union, cast
-from collections.abc import Iterator
 
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
