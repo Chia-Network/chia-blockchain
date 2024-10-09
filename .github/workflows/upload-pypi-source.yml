@@ -56,7 +56,6 @@ jobs:
           - name: Intel
             matrix: intel
         python:
-          - major_dot_minor: "3.8"
           - major_dot_minor: "3.9"
           - major_dot_minor: "3.10"
           - major_dot_minor: "3.11"
@@ -68,12 +67,6 @@ jobs:
               python manage-mypy.py build-mypy-ini
               mypy
         exclude:
-          - os:
-              matrix: macos
-            arch:
-              matrix: arm
-            python:
-              major_dot_minor: "3.8"
           - os:
               matrix: windows
             arch:
@@ -174,7 +167,7 @@ jobs:
       - check
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: [3.10]
         os: [ubuntu-latest]
 
     steps:
