@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
-from typing import Any, List
+from typing import Any
 
 import pytest
 from chia_rs import ALLOW_BACKREFS

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 
 from chia._tests.util.misc import BenchmarkRunner, add_blocks_in_batches, wallet_height_at_least

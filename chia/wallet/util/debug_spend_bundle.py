@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from chia_rs import AugSchemeMPL
 from clvm.operators import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble

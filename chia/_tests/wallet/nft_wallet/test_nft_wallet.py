@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element

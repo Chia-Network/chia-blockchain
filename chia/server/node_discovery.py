@@ -9,7 +9,7 @@ from logging import Logger
 from pathlib import Path
 from random import Random
 from secrets import randbits
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 import dns.asyncresolver
 

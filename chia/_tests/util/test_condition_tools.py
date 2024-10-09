@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import pytest
 from chia_rs import G1Element
 from clvm.casts import int_to_bytes

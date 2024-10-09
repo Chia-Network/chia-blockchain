@@ -6,7 +6,6 @@ import os
 import pathlib
 import sys
 import tempfile
-from typing import List
 
 import importlib_resources
 from clvm_tools_rs import compile_clvm as compile_clvm_rust

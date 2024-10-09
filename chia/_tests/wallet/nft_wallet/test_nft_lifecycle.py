@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-from typing import List
 
 import pytest
 from chia_rs import G2Element

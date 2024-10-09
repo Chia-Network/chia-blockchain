@@ -6,7 +6,7 @@ import json
 import logging
 import types
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import testconfig
 

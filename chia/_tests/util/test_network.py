@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 from ipaddress import IPv4Address, IPv6Address
-from typing import Type, Union
+from typing import Union
 
 import pytest
 

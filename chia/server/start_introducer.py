@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import ast
 import inspect
-from typing import Any, Dict, Set, cast
+from typing import Any, cast
 
 from chia.protocols import (
     farmer_protocol,

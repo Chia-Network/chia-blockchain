@@ -12,7 +12,7 @@ if sys.platform == "win32":
     import _winapi
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 from typing_extensions import Protocol, TypeAlias
 

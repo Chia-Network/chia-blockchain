@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, List, Optional, cast, final
+from typing import TYPE_CHECKING, Optional, cast, final
 
 from chia.types.blockchain_format.coin import Coin
 from chia.util.action_scope import ActionScope

@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import functools
 from types import MappingProxyType
-from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar, Union, get_args, get_type_hints
+from typing import Any, Callable, Generic, Optional, TypeVar, Union, get_args, get_type_hints
 
 from hsms.clvm_serde import from_program_for_type, to_program_for_type
 from typing_extensions import TypeGuard

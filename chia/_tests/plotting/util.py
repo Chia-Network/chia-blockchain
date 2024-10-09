@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from chia.simulator.block_tools import get_plot_dir
 

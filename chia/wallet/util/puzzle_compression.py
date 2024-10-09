@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import zlib
-from typing import List
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD

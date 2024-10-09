@@ -4,7 +4,7 @@ import functools
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from enum import IntEnum
-from typing import List, Optional, Tuple, Type, TypeVar
+from typing import Optional, TypeVar
 
 from clvm.casts import int_to_bytes
 

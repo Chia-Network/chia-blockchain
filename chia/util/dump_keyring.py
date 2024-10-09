@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Any, Dict, Optional, cast
+from typing import Any, Optional, cast
 
 import click
 import colorama

@@ -11,7 +11,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, overload
+from typing import Any, Optional, overload
 from urllib.parse import urlparse
 
 import boto3 as boto3

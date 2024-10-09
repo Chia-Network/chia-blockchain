@@ -6,7 +6,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, MerkleSet

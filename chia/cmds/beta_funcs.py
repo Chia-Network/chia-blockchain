@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 from chia.cmds.cmds_util import format_bytes, prompt_yes_no, validate_directory_writable
 from chia.util.beta_metrics import metrics_log_interval_max, metrics_log_interval_min

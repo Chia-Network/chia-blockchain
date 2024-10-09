@@ -5,7 +5,7 @@ import binascii
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit
 from chia.plotters.chiapos import get_chiapos_install_info, plot_chia

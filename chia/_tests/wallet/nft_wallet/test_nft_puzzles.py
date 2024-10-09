@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import Optional, Tuple
+from typing import Optional
 
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program

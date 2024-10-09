@@ -15,7 +15,7 @@ import sysconfig
 import tempfile
 from collections.abc import AsyncIterator, Iterator
 from contextlib import AsyncExitStack
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Union
 
 import aiohttp
 import pytest

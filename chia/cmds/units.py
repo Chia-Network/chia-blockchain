@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict
-
 # The rest of the codebase uses mojos everywhere.
 # Only use these units for user facing interfaces.
 units: dict[str, int] = {

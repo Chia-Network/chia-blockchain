@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols import timelord_protocol

@@ -5,7 +5,7 @@ import stat
 import sys
 from logging import Logger
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
+from typing import Optional
 
 from chia.util.config import load_config, traverse_dict
 from chia.util.permissions import octal_mode_string, verify_file_permissions

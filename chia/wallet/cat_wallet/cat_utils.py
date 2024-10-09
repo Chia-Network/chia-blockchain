@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Iterator
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from chia_rs import G2Element
 

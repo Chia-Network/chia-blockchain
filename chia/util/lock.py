@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
-from typing import Optional, Type
+from typing import Optional
 
 from filelock import BaseFileLock, FileLock, Timeout
 from typing_extensions import final

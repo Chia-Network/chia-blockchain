@@ -8,7 +8,7 @@ from dataclasses import replace
 from functools import cached_property
 from pathlib import Path
 from threading import Event, Thread
-from typing import List, Type, TypeVar
+from typing import TypeVar
 
 import click
 from chia_rs import AugSchemeMPL, G2Element

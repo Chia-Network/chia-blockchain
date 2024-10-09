@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import sys
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI

@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from chia.cmds.cmds_util import format_bytes, format_minutes, get_any_service_client
 from chia.cmds.units import units

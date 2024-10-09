@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import time
 from collections import Counter
-from typing import List
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability

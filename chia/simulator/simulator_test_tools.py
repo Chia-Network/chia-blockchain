@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 from chia_rs import PrivateKey
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import List, Optional, Type, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 from clvm.casts import int_from_bytes
 

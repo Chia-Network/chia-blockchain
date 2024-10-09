@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Set
+from typing import Any, Optional
 
 from chia._tests.util.misc import DataCase, Marks, datacases
 from chia.server.outbound_message import NodeType

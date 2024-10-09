@@ -4,7 +4,6 @@ from __future__ import annotations
 import dataclasses
 import logging
 import random
-from typing import Dict
 
 import pytest
 from clvm.casts import int_to_bytes

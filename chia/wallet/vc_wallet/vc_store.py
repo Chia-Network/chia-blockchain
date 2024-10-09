@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from functools import cmp_to_key
-from typing import Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Optional, TypeVar
 
 from aiosqlite import Row
 

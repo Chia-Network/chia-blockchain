@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional, Tuple
+from typing import Optional
 
 from chia_rs import AugSchemeMPL
 

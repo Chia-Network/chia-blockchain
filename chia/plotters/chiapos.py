@@ -10,7 +10,7 @@ import importlib.metadata
 import logging
 from argparse import Namespace
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia.plotting.create_plots import create_plots, resolve_plot_keys
 from chia.plotting.util import Params, add_plot_directory, validate_plot_size

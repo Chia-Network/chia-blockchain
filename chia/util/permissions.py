@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Tuple
 
 
 def verify_file_permissions(path: Path, mask: int) -> tuple[bool, int]:

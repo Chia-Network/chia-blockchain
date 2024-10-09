@@ -7,7 +7,7 @@ import logging
 import random
 import time
 from collections.abc import Coroutine
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey

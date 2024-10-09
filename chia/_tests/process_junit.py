@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import StatisticsError, mean, stdev
-from typing import Any, Dict, List, Optional, TextIO, Tuple, Type, final
+from typing import Any, Optional, TextIO, final
 
 import click
 import lxml.etree

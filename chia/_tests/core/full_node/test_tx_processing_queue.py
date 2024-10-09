@@ -4,7 +4,7 @@ import asyncio
 import logging
 import random
 from dataclasses import dataclass
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 import pytest
 

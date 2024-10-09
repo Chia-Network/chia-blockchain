@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import random
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Optional
 
 import pytest
 from chia_rs import G1Element, G2Element

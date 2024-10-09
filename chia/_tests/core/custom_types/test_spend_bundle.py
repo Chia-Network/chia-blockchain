@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import random
 import unittest
-from typing import List, Tuple
 
 import pytest
 from chia_rs import G2Element

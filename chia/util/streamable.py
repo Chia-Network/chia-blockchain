@@ -7,21 +7,7 @@ import pprint
 import traceback
 from collections.abc import Collection
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    BinaryIO,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    get_type_hints,
-)
+from typing import TYPE_CHECKING, Any, BinaryIO, Callable, ClassVar, Optional, TypeVar, Union, get_type_hints
 
 from typing_extensions import Literal, get_args, get_origin
 

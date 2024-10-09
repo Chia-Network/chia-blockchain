@@ -7,7 +7,7 @@ import time
 from collections.abc import Awaitable
 from dataclasses import replace
 from pprint import pprint
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import aiohttp
 

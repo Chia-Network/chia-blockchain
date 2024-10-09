@@ -1,8 +1,6 @@
 # flake8: noqa: F811, F401
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import List, Optional, Tuple, Type, TypeVar
+from typing import Optional, TypeVar
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

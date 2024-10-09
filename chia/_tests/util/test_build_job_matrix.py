@@ -4,7 +4,6 @@ import json
 import pathlib
 import subprocess
 import sys
-from typing import Dict, List
 
 import chia._tests
 

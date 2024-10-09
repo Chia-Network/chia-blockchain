@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import logging
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional, Type, TypeVar, Union, get_type_hints
+from typing import Callable, Optional, TypeVar, Union, get_type_hints
 
 from typing_extensions import Concatenate, ParamSpec
 

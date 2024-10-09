@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import types
-from typing import Dict, List
 
 import pytest
 from chia_rs import Coin

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict
-
 from chia_rs import G1Element, G2Element, PrivateKey
 
 from chia.full_node.bundle_tools import simple_solution_generator

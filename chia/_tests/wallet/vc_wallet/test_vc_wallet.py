@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Awaitable
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G2Element

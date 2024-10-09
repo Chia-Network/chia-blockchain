@@ -4,7 +4,7 @@ import contextlib
 import dataclasses
 import logging
 import re
-from typing import Tuple, Type, Union
+from typing import Union
 
 import pytest
 

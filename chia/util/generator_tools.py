@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chiabip158 import PyBIP158
 

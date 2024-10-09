@@ -10,7 +10,7 @@ from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pytest
 import yaml

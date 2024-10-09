@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path, PureWindowsPath
 from random import randint
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from aiohttp import ClientConnectorError
 from chia_rs import PrivateKey

@@ -5,7 +5,7 @@ import random
 from hashlib import sha256
 from itertools import permutations
 from random import Random
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import Coin, MerkleSet, compute_merkle_set_root, confirm_included_already_hashed

@@ -5,7 +5,7 @@ import pathlib
 import sys
 import time
 from collections.abc import AsyncIterable, Awaitable, Iterator
-from typing import Any, Callable, Dict
+from typing import Any, Callable
 
 import pytest
 

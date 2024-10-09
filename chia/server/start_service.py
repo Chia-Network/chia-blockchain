@@ -9,7 +9,7 @@ import signal
 from collections.abc import AsyncIterator, Awaitable, Coroutine
 from pathlib import Path
 from types import FrameType
-from typing import Any, Callable, Dict, Generic, List, Optional, Set, Tuple, Type, TypeVar, cast
+from typing import Any, Callable, Generic, Optional, TypeVar, cast
 
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server

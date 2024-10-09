@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List
 
 from chia._tests.util.run_block import run_json_block
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

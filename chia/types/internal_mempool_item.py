@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import BundleCoinSpend

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, List
-
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.simulator.full_node_simulator import FullNodeSimulator

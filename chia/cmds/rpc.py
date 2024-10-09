@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from typing import Any, Dict, List, Optional, TextIO
+from typing import Any, Optional, TextIO
 
 import click
 from aiohttp import ClientResponseError

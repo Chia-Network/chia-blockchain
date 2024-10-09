@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from logging import Logger
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Tuple, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia._tests.environments.common import ServiceEnvironment
 from chia.full_node.full_node import FullNode

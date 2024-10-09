@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass
 from time import time
 from types import TracebackType
-from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Optional, Union, cast
 from unittest.mock import ANY
 
 import pytest

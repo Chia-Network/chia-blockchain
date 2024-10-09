@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Tuple
 
 import pytest
 from clvm.casts import int_to_bytes

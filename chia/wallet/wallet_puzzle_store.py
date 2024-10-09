@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from chia_rs import G1Element
 

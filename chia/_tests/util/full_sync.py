@@ -8,7 +8,7 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, List, Optional, cast
+from typing import Callable, Optional, cast
 
 import aiosqlite
 import zstd

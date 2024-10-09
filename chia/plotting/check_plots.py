@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 from threading import Lock
 from time import sleep, time
-from typing import List, Optional
+from typing import Optional
 
 from chia_rs import G1Element
 from chiapos import Verifier

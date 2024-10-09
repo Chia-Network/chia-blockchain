@@ -43,7 +43,7 @@ def gen_ssl(suffix: str = "") -> None:
     private_ca_key: Optional[bytes] = None
     capture_cert_and_key = True
 
-    print("from typing import Dict, Tuple")
+    print("from typing import Tuple")
     print()
 
     make_ca_cert(Path("SSL_TEST_PRIVATE_CA_CRT"), Path("SSL_TEST_PRIVATE_CA_KEY"))

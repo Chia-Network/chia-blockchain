@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import random
-from typing import Tuple
 
 import importlib_resources
 from chia_rs import AugSchemeMPL, ClassgroupElement, Coin, G1Element, G2Element, VDFInfo, VDFProof

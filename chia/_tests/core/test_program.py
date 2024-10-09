@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from clvm.SExp import CastableType
 from clvm_tools import binutils
 

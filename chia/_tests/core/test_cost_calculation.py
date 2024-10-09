@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from typing import List
 
 import pytest
 from chia_rs import G1Element

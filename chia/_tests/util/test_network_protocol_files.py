@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Tuple
 
 from chia._tests.util.build_network_protocol_files import get_network_protocol_filename
 from chia._tests.util.network_protocol_data import *  # noqa: F403

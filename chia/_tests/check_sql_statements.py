@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import sys
 from subprocess import check_output
-from typing import Dict, Set, Tuple
 
 # check for duplicate index names
 

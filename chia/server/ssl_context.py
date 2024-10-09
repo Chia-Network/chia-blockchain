@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 
 
 def public_ssl_paths(path: Path, config: dict[str, Any]) -> tuple[Path, Path]:

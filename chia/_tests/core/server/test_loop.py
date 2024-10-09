@@ -10,7 +10,7 @@ import sys
 import threading
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
 
 import anyio
 import pytest

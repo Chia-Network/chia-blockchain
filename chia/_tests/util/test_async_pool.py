@@ -4,7 +4,7 @@ import asyncio
 import random
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Type
+from typing import Optional
 
 import anyio
 import pytest

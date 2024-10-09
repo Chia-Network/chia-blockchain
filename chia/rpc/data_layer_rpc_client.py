@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from chia.data_layer.data_layer_util import ClearPendingRootsRequest
 from chia.rpc.rpc_client import RpcClient

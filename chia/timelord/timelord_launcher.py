@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from types import FrameType
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_logging

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 

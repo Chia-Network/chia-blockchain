@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from sys import platform
-from typing import ClassVar, Optional, Tuple, Union, overload
+from typing import ClassVar, Optional, Union, overload
 
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring

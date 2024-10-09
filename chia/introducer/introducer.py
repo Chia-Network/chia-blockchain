@@ -5,7 +5,7 @@ import contextlib
 import logging
 import time
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.server.introducer_peers import VettedPeer

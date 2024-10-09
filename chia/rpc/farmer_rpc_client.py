@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 from chia.rpc.farmer_rpc_api import PlotInfoRequestData, PlotPathRequestData
 from chia.rpc.rpc_client import RpcClient

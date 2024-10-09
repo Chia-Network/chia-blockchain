@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Tuple
-
 from chiavdf import prove
 
 from chia.consensus.constants import ConsensusConstants

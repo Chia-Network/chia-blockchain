@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import socket
 from contextlib import closing
-from typing import Set
 
 recent_ports: set[int] = set()
 

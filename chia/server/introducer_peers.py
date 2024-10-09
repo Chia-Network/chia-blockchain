@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import time
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import Optional
 
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64

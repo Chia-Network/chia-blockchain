@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 import pytest
 from chia_rs import G2Element

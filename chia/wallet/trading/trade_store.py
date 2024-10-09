@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from time import perf_counter
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import aiosqlite
 

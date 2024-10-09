@@ -4,7 +4,6 @@ import random
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import List
 
 import pytest
 
