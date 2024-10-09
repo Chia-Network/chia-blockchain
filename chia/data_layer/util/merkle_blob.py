@@ -368,7 +368,7 @@ class MerkleBlob:
         else:
             leaf_index = self.key_to_index[reference_kid]
             old_leaf = self.get_raw_node(leaf_index)
-            assert isinstance(old_leaf, RawLeafMerkleNode)
+        assert isinstance(old_leaf, RawLeafMerkleNode)
         if side is None:
             side = Side.LEFT if seed[0] < 128 else Side.RIGHT
 
