@@ -85,7 +85,7 @@ class MerkleBlob:
         metadata = NodeMetadata.unpack(block[:metadata_size])
         node = unpack_raw_node(
             metadata=metadata,
-            data=block[-data_size:],
+            data=block[-int(data_size):],
             index=index,
         )
         return node
