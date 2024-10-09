@@ -12,6 +12,7 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from chia._tests.util.misc import DataCase, Marks, datacases
+from chia.data_layer.data_layer_util import Side
 from chia.data_layer.util.merkle_blob import (
     InvalidIndexError,
     KVId,
@@ -305,8 +306,6 @@ def test_small_insert_deletes() -> None:
 
 def test_proof_of_inclusion_merkle_blob() -> None:
     num_repeats = 10
-    num_inserts = 1000
-    num_deletes = 100
     seed = 0
 
     random = Random()
@@ -316,6 +315,9 @@ def test_proof_of_inclusion_merkle_blob() -> None:
     keys_values: Dict[KVId, KVId] = {}
 
     for repeats in range(num_repeats):
+        num_inserts = 1 + repeats * 100
+        num_deletes = 1 + repeats * 10
+
         kv_ids: List[Tuple[KVId, KVId]] = []
         hashes: List[bytes] = []
         for _ in range(num_inserts):
@@ -365,6 +367,7 @@ def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
 
     with pytest.raises(InvalidIndexError):
         merkle_blob.get_raw_node(index)
+    with pytest.raises(InvalidIndexError):
         merkle_blob.get_metadata(index)
 
 
@@ -375,3 +378,42 @@ def test_as_tuple_matches_dataclasses_astuple(cls: Type[RawMerkleNodeProtocol], 
     # hacky [:-1] to exclude the index
     # TODO: try again to indicate that the RawMerkleNodeProtocol requires the dataclass interface
     assert raw_node.as_tuple() == astuple(raw_node)[:-1]  # type: ignore[call-overload]
+
+
+def test_helper_methods() -> None:
+    merkle_blob = MerkleBlob(blob=bytearray())
+    assert merkle_blob.empty()
+    assert merkle_blob.get_root_hash() is None
+
+    key, value = generate_kvid(0)
+    hash = generate_hash(0)
+    merkle_blob.insert(key, value, hash)
+    assert not merkle_blob.empty()
+    assert merkle_blob.get_root_hash() is not None
+
+    merkle_blob.delete(key)
+    assert merkle_blob.empty()
+    assert merkle_blob.get_root_hash() is None
+
+
+def test_insert_with_reference_key_and_side() -> None:
+    num_inserts = 50
+    merkle_blob = MerkleBlob(blob=bytearray())
+    reference_kid = None
+    side = None
+
+    for operation in range(num_inserts):
+        key, value = generate_kvid(operation)
+        hash = generate_hash(operation)
+        merkle_blob.insert(key, value, hash, reference_kid, side)
+        if reference_kid is not None:
+            assert side is not None
+            index = merkle_blob.key_to_index[key]
+            node = merkle_blob.get_raw_node(index)
+            parent = merkle_blob.get_raw_node(node.parent)
+            if side == Side.LEFT:
+                assert parent.left == index
+            else:
+                assert parent.right == index
+        side = Side.LEFT if operation % 2 == 0 else Side.RIGHT
+        reference_kid = key

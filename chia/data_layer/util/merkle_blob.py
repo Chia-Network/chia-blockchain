@@ -131,6 +131,9 @@ class MerkleBlob:
             index = node.parent
 
     def calculate_lazy_hashes(self, index: TreeIndex = TreeIndex(0)) -> bytes32:
+        if self.empty():
+            return
+
         metadata = self.get_metadata(index)
         node = self.get_raw_node(index)
         if not metadata.dirty:
