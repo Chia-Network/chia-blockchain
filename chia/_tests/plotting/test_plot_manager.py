@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 import sys
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
 from typing import Callable, List, Optional, cast
-from collections.abc import Iterator
 
 import pytest
 from chia_rs import G1Element

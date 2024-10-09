@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from hashlib import sha256
 from typing import Callable, List
-from collections.abc import Sequence
 
 from clvm.casts import int_to_bytes
 

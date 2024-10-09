@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from itertools import chain
 from typing import Any, List, Optional, Tuple, Union
-from collections.abc import Iterator
 
 from clvm.EvalError import EvalError
 

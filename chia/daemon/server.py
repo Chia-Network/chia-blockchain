@@ -13,13 +13,13 @@ import sys
 import time
 import traceback
 import uuid
+from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
 from types import FrameType
 from typing import Any, Dict, List, Optional, Set, TextIO, Tuple
-from collections.abc import AsyncIterator
 
 from chia_rs import G1Element
 from typing_extensions import Protocol

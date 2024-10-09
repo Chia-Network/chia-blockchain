@@ -3,11 +3,11 @@ from __future__ import annotations
 import contextlib
 import logging
 from collections import defaultdict
+from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union
-from collections.abc import AsyncIterator, Awaitable
 
 import aiosqlite
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Set, Tuple
 from collections.abc import Collection
+from typing import Dict, List, Optional, Set, Tuple
 
 import pytest
 from chia_rs import Coin, CoinState

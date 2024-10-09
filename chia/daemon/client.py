@@ -3,10 +3,10 @@ from __future__ import annotations
 import asyncio
 import json
 import ssl
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from collections.abc import AsyncIterator
 
 import aiohttp
 

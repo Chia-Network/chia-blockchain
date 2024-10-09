@@ -5,10 +5,10 @@ import ipaddress
 import logging
 import socket
 import ssl
+from collections.abc import Iterable
 from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
-from collections.abc import Iterable
 
 from aiohttp import web
 from aiohttp.log import web_logger

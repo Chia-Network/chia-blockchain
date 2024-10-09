@@ -10,21 +10,9 @@ import os
 import random
 import time
 import traceback
-from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-    cast,
-    final,
-)
 from collections.abc import AsyncIterator, Awaitable
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast, final
 
 import aiohttp
 

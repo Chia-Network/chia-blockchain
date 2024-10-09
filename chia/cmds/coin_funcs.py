@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 import sys
-from typing import List, Optional, Tuple
 from collections.abc import Sequence
+from typing import List, Optional, Tuple
 
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
 from chia.cmds.param_types import CliAmount

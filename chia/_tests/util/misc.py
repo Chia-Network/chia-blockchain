@@ -12,6 +12,7 @@ import pathlib
 import ssl
 import subprocess
 import sys
+from collections.abc import Awaitable, Collection, Iterable, Iterator
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import Enum
@@ -38,7 +39,6 @@ from typing import (
     cast,
     final,
 )
-from collections.abc import Awaitable, Collection, Iterable, Iterator
 
 import aiohttp
 import pytest

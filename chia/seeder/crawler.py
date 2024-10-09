@@ -7,21 +7,10 @@ import logging
 import time
 import traceback
 from collections import defaultdict
+from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    cast,
-)
-from collections.abc import AsyncIterator, Awaitable
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 import aiosqlite
 

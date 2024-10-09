@@ -3,10 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Collection
 from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Set, Tuple, TypeVar
-from collections.abc import Awaitable, Collection
 
 from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, BLSCache, supports_fast_forward, validate_clvm_and_signature
 from chiabip158 import PyBIP158

@@ -5,11 +5,11 @@ import contextlib
 import json
 import logging
 import traceback
+from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
 from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar
-from collections.abc import AsyncIterator, Awaitable
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final

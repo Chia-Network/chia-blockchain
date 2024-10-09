@@ -6,9 +6,9 @@ import os
 import pathlib
 import shutil
 import subprocess
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import IO, TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union, overload
-from collections.abc import Iterator
 
 from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode
 from chia.data_layer.data_store import DataStore

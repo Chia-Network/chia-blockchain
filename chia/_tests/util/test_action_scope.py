@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import final
-from collections.abc import AsyncIterator
 
 import pytest
 

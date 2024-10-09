@@ -3,9 +3,9 @@ from __future__ import annotations
 import contextlib
 import os
 import pickle
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import List, Optional, Tuple
-from collections.abc import AsyncIterator
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants

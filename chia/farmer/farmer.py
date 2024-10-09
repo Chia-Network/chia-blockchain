@@ -7,11 +7,11 @@ import logging
 import sys
 import time
 import traceback
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from math import floor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
-from collections.abc import AsyncIterator
 
 import aiohttp
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey

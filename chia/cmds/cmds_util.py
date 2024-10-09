@@ -3,10 +3,10 @@ from __future__ import annotations
 import dataclasses
 import logging
 import traceback
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar
-from collections.abc import AsyncIterator
 
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Set, Tuple
 from collections.abc import Iterable
+from typing import List, Set, Tuple
 
 from chia.protocols.shared_protocol import Capability
 from chia.util.ints import uint16

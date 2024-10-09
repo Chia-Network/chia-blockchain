@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from collections.abc import AsyncIterator
 
 import pytest
 

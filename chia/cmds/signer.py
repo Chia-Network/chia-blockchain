@@ -3,12 +3,12 @@ from __future__ import annotations
 import itertools
 import os
 import time
+from collections.abc import Sequence
 from dataclasses import replace
 from functools import cached_property
 from pathlib import Path
 from threading import Event, Thread
 from typing import List, Type, TypeVar
-from collections.abc import Sequence
 
 import click
 from chia_rs import AugSchemeMPL, G2Element

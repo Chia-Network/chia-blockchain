@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Awaitable
 from contextlib import AsyncExitStack
 from dataclasses import replace
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
-from collections.abc import AsyncIterator, Awaitable
 
 import pytest
 

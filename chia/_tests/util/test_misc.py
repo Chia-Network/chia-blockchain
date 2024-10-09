@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import contextlib
-from typing import List, Optional, Tuple, Type, TypeVar
 from collections.abc import AsyncIterator, Iterator
+from typing import List, Optional, Tuple, Type, TypeVar
 
 import aiohttp
 import anyio

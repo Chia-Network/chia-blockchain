@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Awaitable, Collection, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Union
-from collections.abc import Awaitable, Collection, Sequence
 
 from typing_extensions import Protocol
 

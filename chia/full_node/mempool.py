@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Awaitable, Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from time import monotonic
 from typing import Callable, Dict, List, Optional, Set, Tuple
-from collections.abc import Awaitable, Iterator
 
 from chia_rs import AugSchemeMPL, Coin, G2Element
 

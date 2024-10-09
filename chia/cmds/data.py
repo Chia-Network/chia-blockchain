@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Coroutine, Sequence
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
-from collections.abc import Coroutine, Sequence
 
 import click
 

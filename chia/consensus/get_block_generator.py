@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, Optional, Set
 from collections.abc import Awaitable
+from typing import Callable, Dict, Optional, Set
 
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.sized_bytes import bytes32

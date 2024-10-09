@@ -5,9 +5,9 @@ import logging
 import math
 import time
 import traceback
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
-from collections.abc import Awaitable
 
 from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse

@@ -5,11 +5,11 @@ import logging
 import ssl
 import time
 import traceback
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, cast
-from collections.abc import Awaitable
 
 from aiohttp import (
     ClientResponseError,

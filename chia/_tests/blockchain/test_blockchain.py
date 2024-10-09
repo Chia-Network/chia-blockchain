@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 import random
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from typing import Dict, List, Optional
-from collections.abc import AsyncIterator
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, MerkleSet

@@ -5,12 +5,12 @@ import logging
 import operator
 import sys
 import time
+from collections.abc import Awaitable
 from math import ceil
 from os import mkdir
 from pathlib import Path
 from shutil import copy
 from typing import Any, Callable, Dict, List, Union, cast
-from collections.abc import Awaitable
 
 import pytest
 

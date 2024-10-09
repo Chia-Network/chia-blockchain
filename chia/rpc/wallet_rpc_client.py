@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from collections.abc import Sequence
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from chia.data_layer.data_layer_util import DLProof, VerifyProofResponse
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord

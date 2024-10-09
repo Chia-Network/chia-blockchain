@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Tuple
-from collections.abc import Iterator
 
 import pytest
 

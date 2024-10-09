@@ -5,10 +5,10 @@ import logging
 import shutil
 import tempfile
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, List, Optional, cast
-from collections.abc import Iterator
 
 import aiosqlite
 import zstd

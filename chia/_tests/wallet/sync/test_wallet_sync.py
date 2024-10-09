@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+from collections.abc import Awaitable
 from dataclasses import dataclass
 from typing import Callable, List, Optional
-from collections.abc import Awaitable
 from unittest.mock import MagicMock
 
 import pytest

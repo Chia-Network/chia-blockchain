@@ -11,8 +11,8 @@ if sys.platform == "win32":
     import _overlapped
     import _winapi
 
-from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, Union
 from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, Union
 
 from typing_extensions import Protocol, TypeAlias
 

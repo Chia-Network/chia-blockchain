@@ -8,9 +8,9 @@ import random
 import subprocess
 import sys
 import threading
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import List, Optional
-from collections.abc import AsyncIterator
 
 import anyio
 import pytest

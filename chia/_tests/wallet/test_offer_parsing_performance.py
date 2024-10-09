@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import cProfile
-from contextlib import contextmanager
 from collections.abc import Iterator
+from contextlib import contextmanager
 
 from chia._tests.util.misc import BenchmarkRunner
 from chia.wallet.trading.offer import Offer
