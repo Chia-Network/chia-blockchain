@@ -12,7 +12,7 @@ import pytest
 from _pytest.fixtures import SubRequest
 
 from chia._tests.util.misc import DataCase, Marks, datacases
-from chia.data_layer.data_layer_util import Side
+from chia.data_layer.data_layer_util import InternalNode, Side, internal_hash
 from chia.data_layer.util.merkle_blob import (
     InvalidIndexError,
     KVId,
@@ -32,7 +32,7 @@ from chia.data_layer.util.merkle_blob import (
     spacing,
     unpack_raw_node,
 )
-
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 @pytest.fixture(
     name="raw_node_class",
@@ -202,6 +202,13 @@ def test_merkle_blob_two_leafs_loads() -> None:
 
     assert merkle_blob.get_lineage(TreeIndex(0)) == [root]
     assert merkle_blob.get_lineage(root.left) == [left_leaf, root]
+
+    merkle_blob.calculate_lazy_hashes()
+    son_hash = bytes32(range(32))
+    root_hash = internal_hash(son_hash, son_hash)
+    expected_node = InternalNode(root_hash, son_hash, son_hash)
+    assert merkle_blob.get_lineage_by_key_id(KVId(0x0405060708090A0B)) == [expected_node]
+    assert merkle_blob.get_lineage_by_key_id(KVId(0x1415161718191A1B)) == [expected_node]
 
 
 def generate_kvid(seed: int) -> Tuple[KVId, KVId]:
@@ -391,6 +398,7 @@ def test_helper_methods() -> None:
     merkle_blob.insert(key, value, hash)
     assert not merkle_blob.empty()
     assert merkle_blob.get_root_hash() is not None
+    assert merkle_blob.get_root_hash() == merkle_blob.get_hash_at_index(TreeIndex(0))
 
     merkle_blob.delete(key)
     assert merkle_blob.empty()
@@ -418,3 +426,43 @@ def test_insert_with_reference_key_and_side() -> None:
                 assert parent.right == index
         side = Side.LEFT if operation % 2 == 0 else Side.RIGHT
         reference_kid = key
+
+
+def test_double_insert_fails() -> None:
+    merkle_blob = MerkleBlob(blob=bytearray())
+    key, value = generate_kvid(0)
+    hash = generate_hash(0)
+    merkle_blob.insert(key, value, hash)
+    with pytest.raises(Exception, match="Key already present"):
+        merkle_blob.insert(key, value, hash)
+
+
+def test_get_nodes() -> None:
+    merkle_blob = MerkleBlob(blob=bytearray())
+    num_inserts = 500
+    keys = set()
+    seen_keys = set()
+    seen_indexes = set()
+    for operation in range(num_inserts):
+        key, value = generate_kvid(operation)
+        hash = generate_hash(operation)
+        merkle_blob.insert(key, value, hash)
+        keys.add(key)
+
+    merkle_blob.calculate_lazy_hashes()
+    all_nodes = merkle_blob.get_nodes()
+    for node in all_nodes:
+        if isinstance(node, RawInternalMerkleNode):
+            left = merkle_blob.get_raw_node(node.left)
+            right = merkle_blob.get_raw_node(node.right)
+            assert left.parent == node.index
+            assert right.parent == node.index
+            assert bytes32(node.hash) == internal_hash(bytes32(left.hash), bytes32(right.hash))
+            # assert nodes are provided in left-to-right ordering
+            assert node.left not in seen_indexes
+            assert node.right not in seen_indexes
+        else:
+            seen_keys.add(node.key)
+        seen_indexes.add(node.index)
+
+    assert keys == seen_keys
