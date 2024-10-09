@@ -290,6 +290,8 @@ class PuzzleWithRestrictions:
 
     def puzzle_reveal(self) -> Program:
         # TODO: optimizations on specific cases
+        #   - 1 of N can be a simpler puzzle
+        #   - Stacked MofNs could be a more complicated but more efficient puzzle (?)
         inner_puzzle = self.puzzle.puzzle(self.nonce)
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             restricted_inner_puzzle = RESTRICTION_MOD.curry(
@@ -311,6 +313,8 @@ class PuzzleWithRestrictions:
 
     def puzzle_hash(self) -> bytes32:
         # TODO: optimizations on specific cases
+        #   - 1 of N can be a simpler puzzle
+        #   - Stacked MofNs could be a more complicated but more efficient puzzle (?)
         inner_puzzle_hash = self.puzzle.puzzle_hash(self.nonce)
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             morpher_hashes = [
