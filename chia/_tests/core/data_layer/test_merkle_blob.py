@@ -352,7 +352,8 @@ def test_proof_of_inclusion_merkle_blob() -> None:
             hash = generate_hash(seed)
             merkle_blob.upsert(old_kv, value, hash)
             new_keys_values[old_kv] = value
-        merkle_blob.calculate_lazy_hashes()
+        if not merkle_blob.empty():
+            merkle_blob.calculate_lazy_hashes()
 
         keys_values = new_keys_values
         for kv_id in keys_values:
