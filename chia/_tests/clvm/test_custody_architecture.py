@@ -205,8 +205,8 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
                 # Test a spend of every combination of m of n
                 for indexes in itertools.combinations(range(0, n), m):
                     proven_spends = {
-                        ACSMember().puzzle_hash(index): ProvenSpend(
-                            ACSMember().puzzle(index),
+                        PuzzleWithRestrictions(index, [], ACSMember()).puzzle_hash(): ProvenSpend(
+                            PuzzleWithRestrictions(index, [], ACSMember()).puzzle_reveal(),
                             Program.to(
                                 [announcement_1.to_program(), announcement_2.corresponding_assertion().to_program()]
                             ),

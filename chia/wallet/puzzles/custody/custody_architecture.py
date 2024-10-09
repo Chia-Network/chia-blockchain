@@ -17,6 +17,8 @@ RESTRICTION_MOD = load_clvm_maybe_recompile(
     "restrictions.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
 )
 RESTRICTION_MOD_HASH = RESTRICTION_MOD.get_tree_hash()
+# (mod (INDEX INNER_PUZZLE . inner_solution) (a INNER_PUZZLE inner_solution))
+INDEX_WRAPPER = Program.to([2, 5, 7])
 
 
 # General (inner) puzzle driver spec
@@ -287,11 +289,10 @@ class PuzzleWithRestrictions:
         )
 
     def puzzle_reveal(self) -> Program:
-        # TODO: indexing
         # TODO: optimizations on specific cases
         inner_puzzle = self.puzzle.puzzle(self.nonce)
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
-            return RESTRICTION_MOD.curry(
+            restricted_inner_puzzle = RESTRICTION_MOD.curry(
                 [
                     restriction.puzzle(self.nonce)
                     for restriction in self.restrictions
@@ -305,10 +306,10 @@ class PuzzleWithRestrictions:
                 inner_puzzle,
             )
         else:
-            return inner_puzzle
+            restricted_inner_puzzle = inner_puzzle
+        return INDEX_WRAPPER.curry(self.nonce, restricted_inner_puzzle)
 
     def puzzle_hash(self) -> bytes32:
-        # TODO: indexing
         # TODO: optimizations on specific cases
         inner_puzzle_hash = self.puzzle.puzzle_hash(self.nonce)
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
@@ -322,7 +323,7 @@ class PuzzleWithRestrictions:
                 for restriction in self.restrictions
                 if not restriction.morpher_not_validator
             ]
-            return (
+            restricted_inner_puzzle_hash = (
                 Program.to(RESTRICTION_MOD_HASH)
                 .curry(
                     morpher_hashes,
@@ -332,7 +333,10 @@ class PuzzleWithRestrictions:
                 .get_tree_hash_precalc(*morpher_hashes, *validator_hashes, RESTRICTION_MOD_HASH, inner_puzzle_hash)
             )
         else:
-            return inner_puzzle_hash
+            restricted_inner_puzzle_hash = inner_puzzle_hash
+        return INDEX_WRAPPER.curry(self.nonce, restricted_inner_puzzle_hash).get_tree_hash_precalc(
+            restricted_inner_puzzle_hash
+        )
 
     def solve(
         self, morpher_solutions: List[Program], validator_solutions: List[Program], inner_solution: Program
