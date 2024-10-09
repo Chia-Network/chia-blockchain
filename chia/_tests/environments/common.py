@@ -17,7 +17,7 @@ T_PeerApi = TypeVar("T_PeerApi", bound=ApiProtocol)
 class ServiceEnvironment(Protocol[T_Node, T_RpcApi, T_PeerApi]):
     service: Service[T_Node, T_PeerApi, T_RpcApi]
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
     @property
     def node(self) -> T_Node: ...

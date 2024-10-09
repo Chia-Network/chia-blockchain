@@ -90,4 +90,4 @@ class FeeBlockInfo:  # See BlockRecord
     """
 
     block_height: uint32
-    included_items: List[MempoolItemInfo]
+    included_items: list[MempoolItemInfo]

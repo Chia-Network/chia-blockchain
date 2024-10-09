@@ -9,7 +9,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
 
 def test_puzzle_info() -> None:
-    test_driver: Dict[str, Any] = {
+    test_driver: dict[str, Any] = {
         "string": "hello",
         "bytes": "0xcafef00d",
         "int": "123",
@@ -17,7 +17,7 @@ def test_puzzle_info() -> None:
         "zero": "0",
         "nil": "()",
     }
-    test_also: Dict[str, Any] = {"type": "TEST", "string": "hello"}
+    test_also: dict[str, Any] = {"type": "TEST", "string": "hello"}
     test_driver["also"] = test_also
 
     with pytest.raises(ValueError, match="A type is required"):

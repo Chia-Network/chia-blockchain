@@ -18,7 +18,7 @@ from chia.plotting.util import Params, add_plot_directory, validate_plot_size
 log = logging.getLogger(__name__)
 
 
-def get_chiapos_install_info() -> Optional[Dict[str, Any]]:
+def get_chiapos_install_info() -> Optional[dict[str, Any]]:
     chiapos_version = importlib.metadata.version("chiapos")
     return {"display_name": "Chia Proof of Space", "version": chiapos_version, "installed": True}
 

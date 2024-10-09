@@ -5,7 +5,8 @@ import logging
 import threading
 from dataclasses import dataclass, field
 from queue import Queue
-from typing import Iterator, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
+from collections.abc import Iterator
 
 from typing_extensions import Literal
 
@@ -24,13 +25,13 @@ except ImportError:
 @dataclass
 class UPnP:
     _thread: Optional[threading.Thread] = None
-    _queue: Queue[Union[Tuple[Literal["remap", "release"], int], Tuple[Literal["shutdown"]]]] = field(
+    _queue: Queue[Union[tuple[Literal["remap", "release"], int], tuple[Literal["shutdown"]]]] = field(
         default_factory=Queue,
     )
     _upnp: Optional[miniupnpc.UPnP] = None
 
     @contextlib.contextmanager
-    def manage(self, ports: List[int]) -> Iterator[None]:
+    def manage(self, ports: list[int]) -> Iterator[None]:
         self.setup()
         try:
             for port in ports:

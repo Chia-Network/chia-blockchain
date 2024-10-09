@@ -457,7 +457,7 @@ class TestKeyringWrapper:
         ],
     )
     def test_set_label_failures(
-        self, label: str, exception: Type[KeychainLabelError], message: str, empty_temp_file_keyring: TempKeyring
+        self, label: str, exception: type[KeychainLabelError], message: str, empty_temp_file_keyring: TempKeyring
     ) -> None:
         keyring_wrapper = KeyringWrapper.get_shared_instance()
         keyring_wrapper.keyring.set_label(1, "one")

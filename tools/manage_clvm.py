@@ -51,8 +51,8 @@ class CacheEntry(typing_extensions.TypedDict):
     hash: str
 
 
-CacheEntries = typing.Dict[str, CacheEntry]
-CacheVersion = typing.List[int]
+CacheEntries = dict[str, CacheEntry]
+CacheVersion = list[int]
 current_cache_version: CacheVersion = [1]
 
 
@@ -113,10 +113,10 @@ class ClvmPaths:
     clvm: pathlib.Path
     hex: pathlib.Path
     hash: str
-    missing_files: typing.List[str]
+    missing_files: list[str]
 
     @classmethod
-    def from_clvm(cls, clvm: pathlib.Path, hash_dict: typing.Dict[str, str] = {}) -> ClvmPaths:
+    def from_clvm(cls, clvm: pathlib.Path, hash_dict: dict[str, str] = {}) -> ClvmPaths:
         stem_filename = clvm.name[: -len(clsp_suffix)]
         hex_path = clvm.with_name(stem_filename + hex_suffix)
         missing_files = []
@@ -139,7 +139,7 @@ class ClvmBytes:
     hash: bytes
 
     @classmethod
-    def from_clvm_paths(cls, paths: ClvmPaths, hash_dict: typing.Dict[str, str] = {}) -> ClvmBytes:
+    def from_clvm_paths(cls, paths: ClvmPaths, hash_dict: dict[str, str] = {}) -> ClvmBytes:
         hex_bytes = paths.hex.read_bytes()
         return cls(
             hex=hex_bytes,
@@ -159,13 +159,13 @@ class ClvmBytes:
 
 
 # These files have the wrong extension for now so we'll just manually exclude them
-excludes: typing.Set[str] = set()
+excludes: set[str] = set()
 
 
 def find_stems(
-    top_levels: typing.Set[str],
+    top_levels: set[str],
     suffixes: typing.Mapping[str, str] = all_suffixes,
-) -> typing.Dict[str, typing.Set[pathlib.Path]]:
+) -> dict[str, set[pathlib.Path]]:
     found_stems = {
         name: {
             path.with_name(path.name[: -len(suffix)])
@@ -207,7 +207,7 @@ def check(use_cache: bool) -> int:
     used_excludes = set()
     overall_fail = False
 
-    HASHES: typing.Dict[str, str] = json.loads(hashes_path.read_text()) if hashes_path.exists() else {}
+    HASHES: dict[str, str] = json.loads(hashes_path.read_text()) if hashes_path.exists() else {}
 
     cache: Cache
     if not use_cache:
@@ -259,8 +259,8 @@ def check(use_cache: bool) -> int:
                         print(f"FAIL    : {stem_path.name + clvm_suffix} contains `(mod`")
                     break
 
-    missing_files: typing.List[str] = []
-    all_hash_stems: typing.List[str] = []
+    missing_files: list[str] = []
+    all_hash_stems: list[str] = []
 
     print()
     print("Checking that all existing .clsp files compile to .clsp.hex that match existing caches:")
@@ -358,7 +358,7 @@ def check(use_cache: bool) -> int:
 def build() -> int:
     overall_fail = False
 
-    HASHES: typing.Dict[str, str] = json.loads(hashes_path.read_text()) if hashes_path.exists() else {}
+    HASHES: dict[str, str] = json.loads(hashes_path.read_text()) if hashes_path.exists() else {}
 
     found_stems = find_stems(top_levels, suffixes={"clsp": clsp_suffix})
     hash_stems = []

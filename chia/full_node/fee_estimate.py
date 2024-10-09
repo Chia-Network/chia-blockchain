@@ -51,4 +51,4 @@ class FeeEstimateGroup(Streamable):
     """
 
     error: Optional[str]
-    estimates: List[FeeEstimate]
+    estimates: list[FeeEstimate]

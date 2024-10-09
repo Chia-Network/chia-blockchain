@@ -141,7 +141,7 @@ async def test_coin_ids_multi(db_version: int) -> None:
 
 @pytest.mark.anyio
 async def test_hints_in_blockchain(
-    wallet_nodes: Tuple[
+    wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
     ],
 ) -> None:

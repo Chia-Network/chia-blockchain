@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import cProfile
 from contextlib import contextmanager
-from typing import Iterator
+from collections.abc import Iterator
 
 from chia._tests.util.misc import BenchmarkRunner
 from chia.wallet.trading.offer import Offer

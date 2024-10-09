@@ -26,9 +26,9 @@ SERVICE_NAME = "harvester"
 
 def create_harvester_service(
     root_path: pathlib.Path,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     consensus_constants: ConsensusConstants,
-    farmer_peers: Set[UnresolvedPeerInfo],
+    farmer_peers: set[UnresolvedPeerInfo],
     connect_to_daemon: bool = True,
 ) -> HarvesterService:
     service_config = config[SERVICE_NAME]

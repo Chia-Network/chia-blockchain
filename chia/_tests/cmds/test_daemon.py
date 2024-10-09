@@ -28,7 +28,7 @@ async def test_daemon(
         async def unlock_keyring(_passphrase: str) -> bool:
             return True
 
-    async def connect_to_daemon_and_validate(_root_path: Path, _config: Dict[str, Any]) -> DummyConnection:
+    async def connect_to_daemon_and_validate(_root_path: Path, _config: dict[str, Any]) -> DummyConnection:
         return DummyConnection()
 
     class DummyKeychain:
@@ -74,7 +74,7 @@ def test_start_daemon(tmp_path: Path, empty_keyring: Any, mocker: MockerFixture)
             return None
 
     async def create_start_daemon_connection_dummy(
-        root_path: Path, config: Dict[str, Any], *, skip_keyring: bool
+        root_path: Path, config: dict[str, Any], *, skip_keyring: bool
     ) -> DummyDaemon:
         return DummyDaemon()
 

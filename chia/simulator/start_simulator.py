@@ -34,10 +34,10 @@ PLOT_SIZE = 19  # anything under k19 is a bit buggy
 
 async def create_full_node_simulator_service(
     root_path: Path,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     bt: BlockTools,
     connect_to_daemon: bool = True,
-    override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+    override_capabilities: Optional[list[tuple[uint16, str]]] = None,
 ) -> SimulatorFullNodeService:
     service_config = config[SERVICE_NAME]
     constants = bt.constants

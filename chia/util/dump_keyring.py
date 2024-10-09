@@ -66,7 +66,7 @@ def dump(keyring_file: str, full_payload: bool, passphrase_file: Optional[TextIO
         try:
             data_dict = file_content.get_decrypted_data_dict(passphrase)
             if full_payload:
-                dump_content: Dict[str, Any] = file_content_dict
+                dump_content: dict[str, Any] = file_content_dict
                 dump_content["data"] = data_dict
             else:
                 dump_content = data_dict

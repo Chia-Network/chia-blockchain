@@ -7,7 +7,8 @@ import functools
 import signal
 import sys
 from types import FrameType
-from typing import AsyncIterator, List, Optional, final
+from typing import List, Optional, final
+from collections.abc import AsyncIterator
 
 from typing_extensions import Protocol
 
@@ -33,7 +34,7 @@ class AsyncHandler(Protocol):
 @final
 @dataclasses.dataclass
 class SignalHandlers:
-    tasks: List[asyncio.Task[None]] = dataclasses.field(default_factory=list)
+    tasks: list[asyncio.Task[None]] = dataclasses.field(default_factory=list)
 
     @classmethod
     @contextlib.asynccontextmanager

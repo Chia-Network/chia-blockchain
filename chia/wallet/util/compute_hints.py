@@ -24,10 +24,10 @@ def compute_spend_hints_and_additions(
     cs: CoinSpend,
     *,
     max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-) -> Tuple[Dict[bytes32, HintedCoin], int]:
+) -> tuple[dict[bytes32, HintedCoin], int]:
     cost, result_program = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
 
-    hinted_coins: Dict[bytes32, HintedCoin] = {}
+    hinted_coins: dict[bytes32, HintedCoin] = {}
     for condition in result_program.as_iter():
         if cost > max_cost:
             raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_spend_hints_and_additions() for CoinSpend")

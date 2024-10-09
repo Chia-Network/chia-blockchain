@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 def create_timelord_service(
     root_path: pathlib.Path,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
 ) -> TimelordService:

@@ -27,8 +27,8 @@ log_levels = {
 ignores = {"__pycache__", ".pytest_cache"}
 
 
-def traverse_directory(path: pathlib.Path) -> List[pathlib.Path]:
-    of_interest: List[pathlib.Path] = []
+def traverse_directory(path: pathlib.Path) -> list[pathlib.Path]:
+    of_interest: list[pathlib.Path] = []
 
     file_found = False
 

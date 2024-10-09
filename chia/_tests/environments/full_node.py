@@ -20,7 +20,7 @@ class FullNodeEnvironment:
             None,
         )
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
     service: Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
 

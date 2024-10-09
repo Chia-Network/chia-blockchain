@@ -21,7 +21,7 @@ from chia.wallet.wallet_node import WalletNode
 )
 @pytest.mark.anyio
 async def test_is_recipient(
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,
     self_hostname: str,
     seeded_random: random.Random,

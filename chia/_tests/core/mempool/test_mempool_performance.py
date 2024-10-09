@@ -24,7 +24,7 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance: uint128) -> 
 @pytest.mark.anyio
 async def test_mempool_update_performance(
     wallet_nodes_mempool_perf: OldSimulatorsAndWallets,
-    default_400_blocks: List[FullBlock],
+    default_400_blocks: list[FullBlock],
     self_hostname: str,
     benchmark_runner: BenchmarkRunner,
 ) -> None:

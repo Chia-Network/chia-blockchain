@@ -35,7 +35,7 @@ class TestC:
 class TestA:
     a: int
     b: str
-    c: List[int]
+    c: list[int]
     d: Optional[TestC]
 
 

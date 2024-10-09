@@ -16,7 +16,7 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 class UnfinishedHeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
-    finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
+    finished_sub_slots: list[EndOfSubSlotBundle]  # If first sb
     reward_chain_block: RewardChainBlockUnfinished  # Reward chain trunk data
     challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
     reward_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot

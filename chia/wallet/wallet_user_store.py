@@ -86,7 +86,7 @@ class WalletUserStore:
 
         return None if row is None else await self.get_wallet_by_id(row[0])
 
-    async def get_all_wallet_info_entries(self, wallet_type: Optional[WalletType] = None) -> List[WalletInfo]:
+    async def get_all_wallet_info_entries(self, wallet_type: Optional[WalletType] = None) -> list[WalletInfo]:
         """
         Return a set containing all wallets, optionally with a specific WalletType
         """

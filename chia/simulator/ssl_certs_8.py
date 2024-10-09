@@ -665,9 +665,9 @@ axack/6KTJBo6FRskxPoH4U=
 -----END PRIVATE KEY-----
 """
 
-SSL_TEST_PRIVATE_CA_CERT_AND_KEY_8: Tuple[bytes, bytes] = (SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY)
+SSL_TEST_PRIVATE_CA_CERT_AND_KEY_8: tuple[bytes, bytes] = (SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY)
 
-SSL_TEST_NODE_CERTS_AND_KEYS_8: Dict[str, Dict[str, Dict[str, bytes]]] = {
+SSL_TEST_NODE_CERTS_AND_KEYS_8: dict[str, dict[str, dict[str, bytes]]] = {
     "full_node": {
         "private": {"crt": SSL_TEST_FULLNODE_PRIVATE_CRT, "key": SSL_TEST_FULLNODE_PRIVATE_KEY},
         "public": {"crt": SSL_TEST_FULLNODE_PUBLIC_CRT, "key": SSL_TEST_FULLNODE_PUBLIC_KEY},

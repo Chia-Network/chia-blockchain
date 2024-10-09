@@ -43,7 +43,7 @@ class RateLimiter:
         self.non_tx_cumulative_size = 0
 
     def process_msg_and_check(
-        self, message: Message, our_capabilities: List[Capability], peer_capabilities: List[Capability]
+        self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
     ) -> bool:
         """
         Returns True if message can be processed successfully, false if a rate limit is passed.

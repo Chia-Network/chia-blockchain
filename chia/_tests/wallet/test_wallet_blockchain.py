@@ -21,7 +21,7 @@ from chia.wallet.wallet_blockchain import WalletBlockchain
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_wallet_blockchain(
-    simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, default_1000_blocks: list[FullBlock]
 ) -> None:
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
 
@@ -75,7 +75,7 @@ async def test_wallet_blockchain(
         assert peak_block is not None
         assert peak_block.height == 505
 
-        header_blocks: List[HeaderBlock] = []
+        header_blocks: list[HeaderBlock] = []
         for block in default_1000_blocks:
             header_block = get_block_header(block, [], [])
             header_blocks.append(header_block)

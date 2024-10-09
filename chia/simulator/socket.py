@@ -4,7 +4,7 @@ import socket
 from contextlib import closing
 from typing import Set
 
-recent_ports: Set[int] = set()
+recent_ports: set[int] = set()
 
 
 def find_available_listen_port(name: str = "free") -> int:

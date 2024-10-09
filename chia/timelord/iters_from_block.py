@@ -16,7 +16,7 @@ def iters_from_block(
     sub_slot_iters: uint64,
     difficulty: uint64,
     height: uint32,
-) -> Tuple[uint64, uint64]:
+) -> tuple[uint64, uint64]:
     if reward_chain_block.challenge_chain_sp_vdf is None:
         assert reward_chain_block.signage_point_index == 0
         cc_sp: bytes32 = reward_chain_block.pos_ss_cc_challenge_hash

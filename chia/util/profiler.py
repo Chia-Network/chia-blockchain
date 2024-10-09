@@ -7,7 +7,8 @@ import pathlib
 import tracemalloc
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncIterator, Optional
+from typing import Optional
+from collections.abc import AsyncIterator
 
 from chia.util.path import path_from_root
 

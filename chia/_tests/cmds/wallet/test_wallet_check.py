@@ -68,7 +68,7 @@ def make_dp(
     return DerivationPath(row, fields)
 
 
-def used_list_to_dp_list(used_list: List[int], wallet_id: int) -> List[DerivationPath]:
+def used_list_to_dp_list(used_list: list[int], wallet_id: int) -> list[DerivationPath]:
     dps = []
 
     for index, used in enumerate(used_list):
@@ -78,14 +78,14 @@ def used_list_to_dp_list(used_list: List[int], wallet_id: int) -> List[Derivatio
 
 
 def test_check_addresses_used_contiguous() -> None:
-    ok_used_lists: List[List[int]] = [
+    ok_used_lists: list[list[int]] = [
         [],
         [1],
         [0],
         [1, 0],
     ]
 
-    bad_used_lists: List[List[int]] = [
+    bad_used_lists: list[list[int]] = [
         [0, 1],
     ]
 
@@ -103,9 +103,9 @@ def test_check_addresses_used_contiguous() -> None:
 
 
 def test_check_addresses_used_contiguous_multiple_wallets() -> None:
-    multi_used_lists: List[Dict[int, List[int]]] = [{0: [1, 1], 1: [1, 1]}, {0: [0, 0], 1: [1, 1]}]
+    multi_used_lists: list[dict[int, list[int]]] = [{0: [1, 1], 1: [1, 1]}, {0: [0, 0], 1: [1, 1]}]
     for entry in multi_used_lists:
-        dp_list: List[DerivationPath] = []
+        dp_list: list[DerivationPath] = []
         for wallet_id, used_list in entry.items():
             dp_list.extend(used_list_to_dp_list(used_list, wallet_id))
         assert [] == check_addresses_used_contiguous(dp_list)

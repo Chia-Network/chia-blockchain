@@ -89,7 +89,7 @@ class WalletPoolStore:
             )
             await cursor.close()
 
-    async def get_spends_for_wallet(self, wallet_id: int) -> List[Tuple[uint32, CoinSpend]]:
+    async def get_spends_for_wallet(self, wallet_id: int) -> list[tuple[uint32, CoinSpend]]:
         """
         Retrieves all entries for a wallet ID.
         """

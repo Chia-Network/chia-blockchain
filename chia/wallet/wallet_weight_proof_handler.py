@@ -44,7 +44,7 @@ class WalletWeightProofHandler:
 
     async def validate_weight_proof(
         self, weight_proof: WeightProof, skip_segment_validation: bool = False, old_proof: Optional[WeightProof] = None
-    ) -> List[BlockRecord]:
+    ) -> list[BlockRecord]:
         start_time = time.time()
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self._constants, weight_proof)
         await asyncio.sleep(0)  # break up otherwise multi-second sync code

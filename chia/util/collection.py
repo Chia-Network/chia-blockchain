@@ -5,7 +5,7 @@ from typing import List, Set
 # Utility Functions for Collections & Sequences
 
 
-def find_duplicates(array: List[int]) -> Set[int]:
+def find_duplicates(array: list[int]) -> set[int]:
     seen = set()
     duplicates = set()
 

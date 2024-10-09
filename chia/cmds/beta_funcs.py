@@ -15,7 +15,7 @@ def default_beta_root_path() -> Path:
     return Path(os.path.expanduser(os.getenv("CHIA_BETA_ROOT", "~/chia-beta-test"))).resolve()
 
 
-def warn_if_beta_enabled(config: Dict[str, Any]) -> None:
+def warn_if_beta_enabled(config: dict[str, Any]) -> None:
     if config.get("beta", {}).get("enabled", False):
         print("\nWARNING: beta test mode is enabled. Run `chia beta disable` if this is unintentional.\n")
 
@@ -84,7 +84,7 @@ def prompt_for_metrics_log_interval(default_interval: int) -> int:
         return interval
 
 
-def update_beta_config(enabled: bool, path: Path, metrics_log_interval: int, config: Dict[str, Any]) -> None:
+def update_beta_config(enabled: bool, path: Path, metrics_log_interval: int, config: dict[str, Any]) -> None:
     if "beta" not in config:
         config["beta"] = {}
 
@@ -121,7 +121,7 @@ def prepare_chia_blockchain_log(path: Path) -> None:
     print(f"  - {path.name}")
 
 
-def prepare_logs(prepare_path: Path, prepare_callback: Callable[[Path], None]) -> List[Path]:
+def prepare_logs(prepare_path: Path, prepare_callback: Callable[[Path], None]) -> list[Path]:
     result = [path for path in prepare_path.iterdir()] if prepare_path.exists() else []
     if len(result):
         print(f"\nPreparing {prepare_path.name!r} logs:")

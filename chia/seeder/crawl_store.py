@@ -19,9 +19,9 @@ log = logging.getLogger(__name__)
 @dataclass
 class CrawlStore:
     crawl_db: aiosqlite.Connection
-    host_to_records: Dict[str, PeerRecord] = field(default_factory=dict)  # peer_id: PeerRecord
-    host_to_selected_time: Dict[str, float] = field(default_factory=dict)  # peer_id: timestamp (as a float)
-    host_to_reliability: Dict[str, PeerReliability] = field(default_factory=dict)  # peer_id: PeerReliability
+    host_to_records: dict[str, PeerRecord] = field(default_factory=dict)  # peer_id: PeerRecord
+    host_to_selected_time: dict[str, float] = field(default_factory=dict)  # peer_id: timestamp (as a float)
+    host_to_reliability: dict[str, PeerReliability] = field(default_factory=dict)  # peer_id: PeerReliability
     banned_peers: int = 0
     ignored_peers: int = 0
     reliable_peers: int = 0
@@ -184,7 +184,7 @@ class CrawlStore:
         else:
             await self.peer_failed_to_connect(record)
 
-    async def get_peers_to_crawl(self, min_batch_size: int, max_batch_size: int) -> List[PeerRecord]:
+    async def get_peers_to_crawl(self, min_batch_size: int, max_batch_size: int) -> list[PeerRecord]:
         now = int(time.time())
         records = []
         records_v6 = []
@@ -410,7 +410,7 @@ class CrawlStore:
         await self.crawl_db.commit()
         await self.crawl_db.execute("VACUUM")
 
-        to_delete: List[str] = []
+        to_delete: list[str] = []
 
         # Deletes the old records from the in memory Dicts
         for peer_id, peer_record in self.host_to_records.items():

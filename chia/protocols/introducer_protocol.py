@@ -23,4 +23,4 @@ class RequestPeersIntroducer(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RespondPeersIntroducer(Streamable):
-    peer_list: List[TimestampedPeerInfo]
+    peer_list: list[TimestampedPeerInfo]

@@ -39,7 +39,7 @@ class SingletonOuterPuzzle:
             assert launcher_id is not None
             launcher_ph = launcher_struct[1].atom
             assert launcher_ph is not None
-            constructor_dict: Dict[str, Any] = {
+            constructor_dict: dict[str, Any] = {
                 "type": "singleton",
                 "launcher_id": "0x" + launcher_id.hex(),
                 "launcher_ph": "0x" + launcher_ph.hex(),

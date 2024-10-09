@@ -14,4 +14,4 @@ class ConditionWithArgs:
     """
 
     opcode: ConditionOpcode
-    vars: List[bytes]
+    vars: list[bytes]

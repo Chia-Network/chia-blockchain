@@ -78,13 +78,13 @@ EXPECTED_OUTPUT = (
 )
 
 
-def run_generator(self: BlockGenerator) -> Tuple[int, Program]:
+def run_generator(self: BlockGenerator) -> tuple[int, Program]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
     args = Program.to([self.generator_refs])
     return GENERATOR_MOD.run_with_cost(MAX_COST, [self.program, args])
 
 
-def as_atom_list(prg: CLVMStorage) -> List[bytes]:
+def as_atom_list(prg: CLVMStorage) -> list[bytes]:
     """
     Pretend `prg` is a list of atoms. Return the corresponding
     python list of atoms.

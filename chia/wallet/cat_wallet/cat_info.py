@@ -35,7 +35,7 @@ class CATCoinData(Streamable):
 class LegacyCATInfo(Streamable):
     limitations_program_hash: bytes32
     my_tail: Optional[Program]  # this is the program
-    lineage_proofs: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): lineage_proof}
+    lineage_proofs: list[tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): lineage_proof}
 
 
 @streamable
@@ -43,5 +43,5 @@ class LegacyCATInfo(Streamable):
 class CRCATInfo(Streamable):
     limitations_program_hash: bytes32
     my_tail: Optional[Program]  # this is the program
-    authorized_providers: List[bytes32]
+    authorized_providers: list[bytes32]
     proofs_checker: ProofsChecker

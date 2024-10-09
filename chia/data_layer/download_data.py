@@ -237,7 +237,7 @@ async def insert_from_delta_file(
     store_id: bytes32,
     existing_generation: int,
     target_generation: int,
-    root_hashes: List[bytes32],
+    root_hashes: list[bytes32],
     server_info: ServerInfo,
     client_foldername: Path,
     timeout: aiohttp.ClientTimeout,
