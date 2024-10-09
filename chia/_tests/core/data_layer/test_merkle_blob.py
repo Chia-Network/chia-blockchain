@@ -34,6 +34,7 @@ from chia.data_layer.util.merkle_blob import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 
+
 @pytest.fixture(
     name="raw_node_class",
     scope="session",
@@ -462,6 +463,7 @@ def test_get_nodes() -> None:
             assert node.left not in seen_indexes
             assert node.right not in seen_indexes
         else:
+            assert isinstance(node, RawLeafMerkleNode)
             seen_keys.add(node.key)
         seen_indexes.add(node.index)
 
