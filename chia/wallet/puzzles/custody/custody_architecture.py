@@ -119,11 +119,12 @@ class ProvenSpend:
     solution: Program
 
 
-class MofNMerkleTree(MerkleTree):
+class MofNMerkleTree(MerkleTree):  # Special subclass that can generate proofs for m of n puzzles in the tree
     def _m_of_n_proof(self, puzzle_hashes: List[bytes32], spends_to_prove: Dict[bytes32, ProvenSpend]) -> Program:
-        if len(puzzle_hashes) == 1:
+        if len(puzzle_hashes) == 1:  # we've reached a leaf node
             if puzzle_hashes[0] in spends_to_prove:
                 spend_to_prove = spends_to_prove[puzzle_hashes[0]]
+                # If it's one that we've been requested to prove, the format is (() puzzle_reveal . solution)
                 return Program.to((None, (spend_to_prove.puzzle_reveal, spend_to_prove.solution)))
             else:
                 return Program.to(hash_an_atom(puzzle_hashes[0]))
@@ -132,6 +133,8 @@ class MofNMerkleTree(MerkleTree):
             first_proof = self._m_of_n_proof(first, spends_to_prove)
             rest_proof = self._m_of_n_proof(rest, spends_to_prove)
             if first_proof.atom is None or rest_proof.atom is None:
+                # If either side has returned as a cons, part of the subtree needs to be revealed
+                # so we just return the branch as is
                 return Program.to((first_proof, rest_proof))
             else:
                 return Program.to(hash_a_pair(bytes32(first_proof.as_atom()), bytes32(rest_proof.as_atom())))
@@ -158,7 +161,7 @@ class MofNHint:
 
 
 @dataclass(frozen=True)
-class MofN:
+class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the architecture
     m: int
     members: List[PuzzleWithRestrictions]
 
@@ -190,7 +193,7 @@ class MofN:
 # The top-level object inside every "outer" puzzle
 @dataclass(frozen=True)
 class PuzzleWithRestrictions:
-    nonce: int
+    nonce: int  # Arbitrary nonce to make otherwise identical custody arrangements have different puzzle hashes
     restrictions: List[Restriction[MorpherOrValidator]]
     puzzle: Puzzle
 

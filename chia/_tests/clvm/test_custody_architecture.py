@@ -37,9 +37,13 @@ ANY_PROGRAM = Program.to(None)
 @pytest.mark.parametrize(
     "restrictions",
     [
+        # no restrictions
         [],
+        # morpher
         [UnknownRestriction(RestrictionHint(True, BUNCH_OF_ZEROS, ANY_PROGRAM))],
+        # validator
         [UnknownRestriction(RestrictionHint(False, BUNCH_OF_ZEROS, ANY_PROGRAM))],
+        # multiple restrictions of various types
         [
             UnknownRestriction(RestrictionHint(True, BUNCH_OF_ZEROS, ANY_PROGRAM)),
             UnknownRestriction(RestrictionHint(False, BUNCH_OF_ZEROS, ANY_PROGRAM)),
@@ -49,7 +53,9 @@ ANY_PROGRAM = Program.to(None)
 @pytest.mark.parametrize(
     "puzzle",
     [
+        # Custody puzzle
         UnknownPuzzle(PuzzleHint(BUNCH_OF_ZEROS, ANY_PROGRAM)),
+        # 1 of 2 (w/ & w/o restrictions)
         MofN(
             1,
             [
@@ -64,6 +70,7 @@ ANY_PROGRAM = Program.to(None)
                 ),
             ],
         ),
+        # 2 of 2 (further 1 of 1s)
         MofN(
             2,
             [
@@ -82,6 +89,11 @@ ANY_PROGRAM = Program.to(None)
     ],
 )
 def test_back_and_forth_hint_parsing(restrictions: List[Restriction[MorpherOrValidator]], puzzle: Puzzle) -> None:
+    """
+    This tests that a PuzzleWithRestrictions can be exported to a clvm program to be reimported from.
+
+    This is necessary functionality to sync an unknown inner puzzle from on chain.
+    """
     cwr = PuzzleWithRestrictions(
         nonce=0,
         restrictions=restrictions,
@@ -92,6 +104,13 @@ def test_back_and_forth_hint_parsing(restrictions: List[Restriction[MorpherOrVal
 
 
 def test_unknown_puzzle_behavior() -> None:
+    """
+    Once an inner puzzle is loaded from chain, all of its nodes are of the UnknownPuzzle type. To spend the puzzle,
+    at least one of these nodes must be replaced with a Puzzle that implements the `.puzzle(nonce: int)` method.
+
+    This test tests the ability to replace one or many of these nodes.
+    """
+
     @dataclass(frozen=True)
     class PlaceholderPuzzle:
         @property
@@ -186,6 +205,10 @@ class ACSMember:
 
 @pytest.mark.anyio
 async def test_m_of_n(cost_logger: CostLogger) -> None:
+    """
+    This tests the various functionality of the MofN drivers including that m of n puzzles can be constructed and solved
+    for every combination of its nodes from size 1 - 5.
+    """
     async with sim_and_client() as (sim, client):
         for m in range(1, 6):  # 1 - 5 inclusive
             for n in range(1, 6):
@@ -287,6 +310,9 @@ class ACSValidator:
 
 @pytest.mark.anyio
 async def test_restriction_layer(cost_logger: CostLogger) -> None:
+    """
+    This tests the capabilities of the optional restriction layer placed on inner puzzles.
+    """
     async with sim_and_client() as (sim, client):
         pwr = PuzzleWithRestrictions(0, [ACSMorpher(), ACSMorpher(), ACSValidator(), ACSValidator()], ACSPuzzle())
 
