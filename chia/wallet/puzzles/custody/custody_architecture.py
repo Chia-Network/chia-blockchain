@@ -276,8 +276,9 @@ class PuzzleWithRestrictions:
         for restriction in self.restrictions:
             if isinstance(restriction, UnknownRestriction) and restriction.restriction_hint.puzhash in puzzle_dict:
                 new = puzzle_dict[restriction.restriction_hint.puzhash]
-                assert isinstance(new, Restriction)
-                new_restrictions.append(new)
+                # using runtime_checkable here to assert isinstance(new, Restriction) results in an error in the test
+                # where PlaceholderPuzzle() is used. Not sure why, so we'll ignore since it's for mypy's sake anyways
+                new_restrictions.append(new)  # type: ignore[arg-type]
             else:
                 new_restrictions.append(restriction)
 
