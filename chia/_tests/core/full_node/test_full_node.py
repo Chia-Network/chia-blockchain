@@ -24,7 +24,7 @@ from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
@@ -430,7 +430,7 @@ class TestFullNodeBlockCompression:
                 for reorg_block in reog_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, reorg_block, fork_info=fork_info)
                 for i in range(1, height):
-                    results = await pre_validate_blocks_multiprocessing(
+                    futures = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
                         blockchain,
                         all_blocks[:i],
@@ -439,6 +439,7 @@ class TestFullNodeBlockCompression:
                         ValidationState(ssi, diff, None),
                         validate_signatures=False,
                     )
+                    results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None
                     for result in results:
                         assert result.error is None
@@ -448,7 +449,7 @@ class TestFullNodeBlockCompression:
                 for block in all_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
                 for i in range(1, height):
-                    results = await pre_validate_blocks_multiprocessing(
+                    futures = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
                         blockchain,
                         all_blocks[:i],
@@ -457,6 +458,7 @@ class TestFullNodeBlockCompression:
                         ValidationState(ssi, diff, None),
                         validate_signatures=False,
                     )
+                    results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None
                     for result in results:
                         assert result.error is None

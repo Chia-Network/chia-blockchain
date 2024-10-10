@@ -174,7 +174,7 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                futures = await pre_validate_blocks_multiprocessing(
                     self.full_node.blockchain.constants,
                     self.full_node.blockchain,
                     [genesis],
@@ -183,6 +183,7 @@ class FullNodeSimulator(FullNodeAPI):
                     ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
+                pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 assert pre_validation_results is not None
                 fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(
@@ -237,7 +238,7 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                futures = await pre_validate_blocks_multiprocessing(
                     self.full_node.blockchain.constants,
                     self.full_node.blockchain,
                     [genesis],
@@ -246,6 +247,7 @@ class FullNodeSimulator(FullNodeAPI):
                     ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
+                pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 assert pre_validation_results is not None
                 fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(

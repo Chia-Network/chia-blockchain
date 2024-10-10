@@ -437,7 +437,7 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
         prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
     ssi, diff = get_next_sub_slot_iters_and_difficulty(full_node.constants, new_slot, prev_b, full_node.blockchain)
-    pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+    futures = await pre_validate_blocks_multiprocessing(
         full_node.blockchain.constants,
         full_node.blockchain,
         blocks,
@@ -446,6 +446,7 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
         ValidationState(ssi, diff, prev_ses_block),
         validate_signatures=True,
     )
+    pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
     for i in range(len(blocks)):
         block = blocks[i]

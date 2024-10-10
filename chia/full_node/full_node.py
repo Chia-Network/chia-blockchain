@@ -10,7 +10,7 @@ import random
 import sqlite3
 import time
 import traceback
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncIterator, Awaitable, Sequence
 from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TextIO, Union, cast, final
@@ -1317,7 +1317,7 @@ class FullNode:
         # call below. pre_validate_blocks_multiprocessing() will update the
         # object we pass in.
         pre_validate_start = time.monotonic()
-        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        futures: Sequence[Awaitable[PreValidationResult]] = await pre_validate_blocks_multiprocessing(
             self.blockchain.constants,
             self.blockchain,
             blocks_to_validate,
@@ -1327,6 +1327,7 @@ class FullNode:
             wp_summaries=wp_summaries,
             validate_signatures=True,
         )
+        pre_validation_results = list(await asyncio.gather(*futures))
         pre_validate_end = time.monotonic()
         pre_validate_time = pre_validate_end - pre_validate_start
 
@@ -1843,7 +1844,7 @@ class FullNode:
                 prev_ses_block = curr
             new_slot = len(block.finished_sub_slots) > 0
             ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
-            pre_validation_results = await pre_validate_blocks_multiprocessing(
+            futures = await pre_validate_blocks_multiprocessing(
                 self.blockchain.constants,
                 self.blockchain,
                 [block],
@@ -1852,6 +1853,7 @@ class FullNode:
                 ValidationState(ssi, diff, prev_ses_block),
                 validate_signatures=False,
             )
+            pre_validation_results = list(await asyncio.gather(*futures))
             added: Optional[AddBlockResult] = None
             pre_validation_time = time.monotonic() - validation_start
             try:

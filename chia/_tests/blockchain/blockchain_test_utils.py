@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Optional
 
 from chia_rs import BLSCache
@@ -76,7 +77,7 @@ async def _validate_and_add_block(
     else:
         # validate_signatures must be False in order to trigger add_block() to
         # validate the signature.
-        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             blockchain.constants,
             blockchain,
             [block],
@@ -85,6 +86,7 @@ async def _validate_and_add_block(
             ValidationState(ssi, diff, prev_ses_block),
             validate_signatures=False,
         )
+        pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         assert pre_validation_results is not None
         results = pre_validation_results[0]
     if results.error is not None:
