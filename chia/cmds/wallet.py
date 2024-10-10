@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import pathlib
-from typing import List, Optional, Sequence
+import sys
+from typing import List, Optional, Sequence, TextIO
 
 import click
 
@@ -1335,6 +1336,68 @@ def nft_get_info_cmd(
     from .wallet_funcs import get_nft_info
 
     asyncio.run(get_nft_info(wallet_rpc_port, fingerprint, nft_coin_id))
+
+
+@wallet_cmd.group("dump_transactions", short_help="Dump all transactions to parseable formats")
+def dump_transactions_cmd() -> None:
+    pass
+
+
+@dump_transactions_cmd.command("csv", short_help="Dump all transactions to CSV")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option(
+    "-i",
+    "--id",
+    "wallet_ids",
+    help="Id of the wallet to use, unspecified lists all.",
+    multiple=True,
+    type=int,
+)
+@click.option(
+    "-o",
+    "--output",
+    default="-",
+    help="Path to write to, - for stdout.",
+    show_default=True,
+    # TODO: handle the newline="" that the csv module wants
+    type=click.File(
+        mode="w",
+        encoding="utf-8",
+    ),
+)
+def dump_transactions_csv_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_ids: List[int],
+    output: TextIO,
+) -> None:
+    import asyncio
+
+    from .wallet_funcs import dump_transactions
+
+    asyncio.run(
+        dump_transactions(
+            wallet_rpc_port=wallet_rpc_port,
+            fingerprint=fingerprint,
+            wallet_ids=wallet_ids,
+            output=output,
+        ),
+    )
+
+    # The flush/close avoids output like below when piping through `head -n 1`
+    # which will close stdout.
+    #
+    # Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+    # BrokenPipeError: [Errno 32] Broken pipe
+    sys.stdout.flush()
+    sys.stdout.close()
 
 
 # Keep at bottom.
