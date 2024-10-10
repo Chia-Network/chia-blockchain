@@ -190,10 +190,9 @@ class CrawlStore:
         counter = 0
         self.ignored_peers = 0
         self.banned_peers = 0
-        for peer_id in self.host_to_reliability:
+        for peer_id, reliability in self.host_to_reliability.items():
             add = False
             counter += 1
-            reliability = self.host_to_reliability[peer_id]
             if reliability.ignore_till < now and reliability.ban_till < now:
                 add = True
             else:
