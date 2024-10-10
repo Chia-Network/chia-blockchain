@@ -164,7 +164,7 @@ def combine_cmd(
     "--number-of-coins",
     type=int,
     help="The number of coins we are creating.",
-    required=True,
+    default=None,
 )
 @options.create_fee()
 @click.option(
@@ -172,7 +172,7 @@ def combine_cmd(
     "--amount-per-coin",
     help="The amount of each newly created coin, in XCH or CAT units",
     type=AmountParamType(),
-    required=True,
+    default=None,
 )
 @click.option(
     "-t", "--target-coin-id", type=Bytes32ParamType(), required=True, help="The coin id of the coin we are splitting."
