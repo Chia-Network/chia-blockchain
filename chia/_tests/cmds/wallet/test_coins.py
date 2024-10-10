@@ -222,7 +222,44 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         FINGERPRINT_ARG,
         "-i1",
         "-m0.001",
-        "-a0.5",
+        "-a0.5",  # split into coins of amount 0.5 XCH or 500_000_000_000 mojo
+        f"-t{target_coin_id.hex()}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
+    ]
+    # these are various things that should be in the output
+    assert_list = []
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+    expected_calls: logType = {
+        "get_wallets": [(None,)],
+        "get_sync_status": [()],
+        "split_coins": [
+            (
+                SplitCoins(
+                    wallet_id=uint32(1),
+                    number_of_coins=uint16(20),  # this transaction should be equivalent to specifying 20 x  0.5xch coins 
+                    amount_per_coin=uint64(500_000_000_000),
+                    target_coin_id=target_coin_id,
+                    fee=uint64(1_000_000_000),
+                    push=True,
+                ),
+                DEFAULT_TX_CONFIG,
+                test_condition_valid_times,
+            )
+        ],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+    command_args = [
+        "wallet",
+        "coins",
+        "split",
+        FINGERPRINT_ARG,
+        "-i1",
+        "-m0.001",
+        "-n20",  # split target coin into 20 coins of even amounts
         f"-t{target_coin_id.hex()}",
         "--valid-at",
         "100",
