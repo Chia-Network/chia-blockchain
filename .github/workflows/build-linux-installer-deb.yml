@@ -277,9 +277,11 @@ jobs:
             url: "docker://ubuntu:noble"
         mode:
           - name: GUI
+            matrix: gui
             file: chia-blockchain_*.deb
             package: chia-blockchain
           - name: CLI
+            matrix: cli
             file: chia-blockchain-cli_*.deb
             package: chia-blockchain-cli
         arch:
@@ -318,7 +320,7 @@ jobs:
 
       - name: Run chia dev installers test
         run: |
-          chia dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
+          chia dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}" ${{ matrix.mode.matrix == 'gui' && '--gui-command chia-blockchain' || '' }}
 
       - name: Verify /opt/chia present
         run: |
@@ -330,7 +332,7 @@ jobs:
 
       - name: Check permissions of /opt/chia/chrome-sandbox
         shell: bash
-        if: matrix.mode.name == 'GUI'
+        if: matrix.mode.matrix == 'gui'
         run: |
           [ $(stat -c %a:%G:%U /opt/chia/chrome-sandbox) == "4755:root:root" ]
 
