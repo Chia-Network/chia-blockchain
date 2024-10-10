@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
 from chia.rpc.wallet_request_types import CombineCoins, CombineCoinsResponse, SplitCoins, SplitCoinsResponse
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.coin import Coin
+from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
@@ -141,6 +144,27 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         ) -> SplitCoinsResponse:
             self.add_to_log("split_coins", (args, tx_config, timelock_info))
             return SplitCoinsResponse([STD_UTX], [STD_TX])
+        
+        async def get_coin_records_by_names(
+            self,
+            names: List[bytes32],
+            include_spent_coins: bool = True,
+            start_height: Optional[int] = None,
+            end_height: Optional[int] = None,
+        ) -> List[CoinRecord]:
+            coin = Coin(
+                Program.to(0).get_tree_hash(),
+                Program.to(1).get_tree_hash(),
+                10_000_000_000_000
+            )
+            cr = CoinRecord(
+                coin,
+                10,
+                0,
+                False,
+                0,
+            )
+            return [cr]
 
     inst_rpc_client = CoinsSplitRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -175,6 +199,48 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
                     wallet_id=uint32(1),
                     number_of_coins=uint16(10),
                     amount_per_coin=uint64(100_000),
+                    target_coin_id=target_coin_id,
+                    fee=uint64(1_000_000_000),
+                    push=True,
+                ),
+                DEFAULT_TX_CONFIG,
+                test_condition_valid_times,
+            )
+        ],
+    }
+    test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+
+    target_coin_id = Coin(
+        Program.to(0).get_tree_hash(),
+        Program.to(1).get_tree_hash(),
+        10_000_000_000_000
+    ).name()
+    command_args = [
+        "wallet",
+        "coins",
+        "split",
+        FINGERPRINT_ARG,
+        "-i1",
+        "-m0.001",
+        "-a0.5",
+        f"-t{target_coin_id.hex()}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
+    ]
+    # these are various things that should be in the output
+    assert_list = []
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+    expected_calls: logType = {
+        "get_wallets": [(None,)],
+        "get_sync_status": [()],
+        "split_coins": [
+            (
+                SplitCoins(
+                    wallet_id=uint32(1),
+                    number_of_coins=uint16(20),  # this transaction should be equivalent to specifying 20 x  0.5xch coins 
+                    amount_per_coin=uint64(500_000_000_000),
                     target_coin_id=target_coin_id,
                     fee=uint64(1_000_000_000),
                     push=True,

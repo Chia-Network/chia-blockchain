@@ -188,8 +188,8 @@ async def async_split(
     fingerprint: Optional[int],
     wallet_id: int,
     fee: uint64,
-    number_of_coins: int,
-    amount_per_coin: CliAmount,
+    number_of_coins: Optional[int],
+    amount_per_coin: Optional[CliAmount],
     target_coin_id: bytes32,
     max_coin_amount: CliAmount,
     min_coin_amount: CliAmount,
@@ -209,6 +209,17 @@ async def async_split(
         if not (await wallet_client.get_sync_status()).synced:
             print("Wallet not synced. Please wait.")
             return []
+
+        if number_of_coins is None and amount_per_coin is None:
+            print("Must use either -a or -n. For more information run --help.")
+            return []
+
+        if number_of_coins is None:
+            coins = await wallet_client.get_coin_records_by_names([target_coin_id])
+            number_of_coins = uint64(coins[0].coin.amount // amount_per_coin.convert_amount(mojo_per_unit))
+        elif amount_per_coin is None:
+            coins = await wallet_client.get_coin_records_by_names([target_coin_id])
+            amount_per_coin = CliAmount(True, uint64(coins[0].coin.amount // number_of_coins))
 
         final_amount_per_coin = amount_per_coin.convert_amount(mojo_per_unit)
 
