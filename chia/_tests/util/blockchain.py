@@ -71,6 +71,27 @@ def persistent_blocks(
                 blocks.append(FullBlock.from_bytes_unchecked(block_bytes))
             if len(blocks) == num_of_blocks + len(block_list_input):
                 print(f"\n loaded {file_path} with {len(blocks)} blocks")
+
+                # make sure that the blocks we found on-disk are consistent with
+                # the ones we would have generated
+                expected_blocks: List[FullBlock] = bt.get_consecutive_blocks(
+                    5,
+                    block_list_input=block_list_input,
+                    time_per_block=time_per_block,
+                    seed=seed,
+                    skip_slots=empty_sub_slots,
+                    normalized_to_identity_cc_eos=normalized_to_identity_cc_eos,
+                    normalized_to_identity_icc_eos=normalized_to_identity_icc_eos,
+                    normalized_to_identity_cc_sp=normalized_to_identity_cc_sp,
+                    normalized_to_identity_cc_ip=normalized_to_identity_cc_ip,
+                    dummy_block_references=dummy_block_references,
+                    include_transactions=include_transactions,
+                )
+                # if this assert fails, and changing the test chains was
+                # intentional, please also update the test chain cache.
+                # run: pytest -m build_test_chains
+                assert blocks[0:5] == expected_blocks
+
                 return blocks
         except EOFError:
             print("\n error reading db file")
