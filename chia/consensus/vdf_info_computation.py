@@ -143,7 +143,6 @@ def get_signage_point_vdf_info(
         assert curr.finished_challenge_slot_hashes is not None
         cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
     else:
-        # All cases are handled above
         assert False
 
     return (
