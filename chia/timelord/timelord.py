@@ -7,6 +7,7 @@ import io
 import logging
 import os
 import random
+import tempfile
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
@@ -52,7 +53,7 @@ class BlueboxProcessData(Streamable):
     iters: uint64
 
 
-def prove_bluebox_slow(payload: bytes) -> bytes:
+def prove_bluebox_slow(payload: bytes, executor_shutdown_tempfile_name: str) -> bytes:
     bluebox_process_data = BlueboxProcessData.from_bytes(payload)
     initial_el = b"\x08" + (b"\x00" * 99)
     return cast(
@@ -62,8 +63,13 @@ def prove_bluebox_slow(payload: bytes) -> bytes:
             initial_el,
             bluebox_process_data.size_bits,
             bluebox_process_data.iters,
+            executor_shutdown_tempfile_name,
         ),
     )
+
+
+def _create_shutdown_file() -> IO[bytes]:
+    return tempfile.NamedTemporaryFile(prefix="chia_timelord_executor_shutdown_trigger")
 
 
 class Timelord:
@@ -137,6 +143,7 @@ class Timelord:
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
         self.max_allowed_inactivity_time = 60
+        self._executor_shutdown_tempfile: Optional[IO[bytes]] = None
         self.bluebox_pool: Optional[ThreadPoolExecutor] = None
 
     @contextlib.asynccontextmanager
@@ -155,6 +162,7 @@ class Timelord:
             if os.name == "nt" or slow_bluebox:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
                 workers = self.config.get("slow_bluebox_process_count", 1)
+                self._executor_shutdown_tempfile: IO[bytes] = _create_shutdown_file()
                 self.bluebox_pool = ThreadPoolExecutor(
                     max_workers=workers,
                 )
@@ -168,12 +176,15 @@ class Timelord:
             yield
         finally:
             self._shut_down = True
+            if self._executor_shutdown_tempfile is not None:
+                self._executor_shutdown_tempfile.close()
             for task in self.process_communication_tasks:
                 task.cancel()
             if self.main_loop is not None:
                 self.main_loop.cancel()
             if self.bluebox_pool is not None:
                 self.bluebox_pool.shutdown()
+
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
@@ -1167,6 +1178,7 @@ class Timelord:
                         pool,
                         prove_bluebox_slow,
                         bytes(bluebox_process_data),
+                        self._executor_shutdown_tempfile.name,
                     )
                     t2 = time.time()
                     delta = t2 - t1
@@ -1174,6 +1186,11 @@ class Timelord:
                         ips = picked_info.new_proof_of_time.number_of_iterations / delta
                     else:
                         ips = 0
+
+                    if len(proof) == 0:
+                        log.info(f"Empty VDF proof returned: {picked_info.height}. Time: {delta}s. IPS: {ips}.")
+                        return
+
                     log.info(f"Finished compact proof: {picked_info.height}. Time: {delta}s. IPS: {ips}.")
                     output = proof[:100]
                     proof_part = proof[100:200]
