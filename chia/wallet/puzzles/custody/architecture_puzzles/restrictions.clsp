@@ -1,0 +1,47 @@
+(mod
+  (
+    MORPHERS  ; programs that can look at the conditions and add their own
+    VALIDATORS  ; programs that look at the final set of conditions and optionally raise
+    INNER_PUZZLE  ; the program that generates the conditions
+    morpher_solutions
+    validator_solutions
+    inner_solution
+  )
+
+  ; utility
+  (defun merge_list (list_a list_b)
+    (if list_a
+        (c (f list_a) (merge_list (r list_a) list_b))
+        list_b
+    )
+  )
+
+  ; running restrictions
+  (defun run_restrictions (is_morpher conditions RESTRICTIONS restriction_solutions)
+    (if RESTRICTIONS
+        (run_restrictions
+          is_morpher
+          (i is_morpher  ; lazy eval because either way we want to run the puzzle
+            (merge_list (a (f RESTRICTIONS) (c conditions (f restriction_solutions))) conditions)
+            conditions
+          )
+          (r RESTRICTIONS)
+          (r restriction_solutions)
+        )
+        conditions
+    )
+  )
+
+  ; main
+  (run_restrictions
+    ()  ; false
+    (run_restrictions
+      1  ; true
+      (a INNER_PUZZLE inner_solution)
+      MORPHERS
+      morpher_solutions
+    )
+    VALIDATORS
+    validator_solutions
+  )
+)
