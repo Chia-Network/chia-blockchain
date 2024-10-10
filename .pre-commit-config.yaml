@@ -73,6 +73,13 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: virtual_project_dependency_cycles
+        name: Check for dependency cycles in project packages
+        entry: ./activated.py python chia/util/virtual_project_analysis.py print_cycles --directory chia --config virtual_project.yaml
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
       - id: build mypy.ini
         name: build mypy.ini
         entry: ./activated.py python manage-mypy.py build-mypy-ini
