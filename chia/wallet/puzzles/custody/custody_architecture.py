@@ -208,7 +208,9 @@ class PuzzleWithRestrictions:
 
         puzzle_hint: Union[MofNHint, PuzzleHint]
         if isinstance(self.puzzle, MofN):
-            puzzle_hint = MofNHint(self.puzzle.m, [member.memo() for member in self.puzzle.members])
+            puzzle_hint = MofNHint(
+                self.puzzle.m, [member.memo() for member in self.puzzle.members]
+            )  # pylint: disable=no-member
         else:
             puzzle_hint = PuzzleHint(
                 self.puzzle.puzzle_hash(self.nonce),
@@ -261,7 +263,7 @@ class PuzzleWithRestrictions:
         elif isinstance(self.puzzle, MofN):
             unknown_puzzles = {
                 uph: up
-                for puz_w_restriction in self.puzzle.members
+                for puz_w_restriction in self.puzzle.members  # pylint: disable=no-member
                 for uph, up in puz_w_restriction.unknown_puzzles.items()
             }
         else:
@@ -283,11 +285,16 @@ class PuzzleWithRestrictions:
                 new_restrictions.append(restriction)
 
         new_puzzle: Puzzle
-        if isinstance(self.puzzle, UnknownPuzzle) and self.puzzle.puzzle_hint.puzhash in puzzle_dict:
-            new_puzzle = puzzle_dict[self.puzzle.puzzle_hint.puzhash]
+        if (
+            isinstance(self.puzzle, UnknownPuzzle) and self.puzzle.puzzle_hint.puzhash in puzzle_dict
+        ):  # pylint: disable=no-member
+            new_puzzle = puzzle_dict[self.puzzle.puzzle_hint.puzhash]  # pylint: disable=no-member
         elif isinstance(self.puzzle, MofN):
             new_puzzle = replace(
-                self.puzzle, members=[puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.puzzle.members]
+                self.puzzle,
+                members=[
+                    puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.puzzle.members
+                ],  # pylint: disable=no-member
             )
         else:
             new_puzzle = self.puzzle
@@ -302,7 +309,7 @@ class PuzzleWithRestrictions:
         # TODO: optimizations on specific cases
         #   - 1 of N can be a simpler puzzle
         #   - Stacked MofNs could be a more complicated but more efficient puzzle (?)
-        inner_puzzle = self.puzzle.puzzle(self.nonce)
+        inner_puzzle = self.puzzle.puzzle(self.nonce)  # pylint: disable=assignment-from-no-return
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             restricted_inner_puzzle = RESTRICTION_MOD.curry(
                 [
@@ -325,7 +332,7 @@ class PuzzleWithRestrictions:
         # TODO: optimizations on specific cases
         #   - 1 of N can be a simpler puzzle
         #   - Stacked MofNs could be a more complicated but more efficient puzzle (?)
-        inner_puzzle_hash = self.puzzle.puzzle_hash(self.nonce)
+        inner_puzzle_hash = self.puzzle.puzzle_hash(self.nonce)  # pylint: disable=assignment-from-no-return
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             morpher_hashes = [
                 restriction.puzzle_hash(self.nonce)
