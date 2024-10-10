@@ -353,7 +353,7 @@ class DataLayer:
     ) -> bytes32:
         await self._update_confirmation_status(store_id=store_id)
 
-        async with self.data_store.transaction():
+        async with self.data_store.transaction(foreign_key_enforcement_enabled=False):
             pending_root: Optional[Root] = await self.data_store.get_pending_root(store_id=store_id)
             if pending_root is not None and pending_root.status == Status.PENDING:
                 raise Exception("Already have a pending root waiting for confirmation.")
