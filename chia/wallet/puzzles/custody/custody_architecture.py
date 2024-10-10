@@ -13,6 +13,9 @@ from chia.wallet.util.merkle_tree import MerkleTree, hash_a_pair, hash_an_atom
 MofN_MOD = load_clvm_maybe_recompile(
     "m_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
 )
+OneOfN_MOD = load_clvm_maybe_recompile(
+    "1_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.optimization_puzzles"
+)
 RESTRICTION_MOD = load_clvm_maybe_recompile(
     "restrictions.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
 )
@@ -166,7 +169,7 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
     members: List[PuzzleWithRestrictions]
 
     def __post_init__(self) -> None:
-        if len(list(set(self.merkle_tree.nodes))) != len(self.merkle_tree.nodes):
+        if len(list(set(self._merkle_tree.nodes))) != len(self._merkle_tree.nodes):
             raise ValueError("Duplicate nodes not currently supported by MofN drivers")
 
     @property
@@ -174,20 +177,40 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
         return len(self.members)
 
     @property
-    def merkle_tree(self) -> MofNMerkleTree:
-        return MofNMerkleTree([member.puzzle_hash() for member in self.members])
+    def _merkle_tree(self) -> MerkleTree:
+        nodes = [member.puzzle_hash() for member in self.members]
+        if self.m > 1:
+            return MofNMerkleTree(nodes)
+        else:
+            return MerkleTree(nodes)
+
+    def generate_proof(self, spends_to_prove: Dict[bytes32, ProvenSpend]) -> Program:
+        assert len(spends_to_prove) == self.m, "Must prove as many spends as the M value"
+        if self.m > 1:
+            return self._merkle_tree.generate_m_of_n_proof(spends_to_prove)  # type: ignore[attr-defined, no-any-return]
+        else:
+            only_key = list(spends_to_prove.keys())[0]
+            proven_spend = spends_to_prove[only_key]
+            proof = self._merkle_tree.generate_proof(only_key)
+            return Program.to([(proof[0], proof[1][0]), proven_spend.puzzle_reveal, proven_spend.solution])
 
     def memo(self, nonce: int) -> Program:
         raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
 
     def puzzle(self, nonce: int) -> Program:
-        return MofN_MOD.curry(self.m, self.merkle_tree.calculate_root())
+        if self.m > 1:
+            return MofN_MOD.curry(self.m, self._merkle_tree.calculate_root())
+        else:
+            return OneOfN_MOD.curry(self._merkle_tree.calculate_root())
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
 
     def solve(self, proof: Program, delegated_puzzle: Program, delegated_solution: Program) -> Program:
-        return Program.to([proof, delegated_puzzle, delegated_solution])
+        if self.m > 1:
+            return Program.to([proof, delegated_puzzle, delegated_solution])
+        else:
+            return Program.to([*proof.as_iter(), delegated_puzzle, delegated_solution])
 
 
 # The top-level object inside every "outer" puzzle
