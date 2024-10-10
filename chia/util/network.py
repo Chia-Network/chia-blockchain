@@ -6,50 +6,16 @@ import logging
 import socket
 import ssl
 from dataclasses import dataclass
-from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
+from ipaddress import IPv4Network, IPv6Network, ip_address
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
 
 from aiohttp import web
 from aiohttp.log import web_logger
 from typing_extensions import final
 
-from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
-
-
-@dataclass(frozen=True)
-class IPAddress:
-    _inner: Union[IPv4Address, IPv6Address]
-
-    @classmethod
-    def create(cls, ip: str) -> IPAddress:
-        return cls(ip_address(ip))
-
-    def __int__(self) -> int:
-        return int(self._inner)
-
-    def __str__(self) -> str:
-        return str(self._inner)
-
-    def __repr__(self) -> str:
-        return repr(self._inner)
-
-    @property
-    def packed(self) -> bytes:
-        return self._inner.packed
-
-    @property
-    def is_private(self) -> bool:
-        return self._inner.is_private
-
-    @property
-    def is_v4(self) -> bool:
-        return self._inner.version == 4
-
-    @property
-    def is_v6(self) -> bool:
-        return self._inner.version == 6
+from chia.util.ip_address import IPAddress
 
 
 @final
@@ -165,37 +131,13 @@ def is_localhost(peer_host: str) -> bool:
 
 
 def is_trusted_peer(
-    host: str, node_id: bytes32, trusted_peers: Dict[str, Any], trusted_cidrs: List[str], testing: bool = False
+    host: str,
+    node_id: bytes32,
+    trusted_peers: Dict[str, Any],
+    trusted_cidrs: List[str],
+    testing: bool = False,
 ) -> bool:
     return not testing and is_localhost(host) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
-
-
-def class_for_type(type: NodeType) -> Any:
-    if type is NodeType.FULL_NODE:
-        from chia.full_node.full_node_api import FullNodeAPI
-
-        return FullNodeAPI
-    elif type is NodeType.WALLET:
-        from chia.wallet.wallet_node_api import WalletNodeAPI
-
-        return WalletNodeAPI
-    elif type is NodeType.INTRODUCER:
-        from chia.introducer.introducer_api import IntroducerAPI
-
-        return IntroducerAPI
-    elif type is NodeType.TIMELORD:
-        from chia.timelord.timelord_api import TimelordAPI
-
-        return TimelordAPI
-    elif type is NodeType.FARMER:
-        from chia.farmer.farmer_api import FarmerAPI
-
-        return FarmerAPI
-    elif type is NodeType.HARVESTER:
-        from chia.harvester.harvester_api import HarvesterAPI
-
-        return HarvesterAPI
-    raise ValueError("No class for type")
 
 
 async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
@@ -204,7 +146,13 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
     except ValueError:
         pass
     addrset: List[
-        Tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
+        Tuple[
+            socket.AddressFamily,
+            socket.SocketKind,
+            int,
+            str,
+            Union[Tuple[str, int], Tuple[str, int, int, int]],
+        ]
     ] = await asyncio.get_event_loop().getaddrinfo(host, None)
     # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
     ips_v4 = []

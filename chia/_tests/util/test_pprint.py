@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from chia.util.pprint import print_compact_ranges
+from chia.wallet.util.pprint import print_compact_ranges
 
 
 def test_print_compact_ranges() -> None:
