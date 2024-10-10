@@ -144,7 +144,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         ) -> SplitCoinsResponse:
             self.add_to_log("split_coins", (args, tx_config, timelock_info))
             return SplitCoinsResponse([STD_UTX], [STD_TX])
-        
+
         async def get_coin_records_by_names(
             self,
             names: List[bytes32],
@@ -152,17 +152,13 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
             start_height: Optional[int] = None,
             end_height: Optional[int] = None,
         ) -> List[CoinRecord]:
-            coin = Coin(
-                Program.to(0).get_tree_hash(),
-                Program.to(1).get_tree_hash(),
-                10_000_000_000_000
-            )
+            coin = Coin(Program.to(0).get_tree_hash(), Program.to(1).get_tree_hash(), uint64(10_000_000_000_000))
             cr = CoinRecord(
                 coin,
-                10,
-                0,
+                uint32(10),
+                uint32(0),
                 False,
-                0,
+                uint64(0),
             )
             return [cr]
 
@@ -210,11 +206,6 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
-    target_coin_id = Coin(
-        Program.to(0).get_tree_hash(),
-        Program.to(1).get_tree_hash(),
-        10_000_000_000_000
-    ).name()
     command_args = [
         "wallet",
         "coins",
@@ -232,14 +223,16 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     # these are various things that should be in the output
     assert_list = []
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {
+    expected_calls = {
         "get_wallets": [(None,)],
         "get_sync_status": [()],
         "split_coins": [
             (
                 SplitCoins(
                     wallet_id=uint32(1),
-                    number_of_coins=uint16(20),  # this transaction should be equivalent to specifying 20 x  0.5xch coins 
+                    number_of_coins=uint16(
+                        20
+                    ),  # this transaction should be equivalent to specifying 20 x  0.5xch coins
                     amount_per_coin=uint64(500_000_000_000),
                     target_coin_id=target_coin_id,
                     fee=uint64(1_000_000_000),
@@ -276,7 +269,9 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
             (
                 SplitCoins(
                     wallet_id=uint32(1),
-                    number_of_coins=uint16(20),  # this transaction should be equivalent to specifying 20 x  0.5xch coins 
+                    number_of_coins=uint16(
+                        20
+                    ),  # this transaction should be equivalent to specifying 20 x  0.5xch coins
                     amount_per_coin=uint64(500_000_000_000),
                     target_coin_id=target_coin_id,
                     fee=uint64(1_000_000_000),
