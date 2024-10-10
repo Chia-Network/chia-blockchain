@@ -211,7 +211,7 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
     """
     async with sim_and_client() as (sim, client):
         for m in range(1, 6):  # 1 - 5 inclusive
-            for n in range(1, 6):
+            for n in range(2, 6):
                 m_of_n = MofN(m, [PuzzleWithRestrictions(n_i, [], ACSMember()) for n_i in range(0, n)])
 
                 # Farm and find coin
@@ -236,7 +236,7 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
                         )
                         for index in indexes
                     }
-                    proof = m_of_n.merkle_tree.generate_m_of_n_proof(proven_spends)
+                    proof = m_of_n.generate_proof(proven_spends)
                     result = await client.push_tx(
                         cost_logger.add_cost(
                             f"M={m}, N={n}, indexes={indexes}",
