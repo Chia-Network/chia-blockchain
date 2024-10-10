@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from chia.cmds.cmds_util import format_bytes, format_minutes, get_any_service_client
 from chia.cmds.units import units
@@ -20,14 +20,14 @@ SECONDS_PER_BLOCK = (24 * 3600) / 4608
 
 async def get_harvesters_summary(
     farmer_rpc_port: Optional[int], root_path: Path = DEFAULT_ROOT_PATH
-) -> Optional[Dict[str, Any]]:
+) -> Optional[dict[str, Any]]:
     async with get_any_service_client(FarmerRpcClient, farmer_rpc_port, root_path) as (farmer_client, _):
         return await farmer_client.get_harvesters_summary()
 
 
 async def get_blockchain_state(
     rpc_port: Optional[int], root_path: Path = DEFAULT_ROOT_PATH
-) -> Optional[Dict[str, Any]]:
+) -> Optional[dict[str, Any]]:
     async with get_any_service_client(FullNodeRpcClient, rpc_port, root_path) as (client, _):
         return await client.get_blockchain_state()
 
@@ -55,12 +55,12 @@ async def get_average_block_time(rpc_port: Optional[int], root_path: Path = DEFA
 
 async def get_wallets_stats(
     wallet_rpc_port: Optional[int], root_path: Path = DEFAULT_ROOT_PATH
-) -> Optional[Dict[str, Any]]:
+) -> Optional[dict[str, Any]]:
     async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, _):
         return await wallet_client.get_farmed_amount()
 
 
-async def get_challenges(farmer_rpc_port: Optional[int]) -> Optional[List[Dict[str, Any]]]:
+async def get_challenges(farmer_rpc_port: Optional[int]) -> Optional[list[dict[str, Any]]]:
     async with get_any_service_client(FarmerRpcClient, farmer_rpc_port) as (farmer_client, _):
         return await farmer_client.get_signage_points()
 
@@ -135,8 +135,8 @@ async def summary(
         total_plots = 0
 
     if harvesters_summary is not None:
-        harvesters_local: Dict[str, Dict[str, Any]] = {}
-        harvesters_remote: Dict[str, Dict[str, Any]] = {}
+        harvesters_local: dict[str, dict[str, Any]] = {}
+        harvesters_remote: dict[str, dict[str, Any]] = {}
         for harvester in harvesters_summary["harvesters"]:
             ip = harvester["connection"]["host"]
             if is_localhost(ip):
@@ -146,7 +146,7 @@ async def summary(
                     harvesters_remote[ip] = {}
                 harvesters_remote[ip][harvester["connection"]["node_id"]] = harvester
 
-        def process_harvesters(harvester_peers_in: Dict[str, Dict[str, Any]]) -> None:
+        def process_harvesters(harvester_peers_in: dict[str, dict[str, Any]]) -> None:
             for harvester_peer_id, harvester_dict in harvester_peers_in.items():
                 syncing = harvester_dict["syncing"]
                 if syncing is not None and syncing["initial"]:

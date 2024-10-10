@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 
@@ -78,14 +78,14 @@ def test_nested_serialization() -> None:
 @dataclasses.dataclass(frozen=True)
 class Compound(Streamable):
     optional: Optional[BasicCLVMStreamable]
-    list: List[BasicCLVMStreamable]
+    list: list[BasicCLVMStreamable]
 
 
 @clvm_streamable
 @dataclasses.dataclass(frozen=True)
 class CompoundCLVM(Streamable):
     optional: Optional[BasicCLVMStreamable]
-    list: List[BasicCLVMStreamable]
+    list: list[BasicCLVMStreamable]
 
 
 def test_compound_type_serialization() -> None:
@@ -153,7 +153,7 @@ def test_compound_type_serialization() -> None:
         @clvm_streamable
         @dataclasses.dataclass(frozen=True)
         class DoesntWork(Streamable):
-            tuples_are_not_supported: Tuple[str]
+            tuples_are_not_supported: tuple[str]
 
 
 @clvm_streamable

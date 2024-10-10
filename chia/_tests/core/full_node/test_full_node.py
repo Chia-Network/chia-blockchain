@@ -6,7 +6,8 @@ import dataclasses
 import logging
 import random
 import time
-from typing import Coroutine, Dict, List, Optional, Tuple
+from collections.abc import Coroutine
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
@@ -114,7 +115,7 @@ async def get_block_path(full_node: FullNodeAPI):
 @pytest.mark.anyio
 async def test_sync_no_farmer(
     setup_two_nodes_and_wallet,
-    default_1000_blocks: List[FullBlock],
+    default_1000_blocks: list[FullBlock],
     self_hostname: str,
     seeded_random: random.Random,
 ):
@@ -416,7 +417,7 @@ class TestFullNodeBlockCompression:
         height = full_node_1.full_node.blockchain.get_peak().height
 
         blockchain = empty_blockchain
-        all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
+        all_blocks: list[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
 
         if test_reorgs:
@@ -833,7 +834,7 @@ class TestFullNodeProtocol:
         puzzle_hashes = []
 
         # Makes a bunch of coins
-        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
+        conditions_dict: dict = {ConditionOpcode.CREATE_COIN: []}
         # This should fit in one transaction
         for _ in range(100):
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -1306,7 +1307,7 @@ class TestFullNodeProtocol:
         # best block we've already seen, so we may need to send more than 3
         # blocks to the node for it to forward 3
 
-        unf_blocks: List[UnfinishedBlock] = []
+        unf_blocks: list[UnfinishedBlock] = []
 
         last_reward_hash: Optional[bytes32] = None
         for idx in range(0, 6):
@@ -1475,7 +1476,7 @@ class TestFullNodeProtocol:
         else:
             reward_chain_block = block.reward_chain_block.get_unfinished()
 
-        generator_refs: List[uint32] = []
+        generator_refs: list[uint32] = []
         if committment > 6:
             generator_refs = [uint32(n) for n in range(600)]
 
@@ -1512,7 +1513,7 @@ class TestFullNodeProtocol:
 
         for i in range(2):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
+        blocks: list[FullBlock] = await full_node_1.get_all_full_blocks()
 
         coin = blocks[-1].get_included_reward_coins()[0]
         tx = wallet_a.generate_signed_transaction(10000, wallet_receiver.get_new_puzzlehash(), coin)
@@ -2174,9 +2175,9 @@ class TestFullNodeProtocol:
     @pytest.mark.anyio
     async def test_invalid_capability_can_connect(
         self,
-        two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+        two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
         self_hostname: str,
-        custom_capabilities: List[Tuple[uint16, str]],
+        custom_capabilities: list[tuple[uint16, str]],
         expect_success: bool,
     ) -> None:
         # TODO: consider not testing this against both DB v1 and v2?
@@ -2256,9 +2257,9 @@ async def test_wallet_sync_task_failure(
 async def test_long_reorg(
     light_blocks: bool,
     one_node_one_block,
-    default_10000_blocks: List[FullBlock],
-    test_long_reorg_1500_blocks: List[FullBlock],
-    test_long_reorg_1500_blocks_light: List[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    test_long_reorg_1500_blocks: list[FullBlock],
+    test_long_reorg_1500_blocks_light: list[FullBlock],
     seeded_random: random.Random,
 ):
     node, server, bt = one_node_one_block
@@ -2345,11 +2346,11 @@ async def test_long_reorg_nodes(
     chain_length: int,
     fork_point: int,
     three_nodes,
-    default_10000_blocks: List[FullBlock],
-    test_long_reorg_blocks: List[FullBlock],
-    test_long_reorg_blocks_light: List[FullBlock],
-    test_long_reorg_1500_blocks: List[FullBlock],
-    test_long_reorg_1500_blocks_light: List[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    test_long_reorg_blocks: list[FullBlock],
+    test_long_reorg_blocks_light: list[FullBlock],
+    test_long_reorg_1500_blocks: list[FullBlock],
+    test_long_reorg_1500_blocks_light: list[FullBlock],
     self_hostname: str,
     seeded_random: random.Random,
 ):

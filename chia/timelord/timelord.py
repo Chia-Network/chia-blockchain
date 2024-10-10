@@ -9,9 +9,10 @@ import os
 import random
 import time
 import traceback
+from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chiavdf import create_discriminant, prove
 
@@ -81,50 +82,50 @@ class Timelord:
 
         return self._server
 
-    def __init__(self, root_path: Path, config: Dict[str, Any], constants: ConsensusConstants) -> None:
+    def __init__(self, root_path: Path, config: dict[str, Any], constants: ConsensusConstants) -> None:
         self.config = config
         self.root_path = root_path
         self.constants = constants
         self._shut_down = False
-        self.free_clients: List[Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = []
+        self.free_clients: list[tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = []
         self.ip_whitelist = self.config["vdf_clients"]["ip"]
         self._server: Optional[ChiaServer] = None
-        self.chain_type_to_stream: Dict[Chain, Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = {}
-        self.chain_start_time: Dict[Chain, float] = {}
+        self.chain_type_to_stream: dict[Chain, tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = {}
+        self.chain_start_time: dict[Chain, float] = {}
         # Chains that currently don't have a vdf_client.
-        self.unspawned_chains: List[Chain] = [
+        self.unspawned_chains: list[Chain] = [
             Chain.CHALLENGE_CHAIN,
             Chain.REWARD_CHAIN,
             Chain.INFUSED_CHALLENGE_CHAIN,
         ]
         # Chains that currently accept iterations.
-        self.allows_iters: List[Chain] = []
+        self.allows_iters: list[Chain] = []
         # Last peak received, None if it's already processed.
         self.new_peak: Optional[timelord_protocol.NewPeakTimelord] = None
         # Last state received. Can either be a new peak or a new EndOfSubslotBundle.
         # Unfinished block info, iters adjusted to the last peak.
-        self.unfinished_blocks: List[timelord_protocol.NewUnfinishedBlockTimelord] = []
+        self.unfinished_blocks: list[timelord_protocol.NewUnfinishedBlockTimelord] = []
         # Signage points iters, adjusted to the last peak.
-        self.signage_point_iters: List[Tuple[uint64, uint8]] = []
+        self.signage_point_iters: list[tuple[uint64, uint8]] = []
         # For each chain, send those info when the process spawns.
-        self.iters_to_submit: Dict[Chain, List[uint64]] = {}
-        self.iters_submitted: Dict[Chain, List[uint64]] = {}
-        self.iters_finished: Set[uint64] = set()
+        self.iters_to_submit: dict[Chain, list[uint64]] = {}
+        self.iters_submitted: dict[Chain, list[uint64]] = {}
+        self.iters_finished: set[uint64] = set()
         # For each iteration submitted, know if it's a signage point, an infusion point or an end of slot.
-        self.iteration_to_proof_type: Dict[uint64, IterationType] = {}
+        self.iteration_to_proof_type: dict[uint64, IterationType] = {}
         # List of proofs finished.
-        self.proofs_finished: List[Tuple[Chain, VDFInfo, VDFProof, int]] = []
+        self.proofs_finished: list[tuple[Chain, VDFInfo, VDFProof, int]] = []
         # Data to send at vdf_client initialization.
-        self.overflow_blocks: List[timelord_protocol.NewUnfinishedBlockTimelord] = []
+        self.overflow_blocks: list[timelord_protocol.NewUnfinishedBlockTimelord] = []
         # Incremented each time `reset_chains` has been called.
         # Used to label proofs in `finished_proofs` and to only filter proofs corresponding to the most recent state.
         self.num_resets: int = 0
 
-        self.process_communication_tasks: List[asyncio.Task[None]] = []
+        self.process_communication_tasks: list[asyncio.Task[None]] = []
         self.main_loop: Optional[asyncio.Task[None]] = None
         self.vdf_server: Optional[asyncio.base_events.Server] = None
         self._shut_down = False
-        self.vdf_failures: List[Tuple[Chain, Optional[int]]] = []
+        self.vdf_failures: list[tuple[Chain, Optional[int]]] = []
         self.vdf_failures_count: int = 0
         self.vdf_failure_time: float = 0
         self.total_unfinished: int = 0
@@ -134,7 +135,7 @@ class Timelord:
         # Support backwards compatibility for the old `config.yaml` that has field `sanitizer_mode`.
         if not self.bluebox_mode:
             self.bluebox_mode = self.config.get("sanitizer_mode", False)
-        self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
+        self.pending_bluebox_info: list[tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
         self.max_allowed_inactivity_time = 60
         self.bluebox_pool: Optional[ThreadPoolExecutor] = None
@@ -175,7 +176,7 @@ class Timelord:
             if self.bluebox_pool is not None:
                 self.bluebox_pool.shutdown()
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
@@ -189,7 +190,7 @@ class Timelord:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
-    def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
+    def state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
@@ -431,7 +432,7 @@ class Timelord:
                     writer.write(iter_str.encode())
                     await writer.drain()
 
-    def _clear_proof_list(self, iters: uint64) -> List[Tuple[Chain, VDFInfo, VDFProof, int]]:
+    def _clear_proof_list(self, iters: uint64) -> list[tuple[Chain, VDFInfo, VDFProof, int]]:
         return [
             (chain, info, proof, label)
             for chain, info, proof, label in self.proofs_finished

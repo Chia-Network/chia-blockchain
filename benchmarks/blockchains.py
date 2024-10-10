@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import cProfile
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from subprocess import check_call
-from typing import Iterator
 
 from chia._tests.util.blockchain import persistent_blocks
 from chia.simulator.block_tools import create_block_tools_async, test_constants

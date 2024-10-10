@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, recurse_jsonify, streamable
 
 
-def dict_with_types(d: Dict[str, Any]) -> Dict[str, Any]:
+def dict_with_types(d: dict[str, Any]) -> dict[str, Any]:
     return {k: (v, type(v)) for k, v in d.items()}
 
 
@@ -64,7 +64,7 @@ def test_list() -> None:
     @streamable
     @dataclass(frozen=True)
     class ListTest(Streamable):
-        d: List[str]
+        d: list[str]
 
     t = ListTest(["foo", "bar"])
 
@@ -75,7 +75,7 @@ def test_tuple() -> None:
     @streamable
     @dataclass(frozen=True)
     class TupleTest(Streamable):
-        d: Tuple[str, uint32, str]
+        d: tuple[str, uint32, str]
 
     t = TupleTest(("foo", uint32(123), "bar"))
 
@@ -85,14 +85,14 @@ def test_tuple() -> None:
 @streamable
 @dataclass(frozen=True)
 class NestedWithTupleInner(Streamable):
-    a: Tuple[str, uint32, str]
+    a: tuple[str, uint32, str]
     b: bytes
 
 
 @streamable
 @dataclass(frozen=True)
 class NestedWithTupleOuter(Streamable):
-    a: Tuple[NestedWithTupleInner, uint32, str]
+    a: tuple[NestedWithTupleInner, uint32, str]
 
 
 def test_nested_with_tuple() -> None:
@@ -113,7 +113,7 @@ class NestedWithListInner(Streamable):
 @streamable
 @dataclass(frozen=True)
 class NestedWithListOuter(Streamable):
-    a: List[NestedWithListInner]
+    a: list[NestedWithListInner]
 
 
 def test_nested_with_list() -> None:
@@ -125,7 +125,7 @@ def test_nested_with_list() -> None:
 @streamable
 @dataclass(frozen=True)
 class TestNestedInner(Streamable):
-    a: Tuple[str, uint32, str]
+    a: tuple[str, uint32, str]
     b: bytes
 
 

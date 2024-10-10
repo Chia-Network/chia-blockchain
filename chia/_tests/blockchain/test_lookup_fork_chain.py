@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List
 
 import pytest
 
@@ -15,7 +14,7 @@ from chia.util.ints import uint32
 
 
 class DummyChain:
-    _chain: Dict[bytes32, bytes32]
+    _chain: dict[bytes32, bytes32]
 
     def __init__(self) -> None:
         self._chain = {}
@@ -23,8 +22,8 @@ class DummyChain:
     def add_block(self, h: bytes32, prev: bytes32) -> None:
         self._chain[h] = prev
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
-        ret: List[bytes32] = []
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
+        ret: list[bytes32] = []
         for h in header_hashes:
             ret.append(self._chain[h])
         return ret

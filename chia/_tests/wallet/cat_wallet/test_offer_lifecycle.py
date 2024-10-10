@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pytest
 from chia_rs import G2Element
@@ -45,8 +45,8 @@ def str_to_cat_hash(tail_str: str) -> bytes32:
 
 # This method takes a dictionary of strings mapping to amounts and generates the appropriate CAT/XCH coins
 async def generate_coins(
-    sim: SpendSim, sim_client: SimClient, requested_coins: Dict[Optional[str], List[int]]
-) -> Dict[Optional[str], List[Coin]]:
+    sim: SpendSim, sim_client: SimClient, requested_coins: dict[Optional[str], list[int]]
+) -> dict[Optional[str], list[Coin]]:
     await sim.farm_block(acs_ph)
     parent_coin = [cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph)][0]
 
@@ -87,7 +87,7 @@ async def generate_coins(
     await sim.farm_block()
 
     # Search for all of the coins and put them into a dictionary
-    coin_dict: Dict[Optional[str], List[Coin]] = {}
+    coin_dict: dict[Optional[str], list[Coin]] = {}
     for tail_str, _ in requested_coins.items():
         if tail_str:
             tail_hash = str_to_tail_hash(tail_str)
@@ -112,15 +112,15 @@ async def generate_coins(
 # `generate_secure_bundle` simulates a wallet's `generate_signed_transaction`
 # but doesn't bother with non-offer announcements
 def generate_secure_bundle(
-    selected_coins: List[Coin],
-    announcements: List[AssertPuzzleAnnouncement],
+    selected_coins: list[Coin],
+    announcements: list[AssertPuzzleAnnouncement],
     offered_amount: uint64,
     tail_str: Optional[str] = None,
 ) -> WalletSpendBundle:
     announcement_assertions = [a.to_program() for a in announcements]
     selected_coin_amount = sum(c.amount for c in selected_coins)
     non_primaries = [] if len(selected_coins) < 2 else selected_coins[1:]
-    inner_solution: List[Any] = [
+    inner_solution: list[Any] = [
         [51, Offer.ph(), offered_amount],  # Offered coin
         [51, acs_ph, uint64(selected_coin_amount - offered_amount)],  # Change
         *announcement_assertions,
@@ -178,7 +178,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         driver_dict_as_infos = {key.hex(): value.info for key, value in driver_dict.items()}
 
         # Create an XCH Offer for RED
-        chia_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
+        chia_requested_payments: dict[Optional[bytes32], list[Payment]] = {
             str_to_tail_hash("red"): [Payment(acs_ph, uint64(100), [b"memo"]), Payment(acs_ph, uint64(200), [b"memo"])]
         }
         chia_notarized_payments = Offer.notarize_payments(chia_requested_payments, chia_coins)
@@ -190,7 +190,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         # Create a RED Offer for XCH
         red_coins_1 = red_coins[0:1]
         red_coins_2 = red_coins[1:]
-        red_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
+        red_requested_payments: dict[Optional[bytes32], list[Payment]] = {
             None: [Payment(acs_ph, uint64(300), [b"red memo"]), Payment(acs_ph, uint64(350), [b"red memo"])]
         }
         red_notarized_payments = Offer.notarize_payments(red_requested_payments, red_coins_1)
@@ -201,7 +201,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         red_offer = Offer(red_notarized_payments, red_secured_bundle, driver_dict)
         assert not red_offer.is_valid()
 
-        red_requested_payments_2: Dict[Optional[bytes32], List[Payment]] = {
+        red_requested_payments_2: dict[Optional[bytes32], list[Payment]] = {
             None: [Payment(acs_ph, uint64(50), [b"red memo"])]
         }
         red_notarized_payments_2 = Offer.notarize_payments(red_requested_payments_2, red_coins_2)
@@ -219,7 +219,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         assert new_offer.is_valid()
 
         # Create yet another offer of BLUE for XCH and RED
-        blue_requested_payments: Dict[Optional[bytes32], List[Payment]] = {
+        blue_requested_payments: dict[Optional[bytes32], list[Payment]] = {
             None: [Payment(acs_ph, uint64(200), [b"blue memo"])],
             str_to_tail_hash("red"): [Payment(acs_ph, uint64(50), [b"blue memo"])],
         }

@@ -5,9 +5,10 @@ import ipaddress
 import logging
 import socket
 import ssl
+from collections.abc import Iterable
 from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
-from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple, Union
+from typing import Any, Literal, Optional, Union
 
 from aiohttp import web
 from aiohttp.log import web_logger
@@ -146,7 +147,7 @@ def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Netw
         return False
 
 
-def is_trusted_cidr(peer_host: str, trusted_cidrs: List[str]) -> bool:
+def is_trusted_cidr(peer_host: str, trusted_cidrs: list[str]) -> bool:
     try:
         ip_obj = ipaddress.ip_address(peer_host)
     except ValueError:
@@ -165,7 +166,7 @@ def is_localhost(peer_host: str) -> bool:
 
 
 def is_trusted_peer(
-    host: str, node_id: bytes32, trusted_peers: Dict[str, Any], trusted_cidrs: List[str], testing: bool = False
+    host: str, node_id: bytes32, trusted_peers: dict[str, Any], trusted_cidrs: list[str], testing: bool = False
 ) -> bool:
     return not testing and is_localhost(host) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
 
@@ -203,8 +204,8 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
         return IPAddress.create(host)
     except ValueError:
         pass
-    addrset: List[
-        Tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[Tuple[str, int], Tuple[str, int, int, int]]]
+    addrset: list[
+        tuple[socket.AddressFamily, socket.SocketKind, int, str, Union[tuple[str, int], tuple[str, int, int, int]]]
     ] = await asyncio.get_event_loop().getaddrinfo(host, None)
     # The list returned by getaddrinfo is never empty, an exception is thrown or data is returned.
     ips_v4 = []
@@ -224,7 +225,7 @@ async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:
         raise ValueError(f"failed to resolve {host} into an IP address")
 
 
-def select_port(prefer_ipv6: bool, addresses: List[Any]) -> uint16:
+def select_port(prefer_ipv6: bool, addresses: list[Any]) -> uint16:
     selected_port: uint16
     for address_string, port, *_ in addresses:
         address = ip_address(address_string)

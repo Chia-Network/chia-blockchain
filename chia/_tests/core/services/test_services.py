@@ -5,7 +5,7 @@ import signal
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import aiohttp.client_exceptions
 import pytest
@@ -39,11 +39,11 @@ class CreateServiceProtocol(Protocol):
         self_hostname: str,
         port: uint16,
         root_path: Path,
-        net_config: Dict[str, Any],
+        net_config: dict[str, Any],
     ) -> RpcClient: ...
 
 
-async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: float = 15) -> DaemonProxy:
+async def wait_for_daemon_connection(root_path: Path, config: dict[str, Any], timeout: float = 15) -> DaemonProxy:
     timeout = adjusted_timeout(timeout=timeout)
 
     start = time.monotonic()

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from math import ceil
-from typing import List, Type
 
 import pytest
 
@@ -12,7 +11,7 @@ from chia.util.paginator import InvalidPageSizeError, InvalidPageSizeLimit, Page
     "source, page_size, page_size_limit",
     [([], 1, 1), ([1], 1, 2), ([1, 2], 2, 2), ([], 10, 100), ([1, 2, 10], 1000, 1000)],
 )
-def test_constructor_valid_inputs(source: List[int], page_size: int, page_size_limit: int) -> None:
+def test_constructor_valid_inputs(source: list[int], page_size: int, page_size_limit: int) -> None:
     paginator: Paginator = Paginator.create(source, page_size, page_size_limit)
     assert paginator.page_size() == page_size
     assert paginator.page_count() == 1
@@ -29,7 +28,7 @@ def test_constructor_valid_inputs(source: List[int], page_size: int, page_size_l
         (1001, 1000, InvalidPageSizeError),
     ],
 )
-def test_constructor_invalid_inputs(page_size: int, page_size_limit: int, exception: Type[Exception]) -> None:
+def test_constructor_invalid_inputs(page_size: int, page_size_limit: int, exception: type[Exception]) -> None:
     with pytest.raises(exception):
         Paginator.create([], page_size, page_size_limit)
 
@@ -62,7 +61,7 @@ def test_page_count() -> None:
         (0, 10, 0, []),
     ],
 )
-def test_get_page_valid(length: int, page: int, page_size: int, expected_data: List[int]) -> None:
+def test_get_page_valid(length: int, page: int, page_size: int, expected_data: list[int]) -> None:
     assert Paginator.create(list(range(0, length)), page_size).get_page(page) == expected_data
 
 

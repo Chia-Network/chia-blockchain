@@ -5,11 +5,12 @@ import logging
 import operator
 import sys
 import time
+from collections.abc import Awaitable
 from math import ceil
 from os import mkdir
 from pathlib import Path
 from shutil import copy
-from typing import Any, Awaitable, Callable, Dict, List, Union, cast
+from typing import Any, Callable, Union, cast
 
 import pytest
 
@@ -358,8 +359,8 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool) -> None:
 @pytest.mark.skipif(sys.platform == "win32", reason="avoiding crashes on windows until we fix this (crashing workers)")
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
-    endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[Dict[str, Any]]],
-    filtering: Union[List[FilterItem], List[str]],
+    endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[dict[str, Any]]],
+    filtering: Union[list[FilterItem], list[str]],
     sort_key: str,
     reverse: bool,
     expected_plot_count: int,
@@ -378,12 +379,12 @@ async def test_farmer_get_harvester_plots_endpoints(
     request: PaginatedRequestData
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
         request = PlotInfoRequestData(
-            harvester_id, uint32(0), uint32(0), cast(List[FilterItem], filtering), sort_key, reverse
+            harvester_id, uint32(0), uint32(0), cast(list[FilterItem], filtering), sort_key, reverse
         )
     else:
-        request = PlotPathRequestData(harvester_id, uint32(0), uint32(0), cast(List[str], filtering), reverse)
+        request = PlotPathRequestData(harvester_id, uint32(0), uint32(0), cast(list[str], filtering), reverse)
 
-    def add_plot_directories(prefix: str, count: int) -> List[Path]:
+    def add_plot_directories(prefix: str, count: int) -> list[Path]:
         new_paths = []
         for i in range(count):
             new_paths.append(harvester.root_path / f"{prefix}_{i}")

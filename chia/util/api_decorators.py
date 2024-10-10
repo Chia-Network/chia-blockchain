@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import logging
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional, Type, TypeVar, Union, get_type_hints
+from typing import Callable, Optional, TypeVar, Union, get_type_hints
 
 from typing_extensions import Concatenate, ParamSpec
 
@@ -24,11 +24,11 @@ metadata_attribute_name = "_chia_api_metadata"
 @dataclass
 class ApiMetadata:
     request_type: ProtocolMessageTypes
-    message_class: Type[Streamable]
+    message_class: type[Streamable]
     peer_required: bool = False
     bytes_required: bool = False
     execute_task: bool = False
-    reply_types: List[ProtocolMessageTypes] = field(default_factory=list)
+    reply_types: list[ProtocolMessageTypes] = field(default_factory=list)
 
 
 def get_metadata(function: Callable[..., object]) -> Optional[ApiMetadata]:
@@ -45,9 +45,9 @@ def api_request(
     peer_required: bool = False,
     bytes_required: bool = False,
     execute_task: bool = False,
-    reply_types: Optional[List[ProtocolMessageTypes]] = None,
+    reply_types: Optional[list[ProtocolMessageTypes]] = None,
 ) -> Callable[[Callable[Concatenate[Self, S, P], R]], Callable[Concatenate[Self, Union[bytes, S], P], R]]:
-    non_optional_reply_types: List[ProtocolMessageTypes]
+    non_optional_reply_types: list[ProtocolMessageTypes]
     if reply_types is None:
         non_optional_reply_types = []
     else:

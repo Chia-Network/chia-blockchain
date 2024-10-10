@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import pytest
 
 from chia.protocols.shared_protocol import Capability
@@ -53,8 +51,8 @@ from chia.util.ints import uint16
     ids=lambda value: "disabled" if value else "enabled",
 )
 def test_known_active_capabilities_filter(
-    values: List[Tuple[uint16, str]],
-    expected: List[Capability],
+    values: list[tuple[uint16, str]],
+    expected: list[Capability],
     duplicated: bool,
     disabled: bool,
 ) -> None:

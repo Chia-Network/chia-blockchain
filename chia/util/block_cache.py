@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -14,12 +14,12 @@ class BlockCache:
 
         _protocol_check: ClassVar[BlockRecordsProtocol] = cast("BlockCache", None)
 
-    _block_records: Dict[bytes32, BlockRecord]
-    _height_to_hash: Dict[uint32, bytes32]
+    _block_records: dict[bytes32, BlockRecord]
+    _height_to_hash: dict[uint32, bytes32]
 
     def __init__(
         self,
-        blocks: Dict[bytes32, BlockRecord],
+        blocks: dict[bytes32, BlockRecord],
     ):
         self._block_records = blocks
         self._height_to_hash = {block.height: hh for hh, block in blocks.items()}
@@ -52,5 +52,5 @@ class BlockCache:
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records.get(header_hash)
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         return [self._block_records[h].prev_hash for h in header_hashes]

@@ -7,9 +7,10 @@ import os
 import signal
 import subprocess
 import sys
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, Optional, TextIO
+from typing import Optional, TextIO
 
 from chia.util.chia_version import chia_short_version
 from chia.util.config import lock_and_load_config

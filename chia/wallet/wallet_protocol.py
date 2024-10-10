@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Set, Tuple, TypeVar
+from typing import TYPE_CHECKING, Optional, TypeVar
 
 from chia_rs import G1Element
 from typing_extensions import NotRequired, Protocol, TypedDict
@@ -35,17 +35,17 @@ class WalletProtocol(Protocol[T]):
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> Set[Coin]: ...
+    ) -> set[Coin]: ...
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128: ...
+    async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128: ...
 
-    async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128: ...
+    async def get_unconfirmed_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128: ...
 
-    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128: ...
+    async def get_spendable_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128: ...
 
     async def get_pending_change_balance(self) -> uint64: ...
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128: ...
+    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128: ...
 
     # not all wallet supports this. To signal support, make
     # require_derivation_paths() return true
@@ -71,14 +71,14 @@ class GSTOptionalArgs(TypedDict):
     add_pending_singleton: NotRequired[bool]
     announce_new_state: NotRequired[bool]
     # CATWallet
-    cat_discrepancy: NotRequired[Optional[Tuple[int, Program, Program]]]
+    cat_discrepancy: NotRequired[Optional[tuple[int, Program, Program]]]
     # NFTWallet
     nft_coin: NotRequired[Optional[NFTCoinInfo]]
     new_owner: NotRequired[Optional[bytes]]
     new_did_inner_hash: NotRequired[Optional[bytes]]
     trade_prices_list: NotRequired[Optional[Program]]
-    additional_bundles: NotRequired[List[WalletSpendBundle]]
-    metadata_update: NotRequired[Optional[Tuple[str, str]]]
+    additional_bundles: NotRequired[list[WalletSpendBundle]]
+    metadata_update: NotRequired[Optional[tuple[str, str]]]
     # CR-CAT Wallet
     add_authorizations_to_cr_cats: NotRequired[bool]
     # VCWallet

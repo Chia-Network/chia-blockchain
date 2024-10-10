@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -1112,7 +1112,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_1.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
 
-        before_txs: Dict[str, Dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
+        before_txs: dict[str, dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
         before_txs["sender"][TransactionType.INCOMING_CLAWBACK_SEND] = (
             await wsm_1.tx_store.get_transaction_count_for_wallet(
                 1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
@@ -1159,7 +1159,7 @@ class TestWalletSimulator:
         wsm_1 = env_1.node.wallet_state_manager
         wsm_2 = env_2.node.wallet_state_manager
 
-        after_txs: Dict[str, Dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
+        after_txs: dict[str, dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
         after_txs["sender"][TransactionType.INCOMING_CLAWBACK_SEND] = (
             await wsm_1.tx_store.get_transaction_count_for_wallet(
                 1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
@@ -1260,7 +1260,7 @@ class TestWalletSimulator:
     @pytest.mark.anyio
     async def test_wallet_send_to_three_peers(
         self,
-        three_sim_two_wallets: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        three_sim_two_wallets: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
         self_hostname: str,
     ) -> None:
@@ -2083,7 +2083,7 @@ class TestWalletSimulator:
 
 def test_get_wallet_db_path_v2_r1() -> None:
     root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v2_r1_CHALLENGE_KEY.sqlite",
         "selected_network": "mainnet",
     }
@@ -2095,7 +2095,7 @@ def test_get_wallet_db_path_v2_r1() -> None:
 
 def test_get_wallet_db_path_v2() -> None:
     root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
         "selected_network": "mainnet",
     }
@@ -2107,7 +2107,7 @@ def test_get_wallet_db_path_v2() -> None:
 
 def test_get_wallet_db_path_v1() -> None:
     root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite",
         "selected_network": "mainnet",
     }
@@ -2119,7 +2119,7 @@ def test_get_wallet_db_path_v1() -> None:
 
 def test_get_wallet_db_path_testnet() -> None:
     root_path: Path = Path("/x/y/z/.chia/testnet").resolve()
-    config: Dict[str, Any] = {
+    config: dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
         "selected_network": "testnet",
     }
@@ -2131,7 +2131,7 @@ def test_get_wallet_db_path_testnet() -> None:
 
 @pytest.mark.anyio
 async def test_wallet_has_no_server(
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
     full_nodes, wallets, bt = simulator_and_wallet
     wallet_node, wallet_server = wallets[0]

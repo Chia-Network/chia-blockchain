@@ -13,12 +13,13 @@ import sys
 import time
 import traceback
 import uuid
+from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
 from types import FrameType
-from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
+from typing import Any, Optional, TextIO
 
 from chia_rs import G1Element
 from typing_extensions import Protocol
@@ -117,16 +118,16 @@ else:
         return cmd_to_exec if cmd_to_exec is not None else service_name
 
 
-async def ping() -> Dict[str, Any]:
+async def ping() -> dict[str, Any]:
     response = {"success": True, "value": "pong"}
     return response
 
 
 class Command(Protocol):
-    async def __call__(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]: ...
+    async def __call__(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]: ...
 
 
-def _get_keys_by_fingerprints(fingerprints: Optional[List[uint32]]) -> Tuple[List[KeyData], Set[uint32]]:
+def _get_keys_by_fingerprints(fingerprints: Optional[list[uint32]]) -> tuple[list[KeyData], set[uint32]]:
     all_keys = Keychain().get_keys(include_secrets=True)
     missing_fingerprints = set()
 
@@ -153,7 +154,7 @@ class StatusMessage:
     command: str
     destination: str
     origin: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
 
     def create_payload(self) -> str:
         return create_payload(command=self.command, data=self.data, origin=self.origin, destination=self.destination)
@@ -171,9 +172,9 @@ class WebSocketServer:
     ):
         self.root_path = root_path
         self.log = log
-        self.services: Dict[str, List[subprocess.Popen]] = dict()
-        self.plots_queue: List[Dict] = []
-        self.connections: Dict[str, Set[WebSocketResponse]] = dict()  # service name : {WebSocketResponse}
+        self.services: dict[str, list[subprocess.Popen]] = dict()
+        self.plots_queue: list[dict] = []
+        self.connections: dict[str, set[WebSocketResponse]] = dict()  # service name : {WebSocketResponse}
         self.ping_job: Optional[asyncio.Task] = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
@@ -247,10 +248,10 @@ class WebSocketServer:
             except Exception as e:
                 self.log.error(f"Error while canceling task.{e} {task}")
 
-    async def stop_command(self, websocket: WebSocketResponse, request: Dict[str, Any] = {}) -> Dict[str, Any]:
+    async def stop_command(self, websocket: WebSocketResponse, request: dict[str, Any] = {}) -> dict[str, Any]:
         return await self.stop()
 
-    async def stop(self) -> Dict[str, Any]:
+    async def stop(self) -> dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
         self.cancel_task_safe(self.state_changed_task)
         service_names = list(self.services.keys())
@@ -330,7 +331,7 @@ class WebSocketServer:
 
         return ws
 
-    async def send_all_responses(self, connections: Set[WebSocketResponse], response: str) -> None:
+    async def send_all_responses(self, connections: set[WebSocketResponse], response: str) -> None:
         for connection in connections.copy():
             try:
                 await connection.send_str(response)
@@ -348,7 +349,7 @@ class WebSocketServer:
 
                 await connection.close()
 
-    def remove_connection(self, websocket: WebSocketResponse) -> List[str]:
+    def remove_connection(self, websocket: WebSocketResponse) -> list[str]:
         """Returns a list of service names from which the connection was removed"""
         service_names = []
         for service_name, connections in self.connections.items():
@@ -396,7 +397,7 @@ class WebSocketServer:
 
     async def handle_message(
         self, websocket: WebSocketResponse, message: WsRpcMessage
-    ) -> Optional[Tuple[str, Set[WebSocketResponse]]]:
+    ) -> Optional[tuple[str, set[WebSocketResponse]]]:
         """
         This function gets called when new message is received via websocket.
         """
@@ -437,7 +438,7 @@ class WebSocketServer:
         full_response = format_response(message, response)
         return full_response, {websocket}
 
-    def get_command_mapping(self) -> Dict[str, Command]:
+    def get_command_mapping(self) -> dict[str, Command]:
         """
         Returns a mapping of commands to their respective function calls.
         """
@@ -465,11 +466,11 @@ class WebSocketServer:
             "get_network_info": self.get_network_info,
         }
 
-    async def get_network_info(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_network_info(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         network_name = self.net_config["selected_network"]
         address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
         genesis_challenge = self.net_config["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
-        response: Dict[str, Any] = {
+        response: dict[str, Any] = {
             "success": True,
             "network_name": network_name,
             "network_prefix": address_prefix,
@@ -477,22 +478,22 @@ class WebSocketServer:
         }
         return response
 
-    async def is_keyring_locked(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def is_keyring_locked(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         locked: bool = Keychain.is_keyring_locked()
-        response: Dict[str, Any] = {"success": True, "is_keyring_locked": locked}
+        response: dict[str, Any] = {"success": True, "is_keyring_locked": locked}
         return response
 
-    async def keyring_status_command(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def keyring_status_command(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         return await self.keyring_status()
 
-    async def keyring_status(self) -> Dict[str, Any]:
+    async def keyring_status(self) -> dict[str, Any]:
         can_save_passphrase: bool = supports_os_passphrase_storage()
         user_passphrase_is_set: bool = Keychain.has_master_passphrase() and not using_default_passphrase()
         locked: bool = Keychain.is_keyring_locked()
         can_set_passphrase_hint: bool = True
         passphrase_hint: str = Keychain.get_master_passphrase_hint() or ""
-        requirements: Dict[str, Any] = passphrase_requirements()
-        response: Dict[str, Any] = {
+        requirements: dict[str, Any] = passphrase_requirements()
+        response: dict[str, Any] = {
             "success": True,
             "is_keyring_locked": locked,
             "can_save_passphrase": can_save_passphrase,
@@ -505,7 +506,7 @@ class WebSocketServer:
         self.log.debug(f"Keyring status: {response}")
         return response
 
-    async def unlock_keyring(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def unlock_keyring(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         key: Optional[str] = request.get("key", None)
@@ -534,14 +535,14 @@ class WebSocketServer:
                 tb = traceback.format_exc()
                 self.log.error(f"check_keys failed after unlocking keyring: {e} {tb}")
 
-        response: Dict[str, Any] = {"success": success, "error": error}
+        response: dict[str, Any] = {"success": success, "error": error}
         return response
 
     async def validate_keyring_passphrase(
         self,
         websocket: WebSocketResponse,
-        request: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        request: dict[str, Any],
+    ) -> dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         key: Optional[str] = request.get("key", None)
@@ -555,10 +556,10 @@ class WebSocketServer:
             self.log.error(f"Keyring passphrase validation failed: {e} {tb}")
             error = "validation exception"
 
-        response: Dict[str, Any] = {"success": success, "error": error}
+        response: dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def set_keyring_passphrase(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def set_keyring_passphrase(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
@@ -599,10 +600,10 @@ class WebSocketServer:
             # Inform the GUI of keyring status changes
             self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
 
-        response: Dict[str, Any] = {"success": success, "error": error}
+        response: dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def remove_keyring_passphrase(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def remove_keyring_passphrase(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         success: bool = False
         error: Optional[str] = None
         current_passphrase: Optional[str] = None
@@ -626,28 +627,28 @@ class WebSocketServer:
             # Inform the GUI of keyring status changes
             self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
 
-        response: Dict[str, Any] = {"success": success, "error": error}
+        response: dict[str, Any] = {"success": success, "error": error}
         return response
 
-    async def get_status(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_status(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         response = {"success": True, "genesis_initialized": True}
         return response
 
-    async def get_version(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_version(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         response = {"success": True, "version": __version__}
         return response
 
-    async def get_plotters(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
-        plotters: Dict[str, Any] = get_available_plotters(self.root_path)
-        response: Dict[str, Any] = {"success": True, "plotters": plotters}
+    async def get_plotters(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
+        plotters: dict[str, Any] = get_available_plotters(self.root_path)
+        response: dict[str, Any] = {"success": True, "plotters": plotters}
         return response
 
-    async def get_routes(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_routes(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         routes = list(self.get_command_mapping().keys())
-        response: Dict[str, Any] = {"success": True, "routes": routes}
+        response: dict[str, Any] = {"success": True, "routes": routes}
         return response
 
-    async def get_wallet_addresses(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_wallet_addresses(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         fingerprints = request.get("fingerprints", None)
         keys, missing_fingerprints = _get_keys_by_fingerprints(fingerprints)
         if len(missing_fingerprints) > 0:
@@ -684,16 +685,16 @@ class WebSocketServer:
 
             wallet_addresses_by_fingerprint[key.fingerprint] = address_entries
 
-        response: Dict[str, Any] = {"success": True, "wallet_addresses": wallet_addresses_by_fingerprint}
+        response: dict[str, Any] = {"success": True, "wallet_addresses": wallet_addresses_by_fingerprint}
         return response
 
-    async def get_keys_for_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_keys_for_plotting(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         fingerprints = request.get("fingerprints", None)
         keys, missing_fingerprints = _get_keys_by_fingerprints(fingerprints)
         if len(missing_fingerprints) > 0:
             return {"success": False, "error": f"key(s) not found for fingerprint(s) {missing_fingerprints}"}
 
-        keys_for_plot: Dict[uint32, Any] = {}
+        keys_for_plot: dict[uint32, Any] = {}
         for key in keys:
             if key.secrets is None:
                 continue
@@ -704,13 +705,13 @@ class WebSocketServer:
                 "farmer_public_key": bytes(farmer_public_key).hex(),
                 "pool_public_key": bytes(pool_public_key).hex(),
             }
-        response: Dict[str, Any] = {
+        response: dict[str, Any] = {
             "success": True,
             "keys": keys_for_plot,
         }
         return response
 
-    def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> Dict[str, Any]:
+    def plot_queue_to_payload(self, plot_queue_item, send_full_log: bool) -> dict[str, Any]:
         error = plot_queue_item.get("error")
         has_error = error is not None
 
@@ -737,7 +738,7 @@ class WebSocketServer:
         }
         return message
 
-    def extract_plot_queue(self, id=None) -> List[Dict]:
+    def extract_plot_queue(self, id=None) -> list[dict]:
         send_full_log = id is None
         data = []
         for item in self.plots_queue:
@@ -778,14 +779,14 @@ class WebSocketServer:
                 websockets.remove(websocket)
                 await websocket.close()
 
-    def state_changed(self, service: str, message: Dict[str, Any]) -> None:
+    def state_changed(self, service: str, message: dict[str, Any]) -> None:
         self.state_changed_msg_queue.put_nowait(
             StatusMessage(
                 service=service, command="state_changed", destination="wallet_ui", origin=service, data=message
             )
         )
 
-    def keyring_status_changed(self, keyring_status: Dict[str, Any], destination: str) -> None:
+    def keyring_status_changed(self, keyring_status: dict[str, Any], destination: str) -> None:
         self.state_changed_msg_queue.put_nowait(
             StatusMessage(
                 service="wallet_ui",
@@ -799,7 +800,7 @@ class WebSocketServer:
     async def _watch_file_changes(self, config, fp: TextIO, loop: asyncio.AbstractEventLoop):
         id: str = config["id"]
         plotter: str = config["plotter"]
-        final_words: List[str] = []
+        final_words: list[str] = []
 
         if plotter == "chiapos":
             final_words = ["Renamed final file"]
@@ -841,7 +842,7 @@ class WebSocketServer:
         with open(file_path) as fp:
             await self._watch_file_changes(config, fp, loop)
 
-    def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+    def _common_plotting_command_args(self, request: Any, ignoreCount: bool) -> list[str]:
         n = 1 if ignoreCount else request["n"]  # Plot count
         d = request["d"]  # Final directory
         r = request["r"]  # Threads
@@ -849,7 +850,7 @@ class WebSocketServer:
         p = request.get("p")  # Pool pubkey
         c = request.get("c")  # Pool contract address
 
-        command_args: List[str] = ["-n", str(n), "-d", d, "-r", str(r)]
+        command_args: list[str] = ["-n", str(n), "-d", d, "-r", str(r)]
 
         if f is not None:
             command_args.append("-f")
@@ -863,7 +864,7 @@ class WebSocketServer:
 
         return command_args
 
-    def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+    def _chiapos_plotting_command_args(self, request: Any, ignoreCount: bool) -> list[str]:
         k = request["k"]  # Plot size
         t = request["t"]  # Temp directory
         t2 = request.get("t2")  # Temp2 directory
@@ -874,7 +875,7 @@ class WebSocketServer:
         x = request["x"]  # Exclude final directory
         override_k = request["overrideK"]  # Force plot sizes < k32
 
-        command_args: List[str] = ["-k", str(k), "-t", t, "-b", str(b), "-u", str(u)]
+        command_args: list[str] = ["-k", str(k), "-t", t, "-b", str(b), "-u", str(u)]
 
         if t2 is not None:
             command_args.append("-2")
@@ -891,12 +892,12 @@ class WebSocketServer:
 
         return command_args
 
-    def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+    def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> list[str]:
         plot_type = request["plot_type"]
         if plot_type not in ["ramplot", "diskplot", "cudaplot"]:
             raise ValueError(f"Unknown plot_type: {plot_type}")
 
-        command_args: List[str] = []
+        command_args: list[str] = []
 
         # Common options among diskplot, ramplot, cudaplot
         w = request.get("w", False)  # Warm start
@@ -991,7 +992,7 @@ class WebSocketServer:
 
         return command_args
 
-    def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
+    def _madmax_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> list[str]:
         k = request["k"]  # Plot size
         t = request["t"]  # Temp directory
         t2 = request["t2"]  # Temp2 directory
@@ -1000,7 +1001,7 @@ class WebSocketServer:
         K = request.get("K", 1)  # Thread multiplier for phase 2
         G = request.get("G", False)  # Alternate tmpdir/tmp2dir
 
-        command_args: List[str] = []
+        command_args: list[str] = []
         command_args.append(f"-k{k}")
         command_args.append(f"-u{u}")
         command_args.append(f"-v{v}")
@@ -1017,9 +1018,9 @@ class WebSocketServer:
 
         return command_args
 
-    def _build_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> List[str]:
+    def _build_plotting_command_args(self, request: Any, ignoreCount: bool, index: int) -> list[str]:
         plotter: str = request.get("plotter", "chiapos")
-        command_args: List[str] = ["chia", "plotters", plotter]
+        command_args: list[str] = ["chia", "plotters", plotter]
 
         if plotter == "bladebit":
             # plotter command must be either
@@ -1064,7 +1065,7 @@ class WebSocketServer:
         if next_plot_id is not None:
             loop.create_task(self._start_plotting(next_plot_id, loop, queue))
 
-    def _post_process_plotting_job(self, job: Dict[str, Any]):
+    def _post_process_plotting_job(self, job: dict[str, Any]):
         id: str = job["id"]
         final_dir: str = job["final_dir"]
         exclude_final_dir: bool = job["exclude_final_dir"]
@@ -1141,7 +1142,7 @@ class WebSocketServer:
                 current_process.wait()  # prevent zombies
             self._run_next_serial_plotting(loop, queue)
 
-    async def start_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def start_plotting(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         service_name = request["service"]
 
         plotter = request.get("plotter", "chiapos")
@@ -1162,7 +1163,7 @@ class WebSocketServer:
             }
             return response
 
-        ids: List[str] = []
+        ids: list[str] = []
         for k in range(count):
             id = str(uuid.uuid4())
             ids.append(id)
@@ -1209,7 +1210,7 @@ class WebSocketServer:
 
         return response
 
-    async def stop_plotting(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def stop_plotting(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         id = request["id"]
         config = self._get_plots_queue_item(id)
         if config is None:
@@ -1251,7 +1252,7 @@ class WebSocketServer:
             self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.STATE_CHANGED, id))
             return {"success": False}
 
-    async def start_service(self, websocket: WebSocketResponse, request: Dict[str, Any]):
+    async def start_service(self, websocket: WebSocketResponse, request: dict[str, Any]):
         service_command = request["service"]
 
         error = None
@@ -1295,14 +1296,14 @@ class WebSocketServer:
         response = {"success": success, "service": service_command, "error": error}
         return response
 
-    async def stop_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def stop_service(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         service_name = request["service"]
         result = await kill_service(self.root_path, self.services, service_name)
         response = {"success": result, "service_name": service_name}
         return response
 
     def is_service_running(self, service_name: str) -> bool:
-        processes: List[subprocess.Popen]
+        processes: list[subprocess.Popen]
         if service_name == service_plotter:
             processes = self.services.get(service_name, [])
             is_running = len(processes) > 0
@@ -1317,19 +1318,19 @@ class WebSocketServer:
                     is_running = len(service_connections) > 0
         return is_running
 
-    async def running_services_command(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def running_services_command(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         return await self.running_services()
 
-    async def running_services(self) -> Dict[str, Any]:
+    async def running_services(self) -> dict[str, Any]:
         services = list({*self.services.keys(), *self.connections.keys()})
         running_services = [service_name for service_name in services if self.is_service_running(service_name)]
 
         return {"success": True, "running_services": running_services}
 
-    async def is_running_command(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def is_running_command(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         return await self.is_running(request=request)
 
-    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def is_running(self, request: dict[str, Any]) -> dict[str, Any]:
         service_name = request["service"]
         is_running = self.is_service_running(service_name)
         return {"success": True, "service_name": service_name, "is_running": is_running}
@@ -1340,7 +1341,7 @@ class WebSocketServer:
             await self.webserver.await_closed()
         log.info("chia daemon exiting")
 
-    async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def register_service(self, websocket: WebSocketResponse, request: dict[str, Any]) -> dict[str, Any]:
         self.log.info(f"Register service {request}")
         service = request.get("service")
         if service is None:
@@ -1350,7 +1351,7 @@ class WebSocketServer:
             self.connections[service] = set()
         self.connections[service].add(websocket)
 
-        response: Dict[str, Any] = {"success": True}
+        response: dict[str, Any] = {"success": True}
         if service == service_plotter:
             response = {
                 "success": True,
@@ -1394,8 +1395,8 @@ def plotter_log_path(root_path: Path, id: str):
 
 
 def launch_plotter(
-    root_path: Path, service_name: str, service_array: List[str], id: str
-) -> Tuple[subprocess.Popen, Path]:
+    root_path: Path, service_name: str, service_array: list[str], id: str
+) -> tuple[subprocess.Popen, Path]:
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
     service_executable = executable_for_service(service_array[0])
@@ -1438,7 +1439,7 @@ def launch_plotter(
     return process, pid_path
 
 
-def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, Path]:
+def launch_service(root_path: Path, service_command) -> tuple[subprocess.Popen, Path]:
     """
     Launch a child process.
     """
@@ -1482,7 +1483,7 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
 
 
 async def kill_processes(
-    processes: List[subprocess.Popen],
+    processes: list[subprocess.Popen],
     root_path: Path,
     service_name: str,
     id: str,
@@ -1526,7 +1527,7 @@ async def kill_processes(
 
 
 async def kill_service(
-    root_path: Path, services: Dict[str, List[subprocess.Popen]], service_name: str, delay_before_kill: int = 15
+    root_path: Path, services: dict[str, list[subprocess.Popen]], service_name: str, delay_before_kill: int = 15
 ) -> bool:
     processes = services.get(service_name)
     if processes is None:
@@ -1536,7 +1537,7 @@ async def kill_service(
     return result
 
 
-def is_running(services: Dict[str, subprocess.Popen], service_name: str) -> bool:
+def is_running(services: dict[str, subprocess.Popen], service_name: str) -> bool:
     process = services.get(service_name)
     return process is not None and process.poll() is None
 

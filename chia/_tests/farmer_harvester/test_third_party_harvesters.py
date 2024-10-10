@@ -6,7 +6,7 @@ import dataclasses
 import json
 import logging
 from os.path import dirname
-from typing import Any, List, Optional, Tuple, Union, cast
+from typing import Any, Optional, Union, cast
 
 import pytest
 from chia_rs import G1Element
@@ -45,12 +45,12 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
 
 SPType = Union[timelord_protocol.NewEndOfSubSlotVDF, timelord_protocol.NewSignagePointVDF]
-SPList = List[SPType]
+SPList = list[SPType]
 
 
 @pytest.mark.anyio
 async def test_harvester_receive_source_signing_data(
-    farmer_harvester_2_simulators_zero_bits_plot_filter: Tuple[
+    farmer_harvester_2_simulators_zero_bits_plot_filter: tuple[
         FarmerService,
         HarvesterService,
         Union[FullNodeService, SimulatorFullNodeService],
@@ -91,7 +91,7 @@ async def test_harvester_receive_source_signing_data(
     await wait_until_node_type_connected(full_node_1.server, NodeType.FULL_NODE)
 
     # Prepare test data
-    blocks: List[FullBlock]
+    blocks: list[FullBlock]
     signage_points: SPList
 
     (blocks, signage_points) = load_test_data()
@@ -256,7 +256,7 @@ async def test_harvester_receive_source_signing_data(
 
 @pytest.mark.anyio
 async def test_harvester_fee_convention(
-    farmer_harvester_2_simulators_zero_bits_plot_filter: Tuple[
+    farmer_harvester_2_simulators_zero_bits_plot_filter: tuple[
         FarmerService,
         HarvesterService,
         Union[FullNodeService, SimulatorFullNodeService],
@@ -286,7 +286,7 @@ async def test_harvester_fee_convention(
 
 @pytest.mark.anyio
 async def test_harvester_fee_invalid_convention(
-    farmer_harvester_2_simulators_zero_bits_plot_filter: Tuple[
+    farmer_harvester_2_simulators_zero_bits_plot_filter: tuple[
         FarmerService,
         HarvesterService,
         Union[FullNodeService, SimulatorFullNodeService],
@@ -319,7 +319,7 @@ async def test_harvester_fee_invalid_convention(
 
 def prepare_sp_and_pos_for_fee_test(
     fee_threshold_offset: int,
-) -> Tuple[farmer_protocol.NewSignagePoint, harvester_protocol.NewProofOfSpace]:
+) -> tuple[farmer_protocol.NewSignagePoint, harvester_protocol.NewProofOfSpace]:
     proof = std_hash(b"1")
     challenge = std_hash(b"1")
 
@@ -420,7 +420,7 @@ def decode_sp(
     return timelord_protocol.NewSignagePointVDF.from_bytes(sp_bytes)
 
 
-async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: FullNode) -> None:
+async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: FullNode) -> None:
     # Inject full node with a pre-existing block to skip initial genesis sub-slot
     # so that we have blocks generated that have our farmer reward address, instead
     # of the GENESIS_PRE_FARM_FARMER_PUZZLE_HASH.
@@ -436,7 +436,7 @@ async def add_test_blocks_into_full_node(blocks: List[FullBlock], full_node: Ful
         prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
     ssi, diff = get_next_sub_slot_iters_and_difficulty(full_node.constants, new_slot, prev_b, full_node.blockchain)
-    pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+    pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
         full_node.blockchain.constants,
         full_node.blockchain,
         blocks,
@@ -490,7 +490,7 @@ async def inject_signage_points(signage_points: SPList, full_node_1: FullNode, f
 # A FullBlock is also included which is infused already in the chain so
 # that the next NewEndOfSubSlotVDF is valid.
 # This block has to be added to the test FullNode before injecting the signage points.
-def load_test_data() -> Tuple[List[FullBlock], SPList]:
+def load_test_data() -> tuple[list[FullBlock], SPList]:
     file_path: str = dirname(__file__) + "/test_third_party_harvesters_data.json"
     with open(file_path) as f:
         data = json.load(f)

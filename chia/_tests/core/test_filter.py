@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 from chiabip158 import PyBIP158
 
@@ -21,7 +19,7 @@ async def test_basic_filter_test(simulator_and_wallet):
         pool_reward_puzzle_hash=ph,
     )
     for i in range(1, num_blocks):
-        byte_array_tx: List[bytes] = []
+        byte_array_tx: list[bytes] = []
         block = blocks[i]
         coins = block.get_included_reward_coins()
         coin_0 = bytearray(coins[0].puzzle_hash)

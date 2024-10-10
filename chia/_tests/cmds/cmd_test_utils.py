@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Optional, Union, cast
 
 from chia_rs import Coin, G2Element
 
@@ -40,25 +41,25 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 # Any functions that are the same for every command being tested should be below.
 # Functions that are specific to a command should be in the test file for that command.
 
-logType = Dict[str, Optional[List[Tuple[Any, ...]]]]
+logType = dict[str, Optional[list[tuple[Any, ...]]]]
 
 
 @dataclass
 class TestRpcClient:
-    client_type: Type[RpcClient]
+    client_type: type[RpcClient]
     rpc_port: Optional[uint16] = None
     root_path: Optional[Path] = None
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[dict[str, Any]] = None
     create_called: bool = field(init=False, default=False)
-    rpc_log: Dict[str, List[Tuple[Any, ...]]] = field(init=False, default_factory=dict)
+    rpc_log: dict[str, list[tuple[Any, ...]]] = field(init=False, default_factory=dict)
 
-    async def create(self, _: str, rpc_port: uint16, root_path: Path, config: Dict[str, Any]) -> None:
+    async def create(self, _: str, rpc_port: uint16, root_path: Path, config: dict[str, Any]) -> None:
         self.rpc_port = rpc_port
         self.root_path = root_path
         self.config = config
         self.create_called = True
 
-    def add_to_log(self, method_name: str, args: Tuple[Any, ...]) -> None:
+    def add_to_log(self, method_name: str, args: tuple[Any, ...]) -> None:
         if method_name not in self.rpc_log:
             self.rpc_log[method_name] = []
         self.rpc_log[method_name].append(args)
@@ -73,12 +74,12 @@ class TestRpcClient:
 
 @dataclass
 class TestFarmerRpcClient(TestRpcClient):
-    client_type: Type[FarmerRpcClient] = field(init=False, default=FarmerRpcClient)
+    client_type: type[FarmerRpcClient] = field(init=False, default=FarmerRpcClient)
 
 
 @dataclass
 class TestWalletRpcClient(TestRpcClient):
-    client_type: Type[WalletRpcClient] = field(init=False, default=WalletRpcClient)
+    client_type: type[WalletRpcClient] = field(init=False, default=WalletRpcClient)
     fingerprint: int = field(init=False, default=0)
     wallet_index: int = field(init=False, default=0)
 
@@ -86,7 +87,7 @@ class TestWalletRpcClient(TestRpcClient):
         self.add_to_log("get_sync_status", ())
         return GetSyncStatusResponse(synced=True, syncing=False)
 
-    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
+    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Union[str, int]]]:
         self.add_to_log("get_wallets", (wallet_type,))
         # we cant start with zero because ints cant have a leading zero
         if wallet_type is not None:
@@ -131,21 +132,21 @@ class TestWalletRpcClient(TestRpcClient):
         self.add_to_log("get_cat_name", (wallet_id,))
         return "test" + str(wallet_id)
 
-    async def sign_message_by_address(self, address: str, message: str) -> Tuple[str, str, str]:
+    async def sign_message_by_address(self, address: str, message: str) -> tuple[str, str, str]:
         self.add_to_log("sign_message_by_address", (address, message))
         pubkey = bytes([3] * 48).hex()
         signature = bytes([6] * 576).hex()
         signing_mode = SigningMode.CHIP_0002.value
         return pubkey, signature, signing_mode
 
-    async def sign_message_by_id(self, id: str, message: str) -> Tuple[str, str, str]:
+    async def sign_message_by_id(self, id: str, message: str) -> tuple[str, str, str]:
         self.add_to_log("sign_message_by_id", (id, message))
         pubkey = bytes([4] * 48).hex()
         signature = bytes([7] * 576).hex()
         signing_mode = SigningMode.CHIP_0002.value
         return pubkey, signature, signing_mode
 
-    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[Optional[uint32], str]]:
+    async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[tuple[Optional[uint32], str]]:
         """
         if bytes32([1] * 32), return (uint32(2), "test1"), if bytes32([1] * 32), return (uint32(3), "test2")
         """
@@ -157,7 +158,7 @@ class TestWalletRpcClient(TestRpcClient):
         else:
             return None
 
-    async def get_nft_info(self, coin_id: str, latest: bool = True) -> Dict[str, Any]:
+    async def get_nft_info(self, coin_id: str, latest: bool = True) -> dict[str, Any]:
         self.add_to_log("get_nft_info", (coin_id, latest))
         coin_id_bytes = bytes32.fromhex(coin_id)
         nft_info = NFTInfo(
@@ -186,9 +187,9 @@ class TestWalletRpcClient(TestRpcClient):
 
     async def nft_calculate_royalties(
         self,
-        royalty_assets_dict: Dict[Any, Tuple[Any, uint16]],
-        fungible_asset_dict: Dict[Any, uint64],
-    ) -> Dict[Any, List[Dict[str, Any]]]:
+        royalty_assets_dict: dict[Any, tuple[Any, uint16]],
+        fungible_asset_dict: dict[Any, uint64],
+    ) -> dict[Any, list[dict[str, Any]]]:
         self.add_to_log("nft_calculate_royalties", (royalty_assets_dict, fungible_asset_dict))
         return NFTWallet.royalty_calculation(
             royalty_assets_dict=royalty_assets_dict,
@@ -199,7 +200,7 @@ class TestWalletRpcClient(TestRpcClient):
         self,
         wallet_id: int,
         coin_selection_config: CoinSelectionConfig,
-    ) -> Tuple[List[CoinRecord], List[CoinRecord], List[Coin]]:
+    ) -> tuple[list[CoinRecord], list[CoinRecord], list[Coin]]:
         """
         We return a tuple containing: (confirmed records, unconfirmed removals, unconfirmed additions)
         """
@@ -246,9 +247,9 @@ class TestWalletRpcClient(TestRpcClient):
     async def send_transaction_multi(
         self,
         wallet_id: int,
-        additions: List[Dict[str, object]],
+        additions: list[dict[str, object]],
         tx_config: TXConfig,
-        coins: Optional[List[Coin]] = None,
+        coins: Optional[list[Coin]] = None,
         fee: uint64 = uint64(0),
         push: bool = True,
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
@@ -283,17 +284,17 @@ class TestWalletRpcClient(TestRpcClient):
 
 @dataclass
 class TestFullNodeRpcClient(TestRpcClient):
-    client_type: Type[FullNodeRpcClient] = field(init=False, default=FullNodeRpcClient)
+    client_type: type[FullNodeRpcClient] = field(init=False, default=FullNodeRpcClient)
 
     async def get_fee_estimate(
         self,
-        target_times: Optional[List[int]],
+        target_times: Optional[list[int]],
         cost: Optional[int],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return {}
 
-    async def get_blockchain_state(self) -> Dict[str, Any]:
-        response: Dict[str, Any] = {
+    async def get_blockchain_state(self) -> dict[str, Any]:
+        response: dict[str, Any] = {
             "peak": cast(BlockRecord, create_test_block_record()),
             "genesis_challenge_initialized": True,
             "sync": {
@@ -331,12 +332,12 @@ class TestFullNodeRpcClient(TestRpcClient):
 
 @dataclass
 class TestDataLayerRpcClient(TestRpcClient):
-    client_type: Type[DataLayerRpcClient] = field(init=False, default=DataLayerRpcClient)
+    client_type: type[DataLayerRpcClient] = field(init=False, default=DataLayerRpcClient)
 
 
 @dataclass
 class TestSimulatorFullNodeRpcClient(TestRpcClient):
-    client_type: Type[SimulatorFullNodeRpcClient] = field(init=False, default=SimulatorFullNodeRpcClient)
+    client_type: type[SimulatorFullNodeRpcClient] = field(init=False, default=SimulatorFullNodeRpcClient)
 
 
 @dataclass
@@ -354,7 +355,7 @@ class TestRpcClients:
         default_factory=TestSimulatorFullNodeRpcClient
     )
 
-    def get_client(self, client_type: Type[_T_RpcClient]) -> _T_RpcClient:
+    def get_client(self, client_type: type[_T_RpcClient]) -> _T_RpcClient:
         if client_type == FarmerRpcClient:
             return cast(FarmerRpcClient, self.farmer_rpc_client)  # type: ignore[return-value]
         elif client_type == WalletRpcClient:
@@ -379,12 +380,12 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
 
     @asynccontextmanager
     async def test_get_any_service_client(
-        client_type: Type[_T_RpcClient],
+        client_type: type[_T_RpcClient],
         rpc_port: Optional[int] = None,
         root_path: Optional[Path] = None,
         consume_errors: bool = True,
         use_ssl: bool = True,
-    ) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
+    ) -> AsyncIterator[tuple[_T_RpcClient, dict[str, Any]]]:
         if root_path is None:
             root_path = default_root
 
@@ -411,7 +412,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
         wallet_rpc_port: Optional[int] = None,
         fingerprint: Optional[int] = None,
         root_path: Path = default_root,
-    ) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
+    ) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
         async with test_get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path) as (wallet_client, config):
             wallet_client.fingerprint = fingerprint  # type: ignore
             assert fingerprint is not None
@@ -430,7 +431,7 @@ def create_service_and_wallet_client_generators(test_rpc_clients: TestRpcClients
     chia.cmds.wallet_funcs.cli_confirm = cli_confirm  # type: ignore[attr-defined]
 
 
-def run_cli_command(capsys: object, chia_root: Path, command_list: List[str]) -> str:
+def run_cli_command(capsys: object, chia_root: Path, command_list: list[str]) -> str:
     """
     This is just an easy way to run the chia CLI with the given command list.
     """
@@ -459,7 +460,7 @@ def cli_assert_shortcut(output: str, strings_to_assert: Iterable[str]) -> None:
 
 
 def run_cli_command_and_assert(
-    capsys: object, chia_root: Path, command_list: List[str], strings_to_assert: Iterable[str]
+    capsys: object, chia_root: Path, command_list: list[str], strings_to_assert: Iterable[str]
 ) -> None:
     """
     Runs the command and asserts that all the strings in strings_to_assert are in the output

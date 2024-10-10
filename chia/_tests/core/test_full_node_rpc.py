@@ -1,8 +1,6 @@
 # flake8: noqa: F811, F401
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
@@ -408,14 +406,14 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         await client.close_connection(connections[0]["node_id"])
         await time_out_assert(10, num_connections, 0)
 
-        blocks: List[FullBlock] = await client.get_blocks(0, 5)
+        blocks: list[FullBlock] = await client.get_blocks(0, 5)
         assert len(blocks) == 5
 
         await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32), None))
-        new_blocks_0: List[FullBlock] = await client.get_blocks(0, 5)
+        new_blocks_0: list[FullBlock] = await client.get_blocks(0, 5)
         assert len(new_blocks_0) == 7
 
-        new_blocks: List[FullBlock] = await client.get_blocks(0, 5, exclude_reorged=True)
+        new_blocks: list[FullBlock] = await client.get_blocks(0, 5, exclude_reorged=True)
         assert len(new_blocks) == 5
         assert blocks[0].header_hash == new_blocks[0].header_hash
         assert blocks[1].header_hash == new_blocks[1].header_hash
@@ -620,7 +618,7 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         assert state["space"] == 0
         assert state["average_block_time"] is None
 
-        blocks: List[FullBlock] = bt.get_consecutive_blocks(num_blocks)
+        blocks: list[FullBlock] = bt.get_consecutive_blocks(num_blocks)
         blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
         for block in blocks:
@@ -643,7 +641,7 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         assert state["space"] > 0
         assert state["average_block_time"] > 0
 
-        block_records: List[BlockRecord] = [
+        block_records: list[BlockRecord] = [
             await full_node_api_1.full_node.blockchain.get_block_record_from_db(rec.header_hash) for rec in blocks
         ]
         first_non_transaction_block_index = -1
@@ -655,8 +653,8 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         # so first_non_transaction_block_index != 0
         assert first_non_transaction_block_index > 0
 
-        transaction_blocks: List[BlockRecord] = [b for b in block_records if b.is_transaction_block]
-        non_transaction_block: List[BlockRecord] = [b for b in block_records if not b.is_transaction_block]
+        transaction_blocks: list[BlockRecord] = [b for b in block_records if b.is_transaction_block]
+        non_transaction_block: list[BlockRecord] = [b for b in block_records if not b.is_transaction_block]
         assert len(transaction_blocks) > 0
         assert len(non_transaction_block) > 0
         assert transaction_blocks[0] == await get_nearest_transaction_block(

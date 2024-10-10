@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import random
 import time
-from typing import Any, Callable, List, Tuple, Type, Union
+from typing import Any, Callable, Union
 
 import pytest
 from chia_rs import G1Element
@@ -57,7 +57,7 @@ class SyncStepData:
     args: Any
 
     def __init__(
-        self, state: State, function: Callable[[_T_Streamable], Any], payload_type: Type[_T_Streamable], *args: Any
+        self, state: State, function: Callable[[_T_Streamable], Any], payload_type: type[_T_Streamable], *args: Any
     ) -> None:
         self.state = state
         self.function = function
@@ -89,7 +89,7 @@ def assert_error_response(plot_sync: Receiver, error_code: ErrorCodes) -> None:
     assert response.error.code == error_code.value
 
 
-def pre_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]], expected_state: State) -> None:
+def pre_function_validate(receiver: Receiver, data: Union[list[Plot], list[str]], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
             assert type(plot_info) is Plot
@@ -108,7 +108,7 @@ def pre_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]]
             assert path not in receiver.duplicates()
 
 
-def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]], expected_state: State) -> None:
+def post_function_validate(receiver: Receiver, data: Union[list[Plot], list[str]], expected_state: State) -> None:
     if expected_state == State.loaded:
         for plot_info in data:
             assert type(plot_info) is Plot
@@ -161,7 +161,7 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
         assert receiver._last_sync.time_done == last_sync_time_before
 
 
-def plot_sync_setup(seeded_random: random.Random) -> Tuple[Receiver, List[SyncStepData]]:
+def plot_sync_setup(seeded_random: random.Random) -> tuple[Receiver, list[SyncStepData]]:
     harvester_connection = get_dummy_connection(NodeType.HARVESTER, bytes32.random(seeded_random))
     receiver = Receiver(harvester_connection, dummy_callback)  # type:ignore[arg-type]
 
@@ -188,7 +188,7 @@ def plot_sync_setup(seeded_random: random.Random) -> Tuple[Receiver, List[SyncSt
     receiver._total_effective_plot_size = int(
         sum(UI_ACTUAL_SPACE_CONSTANT_FACTOR * int(_expected_plot_size(plot.size)) for plot in receiver.plots().values())
     )
-    sync_steps: List[SyncStepData] = [
+    sync_steps: list[SyncStepData] = [
         SyncStepData(
             State.idle,
             receiver.sync_started,

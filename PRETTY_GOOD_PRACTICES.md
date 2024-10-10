@@ -197,7 +197,7 @@ How about a couple examples.
 ```python
 import json
 from dataclasses import dataclass
-from typing import Type, TypeVar
+from typing import TypeVar
 
 
 _T_Coin = TypeVar("_T_Coin", bound="Coin")
@@ -281,7 +281,6 @@ If it is hard to deal with the knock on complaints from mypy triggered by the hi
 ### Basic hints
 
 ```python
-from typing import List
 
 def sum_bigger_values(values: List[int], minimum: int) -> int:
     return sum(value for value in values if value > minimum)
@@ -497,7 +496,7 @@ Without writing an implementation, let's see what part of a cache leveraging gen
 
 ```python
 from dataclasses import dataclass, field
-from typing import Dict, Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 KT = TypeVar("KT")
 VT = TypeVar("VT")

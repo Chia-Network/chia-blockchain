@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Awaitable, Callable, List, Optional
+from collections.abc import Awaitable
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G2Element
@@ -39,7 +40,7 @@ async def mint_cr_cat(
     wallet_node_0: WalletNode,
     client_0: WalletRpcClient,
     full_node_api: FullNodeSimulator,
-    authorized_providers: List[bytes32] = [],
+    authorized_providers: list[bytes32] = [],
     tail: Program = Program.to(None),
     proofs_checker: ProofsChecker = ProofsChecker(["foo", "bar"]),
 ) -> None:

@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import List, Tuple
 
 import pytest
 from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
@@ -53,7 +52,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_banned_host_can_not_connect(
         self,
-        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -77,7 +76,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_large_message_disconnect_and_ban(
         self,
-        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -112,7 +111,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_bad_handshake_and_ban(
         self,
-        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:

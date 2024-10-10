@@ -6,7 +6,7 @@ import time
 import traceback
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Optional
 
 from chia_rs import G1Element
 from chiapos import DiskProver, decompressor_context_queue
@@ -27,13 +27,13 @@ log = logging.getLogger(__name__)
 
 
 class PlotManager:
-    plots: Dict[Path, PlotInfo]
-    plot_filename_paths: Dict[str, Tuple[str, Set[str]]]
+    plots: dict[Path, PlotInfo]
+    plot_filename_paths: dict[str, tuple[str, set[str]]]
     plot_filename_paths_lock: threading.Lock
-    failed_to_open_filenames: Dict[Path, int]
-    no_key_filenames: Set[Path]
-    farmer_public_keys: List[G1Element]
-    pool_public_keys: List[G1Element]
+    failed_to_open_filenames: dict[Path, int]
+    no_key_filenames: set[Path]
+    farmer_public_keys: list[G1Element]
+    pool_public_keys: list[G1Element]
     cache: Cache
     match_str: Optional[str]
     open_no_key_filenames: bool
@@ -137,7 +137,7 @@ class PlotManager:
     def set_refresh_callback(self, callback: Callable):
         self._refresh_callback = callback
 
-    def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
+    def set_public_keys(self, farmer_public_keys: list[G1Element], pool_public_keys: list[G1Element]):
         self.farmer_public_keys = farmer_public_keys
         self.pool_public_keys = pool_public_keys
 
@@ -151,7 +151,7 @@ class PlotManager:
         with self:
             return len(self.plots)
 
-    def get_duplicates(self) -> List[Path]:
+    def get_duplicates(self) -> list[Path]:
         result = []
         for plot_filename, paths_entry in self.plot_filename_paths.items():
             _, duplicated_paths = paths_entry
@@ -188,9 +188,9 @@ class PlotManager:
                 if not self._refreshing_enabled:
                     return
 
-                plot_filenames: Dict[Path, List[Path]] = get_plot_filenames(self.root_path)
-                plot_directories: Set[Path] = set(plot_filenames.keys())
-                plot_paths: Set[Path] = set()
+                plot_filenames: dict[Path, list[Path]] = get_plot_filenames(self.root_path)
+                plot_directories: set[Path] = set(plot_filenames.keys())
+                plot_paths: set[Path] = set()
                 for paths in plot_filenames.values():
                     plot_paths.update(paths)
 
@@ -208,7 +208,7 @@ class PlotManager:
                     if path not in plot_paths:
                         self.no_key_filenames.remove(path)
 
-                filenames_to_remove: List[str] = []
+                filenames_to_remove: list[str] = []
                 for plot_filename, paths_entry in self.plot_filename_paths.items():
                     loaded_path, duplicated_paths = paths_entry
                     loaded_plot = Path(loaded_path) / Path(plot_filename)
@@ -221,7 +221,7 @@ class PlotManager:
                         # No need to check the duplicates here since we drop the whole entry
                         continue
 
-                    paths_to_remove: List[str] = []
+                    paths_to_remove: list[str] = []
                     for path_str in duplicated_paths:
                         loaded_plot = Path(path_str) / Path(plot_filename)
                         if loaded_plot not in plot_paths:
@@ -258,7 +258,7 @@ class PlotManager:
 
                 # Cleanup unused cache
                 self.log.debug(f"_refresh_task: cached entries before cleanup: {len(self.cache)}")
-                remove_paths: List[Path] = []
+                remove_paths: list[Path] = []
                 for path, cache_entry in self.cache.items():
                     if cache_entry.expired(Cache.expiry_seconds) and path not in self.plots:
                         remove_paths.append(path)
@@ -281,7 +281,7 @@ class PlotManager:
                 log.error(f"_refresh_callback raised: {e} with the traceback: {traceback.format_exc()}")
                 self.reset()
 
-    def refresh_batch(self, plot_paths: List[Path], plot_directories: Set[Path]) -> PlotRefreshResult:
+    def refresh_batch(self, plot_paths: list[Path], plot_directories: set[Path]) -> PlotRefreshResult:
         start_time: float = time.time()
         result: PlotRefreshResult = PlotRefreshResult(processed=len(plot_paths))
         counter_lock = threading.Lock()
@@ -308,7 +308,7 @@ class PlotManager:
             if file_path in self.plots:
                 return self.plots[file_path]
 
-            entry: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(file_path.name)
+            entry: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
             if entry is not None:
                 loaded_parent, duplicates = entry
                 if str(file_path.parent) in duplicates:
@@ -383,7 +383,7 @@ class PlotManager:
                     self.no_key_filenames.remove(file_path)
 
                 with self.plot_filename_paths_lock:
-                    paths: Optional[Tuple[str, Set[str]]] = self.plot_filename_paths.get(file_path.name)
+                    paths: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
                     if paths is None:
                         paths = (str(Path(cache_entry.prover.get_filename()).parent), set())
                         self.plot_filename_paths[file_path.name] = paths
@@ -419,7 +419,7 @@ class PlotManager:
             return new_plot_info
 
         with self, ThreadPoolExecutor() as executor:
-            plots_refreshed: Dict[Path, PlotInfo] = {}
+            plots_refreshed: dict[Path, PlotInfo] = {}
             for new_plot in executor.map(process_file, plot_paths):
                 if new_plot is not None:
                     plots_refreshed[Path(new_plot.prover.get_filename())] = new_plot

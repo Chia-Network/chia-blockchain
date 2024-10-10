@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from typing import List, Tuple
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element
@@ -774,7 +773,7 @@ class TestDIDWallet:
             ]
         )
         coin = await did_wallet.get_coin()
-        info: List[Tuple[bytes, bytes, int]] = []
+        info: list[tuple[bytes, bytes, int]] = []
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         with pytest.raises(Exception):  # We expect a CLVM 80 error for this test
             async with did_wallet.wallet_state_manager.new_action_scope(
@@ -1369,7 +1368,7 @@ class TestDIDWallet:
     async def test_did_auto_transfer_limit(
         self,
         self_hostname: str,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
     ) -> None:
         fee = uint64(1000)
@@ -2136,7 +2135,7 @@ class TestDIDWallet:
     async def test_did_resync(
         self,
         self_hostname: str,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         trusted: bool,
     ) -> None:
         full_nodes, wallets, _ = two_wallet_nodes

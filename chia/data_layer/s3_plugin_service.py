@@ -11,7 +11,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, overload
+from typing import Any, Optional, overload
 from urllib.parse import urlparse
 
 import boto3 as boto3
@@ -31,17 +31,17 @@ plugin_version = "0.1.0"
 class StoreConfig:
     id: bytes32
     bucket: Optional[str]
-    urls: Set[str]
+    urls: set[str]
 
     @classmethod
-    def unmarshal(cls, d: Dict[str, Any]) -> StoreConfig:
+    def unmarshal(cls, d: dict[str, Any]) -> StoreConfig:
         upload_bucket = d.get("upload_bucket", None)
         if upload_bucket and len(upload_bucket) == 0:
             upload_bucket = None
 
         return StoreConfig(bytes32.from_hexstr(d["store_id"]), upload_bucket, d.get("download_urls", set()))
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {"store_id": self.id.hex(), "upload_bucket": self.bucket, "download_urls": self.urls}
 
 
@@ -52,7 +52,7 @@ class S3Plugin:
     aws_access_key_id: str
     aws_secret_access_key: str
     server_files_path: Path
-    stores: List[StoreConfig]
+    stores: list[StoreConfig]
     instance_name: str
 
     def __init__(
@@ -61,7 +61,7 @@ class S3Plugin:
         aws_access_key_id: str,
         aws_secret_access_key: str,
         server_files_path: Path,
-        stores: List[StoreConfig],
+        stores: list[StoreConfig],
         instance_name: str,
     ):
         self.boto_resource = boto3.resource(
@@ -373,7 +373,7 @@ class S3Plugin:
                 shutil.move(str(tmp_path), str(path))
 
 
-def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreConfig]:
+def read_store_ids_from_config(config: dict[str, Any]) -> list[StoreConfig]:
     stores = []
     for store in config.get("stores", []):
         try:
@@ -389,7 +389,7 @@ def read_store_ids_from_config(config: Dict[str, Any]) -> List[StoreConfig]:
     return stores
 
 
-def make_app(config: Dict[str, Any], instance_name: str) -> web.Application:
+def make_app(config: dict[str, Any], instance_name: str) -> web.Application:
     try:
         region = config["aws_credentials"]["region"]
         aws_access_key_id = config["aws_credentials"]["access_key_id"]

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
-from typing import Any, Dict, Optional, Set
+from typing import Any, Optional
 
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -26,9 +26,9 @@ SERVICE_NAME = "harvester"
 
 def create_harvester_service(
     root_path: pathlib.Path,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     consensus_constants: ConsensusConstants,
-    farmer_peers: Set[UnresolvedPeerInfo],
+    farmer_peers: set[UnresolvedPeerInfo],
     connect_to_daemon: bool = True,
 ) -> HarvesterService:
     service_config = config[SERVICE_NAME]

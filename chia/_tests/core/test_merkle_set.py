@@ -5,7 +5,7 @@ import random
 from hashlib import sha256
 from itertools import permutations
 from random import Random
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import Coin, MerkleSet, compute_merkle_set_root, confirm_included_already_hashed
@@ -292,7 +292,7 @@ async def test_merkle_set_random_regression() -> None:
     rng.seed(123456)
     for i in range(100):
         size = rng.randint(0, 4000)
-        values: List[bytes32] = [rand_hash(rng) for _ in range(size)]
+        values: list[bytes32] = [rand_hash(rng) for _ in range(size)]
         print(f"iter: {i}/100 size: {size}")
 
         for _ in range(10):
@@ -304,7 +304,7 @@ async def test_merkle_set_random_regression() -> None:
             assert rust_root == python_root
 
 
-def make_test_coins(n: int, rng: Random) -> List[Coin]:
+def make_test_coins(n: int, rng: Random) -> list[Coin]:
     return [Coin(bytes32.random(rng), bytes32.random(rng), uint64(rng.randint(0, 10000000))) for i in range(n)]
 
 
@@ -314,7 +314,7 @@ def test_validate_removals_full_list(num_coins: int, seeded_random: Random) -> N
     # the root can be computed by all the removals
     coins = make_test_coins(num_coins, seeded_random)
 
-    coin_map: List[Tuple[bytes32, Optional[Coin]]] = []
+    coin_map: list[tuple[bytes32, Optional[Coin]]] = []
     removals_merkle_set = MerkleSet([coin.name() for coin in coins])
     for coin in coins:
         coin_map.append((coin.name(), coin))
@@ -330,8 +330,8 @@ def test_validate_additions_full_list(num_coins: int, batch_size: int, seeded_ra
     # the root can be computed by all the removals
     coins = make_test_coins(num_coins, seeded_random)
 
-    additions: List[Tuple[bytes32, List[Coin]]] = []
-    leafs: List[bytes32] = []
+    additions: list[tuple[bytes32, list[Coin]]] = []
+    leafs: list[bytes32] = []
     for coin_batch in to_batches(coins, batch_size):
         puzzle_hash = bytes32.random(seeded_random)
         additions.append((puzzle_hash, coin_batch.entries))

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass, fields, replace
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union, final, get_type_hints
+from typing import Any, Optional, TypeVar, Union, final, get_type_hints
 
 from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
@@ -23,7 +24,7 @@ class Condition(Streamable, ABC):
 
     @classmethod
     @abstractmethod
-    def from_program(cls: Type[_T_Condition], program: Program) -> _T_Condition: ...
+    def from_program(cls: type[_T_Condition], program: Program) -> _T_Condition: ...
 
 
 @final
@@ -226,7 +227,7 @@ class AggSigMe(Condition):
 class CreateCoin(Condition):
     puzzle_hash: bytes32
     amount: uint64
-    memos: Optional[List[bytes]] = None
+    memos: Optional[list[bytes]] = None
 
     def to_program(self) -> Program:
         condition_args = [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount]
@@ -736,7 +737,7 @@ class AssertBeforeHeightAbsolute(Condition):
 @dataclass(frozen=True)
 class Softfork(Condition):
     cost: uint64
-    conditions: List[Program]
+    conditions: list[Program]
 
     def to_program(self) -> Program:
         condition: Program = Program.to([ConditionOpcode.SOFTFORK, self.cost, self.conditions])
@@ -772,7 +773,7 @@ class Remark(Condition):
 @dataclass(frozen=True)
 class UnknownCondition(Condition):
     opcode: Program
-    args: List[Program]
+    args: list[Program]
 
     def to_program(self) -> Program:
         return self.opcode.cons(Program.to(self.args))
@@ -923,15 +924,15 @@ TIMELOCK_TYPES = Union[
 ]
 
 
-TIMELOCK_DRIVERS: Tuple[
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
+TIMELOCK_DRIVERS: tuple[
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
 ] = (
     AssertSecondsRelative,
     AssertHeightRelative,
@@ -942,46 +943,46 @@ TIMELOCK_DRIVERS: Tuple[
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 )
-SECONDS_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+SECONDS_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsRelative,
     AssertSecondsAbsolute,
     AssertBeforeSecondsRelative,
     AssertBeforeSecondsAbsolute,
 }
-HEIGHT_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+HEIGHT_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertHeightRelative,
     AssertHeightAbsolute,
     AssertBeforeHeightRelative,
     AssertBeforeHeightAbsolute,
 }
-AFTER_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+AFTER_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsRelative,
     AssertHeightRelative,
     AssertSecondsAbsolute,
     AssertHeightAbsolute,
 }
-BEFORE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+BEFORE_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertBeforeSecondsRelative,
     AssertBeforeHeightRelative,
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 }
-RELATIVE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+RELATIVE_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsRelative,
     AssertHeightRelative,
     AssertBeforeSecondsRelative,
     AssertBeforeHeightRelative,
 }
-ABSOLUTE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+ABSOLUTE_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsAbsolute,
     AssertHeightAbsolute,
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 }
-TIMELOCK_DRIVERS_SET: Set[Type[TIMELOCK_TYPES]] = set(TIMELOCK_DRIVERS)
+TIMELOCK_DRIVERS_SET: set[type[TIMELOCK_TYPES]] = set(TIMELOCK_DRIVERS)
 
 
-TIMELOCK_OPCODES: Set[bytes] = {
+TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
@@ -991,37 +992,37 @@ TIMELOCK_OPCODES: Set[bytes] = {
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 }
-SECONDS_TIMELOCK_OPCODES: Set[bytes] = {
+SECONDS_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
 }
-HEIGHT_TIMELOCK_OPCODES: Set[bytes] = {
+HEIGHT_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 }
-AFTER_TIMELOCK_OPCODES: Set[bytes] = {
+AFTER_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
 }
-BEFORE_TIMELOCK_OPCODES: Set[bytes] = {
+BEFORE_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 }
-RELATIVE_TIMELOCK_OPCODES: Set[bytes] = {
+RELATIVE_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
 }
-ABSOLUTE_TIMELOCK_OPCODES: Set[bytes] = {
+ABSOLUTE_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
@@ -1054,7 +1055,7 @@ class Timelock(Condition):
         else:
             potential_drivers -= SECONDS_TIMELOCK_DRIVERS
 
-        driver: Type[TIMELOCK_TYPES] = next(iter(potential_drivers))
+        driver: type[TIMELOCK_TYPES] = next(iter(potential_drivers))
 
         if self.seconds_not_height:
             # Semantics here mean that we're assuredly passing a uint64 to a class that expects it
@@ -1089,7 +1090,7 @@ class Timelock(Condition):
         )
 
 
-CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
+CONDITION_DRIVERS: dict[bytes, type[Condition]] = {
     ConditionOpcode.AGG_SIG_PARENT.value: AggSigParent,
     ConditionOpcode.AGG_SIG_PUZZLE.value: AggSigPuzzle,
     ConditionOpcode.AGG_SIG_AMOUNT.value: AggSigAmount,
@@ -1126,10 +1127,10 @@ CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.SOFTFORK.value: Softfork,
     ConditionOpcode.REMARK.value: Remark,
 }
-DRIVERS_TO_OPCODES: Dict[Type[Condition], bytes] = {v: k for k, v in CONDITION_DRIVERS.items()}
+DRIVERS_TO_OPCODES: dict[type[Condition], bytes] = {v: k for k, v in CONDITION_DRIVERS.items()}
 
 
-CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
+CONDITION_DRIVERS_W_ABSTRACTIONS: dict[bytes, type[Condition]] = {
     ConditionOpcode.AGG_SIG_PARENT.value: AggSig,
     ConditionOpcode.AGG_SIG_PUZZLE.value: AggSig,
     ConditionOpcode.AGG_SIG_AMOUNT.value: AggSig,
@@ -1171,11 +1172,11 @@ CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
 def parse_conditions_non_consensus(
     conditions: Iterable[Program],
     abstractions: bool = True,  # Use abstractions like *Announcement or Timelock instead of specific condition class
-) -> List[Condition]:
-    driver_dictionary: Dict[bytes, Type[Condition]] = (
+) -> list[Condition]:
+    driver_dictionary: dict[bytes, type[Condition]] = (
         CONDITION_DRIVERS_W_ABSTRACTIONS if abstractions else CONDITION_DRIVERS
     )
-    final_condition_list: List[Condition] = []
+    final_condition_list: list[Condition] = []
     for condition in conditions:
         try:
             final_condition_list.append(driver_dictionary[condition.at("f").as_atom()].from_program(condition))
@@ -1185,8 +1186,8 @@ def parse_conditions_non_consensus(
     return final_condition_list
 
 
-def conditions_from_json_dicts(conditions: Iterable[Dict[str, Any]]) -> List[Condition]:
-    final_condition_list: List[Condition] = []
+def conditions_from_json_dicts(conditions: Iterable[dict[str, Any]]) -> list[Condition]:
+    final_condition_list: list[Condition] = []
     for condition in conditions:
         opcode_specified: Union[str, int] = condition["opcode"]
         if isinstance(opcode_specified, str):
@@ -1209,7 +1210,7 @@ def conditions_from_json_dicts(conditions: Iterable[Dict[str, Any]]) -> List[Con
     return final_condition_list
 
 
-def conditions_to_json_dicts(conditions: Iterable[Condition]) -> List[Dict[str, Any]]:
+def conditions_to_json_dicts(conditions: Iterable[Condition]) -> list[dict[str, Any]]:
     return [
         {
             "opcode": int_from_bytes(DRIVERS_TO_OPCODES[condition.__class__]),
@@ -1231,8 +1232,8 @@ class ConditionValidTimes(Streamable):
     max_blocks_after_created: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_RELATIVE
     max_height: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_ABSOLUTE
 
-    def to_conditions(self) -> List[Condition]:
-        final_condition_list: List[Condition] = []
+    def to_conditions(self) -> list[Condition]:
+        final_condition_list: list[Condition] = []
         if self.min_secs_since_created is not None:
             final_condition_list.append(AssertSecondsRelative(self.min_secs_since_created))
         if self.min_time is not None:
@@ -1254,7 +1255,7 @@ class ConditionValidTimes(Streamable):
 
 
 condition_valid_times_hints = get_type_hints(ConditionValidTimes)
-condition_valid_times_types: Dict[str, Type[int]] = {}
+condition_valid_times_types: dict[str, type[int]] = {}
 for field in fields(ConditionValidTimes):
     hint = condition_valid_times_hints[field.name]
     [type_] = [type_ for type_ in hint.__args__ if type_ is not type(None)]
@@ -1262,23 +1263,23 @@ for field in fields(ConditionValidTimes):
 
 
 # Properties of the dataclass above, grouped by their property
-SECONDS_PROPERTIES: Set[str] = {"min_secs_since_created", "min_time", "max_secs_after_created", "max_time"}
-HEIGHT_PROPERTIES: Set[str] = {"min_blocks_since_created", "min_height", "max_blocks_after_created", "max_height"}
-AFTER_PROPERTIES: Set[str] = {"min_blocks_since_created", "min_height", "min_secs_since_created", "min_time"}
-BEFORE_PROPERTIES: Set[str] = {"max_blocks_after_created", "max_height", "max_secs_after_created", "max_time"}
-RELATIVE_PROPERTIES: Set[str] = {
+SECONDS_PROPERTIES: set[str] = {"min_secs_since_created", "min_time", "max_secs_after_created", "max_time"}
+HEIGHT_PROPERTIES: set[str] = {"min_blocks_since_created", "min_height", "max_blocks_after_created", "max_height"}
+AFTER_PROPERTIES: set[str] = {"min_blocks_since_created", "min_height", "min_secs_since_created", "min_time"}
+BEFORE_PROPERTIES: set[str] = {"max_blocks_after_created", "max_height", "max_secs_after_created", "max_time"}
+RELATIVE_PROPERTIES: set[str] = {
     "min_blocks_since_created",
     "min_secs_since_created",
     "max_secs_after_created",
     "max_blocks_after_created",
 }
-ABSOLUTE_PROPERTIES: Set[str] = {"min_time", "max_time", "min_height", "max_height"}
-ALL_PROPERTIES: Set[str] = SECONDS_PROPERTIES | HEIGHT_PROPERTIES
+ABSOLUTE_PROPERTIES: set[str] = {"min_time", "max_time", "min_height", "max_height"}
+ALL_PROPERTIES: set[str] = SECONDS_PROPERTIES | HEIGHT_PROPERTIES
 
 
 def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
     valid_times: ConditionValidTimes = ConditionValidTimes()
-    properties: Set[str] = ALL_PROPERTIES.copy()
+    properties: set[str] = ALL_PROPERTIES.copy()
     for condition in conditions:
         if isinstance(condition, TIMELOCK_DRIVERS):
             timelock: Timelock = Timelock.from_program(condition.to_program())
@@ -1319,7 +1320,7 @@ def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
             new_value = timelock.timestamp
 
         final_type = condition_valid_times_types[final_property]
-        replacement: Dict[str, int] = {final_property: final_type(new_value)}
+        replacement: dict[str, int] = {final_property: final_type(new_value)}
         # the type is enforced above
         valid_times = replace(valid_times, **replacement)  # type: ignore[arg-type]
 

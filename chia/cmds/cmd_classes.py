@@ -4,22 +4,10 @@ import asyncio
 import collections
 import inspect
 import sys
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import MISSING, dataclass, field, fields
-from typing import (
-    Any,
-    AsyncIterator,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Protocol,
-    Type,
-    Union,
-    get_args,
-    get_origin,
-    get_type_hints,
-)
+from typing import Any, Callable, Optional, Protocol, Union, get_args, get_origin, get_type_hints
 
 import click
 from typing_extensions import dataclass_transform
@@ -96,10 +84,10 @@ _CLASS_TYPES_TO_CLICK_TYPES = {
 
 @dataclass
 class _CommandParsingStage:
-    my_dataclass: Type[ChiaCommand]
-    my_option_decorators: List[Callable[[SyncCmd], SyncCmd]]
-    my_members: Dict[str, _CommandParsingStage]
-    my_kwarg_names: List[str]
+    my_dataclass: type[ChiaCommand]
+    my_option_decorators: list[Callable[[SyncCmd], SyncCmd]]
+    my_members: dict[str, _CommandParsingStage]
+    my_kwarg_names: list[str]
     _needs_context: bool
 
     def needs_context(self) -> bool:
@@ -108,14 +96,14 @@ class _CommandParsingStage:
         else:
             return any(member.needs_context() for member in self.my_members.values())
 
-    def get_all_option_decorators(self) -> List[Callable[[SyncCmd], SyncCmd]]:
-        all_option_decorators: List[Callable[[SyncCmd], SyncCmd]] = self.my_option_decorators
+    def get_all_option_decorators(self) -> list[Callable[[SyncCmd], SyncCmd]]:
+        all_option_decorators: list[Callable[[SyncCmd], SyncCmd]] = self.my_option_decorators
         for member in self.my_members.values():
             all_option_decorators.extend(member.get_all_option_decorators())
         return all_option_decorators
 
     def initialize_instance(self, **kwargs: Any) -> ChiaCommand:
-        kwargs_to_pass: Dict[str, Any] = {}
+        kwargs_to_pass: dict[str, Any] = {}
         for kwarg_name in self.my_kwarg_names:
             kwargs_to_pass[kwarg_name] = kwargs[kwarg_name]
 
@@ -130,7 +118,7 @@ class _CommandParsingStage:
 
             def strip_click_context(func: SyncCmd) -> SyncCmd:
                 def _inner(ctx: click.Context, **kwargs: Any) -> None:
-                    context: Dict[str, Any] = ctx.obj if ctx.obj is not None else {}
+                    context: dict[str, Any] = ctx.obj if ctx.obj is not None else {}
                     func(context=context, **kwargs)
 
                 return _inner
@@ -152,10 +140,10 @@ class _CommandParsingStage:
             instance.run()
 
 
-def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
-    option_decorators: List[Callable[[SyncCmd], SyncCmd]] = []
-    kwarg_names: List[str] = []
-    members: Dict[str, _CommandParsingStage] = {}
+def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
+    option_decorators: list[Callable[[SyncCmd], SyncCmd]] = []
+    kwarg_names: list[str] = []
+    members: dict[str, _CommandParsingStage] = {}
     needs_context: bool = False
 
     hints = get_type_hints(cls)
@@ -172,7 +160,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                 needs_context = True
                 kwarg_names.append(field_name)
         elif "option_args" in _field.metadata:
-            option_args: Dict[str, Any] = {"multiple": False, "required": False}
+            option_args: dict[str, Any] = {"multiple": False, "required": False}
             option_args.update(_field.metadata["option_args"])
 
             if "type" not in option_args:
@@ -230,24 +218,24 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
     )
 
 
-def _convert_class_to_function(cls: Type[ChiaCommand]) -> SyncCmd:
+def _convert_class_to_function(cls: type[ChiaCommand]) -> SyncCmd:
     command_parser = _generate_command_parser(cls)
 
     return command_parser.apply_decorators(command_parser)
 
 
 @dataclass_transform()
-def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[Type[ChiaCommand]], Type[ChiaCommand]]:
-    def _chia_command(cls: Type[ChiaCommand]) -> Type[ChiaCommand]:
+def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[type[ChiaCommand]], type[ChiaCommand]]:
+    def _chia_command(cls: type[ChiaCommand]) -> type[ChiaCommand]:
         # The type ignores here are largely due to the fact that the class information is not preserved after being
         # passed through the dataclass wrapper.  Not sure what to do about this right now.
         if sys.version_info < (3, 10):  # pragma: no cover
             # stuff below 3.10 doesn't know about kw_only
-            wrapped_cls: Type[ChiaCommand] = dataclass(  # type: ignore[assignment]
+            wrapped_cls: type[ChiaCommand] = dataclass(  # type: ignore[assignment]
                 frozen=True,
             )(cls)
         else:
-            wrapped_cls: Type[ChiaCommand] = dataclass(  # type: ignore[assignment]
+            wrapped_cls: type[ChiaCommand] = dataclass(  # type: ignore[assignment]
                 frozen=True,
                 kw_only=True,
             )(cls)
@@ -259,7 +247,7 @@ def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[Type[ChiaC
 
 
 @dataclass_transform()
-def command_helper(cls: Type[Any]) -> Type[Any]:
+def command_helper(cls: type[Any]) -> type[Any]:
     if sys.version_info < (3, 10):  # stuff below 3.10 doesn't support kw_only
         new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
     else:
@@ -268,14 +256,14 @@ def command_helper(cls: Type[Any]) -> Type[Any]:
     return new_cls
 
 
-Context = Dict[str, Any]
+Context = dict[str, Any]
 
 
 @dataclass(frozen=True)
 class WalletClientInfo:
     client: WalletRpcClient
     fingerprint: int
-    config: Dict[str, Any]
+    config: dict[str, Any]
 
 
 @command_helper

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlocksProtocol
@@ -26,8 +26,8 @@ class AugmentedBlockchain:
         _protocol_check: ClassVar[BlocksProtocol] = cast("AugmentedBlockchain", None)
 
     _underlying: BlocksProtocol
-    _extra_blocks: Dict[bytes32, Tuple[FullBlock, BlockRecord]]
-    _height_to_hash: Dict[uint32, bytes32]
+    _extra_blocks: dict[bytes32, tuple[FullBlock, BlockRecord]]
+    _height_to_hash: dict[uint32, bytes32]
 
     def __init__(self, underlying: BlocksProtocol) -> None:
         self._underlying = underlying
@@ -46,14 +46,14 @@ class AugmentedBlockchain:
         self._height_to_hash[block_record.height] = block_record.header_hash
 
     # BlocksProtocol
-    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: Set[uint32]) -> Dict[uint32, bytes]:
+    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
 
-        generators: Dict[uint32, bytes] = {}
+        generators: dict[uint32, bytes] = {}
 
         # traverse the additional blocks (if any) and resolve heights into
         # generators
         to_remove = []
-        curr: Optional[Tuple[FullBlock, BlockRecord]] = self._extra_blocks.get(header_hash)
+        curr: Optional[tuple[FullBlock, BlockRecord]] = self._extra_blocks.get(header_hash)
         while curr is not None:
             b = curr[0]
             if b.height in generator_refs:
@@ -119,8 +119,8 @@ class AugmentedBlockchain:
     def contains_height(self, height: uint32) -> bool:
         return (height in self._height_to_hash) or self._underlying.contains_height(height)
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
-        ret: List[bytes32] = []
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
+        ret: list[bytes32] = []
         for hh in header_hashes:
             b = self._extra_blocks.get(hh)
             if b is not None:

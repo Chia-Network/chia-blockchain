@@ -6,7 +6,6 @@ import os
 import pathlib
 import sys
 import tempfile
-from typing import List
 
 import importlib_resources
 from clvm_tools_rs import compile_clvm as compile_clvm_rust
@@ -40,7 +39,7 @@ if "CLVM_TOOLS" in os.environ:
     compile_clvm_py = compile_clvm_py_candidate
 
 
-def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path]):
+def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: list[pathlib.Path]):
     # Compile using rust (default)
 
     # Ensure path translation is done in the idiomatic way currently
@@ -75,7 +74,7 @@ def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_p
     return res
 
 
-def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path] = []):
+def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: list[pathlib.Path] = []):
     with Lockfile.create(pathlib.Path(tempfile.gettempdir()) / "clvm_compile" / full_path.name):
         compile_clvm_in_lock(full_path, output, search_paths)
 

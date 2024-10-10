@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
@@ -60,7 +60,7 @@ class CATLineageStore:
 
         return None
 
-    async def get_all_lineage_proofs(self) -> Dict[bytes32, LineageProof]:
+    async def get_all_lineage_proofs(self) -> dict[bytes32, LineageProof]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(f"SELECT * FROM {self.table_name}")
             rows = await cursor.fetchall()

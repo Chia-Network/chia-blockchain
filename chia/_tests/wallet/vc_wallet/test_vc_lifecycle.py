@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import G2Element
@@ -105,7 +105,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         ].coin
 
         # With the honest coin, attempt to spend the non-eve case too soon
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             WalletSpendBundle(
                 [
                     make_spend(
@@ -213,7 +213,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         bad_data: bytes32 = bytes32([0] * 32)
 
         # Try to update metadata and tp without any announcement
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             WalletSpendBundle(
                 [
                     make_spend(
@@ -327,7 +327,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         )[0].coin
 
         # Reveal the wrong puzzle
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             WalletSpendBundle(
                 [
                     make_spend(
@@ -399,7 +399,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
 @pytest.mark.parametrize("num_proofs", range(1, 6))
 async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
     async with sim_and_client() as (sim, client):
-        flags: List[str] = [str(i) for i in range(0, num_proofs)]
+        flags: list[str] = [str(i) for i in range(0, num_proofs)]
         proofs_checker: ProofsChecker = ProofsChecker(flags)
 
         # (mod (PROOFS_CHECKER proofs) (if (a PROOFS_CHECKER (list proofs)) () (x)))
@@ -415,7 +415,7 @@ async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
 
         block_height: uint32 = sim.block_height
         for i, proof_list in enumerate(itertools.permutations(flags, num_proofs)):
-            result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+            result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
                 cost_logger.add_cost(
                     f"Proofs Checker only - num_proofs: {num_proofs} - permutation: {i}",
                     WalletSpendBundle(
@@ -506,7 +506,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             ACS_PH,
             [bytes32([0] * 32)],
         )
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             cost_logger.add_cost(
                 "Launch VC",
                 WalletSpendBundle(
@@ -612,7 +612,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             else:
                 proofs = ["test", "test2"]
             proofs_checker: ProofsChecker = ProofsChecker(proofs)
-            AUTHORIZED_PROVIDERS: List[bytes32] = [launcher_id]
+            AUTHORIZED_PROVIDERS: list[bytes32] = [launcher_id]
             dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
                 cr_coin_1,
                 Payment(ACS_PH, uint64(cr_coin_1.amount), []),

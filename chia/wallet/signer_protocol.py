@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 from chia.types.blockchain_format.coin import Coin as _Coin
 from chia.types.blockchain_format.program import Program
@@ -58,7 +57,7 @@ class Spend(Streamable):
 @clvm_streamable
 @dataclass(frozen=True)
 class TransactionInfo(Streamable):
-    spends: List[Spend]
+    spends: list[Spend]
 
 
 @clvm_streamable
@@ -72,7 +71,7 @@ class SigningTarget(Streamable):
 @clvm_streamable
 @dataclass(frozen=True)
 class SumHint(Streamable):
-    fingerprints: List[bytes]
+    fingerprints: list[bytes]
     synthetic_offset: bytes
     final_pubkey: bytes
 
@@ -81,21 +80,21 @@ class SumHint(Streamable):
 @dataclass(frozen=True)
 class PathHint(Streamable):
     root_fingerprint: bytes
-    path: List[uint64]
+    path: list[uint64]
 
 
 @clvm_streamable
 @dataclass(frozen=True)
 class KeyHints(Streamable):
-    sum_hints: List[SumHint]
-    path_hints: List[PathHint]
+    sum_hints: list[SumHint]
+    path_hints: list[PathHint]
 
 
 @clvm_streamable
 @dataclass(frozen=True)
 class SigningInstructions(Streamable):
     key_hints: KeyHints
-    targets: List[SigningTarget]
+    targets: list[SigningTarget]
 
 
 @clvm_streamable
@@ -123,4 +122,4 @@ class Signature(Streamable):
 @dataclass(frozen=True)
 class SignedTransaction(Streamable):
     transaction_info: TransactionInfo
-    signatures: List[Signature]
+    signatures: list[Signature]

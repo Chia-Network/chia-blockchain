@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Coroutine, Sequence
 from pathlib import Path
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Sequence, TypeVar, Union
+from typing import Any, Callable, Optional, TypeVar, Union
 
 import click
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: this is more general and should be part of refactoring the overall CLI code duplication
-def run(coro: Coroutine[Any, Any, Optional[Dict[str, Any]]]) -> None:
+def run(coro: Coroutine[Any, Any, Optional[dict[str, Any]]]) -> None:
     import asyncio
 
     response = asyncio.run(coro)
@@ -344,7 +345,7 @@ def get_root(
 @options.create_fingerprint()
 def subscribe(
     id: bytes32,
-    urls: List[str],
+    urls: list[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -360,7 +361,7 @@ def subscribe(
 @options.create_fingerprint()
 def remove_subscription(
     id: bytes32,
-    urls: List[str],
+    urls: list[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:
@@ -492,7 +493,7 @@ def add_missing_files(
 def add_mirror(
     id: bytes32,
     amount: int,
-    urls: List[str],
+    urls: list[str],
     fee: Optional[uint64],
     data_rpc_port: int,
     fingerprint: Optional[int],
@@ -674,7 +675,7 @@ def wallet_log_in(
 @options.create_fingerprint()
 def get_proof(
     id: bytes32,
-    key_strings: List[str],
+    key_strings: list[str],
     data_rpc_port: int,
     fingerprint: Optional[int],
 ) -> None:

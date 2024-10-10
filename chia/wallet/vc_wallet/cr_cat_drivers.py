@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from enum import IntEnum
-from typing import Iterable, List, Optional, Tuple, Type, TypeVar
+from typing import Optional, TypeVar
 
 from clvm.casts import int_to_bytes
 
@@ -94,7 +95,7 @@ CREDENTIAL_STRUCT_HASH: bytes32 = CREDENTIAL_STRUCT.get_tree_hash()
 
 # Basic drivers
 def construct_cr_layer(
-    authorized_providers: List[bytes32],
+    authorized_providers: list[bytes32],
     proofs_checker: Program,
     inner_puzzle: Program,
 ) -> Program:
@@ -128,7 +129,7 @@ def construct_cr_layer_hash(
 
 def match_cr_layer(
     uncurried_puzzle: UncurriedPuzzle,
-) -> Optional[Tuple[List[bytes32], Program, Program]]:
+) -> Optional[tuple[list[bytes32], Program, Program]]:
     extra_uncurried_puzzle = uncurry_puzzle(uncurried_puzzle.mod)
     if extra_uncurried_puzzle.mod == CREDENTIAL_RESTRICTION:
         return (
@@ -176,24 +177,24 @@ class CRCAT:
     coin: Coin
     tail_hash: bytes32
     lineage_proof: LineageProof
-    authorized_providers: List[bytes32]
+    authorized_providers: list[bytes32]
     proofs_checker: Program
     inner_puzzle_hash: bytes32
 
     @classmethod
     def launch(
-        cls: Type[_T_CRCAT],
+        cls: type[_T_CRCAT],
         # General CAT launching info
         origin_coin: Coin,
         payment: Payment,
         tail: Program,
         tail_solution: Program,
         # CR Layer params
-        authorized_providers: List[bytes32],
+        authorized_providers: list[bytes32],
         proofs_checker: Program,
         # Probably never need this but some tail might
         optional_lineage_proof: Optional[LineageProof] = None,
-    ) -> Tuple[Program, CoinSpend, CRCAT]:
+    ) -> tuple[Program, CoinSpend, CRCAT]:
         """
         Launch a new CR-CAT from XCH.
 
@@ -288,7 +289,7 @@ class CRCAT:
         )
 
     @staticmethod
-    def is_cr_cat(puzzle_reveal: UncurriedPuzzle) -> Tuple[bool, str]:
+    def is_cr_cat(puzzle_reveal: UncurriedPuzzle) -> tuple[bool, str]:
         """
         This takes an (uncurried) puzzle reveal and returns a boolean for whether the puzzle is a CR-CAT and an error
         message for if the puzzle is a mismatch.
@@ -310,7 +311,7 @@ class CRCAT:
         return solution.at("f").at("rrrrrrf")
 
     @classmethod
-    def get_current_from_coin_spend(cls: Type[_T_CRCAT], spend: CoinSpend) -> CRCAT:  # pragma: no cover
+    def get_current_from_coin_spend(cls: type[_T_CRCAT], spend: CoinSpend) -> CRCAT:  # pragma: no cover
         uncurried_puzzle: UncurriedPuzzle = uncurry_puzzle(spend.puzzle_reveal)
         first_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(uncurried_puzzle.args.at("rrf"))
         second_uncurried_cr_layer: UncurriedPuzzle = uncurry_puzzle(first_uncurried_cr_layer.mod)
@@ -329,10 +330,10 @@ class CRCAT:
 
     @classmethod
     def get_next_from_coin_spend(
-        cls: Type[_T_CRCAT],
+        cls: type[_T_CRCAT],
         parent_spend: CoinSpend,
         conditions: Optional[Program] = None,  # For optimization purposes, the conditions may already have been run
-    ) -> List[CRCAT]:
+    ) -> list[CRCAT]:
         """
         Given a coin spend, this will return the next CR-CATs that were created as an output of that spend.
         Inner puzzle output conditions may also be supplied as an optimization.
@@ -388,12 +389,12 @@ class CRCAT:
             uint64(parent_spend.coin.amount),
         )
 
-        all_conditions: List[Program] = list(conditions.as_iter())
+        all_conditions: list[Program] = list(conditions.as_iter())
         if len(all_conditions) > 1000:
             raise RuntimeError("More than 1000 conditions not currently supported by CRCAT drivers")  # pragma: no cover
 
         # Almost complete except the coin's full puzzle hash which we want to use the class method to calculate
-        partially_completed_crcats: List[CRCAT] = [
+        partially_completed_crcats: list[CRCAT] = [
             CRCAT(
                 Coin(coin_name, bytes(32), uint64(condition.at("rrf").as_int())),
                 bytes32(tail_hash_as_prog.as_atom()),
@@ -438,7 +439,7 @@ class CRCAT:
         inner_solution: Program,
         # For optimization purposes the conditions may already have been run
         conditions: Optional[Iterable[Program]] = None,
-    ) -> Tuple[List[AssertCoinAnnouncement], CoinSpend, List[CRCAT]]:
+    ) -> tuple[list[AssertCoinAnnouncement], CoinSpend, list[CRCAT]]:
         """
         Spend a CR-CAT.
 
@@ -449,8 +450,8 @@ class CRCAT:
         Likely, spend_many is more useful.
         """
         # Gather the output information
-        announcements: List[AssertCoinAnnouncement] = []
-        new_inner_puzzle_hashes_and_amounts: List[Tuple[bytes32, uint64]] = []
+        announcements: list[AssertCoinAnnouncement] = []
+        new_inner_puzzle_hashes_and_amounts: list[tuple[bytes32, uint64]] = []
         if conditions is None:
             conditions = inner_puzzle.run(inner_solution).as_iter()  # pragma: no cover
         assert conditions is not None
@@ -518,15 +519,15 @@ class CRCAT:
 
     @classmethod
     def spend_many(
-        cls: Type[_T_CRCAT],
-        inner_spends: List[Tuple[_T_CRCAT, int, Program, Program]],  # CRCAT, extra_delta, inner puzzle, inner solution
+        cls: type[_T_CRCAT],
+        inner_spends: list[tuple[_T_CRCAT, int, Program, Program]],  # CRCAT, extra_delta, inner puzzle, inner solution
         # CR layer solving info
         proof_of_inclusions: Program,
         proof_checker_solution: Program,
         provider_id: bytes32,
         vc_launcher_id: bytes32,
         vc_inner_puzhash: Optional[bytes32],  # Optional for incomplete spends
-    ) -> Tuple[List[AssertCoinAnnouncement], List[CoinSpend], List[CRCAT]]:
+    ) -> tuple[list[AssertCoinAnnouncement], list[CoinSpend], list[CRCAT]]:
         """
         Spend a multiple CR-CATs.
 
@@ -541,19 +542,19 @@ class CRCAT:
         def prev_index(index: int) -> int:
             return index - 1
 
-        sorted_inner_spends: List[Tuple[_T_CRCAT, int, Program, Program]] = sorted(
+        sorted_inner_spends: list[tuple[_T_CRCAT, int, Program, Program]] = sorted(
             inner_spends,
             key=lambda spend: spend[0].coin.name(),
         )
 
-        all_expected_announcements: List[AssertCoinAnnouncement] = []
-        all_coin_spends: List[CoinSpend] = []
-        all_new_crcats: List[CRCAT] = []
+        all_expected_announcements: list[AssertCoinAnnouncement] = []
+        all_coin_spends: list[CoinSpend] = []
+        all_new_crcats: list[CRCAT] = []
 
         subtotal: int = 0
         for i, inner_spend in enumerate(sorted_inner_spends):
             crcat, extra_delta, inner_puzzle, inner_solution = inner_spend
-            conditions: List[Program] = list(inner_puzzle.run(inner_solution).as_iter())
+            conditions: list[Program] = list(inner_puzzle.run(inner_solution).as_iter())
             output_amount: int = (
                 sum(
                     c.at("rrf").as_int()
@@ -604,9 +605,9 @@ class CRCATSpend:
     crcat: CRCAT
     inner_puzzle: Program
     inner_solution: Program
-    children: List[CRCAT]
+    children: list[CRCAT]
     incomplete: bool
-    inner_conditions: List[Program]
+    inner_conditions: list[Program]
     proof_of_inclusions: Program
 
     @classmethod
@@ -628,7 +629,7 @@ class CRCATSpend:
 @streamable
 @dataclass(frozen=True)
 class ProofsChecker(Streamable):
-    flags: List[str]
+    flags: list[str]
 
     def as_program(self) -> Program:
         def byte_sort_flags(f1: str, f2: str) -> int:

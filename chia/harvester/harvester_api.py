@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
@@ -87,7 +87,7 @@ class HarvesterAPI:
 
         loop = asyncio.get_running_loop()
 
-        def blocking_lookup(filename: Path, plot_info: PlotInfo) -> List[Tuple[bytes32, ProofOfSpace]]:
+        def blocking_lookup(filename: Path, plot_info: PlotInfo) -> list[tuple[bytes32, ProofOfSpace]]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
@@ -123,7 +123,7 @@ class HarvesterAPI:
                     )
                     return []
 
-                responses: List[Tuple[bytes32, ProofOfSpace]] = []
+                responses: list[tuple[bytes32, ProofOfSpace]] = []
                 if quality_strings is not None:
                     difficulty = new_challenge.difficulty
                     sub_slot_iters = new_challenge.sub_slot_iters
@@ -205,12 +205,12 @@ class HarvesterAPI:
 
         async def lookup_challenge(
             filename: Path, plot_info: PlotInfo
-        ) -> Tuple[Path, List[harvester_protocol.NewProofOfSpace]]:
+        ) -> tuple[Path, list[harvester_protocol.NewProofOfSpace]]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
-            all_responses: List[harvester_protocol.NewProofOfSpace] = []
+            all_responses: list[harvester_protocol.NewProofOfSpace] = []
             if self.harvester._shut_down:
                 return filename, []
-            proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
+            proofs_of_space_and_q: list[tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
                 self.harvester.executor, blocking_lookup, filename, plot_info
             )
             for quality_str, proof_of_space in proofs_of_space_and_q:
@@ -329,7 +329,7 @@ class HarvesterAPI:
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
-        message_signatures: List[Tuple[bytes32, G2Element]] = []
+        message_signatures: list[tuple[bytes32, G2Element]] = []
         for message in request.messages:
             signature: G2Element = AugSchemeMPL.sign(local_sk, message, agg_pk)
             message_signatures.append((message, signature))

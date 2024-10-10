@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import operator
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple
+from typing import Any, Callable, ClassVar, Optional
 
 from typing_extensions import Protocol
 
@@ -23,7 +23,7 @@ class PaginatedRequestData(Protocol):
     page: uint32
     page_size: uint32
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
 
 @streamable
@@ -39,11 +39,11 @@ class PlotInfoRequestData(Streamable):
     node_id: bytes32
     page: uint32
     page_size: uint32
-    filter: List[FilterItem] = dataclasses.field(default_factory=list)
+    filter: list[FilterItem] = dataclasses.field(default_factory=list)
     sort_key: str = "filename"
     reverse: bool = False
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
 
 @streamable
@@ -52,13 +52,13 @@ class PlotPathRequestData(Streamable):
     node_id: bytes32
     page: uint32
     page_size: uint32
-    filter: List[str] = dataclasses.field(default_factory=list)
+    filter: list[str] = dataclasses.field(default_factory=list)
     reverse: bool = False
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
 
-def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
+def paginated_plot_request(source: list[Any], request: PaginatedRequestData) -> dict[str, object]:
     paginator: Paginator = Paginator(source, request.page_size)
     return {
         "node_id": request.node_id.hex(),
@@ -82,7 +82,7 @@ class FarmerRpcApi:
         self.service = farmer
         self.service_name = "chia_farmer"
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def get_routes(self) -> dict[str, Endpoint]:
         return {
             "/get_signage_point": self.get_signage_point,
             "/get_signage_points": self.get_signage_points,
@@ -99,7 +99,7 @@ class FarmerRpcApi:
             "/get_pool_login_link": self.get_pool_login_link,
         }
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]]) -> list[WsRpcMessage]:
         payloads = []
 
         if change_data is None:
@@ -233,7 +233,7 @@ class FarmerRpcApi:
 
         return payloads
 
-    async def get_signage_point(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_signage_point(self, request: dict[str, Any]) -> EndpointResult:
         sp_hash = bytes32.from_hexstr(request["sp_hash"])
         sps = self.service.sps.get(sp_hash)
         if sps is None or len(sps) < 1:
@@ -253,8 +253,8 @@ class FarmerRpcApi:
             "proofs": pospaces,
         }
 
-    async def get_signage_points(self, _: Dict[str, Any]) -> EndpointResult:
-        result: List[Dict[str, Any]] = []
+    async def get_signage_points(self, _: dict[str, Any]) -> EndpointResult:
+        result: list[dict[str, Any]] = []
         for sps in self.service.sps.values():
             for sp in sps:
                 pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
@@ -273,12 +273,12 @@ class FarmerRpcApi:
                 )
         return {"signage_points": result}
 
-    async def get_reward_targets(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_reward_targets(self, request: dict[str, Any]) -> EndpointResult:
         search_for_private_key = request["search_for_private_key"]
         max_ph_to_search = request.get("max_ph_to_search", 500)
         return await self.service.get_reward_targets(search_for_private_key, max_ph_to_search)
 
-    async def set_reward_targets(self, request: Dict[str, Any]) -> EndpointResult:
+    async def set_reward_targets(self, request: dict[str, Any]) -> EndpointResult:
         farmer_target, pool_target = None, None
         if "farmer_target" in request:
             farmer_target = request["farmer_target"]
@@ -296,7 +296,7 @@ class FarmerRpcApi:
             )
         return plot_count
 
-    async def get_pool_state(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_pool_state(self, request: dict[str, Any]) -> EndpointResult:
         pools_list = []
         for p2_singleton_puzzle_hash, pool_dict in self.service.pool_state.items():
             pool_state = pool_dict.copy()
@@ -304,18 +304,18 @@ class FarmerRpcApi:
             pools_list.append(pool_state)
         return {"pool_state": pools_list}
 
-    async def set_payout_instructions(self, request: Dict[str, Any]) -> EndpointResult:
+    async def set_payout_instructions(self, request: dict[str, Any]) -> EndpointResult:
         launcher_id: bytes32 = bytes32.from_hexstr(request["launcher_id"])
         await self.service.set_payout_instructions(launcher_id, request["payout_instructions"])
         return {}
 
-    async def get_harvesters(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_harvesters(self, request: dict[str, Any]) -> EndpointResult:
         return await self.service.get_harvesters(False)
 
-    async def get_harvesters_summary(self, _: Dict[str, object]) -> EndpointResult:
+    async def get_harvesters_summary(self, _: dict[str, object]) -> EndpointResult:
         return await self.service.get_harvesters(True)
 
-    async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> EndpointResult:
+    async def get_harvester_plots_valid(self, request_dict: dict[str, object]) -> EndpointResult:
         # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
         request = PlotInfoRequestData.from_json_dict(request_dict)
         plot_list = list(self.service.get_receiver(request.node_id).plots().values())
@@ -323,7 +323,7 @@ class FarmerRpcApi:
         plot_list = [
             plot for plot in plot_list if all(plot_matches_filter(plot, filter_item) for filter_item in request.filter)
         ]
-        restricted_sort_keys: List[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
+        restricted_sort_keys: list[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
         # Apply sort_key and reverse if sort_key is not restricted
         if request.sort_key in restricted_sort_keys:
             raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
@@ -332,8 +332,8 @@ class FarmerRpcApi:
         return paginated_plot_request(plot_list, request)
 
     def paginated_plot_path_request(
-        self, source_func: Callable[[Receiver], List[str]], request_dict: Dict[str, object]
-    ) -> Dict[str, object]:
+        self, source_func: Callable[[Receiver], list[str]], request_dict: dict[str, object]
+    ) -> dict[str, object]:
         request: PlotPathRequestData = PlotPathRequestData.from_json_dict(request_dict)
         receiver = self.service.get_receiver(request.node_id)
         source = source_func(receiver)
@@ -343,16 +343,16 @@ class FarmerRpcApi:
         source = sorted(source, reverse=request.reverse)
         return paginated_plot_request(source, request)
 
-    async def get_harvester_plots_invalid(self, request_dict: Dict[str, object]) -> EndpointResult:
+    async def get_harvester_plots_invalid(self, request_dict: dict[str, object]) -> EndpointResult:
         return self.paginated_plot_path_request(Receiver.invalid, request_dict)
 
-    async def get_harvester_plots_keys_missing(self, request_dict: Dict[str, object]) -> EndpointResult:
+    async def get_harvester_plots_keys_missing(self, request_dict: dict[str, object]) -> EndpointResult:
         return self.paginated_plot_path_request(Receiver.keys_missing, request_dict)
 
-    async def get_harvester_plots_duplicates(self, request_dict: Dict[str, object]) -> EndpointResult:
+    async def get_harvester_plots_duplicates(self, request_dict: dict[str, object]) -> EndpointResult:
         return self.paginated_plot_path_request(Receiver.duplicates, request_dict)
 
-    async def get_pool_login_link(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_pool_login_link(self, request: dict[str, Any]) -> EndpointResult:
         launcher_id: bytes32 = bytes32.from_hexstr(request["launcher_id"])
         login_link: Optional[str] = await self.service.generate_login_link(launcher_id)
         if login_link is None:

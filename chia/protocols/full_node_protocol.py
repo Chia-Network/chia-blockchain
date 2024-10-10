@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
@@ -90,7 +90,7 @@ class RequestBlocks(Streamable):
 class RespondBlocks(Streamable):
     start_height: uint32
     end_height: uint32
-    blocks: List[FullBlock]
+    blocks: list[FullBlock]
 
 
 @streamable
@@ -216,4 +216,4 @@ class RequestPeers(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RespondPeers(Streamable):
-    peer_list: List[TimestampedPeerInfo]
+    peer_list: list[TimestampedPeerInfo]

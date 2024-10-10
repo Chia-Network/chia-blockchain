@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import aiohttp
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
@@ -117,7 +117,7 @@ class FarmerAPI:
                 if new_proof_of_space.farmer_reward_address_override is not None:
                     self.farmer.notify_farmer_reward_taken_by_harvester_as_fee(sp, new_proof_of_space)
 
-                sp_src_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
+                sp_src_data: Optional[list[Optional[SignatureRequestSourceData]]] = None
                 if (
                     new_proof_of_space.include_source_signature_data
                     or new_proof_of_space.farmer_reward_address_override is not None
@@ -182,7 +182,7 @@ class FarmerAPI:
                 if p2_singleton_puzzle_hash not in self.farmer.pool_state:
                     self.farmer.log.info(f"Did not find pool info for {p2_singleton_puzzle_hash}")
                     return
-                pool_state_dict: Dict[str, Any] = self.farmer.pool_state[p2_singleton_puzzle_hash]
+                pool_state_dict: dict[str, Any] = self.farmer.pool_state[p2_singleton_puzzle_hash]
                 pool_url = pool_state_dict["pool_config"].pool_url
                 if pool_url == "":
                     # `pool_url == ""` means solo plotNFT farming
@@ -268,7 +268,7 @@ class FarmerAPI:
 
                 # The plot key is 2/2 so we need the harvester's half of the signature
                 m_to_sign = payload.get_hash()
-                m_src_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
+                m_src_data: Optional[list[Optional[SignatureRequestSourceData]]] = None
 
                 if (  # pragma: no cover
                     new_proof_of_space.include_source_signature_data
@@ -374,7 +374,7 @@ class FarmerAPI:
                                 )
                                 return
 
-                            pool_response: Dict[str, Any] = json.loads(await resp.text())
+                            pool_response: dict[str, Any] = json.loads(await resp.text())
                             self.farmer.log.info(f"Pool response: {pool_response}")
                             if "error_code" in pool_response:
                                 self.farmer.log.error(
@@ -501,7 +501,7 @@ class FarmerAPI:
         self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
 
         try:
-            pool_difficulties: List[PoolDifficulty] = []
+            pool_difficulties: list[PoolDifficulty] = []
             for p2_singleton_puzzle_hash, pool_dict in self.farmer.pool_state.items():
                 if pool_dict["pool_config"].pool_url == "":
                     # Self pooling
@@ -568,7 +568,7 @@ class FarmerAPI:
             full_node_request.quality_string
         ]
 
-        message_data: Optional[List[Optional[SignatureRequestSourceData]]] = None
+        message_data: Optional[list[Optional[SignatureRequestSourceData]]] = None
 
         if full_node_request.foliage_block_data is not None:
             message_data = [

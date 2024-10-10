@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from chia.harvester.harvester import Harvester
 from chia.rpc.rpc_server import Endpoint, EndpointResult
@@ -13,7 +13,7 @@ class HarvesterRpcApi:
         self.service = harvester
         self.service_name = "chia_harvester"
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def get_routes(self) -> dict[str, Endpoint]:
         return {
             "/get_plots": self.get_plots,
             "/refresh_plots": self.refresh_plots,
@@ -25,7 +25,7 @@ class HarvesterRpcApi:
             "/update_harvester_config": self.update_harvester_config,
         }
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
         if change_data is None:
             change_data = {}
 
@@ -48,7 +48,7 @@ class HarvesterRpcApi:
 
         return payloads
 
-    async def get_plots(self, _: Dict[str, Any]) -> EndpointResult:
+    async def get_plots(self, _: dict[str, Any]) -> EndpointResult:
         plots, failed_to_open, not_found = self.service.get_plots()
         return {
             "plots": plots,
@@ -56,33 +56,33 @@ class HarvesterRpcApi:
             "not_found_filenames": not_found,
         }
 
-    async def refresh_plots(self, _: Dict[str, Any]) -> EndpointResult:
+    async def refresh_plots(self, _: dict[str, Any]) -> EndpointResult:
         self.service.plot_manager.trigger_refresh()
         return {}
 
-    async def delete_plot(self, request: Dict[str, Any]) -> EndpointResult:
+    async def delete_plot(self, request: dict[str, Any]) -> EndpointResult:
         filename = request["filename"]
         if self.service.delete_plot(filename):
             return {}
         raise ValueError(f"Not able to delete file {filename}")
 
-    async def add_plot_directory(self, request: Dict[str, Any]) -> EndpointResult:
+    async def add_plot_directory(self, request: dict[str, Any]) -> EndpointResult:
         directory_name = request["dirname"]
         if await self.service.add_plot_directory(directory_name):
             return {}
         raise ValueError(f"Did not add plot directory {directory_name}")
 
-    async def get_plot_directories(self, _: Dict[str, Any]) -> EndpointResult:
+    async def get_plot_directories(self, _: dict[str, Any]) -> EndpointResult:
         plot_dirs = await self.service.get_plot_directories()
         return {"directories": plot_dirs}
 
-    async def remove_plot_directory(self, request: Dict[str, Any]) -> EndpointResult:
+    async def remove_plot_directory(self, request: dict[str, Any]) -> EndpointResult:
         directory_name = request["dirname"]
         if await self.service.remove_plot_directory(directory_name):
             return {}
         raise ValueError(f"Did not remove plot directory {directory_name}")
 
-    async def get_harvester_config(self, _: Dict[str, Any]) -> EndpointResult:
+    async def get_harvester_config(self, _: dict[str, Any]) -> EndpointResult:
         harvester_config = await self.service.get_harvester_config()
         return {
             "use_gpu_harvesting": harvester_config["use_gpu_harvesting"],
@@ -95,7 +95,7 @@ class HarvesterRpcApi:
             "refresh_parameter_interval_seconds": harvester_config["plots_refresh_parameter"].get("interval_seconds"),
         }
 
-    async def update_harvester_config(self, request: Dict[str, Any]) -> EndpointResult:
+    async def update_harvester_config(self, request: dict[str, Any]) -> EndpointResult:
         use_gpu_harvesting: Optional[bool] = None
         gpu_index: Optional[int] = None
         enforce_gpu_index: Optional[bool] = None

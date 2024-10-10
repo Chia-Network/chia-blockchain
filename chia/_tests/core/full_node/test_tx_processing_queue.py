@@ -4,7 +4,7 @@ import asyncio
 import logging
 import random
 from dataclasses import dataclass
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 import pytest
 
@@ -90,7 +90,7 @@ async def test_lots_of_peers(seeded_random: random.Random) -> None:
     num_peers = 1000
     num_txs = 100
     total_txs = num_txs * num_peers
-    peer_ids: List[bytes32] = [bytes32.random(seeded_random) for _ in range(num_peers)]
+    peer_ids: list[bytes32] = [bytes32.random(seeded_random) for _ in range(num_peers)]
 
     # 100 txs per peer
     list_txs = [get_transaction_queue_entry(peer_id, i) for peer_id in peer_ids for i in range(num_txs)]
@@ -112,7 +112,7 @@ async def test_full_queue(seeded_random: random.Random) -> None:
     num_peers = 100
     num_txs = 1000
     total_txs = num_txs * num_peers
-    peer_ids: List[bytes32] = [bytes32.random(seeded_random) for _ in range(num_peers)]
+    peer_ids: list[bytes32] = [bytes32.random(seeded_random) for _ in range(num_peers)]
 
     # 999 txs per peer then 1 to fail later
     list_txs = [get_transaction_queue_entry(peer_id, i) for peer_id in peer_ids for i in range(num_txs)]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from clvm.casts import int_from_bytes
 from clvm.SExp import SExp
@@ -25,7 +25,7 @@ class PuzzleInfo:
       - 'also' gets its own method as it's the supported way to do recursion of PuzzleInfos
     """
 
-    info: Dict[str, Any]
+    info: dict[str, Any]
 
     def __post_init__(self) -> None:
         if "type" not in self.info:
@@ -59,7 +59,7 @@ class PuzzleInfo:
         else:
             return None
 
-    def check_type(self, types: List[str]) -> bool:
+    def check_type(self, types: list[str]) -> bool:
         if types == []:
             if self.also() is None:
                 return True
@@ -78,7 +78,7 @@ class PuzzleInfo:
 
 @dataclass(frozen=True)
 class Solver:
-    info: Dict[str, Any]
+    info: dict[str, Any]
 
     def __getitem__(self, item: str) -> Any:
         value = self.info[item]

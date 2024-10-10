@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Tuple
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
@@ -17,7 +16,7 @@ test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=u
 # Coin Commands
 
 
-def test_coins_get_info(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_coins_get_info(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -51,7 +50,7 @@ def test_coins_get_info(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_coins_combine(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -131,7 +130,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_coins_split(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client

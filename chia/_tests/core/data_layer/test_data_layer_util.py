@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 from random import Random
-from typing import List, Tuple
 
 import pytest
 
@@ -32,7 +31,7 @@ pytestmark = pytest.mark.data_layer
 
 def create_valid_proof_of_inclusion(layer_count: int, other_hash_side: Side) -> ProofOfInclusion:
     node_hash = bytes32(b"a" * 32)
-    layers: List[ProofOfInclusionLayer] = []
+    layers: list[ProofOfInclusionLayer] = []
 
     existing_hash = node_hash
 
@@ -143,7 +142,7 @@ def test_internal_hash(seeded_random: Random) -> None:
     def definition(left_hash: bytes32, right_hash: bytes32) -> bytes32:
         return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)
 
-    data: List[Tuple[bytes32, bytes32, bytes32]] = []
+    data: list[tuple[bytes32, bytes32, bytes32]] = []
     for _ in range(5000):
         left_hash = bytes32.random(r=seeded_random)
         right_hash = bytes32.random(r=seeded_random)
@@ -170,7 +169,7 @@ def test_leaf_hash(seeded_random: Random) -> None:
     def definition(key: bytes, value: bytes) -> bytes32:
         return SerializedProgram.to((key, value)).get_tree_hash()
 
-    data: List[Tuple[bytes, bytes, bytes32]] = []
+    data: list[tuple[bytes, bytes, bytes32]] = []
     for cycle in range(20000):
         if cycle in (0, 1):
             length = 0
@@ -200,7 +199,7 @@ def test_key_hash(seeded_random: Random) -> None:
     def definition(key: bytes) -> bytes32:
         return SerializedProgram.to(key).get_tree_hash()
 
-    data: List[Tuple[bytes, bytes32]] = []
+    data: list[tuple[bytes, bytes32]] = []
     for cycle in range(30000):
         if cycle == 0:
             length = 0

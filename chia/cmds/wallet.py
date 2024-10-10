@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import pathlib
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import click
 
@@ -216,7 +217,7 @@ def send_cmd(
     clawback_time: int,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import send
 
     return asyncio.run(
@@ -328,7 +329,7 @@ def clawback(
     force: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import spend_clawback
 
     return asyncio.run(
@@ -598,7 +599,7 @@ def take_offer_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import take_offer
 
     return asyncio.run(
@@ -635,7 +636,7 @@ def cancel_offer_cmd(
     fee: uint64,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import cancel_offer
 
     return asyncio.run(
@@ -698,7 +699,7 @@ def did_create_wallet_cmd(
     fee: uint64,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import create_did_wallet
 
     return asyncio.run(
@@ -815,7 +816,7 @@ def did_update_metadata_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import update_did_metadata
 
     return asyncio.run(
@@ -912,11 +913,11 @@ def did_message_spend_cmd(
     coin_announcements: Optional[str],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import did_message_spend
 
-    puzzle_list: List[str] = []
-    coin_list: List[str] = []
+    puzzle_list: list[str] = []
+    coin_list: list[str] = []
     if puzzle_announcements is not None:
         try:
             puzzle_list = puzzle_announcements.split(",")
@@ -982,7 +983,7 @@ def did_transfer_did(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import transfer_did
 
     return asyncio.run(
@@ -1107,7 +1108,7 @@ def nft_mint_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import mint_nft
 
     if metadata_uris is None:
@@ -1180,7 +1181,7 @@ def nft_add_uri_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import add_uri_to_nft
 
     return asyncio.run(
@@ -1231,7 +1232,7 @@ def nft_transfer_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import transfer_nft
 
     return asyncio.run(
@@ -1298,7 +1299,7 @@ def nft_set_did_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import set_nft_did
 
     return asyncio.run(
@@ -1379,7 +1380,7 @@ def send_notification_cmd(
     fee: uint64,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import send_notification
 
     message_bytes: bytes = bytes(message, "utf8")
@@ -1475,7 +1476,7 @@ def mint_vc_cmd(
     fee: uint64,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import mint_vc
 
     return asyncio.run(
@@ -1559,7 +1560,7 @@ def spend_vc_cmd(
     reuse_puzhash: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import spend_vc
 
     return asyncio.run(
@@ -1659,7 +1660,7 @@ def revoke_vc_cmd(
     reuse_puzhash: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import revoke_vc
 
     return asyncio.run(
@@ -1726,7 +1727,7 @@ def approve_r_cats_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .wallet_funcs import approve_r_cats
 
     return asyncio.run(

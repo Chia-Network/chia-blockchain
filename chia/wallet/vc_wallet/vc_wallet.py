@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
 from chia_rs import G1Element, G2Element
 from clvm.casts import int_to_bytes
@@ -63,7 +63,7 @@ class VCWallet:
 
     @classmethod
     async def create_new_vc_wallet(
-        cls: Type[_T_VCWallet],
+        cls: type[_T_VCWallet],
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         name: Optional[str] = None,
@@ -80,7 +80,7 @@ class VCWallet:
 
     @classmethod
     async def create(
-        cls: Type[_T_VCWallet],
+        cls: type[_T_VCWallet],
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         wallet_info: WalletInfo,
@@ -110,7 +110,7 @@ class VCWallet:
         """
         # TODO Use coin_data instead of calling peer API
         wallet_node = self.wallet_state_manager.wallet_node
-        coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
+        coin_states: Optional[list[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
         if coin_states is None:
             self.log.error(
                 f"Cannot find parent coin of the verified credential coin: {coin.name().hex()}"
@@ -165,7 +165,7 @@ class VCWallet:
         action_scope: WalletActionScope,
         inner_puzzle_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> VCRecord:
         """
         Given the DID ID of a proof provider, mint a brand new VC with an empty slot for proofs.
@@ -204,8 +204,8 @@ class VCWallet:
             coin_spends.append(make_spend(coin, puzzle, solution))
         spend_bundle = WalletSpendBundle(coin_spends, G2Element())
         now = uint64(int(time.time()))
-        add_list: List[Coin] = list(spend_bundle.additions())
-        rem_list: List[Coin] = list(spend_bundle.removals())
+        add_list: list[Coin] = list(spend_bundle.additions())
+        rem_list: list[Coin] = list(spend_bundle.removals())
         vc_record: VCRecord = VCRecord(vc, uint32(0))
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(
@@ -238,7 +238,7 @@ class VCWallet:
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         new_inner_puzhash: Optional[bytes32] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
         new_proof_hash: Optional[bytes32] = kwargs.get(
@@ -265,7 +265,7 @@ class VCWallet:
         if new_inner_puzhash is None:
             new_inner_puzhash = inner_puzhash
 
-        primaries: List[Payment] = [Payment(new_inner_puzhash, uint64(vc_record.vc.coin.amount), [new_inner_puzhash])]
+        primaries: list[Payment] = [Payment(new_inner_puzhash, uint64(vc_record.vc.coin.amount), [new_inner_puzhash])]
 
         if fee > 0:
             coin_name = vc_record.vc.coin.name()
@@ -316,8 +316,8 @@ class VCWallet:
                 raise ValueError(
                     f"Cannot find the required DID {vc_record.vc.proof_provider.hex()}."
                 )  # pragma: no cover
-        add_list: List[Coin] = list(spend_bundle.additions())
-        rem_list: List[Coin] = list(spend_bundle.removals())
+        add_list: list[Coin] = list(spend_bundle.additions())
+        rem_list: list[Coin] = list(spend_bundle.removals())
         now = uint64(int(time.time()))
 
         async with action_scope.use() as interface:
@@ -349,9 +349,9 @@ class VCWallet:
         peer: WSChiaConnection,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
-        vc_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
+        vc_coin_states: list[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [parent_id], peer=peer
         )
         if vc_coin_states is None:
@@ -377,7 +377,7 @@ class VCWallet:
             )
             return
 
-        recovery_info: Optional[Tuple[bytes32, bytes32, uint64]] = await did_wallet.get_info_for_recovery()
+        recovery_info: Optional[tuple[bytes32, bytes32, uint64]] = await did_wallet.get_info_for_recovery()
         if recovery_info is None:
             raise RuntimeError("DID could not currently be accessed while trying to revoke VC")  # pragma: no cover
         _, provider_inner_puzhash, _ = recovery_info
@@ -387,8 +387,8 @@ class VCWallet:
         coins.add(vc.coin)
         if fee > 0:
             coins.update(await self.standard_wallet.select_coins(fee, action_scope))
-        sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
-        sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
+        sorted_coins: list[Coin] = sorted(coins, key=Coin.name)
+        sorted_coin_list: list[list[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = SerializedProgram.to(sorted_coin_list).get_tree_hash()
         vc_announcement: AssertCoinAnnouncement = AssertCoinAnnouncement(asserted_id=vc.coin.name(), asserted_msg=nonce)
 
@@ -408,7 +408,7 @@ class VCWallet:
 
     async def add_vc_authorization(
         self, offer: Offer, solver: Solver, action_scope: WalletActionScope
-    ) -> Tuple[Offer, Solver]:
+    ) -> tuple[Offer, Solver]:
         """
         This method takes an existing offer and adds a VC authorization spend to it where it can/is willing.
         The only coins types that it looks for to approve are CR-CATs at the moment.
@@ -422,9 +422,9 @@ class VCWallet:
         send the change back to it's original puzzle hash or else a taker wallet will not approve it.
         """
         # Gather all of the CRCATs being spent and the CRCATs that each creates
-        crcat_spends: List[CRCATSpend] = []
-        other_spends: List[CoinSpend] = []
-        spends_to_fix: Dict[bytes32, CoinSpend] = {}
+        crcat_spends: list[CRCATSpend] = []
+        other_spends: list[CoinSpend] = []
+        spends_to_fix: dict[bytes32, CoinSpend] = {}
         for spend in offer.to_valid_spend().coin_spends:
             if CRCAT.is_cr_cat(uncurry_puzzle(spend.puzzle_reveal))[0]:
                 crcat_spend: CRCATSpend = CRCATSpend.from_coin_spend(spend)
@@ -440,13 +440,13 @@ class VCWallet:
                     other_spends.append(spend)
 
         # Figure out what VC announcements are needed
-        announcements_to_make: Dict[bytes32, List[CreatePuzzleAnnouncement]] = {}
-        announcements_to_assert: Dict[bytes32, List[AssertCoinAnnouncement]] = {}
-        vcs: Dict[bytes32, VerifiedCredential] = {}
-        coin_args: Dict[str, List[str]] = {}
+        announcements_to_make: dict[bytes32, list[CreatePuzzleAnnouncement]] = {}
+        announcements_to_assert: dict[bytes32, list[AssertCoinAnnouncement]] = {}
+        vcs: dict[bytes32, VerifiedCredential] = {}
+        coin_args: dict[str, list[str]] = {}
         for crcat_spend in crcat_spends:
             # Check first whether we can approve...
-            available_vcs: List[VCRecord] = [
+            available_vcs: list[VCRecord] = [
                 vc_rec
                 for vc_rec in await self.store.get_vc_records_by_providers(crcat_spend.crcat.authorized_providers)
                 if vc_rec.confirmed_at_height != 0
@@ -572,9 +572,9 @@ class VCWallet:
         ), Solver({"vc_authorizations": coin_args})
 
     async def get_vc_with_provider_in_and_proofs(
-        self, authorized_providers: List[bytes32], proofs: List[str]
+        self, authorized_providers: list[bytes32], proofs: list[str]
     ) -> VerifiedCredential:
-        vc_records: List[VCRecord] = await self.store.get_vc_records_by_providers(authorized_providers)
+        vc_records: list[VCRecord] = await self.store.get_vc_records_by_providers(authorized_providers)
         if len(vc_records) == 0:  # pragma: no cover
             raise ValueError(f"VCWallet has no VCs with providers in the following list: {authorized_providers}")
         else:
@@ -588,7 +588,7 @@ class VCWallet:
                     return rec.vc
         raise ValueError(f"No authorized VC has the correct proofs: {proofs}")  # pragma: no cover
 
-    async def proof_of_inclusions_for_root_and_keys(self, root: bytes32, keys: List[str]) -> Program:
+    async def proof_of_inclusions_for_root_and_keys(self, root: bytes32, keys: list[str]) -> Program:
         vc_proofs: Optional[VCProofs] = await self.store.get_proofs_for_root(root)
         if vc_proofs is None:
             raise RuntimeError(f"No proofs exist for VC root: {root.hex()}")  # pragma: no cover
@@ -599,25 +599,25 @@ class VCWallet:
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> Set[Coin]:
+    ) -> set[Coin]:
         raise RuntimeError("VCWallet does not support select_coins()")  # pragma: no cover
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         """The VC wallet doesn't really have a balance."""
         return uint128(0)  # pragma: no cover
 
-    async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_unconfirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         """The VC wallet doesn't really have a balance."""
         return uint128(0)  # pragma: no cover
 
-    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_spendable_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         """The VC wallet doesn't really have a balance."""
         return uint128(0)  # pragma: no cover
 
     async def get_pending_change_balance(self) -> uint64:
         return uint64(0)  # pragma: no cover
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         """This is the confirmed balance, which we set to 0 as the VC wallet doesn't have one."""
         return uint128(0)  # pragma: no cover
 

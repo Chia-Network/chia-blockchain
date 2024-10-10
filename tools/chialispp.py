@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 # A simple class for separating a line into code and comment
 class Line:
-    def __init__(self, code: List[bytes], comment: Optional[List[bytes]]):
+    def __init__(self, code: list[bytes], comment: Optional[list[bytes]]):
         self.code = code
         self.comment = comment
 
 
 # Remove all whitespace from the beginning of a byte array
-def trim_ascii_start(line: List[bytes]) -> List[bytes]:
+def trim_ascii_start(line: list[bytes]) -> list[bytes]:
     first_non_ws: int = 0
     got_one: bool = False
 
@@ -30,7 +30,7 @@ def trim_ascii_start(line: List[bytes]) -> List[bytes]:
 
 
 # Remove all whitespace from the end of a byte array
-def trim_ascii_end(line: List[bytes]) -> List[bytes]:
+def trim_ascii_end(line: list[bytes]) -> list[bytes]:
     last_non_ws: int = 0
     got_one: bool = False
 
@@ -51,21 +51,21 @@ class Formatter:
         self.paren_level: int = 0
         self.out_col: int = 0  # The colum we are at while outputting a line
         self.cur_line: int = 0
-        self.line: List[bytes] = []
-        self.comment: Optional[List[bytes]] = None
-        self.lines: List[List[bytes]] = []
-        self.work_lines: List[Line] = []
+        self.line: list[bytes] = []
+        self.comment: Optional[list[bytes]] = None
+        self.lines: list[list[bytes]] = []
+        self.work_lines: list[Line] = []
         self.getting_form_name: int = 0
         self.got_form_on_line: int = 0
-        self.form_name: List[bytes] = []
+        self.form_name: list[bytes] = []
         self.reset_form_indent: bool = False
         # self.def_started = False
-        self.result_line: List[bytes] = []
+        self.result_line: list[bytes] = []
         # self.definition_starts = []
         # self.extra_def_lines = []
-        self.indent_stack: List[int] = []
-        self.result: List[List[bytes]] = []
-        self.config: Dict[str, Any] = {
+        self.indent_stack: list[int] = []
+        self.result: list[list[bytes]] = []
+        self.config: dict[str, Any] = {
             "gnu_comment_conventions": False,
         }
 
@@ -322,7 +322,7 @@ class Formatter:
             self.indent_stack.pop()
 
 
-def concat_byte_array(bs: List[bytes]) -> bytes:
+def concat_byte_array(bs: list[bytes]) -> bytes:
     return b"".join(bs)
 
 

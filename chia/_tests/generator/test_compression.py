@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
-from typing import Any, List
+from typing import Any
 
 import pytest
 from chia_rs import ALLOW_BACKREFS
@@ -58,7 +58,7 @@ assert serialized_length(gen1) == len(gen1)
 assert serialized_length(gen2) == len(gen2)
 
 
-def spend_bundle_to_coin_spend_entry_list(bundle: SpendBundle) -> List[Any]:
+def spend_bundle_to_coin_spend_entry_list(bundle: SpendBundle) -> list[Any]:
     r = []
     for coin_spend in bundle.coin_spends:
         entry = [

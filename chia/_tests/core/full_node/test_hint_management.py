@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 
@@ -59,7 +59,7 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     br: Optional[BlockRecord] = empty_blockchain.get_peak()
     assert br is not None
 
-    rewards: List[Coin] = [
+    rewards: list[Coin] = [
         Coin(coin_ids[8], phs[8], uint64(1)),
         Coin(coin_ids[9], phs[9], uint64(2)),
         Coin(coin_ids[5], phs[8], uint64(1234)),

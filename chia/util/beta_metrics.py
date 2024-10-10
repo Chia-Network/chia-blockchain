@@ -6,7 +6,7 @@ import platform
 import socket
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import psutil
 
@@ -43,7 +43,7 @@ def log_memory_metrics() -> None:
     log.debug(f"MEMORY - virtual memory: {psutil.virtual_memory()}, swap: {psutil.swap_memory()}")
 
 
-def log_disk_metrics(root_path: Path, plot_dirs: List[str]) -> None:
+def log_disk_metrics(root_path: Path, plot_dirs: list[str]) -> None:
     # TODO, Could this spam the logs too much for large farms? Maybe don't log usage of plot dirs and
     #       set perdisk=False rather for psutil.disk_io_counters? Lets try it with the default interval of 15s for now.
     log.debug(f"DISK partitions: {psutil.disk_partitions()}")
@@ -57,7 +57,7 @@ def log_disk_metrics(root_path: Path, plot_dirs: List[str]) -> None:
     log.debug(f"DISK - io counters: {psutil.disk_io_counters(perdisk=True)}")
 
 
-def log_port_states(config: Dict[str, Any]) -> None:
+def log_port_states(config: dict[str, Any]) -> None:
     selected_network = config["selected_network"]
     full_node_port = config["network_overrides"]["config"][selected_network]["default_full_node_port"]
     test_socket_ipv4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

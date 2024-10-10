@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from chia.data_layer.data_layer import DataLayer
 
 
-def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
+def process_change(change: dict[str, Any]) -> dict[str, Any]:
     # TODO: A full class would likely be nice for this so downstream doesn't
     #       have to deal with maybe-present attributes or Dict[str, Any] hints.
     reference_node_hash = change.get("reference_node_hash")
@@ -68,20 +68,20 @@ def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def process_change_multistore(update: Dict[str, Any]) -> Dict[str, Any]:
+def process_change_multistore(update: dict[str, Any]) -> dict[str, Any]:
     store_id = update.get("store_id")
     if store_id is None:
         raise Exception("Each update must specify a store_id")
     changelist = update.get("changelist")
     if changelist is None:
         raise Exception("Each update must specify a changelist")
-    res: Dict[str, Any] = {}
+    res: dict[str, Any] = {}
     res["store_id"] = bytes32.from_hexstr(store_id)
     res["changelist"] = [process_change(change) for change in changelist]
     return res
 
 
-def get_fee(config: Dict[str, Any], request: Dict[str, Any]) -> uint64:
+def get_fee(config: dict[str, Any], request: dict[str, Any]) -> uint64:
     fee = request.get("fee")
     if fee is None:
         fee = 0  # DL no longer reads the fee from the config
@@ -94,7 +94,7 @@ class DataLayerRpcApi:
         self.service: DataLayer = data_layer
         self.service_name = "chia_data_layer"
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def get_routes(self) -> dict[str, Endpoint]:
         return {
             "/wallet_log_in": self.wallet_log_in,
             "/create_data_store": self.create_data_store,
@@ -133,17 +133,17 @@ class DataLayerRpcApi:
             "/verify_proof": self.verify_proof,
         }
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]]) -> list[WsRpcMessage]:
         return []
 
-    async def wallet_log_in(self, request: Dict[str, Any]) -> EndpointResult:
+    async def wallet_log_in(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
         fingerprint = cast(int, request["fingerprint"])
         await self.service.wallet_log_in(fingerprint=fingerprint)
         return {}
 
-    async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
+    async def create_data_store(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
         fee = get_fee(self.service.config, request)
@@ -154,13 +154,13 @@ class DataLayerRpcApi:
         else:
             return {"id": value.hex()}
 
-    async def get_owned_stores(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_owned_stores(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
         singleton_records = await self.service.get_owned_stores()
         return {"store_ids": [singleton.launcher_id.hex() for singleton in singleton_records]}
 
-    async def get_value(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_value(self, request: dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
         # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
@@ -178,7 +178,7 @@ class DataLayerRpcApi:
             hex = value.hex()
         return {"value": hex}
 
-    async def get_keys(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_keys(self, request: dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
         root_hash: Optional[str] = request.get("root_hash")
@@ -215,7 +215,7 @@ class DataLayerRpcApi:
 
         return response
 
-    async def get_keys_values(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_keys_values(self, request: dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         # NOTE: being outside the rpc, this retains the none-means-unspecified semantics
         root_hash: Optional[str] = request.get("root_hash")
@@ -255,7 +255,7 @@ class DataLayerRpcApi:
 
         return response
 
-    async def get_ancestors(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_ancestors(self, request: dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         node_hash = bytes32.from_hexstr(request["hash"])
         if self.service is None:
@@ -263,7 +263,7 @@ class DataLayerRpcApi:
         value = await self.service.get_ancestors(node_hash, store_id)
         return {"ancestors": value}
 
-    async def batch_update(self, request: Dict[str, Any]) -> EndpointResult:
+    async def batch_update(self, request: dict[str, Any]) -> EndpointResult:
         """
         id  - the id of the store we are operating on
         changelist - a list of changes to apply on store
@@ -285,7 +285,7 @@ class DataLayerRpcApi:
                 raise Exception("Transaction submitted on chain, but submit_on_chain set to False")
             return {}
 
-    async def multistore_batch_update(self, request: Dict[str, Any]) -> EndpointResult:
+    async def multistore_batch_update(self, request: dict[str, Any]) -> EndpointResult:
         fee = get_fee(self.service.config, request)
         store_updates = [process_change_multistore(update) for update in request["store_updates"]]
         submit_on_chain = request.get("submit_on_chain", True)
@@ -301,18 +301,18 @@ class DataLayerRpcApi:
                 raise Exception("Transaction submitted on chain, but submit_on_chain set to False")
             return {}
 
-    async def submit_pending_root(self, request: Dict[str, Any]) -> EndpointResult:
+    async def submit_pending_root(self, request: dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         fee = get_fee(self.service.config, request)
         transaction_record = await self.service.submit_pending_root(store_id, uint64(fee))
         return {"tx_id": transaction_record.name}
 
-    async def submit_all_pending_roots(self, request: Dict[str, Any]) -> EndpointResult:
+    async def submit_all_pending_roots(self, request: dict[str, Any]) -> EndpointResult:
         fee = get_fee(self.service.config, request)
         transaction_records = await self.service.submit_all_pending_roots(uint64(fee))
         return {"tx_id": [transaction_record.name for transaction_record in transaction_records]}
 
-    async def insert(self, request: Dict[str, Any]) -> EndpointResult:
+    async def insert(self, request: dict[str, Any]) -> EndpointResult:
         """
         rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
@@ -329,7 +329,7 @@ class DataLayerRpcApi:
         assert transaction_record is not None
         return {"tx_id": transaction_record.name}
 
-    async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
+    async def delete_key(self, request: dict[str, Any]) -> EndpointResult:
         """
         rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
@@ -345,7 +345,7 @@ class DataLayerRpcApi:
         assert transaction_record is not None
         return {"tx_id": transaction_record.name}
 
-    async def get_root(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_root(self, request: dict[str, Any]) -> EndpointResult:
         """get hash of latest tree root"""
         store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
@@ -356,7 +356,7 @@ class DataLayerRpcApi:
             raise Exception(f"Failed to get root for {store_id.hex()}")
         return {"hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp}
 
-    async def get_local_root(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_local_root(self, request: dict[str, Any]) -> EndpointResult:
         """get hash of latest tree root saved in our local datastore"""
         store_id = bytes32.from_hexstr(request["id"])
         # todo input checks
@@ -365,7 +365,7 @@ class DataLayerRpcApi:
         res = await self.service.get_local_root(store_id)
         return {"hash": res}
 
-    async def get_roots(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_roots(self, request: dict[str, Any]) -> EndpointResult:
         """
         get state hashes for a list of roots
         """
@@ -381,7 +381,7 @@ class DataLayerRpcApi:
                 roots.append({"id": id_bytes, "hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
         return {"root_hashes": roots}
 
-    async def subscribe(self, request: Dict[str, Any]) -> EndpointResult:
+    async def subscribe(self, request: dict[str, Any]) -> EndpointResult:
         """
         subscribe to singleton
         """
@@ -396,7 +396,7 @@ class DataLayerRpcApi:
         await self.service.subscribe(store_id=store_id_bytes, urls=urls)
         return {}
 
-    async def unsubscribe(self, request: Dict[str, Any]) -> EndpointResult:
+    async def unsubscribe(self, request: dict[str, Any]) -> EndpointResult:
         """
         unsubscribe from singleton
         """
@@ -410,16 +410,16 @@ class DataLayerRpcApi:
         await self.service.unsubscribe(store_id_bytes, retain_data)
         return {}
 
-    async def subscriptions(self, request: Dict[str, Any]) -> EndpointResult:
+    async def subscriptions(self, request: dict[str, Any]) -> EndpointResult:
         """
         List current subscriptions
         """
         if self.service is None:
             raise Exception("Data layer not created")
-        subscriptions: List[Subscription] = await self.service.get_subscriptions()
+        subscriptions: list[Subscription] = await self.service.get_subscriptions()
         return {"store_ids": [sub.store_id.hex() for sub in subscriptions]}
 
-    async def remove_subscriptions(self, request: Dict[str, Any]) -> EndpointResult:
+    async def remove_subscriptions(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
         store_id = request.get("id")
@@ -430,7 +430,7 @@ class DataLayerRpcApi:
         await self.service.remove_subscriptions(store_id=store_id_bytes, urls=urls)
         return {}
 
-    async def add_missing_files(self, request: Dict[str, Any]) -> EndpointResult:
+    async def add_missing_files(self, request: dict[str, Any]) -> EndpointResult:
         """
         complete the data server files.
         """
@@ -438,7 +438,7 @@ class DataLayerRpcApi:
             store_ids = request["ids"]
             ids_bytes = [bytes32.from_hexstr(id) for id in store_ids]
         else:
-            subscriptions: List[Subscription] = await self.service.get_subscriptions()
+            subscriptions: list[Subscription] = await self.service.get_subscriptions()
             ids_bytes = [subscription.store_id for subscription in subscriptions]
         overwrite = request.get("overwrite", False)
         foldername: Optional[Path] = None
@@ -448,7 +448,7 @@ class DataLayerRpcApi:
             await self.service.add_missing_files(store_id, overwrite, foldername)
         return {}
 
-    async def get_root_history(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_root_history(self, request: dict[str, Any]) -> EndpointResult:
         """
         get history of state hashes for a store
         """
@@ -457,12 +457,12 @@ class DataLayerRpcApi:
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
         records = await self.service.get_root_history(id_bytes)
-        res: List[Dict[str, Any]] = []
+        res: list[dict[str, Any]] = []
         for rec in records:
             res.insert(0, {"root_hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
         return {"root_history": res}
 
-    async def get_kv_diff(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_kv_diff(self, request: dict[str, Any]) -> EndpointResult:
         """
         get kv diff between two root hashes
         """
@@ -476,7 +476,7 @@ class DataLayerRpcApi:
         hash_2_bytes = bytes32.from_hexstr(hash_2)
         page = request.get("page", None)
         max_page_size = request.get("max_page_size", None)
-        res: List[Dict[str, Any]] = []
+        res: list[dict[str, Any]] = []
 
         if page is None:
             records_dict = await self.service.get_kv_diff(id_bytes, hash_1_bytes, hash_2_bytes)
@@ -501,7 +501,7 @@ class DataLayerRpcApi:
 
         return response
 
-    async def add_mirror(self, request: Dict[str, Any]) -> EndpointResult:
+    async def add_mirror(self, request: dict[str, Any]) -> EndpointResult:
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
         urls = request["urls"]
@@ -510,17 +510,17 @@ class DataLayerRpcApi:
         await self.service.add_mirror(id_bytes, urls, amount, fee)
         return {}
 
-    async def delete_mirror(self, request: Dict[str, Any]) -> EndpointResult:
+    async def delete_mirror(self, request: dict[str, Any]) -> EndpointResult:
         coin_id = request["coin_id"]
         coin_id_bytes = bytes32.from_hexstr(coin_id)
         fee = get_fee(self.service.config, request)
         await self.service.delete_mirror(coin_id_bytes, fee)
         return {}
 
-    async def get_mirrors(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_mirrors(self, request: dict[str, Any]) -> EndpointResult:
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
-        mirrors: List[Mirror] = await self.service.get_mirrors(id_bytes)
+        mirrors: list[Mirror] = await self.service.get_mirrors(id_bytes)
         return {"mirrors": [mirror.to_json_dict() for mirror in mirrors]}
 
     @marshal()  # type: ignore[arg-type]
@@ -566,7 +566,7 @@ class DataLayerRpcApi:
 
         return CancelOfferResponse(success=True)
 
-    async def get_sync_status(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_sync_status(self, request: dict[str, Any]) -> EndpointResult:
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
         if self.service is None:
@@ -582,7 +582,7 @@ class DataLayerRpcApi:
             }
         }
 
-    async def check_plugins(self, request: Dict[str, Any]) -> EndpointResult:
+    async def check_plugins(self, request: dict[str, Any]) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
         plugin_status = await self.service.check_plugins()
@@ -601,7 +601,7 @@ class DataLayerRpcApi:
         if root is None:
             raise ValueError("no root")
 
-        all_proofs: List[HashOnlyProof] = []
+        all_proofs: list[HashOnlyProof] = []
         for key in request.keys:
             node = await self.service.data_store.get_node_by_key(store_id=request.store_id, key=key)
             pi = await self.service.data_store.get_proof_of_inclusion_by_hash(

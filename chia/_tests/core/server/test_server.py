@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Callable, Tuple, cast
+from typing import Callable, cast
 
 import pytest
 from packaging.version import Version
@@ -44,7 +44,7 @@ class TestAPI:
 
 @pytest.mark.anyio
 async def test_duplicate_client_connection(
-    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
     assert await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
@@ -54,7 +54,7 @@ async def test_duplicate_client_connection(
 @pytest.mark.anyio
 @pytest.mark.parametrize("method", [repr, str])
 async def test_connection_string_conversion(
-    two_nodes_one_block: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    two_nodes_one_block: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
     self_hostname: str,
     method: Callable[[object], str],
 ) -> None:
@@ -178,7 +178,7 @@ async def test_error_receive(
 
 @pytest.mark.anyio
 async def test_call_api_of_specific(
-    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools], self_hostname: str
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
     assert await server_1.start_client(PeerInfo(self_hostname, server_2.get_port()), None)
@@ -193,7 +193,7 @@ async def test_call_api_of_specific(
 
 @pytest.mark.anyio
 async def test_call_api_of_specific_for_missing_peer(
-    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
 

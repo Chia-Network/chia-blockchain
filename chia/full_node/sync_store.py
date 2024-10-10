@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import collections
 import logging
+from collections import OrderedDict
 from collections import OrderedDict as orderedDict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, OrderedDict, Set
+from typing import Optional
 
 import typing_extensions
 
@@ -29,14 +30,14 @@ class SyncStore:
     sync_mode: bool = False
     long_sync: bool = False
     # Header hash : peer node id
-    peak_to_peer: OrderedDict[bytes32, Set[bytes32]] = field(default_factory=orderedDict)
+    peak_to_peer: OrderedDict[bytes32, set[bytes32]] = field(default_factory=orderedDict)
     # peer node id : Peak
-    peer_to_peak: Dict[bytes32, Peak] = field(default_factory=dict)
+    peer_to_peak: dict[bytes32, Peak] = field(default_factory=dict)
     # Peak we are syncing towards
     target_peak: Optional[Peak] = None
     peers_changed: asyncio.Event = field(default_factory=asyncio.Event)
     # Set of nodes which we are batch syncing from
-    batch_syncing: Set[bytes32] = field(default_factory=set)
+    batch_syncing: set[bytes32] = field(default_factory=set)
     # Set of nodes which we are backtrack syncing from, and how many threads
     _backtrack_syncing: collections.defaultdict[bytes32, int] = field(
         default_factory=lambda: collections.defaultdict(int),
@@ -79,19 +80,19 @@ class SyncStore:
         if new_peak:
             self.peer_to_peak[peer_id] = Peak(header_hash, height, weight)
 
-    def get_peers_that_have_peak(self, header_hashes: List[bytes32]) -> Set[bytes32]:
+    def get_peers_that_have_peak(self, header_hashes: list[bytes32]) -> set[bytes32]:
         """
         Returns: peer ids of peers that have at least one of the header hashes.
         """
 
-        node_ids: Set[bytes32] = set()
+        node_ids: set[bytes32] = set()
         for header_hash in header_hashes:
             if header_hash in self.peak_to_peer:
                 for node_id in self.peak_to_peer[header_hash]:
                     node_ids.add(node_id)
         return node_ids
 
-    def get_peak_of_each_peer(self) -> Dict[bytes32, Peak]:
+    def get_peak_of_each_peer(self) -> dict[bytes32, Peak]:
         """
         Returns: dictionary of peer id to peak information.
         """

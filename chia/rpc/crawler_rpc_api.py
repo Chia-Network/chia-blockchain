@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.seeder.crawler import Crawler
@@ -13,13 +13,13 @@ class CrawlerRpcApi:
         self.service = crawler
         self.service_name = "chia_crawler"
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def get_routes(self) -> dict[str, Endpoint]:
         return {
             "/get_peer_counts": self.get_peer_counts,
             "/get_ips_after_timestamp": self.get_ips_after_timestamp,
         }
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
         payloads = []
 
         if change_data is None:
@@ -30,7 +30,7 @@ class CrawlerRpcApi:
 
         return payloads
 
-    async def get_peer_counts(self, _request: Dict[str, Any]) -> EndpointResult:
+    async def get_peer_counts(self, _request: dict[str, Any]) -> EndpointResult:
         ipv6_addresses_count = 0
         for host in self.service.best_timestamp_per_peer.keys():
             try:
@@ -54,7 +54,7 @@ class CrawlerRpcApi:
         }
         return data
 
-    async def get_ips_after_timestamp(self, _request: Dict[str, Any]) -> EndpointResult:
+    async def get_ips_after_timestamp(self, _request: dict[str, Any]) -> EndpointResult:
         after = _request.get("after", None)
         if after is None:
             raise ValueError("`after` is required and must be a unix timestamp")
@@ -62,7 +62,7 @@ class CrawlerRpcApi:
         offset = _request.get("offset", 0)
         limit = _request.get("limit", 10000)
 
-        matched_ips: List[str] = []
+        matched_ips: list[str] = []
         for ip, timestamp in self.service.best_timestamp_per_peer.items():
             if timestamp > after:
                 matched_ips.append(ip)

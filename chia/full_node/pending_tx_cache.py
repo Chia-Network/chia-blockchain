@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Optional
 
 from sortedcontainers import SortedDict
 
@@ -15,7 +15,7 @@ class ConflictTxCache:
     _cache_max_total_cost: int
     _cache_max_size: int = 1000
     _cache_cost: int = field(default=0, init=False)
-    _txs: Dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
+    _txs: dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
 
     def get(self, bundle_name: bytes32) -> Optional[MempoolItem]:
         return self._txs.get(bundle_name, None)
@@ -38,7 +38,7 @@ class ConflictTxCache:
             self._cache_cost -= self._txs[first_in].cost
             self._txs.pop(first_in)
 
-    def drain(self) -> Dict[bytes32, MempoolItem]:
+    def drain(self) -> dict[bytes32, MempoolItem]:
         ret = self._txs
         self._txs = {}
         self._cache_cost = 0
@@ -53,8 +53,8 @@ class PendingTxCache:
     _cache_max_total_cost: int
     _cache_max_size: int = 3000
     _cache_cost: int = field(default=0, init=False)
-    _txs: Dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
-    _by_height: SortedDict[uint32, Dict[bytes32, MempoolItem]] = field(default_factory=SortedDict, init=False)
+    _txs: dict[bytes32, MempoolItem] = field(default_factory=dict, init=False)
+    _by_height: SortedDict[uint32, dict[bytes32, MempoolItem]] = field(default_factory=SortedDict, init=False)
 
     def get(self, bundle_name: bytes32) -> Optional[MempoolItem]:
         return self._txs.get(bundle_name, None)
@@ -89,8 +89,8 @@ class PendingTxCache:
             if to_evict[1] == {}:
                 self._by_height.popitem()
 
-    def drain(self, up_to_height: uint32) -> Dict[bytes32, MempoolItem]:
-        ret: Dict[bytes32, MempoolItem] = {}
+    def drain(self, up_to_height: uint32) -> dict[bytes32, MempoolItem]:
+        ret: dict[bytes32, MempoolItem] = {}
 
         if self._txs == {}:
             return ret

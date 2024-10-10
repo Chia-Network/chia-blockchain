@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, BinaryIO, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, BinaryIO, Optional, Union
 
 from chia_rs import G2Element
 from clvm_tools.binutils import disassemble
@@ -49,8 +49,8 @@ ZERO_32 = bytes32([0] * 32)
 
 
 def detect_dependent_coin(
-    names: List[bytes32], deps: Dict[bytes32, List[bytes32]], announcement_dict: Dict[bytes32, List[bytes32]]
-) -> Optional[Tuple[bytes32, bytes32]]:
+    names: list[bytes32], deps: dict[bytes32, list[bytes32]], announcement_dict: dict[bytes32, list[bytes32]]
+) -> Optional[tuple[bytes32, bytes32]]:
     # First, we check for any dependencies on coins in the same bundle
     for name in names:
         for dependency in deps[name]:
@@ -75,19 +75,19 @@ class NotarizedPayment(Payment):
 
 @dataclass(frozen=True, eq=False)
 class Offer:
-    requested_payments: Dict[
-        Optional[bytes32], List[NotarizedPayment]
+    requested_payments: dict[
+        Optional[bytes32], list[NotarizedPayment]
     ]  # The key is the asset id of the asset being requested
     _bundle: WalletSpendBundle
-    driver_dict: Dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
+    driver_dict: dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
 
     # this is a cache of the coin additions made by the SpendBundle (_bundle)
     # ordered by the coin being spent
-    _additions: Dict[Coin, List[Coin]] = field(init=False, repr=False)
-    _hints: Dict[bytes32, bytes32] = field(init=False)
-    _offered_coins: Dict[Optional[bytes32], List[Coin]] = field(init=False, repr=False)
+    _additions: dict[Coin, list[Coin]] = field(init=False, repr=False)
+    _hints: dict[bytes32, bytes32] = field(init=False)
+    _offered_coins: dict[Optional[bytes32], list[Coin]] = field(init=False, repr=False)
     _final_spend_bundle: Optional[WalletSpendBundle] = field(init=False, repr=False)
-    _conditions: Optional[Dict[Coin, List[Condition]]] = field(init=False)
+    _conditions: Optional[dict[Coin, list[Condition]]] = field(init=False)
 
     @staticmethod
     def ph() -> bytes32:
@@ -95,15 +95,15 @@ class Offer:
 
     @staticmethod
     def notarize_payments(
-        requested_payments: Dict[Optional[bytes32], List[Payment]],  # `None` means you are requesting XCH
-        coins: List[Coin],
-    ) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
+        requested_payments: dict[Optional[bytes32], list[Payment]],  # `None` means you are requesting XCH
+        coins: list[Coin],
+    ) -> dict[Optional[bytes32], list[NotarizedPayment]]:
         # This sort should be reproducible in CLVM with `>s`
-        sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
-        sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
+        sorted_coins: list[Coin] = sorted(coins, key=Coin.name)
+        sorted_coin_list: list[list[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
 
-        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
+        notarized_payments: dict[Optional[bytes32], list[NotarizedPayment]] = {}
         for asset_id, payments in requested_payments.items():
             notarized_payments[asset_id] = []
             for p in payments:
@@ -115,10 +115,10 @@ class Offer:
     # The announcements returned from this function must be asserted in whatever spend bundle is created by the wallet
     @staticmethod
     def calculate_announcements(
-        notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]],
-        driver_dict: Dict[bytes32, PuzzleInfo],
-    ) -> List[AssertPuzzleAnnouncement]:
-        announcements: List[AssertPuzzleAnnouncement] = []
+        notarized_payments: dict[Optional[bytes32], list[NotarizedPayment]],
+        driver_dict: dict[bytes32, PuzzleInfo],
+    ) -> list[AssertPuzzleAnnouncement]:
+        announcements: list[AssertPuzzleAnnouncement] = []
         for asset_id, payments in notarized_payments.items():
             if asset_id is not None:
                 if asset_id not in driver_dict:
@@ -135,7 +135,7 @@ class Offer:
     def __post_init__(self) -> None:
         # Verify that there are no duplicate payments
         for payments in self.requested_payments.values():
-            payment_programs: List[bytes32] = [p.name() for p in payments]
+            payment_programs: list[bytes32] = [p.name() for p in payments]
             if len(set(payment_programs)) != len(payment_programs):
                 raise ValueError("Bundle has duplicate requested payments")
 
@@ -145,8 +145,8 @@ class Offer:
                 raise ValueError("Offer does not have enough driver information about the requested payments")
 
         # populate the _additions cache
-        adds: Dict[Coin, List[Coin]] = {}
-        hints: Dict[bytes32, bytes32] = {}
+        adds: dict[Coin, list[Coin]] = {}
+        hints: dict[bytes32, bytes32] = {}
         max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
         for cs in self._bundle.coin_spends:
             # you can't spend the same coin twice in the same SpendBundle
@@ -164,9 +164,9 @@ class Offer:
         object.__setattr__(self, "_hints", hints)
         object.__setattr__(self, "_conditions", None)
 
-    def conditions(self) -> Dict[Coin, List[Condition]]:
+    def conditions(self) -> dict[Coin, list[Condition]]:
         if self._conditions is None:
-            conditions: Dict[Coin, List[Condition]] = {}
+            conditions: dict[Coin, list[Condition]] = {}
             max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
             for cs in self._bundle.coin_spends:
                 try:
@@ -181,7 +181,7 @@ class Offer:
         assert self._conditions is not None, "self._conditions is None"
         return self._conditions
 
-    def valid_times(self) -> Dict[Coin, ConditionValidTimes]:
+    def valid_times(self) -> dict[Coin, ConditionValidTimes]:
         return {coin: parse_timelock_info(conditions) for coin, conditions in self.conditions().items()}
 
     def absolute_valid_times_ban_relatives(self) -> ConditionValidTimes:
@@ -197,13 +197,13 @@ class Offer:
             raise ValueError("Offers with relative timelocks are not currently supported")
         return valid_times
 
-    def hints(self) -> Dict[bytes32, bytes32]:
+    def hints(self) -> dict[bytes32, bytes32]:
         return self._hints
 
-    def additions(self) -> List[Coin]:
+    def additions(self) -> list[Coin]:
         return [c for additions in self._additions.values() for c in additions]
 
-    def removals(self) -> List[Coin]:
+    def removals(self) -> list[Coin]:
         return self._bundle.removals()
 
     def fees(self) -> int:
@@ -212,7 +212,7 @@ class Offer:
         amount_out = sum(_.amount for _ in self.additions())
         return int(amount_in - amount_out)
 
-    def coin_spends(self) -> List[CoinSpend]:
+    def coin_spends(self) -> list[CoinSpend]:
         return self._bundle.coin_spends
 
     def aggregated_signature(self) -> G2Element:
@@ -220,15 +220,15 @@ class Offer:
 
     # This method does not get every coin that is being offered, only the `settlement_payment` children
     # It's also a little heuristic, but it should get most things
-    def _get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
-        offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
+    def _get_offered_coins(self) -> dict[Optional[bytes32], list[Coin]]:
+        offered_coins: dict[Optional[bytes32], list[Coin]] = {}
 
         for parent_spend in self._bundle.coin_spends:
-            coins_for_this_spend: List[Coin] = []
+            coins_for_this_spend: list[Coin] = []
 
             parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal)
             parent_solution: Program = parent_spend.solution.to_program()
-            additions: List[Coin] = self._additions[parent_spend.coin]
+            additions: list[Coin] = self._additions[parent_spend.coin]
 
             puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:
@@ -240,7 +240,7 @@ class Offer:
                 # We're going to look at the conditions created by the inner puzzle
                 conditions: Program = inner_puzzle.run(inner_solution)
                 expected_num_matches: int = 0
-                offered_amounts: List[int] = []
+                offered_amounts: list[int] = []
                 for condition in conditions.as_iter():
                     if condition.first() == 51 and condition.rest().first() == OFFER_MOD_HASH:
                         expected_num_matches += 1
@@ -281,7 +281,7 @@ class Offer:
                 offered_coins[asset_id].extend(coins_for_this_spend)
         return offered_coins
 
-    def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
+    def get_offered_coins(self) -> dict[Optional[bytes32], list[Coin]]:
         try:
             if self._offered_coins is not None:
                 return self._offered_coins
@@ -289,44 +289,44 @@ class Offer:
             object.__setattr__(self, "_offered_coins", self._get_offered_coins())
         return self._offered_coins
 
-    def get_offered_amounts(self) -> Dict[Optional[bytes32], int]:
-        offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
-        offered_amounts: Dict[Optional[bytes32], int] = {}
+    def get_offered_amounts(self) -> dict[Optional[bytes32], int]:
+        offered_coins: dict[Optional[bytes32], list[Coin]] = self.get_offered_coins()
+        offered_amounts: dict[Optional[bytes32], int] = {}
         for asset_id, coins in offered_coins.items():
             offered_amounts[asset_id] = uint64(sum(c.amount for c in coins))
         return offered_amounts
 
-    def get_requested_payments(self) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
+    def get_requested_payments(self) -> dict[Optional[bytes32], list[NotarizedPayment]]:
         return self.requested_payments
 
-    def get_requested_amounts(self) -> Dict[Optional[bytes32], int]:
-        requested_amounts: Dict[Optional[bytes32], int] = {}
+    def get_requested_amounts(self) -> dict[Optional[bytes32], int]:
+        requested_amounts: dict[Optional[bytes32], int] = {}
         for asset_id, coins in self.get_requested_payments().items():
             requested_amounts[asset_id] = uint64(sum(c.amount for c in coins))
         return requested_amounts
 
-    def arbitrage(self) -> Dict[Optional[bytes32], int]:
+    def arbitrage(self) -> dict[Optional[bytes32], int]:
         """
         Returns a dictionary of the type of each asset and amount that is involved in the trade
         With the amount being how much their offered amount within the offer
         exceeds/falls short of their requested amount.
         """
-        offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
-        requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
+        offered_amounts: dict[Optional[bytes32], int] = self.get_offered_amounts()
+        requested_amounts: dict[Optional[bytes32], int] = self.get_requested_amounts()
 
-        arbitrage_dict: Dict[Optional[bytes32], int] = {}
+        arbitrage_dict: dict[Optional[bytes32], int] = {}
         for asset_id in [*requested_amounts.keys(), *offered_amounts.keys()]:
             arbitrage_dict[asset_id] = offered_amounts.get(asset_id, 0) - requested_amounts.get(asset_id, 0)
 
         return arbitrage_dict
 
     # This is a method mostly for the UI that creates a JSON summary of the offer
-    def summary(self) -> Tuple[Dict[str, int], Dict[str, int], Dict[str, Dict[str, Any]], ConditionValidTimes]:
-        offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
-        requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()
+    def summary(self) -> tuple[dict[str, int], dict[str, int], dict[str, dict[str, Any]], ConditionValidTimes]:
+        offered_amounts: dict[Optional[bytes32], int] = self.get_offered_amounts()
+        requested_amounts: dict[Optional[bytes32], int] = self.get_requested_amounts()
 
-        def keys_to_strings(dic: Dict[Optional[bytes32], Any]) -> Dict[str, Any]:
-            new_dic: Dict[str, Any] = {}
+        def keys_to_strings(dic: dict[Optional[bytes32], Any]) -> dict[str, Any]:
+            new_dic: dict[str, Any] = {}
             for key in dic:
                 if key is None:
                     new_dic["xch"] = dic[key]
@@ -334,7 +334,7 @@ class Offer:
                     new_dic[key.hex()] = dic[key]
             return new_dic
 
-        driver_dict: Dict[str, Any] = {}
+        driver_dict: dict[str, Any] = {}
         for key, value in self.driver_dict.items():
             driver_dict[key.hex()] = value.info
 
@@ -347,12 +347,12 @@ class Offer:
 
     # Also mostly for the UI, returns a dictionary of assets and how much of them is pended for this offer
     # This method is also imperfect for sufficiently complex spends
-    def get_pending_amounts(self) -> Dict[str, int]:
-        all_additions: List[Coin] = self.additions()
-        all_removals: List[Coin] = self.removals()
-        non_ephemeral_removals: List[Coin] = list(filter(lambda c: c not in all_additions, all_removals))
+    def get_pending_amounts(self) -> dict[str, int]:
+        all_additions: list[Coin] = self.additions()
+        all_removals: list[Coin] = self.removals()
+        non_ephemeral_removals: list[Coin] = list(filter(lambda c: c not in all_additions, all_removals))
 
-        pending_dict: Dict[str, int] = {}
+        pending_dict: dict[str, int] = {}
         # First we add up the amounts of all coins that share an ancestor with the offered coins (i.e. a primary coin)
         for asset_id, coins in self.get_offered_coins().items():
             name = "xch" if asset_id is None else asset_id.hex()
@@ -372,16 +372,16 @@ class Offer:
         return pending_dict
 
     # This method returns all of the coins that are being used in the offer (without which it would be invalid)
-    def get_involved_coins(self) -> List[Coin]:
+    def get_involved_coins(self) -> list[Coin]:
         additions = self.additions()
         return list(filter(lambda c: c not in additions, self.removals()))
 
     # This returns the non-ephemeral removal that is an ancestor of the specified coin
     # This should maybe move to the SpendBundle object at some point
     def get_root_removal(self, coin: Coin) -> Coin:
-        all_removals: Set[Coin] = set(self.removals())
-        all_removal_ids: Set[bytes32] = {c.name() for c in all_removals}
-        non_ephemeral_removals: Set[Coin] = {
+        all_removals: set[Coin] = set(self.removals())
+        all_removal_ids: set[bytes32] = {c.name() for c in all_removals}
+        non_ephemeral_removals: set[Coin] = {
             c for c in all_removals if c.parent_coin_info not in {r.name() for r in all_removals}
         }
         if coin.name() not in all_removal_ids and coin.parent_coin_info not in all_removal_ids:
@@ -393,19 +393,19 @@ class Offer:
         return coin
 
     # This will only return coins that are ancestors of settlement payments
-    def get_primary_coins(self) -> List[Coin]:
-        primary_coins: Set[Coin] = set()
+    def get_primary_coins(self) -> list[Coin]:
+        primary_coins: set[Coin] = set()
         for _, coins in self.get_offered_coins().items():
             for coin in coins:
                 primary_coins.add(self.get_root_removal(coin))
         return list(primary_coins)
 
     # This returns the minimum coins that when spent will invalidate the rest of the bundle
-    def get_cancellation_coins(self) -> List[Coin]:
+    def get_cancellation_coins(self) -> list[Coin]:
         # First, we're going to gather:
-        dependencies: Dict[bytes32, List[bytes32]] = {}  # all of the hashes that each coin depends on
-        announcements: Dict[bytes32, List[bytes32]] = {}  # all of the hashes of the announcement that each coin makes
-        coin_names: List[bytes32] = []  # The names of all the coins
+        dependencies: dict[bytes32, list[bytes32]] = {}  # all of the hashes that each coin depends on
+        announcements: dict[bytes32, list[bytes32]] = {}  # all of the hashes of the announcement that each coin makes
+        coin_names: list[bytes32] = []  # The names of all the coins
         additions = self.additions()
         for spend in [cs for cs in self._bundle.coin_spends if cs.coin not in additions]:
             name = bytes32(spend.coin.name())
@@ -430,8 +430,8 @@ class Offer:
             if removed is None:
                 break
             removed_coin, provider = removed
-            removed_announcements: List[bytes32] = announcements[removed_coin]
-            remove_these_keys: List[bytes32] = [removed_coin]
+            removed_announcements: list[bytes32] = announcements[removed_coin]
+            remove_these_keys: list[bytes32] = [removed_coin]
             while True:
                 for coin, deps in dependencies.items():
                     if set(deps) & set(removed_announcements) and coin != provider:
@@ -449,14 +449,14 @@ class Offer:
         return [cs.coin for cs in self._bundle.coin_spends if cs.coin.name() in coin_names]
 
     @classmethod
-    def aggregate(cls, offers: List[Offer]) -> Offer:
-        total_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
+    def aggregate(cls, offers: list[Offer]) -> Offer:
+        total_requested_payments: dict[Optional[bytes32], list[NotarizedPayment]] = {}
         total_bundle = WalletSpendBundle([], G2Element())
-        total_driver_dict: Dict[bytes32, PuzzleInfo] = {}
+        total_driver_dict: dict[bytes32, PuzzleInfo] = {}
         for offer in offers:
             # First check for any overlap in inputs
-            total_inputs: Set[Coin] = {cs.coin for cs in total_bundle.coin_spends}
-            offer_inputs: Set[Coin] = {cs.coin for cs in offer._bundle.coin_spends}
+            total_inputs: set[Coin] = {cs.coin for cs in total_bundle.coin_spends}
+            offer_inputs: set[Coin] = {cs.coin for cs in offer._bundle.coin_spends}
             if total_inputs & offer_inputs:
                 raise ValueError("The aggregated offers overlap inputs")
 
@@ -486,23 +486,23 @@ class Offer:
         if not self.is_valid():
             raise ValueError("Offer is currently incomplete")
 
-        completion_spends: List[CoinSpend] = []
-        all_offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
-        total_arbitrage_amount: Dict[Optional[bytes32], int] = self.arbitrage()
+        completion_spends: list[CoinSpend] = []
+        all_offered_coins: dict[Optional[bytes32], list[Coin]] = self.get_offered_coins()
+        total_arbitrage_amount: dict[Optional[bytes32], int] = self.arbitrage()
         for asset_id, payments in self.requested_payments.items():
-            offered_coins: List[Coin] = all_offered_coins[asset_id]
+            offered_coins: list[Coin] = all_offered_coins[asset_id]
 
             # Because of CAT supply laws, we must specify a place for the leftovers to go
             arbitrage_amount: int = total_arbitrage_amount[asset_id]
-            all_payments: List[NotarizedPayment] = payments.copy()
+            all_payments: list[NotarizedPayment] = payments.copy()
             if arbitrage_amount > 0:
                 assert arbitrage_amount is not None
                 assert arbitrage_ph is not None
                 all_payments.append(NotarizedPayment(arbitrage_ph, uint64(arbitrage_amount)))
 
             # Some assets need to know about siblings so we need to collect all spends first to be able to use them
-            coin_to_spend_dict: Dict[Coin, CoinSpend] = {}
-            coin_to_solution_dict: Dict[Coin, Program] = {}
+            coin_to_spend_dict: dict[Coin, CoinSpend] = {}
+            coin_to_solution_dict: dict[Coin, Program] = {}
             for coin in offered_coins:
                 parent_spend: CoinSpend = list(
                     filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self._bundle.coin_spends)
@@ -511,9 +511,9 @@ class Offer:
 
                 inner_solutions = []
                 if coin == offered_coins[0]:
-                    nonces: List[bytes32] = [p.nonce for p in all_payments]
+                    nonces: list[bytes32] = [p.nonce for p in all_payments]
                     for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order
-                        nonce_payments: List[NotarizedPayment] = list(filter(lambda p: p.nonce == nonce, all_payments))
+                        nonce_payments: list[NotarizedPayment] = list(filter(lambda p: p.nonce == nonce, all_payments))
                         inner_solutions.append((nonce, [np.as_condition_args() for np in nonce_payments]))
                 coin_to_solution_dict[coin] = Program.to(inner_solutions)
 
@@ -580,13 +580,13 @@ class Offer:
         except AttributeError:
             pass
         # Before we serialize this as a SpendBundle, we need to serialize the `requested_payments` as dummy CoinSpends
-        additional_coin_spends: List[CoinSpend] = []
+        additional_coin_spends: list[CoinSpend] = []
         for asset_id, payments in self.requested_payments.items():
             puzzle_reveal: Program = construct_puzzle(self.driver_dict[asset_id], OFFER_MOD) if asset_id else OFFER_MOD
             inner_solutions = []
-            nonces: List[bytes32] = [p.nonce for p in payments]
+            nonces: list[bytes32] = [p.nonce for p in payments]
             for nonce in list(dict.fromkeys(nonces)):  # dedup without messing with order
-                nonce_payments: List[NotarizedPayment] = list(filter(lambda p: p.nonce == nonce, payments))
+                nonce_payments: list[NotarizedPayment] = list(filter(lambda p: p.nonce == nonce, payments))
                 inner_solutions.append((nonce, [np.as_condition_args() for np in nonce_payments]))
 
             additional_coin_spends.append(
@@ -613,9 +613,9 @@ class Offer:
     @classmethod
     def from_spend_bundle(cls, bundle: WalletSpendBundle) -> Offer:
         # Because of the `to_spend_bundle` method, we need to parse the dummy CoinSpends as `requested_payments`
-        requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
-        driver_dict: Dict[bytes32, PuzzleInfo] = {}
-        leftover_coin_spends: List[CoinSpend] = []
+        requested_payments: dict[Optional[bytes32], list[NotarizedPayment]] = {}
+        driver_dict: dict[bytes32, PuzzleInfo] = {}
+        leftover_coin_spends: list[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
             driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal))
             if driver is not None:
@@ -625,7 +625,7 @@ class Offer:
             else:
                 asset_id = None
             if coin_spend.coin.parent_coin_info == ZERO_32:
-                notarized_payments: List[NotarizedPayment] = []
+                notarized_payments: list[NotarizedPayment] = []
                 for payment_group in coin_spend.solution.to_program().as_iter():
                     nonce = bytes32(payment_group.first().as_atom())
                     payment_args_list = payment_group.rest().as_iter()
@@ -652,7 +652,7 @@ class Offer:
     def compress(self, version: Optional[int] = None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
         if version is None:
-            mods: List[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
+            mods: list[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
             version = max(lowest_best_version(mods), 6)  # Clients lower than version 6 should not be able to parse
         return compress_object_with_puzzles(bytes(as_spend_bundle), version)
 

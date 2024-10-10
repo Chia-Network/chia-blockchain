@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from typing import Iterable, List, Set, Tuple
+from collections.abc import Iterable
 
 from chia.protocols.shared_protocol import Capability
 from chia.util.ints import uint16
 
 
-def known_active_capabilities(values: Iterable[Tuple[uint16, str]]) -> List[Capability]:
+def known_active_capabilities(values: Iterable[tuple[uint16, str]]) -> list[Capability]:
     # NOTE: order is not guaranteed
     # TODO: what if there's a claim for both supporting and not?
     #       presently it considers it supported
-    filtered: Set[Capability] = set()
+    filtered: set[Capability] = set()
     for value, state in values:
         if state != "1":
             continue

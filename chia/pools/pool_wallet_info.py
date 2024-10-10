@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia_rs import G1Element
 
@@ -62,7 +62,7 @@ class PoolState(Streamable):
 
 
 def initial_pool_state_from_dict(
-    state_dict: Dict[str, Any],
+    state_dict: dict[str, Any],
     owner_pubkey: G1Element,
     owner_puzzle_hash: bytes32,
 ) -> PoolState:

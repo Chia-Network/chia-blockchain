@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import List
 
 import yaml
 
@@ -10,7 +9,7 @@ from chia.data_layer.data_layer_util import PluginRemote
 from chia.util.log_exceptions import log_exceptions
 
 
-async def load_plugin_configurations(root_path: Path, config_type: str, log: logging.Logger) -> List[PluginRemote]:
+async def load_plugin_configurations(root_path: Path, config_type: str, log: logging.Logger) -> list[PluginRemote]:
     """
     Loads plugin configurations from the specified directory and validates that the contents
     are in the expected JSON format (an array of PluginRemote objects). It gracefully handles errors

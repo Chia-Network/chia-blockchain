@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import pytest
 
@@ -29,7 +28,7 @@ class TestRequestType(Streamable):
 @streamable
 @dataclass(frozen=True)
 class TestResponseObject(Streamable):
-    qat: List[str]
+    qat: list[str]
     sub: SubObject
 
 

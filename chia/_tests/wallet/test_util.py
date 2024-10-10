@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import pytest
 
@@ -125,7 +125,7 @@ def test_list_to_binary_tree() -> None:
         ),
     ],
 )
-def test_lineage_proof_varargs(serializations: Tuple[Tuple[Any, ...], Program, List[LineageProofField]]) -> None:
+def test_lineage_proof_varargs(serializations: tuple[tuple[Any, ...], Program, list[LineageProofField]]) -> None:
     var_args, expected_program, lp_fields = serializations
     assert LineageProof(*var_args).to_program() == expected_program
     assert LineageProof(*var_args) == LineageProof.from_program(expected_program, lp_fields)
@@ -164,7 +164,7 @@ def test_lineage_proof_varargs(serializations: Tuple[Tuple[Any, ...], Program, L
         ),
     ],
 )
-def test_lineage_proof_kwargs(serializations: Tuple[Dict[str, Any], Program, List[LineageProofField]]) -> None:
+def test_lineage_proof_kwargs(serializations: tuple[dict[str, Any], Program, list[LineageProofField]]) -> None:
     kwargs, expected_program, lp_fields = serializations
     assert LineageProof(**kwargs).to_program() == expected_program
     assert LineageProof(**kwargs) == LineageProof.from_program(expected_program, lp_fields)

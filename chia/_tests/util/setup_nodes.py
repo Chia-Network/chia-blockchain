@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import anyio
 
@@ -46,8 +47,8 @@ from chia.util.keychain import Keychain
 from chia.util.timing import adjusted_timeout, backoff_times
 from chia.wallet.wallet_node import WalletNode
 
-OldSimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
-SimulatorsAndWalletsServices = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
+OldSimulatorsAndWallets = tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools]
+SimulatorsAndWalletsServices = tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]
 
 
 @dataclass(frozen=True)
@@ -64,8 +65,8 @@ class FullSystem:
 
 @dataclass
 class SimulatorsAndWallets:
-    simulators: List[FullNodeEnvironment]
-    wallets: List[WalletEnvironment]
+    simulators: list[FullNodeEnvironment]
+    wallets: list[WalletEnvironment]
     bt: BlockTools
 
 
@@ -79,7 +80,7 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def setup_two_nodes(
     consensus_constants: ConsensusConstants, db_version: int, self_hostname: str
-) -> AsyncIterator[Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]]:
+) -> AsyncIterator[tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]]:
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
@@ -116,7 +117,7 @@ async def setup_two_nodes(
 @asynccontextmanager
 async def setup_n_nodes(
     consensus_constants: ConsensusConstants, n: int, db_version: int, self_hostname: str
-) -> AsyncIterator[List[FullNodeAPI]]:
+) -> AsyncIterator[list[FullNodeAPI]]:
     """
     Setup and teardown of n full nodes, with blockchains and separate DBs.
     """
@@ -154,8 +155,8 @@ async def setup_simulators_and_wallets(
     key_seed: Optional[bytes32] = None,
     initial_num_public_keys: int = 5,
     db_version: int = 2,
-    config_overrides: Optional[Dict[str, int]] = None,
-    disable_capabilities: Optional[List[Capability]] = None,
+    config_overrides: Optional[dict[str, int]] = None,
+    disable_capabilities: Optional[list[Capability]] = None,
 ) -> AsyncIterator[SimulatorsAndWallets]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         if config_overrides is None:
@@ -175,7 +176,7 @@ async def setup_simulators_and_wallets(
             disable_capabilities,
         ) as (bt_tools, simulators, wallets_services):
             async with contextlib.AsyncExitStack() as exit_stack:
-                wallets: List[WalletEnvironment] = []
+                wallets: list[WalletEnvironment] = []
                 for service in wallets_services:
                     assert service.rpc_server is not None
 
@@ -207,9 +208,9 @@ async def setup_simulators_and_wallets_service(
     key_seed: Optional[bytes32] = None,
     initial_num_public_keys: int = 5,
     db_version: int = 2,
-    config_overrides: Optional[Dict[str, int]] = None,
-    disable_capabilities: Optional[List[Capability]] = None,
-) -> AsyncIterator[Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]]:
+    config_overrides: Optional[dict[str, int]] = None,
+    disable_capabilities: Optional[list[Capability]] = None,
+) -> AsyncIterator[tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]]:
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         async with setup_simulators_and_wallets_inner(
             db_version,
@@ -240,13 +241,13 @@ async def setup_simulators_and_wallets_inner(
     spam_filter_after_n_txs: int,
     wallet_count: int,
     xch_spam_amount: int,
-    config_overrides: Optional[Dict[str, int]],
-    disable_capabilities: Optional[List[Capability]],
-) -> AsyncIterator[Tuple[List[BlockTools], List[SimulatorFullNodeService], List[WalletService]]]:
+    config_overrides: Optional[dict[str, int]],
+    disable_capabilities: Optional[list[Capability]],
+) -> AsyncIterator[tuple[list[BlockTools], list[SimulatorFullNodeService], list[WalletService]]]:
     if config_overrides is not None and "full_node.max_sync_wait" not in config_overrides:
         config_overrides["full_node.max_sync_wait"] = 0
     async with AsyncExitStack() as async_exit_stack:
-        bt_tools: List[BlockTools] = [
+        bt_tools: list[BlockTools] = [
             await create_block_tools_async(consensus_constants, keychain=keychain1, config_overrides=config_overrides)
             for _ in range(0, simulator_count)
         ]
@@ -258,7 +259,7 @@ async def setup_simulators_and_wallets_inner(
                     )
                 )
 
-        simulators: List[SimulatorFullNodeService] = [
+        simulators: list[SimulatorFullNodeService] = [
             await async_exit_stack.enter_async_context(
                 # Passing simulator=True gets us this type guaranteed
                 setup_full_node(  # type: ignore[arg-type]
@@ -274,7 +275,7 @@ async def setup_simulators_and_wallets_inner(
             for index in range(0, simulator_count)
         ]
 
-        wallets: List[WalletService] = [
+        wallets: list[WalletService] = [
             await async_exit_stack.enter_async_context(
                 setup_wallet_node(
                     bt_tools[index].config["self_hostname"],
@@ -301,7 +302,7 @@ async def setup_farmer_multi_harvester(
     consensus_constants: ConsensusConstants,
     *,
     start_services: bool,
-) -> AsyncIterator[Tuple[List[HarvesterService], FarmerService, BlockTools]]:
+) -> AsyncIterator[tuple[list[HarvesterService], FarmerService, BlockTools]]:
     async with AsyncExitStack() as async_exit_stack:
         farmer_service = await async_exit_stack.enter_async_context(
             setup_farmer(

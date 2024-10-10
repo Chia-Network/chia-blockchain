@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass, field, fields
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
+from typing import Any, Callable, Optional, get_type_hints
 
 import pytest
 from chia_rs import G1Element
@@ -69,7 +69,7 @@ def test_dict_not_suppported() -> None:
         @streamable
         @dataclass(frozen=True)
         class TestClassDict(Streamable):
-            a: Dict[str, str]
+            a: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -118,8 +118,8 @@ class StreamableFromDict2(Streamable):
 @streamable
 @dataclass(frozen=True)
 class ConvertTupleFailures(Streamable):
-    a: Tuple[uint8, uint8]
-    b: Tuple[uint8, Tuple[uint8, uint8]]
+    a: tuple[uint8, uint8]
+    b: tuple[uint8, tuple[uint8, uint8]]
 
 
 @pytest.mark.parametrize(
@@ -137,7 +137,7 @@ class ConvertTupleFailures(Streamable):
         pytest.param({"a": (1, 1), "b": (1, "22")}, InvalidTypeError, id="b: invalid type str"),
     ],
 )
-def test_convert_tuple_failures(input_dict: Dict[str, Any], error: Any) -> None:
+def test_convert_tuple_failures(input_dict: dict[str, Any], error: Any) -> None:
     with pytest.raises(error):
         streamable_from_dict(ConvertTupleFailures, input_dict)
 
@@ -145,8 +145,8 @@ def test_convert_tuple_failures(input_dict: Dict[str, Any], error: Any) -> None:
 @streamable
 @dataclass(frozen=True)
 class ConvertListFailures(Streamable):
-    a: List[uint8]
-    b: List[List[uint8]]
+    a: list[uint8]
+    b: list[list[uint8]]
 
 
 @pytest.mark.parametrize(
@@ -160,7 +160,7 @@ class ConvertListFailures(Streamable):
         pytest.param({"a": [1, 1], "b": [1, "22"]}, InvalidTypeError, id="b: invalid type str"),
     ],
 )
-def test_convert_list_failures(input_dict: Dict[str, Any], error: Any) -> None:
+def test_convert_list_failures(input_dict: dict[str, Any], error: Any) -> None:
     with pytest.raises(error):
         streamable_from_dict(ConvertListFailures, input_dict)
 
@@ -189,7 +189,7 @@ class ConvertByteTypeFailures(Streamable):
         pytest.param({"a": "00000000", "b": "invalid"}, ConversionError, id="b: invalid hex string"),
     ],
 )
-def test_convert_byte_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
+def test_convert_byte_type_failures(input_dict: dict[str, Any], error: Any) -> None:
     with pytest.raises(error):
         streamable_from_dict(ConvertByteTypeFailures, input_dict)
 
@@ -214,7 +214,7 @@ class ConvertUnhashableTypeFailures(Streamable):
         pytest.param({"a": b"\00" * G1Element.SIZE}, ValueError, "BLS Error G1InfinityInvalidBits"),
     ],
 )
-def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any, error_msg: str) -> None:
+def test_convert_unhashable_type_failures(input_dict: dict[str, Any], error: Any, error_msg: str) -> None:
     with pytest.raises(error, match=re.escape(error_msg)):
         streamable_from_dict(ConvertUnhashableTypeFailures, input_dict)
 
@@ -240,7 +240,7 @@ class ConvertPrimitiveFailures(Streamable):
         pytest.param({"a": 0, "b": uint8(1), "c": NoStrClass()}, ConversionError, id="c: invalid value"),
     ],
 )
-def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> None:
+def test_convert_primitive_failures(input_dict: dict[str, Any], error: Any) -> None:
     with pytest.raises(error):
         streamable_from_dict(ConvertPrimitiveFailures, input_dict)
 
@@ -309,7 +309,7 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
     ],
 )
 def test_streamable_from_dict_failures(
-    test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any, error_message: str
+    test_class: type[Streamable], input_dict: dict[str, Any], error: Any, error_message: str
 ) -> None:
     with pytest.raises(error, match=re.escape(error_message)):
         streamable_from_dict(test_class, input_dict)
@@ -320,7 +320,7 @@ def test_streamable_from_dict_failures(
 class TestFromJsonDictDefaultValues(Streamable):
     a: uint64 = uint64(1)
     b: str = "default"
-    c: List[uint64] = field(default_factory=list)
+    c: list[uint64] = field(default_factory=list)
 
 
 @pytest.mark.parametrize(
@@ -333,30 +333,30 @@ class TestFromJsonDictDefaultValues(Streamable):
         [{"a": 2, "b": "not_default", "c": [1, 2]}, {"a": 2, "b": "not_default", "c": [1, 2]}],
     ],
 )
-def test_from_json_dict_default_values(input_dict: Dict[str, object], output_dict: Dict[str, object]) -> None:
+def test_from_json_dict_default_values(input_dict: dict[str, object], output_dict: dict[str, object]) -> None:
     assert str(TestFromJsonDictDefaultValues.from_json_dict(input_dict).to_json_dict()) == str(output_dict)
 
 
 def test_basic_list() -> None:
     a = [1, 2, 3]
     assert is_type_List(type(a))
-    assert is_type_List(List)
-    assert is_type_List(List[int])
-    assert is_type_List(List[uint8])
     assert is_type_List(list)
-    assert not is_type_List(type(Tuple))
+    assert is_type_List(list[int])
+    assert is_type_List(list[uint8])
+    assert is_type_List(list)
+    assert not is_type_List(type(tuple))
     assert not is_type_List(tuple)
     assert not is_type_List(dict)
 
 
 def test_not_lists() -> None:
-    assert not is_type_List(Dict)
+    assert not is_type_List(dict)
 
 
 def test_basic_optional() -> None:
     assert is_type_SpecificOptional(Optional[int])
     assert is_type_SpecificOptional(Optional[Optional[int]])
-    assert not is_type_SpecificOptional(List[int])
+    assert not is_type_SpecificOptional(list[int])
 
 
 @streamable
@@ -388,15 +388,15 @@ class PostInitTestClassOptional(Streamable):
 @streamable
 @dataclass(frozen=True)
 class PostInitTestClassList(Streamable):
-    a: List[uint8]
-    b: List[List[G1Element]]
+    a: list[uint8]
+    b: list[list[G1Element]]
 
 
 @streamable
 @dataclass(frozen=True)
 class PostInitTestClassTuple(Streamable):
-    a: Tuple[uint8, str]
-    b: Tuple[Tuple[uint8, str], bytes32]
+    a: tuple[uint8, str]
+    b: tuple[tuple[uint8, str], bytes32]
 
 
 @pytest.mark.parametrize(
@@ -410,8 +410,8 @@ class PostInitTestClassTuple(Streamable):
         (PostInitTestClassOptional, (12, None, 13, None)),
     ],
 )
-def test_post_init_valid(test_class: Type[Any], args: Tuple[Any, ...]) -> None:
-    def validate_item_type(type_in: Type[Any], item: object) -> bool:
+def test_post_init_valid(test_class: type[Any], args: tuple[Any, ...]) -> None:
+    def validate_item_type(type_in: type[Any], item: object) -> bool:
         if is_type_SpecificOptional(type_in):
             return item is None or validate_item_type(get_args(type_in)[0], item)
         if is_type_Tuple(type_in):
@@ -449,7 +449,7 @@ def test_post_init_valid(test_class: Type[Any], args: Tuple[Any, ...]) -> None:
         (PostInitTestClassOptional, ([], None, None, None), ValueError),
     ],
 )
-def test_post_init_failures(test_class: Type[Any], args: Tuple[Any, ...], expected_exception: Type[Exception]) -> None:
+def test_post_init_failures(test_class: type[Any], args: tuple[Any, ...], expected_exception: type[Exception]) -> None:
     with pytest.raises(expected_exception):
         test_class(*args)
 
@@ -460,11 +460,11 @@ def test_basic() -> None:
     class TestClass(Streamable):
         a: uint32
         b: uint32
-        c: List[uint32]
-        d: List[List[uint32]]
+        c: list[uint32]
+        d: list[list[uint32]]
         e: Optional[uint32]
         f: Optional[uint32]
-        g: Tuple[uint32, str, bytes]
+        g: tuple[uint32, str, bytes]
 
     # we want to test invalid here, hence the ignore.
     a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))  # type: ignore[arg-type,list-item] # noqa: E501
@@ -503,7 +503,7 @@ def test_json(bt: BlockTools) -> None:
 class OptionalTestClass(Streamable):
     a: Optional[str]
     b: Optional[bool]
-    c: Optional[List[Optional[str]]]
+    c: Optional[list[Optional[str]]]
 
 
 @pytest.mark.parametrize(
@@ -517,7 +517,7 @@ class OptionalTestClass(Streamable):
         (None, None, None),
     ],
 )
-def test_optional_json(a: Optional[str], b: Optional[bool], c: Optional[List[Optional[str]]]) -> None:
+def test_optional_json(a: Optional[str], b: Optional[bool], c: Optional[list[Optional[str]]]) -> None:
     obj: OptionalTestClass = OptionalTestClass.from_json_dict({"a": a, "b": b, "c": c})
     assert obj.a == a
     assert obj.b == b
@@ -527,14 +527,14 @@ def test_optional_json(a: Optional[str], b: Optional[bool], c: Optional[List[Opt
 @streamable
 @dataclass(frozen=True)
 class TestClassRecursive1(Streamable):
-    a: List[uint32]
+    a: list[uint32]
 
 
 @streamable
 @dataclass(frozen=True)
 class TestClassRecursive2(Streamable):
     a: uint32
-    b: List[Optional[List[TestClassRecursive1]]]
+    b: list[Optional[list[TestClassRecursive1]]]
     c: bytes32
 
 
@@ -586,7 +586,7 @@ def test_ambiguous_deserialization_list() -> None:
     @streamable
     @dataclass(frozen=True)
     class TestClassList(Streamable):
-        a: List[uint8]
+        a: list[uint8]
 
     # Does not have the required elements
     with pytest.raises(ValueError):
@@ -597,7 +597,7 @@ def test_ambiguous_deserialization_tuple() -> None:
     @streamable
     @dataclass(frozen=True)
     class TestClassTuple(Streamable):
-        a: Tuple[uint8, str]
+        a: tuple[uint8, str]
 
     # Does not have the required elements
     with pytest.raises(AssertionError):

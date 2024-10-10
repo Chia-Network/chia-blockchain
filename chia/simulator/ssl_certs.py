@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field
-from typing import Dict, Generic, List, Tuple, TypeVar
+from typing import Generic, TypeVar
 
 from chia.simulator.ssl_certs_1 import SSL_TEST_NODE_CERTS_AND_KEYS_1, SSL_TEST_PRIVATE_CA_CERT_AND_KEY_1
 from chia.simulator.ssl_certs_2 import SSL_TEST_NODE_CERTS_AND_KEYS_2, SSL_TEST_PRIVATE_CA_CERT_AND_KEY_2
@@ -39,12 +39,12 @@ class SSLTestCollateralTracker:
 
 @dataclass
 class SSLTestCACertAndPrivateKey(SSLTestCollateralTracker):
-    cert_and_key: Tuple[bytes, bytes]
+    cert_and_key: tuple[bytes, bytes]
 
 
 @dataclass
 class SSLTestNodeCertsAndKeys(SSLTestCollateralTracker):
-    certs_and_keys: Dict[str, Dict[str, Dict[str, bytes]]]
+    certs_and_keys: dict[str, dict[str, dict[str, bytes]]]
 
 
 @dataclass
@@ -64,7 +64,7 @@ class SSLTestCollateralWrapper(Generic[_T_SSLTestCollateral]):
 # Private CA certs/keys
 # ---------------------------------------------------------------------------
 
-SSL_TEST_PRIVATE_CA_CERTS_AND_KEYS: List[SSLTestCACertAndPrivateKey] = [
+SSL_TEST_PRIVATE_CA_CERTS_AND_KEYS: list[SSLTestCACertAndPrivateKey] = [
     SSLTestCACertAndPrivateKey(SSL_TEST_PRIVATE_CA_CERT_AND_KEY_1),
     SSLTestCACertAndPrivateKey(SSL_TEST_PRIVATE_CA_CERT_AND_KEY_2),
     SSLTestCACertAndPrivateKey(SSL_TEST_PRIVATE_CA_CERT_AND_KEY_3),
@@ -81,7 +81,7 @@ SSL_TEST_PRIVATE_CA_CERTS_AND_KEYS: List[SSLTestCACertAndPrivateKey] = [
 # Node -> cert/key mappings
 # ---------------------------------------------------------------------------
 
-SSL_TEST_NODE_CERTS_AND_KEYS: List[SSLTestNodeCertsAndKeys] = [
+SSL_TEST_NODE_CERTS_AND_KEYS: list[SSLTestNodeCertsAndKeys] = [
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_1),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_2),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_3),

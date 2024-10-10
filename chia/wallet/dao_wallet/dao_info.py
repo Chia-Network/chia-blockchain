@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -33,13 +33,13 @@ class DAOInfo(Streamable):
     treasury_id: bytes32
     cat_wallet_id: uint32
     dao_cat_wallet_id: uint32
-    proposals_list: List[ProposalInfo]
-    parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
+    proposals_list: list[ProposalInfo]
+    parent_info: list[tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
     current_treasury_coin: Optional[Coin]
     current_treasury_innerpuz: Optional[Program]
     singleton_block_height: uint32  # the block height that the current treasury singleton was created in
     filter_below_vote_amount: uint64  # we ignore proposals with fewer votes than this - defaults to 1
-    assets: List[Optional[bytes32]]
+    assets: list[Optional[bytes32]]
     current_height: uint64
 
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import compute_merkle_set_root
 
@@ -12,8 +12,8 @@ from chia.util.errors import Err
 def validate_block_merkle_roots(
     block_additions_root: bytes32,
     block_removals_root: bytes32,
-    tx_additions: Optional[List[Tuple[Coin, bytes32]]] = None,
-    tx_removals: Optional[List[bytes32]] = None,
+    tx_additions: Optional[list[tuple[Coin, bytes32]]] = None,
+    tx_removals: Optional[list[bytes32]] = None,
 ) -> Optional[Err]:
     if tx_removals is None:
         tx_removals = []
@@ -21,7 +21,7 @@ def validate_block_merkle_roots(
         tx_additions = []
 
     # Create addition Merkle set
-    puzzlehash_coins_map: Dict[bytes32, List[bytes32]] = {}
+    puzzlehash_coins_map: dict[bytes32, list[bytes32]] = {}
 
     for coin, coin_name in tx_additions:
         if coin.puzzle_hash in puzzlehash_coins_map:
@@ -30,7 +30,7 @@ def validate_block_merkle_roots(
             puzzlehash_coins_map[coin.puzzle_hash] = [coin_name]
 
     # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-    additions_merkle_items: List[bytes32] = []
+    additions_merkle_items: list[bytes32] = []
     for puzzle, coin_ids in puzzlehash_coins_map.items():
         additions_merkle_items.append(puzzle)
         additions_merkle_items.append(hash_coin_ids(coin_ids))

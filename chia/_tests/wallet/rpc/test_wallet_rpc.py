@@ -6,7 +6,7 @@ import json
 import logging
 import random
 from operator import attrgetter
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 import aiosqlite
 import pytest
@@ -231,7 +231,7 @@ async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostna
                 yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
 
 
-async def create_tx_outputs(wallet: Wallet, output_args: List[Tuple[int, Optional[List[str]]]]) -> List[Dict[str, Any]]:
+async def create_tx_outputs(wallet: Wallet, output_args: list[tuple[int, Optional[list[str]]]]) -> list[dict[str, Any]]:
     outputs = []
     for args in output_args:
         output = {"amount": uint64(args[0]), "puzzle_hash": await wallet.get_new_puzzlehash()}
@@ -242,7 +242,7 @@ async def create_tx_outputs(wallet: Wallet, output_args: List[Tuple[int, Optiona
     return outputs
 
 
-async def assert_wallet_types(client: WalletRpcClient, expected: Dict[WalletType, int]) -> None:
+async def assert_wallet_types(client: WalletRpcClient, expected: dict[WalletType, int]) -> None:
     for wallet_type in WalletType:
         wallets = await client.get_wallets(wallet_type)
         wallet_count = len(wallets)
@@ -254,7 +254,7 @@ async def assert_wallet_types(client: WalletRpcClient, expected: Dict[WalletType
 
 def assert_tx_amounts(
     tx: TransactionRecord,
-    outputs: List[Dict[str, Any]],
+    outputs: list[dict[str, Any]],
     *,
     amount_fee: uint64,
     change_expected: bool,
@@ -541,7 +541,7 @@ async def test_get_timestamp_for_height(wallet_rpc_environment: WalletRpcTestEnv
 @pytest.mark.anyio
 async def test_create_signed_transaction(
     wallet_rpc_environment: WalletRpcTestEnvironment,
-    output_args: List[Tuple[int, Optional[List[str]]]],
+    output_args: list[tuple[int, Optional[list[str]]]],
     fee: int,
     select_coin: bool,
     is_cat: bool,
@@ -609,7 +609,7 @@ async def test_create_signed_transaction(
     await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, wallet_id)
 
     # Assert every coin comes from the same parent
-    additions: List[Coin] = spend_bundle.additions()
+    additions: list[Coin] = spend_bundle.additions()
     assert len({c.parent_coin_info for c in additions}) == 2 if is_cat else 1
 
     # Assert you can get the spend for each addition
@@ -622,8 +622,8 @@ async def test_create_signed_transaction(
         assert spend is not None
 
     # Assert the memos are all correct
-    addition_dict: Dict[bytes32, Coin] = {addition.name(): addition for addition in additions}
-    memo_dictionary: Dict[bytes32, List[bytes]] = compute_memos(spend_bundle)
+    addition_dict: dict[bytes32, Coin] = {addition.name(): addition for addition in additions}
+    memo_dictionary: dict[bytes32, list[bytes]] = compute_memos(spend_bundle)
     for output in outputs:
         if "memos" in output:
             found: bool = False
@@ -1222,7 +1222,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
     await time_out_assert(5, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
-    test_crs: List[CoinRecord] = await wallet_1_rpc.get_coin_records_by_names(
+    test_crs: list[CoinRecord] = await wallet_1_rpc.get_coin_records_by_names(
         [a.name() for a in spend_bundle.additions() if a.amount != 4]
     )
     for cr in test_crs:
@@ -1236,7 +1236,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     all_offers = await wallet_1_rpc.get_all_offers()
     assert len(all_offers) == 0
 
-    driver_dict: Dict[str, Any] = {cat_asset_id.hex(): {"type": "CAT", "tail": "0x" + cat_asset_id.hex()}}
+    driver_dict: dict[str, Any] = {cat_asset_id.hex(): {"type": "CAT", "tail": "0x" + cat_asset_id.hex()}}
 
     create_res = await wallet_1_rpc.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1},
@@ -1842,8 +1842,8 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     funds = await generate_funds(full_node_api, env.wallet_1)
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
-    coin_300: List[Coin]
-    tx_amounts: List[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
+    coin_300: list[Coin]
+    tx_amounts: list[uint64] = [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]
     for tx_amount in tx_amounts:
         funds -= tx_amount
         # create coins for tests
@@ -1859,7 +1859,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
         await time_out_assert(20, get_confirmed_balance, funds, client, 1)
 
     # test min coin amount
-    min_coins: List[Coin] = await client_2.select_coins(
+    min_coins: list[Coin] = await client_2.select_coins(
         amount=1000,
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(min_coin_amount=uint64(1001)),
@@ -1868,7 +1868,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
 
     # test max coin amount
-    max_coins: List[Coin] = await client_2.select_coins(
+    max_coins: list[Coin] = await client_2.select_coins(
         amount=2000,
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(
@@ -1880,7 +1880,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
 
     # test excluded coin amounts
     non_1000_amt: int = sum(a for a in tx_amounts if a != 1000)
-    excluded_amt_coins: List[Coin] = await client_2.select_coins(
+    excluded_amt_coins: list[Coin] = await client_2.select_coins(
         amount=non_1000_amt,
         wallet_id=1,
         coin_selection_config=DEFAULT_COIN_SELECTION_CONFIG.override(excluded_coin_amounts=[uint64(1000)]),
@@ -1963,7 +1963,7 @@ async def test_get_coin_records_rpc(wallet_rpc_environment: WalletRpcTestEnviron
         test_case: str,
         test_request: GetCoinRecords,
         test_total_count: Optional[int],
-        test_records: List[WalletCoinRecord],
+        test_records: list[WalletCoinRecord],
     ):
         response = await client.get_coin_records(test_request)
         assert response["coin_records"] == [coin.to_json_dict_parsed_metadata() for coin in test_records], test_case
@@ -2324,8 +2324,8 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
 @pytest.mark.limit_consensus_modes(reason="irrelevant")
 async def test_verify_signature(
     wallet_rpc_environment: WalletRpcTestEnvironment,
-    rpc_request: Dict[str, Any],
-    rpc_response: Dict[str, Any],
+    rpc_request: dict[str, Any],
+    rpc_response: dict[str, Any],
     prefix_hex_strings: bool,
 ):
     rpc_server: Optional[RpcServer] = wallet_rpc_environment.wallet_1.service.rpc_server

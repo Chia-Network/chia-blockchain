@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Type
+from typing import Any
 
 from chia_rs import PrivateKey
 
@@ -65,7 +65,7 @@ class GetKeyRequest(Streamable):
 @streamable
 @dataclass(frozen=True)
 class GetKeysResponse(Streamable):
-    keys: List[KeyData]
+    keys: list[KeyData]
 
 
 @streamable
@@ -91,7 +91,7 @@ class GetPublicKeyRequest(Streamable):
 class GetPublicKeyResponse(Streamable):
     key: KeyData
 
-    def to_json_dict(self) -> Dict[str, Any]:
+    def to_json_dict(self) -> dict[str, Any]:
         # Ensure that only approved keys are returned
         approved_keys = ["fingerprint", "public_key", "label"]
         key_dict = self.key.to_json_dict()
@@ -108,9 +108,9 @@ class GetPublicKeysRequest(Streamable):
 @streamable
 @dataclass(frozen=True)
 class GetPublicKeysResponse(Streamable):
-    keys: List[KeyData]
+    keys: list[KeyData]
 
-    def to_json_dict(self) -> Dict[str, Any]:
+    def to_json_dict(self) -> dict[str, Any]:
         # Ensure that only approved keys are returned
         approved_keys = ["fingerprint", "public_key", "label"]
         return {
@@ -149,9 +149,9 @@ class KeychainServer:
     """
 
     _default_keychain: Keychain = field(default_factory=Keychain)
-    _alt_keychains: Dict[str, Keychain] = field(default_factory=dict)
+    _alt_keychains: dict[str, Keychain] = field(default_factory=dict)
 
-    def get_keychain_for_request(self, request: Dict[str, Any]) -> Keychain:
+    def get_keychain_for_request(self, request: dict[str, Any]) -> Keychain:
         """
         Keychain instances can have user and service strings associated with them.
         The keychain backends ultimately point to the same data stores, but the user
@@ -171,7 +171,7 @@ class KeychainServer:
                 self._alt_keychains[key] = keychain
         return keychain
 
-    async def handle_command(self, command: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_command(self, command: str, data: dict[str, Any]) -> dict[str, Any]:
         try:
             if command == "add_private_key":
                 data["private"] = True
@@ -208,7 +208,7 @@ class KeychainServer:
             log.exception(e)
             return {"success": False, "error": str(e), "command": command}
 
-    async def add_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def add_key(self, request: dict[str, Any]) -> dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
@@ -245,7 +245,7 @@ class KeychainServer:
 
         return {"success": True, "fingerprint": fingerprint}
 
-    async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def check_keys(self, request: dict[str, Any]) -> dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
@@ -261,7 +261,7 @@ class KeychainServer:
 
         return {"success": True}
 
-    async def delete_all_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def delete_all_keys(self, request: dict[str, Any]) -> dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
@@ -269,7 +269,7 @@ class KeychainServer:
 
         return {"success": True}
 
-    async def delete_key_by_fingerprint(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def delete_key_by_fingerprint(self, request: dict[str, Any]) -> dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
@@ -285,7 +285,7 @@ class KeychainServer:
 
         return {"success": True}
 
-    async def run_request(self, request_dict: Dict[str, Any], request_type: Type[Any]) -> Dict[str, Any]:
+    async def run_request(self, request_dict: dict[str, Any], request_type: type[Any]) -> dict[str, Any]:
         keychain = self.get_keychain_for_request(request_dict)
         if keychain.is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
@@ -314,8 +314,8 @@ class KeychainServer:
                 "error_details": {"message": str(e)},
             }
 
-    async def get_all_private_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        all_keys: List[Dict[str, Any]] = []
+    async def get_all_private_keys(self, request: dict[str, Any]) -> dict[str, Any]:
+        all_keys: list[dict[str, Any]] = []
         if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
@@ -325,8 +325,8 @@ class KeychainServer:
 
         return {"success": True, "private_keys": all_keys}
 
-    async def get_first_private_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        key: Dict[str, Any] = {}
+    async def get_first_private_key(self, request: dict[str, Any]) -> dict[str, Any]:
+        key: dict[str, Any] = {}
         if self.get_keychain_for_request(request).is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
@@ -340,7 +340,7 @@ class KeychainServer:
 
         return {"success": True, "private_key": key}
 
-    async def get_key_for_fingerprint(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_key_for_fingerprint(self, request: dict[str, Any]) -> dict[str, Any]:
         keychain = self.get_keychain_for_request(request)
         if keychain.is_keyring_locked():
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}

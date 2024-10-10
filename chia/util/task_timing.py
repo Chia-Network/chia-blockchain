@@ -6,8 +6,9 @@ import inspect
 import os
 import sys
 import time
+from collections.abc import Iterator
 from types import FrameType
-from typing import Any, Dict, Iterator, List
+from typing import Any
 
 # This is a development utility that instruments tasks (coroutines) and records
 # wall-clock time they spend in various functions. Since it relies on
@@ -49,7 +50,7 @@ class CallInfo:
 
 
 class TaskInfo:
-    stack: Dict[FrameType, FrameInfo]
+    stack: dict[FrameType, FrameInfo]
     stack_pos: int
 
     def __init__(self) -> None:
@@ -65,7 +66,7 @@ class FunctionInfo:
     file: str
     num_calls: int
     duration: float
-    callers: Dict[str, CallInfo]
+    callers: dict[str, CallInfo]
     fun_id: int
 
     def __init__(self, name: str, file: str) -> None:
@@ -81,9 +82,9 @@ class FunctionInfo:
 
 
 # maps tasks to call-treea
-g_function_infos: Dict[str, Dict[str, FunctionInfo]] = {}
+g_function_infos: dict[str, dict[str, FunctionInfo]] = {}
 
-g_tasks: Dict[asyncio.Task[Any], TaskInfo] = {}
+g_tasks: dict[asyncio.Task[Any], TaskInfo] = {}
 
 g_cwd = os.getcwd() + "/"
 
@@ -348,13 +349,13 @@ def maybe_manage_task_instrumentation(enable: bool) -> Iterator[None]:
         yield
 
 
-def main(args: List[str]) -> int:
+def main(args: list[str]) -> int:
     import glob
     import pathlib
     import subprocess
 
     profile_dir = pathlib.Path(args[0])
-    queue: List[subprocess.Popen[bytes]] = []
+    queue: list[subprocess.Popen[bytes]] = []
     for file in glob.glob(str(profile_dir / "*.dot")):
         print(file)
         if os.path.exists(file + ".png"):

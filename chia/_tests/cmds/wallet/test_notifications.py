@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Tuple, cast
+from typing import Optional, cast
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, get_bytes32
@@ -18,7 +18,7 @@ test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=u
 # Notifications Commands
 
 
-def test_notifications_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_notifications_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -71,7 +71,7 @@ def test_notifications_send(capsys: object, get_test_cli_clients: Tuple[TestRpcC
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_notifications_get(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_notifications_get(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -105,12 +105,12 @@ def test_notifications_get(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_notifications_delete(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_notifications_delete(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class NotificationsDeleteRpcClient(TestWalletRpcClient):
-        async def delete_notifications(self, ids: Optional[List[bytes32]] = None) -> bool:
+        async def delete_notifications(self, ids: Optional[list[bytes32]] = None) -> bool:
             self.add_to_log("delete_notifications", (ids,))
             return True
 

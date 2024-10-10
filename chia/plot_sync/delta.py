@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Union
+from typing import Union
 
 from chia.protocols.harvester_protocol import Plot
 
 
 @dataclass
 class DeltaType:
-    additions: Union[Dict[str, Plot], List[str]]
-    removals: List[str]
+    additions: Union[dict[str, Plot], list[str]]
+    removals: list[str]
 
     def __str__(self) -> str:
         return f"+{len(self.additions)}/-{len(self.removals)}"
@@ -24,17 +24,17 @@ class DeltaType:
 
 @dataclass
 class PlotListDelta(DeltaType):
-    additions: Dict[str, Plot] = field(default_factory=dict)
-    removals: List[str] = field(default_factory=list)
+    additions: dict[str, Plot] = field(default_factory=dict)
+    removals: list[str] = field(default_factory=list)
 
 
 @dataclass
 class PathListDelta(DeltaType):
-    additions: List[str] = field(default_factory=list)
-    removals: List[str] = field(default_factory=list)
+    additions: list[str] = field(default_factory=list)
+    removals: list[str] = field(default_factory=list)
 
     @staticmethod
-    def from_lists(old: List[str], new: List[str]) -> PathListDelta:
+    def from_lists(old: list[str], new: list[str]) -> PathListDelta:
         return PathListDelta([x for x in new if x not in old], [x for x in old if x not in new])
 
 

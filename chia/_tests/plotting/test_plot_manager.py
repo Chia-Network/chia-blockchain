@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 import sys
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, Iterator, List, Optional, cast
+from typing import Callable, Optional, cast
 
 import pytest
 from chia_rs import G1Element
@@ -48,9 +49,9 @@ class MockPlotInfo:
 
 class Directory:
     path: Path
-    plots: List[Path]
+    plots: list[Path]
 
-    def __init__(self, path: Path, plots_origin: List[Path]):
+    def __init__(self, path: Path, plots_origin: list[Path]):
         self.path = path
         path.mkdir(parents=True, exist_ok=True)
         # Drop the existing files in the test directories
@@ -66,10 +67,10 @@ class Directory:
     def __len__(self):
         return len(self.plots)
 
-    def plot_info_list(self) -> List[MockPlotInfo]:
+    def plot_info_list(self) -> list[MockPlotInfo]:
         return [MockPlotInfo(MockDiskProver(str(x))) for x in self.plots]
 
-    def path_list(self) -> List[Path]:
+    def path_list(self) -> list[Path]:
         return self.plots
 
     def drop(self, path: Path):
@@ -149,7 +150,7 @@ class Environment:
 def environment(tmp_path, bt) -> Iterator[Environment]:
     dir_1_count: int = 7
     dir_2_count: int = 3
-    plots: List[Path] = get_test_plots()
+    plots: list[Path] = get_test_plots()
     assert len(plots) >= dir_1_count + dir_2_count
 
     dir_1: Directory = Directory(tmp_path / "plots" / "1", plots[0:dir_1_count])
@@ -180,14 +181,14 @@ async def test_plot_refreshing(environment):
         *,
         trigger: Callable,
         test_path: Path,
-        expect_loaded: List[MockPlotInfo],
-        expect_removed: List[Path],
+        expect_loaded: list[MockPlotInfo],
+        expect_removed: list[Path],
         expect_processed: int,
         expect_duplicates: int,
         expected_directories: int,
         expect_total_plots: int,
     ):
-        expected_result.loaded = cast(List[PlotInfo], expect_loaded)
+        expected_result.loaded = cast(list[PlotInfo], expect_loaded)
         expected_result.removed = expect_removed
         expected_result.processed = expect_processed
         trigger(env.root_path, str(test_path))
@@ -432,7 +433,7 @@ async def test_invalid_plots(environment):
 @pytest.mark.anyio
 async def test_keys_missing(environment: Environment) -> None:
     env: Environment = environment
-    not_in_keychain_plots: List[Path] = get_test_plots("not_in_keychain")
+    not_in_keychain_plots: list[Path] = get_test_plots("not_in_keychain")
     dir_not_in_keychain: Directory = Directory(env.root_path / "plots" / "not_in_keychain", not_in_keychain_plots)
     expected_result = PlotRefreshResult()
     # The plots in "not_in_keychain" directory have infinity g1 elements as farmer/pool key so they should be plots
@@ -584,7 +585,7 @@ async def test_drop_too_large_cache_entries(environment, bt):
         )
         return path
 
-    def assert_cache(expected: List[MockPlotInfo]) -> None:
+    def assert_cache(expected: list[MockPlotInfo]) -> None:
         test_cache = Cache(cache_path)
         assert len(test_cache) == 0
         test_cache.load()

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 import pytest
 
@@ -32,17 +32,17 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
-async def get_proposal_state(wallet: DAOWallet, index: int) -> Tuple[Optional[bool], Optional[bool]]:
+async def get_proposal_state(wallet: DAOWallet, index: int) -> tuple[Optional[bool], Optional[bool]]:
     return wallet.dao_info.proposals_list[index].passed, wallet.dao_info.proposals_list[index].closed
 
 
 async def rpc_state(
     timeout: float,
     async_function: Callable[[Any], Any],
-    params: List[Union[int, Dict[str, Any]]],
-    condition_func: Callable[[Dict[str, Any]], Any],
+    params: list[Union[int, dict[str, Any]]],
+    condition_func: Callable[[dict[str, Any]], Any],
     result: Optional[Any] = None,
-) -> Union[bool, Dict[str, Any]]:  # pragma: no cover
+) -> Union[bool, dict[str, Any]]:  # pragma: no cover
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)

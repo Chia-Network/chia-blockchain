@@ -4,7 +4,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pytest
 from click.testing import CliRunner, Result
@@ -105,7 +105,7 @@ class TestKeysCommands:
         assert len(address_matches) > 1
         address = address_matches[0]
 
-        config: Dict = load_config(tmp_path, "config.yaml")
+        config: dict = load_config(tmp_path, "config.yaml")
         assert config["farmer"]["xch_target_address"] == address
         assert config["pool"]["xch_target_address"] == address
 
@@ -153,7 +153,7 @@ class TestKeysCommands:
         assert len(address_matches) > 1
         address = address_matches[0]
 
-        existing_config: Dict = load_config(tmp_path, "config.yaml")
+        existing_config: dict = load_config(tmp_path, "config.yaml")
         assert existing_config["farmer"]["xch_target_address"] == address
         assert existing_config["pool"]["xch_target_address"] == address
 
@@ -177,7 +177,7 @@ class TestKeysCommands:
         assert len(keychain.get_all_private_keys()) == 2
 
         # Verify that the config's xch_target_address entries have not changed
-        config: Dict = load_config(tmp_path, "config.yaml")
+        config: dict = load_config(tmp_path, "config.yaml")
         assert config["farmer"]["xch_target_address"] == existing_config["farmer"]["xch_target_address"]
         assert config["pool"]["xch_target_address"] == existing_config["pool"]["xch_target_address"]
 
@@ -200,7 +200,7 @@ class TestKeysCommands:
         ],
     )
     def test_generate_and_add_label_parameter(
-        self, cmd_params: List[str], label: Optional[str], input_str: Optional[str], tmp_path, empty_keyring
+        self, cmd_params: list[str], label: Optional[str], input_str: Optional[str], tmp_path, empty_keyring
     ):
         keychain = empty_keyring
         keys_root_path = keychain.keyring_wrapper.keys_root_path

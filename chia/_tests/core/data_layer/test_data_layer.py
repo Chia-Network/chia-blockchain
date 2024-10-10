@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import pytest
 
@@ -26,7 +26,7 @@ class SufficientWalletRpcClient:
 
 @pytest.mark.parametrize(argnames="enable", argvalues=[True, False], ids=["log", "do not log"])
 @pytest.mark.anyio
-async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Path) -> None:
+async def test_sql_logs(enable: bool, config: dict[str, Any], tmp_chia_root: Path) -> None:
     config["data_layer"]["log_sqlite_cmds"] = enable
 
     log_path = tmp_chia_root.joinpath("log", "data_sql.log")
@@ -51,7 +51,7 @@ async def test_sql_logs(enable: bool, config: Dict[str, Any], tmp_chia_root: Pat
 @pytest.mark.anyio
 async def test_plugin_requests_use_custom_headers(
     recording_web_server: RecordingWebServer,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     tmp_chia_root: Path,
 ) -> None:
     header_key = "vbiuoqemnrlah"

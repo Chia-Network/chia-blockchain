@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar
 
 from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, run_chia_program, tree_hash
 from clvm.casts import int_from_bytes
@@ -30,14 +30,14 @@ class Program(SExp):
     """
 
     @classmethod
-    def parse(cls: Type[T_Program], f) -> T_Program:
+    def parse(cls: type[T_Program], f) -> T_Program:
         return sexp_from_stream(f, cls.to)
 
     def stream(self, f):
         sexp_to_stream(self, f)
 
     @classmethod
-    def from_bytes(cls: Type[T_Program], blob: bytes) -> T_Program:
+    def from_bytes(cls: type[T_Program], blob: bytes) -> T_Program:
         # this runs the program "1", which just returns the first argument.
         # the first argument is the buffer we want to parse. This effectively
         # leverages the rust parser and LazyNode, making it a lot faster to
@@ -51,11 +51,11 @@ class Program(SExp):
         return cls.to(ret)
 
     @classmethod
-    def fromhex(cls: Type[T_Program], hexstr: str) -> T_Program:
+    def fromhex(cls: type[T_Program], hexstr: str) -> T_Program:
         return cls.from_bytes(hexstr_to_bytes(hexstr))
 
     @classmethod
-    def from_json_dict(cls: Type[Program], json_dict: Any) -> Program:
+    def from_json_dict(cls: type[Program], json_dict: Any) -> Program:
         if isinstance(json_dict, cls):
             return json_dict
         item = hexstr_to_bytes(json_dict)
@@ -124,12 +124,12 @@ class Program(SExp):
     def get_tree_hash(self) -> bytes32:
         return bytes32(tree_hash(bytes(self)))
 
-    def _run(self, max_cost: int, flags: int, args: Any) -> Tuple[int, Program]:
+    def _run(self, max_cost: int, flags: int, args: Any) -> tuple[int, Program]:
         prog_args = Program.to(args)
         cost, r = run_chia_program(self.as_bin(), prog_args.as_bin(), max_cost, flags)
         return cost, Program.to(r)
 
-    def run_with_cost(self, max_cost: int, args: Any, flags=DEFAULT_FLAGS) -> Tuple[int, Program]:
+    def run_with_cost(self, max_cost: int, args: Any, flags=DEFAULT_FLAGS) -> tuple[int, Program]:
         # when running puzzles in the wallet, default to enabling all soft-forks
         # as well as enabling mempool-mode (i.e. strict mode)
         return self._run(max_cost, flags, args)
@@ -138,7 +138,7 @@ class Program(SExp):
         cost, r = self._run(max_cost, flags, args)
         return r
 
-    def run_with_flags(self, max_cost: int, flags: int, args: Any) -> Tuple[int, Program]:
+    def run_with_flags(self, max_cost: int, flags: int, args: Any) -> tuple[int, Program]:
         return self._run(max_cost, flags, args)
 
     # Replicates the curry function from clvm_tools, taking advantage of *args
@@ -163,7 +163,7 @@ class Program(SExp):
             fixed_args = [4, (1, arg), fixed_args]
         return Program.to([2, (1, self), fixed_args])
 
-    def uncurry(self) -> Tuple[Program, Program]:
+    def uncurry(self) -> tuple[Program, Program]:
         def match(o: CLVMStorage, expected: bytes) -> None:
             if o.atom != expected:
                 raise ValueError(f"expected: {expected.hex()}")
@@ -216,7 +216,7 @@ class Program(SExp):
     EvalError = EvalError
 
 
-def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
+def _tree_hash(node: SExp, precalculated: set[bytes32]) -> bytes32:
     """
     Hash values in `precalculated` are presumed to have been hashed already.
     """
@@ -252,7 +252,7 @@ def _sexp_replace(sexp: T_CLVMStorage, to_sexp: Callable[[Any], T_Program], **kw
     # Now split `kwargs` into two groups: those
     # that start with `f` and those that start with `r`
 
-    args_by_prefix: Dict[str, Dict[str, Any]] = {}
+    args_by_prefix: dict[str, dict[str, Any]] = {}
     for k, v in kwargs.items():
         c = k[0]
         if c not in "fr":

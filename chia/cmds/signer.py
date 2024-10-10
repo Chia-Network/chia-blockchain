@@ -3,11 +3,12 @@ from __future__ import annotations
 import itertools
 import os
 import time
+from collections.abc import Sequence
 from dataclasses import replace
 from functools import cached_property
 from pathlib import Path
 from threading import Event, Thread
-from typing import List, Sequence, Type, TypeVar
+from typing import TypeVar
 
 import click
 from chia_rs import AugSchemeMPL, G2Element
@@ -61,7 +62,7 @@ class QrCodeDisplay:
         show_default=True,
     )
 
-    def _display_qr(self, index: int, max_index: int, code_list: List[QRCode], stop_event: Event) -> None:
+    def _display_qr(self, index: int, max_index: int, code_list: list[QRCode], stop_event: Event) -> None:
         while not stop_event.is_set():
             for qr_code in itertools.cycle(code_list):
                 _clear_screen()
@@ -74,7 +75,7 @@ class QrCodeDisplay:
                     if stop_event.is_set():
                         return
 
-    def display_qr_codes(self, blobs: List[bytes]) -> None:
+    def display_qr_codes(self, blobs: list[bytes]) -> None:
         chunk_sizes = [optimal_chunk_size_for_max_chunk_size(len(blob), self.qr_density) for blob in blobs]
         chunks = [create_chunks_for_blob(blob, chunk_size) for blob, chunk_size in zip(blobs, chunk_sizes)]
         qr_codes = [[make_qr(chunk) for chunk in chks] for chks in chunks]
@@ -118,7 +119,7 @@ class TransactionsOut:
         required=True,
     )
 
-    def handle_transaction_output(self, output: List[TransactionRecord]) -> None:
+    def handle_transaction_output(self, output: list[TransactionRecord]) -> None:
         with open(Path(self.transaction_file_out), "wb") as file:
             file.write(bytes(TransactionBundle(output)))
 
@@ -148,8 +149,8 @@ class SPIn(_SPTranslation):
         required=True,
     )
 
-    def read_sp_input(self, typ: Type[_T_ClvmStreamable]) -> List[_T_ClvmStreamable]:
-        final_list: List[_T_ClvmStreamable] = []
+    def read_sp_input(self, typ: type[_T_ClvmStreamable]) -> list[_T_ClvmStreamable]:
+        final_list: list[_T_ClvmStreamable] = []
         for filename in self.signer_protocol_input:  # pylint: disable=not-an-iterable
             with open(Path(filename), "rb") as file:
                 final_list.append(
@@ -182,7 +183,7 @@ class SPOut(QrCodeDisplay, _SPTranslation):
         help="The file(s) to output to (if --output-format=file)",
     )
 
-    def handle_clvm_output(self, outputs: List[Streamable]) -> None:
+    def handle_clvm_output(self, outputs: list[Streamable]) -> None:
         translation_layer = ALL_TRANSLATION_LAYERS[self.translation] if self.translation != "none" else None
         if self.output_format == "hex":
             for output in outputs:
@@ -219,7 +220,7 @@ class GatherSigningInfoCMD:
 
     async def run(self) -> None:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
-            spends: List[Spend] = [
+            spends: list[Spend] = [
                 Spend.from_coin_spend(cs)
                 for tx in self.txs_in.transaction_bundle.txs
                 if tx.spend_bundle is not None
@@ -240,19 +241,19 @@ class ApplySignaturesCMD:
 
     async def run(self) -> None:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
-            signing_responses: List[SigningResponse] = self.sp_in.read_sp_input(SigningResponse)
-            spends: List[Spend] = [
+            signing_responses: list[SigningResponse] = self.sp_in.read_sp_input(SigningResponse)
+            spends: list[Spend] = [
                 Spend.from_coin_spend(cs)
                 for tx in self.txs_in.transaction_bundle.txs
                 if tx.spend_bundle is not None
                 for cs in tx.spend_bundle.coin_spends
             ]
-            signed_transactions: List[SignedTransaction] = (
+            signed_transactions: list[SignedTransaction] = (
                 await wallet_rpc.client.apply_signatures(
                     ApplySignatures(spends=spends, signing_responses=signing_responses)
                 )
             ).signed_transactions
-            signed_spends: List[Spend] = [spend for tx in signed_transactions for spend in tx.transaction_info.spends]
+            signed_spends: list[Spend] = [spend for tx in signed_transactions for spend in tx.transaction_info.spends]
             final_signature: G2Element = G2Element()
             for signature in [sig for tx in signed_transactions for sig in tx.signatures]:
                 if signature.type != "bls_12381_aug_scheme":  # pragma: no cover
@@ -260,7 +261,7 @@ class ApplySignaturesCMD:
                     return
                 final_signature = AugSchemeMPL.aggregate([final_signature, G2Element.from_bytes(signature.signature)])
             new_spend_bundle = WalletSpendBundle([spend.as_coin_spend() for spend in signed_spends], final_signature)
-            new_transactions: List[TransactionRecord] = [
+            new_transactions: list[TransactionRecord] = [
                 replace(
                     self.txs_in.transaction_bundle.txs[0], spend_bundle=new_spend_bundle, name=new_spend_bundle.name()
                 ),
@@ -277,7 +278,7 @@ class ExecuteSigningInstructionsCMD:
 
     async def run(self) -> None:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
-            signing_instructions: List[SigningInstructions] = self.sp_in.read_sp_input(SigningInstructions)
+            signing_instructions: list[SigningInstructions] = self.sp_in.read_sp_input(SigningInstructions)
             self.sp_out.handle_clvm_output(
                 [
                     signing_response

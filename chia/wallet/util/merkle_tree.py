@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from clvm.casts import int_to_bytes
 
@@ -28,13 +28,13 @@ class TreeType(Enum):
 
 class MerkleTree:
     type: TreeType
-    nodes: List[bytes32]
+    nodes: list[bytes32]
 
-    def __init__(self, nodes: List[bytes32], waterfall: bool = False) -> None:
+    def __init__(self, nodes: list[bytes32], waterfall: bool = False) -> None:
         self.type = TreeType.WATERFALL if waterfall else TreeType.TREE
         self.nodes = nodes
 
-    def split_list(self, puzzle_hashes: List[bytes32]) -> Tuple[List[bytes32], List[bytes32]]:
+    def split_list(self, puzzle_hashes: list[bytes32]) -> tuple[list[bytes32], list[bytes32]]:
         if self.type == TreeType.TREE:
             mid_index = math.ceil(len(puzzle_hashes) / 2)
             first = puzzle_hashes[0:mid_index]
@@ -45,7 +45,7 @@ class MerkleTree:
 
         return first, rest
 
-    def _root(self, puzzle_hashes: List[bytes32]) -> bytes32:
+    def _root(self, puzzle_hashes: list[bytes32]) -> bytes32:
         if len(puzzle_hashes) == 1:
             return hash_an_atom(puzzle_hashes[0])
         else:
@@ -56,8 +56,8 @@ class MerkleTree:
         return self._root(self.nodes)
 
     def _proof(
-        self, puzzle_hashes: List[bytes32], searching_for: bytes32
-    ) -> Tuple[Optional[int], Optional[List[bytes32]], bytes32, Optional[int]]:
+        self, puzzle_hashes: list[bytes32], searching_for: bytes32
+    ) -> tuple[Optional[int], Optional[list[bytes32]], bytes32, Optional[int]]:
         if len(puzzle_hashes) == 1:
             atom_hash = hash_an_atom(puzzle_hashes[0])
             if puzzle_hashes[0] == searching_for:
@@ -95,6 +95,6 @@ class MerkleTree:
 
             return (final_path, final_list, pair_hash, bit_num + 1 if bit_num is not None else None)
 
-    def generate_proof(self, leaf_reveal: bytes32) -> Tuple[Optional[int], List[Optional[List[bytes32]]]]:
+    def generate_proof(self, leaf_reveal: bytes32) -> tuple[Optional[int], list[Optional[list[bytes32]]]]:
         proof = self._proof(self.nodes, leaf_reveal)
         return (proof[0], [proof[1]])

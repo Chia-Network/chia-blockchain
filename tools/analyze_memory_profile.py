@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from subprocess import check_call
 from sys import stdout
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 import click
 from colorama import Back, Fore, Style, init
@@ -27,7 +27,7 @@ class Frame:
     size: int
     fun_id: int
     count: int = 1
-    callers: Dict[str, CallInfo] = field(default_factory=dict)
+    callers: dict[str, CallInfo] = field(default_factory=dict)
 
     def add(self, size: int) -> None:
         self.size += size
@@ -49,7 +49,7 @@ def fontcolor(pct: float) -> str:
 def resolve_function(file: str, line: int) -> str:
     try:
         with open(file) as f:
-            all_lines: List[str] = []
+            all_lines: list[str] = []
             for row in f:
                 all_lines.append(row)
 
@@ -116,7 +116,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
 
     print(f"generating call tree for slot {slot}")
 
-    all_frames: Dict[str, Frame] = {}
+    all_frames: dict[str, Frame] = {}
 
     total_size = 0
     calls = 0
@@ -129,7 +129,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
             stdout.write(f"\rtotal size: {total_size/1000000:0.3f} MB ({calls} allocs) ")
         # to support recursive functions, make sure we only visit each frame
         # once during traversal
-        visited: Set[str] = set()
+        visited: set[str] = set()
         for frame in trace.traceback:
             fun = resolve_function(frame.filename, frame.lineno)
             if fun in visited:

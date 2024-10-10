@@ -6,7 +6,7 @@ helper it's required to install the `legacy_keyring` extra dependency which can 
 from __future__ import annotations
 
 import sys
-from typing import Callable, List, Union, cast
+from typing import Callable, Union, cast
 
 import click
 from chia_rs import G1Element
@@ -85,8 +85,8 @@ def get_key_data(keyring: LegacyKeyring, index: int) -> KeyData:
     )
 
 
-def get_keys(keyring: LegacyKeyring) -> List[KeyData]:
-    keys: List[KeyData] = []
+def get_keys(keyring: LegacyKeyring) -> list[KeyData]:
+    keys: list[KeyData] = []
     for index in range(MAX_KEYS):
         try:
             keys.append(get_key_data(keyring, index))

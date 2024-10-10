@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -15,7 +15,7 @@ NFT_STATE_LAYER_MOD = load_clvm_maybe_recompile(
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 
 
-def match_metadata_layer_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, List[Program]]:
+def match_metadata_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
     if puzzle.mod == NFT_STATE_LAYER_MOD:
         return True, list(puzzle.args.as_iter())
     return False, []

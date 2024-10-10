@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Tuple
+from typing import Any
 
 import pytest
 
@@ -31,9 +31,9 @@ async def get_trade_and_status(trade_manager: Any, trade: TradeRecord) -> TradeS
     return TradeStatus(trade_rec.status)
 
 
-def get_parent_branch(value: bytes32, proof: Tuple[int, List[bytes32]]) -> Tuple[bytes32, Tuple[int, List[bytes32]]]:
+def get_parent_branch(value: bytes32, proof: tuple[int, list[bytes32]]) -> tuple[bytes32, tuple[int, list[bytes32]]]:
     branch: bytes32 = simplify_merkle_proof(value, (proof[0], [proof[1][0]]))
-    new_proof: Tuple[int, List[bytes32]] = (proof[0] >> 1, proof[1][1:])
+    new_proof: tuple[int, list[bytes32]] = (proof[0] >> 1, proof[1][1:])
     return branch, new_proof
 
 

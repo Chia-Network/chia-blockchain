@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import random
-from typing import Tuple
 
 import importlib_resources
 from chia_rs import AugSchemeMPL, ClassgroupElement, Coin, G1Element, G2Element, VDFInfo, VDFProof
@@ -24,7 +23,7 @@ clvm_generator_bin_path = importlib_resources.files(__name__.rpartition(".")[0])
 clvm_generator = clvm_generator_bin_path.read_bytes()
 
 
-def rewards(height: uint32) -> Tuple[Coin, Coin]:
+def rewards(height: uint32) -> tuple[Coin, Coin]:
     farmer_coin = create_farmer_coin(height, ph, uint64(250000000), DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
     pool_coin = create_pool_coin(height, ph, uint64(1750000000), DEFAULT_CONSTANTS.GENESIS_CHALLENGE)
     return farmer_coin, pool_coin

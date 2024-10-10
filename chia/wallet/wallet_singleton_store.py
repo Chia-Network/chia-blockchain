@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import List, Optional, Type, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 from clvm.casts import int_from_bytes
 
@@ -28,7 +28,7 @@ class WalletSingletonStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: Type[_T_WalletSingletonStore], wrapper: DBWrapper2) -> _T_WalletSingletonStore:
+    async def create(cls: type[_T_WalletSingletonStore], wrapper: DBWrapper2) -> _T_WalletSingletonStore:
         self = cls()
         self.db_wrapper = wrapper
 
@@ -183,7 +183,7 @@ class WalletSingletonStore:
             )
             return c.rowcount > 0
 
-    async def get_records_by_wallet_id(self, wallet_id: int) -> List[SingletonRecord]:
+    async def get_records_by_wallet_id(self, wallet_id: int) -> list[SingletonRecord]:
         """
         Retrieves all entries for a wallet ID.
         """
@@ -195,7 +195,7 @@ class WalletSingletonStore:
             )
         return [self._to_singleton_record(row) for row in rows]
 
-    async def get_records_by_coin_id(self, coin_id: bytes32) -> List[SingletonRecord]:
+    async def get_records_by_coin_id(self, coin_id: bytes32) -> list[SingletonRecord]:
         """
         Retrieves all entries for a coin ID.
         """
@@ -207,7 +207,7 @@ class WalletSingletonStore:
             )
         return [self._to_singleton_record(row) for row in rows]
 
-    async def get_records_by_singleton_id(self, singleton_id: bytes32) -> List[SingletonRecord]:
+    async def get_records_by_singleton_id(self, singleton_id: bytes32) -> list[SingletonRecord]:
         """
         Retrieves all entries for a singleton ID.
         """
@@ -234,7 +234,7 @@ class WalletSingletonStore:
 
     async def count(self, wallet_id: Optional[uint32] = None) -> int:
         sql = "SELECT COUNT(singleton_id) FROM singletons WHERE removed_height=0"
-        params: List[uint32] = []
+        params: list[uint32] = []
         if wallet_id is not None:
             sql += " AND wallet_id=?"
             params.append(wallet_id)
@@ -246,7 +246,7 @@ class WalletSingletonStore:
 
     async def is_empty(self, wallet_id: Optional[uint32] = None) -> bool:
         sql = "SELECT 1 FROM singletons WHERE removed_height=0"
-        params: List[Union[uint32, bytes32]] = []
+        params: list[Union[uint32, bytes32]] = []
         if wallet_id is not None:
             sql += " AND wallet_id=?"
             params.append(wallet_id)

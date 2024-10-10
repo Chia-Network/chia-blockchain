@@ -11,7 +11,8 @@ if sys.platform == "win32":
     import _overlapped
     import _winapi
 
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Optional, Tuple, Union
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 from typing_extensions import Protocol, TypeAlias
 
@@ -83,7 +84,7 @@ if TYPE_CHECKING:
                 self,
                 ov: _overlapped.Overlapped,
                 obj: socket.socket,
-                callback: Callable[[object, socket.socket, _overlapped.Overlapped], Tuple[socket.socket, object]],
+                callback: Callable[[object, socket.socket, _overlapped.Overlapped], tuple[socket.socket, object]],
             ) -> _OverlappedFuture: ...
 
             def _get_accept_socket(self, family: socket.AddressFamily) -> socket.socket: ...
@@ -251,7 +252,7 @@ if sys.platform == "win32":
         def disable_connections(self) -> None:
             self.allow_connections = False
 
-        async def _chia_accept_loop(self, listener: socket.socket) -> Tuple[socket.socket, Tuple[object, ...]]:
+        async def _chia_accept_loop(self, listener: socket.socket) -> tuple[socket.socket, tuple[object, ...]]:
             while True:
                 # TODO: switch to Event code.
                 while not self.allow_connections:
@@ -266,7 +267,7 @@ if sys.platform == "win32":
                     ):
                         raise
 
-        def _chia_accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
+        def _chia_accept(self, listener: socket.socket) -> asyncio.Future[tuple[socket.socket, tuple[object, ...]]]:
             self._register_with_iocp(listener)
             conn = self._get_accept_socket(listener.family)  # pylint: disable=assignment-from-no-return
             ov = _overlapped.Overlapped(_winapi.NULL)
@@ -274,7 +275,7 @@ if sys.platform == "win32":
 
             def finish_accept(
                 trans: object, key: socket.socket, ov: _overlapped.Overlapped
-            ) -> Tuple[socket.socket, object]:
+            ) -> tuple[socket.socket, object]:
                 ov.getresult()
                 # Use SO_UPDATE_ACCEPT_CONTEXT so getsockname() etc work.
                 buf = struct.pack("@P", listener.fileno())
@@ -302,7 +303,7 @@ if sys.platform == "win32":
             asyncio.ensure_future(coro, loop=self._loop)
             return future
 
-        def accept(self, listener: socket.socket) -> asyncio.Future[Tuple[socket.socket, Tuple[object, ...]]]:
+        def accept(self, listener: socket.socket) -> asyncio.Future[tuple[socket.socket, tuple[object, ...]]]:
             coro = self._chia_accept_loop(listener)
             return asyncio.ensure_future(coro)
 

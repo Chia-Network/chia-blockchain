@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -21,10 +21,10 @@ class BlockchainMock:
 
     def __init__(
         self,
-        blocks: Dict[bytes32, BlockRecord],
-        headers: Optional[Dict[bytes32, HeaderBlock]] = None,
-        height_to_hash: Optional[Dict[uint32, bytes32]] = None,
-        sub_epoch_summaries: Optional[Dict[uint32, SubEpochSummary]] = None,
+        blocks: dict[bytes32, BlockRecord],
+        headers: Optional[dict[bytes32, HeaderBlock]] = None,
+        height_to_hash: Optional[dict[uint32, bytes32]] = None,
+        sub_epoch_summaries: Optional[dict[uint32, SubEpochSummary]] = None,
     ):
         if sub_epoch_summaries is None:
             sub_epoch_summaries = {}
@@ -36,7 +36,7 @@ class BlockchainMock:
         self._headers = headers
         self._height_to_hash = height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
-        self._sub_epoch_segments: Dict[bytes32, SubEpochSegments] = {}
+        self._sub_epoch_segments: dict[bytes32, SubEpochSegments] = {}
         self.log = logging.getLogger(__name__)
 
     def get_peak(self) -> Optional[BlockRecord]:
@@ -56,7 +56,7 @@ class BlockchainMock:
 
         return self.block_record(header_hash)
 
-    def get_ses_heights(self) -> List[uint32]:
+    def get_ses_heights(self) -> list[uint32]:
         return sorted(self._sub_epoch_summaries.keys())
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
@@ -78,11 +78,11 @@ class BlockchainMock:
     async def warmup(self, fork_point: uint32) -> None:
         return
 
-    async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
+    async def get_block_records_in_range(self, start: int, stop: int) -> dict[bytes32, BlockRecord]:
         return self._block_records
 
-    async def get_block_records_at(self, heights: List[uint32]) -> List[BlockRecord]:
-        block_records: List[BlockRecord] = []
+    async def get_block_records_at(self, heights: list[uint32]) -> list[BlockRecord]:
+        block_records: list[BlockRecord] = []
         for height in heights:
             block_records.append(self.height_to_block_record(height))
         return block_records
@@ -93,7 +93,7 @@ class BlockchainMock:
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
         return self._block_records[header_hash]
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         ret = []
         for h in header_hashes:
             ret.append(self._block_records[h].prev_hash)
@@ -107,18 +107,18 @@ class BlockchainMock:
 
     async def get_header_blocks_in_range(
         self, start: int, stop: int, tx_filter: bool = True
-    ) -> Dict[bytes32, HeaderBlock]:
+    ) -> dict[bytes32, HeaderBlock]:
         return self._headers
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
+        self, sub_epoch_summary_hash: bytes32, segments: list[SubEpochChallengeSegment]
     ) -> None:
         self._sub_epoch_segments[sub_epoch_summary_hash] = SubEpochSegments(segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
         sub_epoch_summary_hash: bytes32,
-    ) -> Optional[List[SubEpochChallengeSegment]]:
+    ) -> Optional[list[SubEpochChallengeSegment]]:
         segments = self._sub_epoch_segments.get(sub_epoch_summary_hash)
         if segments is None:
             return None
@@ -127,6 +127,6 @@ class BlockchainMock:
     def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:
         return False
 
-    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: Set[uint32]) -> Dict[uint32, bytes]:
+    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
         # not implemented
         assert False  # pragma: no cover

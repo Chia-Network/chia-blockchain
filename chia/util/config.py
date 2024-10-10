@@ -10,8 +10,9 @@ import sys
 import tempfile
 import time
 import traceback
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Union, cast
+from typing import Any, Callable, Optional, Union, cast
 
 import importlib_resources
 import yaml
@@ -30,7 +31,7 @@ def initial_config_file(filename: Union[str, Path]) -> str:
     return contents
 
 
-def create_default_chia_config(root_path: Path, filenames: List[str] = ["config.yaml"]) -> None:
+def create_default_chia_config(root_path: Path, filenames: list[str] = ["config.yaml"]) -> None:
     for filename in filenames:
         default_config_file_data: str = initial_config_file(filename)
         path: Path = config_path_for_filename(root_path, filename)
@@ -66,7 +67,7 @@ def lock_and_load_config(
     root_path: Path,
     filename: Union[str, Path],
     fill_missing_services: bool = False,
-) -> Iterator[Dict[str, Any]]:
+) -> Iterator[dict[str, Any]]:
     with lock_config(root_path=root_path, filename=filename):
         config = _load_config_maybe_locked(
             root_path=root_path,
@@ -96,7 +97,7 @@ def load_config(
     sub_config: Optional[str] = None,
     exit_on_error: bool = True,
     fill_missing_services: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     return _load_config_maybe_locked(
         root_path=root_path,
         filename=filename,
@@ -114,7 +115,7 @@ def _load_config_maybe_locked(
     exit_on_error: bool = True,
     acquire_lock: bool = True,
     fill_missing_services: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # This must be called under an acquired config lock, or acquire_lock should be True
 
     path = config_path_for_filename(root_path, filename)
@@ -130,7 +131,7 @@ def _load_config_maybe_locked(
     for i in range(10):
         try:
             # at least we intend it to be this type
-            r: Dict[str, Any]
+            r: dict[str, Any]
             with contextlib.ExitStack() as exit_stack:
                 if acquire_lock:
                     exit_stack.enter_context(lock_config(root_path, filename))
@@ -143,7 +144,7 @@ def _load_config_maybe_locked(
             if fill_missing_services:
                 r.update(load_defaults_for_missing_services(config=r, config_name=path.name))
             if sub_config is not None:
-                r = cast(Dict[str, Any], r.get(sub_config))
+                r = cast(dict[str, Any], r.get(sub_config))
             return r
         except Exception as e:
             tb = traceback.format_exc()
@@ -157,7 +158,7 @@ def load_config_cli(
     filename: str,
     sub_config: Optional[str] = None,
     fill_missing_services: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Loads configuration from the specified filename, in the config directory,
     and then overrides any properties using the passed in command line arguments.
@@ -182,7 +183,7 @@ def load_config_cli(
     return unflatten_properties(flattened_props)
 
 
-def flatten_properties(config: Dict[str, Any]) -> Dict[str, Any]:
+def flatten_properties(config: dict[str, Any]) -> dict[str, Any]:
     properties = {}
     for key, value in config.items():
         if type(value) is dict:
@@ -193,8 +194,8 @@ def flatten_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     return properties
 
 
-def unflatten_properties(config: Dict[str, Any]) -> Dict[str, Any]:
-    properties: Dict[str, Any] = {}
+def unflatten_properties(config: dict[str, Any]) -> dict[str, Any]:
+    properties: dict[str, Any] = {}
     for key, value in config.items():
         if "." in key:
             add_property(properties, key, value)
@@ -203,7 +204,7 @@ def unflatten_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     return properties
 
 
-def add_property(d: Dict[str, Any], partial_key: str, value: Any) -> None:
+def add_property(d: dict[str, Any], partial_key: str, value: Any) -> None:
     if "." not in partial_key:  # root of dict
         d[partial_key] = value
     else:
@@ -228,7 +229,7 @@ def str2bool(v: Union[str, bool]) -> bool:
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
-def traverse_dict(d: Dict[str, Any], key_path: str) -> Any:
+def traverse_dict(d: dict[str, Any], key_path: str) -> Any:
     """
     Traverse nested dictionaries to find the element pointed-to by key_path.
     Key path components are separated by a ':' e.g.
@@ -256,7 +257,7 @@ def traverse_dict(d: Dict[str, Any], key_path: str) -> Any:
 
 method_strings = Literal["default", "python_default", "fork", "forkserver", "spawn"]
 method_values = Optional[Literal["fork", "forkserver", "spawn"]]
-start_methods: Dict[method_strings, method_values] = {
+start_methods: dict[method_strings, method_values] = {
     "default": None,
     "python_default": None,
     "fork": "fork",
@@ -266,7 +267,7 @@ start_methods: Dict[method_strings, method_values] = {
 
 
 def process_config_start_method(
-    config: Dict[str, Any],
+    config: dict[str, Any],
     log: logging.Logger,
 ) -> method_values:
     from_config: object = config.get("multiprocessing_start_method")
@@ -290,7 +291,7 @@ def process_config_start_method(
     return processed_method
 
 
-def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def override_config(config: dict[str, Any], config_overrides: Optional[dict[str, Any]]) -> dict[str, Any]:
     new_config = copy.deepcopy(config)
     if config_overrides is None:
         return new_config
@@ -299,13 +300,13 @@ def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str,
     return new_config
 
 
-def selected_network_address_prefix(config: Dict[str, Any]) -> str:
+def selected_network_address_prefix(config: dict[str, Any]) -> str:
     # we intend this to be a str at least
     address_prefix: str = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     return address_prefix
 
 
-def load_defaults_for_missing_services(config: Dict[str, Any], config_name: str) -> Dict[str, Any]:
+def load_defaults_for_missing_services(config: dict[str, Any], config_name: str) -> dict[str, Any]:
     services = ["data_layer"]
     missing_services = [service for service in services if service not in config]
     defaulted = {}
@@ -331,16 +332,16 @@ def load_defaults_for_missing_services(config: Dict[str, Any], config_name: str)
     return defaulted
 
 
-PEER_INFO_MAPPING: Dict[NodeType, str] = {
+PEER_INFO_MAPPING: dict[NodeType, str] = {
     NodeType.FULL_NODE: "full_node_peer",
     NodeType.FARMER: "farmer_peer",
 }
 
 
-def get_unresolved_peer_infos(service_config: Dict[str, Any], peer_type: NodeType) -> Set[UnresolvedPeerInfo]:
+def get_unresolved_peer_infos(service_config: dict[str, Any], peer_type: NodeType) -> set[UnresolvedPeerInfo]:
     peer_info_key = PEER_INFO_MAPPING[peer_type]
-    peer_infos: List[Dict[str, Any]] = service_config.get(f"{peer_info_key}s", [])
-    peer_info: Optional[Dict[str, Any]] = service_config.get(peer_info_key)
+    peer_infos: list[dict[str, Any]] = service_config.get(f"{peer_info_key}s", [])
+    peer_info: Optional[dict[str, Any]] = service_config.get(peer_info_key)
     if peer_info is not None:
         peer_infos.append(peer_info)
 
@@ -348,7 +349,7 @@ def get_unresolved_peer_infos(service_config: Dict[str, Any], peer_type: NodeTyp
 
 
 def set_peer_info(
-    service_config: Dict[str, Any],
+    service_config: dict[str, Any],
     peer_type: NodeType,
     peer_host: Optional[str] = None,
     peer_port: Optional[int] = None,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Any, List, Optional, Set, Tuple, Union
+from typing import Any, Optional, Union
 
 from chia_rs import compute_merkle_set_root, confirm_included_already_hashed, confirm_not_included_already_hashed
 
@@ -46,10 +46,10 @@ class PeerRequestException(Exception):
 
 
 async def subscribe_to_phs(
-    puzzle_hashes: List[bytes32],
+    puzzle_hashes: list[bytes32],
     peer: WSChiaConnection,
     min_height: int,
-) -> List[CoinState]:
+) -> list[CoinState]:
     """
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
@@ -63,10 +63,10 @@ async def subscribe_to_phs(
 
 
 async def subscribe_to_coin_updates(
-    coin_names: List[bytes32],
+    coin_names: list[bytes32],
     peer: WSChiaConnection,
     min_height: int,
-) -> List[CoinState]:
+) -> list[CoinState]:
     """
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
@@ -81,13 +81,13 @@ async def subscribe_to_coin_updates(
 
 
 def validate_additions(
-    coins: List[Tuple[bytes32, List[Coin]]],
-    proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
+    coins: list[tuple[bytes32, list[Coin]]],
+    proofs: Optional[list[tuple[bytes32, bytes, Optional[bytes]]]],
     root: bytes32,
 ) -> bool:
     if proofs is None:
         # Verify root
-        additions_merkle_items: List[bytes32] = []
+        additions_merkle_items: list[bytes32] = []
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
         for puzzle_hash, coins_l in coins:
@@ -100,7 +100,7 @@ def validate_additions(
     else:
         for i in range(len(coins)):
             assert coins[i][0] == proofs[i][0]
-            coin_list_1: List[Coin] = coins[i][1]
+            coin_list_1: list[Coin] = coins[i][1]
             puzzle_hash_proof: Optional[bytes] = proofs[i][1]
             coin_list_proof: Optional[bytes] = proofs[i][2]
             if len(coin_list_1) == 0:
@@ -143,7 +143,7 @@ def validate_additions(
 
 
 def validate_removals(
-    coins: List[Tuple[bytes32, Optional[Coin]]], proofs: Optional[List[Tuple[bytes32, bytes]]], root: bytes32
+    coins: list[tuple[bytes32, Optional[Coin]]], proofs: Optional[list[tuple[bytes32, bytes]]], root: bytes32
 ) -> bool:
     if proofs is None:
         # If there are no proofs, it means all removals were returned in the response.
@@ -235,7 +235,7 @@ def last_change_height_cs(cs: CoinState) -> uint32:
     return uint32(0)
 
 
-def sort_coin_states(coin_states: Set[CoinState]) -> List[CoinState]:
+def sort_coin_states(coin_states: set[CoinState]) -> list[CoinState]:
     return sorted(
         coin_states,
         key=lambda coin_state: (
@@ -248,7 +248,7 @@ def sort_coin_states(coin_states: Set[CoinState]) -> List[CoinState]:
 
 async def request_header_blocks(
     peer: WSChiaConnection, start_height: uint32, end_height: uint32
-) -> Optional[List[HeaderBlock]]:
+) -> Optional[list[HeaderBlock]]:
     if Capability.BLOCK_HEADERS in peer.peer_capabilities:
         response = await peer.call_api(
             FullNodeAPI.request_block_headers, RequestBlockHeaders(start_height, end_height, False)
@@ -262,7 +262,7 @@ async def request_header_blocks(
 
 
 async def _fetch_header_blocks_inner(
-    all_peers: List[Tuple[WSChiaConnection, bool]],
+    all_peers: list[tuple[WSChiaConnection, bool]],
     request_start: uint32,
     request_end: uint32,
 ) -> Optional[Union[RespondHeaderBlocks, RespondBlockHeaders]]:
@@ -298,9 +298,9 @@ async def fetch_header_blocks_in_range(
     start: uint32,
     end: uint32,
     peer_request_cache: PeerRequestCache,
-    all_peers: List[Tuple[WSChiaConnection, bool]],
-) -> Optional[List[HeaderBlock]]:
-    blocks: List[HeaderBlock] = []
+    all_peers: list[tuple[WSChiaConnection, bool]],
+) -> Optional[list[HeaderBlock]]:
+    blocks: list[HeaderBlock] = []
     for i in range(start - (start % 32), end + 1, 32):
         request_start = min(uint32(i), end)
         request_end = min(uint32(i + 31), end)

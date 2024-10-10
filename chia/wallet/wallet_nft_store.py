@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import List, Optional, Type, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -41,7 +41,7 @@ class WalletNftStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: Type[_T_WalletNftStore], db_wrapper: DBWrapper2) -> _T_WalletNftStore:
+    async def create(cls: type[_T_WalletNftStore], db_wrapper: DBWrapper2) -> _T_WalletNftStore:
         self = cls()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -144,7 +144,7 @@ class WalletNftStore:
 
     async def count(self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None) -> int:
         sql = "SELECT COUNT(nft_id) FROM users_nfts WHERE removed_height is NULL"
-        params: List[Union[uint32, bytes32]] = []
+        params: list[Union[uint32, bytes32]] = []
         if wallet_id is not None:
             sql += " AND wallet_id=?"
             params.append(wallet_id)
@@ -159,7 +159,7 @@ class WalletNftStore:
 
     async def is_empty(self, wallet_id: Optional[uint32] = None) -> bool:
         sql = "SELECT 1 FROM users_nfts WHERE removed_height is NULL"
-        params: List[Union[uint32, bytes32]] = []
+        params: list[Union[uint32, bytes32]] = []
         if wallet_id is not None:
             sql += " AND wallet_id=?"
             params.append(wallet_id)
@@ -176,7 +176,7 @@ class WalletNftStore:
         did_id: Optional[bytes32] = None,
         start_index: int = 0,
         count: int = 50,
-    ) -> List[NFTCoinInfo]:
+    ) -> list[NFTCoinInfo]:
         try:
             start_index = int(start_index)
         except ValueError:
@@ -240,7 +240,7 @@ class WalletNftStore:
     async def get_nft_by_id(self, nft_id: bytes32, wallet_id: Optional[uint32] = None) -> Optional[NFTCoinInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             sql = f"SELECT {NFT_COIN_INFO_COLUMNS} from users_nfts WHERE removed_height is NULL and nft_id=?"
-            params: List[Union[uint32, str]] = [nft_id.hex()]
+            params: list[Union[uint32, str]] = [nft_id.hex()]
             if wallet_id:
                 sql += " and wallet_id=?"
                 params.append(wallet_id)

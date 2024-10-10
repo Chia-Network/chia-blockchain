@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import contextlib
-from typing import AsyncIterator, Iterator, List, Optional, Tuple, Type, TypeVar
+from collections.abc import AsyncIterator, Iterator
+from typing import Optional, TypeVar
 
 import aiohttp
 import anyio
@@ -89,7 +90,7 @@ def test_validate_directory_writable(tmp_path) -> None:
 
 def test_empty_lists() -> None:
     # An empty list should return an empty iterator and skip the loop's body.
-    empty: List[int] = []
+    empty: list[int] = []
     with pytest.raises(StopIteration):
         next(to_batches(empty, 1))
 
@@ -129,14 +130,14 @@ def test_invalid_input_type() -> None:
 
 
 @contextlib.contextmanager
-def sync_manager(y: List[str]) -> Iterator[None]:
+def sync_manager(y: list[str]) -> Iterator[None]:
     y.append("entered")
     yield
     y.append("exited")
 
 
 def test_split_manager_class_works() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitManager(manager=sync_manager(y=x), object=None)
     assert x == []
@@ -149,7 +150,7 @@ def test_split_manager_class_works() -> None:
 
 
 def test_split_manager_function_exits_if_needed() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     with split_manager(manager=sync_manager(y=x), object=None) as split:
         assert x == []
@@ -161,7 +162,7 @@ def test_split_manager_function_exits_if_needed() -> None:
 
 
 def test_split_manager_function_skips_if_not_needed() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     with split_manager(manager=sync_manager(y=x), object=None) as split:
         assert x == []
@@ -176,7 +177,7 @@ def test_split_manager_function_skips_if_not_needed() -> None:
 
 
 def test_split_manager_raises_on_second_entry() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitManager(manager=sync_manager(y=x), object=None)
     split.enter()
@@ -186,7 +187,7 @@ def test_split_manager_raises_on_second_entry() -> None:
 
 
 def test_split_manager_raises_on_second_entry_after_exiting() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitManager(manager=sync_manager(y=x), object=None)
     split.enter()
@@ -197,7 +198,7 @@ def test_split_manager_raises_on_second_entry_after_exiting() -> None:
 
 
 def test_split_manager_raises_on_second_exit() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitManager(manager=sync_manager(y=x), object=None)
     split.enter()
@@ -208,7 +209,7 @@ def test_split_manager_raises_on_second_exit() -> None:
 
 
 def test_split_manager_raises_on_exit_without_entry() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitManager(manager=sync_manager(y=x), object=None)
 
@@ -217,7 +218,7 @@ def test_split_manager_raises_on_exit_without_entry() -> None:
 
 
 @contextlib.asynccontextmanager
-async def async_manager(y: List[str]) -> AsyncIterator[None]:
+async def async_manager(y: list[str]) -> AsyncIterator[None]:
     y.append("entered")
     yield
     y.append("exited")
@@ -225,7 +226,7 @@ async def async_manager(y: List[str]) -> AsyncIterator[None]:
 
 @pytest.mark.anyio
 async def test_split_async_manager_class_works() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitAsyncManager(manager=async_manager(y=x), object=None)
     assert x == []
@@ -239,7 +240,7 @@ async def test_split_async_manager_class_works() -> None:
 
 @pytest.mark.anyio
 async def test_split_async_manager_function_exits_if_needed() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     async with split_async_manager(manager=async_manager(y=x), object=None) as split:
         assert x == []
@@ -252,7 +253,7 @@ async def test_split_async_manager_function_exits_if_needed() -> None:
 
 @pytest.mark.anyio
 async def test_split_async_manager_function_skips_if_not_needed() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     async with split_async_manager(manager=async_manager(y=x), object=None) as split:
         assert x == []
@@ -268,7 +269,7 @@ async def test_split_async_manager_function_skips_if_not_needed() -> None:
 
 @pytest.mark.anyio
 async def test_split_async_manager_raises_on_second_entry() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitAsyncManager(manager=async_manager(y=x), object=None)
     await split.enter()
@@ -279,7 +280,7 @@ async def test_split_async_manager_raises_on_second_entry() -> None:
 
 @pytest.mark.anyio
 async def test_split_async_manager_raises_on_second_entry_after_exiting() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitAsyncManager(manager=async_manager(y=x), object=None)
     await split.enter()
@@ -291,7 +292,7 @@ async def test_split_async_manager_raises_on_second_entry_after_exiting() -> Non
 
 @pytest.mark.anyio
 async def test_split_async_manager_raises_on_second_exit() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitAsyncManager(manager=async_manager(y=x), object=None)
     await split.enter()
@@ -303,7 +304,7 @@ async def test_split_async_manager_raises_on_second_exit() -> None:
 
 @pytest.mark.anyio
 async def test_split_async_manager_raises_on_exit_without_entry() -> None:
-    x: List[str] = []
+    x: list[str] = []
 
     split = SplitAsyncManager(manager=async_manager(y=x), object=None)
 
@@ -365,7 +366,7 @@ async def test_valued_event_wait_blocks_when_not_set() -> None:
 
 @pytest.mark.anyio
 async def test_valued_event_multiple_waits_all_get_values() -> None:
-    results: List[int] = []
+    results: list[int] = []
     valued_event = ValuedEvent[int]()
     value = 37
     task_count = 10
@@ -430,15 +431,15 @@ async def test_recording_web_server_specified_response(
         (42, uint64, False),
         (uint64(42), uint64, True),
         ("42", int, False),
-        ([4, 2], List[int], True),
-        ([4, "2"], List[int], False),
-        ((4, 2), Tuple[int, int], True),
-        ((4, "2"), Tuple[int, int], False),
-        ((4, 2), Tuple[int, ...], True),
-        ((4, "2"), Tuple[int, ...], False),
-        ([(4, Program.to([2]))], List[Tuple[int, Program]], True),
-        ([(4, "2")], Tuple[int, str], False),
+        ([4, 2], list[int], True),
+        ([4, "2"], list[int], False),
+        ((4, 2), tuple[int, int], True),
+        ((4, "2"), tuple[int, int], False),
+        ((4, 2), tuple[int, ...], True),
+        ((4, "2"), tuple[int, ...], False),
+        ([(4, Program.to([2]))], list[tuple[int, Program]], True),
+        ([(4, "2")], tuple[int, str], False),
     ],
 )
-def test_satisfies_hint(obj: T, type_hint: Type[T], expected_result: bool) -> None:
+def test_satisfies_hint(obj: T, type_hint: type[T], expected_result: bool) -> None:
     assert satisfies_hint(obj, type_hint) == expected_result

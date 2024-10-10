@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-from typing import List
 
 import pytest
 from chia_rs import G2Element
@@ -68,13 +67,13 @@ async def test_state_layer(cost_logger: CostLogger, metadata_updater: str) -> No
         await sim.farm_block()
 
         if metadata_updater == "default":
-            metadata_updater_solutions: List[Program] = [
+            metadata_updater_solutions: list[Program] = [
                 Program.to((b"u", "update")),
                 Program.to((b"lu", "update")),
                 Program.to((b"mu", "update")),
                 Program.to((b"foo", "update")),
             ]
-            expected_metadatas: List[Program] = [
+            expected_metadatas: list[Program] = [
                 metadata_to_program(
                     {
                         b"u": ["update", "hey hey"],

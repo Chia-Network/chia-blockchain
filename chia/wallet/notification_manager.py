@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 from chia_rs import G2Element
 
@@ -53,8 +53,8 @@ class NotificationManager:
         ):
             return False
         else:
-            memos: Dict[bytes32, List[bytes]] = compute_memos_for_spend(parent_spend)
-            coin_memos: List[bytes] = memos.get(coin_name, [])
+            memos: dict[bytes32, list[bytes]] = compute_memos_for_spend(parent_spend)
+            coin_memos: list[bytes] = memos.get(coin_name, [])
             if len(coin_memos) == 0 or len(coin_memos[0]) != 32:
                 return False
             wallet_identifier = await self.wallet_state_manager.get_wallet_identifier_for_puzzle_hash(
@@ -87,9 +87,9 @@ class NotificationManager:
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
-        coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(uint64(amount + fee), action_scope)
+        coins: set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(uint64(amount + fee), action_scope)
         origin_coin: bytes32 = next(iter(coins)).name()
         notification_puzzle: Program = construct_notification(target, amount)
         notification_hash: bytes32 = notification_puzzle.get_tree_hash()

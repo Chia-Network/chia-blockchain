@@ -7,7 +7,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Literal, Optional, Union
 
 from chia.plotters.plotters_util import get_venv_bin, reset_loop_policy_for_windows, run_command, run_plotter
 from chia.plotting.create_plots import resolve_plot_keys
@@ -23,7 +23,7 @@ def is_bladebit_supported() -> bool:
     return sys.platform.startswith("linux") or sys.platform in ["win32", "cygwin", "darwin"]
 
 
-def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[str]]:
+def meets_memory_requirement(plotters_root_path: Path) -> tuple[bool, Optional[str]]:
     have_enough_memory: bool = False
     warning_string: Optional[str] = None
 
@@ -40,7 +40,7 @@ def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[s
             if proc.returncode != 0:
                 return have_enough_memory, proc.stderr.strip()
 
-            memory_info: Dict[str, int] = json.loads(proc.stdout)
+            memory_info: dict[str, int] = json.loads(proc.stdout)
             total_bytes: int = memory_info.get("total", -1)
             required_bytes: int = memory_info.get("required", 0)
             have_enough_memory = total_bytes >= required_bytes
@@ -131,7 +131,7 @@ def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
 
 def get_bladebit_version(
     plotters_root_path: Path,
-) -> Union[Tuple[Literal[False], str], Tuple[None, str], Tuple[Literal[True], List[str]]]:
+) -> Union[tuple[Literal[False], str], tuple[None, str], tuple[Literal[True], list[str]]]:
     bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
     if not bladebit_executable_path.exists():
         # (found=False, "")
@@ -157,8 +157,8 @@ def get_bladebit_version(
         return None, str(e)
 
 
-def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
-    info: Dict[str, Any] = {"display_name": "BladeBit Plotter"}
+def get_bladebit_install_info(plotters_root_path: Path) -> Optional[dict[str, Any]]:
+    info: dict[str, Any] = {"display_name": "BladeBit Plotter"}
     installed: bool = False
     supported: bool = is_bladebit_supported()
     cuda_available: bool = is_cudaplot_available(plotters_root_path)

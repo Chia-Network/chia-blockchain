@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass
@@ -16,7 +15,7 @@ class Range:
             return f"{self.first} to {self.last}"
 
 
-def int_list_to_ranges(array: List[int]) -> List[Range]:
+def int_list_to_ranges(array: list[int]) -> list[Range]:
     if len(array) == 0:
         return []
     sorted_array = sorted(array)
@@ -36,5 +35,5 @@ def int_list_to_ranges(array: List[int]) -> List[Range]:
     return ranges
 
 
-def print_compact_ranges(array: List[int]) -> str:
+def print_compact_ranges(array: list[int]) -> str:
     return str(int_list_to_ranges(array))

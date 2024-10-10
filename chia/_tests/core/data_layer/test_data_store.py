@@ -7,10 +7,11 @@ import random
 import re
 import statistics
 import time
+from collections.abc import Awaitable
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Callable, Optional, cast
 
 import aiohttp
 import aiosqlite
@@ -55,7 +56,7 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.data_layer
 
 
-table_columns: Dict[str, List[str]] = {
+table_columns: dict[str, list[str]] = {
     "node": ["hash", "node_type", "left", "right", "key", "value"],
     "root": ["tree_id", "generation", "node_hash", "status"],
 }
@@ -66,7 +67,7 @@ table_columns: Dict[str, List[str]] = {
 
 
 @pytest.mark.anyio
-async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_node_values: Dict[str, Any]) -> None:
+async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_node_values: dict[str, Any]) -> None:
     async with data_store.db_wrapper.writer() as writer:
         await writer.execute(
             """
@@ -80,7 +81,7 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.anyio
 async def test_create_creates_tables_and_columns(
-    database_uri: str, table_name: str, expected_columns: List[str]
+    database_uri: str, table_name: str, expected_columns: list[str]
 ) -> None:
     # Never string-interpolate sql queries...  Except maybe in tests when it does not
     # allow you to parametrize the query.
@@ -298,7 +299,7 @@ async def test_get_ancestors(data_store: DataStore, store_id: bytes32) -> None:
 
 @pytest.mark.anyio
 async def test_get_ancestors_optimized(data_store: DataStore, store_id: bytes32) -> None:
-    ancestors: List[Tuple[int, bytes32, List[InternalNode]]] = []
+    ancestors: list[tuple[int, bytes32, list[InternalNode]]] = []
     random = Random()
     random.seed(100, version=2)
 
@@ -385,16 +386,16 @@ async def test_batch_update(
 ) -> None:
     total_operations = 1000 if use_optimized else 100
     num_ops_per_batch = total_operations // num_batches
-    saved_batches: List[List[Dict[str, Any]]] = []
-    saved_kv: List[List[TerminalNode]] = []
+    saved_batches: list[list[dict[str, Any]]] = []
+    saved_kv: list[list[TerminalNode]] = []
     db_uri = generate_in_memory_db_uri()
     async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
         await single_op_data_store.create_tree(store_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
 
-        batch: List[Dict[str, Any]] = []
-        keys_values: Dict[bytes, bytes] = {}
+        batch: list[dict[str, Any]] = []
+        keys_values: dict[bytes, bytes] = {}
         for operation in range(num_batches * num_ops_per_batch):
             [op_type] = random.choices(
                 ["insert", "upsert-insert", "upsert-update", "delete"],
@@ -468,8 +469,8 @@ async def test_batch_update(
         assert {node.key: node.value for node in current_kv} == {
             node.key: node.value for node in saved_kv[batch_number]
         }
-        queue: List[bytes32] = [root.node_hash]
-        ancestors: Dict[bytes32, bytes32] = {}
+        queue: list[bytes32] = [root.node_hash]
+        ancestors: dict[bytes32, bytes32] = {}
         while len(queue) > 0:
             node_hash = queue.pop(0)
             expected_ancestors = []
@@ -1124,7 +1125,7 @@ async def test_kv_diff(data_store: DataStore, store_id: bytes32) -> None:
     random = Random()
     random.seed(100, version=2)
     insertions = 0
-    expected_diff: Set[DiffData] = set()
+    expected_diff: set[DiffData] = set()
     root_start = None
     for i in range(500):
         key = (i + 100).to_bytes(4, byteorder="big")
@@ -1422,7 +1423,7 @@ async def test_data_server_files(
     group_files_by_store: bool,
     tmp_path: Path,
 ) -> None:
-    roots: List[Root] = []
+    roots: list[Root] = []
     num_batches = 10
     num_ops_per_batch = 100
 
@@ -1432,11 +1433,11 @@ async def test_data_server_files(
         random = Random()
         random.seed(100, version=2)
 
-        keys: List[bytes] = []
+        keys: list[bytes] = []
         counter = 0
 
         for batch in range(num_batches):
-            changelist: List[Dict[str, Any]] = []
+            changelist: list[dict[str, Any]] = []
             for operation in range(num_ops_per_batch):
                 if random.randint(0, 4) > 0 or len(keys) == 0:
                     key = counter.to_bytes(4, byteorder="big")
@@ -2156,7 +2157,7 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert:
     num_values = 10
     new_keys = 10
     for value in range(num_values):
-        changelist: List[Dict[str, Any]] = []
+        changelist: list[dict[str, Any]] = []
         bytes_value = value.to_bytes(4, byteorder="big")
         if use_upsert:
             for key in range(num_keys):
@@ -2201,10 +2202,10 @@ async def test_migration_unknown_version(data_store: DataStore) -> None:
 
 async def _check_ancestors(
     data_store: DataStore, store_id: bytes32, root_hash: bytes32
-) -> Dict[bytes32, Optional[bytes32]]:
-    ancestors: Dict[bytes32, Optional[bytes32]] = {}
+) -> dict[bytes32, Optional[bytes32]]:
+    ancestors: dict[bytes32, Optional[bytes32]] = {}
     root_node: Node = await data_store.get_node(root_hash)
-    queue: List[Node] = [root_node]
+    queue: list[Node] = [root_node]
 
     while queue:
         node = queue.pop(0)
@@ -2231,7 +2232,7 @@ async def _check_ancestors(
 @pytest.mark.anyio
 async def test_build_ancestor_table(data_store: DataStore, store_id: bytes32) -> None:
     num_values = 1000
-    changelist: List[Dict[str, Any]] = []
+    changelist: list[dict[str, Any]] = []
     for value in range(num_values):
         value_bytes = value.to_bytes(4, byteorder="big")
         changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
@@ -2295,12 +2296,12 @@ async def test_sparse_ancestor_table(data_store: DataStore, store_id: bytes32) -
     assert previous_generation_count == 184
 
 
-async def get_all_nodes(data_store: DataStore, store_id: bytes32) -> List[Node]:
+async def get_all_nodes(data_store: DataStore, store_id: bytes32) -> list[Node]:
     root = await data_store.get_tree_root(store_id)
     assert root.node_hash is not None
     root_node = await data_store.get_node(root.node_hash)
-    nodes: List[Node] = []
-    queue: List[Node] = [root_node]
+    nodes: list[Node] = []
+    queue: list[Node] = [root_node]
 
     while len(queue) > 0:
         node = queue.pop(0)
@@ -2317,7 +2318,7 @@ async def get_all_nodes(data_store: DataStore, store_id: bytes32) -> List[Node]:
 @pytest.mark.anyio
 async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
     num_values = 50
-    changelist: List[Dict[str, Any]] = []
+    changelist: list[dict[str, Any]] = []
 
     for value in range(num_values):
         value_bytes = value.to_bytes(4, byteorder="big")
@@ -2349,11 +2350,11 @@ async def test_get_leaf_at_minimum_height(
 ) -> None:
     num_values = 1000
     value_offset = 1000000
-    all_min_leafs: Set[TerminalNode] = set()
+    all_min_leafs: set[TerminalNode] = set()
 
     if pre > 0:
         # This builds a complete binary tree, in order to test more than one batch in the queue before finding the leaf
-        changelist: List[Dict[str, Any]] = []
+        changelist: list[dict[str, Any]] = []
 
         for value in range(pre):
             value_bytes = (value * value).to_bytes(8, byteorder="big")
@@ -2375,12 +2376,12 @@ async def test_get_leaf_at_minimum_height(
         )
 
         if (value + 1) % batch_size == 0:
-            hash_to_parent: Dict[bytes32, InternalNode] = {}
+            hash_to_parent: dict[bytes32, InternalNode] = {}
             root = await data_store.get_tree_root(store_id)
             assert root.node_hash is not None
             min_leaf = await data_store.get_leaf_at_minimum_height(root.node_hash, hash_to_parent)
             all_nodes = await get_all_nodes(data_store, store_id)
-            heights: Dict[bytes32, int] = {}
+            heights: dict[bytes32, int] = {}
             heights[root.node_hash] = 0
             min_leaf_height = None
 

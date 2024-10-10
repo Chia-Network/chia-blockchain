@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 from chia.types.condition_opcodes import ConditionOpcode
 
@@ -14,4 +13,4 @@ class ConditionWithArgs:
     """
 
     opcode: ConditionOpcode
-    vars: List[bytes]
+    vars: list[bytes]

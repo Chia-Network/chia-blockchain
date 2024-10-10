@@ -3,9 +3,10 @@ from __future__ import annotations
 import dataclasses
 import logging
 import traceback
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
@@ -33,7 +34,7 @@ from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
 
-NODE_TYPES: Dict[str, Type[RpcClient]] = {
+NODE_TYPES: dict[str, type[RpcClient]] = {
     "base": RpcClient,
     "farmer": FarmerRpcClient,
     "wallet": WalletRpcClient,
@@ -43,7 +44,7 @@ NODE_TYPES: Dict[str, Type[RpcClient]] = {
     "simulator": SimulatorFullNodeRpcClient,
 }
 
-node_config_section_names: Dict[Type[RpcClient], str] = {
+node_config_section_names: dict[type[RpcClient], str] = {
     RpcClient: "base",
     FarmerRpcClient: "farmer",
     WalletRpcClient: "wallet",
@@ -92,12 +93,12 @@ async def validate_client_connection(
 
 @asynccontextmanager
 async def get_any_service_client(
-    client_type: Type[_T_RpcClient],
+    client_type: type[_T_RpcClient],
     rpc_port: Optional[int] = None,
     root_path: Optional[Path] = None,
     consume_errors: bool = True,
     use_ssl: bool = True,
-) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
+) -> AsyncIterator[tuple[_T_RpcClient, dict[str, Any]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
@@ -151,7 +152,7 @@ async def get_any_service_client(
 async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprint: Optional[int]) -> int:
     selected_fingerprint: int
     keychain_proxy: Optional[KeychainProxy] = None
-    all_keys: List[KeyData] = []
+    all_keys: list[KeyData] = []
 
     try:
         if fingerprint is not None:
@@ -248,7 +249,7 @@ async def get_wallet_client(
     fingerprint: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
     consume_errors: bool = True,
-) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
+) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
     async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path, consume_errors) as (
         wallet_client,
         config,
@@ -351,17 +352,17 @@ def timelock_args(enable: Optional[bool] = None) -> Callable[[Callable[..., None
 @streamable
 @dataclasses.dataclass(frozen=True)
 class TransactionBundle(Streamable):
-    txs: List[TransactionRecord]
+    txs: list[TransactionRecord]
 
 
 def tx_out_cmd(
     enable_timelock_args: Optional[bool] = None,
-) -> Callable[[Callable[..., List[TransactionRecord]]], Callable[..., None]]:
+) -> Callable[[Callable[..., list[TransactionRecord]]], Callable[..., None]]:
 
-    def _tx_out_cmd(func: Callable[..., List[TransactionRecord]]) -> Callable[..., None]:
+    def _tx_out_cmd(func: Callable[..., list[TransactionRecord]]) -> Callable[..., None]:
         @timelock_args(enable=enable_timelock_args)
         def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
-            txs: List[TransactionRecord] = func(**kwargs)
+            txs: list[TransactionRecord] = func(**kwargs)
             if transaction_file is not None:
                 print(f"Writing transactions to file {transaction_file}:")
                 with open(Path(transaction_file), "wb") as file:
@@ -386,8 +387,8 @@ def tx_out_cmd(
 class CMDCoinSelectionConfigLoader:
     min_coin_amount: CliAmount = cli_amount_none
     max_coin_amount: CliAmount = cli_amount_none
-    excluded_coin_amounts: Optional[List[CliAmount]] = None
-    excluded_coin_ids: Optional[List[bytes32]] = None
+    excluded_coin_amounts: Optional[list[CliAmount]] = None
+    excluded_coin_ids: Optional[list[bytes32]] = None
 
     def to_coin_selection_config(self, mojo_per_unit: int) -> CoinSelectionConfig:
         return CoinSelectionConfigLoader(
@@ -406,7 +407,7 @@ class CMDCoinSelectionConfigLoader:
 class CMDTXConfigLoader(CMDCoinSelectionConfigLoader):
     reuse_puzhash: Optional[bool] = None
 
-    def to_tx_config(self, mojo_per_unit: int, config: Dict[str, Any], fingerprint: int) -> TXConfig:
+    def to_tx_config(self, mojo_per_unit: int, config: dict[str, Any], fingerprint: int) -> TXConfig:
         cs_config = self.to_coin_selection_config(mojo_per_unit)
         return TXConfigLoader(
             cs_config.min_coin_amount,

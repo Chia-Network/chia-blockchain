@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from statistics import stdev
 from time import process_time as clock
-from typing import Any, Callable, Dict, List, Optional, TextIO, Tuple, Type, Union
+from typing import Any, Callable, Optional, TextIO, Union
 
 import click
 
@@ -33,9 +33,9 @@ class BenchmarkInner(Streamable):
 @dataclass(frozen=True)
 class BenchmarkMiddle(Streamable):
     a: uint64
-    b: List[bytes32]
-    c: Tuple[str, bool, uint8, List[bytes]]
-    d: Tuple[BenchmarkInner, BenchmarkInner]
+    b: list[bytes32]
+    c: tuple[str, bool, uint8, list[bytes]]
+    d: tuple[BenchmarkInner, BenchmarkInner]
     e: BenchmarkInner
 
 
@@ -45,8 +45,8 @@ class BenchmarkClass(Streamable):
     a: Optional[BenchmarkMiddle]
     b: Optional[BenchmarkMiddle]
     c: BenchmarkMiddle
-    d: List[BenchmarkMiddle]
-    e: Tuple[BenchmarkMiddle, BenchmarkMiddle, BenchmarkMiddle]
+    d: list[BenchmarkMiddle]
+    e: tuple[BenchmarkMiddle, BenchmarkMiddle, BenchmarkMiddle]
 
 
 def get_random_inner() -> BenchmarkInner:
@@ -55,9 +55,9 @@ def get_random_inner() -> BenchmarkInner:
 
 def get_random_middle() -> BenchmarkMiddle:
     a: uint64 = uint64(10)
-    b: List[bytes32] = [rand_hash() for _ in range(a)]
-    c: Tuple[str, bool, uint8, List[bytes]] = ("benchmark", False, uint8(1), [rand_bytes(a) for _ in range(a)])
-    d: Tuple[BenchmarkInner, BenchmarkInner] = (get_random_inner(), get_random_inner())
+    b: list[bytes32] = [rand_hash() for _ in range(a)]
+    c: tuple[str, bool, uint8, list[bytes]] = ("benchmark", False, uint8(1), [rand_bytes(a) for _ in range(a)])
+    d: tuple[BenchmarkInner, BenchmarkInner] = (get_random_inner(), get_random_inner())
     e: BenchmarkInner = get_random_inner()
     return BenchmarkMiddle(a, b, c, d, e)
 
@@ -66,8 +66,8 @@ def get_random_benchmark_object() -> BenchmarkClass:
     a: Optional[BenchmarkMiddle] = None
     b: Optional[BenchmarkMiddle] = get_random_middle()
     c: BenchmarkMiddle = get_random_middle()
-    d: List[BenchmarkMiddle] = [get_random_middle() for _ in range(5)]
-    e: Tuple[BenchmarkMiddle, BenchmarkMiddle, BenchmarkMiddle] = (
+    d: list[BenchmarkMiddle] = [get_random_middle() for _ in range(5)]
+    e: tuple[BenchmarkMiddle, BenchmarkMiddle, BenchmarkMiddle] = (
         get_random_middle(),
         get_random_middle(),
         get_random_middle(),
@@ -146,12 +146,12 @@ class ModeParameter:
 
 @dataclass
 class BenchmarkParameter:
-    data_class: Type[Any]
+    data_class: type[Any]
     object_creation_cb: Callable[[], Any]
-    mode_parameter: Dict[Mode, Optional[ModeParameter]]
+    mode_parameter: dict[Mode, Optional[ModeParameter]]
 
 
-benchmark_parameter: Dict[Data, BenchmarkParameter] = {
+benchmark_parameter: dict[Data, BenchmarkParameter] = {
     Data.benchmark: BenchmarkParameter(
         BenchmarkClass,
         get_random_benchmark_object,
@@ -177,8 +177,8 @@ benchmark_parameter: Dict[Data, BenchmarkParameter] = {
 }
 
 
-def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> List[int]:
-    us_iteration_results: List[int] = []
+def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> list[int]:
+    us_iteration_results: list[int] = []
     start = clock()
     while int((clock() - start) * 1000) < ms_to_run:
         start_iteration = clock()
@@ -188,12 +188,12 @@ def run_for_ms(cb: Callable[[], Any], ms_to_run: int = 100) -> List[int]:
     return us_iteration_results
 
 
-def calc_stdev_percent(iterations: List[int], avg: float) -> float:
+def calc_stdev_percent(iterations: list[int], avg: float) -> float:
     deviation = 0 if len(iterations) < 2 else int(stdev(iterations) * 100) / 100
     return int((deviation / avg * 100) * 100) / 100
 
 
-def pop_data(key: str, *, old: Dict[str, Any], new: Dict[str, Any]) -> Tuple[Any, Any]:
+def pop_data(key: str, *, old: dict[str, Any], new: dict[str, Any]) -> tuple[Any, Any]:
     if key not in old:
         sys.exit(f"{key} missing in old")
     if key not in new:
@@ -206,7 +206,7 @@ def print_compare_row(c0: str, c1: Union[str, float], c2: Union[str, float], c3:
 
 
 def compare_results(
-    old: Dict[str, Dict[str, Dict[str, Union[float, int]]]], new: Dict[str, Dict[str, Dict[str, Union[float, int]]]]
+    old: dict[str, dict[str, dict[str, Union[float, int]]]], new: dict[str, dict[str, dict[str, Union[float, int]]]]
 ) -> None:
     old_version, new_version = pop_data("version", old=old, new=new)
     if old_version != new_version:
@@ -233,8 +233,8 @@ def compare_results(
 @click.option("-o", "--output", type=click.File("w"), help="Write the results to a file")
 @click.option("-c", "--compare", type=click.File("r"), help="Compare to the results from a file")
 def run(data: Data, mode: Mode, runs: int, ms: int, live: bool, output: TextIO, compare: TextIO) -> None:
-    results: Dict[Data, Dict[Mode, List[List[int]]]] = {}
-    bench_results: Dict[str, Any] = {"version": _version, "commit_hash": get_commit_hash()}
+    results: dict[Data, dict[Mode, list[list[int]]]] = {}
+    bench_results: dict[str, Any] = {"version": _version, "commit_hash": get_commit_hash()}
     for current_data, parameter in benchmark_parameter.items():
         if data == Data.all or current_data == data:
             results[current_data] = {}
@@ -253,12 +253,12 @@ def run(data: Data, mode: Mode, runs: int, ms: int, live: bool, output: TextIO, 
             for current_mode, current_mode_parameter in parameter.mode_parameter.items():
                 results[current_data][current_mode] = []
                 if mode == Mode.all or current_mode == mode:
-                    us_iteration_results: List[int]
-                    all_results: List[List[int]] = results[current_data][current_mode]
+                    us_iteration_results: list[int]
+                    all_results: list[list[int]] = results[current_data][current_mode]
                     obj = parameter.object_creation_cb()
 
                     def get_bench_results() -> BenchmarkResults:
-                        all_runtimes: List[int] = [x for inner in all_results for x in inner]
+                        all_runtimes: list[int] = [x for inner in all_results for x in inner]
                         total_iterations: int = len(all_runtimes)
                         total_elapsed_us: int = sum(all_runtimes)
                         avg_iterations: float = total_iterations / len(all_results)

@@ -6,7 +6,7 @@ import time
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 import colorama
 
@@ -73,7 +73,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
 
 def verify_passphrase_meets_requirements(
     new_passphrase: str, confirmation_passphrase: str
-) -> Tuple[bool, Optional[str]]:
+) -> tuple[bool, Optional[str]]:
     match = new_passphrase == confirmation_passphrase
     min_length = Keychain.minimum_passphrase_length()
     meets_len_requirement = len(new_passphrase) >= min_length
@@ -131,7 +131,7 @@ def prompt_to_save_passphrase() -> bool:
     return save
 
 
-def prompt_for_new_passphrase() -> Tuple[str, bool]:
+def prompt_for_new_passphrase() -> tuple[str, bool]:
     min_length: int = Keychain.minimum_passphrase_length()
     if min_length > 0:
         n = min_length
@@ -324,7 +324,7 @@ def remove_passphrase_hint() -> None:
         print("Passphrase hint was not removed")
 
 
-async def async_update_daemon_passphrase_cache_if_running(root_path: Path, config: Dict[str, Any]) -> None:
+async def async_update_daemon_passphrase_cache_if_running(root_path: Path, config: dict[str, Any]) -> None:
     """
     Attempt to connect to the daemon and update the cached passphrase
     """

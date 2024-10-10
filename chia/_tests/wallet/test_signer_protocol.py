@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional
+from typing import Optional
 
 import click
 import pytest
@@ -180,7 +180,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
     assert utx.signing_instructions.targets[0].fingerprint == synthetic_pubkey.get_fingerprint().to_bytes(4, "big")
     assert utx.signing_instructions.targets[0].message == message
 
-    signing_responses: List[SigningResponse] = (
+    signing_responses: list[SigningResponse] = (
         await wallet_rpc.execute_signing_instructions(ExecuteSigningInstructions(utx.signing_instructions))
     ).signing_responses
     assert len(signing_responses) == 1
@@ -256,7 +256,7 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         == signing_responses[0].signature
     )
 
-    signed_txs: List[SignedTransaction] = (
+    signed_txs: list[SignedTransaction] = (
         await wallet_rpc.apply_signatures(
             ApplySignatures(spends=[Spend.from_coin_spend(coin_spend)], signing_responses=signing_responses)
         )
@@ -322,7 +322,7 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
     # Test just a path hint
     test_name: bytes32 = std_hash(b"path hint only")
     child_sk: PrivateKey = _derive_path_unhardened(root_sk, [uint64(1), uint64(2), uint64(3), uint64(4)])
-    signing_responses: List[SigningResponse] = await wallet.execute_signing_instructions(
+    signing_responses: list[SigningResponse] = await wallet.execute_signing_instructions(
         SigningInstructions(
             KeyHints(
                 [],
@@ -505,15 +505,15 @@ async def test_p2blsdohp_execute_signing_instructions(wallet_environments: Walle
 
 
 def test_blind_signer_translation_layer() -> None:
-    sum_hints: List[SumHint] = [
+    sum_hints: list[SumHint] = [
         SumHint([b"a", b"b", b"c"], b"offset", b"final"),
         SumHint([b"c", b"b", b"a"], b"offset2", b"final"),
     ]
-    path_hints: List[PathHint] = [
+    path_hints: list[PathHint] = [
         PathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
         PathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
     ]
-    signing_targets: List[SigningTarget] = [
+    signing_targets: list[SigningTarget] = [
         SigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
         SigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
     ]
@@ -531,15 +531,15 @@ def test_blind_signer_translation_layer() -> None:
         bytes32([1] * 32),
     )
 
-    bstl_sum_hints: List[BSTLSumHint] = [
+    bstl_sum_hints: list[BSTLSumHint] = [
         BSTLSumHint([b"a", b"b", b"c"], b"offset", b"final"),
         BSTLSumHint([b"c", b"b", b"a"], b"offset2", b"final"),
     ]
-    bstl_path_hints: List[BSTLPathHint] = [
+    bstl_path_hints: list[BSTLPathHint] = [
         BSTLPathHint(b"root1", [uint64(1), uint64(2), uint64(3)]),
         BSTLPathHint(b"root2", [uint64(4), uint64(5), uint64(6)]),
     ]
-    bstl_signing_targets: List[BSTLSigningTarget] = [
+    bstl_signing_targets: list[BSTLSigningTarget] = [
         BSTLSigningTarget(b"pubkey", b"message", bytes32([0] * 32)),
         BSTLSigningTarget(b"pubkey2", b"message2", bytes32([1] * 32)),
     ]

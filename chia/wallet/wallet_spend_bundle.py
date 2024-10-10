@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from chia_rs import AugSchemeMPL, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -13,9 +11,9 @@ from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 class WalletSpendBundle(SpendBundle):
 
     @classmethod
-    def aggregate(cls, spend_bundles: List[T_SpendBundle]) -> WalletSpendBundle:
-        coin_spends: List[CoinSpend] = []
-        sigs: List[G2Element] = []
+    def aggregate(cls, spend_bundles: list[T_SpendBundle]) -> WalletSpendBundle:
+        coin_spends: list[CoinSpend] = []
+        sigs: list[G2Element] = []
         for bundle in spend_bundles:
             coin_spends += bundle.coin_spends
             sigs.append(bundle.aggregated_signature)

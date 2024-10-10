@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -41,7 +41,7 @@ from chia.util.network import is_trusted_peer
     ],
 )
 def test_is_trusted_peer(
-    host: str, node_id: bytes32, trusted_peers: Dict[str, Any], trusted_cidrs: List[str], testing: bool, result: bool
+    host: str, node_id: bytes32, trusted_peers: dict[str, Any], trusted_cidrs: list[str], testing: bool, result: bool
 ) -> None:
     assert (
         is_trusted_peer(

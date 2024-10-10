@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import json
-from typing import AsyncIterator, List, Tuple
+from collections.abc import AsyncIterator
 
 import aiohttp
 import pytest
@@ -186,7 +186,7 @@ class TestSimulation:
     @pytest.mark.anyio
     async def test_simulator_auto_farm_and_get_coins(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
     ) -> None:
         num_blocks = 2
@@ -485,7 +485,7 @@ class TestSimulation:
     async def test_create_coins_with_invalid_amounts_raises(
         self,
         self_hostname: str,
-        amounts: List[uint64],
+        amounts: list[uint64],
         simulator_and_wallet: OldSimulatorsAndWallets,
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet

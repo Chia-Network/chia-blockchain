@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict
-
 from chia_rs import G1Element, G2Element, PrivateKey
 
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -25,7 +23,7 @@ def int_to_public_key(index: int) -> G1Element:
     return private_key_from_int.get_g1()
 
 
-def puzzle_hash_for_index(index: int, puzzle_hash_db: Dict[bytes32, SerializedProgram]) -> bytes32:
+def puzzle_hash_for_index(index: int, puzzle_hash_db: dict[bytes32, SerializedProgram]) -> bytes32:
     public_key: G1Element = int_to_public_key(index)
     puzzle = SerializedProgram.from_program(puzzle_for_pk(public_key))
     puzzle_hash: bytes32 = puzzle.get_tree_hash()
@@ -33,7 +31,7 @@ def puzzle_hash_for_index(index: int, puzzle_hash_db: Dict[bytes32, SerializedPr
     return puzzle_hash
 
 
-def make_fake_coin(index: int, puzzle_hash_db: Dict[bytes32, SerializedProgram]) -> Coin:
+def make_fake_coin(index: int, puzzle_hash_db: dict[bytes32, SerializedProgram]) -> Coin:
     """
     Make a fake coin with parent id equal to the index (ie. a genesis block coin)
 
@@ -45,14 +43,14 @@ def make_fake_coin(index: int, puzzle_hash_db: Dict[bytes32, SerializedProgram])
 
 
 def conditions_for_payment(coin: Coin) -> Program:
-    d: Dict[bytes32, SerializedProgram] = {}  # a throwaway db since we don't care
+    d: dict[bytes32, SerializedProgram] = {}  # a throwaway db since we don't care
     new_puzzle_hash = puzzle_hash_for_index(int.from_bytes(coin.puzzle_hash, "big"), d)
     ret: Program = Program.to([[ConditionOpcode.CREATE_COIN, new_puzzle_hash, coin.amount]])
     return ret
 
 
 def make_spend_bundle(count: int) -> SpendBundle:
-    puzzle_hash_db: Dict[bytes32, SerializedProgram] = {}
+    puzzle_hash_db: dict[bytes32, SerializedProgram] = {}
     coins = [make_fake_coin(_, puzzle_hash_db) for _ in range(count)]
 
     coin_spends = []

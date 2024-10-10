@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import importlib_resources
 import pytest
@@ -57,7 +57,7 @@ test_offer_id_bytes: bytes32 = bytes32.from_hexstr(test_offer_id)
 test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
 
-def test_get_transaction(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_get_transaction(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
     # set RPC Client
     inst_rpc_client = TestWalletRpcClient()  # pylint: disable=no-value-for-parameter
@@ -97,7 +97,7 @@ def test_get_transaction(capsys: object, get_test_cli_clients: Tuple[TestRpcClie
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_get_transactions(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -112,7 +112,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: Tuple[TestRpcCli
             to_address: Optional[str] = None,
             type_filter: Optional[TransactionTypeFilter] = None,
             confirmed: Optional[bool] = None,
-        ) -> List[TransactionRecord]:
+        ) -> list[TransactionRecord]:
             self.add_to_log(
                 "get_transactions", (wallet_id, start, end, sort_key, reverse, to_address, type_filter, confirmed)
             )
@@ -142,7 +142,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: Tuple[TestRpcCli
 
             return l_tx_rec
 
-        async def get_coin_records(self, request: GetCoinRecords) -> Dict[str, Any]:
+        async def get_coin_records(self, request: GetCoinRecords) -> dict[str, Any]:
             self.add_to_log("get_coin_records", (request,))
             return {
                 "coin_records": [{"metadata": {"time_lock": 12345678}}],
@@ -200,14 +200,14 @@ def test_get_transactions(capsys: object, get_test_cli_clients: Tuple[TestRpcCli
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class ShowRpcClient(TestWalletRpcClient):
-        async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
+        async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Union[str, int]]]:
             self.add_to_log("get_wallets", (wallet_type,))
-            wallet_list: List[Dict[str, Union[str, int]]] = [
+            wallet_list: list[dict[str, Union[str, int]]] = [
                 {"data": "", "id": 1, "name": "Chia Wallet", "type": WalletType.STANDARD_WALLET},
                 {
                     "data": "dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a774686001ff02ffff01ff02ffff03ff2f"
@@ -232,7 +232,7 @@ def test_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
             self.add_to_log("get_height_info", ())
             return GetHeightInfoResponse(uint32(10))
 
-        async def get_wallet_balance(self, wallet_id: int) -> Dict[str, uint64]:
+        async def get_wallet_balance(self, wallet_id: int) -> dict[str, uint64]:
             self.add_to_log("get_wallet_balance", (wallet_id,))
             if wallet_id == 1:
                 amount = uint64(1000000000)
@@ -252,7 +252,7 @@ def test_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
 
         async def get_connections(
             self, node_type: Optional[NodeType] = None
-        ) -> List[Dict[str, Union[str, int, float, bytes32]]]:
+        ) -> list[dict[str, Union[str, int, float, bytes32]]]:
             self.add_to_log("get_connections", (node_type,))
             return [
                 {
@@ -301,7 +301,7 @@ def test_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -313,8 +313,8 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
             address: str,
             tx_config: TXConfig,
             fee: uint64 = uint64(0),
-            memos: Optional[List[str]] = None,
-            puzzle_decorator_override: Optional[List[Dict[str, Union[str, int, bool]]]] = None,
+            memos: Optional[list[str]] = None,
+            puzzle_decorator_override: Optional[list[dict[str, Union[str, int, bool]]]] = None,
             push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> SendTransactionResponse:
@@ -351,10 +351,10 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
             amount: Optional[uint64] = None,
             inner_address: Optional[str] = None,
             fee: uint64 = uint64(0),
-            memos: Optional[List[str]] = None,
-            additions: Optional[List[Dict[str, Any]]] = None,
-            removals: Optional[List[Coin]] = None,
-            cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
+            memos: Optional[list[str]] = None,
+            additions: Optional[list[dict[str, Any]]] = None,
+            removals: Optional[list[Coin]] = None,
+            cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
             push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> CATSpendResponse:
@@ -468,7 +468,7 @@ def test_send(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_get_address(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_get_address(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -499,19 +499,19 @@ def test_get_address(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_clawback(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_clawback(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class ClawbackWalletRpcClient(TestWalletRpcClient):
         async def spend_clawback_coins(
             self,
-            coin_ids: List[bytes32],
+            coin_ids: list[bytes32],
             fee: int = 0,
             force: bool = False,
             push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             self.add_to_log("spend_clawback_coins", (coin_ids, fee, force, push, timelock_info))
             tx_hex_list = [get_bytes32(6).hex(), get_bytes32(7).hex(), get_bytes32(8).hex()]
             return {
@@ -551,7 +551,7 @@ def test_clawback(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -577,7 +577,7 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: Tuple[TestRpcC
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_get_derivation_index(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_get_derivation_index(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -601,7 +601,7 @@ def test_get_derivation_index(capsys: object, get_test_cli_clients: Tuple[TestRp
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_sign_message(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -624,7 +624,7 @@ def test_sign_message(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_update_derivation_index(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_update_derivation_index(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -644,12 +644,12 @@ def test_update_derivation_index(capsys: object, get_test_cli_clients: Tuple[Tes
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_add_token(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class AddTokenRpcClient(TestWalletRpcClient):
-        async def create_wallet_for_existing_cat(self, asset_id: bytes) -> Dict[str, int]:
+        async def create_wallet_for_existing_cat(self, asset_id: bytes) -> dict[str, int]:
             self.add_to_log("create_wallet_for_existing_cat", (asset_id,))
             return {"wallet_id": 3}
 
@@ -675,7 +675,7 @@ def test_add_token(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, P
 
 
 def test_make_offer_bad_filename(
-    capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path], tmp_path: Path
+    capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path], tmp_path: Path
 ) -> None:
     _, root_dir = get_test_cli_clients
 
@@ -727,17 +727,17 @@ def test_make_offer_bad_filename(
         run_cli_command_and_assert(capsys, root_dir, command_args_unwritable, [""])
 
 
-def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path], tmp_path: Path) -> None:
+def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path], tmp_path: Path) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class MakeOfferRpcClient(TestWalletRpcClient):
         async def create_offer_for_ids(
             self,
-            offer_dict: Dict[uint32, int],
+            offer_dict: dict[uint32, int],
             tx_config: TXConfig,
-            driver_dict: Optional[Dict[str, Any]] = None,
-            solver: Optional[Dict[str, Any]] = None,
+            driver_dict: Optional[dict[str, Any]] = None,
+            solver: Optional[dict[str, Any]] = None,
             fee: uint64 = uint64(0),
             validate_only: bool = False,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
@@ -857,7 +857,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_get_offers(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -872,7 +872,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             exclude_my_offers: bool = False,
             exclude_taken_offers: bool = False,
             include_completed: bool = False,
-        ) -> List[TradeRecord]:
+        ) -> list[TradeRecord]:
             self.add_to_log(
                 "get_all_offers",
                 (
@@ -886,7 +886,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
                     include_completed,
                 ),
             )
-            records: List[TradeRecord] = []
+            records: list[TradeRecord] = []
             for i in reversed(range(start, end - 1)):  # reversed to match the sort order
                 trade_offer = TradeRecord(
                     confirmed_at_index=uint32(0),
@@ -964,7 +964,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_take_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -973,7 +973,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             self,
             offer: Offer,
             tx_config: TXConfig,
-            solver: Optional[Dict[str, Any]] = None,
+            solver: Optional[dict[str, Any]] = None,
             fee: uint64 = uint64(0),
             push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
@@ -1049,7 +1049,7 @@ def test_take_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_cancel_offer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_cancel_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client

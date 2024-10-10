@@ -5,7 +5,7 @@ import binascii
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit
 from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
@@ -547,12 +547,12 @@ def call_plotters(root_path: Path, args):
         show_plotters_version(chia_root_path)
 
 
-def get_available_plotters(root_path) -> Dict[str, Any]:
+def get_available_plotters(root_path) -> dict[str, Any]:
     plotters_root_path: Path = get_plotters_root_path(root_path)
-    plotters: Dict[str, Any] = {}
-    chiapos: Optional[Dict[str, Any]] = get_chiapos_install_info()
-    bladebit: Optional[Dict[str, Any]] = get_bladebit_install_info(plotters_root_path)
-    madmax: Optional[Dict[str, Any]] = get_madmax_install_info(plotters_root_path)
+    plotters: dict[str, Any] = {}
+    chiapos: Optional[dict[str, Any]] = get_chiapos_install_info()
+    bladebit: Optional[dict[str, Any]] = get_bladebit_install_info(plotters_root_path)
+    madmax: Optional[dict[str, Any]] = get_madmax_install_info(plotters_root_path)
 
     if chiapos is not None:
         plotters["chiapos"] = chiapos

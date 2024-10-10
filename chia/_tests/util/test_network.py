@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 from ipaddress import IPv4Address, IPv6Address
-from typing import Type, Union
+from typing import Union
 
 import pytest
 
@@ -49,7 +49,7 @@ async def test_resolve6():
         ("93.184.216.34", IPv4Address),
     ],
 )
-def test_ip_address(address_string: str, expected_inner: Type[Union[IPv4Address, IPv6Address]]) -> None:
+def test_ip_address(address_string: str, expected_inner: type[Union[IPv4Address, IPv6Address]]) -> None:
     inner = expected_inner(address_string)
     ip = IPAddress.create(address_string)
     # Helpers

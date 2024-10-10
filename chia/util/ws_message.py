@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from typing_extensions import TypedDict
 
@@ -19,13 +19,13 @@ from chia.util.json_util import dict_to_json_str
 class WsRpcMessage(TypedDict):
     command: str
     ack: bool
-    data: Dict[str, Any]
+    data: dict[str, Any]
     request_id: str
     destination: str
     origin: str
 
 
-def format_response(incoming_msg: WsRpcMessage, response_data: Dict[str, Any]) -> str:
+def format_response(incoming_msg: WsRpcMessage, response_data: dict[str, Any]) -> str:
     """
     Formats the response into standard format.
     """
@@ -42,12 +42,12 @@ def format_response(incoming_msg: WsRpcMessage, response_data: Dict[str, Any]) -
     return json_str
 
 
-def create_payload(command: str, data: Dict[str, Any], origin: str, destination: str) -> str:
+def create_payload(command: str, data: dict[str, Any], origin: str, destination: str) -> str:
     response = create_payload_dict(command, data, origin, destination)
     return dict_to_json_str(response)
 
 
-def create_payload_dict(command: str, data: Optional[Dict[str, Any]], origin: str, destination: str) -> WsRpcMessage:
+def create_payload_dict(command: str, data: Optional[dict[str, Any]], origin: str, destination: str) -> WsRpcMessage:
     if data is None:
         data = {}
 
@@ -61,6 +61,6 @@ def create_payload_dict(command: str, data: Optional[Dict[str, Any]], origin: st
     )
 
 
-def pong() -> Dict[str, Any]:
+def pong() -> dict[str, Any]:
     response = {"success": True}
     return response

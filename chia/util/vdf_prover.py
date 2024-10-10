@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Tuple
-
 from chiavdf import prove
 
 from chia.consensus.constants import ConsensusConstants
@@ -17,7 +15,7 @@ def get_vdf_info_and_proof(
     challenge_hash: bytes32,
     number_iters: uint64,
     normalized_to_identity: bool = False,
-) -> Tuple[VDFInfo, VDFProof]:
+) -> tuple[VDFInfo, VDFProof]:
     form_size = ClassgroupElement.get_size()
     result: bytes = prove(
         bytes(challenge_hash),

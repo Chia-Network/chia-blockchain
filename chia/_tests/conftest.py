@@ -13,8 +13,9 @@ import os
 import random
 import sysconfig
 import tempfile
+from collections.abc import AsyncIterator, Iterator
 from contextlib import AsyncExitStack
-from typing import Any, AsyncIterator, Callable, Dict, Iterator, List, Tuple, Union
+from typing import Any, Callable, Union
 
 import aiohttp
 import pytest
@@ -550,12 +551,12 @@ def pytest_configure(config):
         globals()[time_out_assert_repeat_fixture.__name__] = time_out_assert_repeat_fixture
 
 
-def pytest_collection_modifyitems(session, config: pytest.Config, items: List[pytest.Function]):
+def pytest_collection_modifyitems(session, config: pytest.Config, items: list[pytest.Function]):
     # https://github.com/pytest-dev/pytest/issues/3730#issuecomment-567142496
     removed = []
     kept = []
-    all_error_lines: List[str] = []
-    limit_consensus_modes_problems: List[str] = []
+    all_error_lines: list[str] = []
+    limit_consensus_modes_problems: list[str] = []
     for item in items:
         limit_consensus_modes_marker = item.get_closest_marker("limit_consensus_modes")
         if limit_consensus_modes_marker is not None:
@@ -583,7 +584,7 @@ def pytest_collection_modifyitems(session, config: pytest.Config, items: List[py
         all_error_lines.append("@pytest.mark.limit_consensus_modes used without consensus_mode:")
         all_error_lines.extend(f"    {line}" for line in limit_consensus_modes_problems)
 
-    benchmark_problems: List[str] = []
+    benchmark_problems: list[str] = []
     for item in items:
         existing_benchmark_mark = item.get_closest_marker("benchmark")
         if existing_benchmark_mark is not None:
@@ -619,7 +620,7 @@ async def two_nodes(db_version: int, self_hostname, blockchain_constants: Consen
 @pytest.fixture(scope="function")
 async def setup_two_nodes_fixture(
     db_version: int, blockchain_constants: ConsensusConstants
-) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
+) -> AsyncIterator[tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools]]:
     async with setup_simulators_and_wallets(2, 0, blockchain_constants, db_version=db_version) as new:
         yield make_old_setup_simulators_and_wallets(new=new)
 
@@ -681,7 +682,7 @@ async def wallet_node_100_pk(blockchain_constants: ConsensusConstants):
 @pytest.fixture(scope="function")
 async def simulator_and_wallet(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]]:
+) -> AsyncIterator[tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools]]:
     async with setup_simulators_and_wallets(1, 1, blockchain_constants) as new:
         yield make_old_setup_simulators_and_wallets(new=new)
 
@@ -698,7 +699,7 @@ async def two_wallet_nodes(request, blockchain_constants: ConsensusConstants):
 @pytest.fixture(scope="function")
 async def two_wallet_nodes_services(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]]:
+) -> AsyncIterator[tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]]:
     async with setup_simulators_and_wallets_service(1, 2, blockchain_constants) as _:
         yield _
 
@@ -781,7 +782,7 @@ async def three_nodes_two_wallets(blockchain_constants: ConsensusConstants):
 @pytest.fixture(scope="function")
 async def one_node(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
+) -> AsyncIterator[tuple[list[Service], list[FullNodeSimulator], BlockTools]]:
     async with setup_simulators_and_wallets_service(1, 0, blockchain_constants) as _:
         yield _
 
@@ -789,7 +790,7 @@ async def one_node(
 @pytest.fixture(scope="function")
 async def one_node_one_block(
     blockchain_constants: ConsensusConstants,
-) -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
+) -> AsyncIterator[tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
     async with setup_simulators_and_wallets(1, 0, blockchain_constants) as new:
         (nodes, _, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
@@ -849,7 +850,7 @@ async def farmer_one_harvester_simulator_wallet(
     tmp_path: Path,
     blockchain_constants: ConsensusConstants,
 ) -> AsyncIterator[
-    Tuple[
+    tuple[
         HarvesterService,
         FarmerService,
         SimulatorFullNodeService,
@@ -866,7 +867,7 @@ async def farmer_one_harvester_simulator_wallet(
             yield harvester_services[0], farmer_service, nodes[0], wallets[0], bt
 
 
-FarmerOneHarvester = Tuple[List[HarvesterService], FarmerService, BlockTools]
+FarmerOneHarvester = tuple[list[HarvesterService], FarmerService, BlockTools]
 
 
 @pytest.fixture(scope="function")
@@ -878,7 +879,7 @@ async def farmer_one_harvester(tmp_path: Path, get_b_tools: BlockTools) -> Async
 @pytest.fixture(scope="function")
 async def farmer_one_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
-) -> AsyncIterator[Tuple[List[Service], Service]]:
+) -> AsyncIterator[tuple[list[Service], Service]]:
     async with setup_farmer_multi_harvester(get_b_tools, 1, tmp_path, get_b_tools.constants, start_services=False) as _:
         yield _
 
@@ -886,7 +887,7 @@ async def farmer_one_harvester_not_started(
 @pytest.fixture(scope="function")
 async def farmer_two_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
-) -> AsyncIterator[Tuple[List[Service], Service]]:
+) -> AsyncIterator[tuple[list[Service], Service]]:
     async with setup_farmer_multi_harvester(get_b_tools, 2, tmp_path, get_b_tools.constants, start_services=False) as _:
         yield _
 
@@ -894,7 +895,7 @@ async def farmer_two_harvester_not_started(
 @pytest.fixture(scope="function")
 async def farmer_three_harvester_not_started(
     tmp_path: Path, get_b_tools: BlockTools
-) -> AsyncIterator[Tuple[List[Service], Service]]:
+) -> AsyncIterator[tuple[list[Service], Service]]:
     async with setup_farmer_multi_harvester(get_b_tools, 3, tmp_path, get_b_tools.constants, start_services=False) as _:
         yield _
 
@@ -934,7 +935,7 @@ async def get_b_tools(get_temp_keyring):
 @pytest.fixture(scope="function")
 async def daemon_connection_and_temp_keychain(
     get_b_tools: BlockTools,
-) -> AsyncIterator[Tuple[aiohttp.ClientWebSocketResponse, Keychain]]:
+) -> AsyncIterator[tuple[aiohttp.ClientWebSocketResponse, Keychain]]:
     async with setup_daemon(btools=get_b_tools) as daemon:
         keychain = daemon.keychain_server._default_keychain
         async with aiohttp.ClientSession() as session:
@@ -1128,13 +1129,13 @@ def root_path_populated_with_config(tmp_chia_root) -> Path:
 
 
 @pytest.fixture(scope="function")
-def config(root_path_populated_with_config: Path) -> Dict[str, Any]:
+def config(root_path_populated_with_config: Path) -> dict[str, Any]:
     with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
         return config
 
 
 @pytest.fixture(scope="function")
-def config_with_address_prefix(root_path_populated_with_config: Path, prefix: str) -> Dict[str, Any]:
+def config_with_address_prefix(root_path_populated_with_config: Path, prefix: str) -> dict[str, Any]:
     with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
         if prefix is not None:
             config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = prefix
@@ -1174,12 +1175,12 @@ async def simulation(bt, get_b_tools):
         yield full_system, get_b_tools
 
 
-HarvesterFarmerEnvironment = Tuple[FarmerService, FarmerRpcClient, HarvesterService, HarvesterRpcClient, BlockTools]
+HarvesterFarmerEnvironment = tuple[FarmerService, FarmerRpcClient, HarvesterService, HarvesterRpcClient, BlockTools]
 
 
 @pytest.fixture(scope="function")
 async def harvester_farmer_environment(
-    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
     self_hostname: str,
 ) -> AsyncIterator[HarvesterFarmerEnvironment]:
     harvesters, farmer_service, bt = farmer_one_harvester
@@ -1229,7 +1230,7 @@ def populated_temp_file_keyring_fixture() -> Iterator[TempKeyring]:
 async def farmer_harvester_2_simulators_zero_bits_plot_filter(
     tmp_path: Path, get_temp_keyring: Keychain
 ) -> AsyncIterator[
-    Tuple[
+    tuple[
         FarmerService,
         HarvesterService,
         Union[FullNodeService, SimulatorFullNodeService],
@@ -1248,7 +1249,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             keychain=get_temp_keyring,
         )
 
-        config_overrides: Dict[str, int] = {"full_node.max_sync_wait": 0}
+        config_overrides: dict[str, int] = {"full_node.max_sync_wait": 0}
 
         bts = [
             await create_block_tools_async(
@@ -1262,7 +1263,7 @@ async def farmer_harvester_2_simulators_zero_bits_plot_filter(
             for _ in range(2)
         ]
 
-        simulators: List[SimulatorFullNodeService] = [
+        simulators: list[SimulatorFullNodeService] = [
             await async_exit_stack.enter_async_context(
                 # Passing simulator=True gets us this type guaranteed
                 setup_full_node(  # type: ignore[arg-type]

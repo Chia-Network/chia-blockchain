@@ -5,8 +5,9 @@ import enum
 import os
 import subprocess
 import sys
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, AsyncIterator, Generic, Optional, Type, TypeVar, Union
+from typing import Any, Generic, Optional, TypeVar, Union
 
 import click
 
@@ -17,7 +18,7 @@ _T_Enum = TypeVar("_T_Enum", bound=enum.Enum)
 
 # Workaround to allow `Enum` with click.Choice: https://github.com/pallets/click/issues/605#issuecomment-901099036
 class EnumType(click.Choice, Generic[_T_Enum]):
-    def __init__(self, enum: Type[_T_Enum], case_sensitive: bool = False) -> None:
+    def __init__(self, enum: type[_T_Enum], case_sensitive: bool = False) -> None:
         self.__enum = enum
         super().__init__(choices=[item.value for item in enum], case_sensitive=case_sensitive)
 

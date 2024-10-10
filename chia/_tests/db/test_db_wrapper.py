@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, List, Optional, Type
+from typing import TYPE_CHECKING, Callable, Optional
 
 import aiosqlite
 import pytest
@@ -54,7 +54,7 @@ async def decrement_counter(db_wrapper: DBWrapper2) -> None:
         await connection.execute("UPDATE counter SET value = :value", {"value": new_value})
 
 
-async def sum_counter(db_wrapper: DBWrapper2, output: List[int]) -> None:
+async def sum_counter(db_wrapper: DBWrapper2, output: list[int]) -> None:
     async with db_wrapper.reader_no_transaction() as connection:
         async with connection.execute("SELECT value FROM counter") as cursor:
             row = await cursor.fetchone()
@@ -340,7 +340,7 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
                 await exit_stack.enter_async_context(get_reader_method(db_wrapper)())
 
             tasks = []
-            values: List[int] = []
+            values: list[int] = []
             for index in range(concurrent_task_count):
                 task = asyncio.create_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
@@ -369,7 +369,7 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
                 await exit_stack.enter_async_context(get_reader_method(db_wrapper)())
 
             tasks = []
-            values: List[int] = []
+            values: list[int] = []
             for index in range(concurrent_task_count):
                 task = asyncio.create_task(increment_counter(db_wrapper))
                 tasks.append(task)
@@ -495,11 +495,11 @@ async def test_foreign_key_pragma_rolls_back_on_foreign_key_error() -> None:
 @dataclass
 class RowFactoryCase:
     id: str
-    factory: Optional[Type[aiosqlite.Row]]
+    factory: Optional[type[aiosqlite.Row]]
     marks: Marks = ()
 
 
-row_factory_cases: List[RowFactoryCase] = [
+row_factory_cases: list[RowFactoryCase] = [
     RowFactoryCase(id="default named tuple", factory=None),
     RowFactoryCase(id="aiosqlite row", factory=aiosqlite.Row),
 ]

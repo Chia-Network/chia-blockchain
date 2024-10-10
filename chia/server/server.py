@@ -5,10 +5,11 @@ import logging
 import ssl
 import time
 import traceback
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Callable, Optional, Union, cast
 
 from aiohttp import (
     ClientResponseError,
@@ -116,7 +117,7 @@ def calculate_node_id(cert_path: Path) -> bytes32:
 class ChiaServer:
     _port: Optional[int]
     _local_type: NodeType
-    _local_capabilities_for_handshake: List[Tuple[uint16, str]]
+    _local_capabilities_for_handshake: list[tuple[uint16, str]]
     _ping_interval: int
     _network_id: str
     _inbound_rate_limit_percent: int
@@ -124,13 +125,13 @@ class ChiaServer:
     api: ApiProtocol
     node: Any
     root_path: Path
-    config: Dict[str, Any]
+    config: dict[str, Any]
     log: logging.Logger
     ssl_context: ssl.SSLContext
     ssl_client_context: ssl.SSLContext
     node_id: bytes32
-    exempt_peer_networks: List[Union[IPv4Network, IPv6Network]]
-    all_connections: Dict[bytes32, WSChiaConnection] = field(default_factory=dict)
+    exempt_peer_networks: list[Union[IPv4Network, IPv6Network]]
+    all_connections: dict[bytes32, WSChiaConnection] = field(default_factory=dict)
     on_connect: Optional[ConnectionCallback] = None
     shut_down_event: asyncio.Event = field(default_factory=asyncio.Event)
     introducer_peers: Optional[IntroducerPeers] = None
@@ -138,7 +139,7 @@ class ChiaServer:
     webserver: Optional[WebServer] = None
     connection_close_task: Optional[asyncio.Task[None]] = None
     received_message_callback: Optional[ConnectionCallback] = None
-    banned_peers: Dict[str, float] = field(default_factory=dict)
+    banned_peers: dict[str, float] = field(default_factory=dict)
     invalid_protocol_ban_seconds = INVALID_PROTOCOL_BAN_SECONDS
 
     @classmethod
@@ -152,11 +153,11 @@ class ChiaServer:
         network_id: str,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
-        capabilities: List[Tuple[uint16, str]],
+        capabilities: list[tuple[uint16, str]],
         root_path: Path,
-        config: Dict[str, Any],
-        private_ca_crt_key: Tuple[Path, Path],
-        chia_ca_crt_key: Tuple[Path, Path],
+        config: dict[str, Any],
+        private_ca_crt_key: tuple[Path, Path],
+        chia_ca_crt_key: tuple[Path, Path],
         name: str = __name__,
     ) -> ChiaServer:
         log = logging.getLogger(name)
@@ -245,7 +246,7 @@ class ChiaServer:
         is_crawler = getattr(self.node, "crawl", None)
         while True:
             await asyncio.sleep(600 if is_crawler is None else 2)
-            to_remove: List[WSChiaConnection] = []
+            to_remove: list[WSChiaConnection] = []
             for connection in self.all_connections.values():
                 if connection.closed:
                     to_remove.append(connection)
@@ -558,7 +559,7 @@ class ChiaServer:
             if on_disconnect is not None:
                 await on_disconnect(connection)
 
-    async def validate_broadcast_message_type(self, messages: List[Message], node_type: NodeType) -> None:
+    async def validate_broadcast_message_type(self, messages: list[Message], node_type: NodeType) -> None:
         for message in messages:
             if message_requires_reply(ProtocolMessageTypes(message.type)):
                 # Internal protocol logic error - we will raise, blocking messages to all peers
@@ -574,7 +575,7 @@ class ChiaServer:
 
     async def send_to_all(
         self,
-        messages: List[Message],
+        messages: list[Message],
         node_type: NodeType,
         exclude: Optional[bytes32] = None,
     ) -> None:
@@ -586,7 +587,7 @@ class ChiaServer:
 
     async def send_to_all_if(
         self,
-        messages: List[Message],
+        messages: list[Message],
         node_type: NodeType,
         predicate: Callable[[WSChiaConnection], bool],
         exclude: Optional[bytes32] = None,
@@ -597,7 +598,7 @@ class ChiaServer:
                 for message in messages:
                     await connection.send_message(message)
 
-    async def send_to_specific(self, messages: List[Message], node_id: bytes32) -> None:
+    async def send_to_specific(self, messages: list[Message], node_id: bytes32) -> None:
         if node_id in self.all_connections:
             connection = self.all_connections[node_id]
             for message in messages:
@@ -614,7 +615,7 @@ class ChiaServer:
 
     def get_connections(
         self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = None
-    ) -> List[WSChiaConnection]:
+    ) -> list[WSChiaConnection]:
         result = []
         for _, connection in self.all_connections.items():
             node_type_match = node_type is None or connection.connection_type == node_type
@@ -707,7 +708,7 @@ class ChiaServer:
             return inbound_count < cast(int, self.config.get("max_inbound_timelord", 5))
         return True
 
-    def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: Dict[str, Any]) -> bool:
+    def is_trusted_peer(self, peer: WSChiaConnection, trusted_peers: dict[str, Any]) -> bool:
         return is_trusted_peer(
             host=peer.peer_info.host,
             node_id=peer.peer_node_id,
@@ -716,5 +717,5 @@ class ChiaServer:
             testing=self.config.get("testing", False),
         )
 
-    def set_capabilities(self, capabilities: List[Tuple[uint16, str]]) -> None:
+    def set_capabilities(self, capabilities: list[tuple[uint16, str]]) -> None:
         self._local_capabilities_for_handshake = capabilities

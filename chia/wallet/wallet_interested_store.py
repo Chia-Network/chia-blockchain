@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -38,7 +38,7 @@ class WalletInterestedStore:
 
         return self
 
-    async def get_interested_coin_ids(self) -> List[bytes32]:
+    async def get_interested_coin_ids(self) -> list[bytes32]:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute("SELECT coin_name FROM interested_coins")
             rows_hex = await cursor.fetchall()
@@ -54,7 +54,7 @@ class WalletInterestedStore:
             cursor = await conn.execute("DELETE FROM interested_coins WHERE coin_name=?", (coin_id.hex(),))
             await cursor.close()
 
-    async def get_interested_puzzle_hashes(self) -> List[Tuple[bytes32, int]]:
+    async def get_interested_puzzle_hashes(self) -> list[tuple[bytes32, int]]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT puzzle_hash, wallet_id FROM interested_puzzle_hashes")
             rows_hex = await cursor.fetchall()
@@ -111,7 +111,7 @@ class WalletInterestedStore:
             )
             await cursor.close()
 
-    async def get_unacknowledged_tokens(self) -> List:
+    async def get_unacknowledged_tokens(self) -> list:
         """
         Get a list of all unacknowledged CATs
         :return: A json style list of unacknowledged CATs
@@ -147,7 +147,7 @@ class WalletInterestedStore:
             )
             await cursor.close()
 
-    async def get_unacknowledged_states_for_asset_id(self, asset_id: bytes32) -> List[Tuple[CoinState, uint32]]:
+    async def get_unacknowledged_states_for_asset_id(self, asset_id: bytes32) -> list[tuple[CoinState, uint32]]:
         """
         Return all states for a particular asset ID that were ignored
         :param asset_id: CAT asset ID

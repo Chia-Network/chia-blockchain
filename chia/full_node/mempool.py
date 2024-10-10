@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Awaitable, Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from time import monotonic
-from typing import Awaitable, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Callable, Optional
 
 from chia_rs import AugSchemeMPL, Coin, G2Element
 
@@ -50,13 +51,13 @@ MEMPOOL_ITEM_FEE_LIMIT = 2**50
 
 @dataclass
 class MempoolRemoveInfo:
-    items: List[InternalMempoolItem]
+    items: list[InternalMempoolItem]
     reason: MempoolRemoveReason
 
 
 @dataclass
 class MempoolAddInfo:
-    removals: List[MempoolRemoveInfo]
+    removals: list[MempoolRemoveInfo]
     error: Optional[Err]
 
 
@@ -71,7 +72,7 @@ class Mempool:
     _db_conn: sqlite3.Connection
     # it's expensive to serialize and deserialize G2Element, so we keep those in
     # this separate dictionary
-    _items: Dict[bytes32, InternalMempoolItem]
+    _items: dict[bytes32, InternalMempoolItem]
 
     # the most recent block height and timestamp that we know of
     _block_height: uint32
@@ -164,18 +165,18 @@ class Mempool:
             for row in cursor:
                 yield self._row_to_item(row)
 
-    def all_item_ids(self) -> List[bytes32]:
+    def all_item_ids(self) -> list[bytes32]:
         with self._db_conn:
             cursor = self._db_conn.execute("SELECT name FROM tx")
             return [bytes32(row[0]) for row in cursor]
 
-    def items_with_coin_ids(self, coin_ids: Set[bytes32]) -> List[bytes32]:
+    def items_with_coin_ids(self, coin_ids: set[bytes32]) -> list[bytes32]:
         """
         Returns a list of transaction ids that spend or create any coins with the provided coin ids.
         This iterates over the internal items instead of using a query.
         """
 
-        transaction_ids: List[bytes32] = []
+        transaction_ids: list[bytes32] = []
 
         for transaction_id, item in self._items.items():
             conds = item.conds
@@ -197,14 +198,14 @@ class Mempool:
 
         return transaction_ids
 
-    def items_with_puzzle_hashes(self, puzzle_hashes: Set[bytes32], include_hints: bool) -> List[bytes32]:
+    def items_with_puzzle_hashes(self, puzzle_hashes: set[bytes32], include_hints: bool) -> list[bytes32]:
         """
         Returns a list of transaction ids that spend or create any coins
         with the provided puzzle hashes (or hints, if enabled).
         This iterates over the internal items instead of using a query.
         """
 
-        transaction_ids: List[bytes32] = []
+        transaction_ids: list[bytes32] = []
 
         for transaction_id, item in self._items.items():
             conds = item.conds
@@ -261,8 +262,8 @@ class Mempool:
         for row in cursor:
             yield self._row_to_item(row)
 
-    def get_items_by_coin_ids(self, spent_coin_ids: List[bytes32]) -> List[MempoolItem]:
-        items: List[MempoolItem] = []
+    def get_items_by_coin_ids(self, spent_coin_ids: list[bytes32]) -> list[MempoolItem]:
+        items: list[MempoolItem] = []
         for batch in to_batches(spent_coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
             args = ",".join(["?"] * len(batch.entries))
             cursor = self._db_conn.execute(
@@ -318,14 +319,14 @@ class Mempool:
 
         return self.remove_from_pool(to_remove, MempoolRemoveReason.EXPIRED)
 
-    def remove_from_pool(self, items: List[bytes32], reason: MempoolRemoveReason) -> MempoolRemoveInfo:
+    def remove_from_pool(self, items: list[bytes32], reason: MempoolRemoveReason) -> MempoolRemoveInfo:
         """
         Removes an item from the mempool.
         """
         if items == []:
             return MempoolRemoveInfo([], reason)
 
-        removed_items: List[MempoolItemInfo] = []
+        removed_items: list[MempoolItemInfo] = []
         if reason != MempoolRemoveReason.BLOCK_INCLUSION:
             for batch in to_batches(items, SQLITE_MAX_VARIABLE_NUMBER):
                 args = ",".join(["?"] * len(batch.entries))
@@ -375,7 +376,7 @@ class Mempool:
         assert item.conds is not None
         assert item.cost <= self.mempool_info.max_block_clvm_cost
 
-        removals: List[MempoolRemoveInfo] = []
+        removals: list[MempoolRemoveInfo] = []
 
         # we have certain limits on transactions that will expire soon
         # (in the next 15 minutes)
@@ -399,7 +400,7 @@ class Mempool:
                 """,
                 (time_cutoff, block_cutoff),
             )
-            to_remove: List[bytes32] = []
+            to_remove: list[bytes32] = []
             for row in cursor:
                 name, fee_per_cost, cumulative_cost = row
 
@@ -476,11 +477,11 @@ class Mempool:
         get_unspent_lineage_info_for_puzzle_hash: Callable[[bytes32], Awaitable[Optional[UnspentLineageInfo]]],
         constants: ConsensusConstants,
         height: uint32,
-    ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
+    ) -> Optional[tuple[SpendBundle, list[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         processed_spend_bundles = 0
-        additions: List[Coin] = []
+        additions: list[Coin] = []
         # This contains:
         # 1. A map of coin ID to a coin spend solution and its isolated cost
         #   We reconstruct it for every bundle we create from mempool items because we
@@ -490,8 +491,8 @@ class Mempool:
         #   recent unspent singleton data, to allow chaining fast forward
         #   singleton spends
         eligible_coin_spends = EligibleCoinSpends()
-        coin_spends: List[CoinSpend] = []
-        sigs: List[G2Element] = []
+        coin_spends: list[CoinSpend] = []
+        sigs: list[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         bundle_creation_start = monotonic()
         cursor = self._db_conn.execute("SELECT name, fee FROM tx ORDER BY fee_per_cost DESC, seq ASC")

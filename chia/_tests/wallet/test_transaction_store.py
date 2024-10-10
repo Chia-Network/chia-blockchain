@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import random
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 
@@ -210,7 +210,7 @@ async def test_get_farming_rewards(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         # tr1 is type OUTGOING_TX
 
         for conf in [True, False]:
@@ -320,7 +320,7 @@ async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         for wallet_id in [1, 2]:
             for type in [
                 TransactionType.INCOMING_TX,
@@ -356,7 +356,7 @@ async def test_all_transactions_for_wallet(seeded_random: random.Random) -> None
         assert await store.get_all_transactions_for_wallet(2, TransactionType.OUTGOING_TRADE) == [test_trs[11]]
 
 
-def cmp(lhs: List[Any], rhs: List[Any]) -> bool:
+def cmp(lhs: list[Any], rhs: list[Any]) -> bool:
     if len(rhs) != len(lhs):
         return False
 
@@ -371,7 +371,7 @@ async def test_get_all_transactions(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         assert await store.get_all_transactions() == []
         for wallet_id in [1, 2, 3, 4]:
             test_trs.append(dataclasses.replace(tr1, name=bytes32.random(seeded_random), wallet_id=uint32(wallet_id)))
@@ -388,7 +388,7 @@ async def test_get_transaction_above(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         assert await store.get_transaction_above(uint32(0)) == []
         for height in range(10):
             test_trs.append(
@@ -440,7 +440,7 @@ async def test_rollback_to_block(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        test_trs: List[TransactionRecord] = []
+        test_trs: list[TransactionRecord] = []
         for height in range(10):
             test_trs.append(
                 dataclasses.replace(tr1, name=bytes32.random(seeded_random), confirmed_at_height=uint32(height))
@@ -798,7 +798,7 @@ async def test_get_not_sent(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_transaction_record_is_valid() -> None:
-    invalid_attempts: List[Tuple[str, uint8, Optional[str]]] = []
+    invalid_attempts: list[tuple[str, uint8, Optional[str]]] = []
     # The tx should be valid as long as we don't have minimum_send_attempts failed attempts
     while len(invalid_attempts) < minimum_send_attempts:
         assert dataclasses.replace(tr1, sent_to=invalid_attempts).is_valid()

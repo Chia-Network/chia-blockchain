@@ -4,7 +4,7 @@ import asyncio
 import random
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Type
+from typing import Optional
 
 import anyio
 import pytest
@@ -110,7 +110,7 @@ async def test_worker_id_counts() -> None:
         worker_async_callable=worker,
         target_worker_count=1,
     ):
-        results: List[int] = []
+        results: list[int] = []
 
         with anyio.fail_after(adjusted_timeout(10)):
             for _ in expected_results:
@@ -194,7 +194,7 @@ async def test_simple_queue_example() -> None:
         for input in inputs:
             await work_queue.put(input)
 
-        results: List[int] = []
+        results: list[int] = []
 
         with anyio.fail_after(adjusted_timeout(10)):
             for _ in inputs:
@@ -228,7 +228,7 @@ async def test_simple_queue_example_using_queued() -> None:
         for job in jobs:
             await work_queue.put(job)
 
-        results: List[int] = []
+        results: list[int] = []
 
         with anyio.fail_after(adjusted_timeout(10)):
             for _ in expected_results:
@@ -266,7 +266,7 @@ async def test_queued_pre_cancel() -> None:
 
             await work_queue.put(job)
 
-        results: List[int] = []
+        results: list[int] = []
 
         with anyio.fail_after(adjusted_timeout(10)):
             for _ in expected_results:
@@ -304,7 +304,7 @@ async def test_queued_active_cancel() -> None:
         for job in jobs:
             await work_queue.put(job)
 
-        results: List[int] = []
+        results: list[int] = []
         with anyio.fail_after(adjusted_timeout(10)):
             for job in jobs:
                 await job.started.wait()
@@ -346,7 +346,7 @@ async def test_queued_raises() -> None:
         for job in jobs:
             await work_queue.put(job)
 
-        results: List[int] = []
+        results: list[int] = []
 
         with anyio.fail_after(adjusted_timeout(10)):
             for _ in expected_results:
@@ -355,7 +355,7 @@ async def test_queued_raises() -> None:
     raising_jobs = [job for job in jobs if job.input in raises]
     expected_exceptions = [(Exception, (job.input,)) for job in raising_jobs]
 
-    exceptions: List[Tuple[Type[BaseException], Tuple[int]]] = []
+    exceptions: list[tuple[type[BaseException], tuple[int]]] = []
     for job in raising_jobs:
         exception = job.exception
         assert isinstance(exception, BaseException)

@@ -5,8 +5,9 @@ import logging
 import math
 import time
 import traceback
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
@@ -47,7 +48,7 @@ ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 error_response_version = Version("0.0.35")
 
 
-def create_default_last_message_time_dict() -> Dict[ProtocolMessageTypes, float]:
+def create_default_last_message_time_dict() -> dict[ProtocolMessageTypes, float]:
     return {message_type: -math.inf for message_type in ProtocolMessageTypes}
 
 
@@ -73,8 +74,8 @@ class WSChiaConnection:
     api: ApiProtocol = field(repr=False)
     local_type: NodeType
     local_port: Optional[int]
-    local_capabilities_for_handshake: List[Tuple[uint16, str]] = field(repr=False)
-    local_capabilities: List[Capability]
+    local_capabilities_for_handshake: list[tuple[uint16, str]] = field(repr=False)
+    local_capabilities: list[Capability]
     peer_info: PeerInfo
     peer_node_id: bytes32
     log: logging.Logger = field(repr=False)
@@ -90,9 +91,9 @@ class WSChiaConnection:
     received_message_callback: Optional[ConnectionCallback] = field(repr=False)
     incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
     outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
-    api_tasks: Dict[bytes32, asyncio.Task[None]] = field(default_factory=dict, repr=False)
+    api_tasks: dict[bytes32, asyncio.Task[None]] = field(default_factory=dict, repr=False)
     # Contains task ids of api tasks which should not be canceled
-    execute_tasks: Set[bytes32] = field(default_factory=set, repr=False)
+    execute_tasks: set[bytes32] = field(default_factory=set, repr=False)
 
     # ChiaConnection metrics
     creation_time: float = field(default_factory=time.time)
@@ -107,17 +108,17 @@ class WSChiaConnection:
     _close_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
     session: Optional[ClientSession] = field(default=None, repr=False)
 
-    pending_requests: Dict[uint16, asyncio.Event] = field(default_factory=dict, repr=False)
-    request_results: Dict[uint16, Message] = field(default_factory=dict, repr=False)
+    pending_requests: dict[uint16, asyncio.Event] = field(default_factory=dict, repr=False)
+    request_results: dict[uint16, Message] = field(default_factory=dict, repr=False)
     closed: bool = False
     connection_type: Optional[NodeType] = None
     request_nonce: uint16 = uint16(0)
-    peer_capabilities: List[Capability] = field(default_factory=list)
+    peer_capabilities: list[Capability] = field(default_factory=list)
     # Used by the Chia Seeder.
     version: str = field(default_factory=str)
     protocol_version: Version = field(default_factory=lambda: Version("0"))
 
-    log_rate_limit_last_time: Dict[ProtocolMessageTypes, float] = field(
+    log_rate_limit_last_time: dict[ProtocolMessageTypes, float] = field(
         default_factory=create_default_last_message_time_dict,
         repr=False,
     )
@@ -136,7 +137,7 @@ class WSChiaConnection:
         peer_id: bytes32,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
-        local_capabilities_for_handshake: List[Tuple[uint16, str]],
+        local_capabilities_for_handshake: list[tuple[uint16, str]],
         session: Optional[ClientSession] = None,
     ) -> WSChiaConnection:
         assert ws._writer is not None

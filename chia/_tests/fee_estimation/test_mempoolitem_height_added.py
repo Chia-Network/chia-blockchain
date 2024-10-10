@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 import pytest
 from chia_rs import Coin, G2Element
@@ -32,7 +32,7 @@ async def farm(
     sim: SpendSim,
     puzzle_hash: bytes32,
     item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
-) -> Tuple[List[Coin], List[Coin], List[Coin]]:
+) -> tuple[list[Coin], list[Coin], list[Coin]]:
     additions, removals = await sim.farm_block(puzzle_hash)  # , item_inclusion_filter)
     height = sim.get_height()
     new_reward_coins = sim.block_records[height].reward_claims_incorporated
@@ -51,7 +51,7 @@ def make_tx_sb(from_coin: Coin) -> SpendBundle:
 
 async def init_test(
     sim: SpendSim, cli: SimClient, puzzle_hash: bytes32, spends_per_block: int
-) -> Tuple[BitcoinFeeEstimator, List[Coin], List[Coin]]:
+) -> tuple[BitcoinFeeEstimator, list[Coin], list[Coin]]:
     new_reward_coins = []
     spend_coins = []
     fee_coins = []

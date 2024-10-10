@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import pytest
 from typing_extensions import override
@@ -32,7 +32,7 @@ from chia.wallet.util.wallet_types import WalletType
 # DAO Commands
 
 
-def test_dao_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_dao_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -41,7 +41,7 @@ def test_dao_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             self,
             mode: str,
             tx_config: TXConfig,
-            dao_rules: Optional[Dict[str, uint64]] = None,
+            dao_rules: Optional[dict[str, uint64]] = None,
             amount_of_cats: Optional[uint64] = None,
             treasury_id: Optional[bytes32] = None,
             filter_amount: uint64 = uint64(1),
@@ -118,17 +118,17 @@ def test_dao_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     run_cli_command_and_assert(capsys, root_dir, add_command_args, assert_list)
 
 
-def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_dao_treasury(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     class DAOCreateRpcClient(TestWalletRpcClient):
         async def dao_get_treasury_id(
             self,
             wallet_id: int,
-        ) -> Dict[str, str]:
+        ) -> dict[str, str]:
             return {"treasury_id": "0xCAFEF00D"}
 
-        async def dao_get_treasury_balance(self, wallet_id: int) -> Dict[str, Union[str, bool, Dict[str, int]]]:
+        async def dao_get_treasury_balance(self, wallet_id: int) -> dict[str, Union[str, bool, dict[str, int]]]:
             if wallet_id == 2:
                 return {"success": True, "balances": {"xch": 1000000000000, "0xCAFEF00D": 10000000}}
             else:
@@ -150,7 +150,7 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
         async def dao_get_rules(
             self,
             wallet_id: int,
-        ) -> Dict[str, Dict[str, int]]:
+        ) -> dict[str, dict[str, int]]:
             return {"rules": {"proposal_minimum": 100}}
 
         @override
@@ -201,7 +201,7 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     run_cli_command_and_assert(capsys, root_dir, rules_args, rules_asserts)
 
 
-def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_dao_proposals(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -210,7 +210,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             self,
             wallet_id: int,
             include_closed: bool = True,
-        ) -> Dict[str, Union[bool, int, List[Any]]]:
+        ) -> dict[str, Union[bool, int, list[Any]]]:
             proposal = {
                 "proposal_id": "0xCAFEF00D",
                 "amount_voted": uint64(10),
@@ -236,11 +236,11 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             self,
             wallet_id: int,
             proposal_id: str,
-        ) -> Dict[str, Union[bool, Dict[str, Any]]]:
+        ) -> dict[str, Union[bool, dict[str, Any]]]:
             if proposal_id == "0xCAFEF00D":
                 puzhash = bytes32(b"1" * 32).hex()
                 asset_id = bytes32(b"2" * 32).hex()
-                proposal_details: Dict[str, Any] = {
+                proposal_details: dict[str, Any] = {
                     "proposal_type": "s",
                     "xch_conditions": [{"puzzle_hash": puzhash, "amount": 100}],
                     "asset_conditions": [
@@ -305,13 +305,13 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             wallet_id: int,
             proposal_type: str,
             tx_config: TXConfig,
-            additions: Optional[List[Dict[str, Any]]] = None,
+            additions: Optional[list[dict[str, Any]]] = None,
             amount: Optional[uint64] = None,
             inner_address: Optional[str] = None,
             asset_id: Optional[str] = None,
             cat_target_address: Optional[str] = None,
             vote_amount: Optional[int] = None,
-            new_dao_rules: Optional[Dict[str, uint64]] = None,
+            new_dao_rules: Optional[dict[str, uint64]] = None,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
             push: bool = True,
@@ -319,7 +319,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         ) -> DAOCreateProposalResponse:
             return DAOCreateProposalResponse([STD_UTX], [STD_TX], bytes32([0] * 32), STD_TX.name, STD_TX)
 
-        async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> List[Dict[str, Union[str, int]]]:
+        async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Union[str, int]]]:
             return [{"id": 1, "type": 0}, {"id": 2, "type": 14}]
 
         @override
@@ -487,7 +487,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
     run_cli_command_and_assert(capsys, root_dir, mint_args, proposal_asserts)
 
 
-def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_dao_cats(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -519,7 +519,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             self,
             wallet_id: int,
             tx_config: TXConfig,
-            coins: Optional[List[Dict[str, Union[str, int]]]] = None,
+            coins: Optional[list[dict[str, Union[str, int]]]] = None,
             fee: uint64 = uint64(0),
             reuse_puzhash: Optional[bool] = None,
             push: bool = True,

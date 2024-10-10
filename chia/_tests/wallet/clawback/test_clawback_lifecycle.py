@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -48,7 +48,7 @@ async def do_spend(
     sim: SpendSim,
     sim_client: SimClient,
     spend_bundle: WalletSpendBundle,
-    expected_result: Tuple[MempoolInclusionStatus, Optional[Err]],
+    expected_result: tuple[MempoolInclusionStatus, Optional[Err]],
     cost_logger: Optional[CostLogger] = None,
     cost_log_msg: str = "",
 ) -> int:
@@ -277,7 +277,7 @@ class TestClawbackLifecycle:
         cb_sender_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, sender_puz, sender_sol)
 
         conds = conditions_dict_for_solution(clawback_puz, cb_sender_sol, INFINITE_COST)
-        assert isinstance(conds, Dict)
+        assert isinstance(conds, dict)
         create_coins = conds[ConditionOpcode.CREATE_COIN]
         assert len(create_coins) == 1
         assert create_coins[0].vars[0] == sender_ph
@@ -286,7 +286,7 @@ class TestClawbackLifecycle:
         cb_recipient_sol = create_merkle_solution(timelock, sender_ph, recipient_ph, recipient_puz, recipient_sol)
         clawback_puz.run(cb_recipient_sol)
         conds = conditions_dict_for_solution(clawback_puz, cb_recipient_sol, INFINITE_COST)
-        assert isinstance(conds, Dict)
+        assert isinstance(conds, dict)
         create_coins = conds[ConditionOpcode.CREATE_COIN]
         assert len(create_coins) == 1
         assert create_coins[0].vars[0] == recipient_ph

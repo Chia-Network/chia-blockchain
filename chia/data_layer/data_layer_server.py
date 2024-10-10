@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import FrameType
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import click
 from aiohttp import web
@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class DataLayerServer:
     root_path: Path
-    config: Dict[str, Any]
+    config: dict[str, Any]
     log: logging.Logger
     shutdown_event: asyncio.Event
     webserver: Optional[WebServer] = None

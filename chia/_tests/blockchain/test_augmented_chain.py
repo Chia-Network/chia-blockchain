@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 import pytest
 
@@ -21,11 +21,11 @@ class NullBlockchain:
 
         _protocol_check: ClassVar[BlocksProtocol] = cast("NullBlockchain", None)
 
-    added_blocks: Set[bytes32] = field(default_factory=set)
-    heights: Dict[uint32, bytes32] = field(default_factory=dict)
+    added_blocks: set[bytes32] = field(default_factory=set)
+    heights: dict[uint32, bytes32] = field(default_factory=dict)
 
     # BlocksProtocol
-    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: Set[uint32]) -> Dict[uint32, bytes]:
+    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
         raise ValueError(Err.GENERATOR_REF_HAS_NO_GENERATOR)  # pragma: no cover
 
     async def get_block_record_from_db(self, header_hash: bytes32) -> Optional[BlockRecord]:
@@ -53,7 +53,7 @@ class NullBlockchain:
     def contains_height(self, height: uint32) -> bool:
         return height in self.heights.keys()
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         raise KeyError("no block records in NullBlockchain")  # pragma: no cover
 
 
@@ -71,7 +71,7 @@ def BR(b: FullBlock) -> BlockRecord:
 
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="save time")
-async def test_augmented_chain(default_10000_blocks: List[FullBlock]) -> None:
+async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
 
     blocks = default_10000_blocks
     # this test blockchain is expected to have block generators at these

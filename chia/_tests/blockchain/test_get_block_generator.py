@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 import pytest
 from clvm.casts import int_to_bytes
@@ -17,7 +17,7 @@ from chia.util.ints import uint32
 class BR:
     prev_header_hash: bytes32
     transactions_generator: Optional[SerializedProgram]
-    transactions_generator_ref_list: List[uint32]
+    transactions_generator_ref_list: list[uint32]
 
 
 @dataclass(frozen=True)
@@ -35,15 +35,15 @@ def program(i: int) -> SerializedProgram:
     return SerializedProgram.from_bytes(int_to_bytes(i))
 
 
-async def zero_hits(hh: bytes32, refs: Set[uint32]) -> Dict[uint32, bytes]:
+async def zero_hits(hh: bytes32, refs: set[uint32]) -> dict[uint32, bytes]:
     return {}
 
 
-async def never_called(hh: bytes32, refs: Set[uint32]) -> Dict[uint32, bytes]:
+async def never_called(hh: bytes32, refs: set[uint32]) -> dict[uint32, bytes]:
     assert False  # pragma: no cover
 
 
-async def only_lookup_5(hh: bytes32, refs: Set[uint32]) -> Dict[uint32, bytes]:
+async def only_lookup_5(hh: bytes32, refs: set[uint32]) -> dict[uint32, bytes]:
     assert refs == {uint32(5)}
     return {uint32(5): bytes(program(5))}
 

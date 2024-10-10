@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 
@@ -31,7 +32,7 @@ from chia.util.keychain import Keychain
     argnames=["filter_prefix_bits", "should_pass"], argvalues=[(9, 34), (8, 89), (7, 162), (6, 295), (5, 579)]
 )
 def test_filter_prefix_bits_on_blocks(
-    default_10000_blocks: List[FullBlock], filter_prefix_bits: uint8, should_pass: int
+    default_10000_blocks: list[FullBlock], filter_prefix_bits: uint8, should_pass: int
 ) -> None:
     passed = 0
     for block in default_10000_blocks:
@@ -50,7 +51,7 @@ def test_filter_prefix_bits_on_blocks(
 @pytest.fixture(scope="function")
 async def farmer_harvester_with_filter_size_9(
     get_temp_keyring: Keychain, tmp_path: Path, self_hostname: str
-) -> AsyncIterator[Tuple[HarvesterService, FarmerAPI]]:
+) -> AsyncIterator[tuple[HarvesterService, FarmerAPI]]:
     async def have_connections() -> bool:
         return len(await farmer_rpc_cl.get_connections()) > 0
 
@@ -86,14 +87,14 @@ async def farmer_harvester_with_filter_size_9(
 @pytest.mark.parametrize(argnames=["peak_height", "eligible_plots"], argvalues=[(5495999, 0), (5496000, 1)])
 @pytest.mark.anyio
 async def test_filter_prefix_bits_with_farmer_harvester(
-    farmer_harvester_with_filter_size_9: Tuple[HarvesterService, FarmerAPI],
+    farmer_harvester_with_filter_size_9: tuple[HarvesterService, FarmerAPI],
     peak_height: uint32,
     eligible_plots: int,
 ) -> None:
     state_change = None
     state_change_data = None
 
-    def state_changed_callback(change: str, change_data: Optional[Dict[str, Any]]) -> None:
+    def state_changed_callback(change: str, change_data: Optional[dict[str, Any]]) -> None:
         nonlocal state_change, state_change_data
         state_change = change
         state_change_data = change_data

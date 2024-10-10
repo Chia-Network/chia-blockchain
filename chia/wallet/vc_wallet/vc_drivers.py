@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import List, Optional, Tuple, Type, TypeVar
+from typing import Optional, TypeVar
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -103,7 +103,7 @@ def create_covenant_layer(initial_puzzle_hash: bytes32, parent_morpher: Program,
     )
 
 
-def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32, Program, Program]]:
+def match_covenant_layer(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[bytes32, Program, Program]]:
     if uncurried_puzzle.mod == COVENANT_LAYER:
         return (
             bytes32(uncurried_puzzle.args.at("f").as_atom()),
@@ -166,7 +166,7 @@ def create_did_tp(
 EML_DID_TP_FULL_HASH = create_did_tp().get_tree_hash()
 
 
-def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[()]]:
+def match_did_tp(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[()]]:
     if uncurried_puzzle.mod == EML_DID_TP:
         return ()
     else:
@@ -198,7 +198,7 @@ def create_viral_backdoor(hidden_puzzle_hash: bytes32, inner_puzzle_hash: bytes3
     )
 
 
-def match_viral_backdoor(uncurried_puzzle: UncurriedPuzzle) -> Optional[Tuple[bytes32, bytes32]]:
+def match_viral_backdoor(uncurried_puzzle: UncurriedPuzzle) -> Optional[tuple[bytes32, bytes32]]:
     if uncurried_puzzle.mod == VIRAL_BACKDOOR:
         return bytes32(uncurried_puzzle.args.at("rf").as_atom()), bytes32(uncurried_puzzle.args.at("rrf").as_atom())
     else:
@@ -328,14 +328,14 @@ class VerifiedCredential(Streamable):
 
     @classmethod
     def launch(
-        cls: Type[_T_VerifiedCredential],
-        origin_coins: List[Coin],
+        cls: type[_T_VerifiedCredential],
+        origin_coins: list[Coin],
         provider_id: bytes32,
         new_inner_puzzle_hash: bytes32,
-        memos: List[bytes32],
+        memos: list[bytes32],
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[List[Program], List[CoinSpend], _T_VerifiedCredential]:
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> tuple[list[Program], list[CoinSpend], _T_VerifiedCredential]:
         """
         Launch a VC.
 
@@ -414,7 +414,7 @@ class VerifiedCredential(Streamable):
         )
 
         primary_dpuz: Program = Program.to((1, create_launcher_conditions))
-        additional_dpuzs: List[Program] = [Program.to((1, [[61, second_launcher_announcement_hash]]))]
+        additional_dpuzs: list[Program] = [Program.to((1, [[61, second_launcher_announcement_hash]]))]
         return (
             [primary_dpuz, *additional_dpuzs],
             [
@@ -496,7 +496,7 @@ class VerifiedCredential(Streamable):
     ####################################################################################################################
 
     @staticmethod
-    def is_vc(puzzle_reveal: UncurriedPuzzle) -> Tuple[bool, str]:
+    def is_vc(puzzle_reveal: UncurriedPuzzle) -> tuple[bool, str]:
         """
         This takes an (uncurried) puzzle reveal and returns a boolean for whether the puzzle is a VC and an error
         message for if the puzzle is a mismatch. Returns True for VC launcher spends.
@@ -555,7 +555,7 @@ class VerifiedCredential(Streamable):
         return True, ""
 
     @classmethod
-    def get_next_from_coin_spend(cls: Type[_T_VerifiedCredential], parent_spend: CoinSpend) -> _T_VerifiedCredential:
+    def get_next_from_coin_spend(cls: type[_T_VerifiedCredential], parent_spend: CoinSpend) -> _T_VerifiedCredential:
         """
         Given a coin spend, this will return the next VC that was create as an output of that spend. This is the main
         method to use when syncing. If a spend has been identified as having a VC puzzle reveal, running this method
@@ -585,7 +585,7 @@ class VerifiedCredential(Streamable):
             dpuz: Program = solution.at("rrf").at("f").at("f")
             dsol: Program = solution.at("rrf").at("f").at("rf")
 
-            conditions: List[Program] = list(dpuz.run(dsol).as_iter())
+            conditions: list[Program] = list(dpuz.run(dsol).as_iter())
             remark_condition: Program = next(c for c in conditions if c.at("f").as_int() == 1)
             inner_puzzle_hash = bytes32(remark_condition.at("rf").as_atom())
             magic_condition: Program = next(c for c in conditions if c.at("f").as_int() == -10)
@@ -707,7 +707,7 @@ class VerifiedCredential(Streamable):
         inner_solution: Program,
         new_proof_hash: Optional[bytes32] = None,
         new_proof_provider: Optional[bytes32] = None,
-    ) -> Tuple[Optional[CreatePuzzleAnnouncement], CoinSpend, VerifiedCredential]:
+    ) -> tuple[Optional[CreatePuzzleAnnouncement], CoinSpend, VerifiedCredential]:
         """
         Given an inner puzzle reveal and solution, spend the VC (potentially updating the proofs in the process).
         Note that the inner puzzle is already expected to output the 'magic' condition (which can be created above).
@@ -760,7 +760,7 @@ class VerifiedCredential(Streamable):
 
     def activate_backdoor(
         self, provider_innerpuzhash: bytes32, announcement_nonce: Optional[bytes32] = None
-    ) -> Tuple[CreatePuzzleAnnouncement, CoinSpend]:
+    ) -> tuple[CreatePuzzleAnnouncement, CoinSpend]:
         """
         Activates the backdoor in the VC to revoke the credentials and remove the provider's DID.
 

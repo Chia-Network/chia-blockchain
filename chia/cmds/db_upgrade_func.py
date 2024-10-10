@@ -10,7 +10,7 @@ import textwrap
 from contextlib import closing
 from pathlib import Path
 from time import monotonic
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import zstd
 
@@ -33,7 +33,7 @@ def db_upgrade_func(
 ) -> None:
     update_config: bool = in_db_path is None and out_db_path is None and not no_update_config
 
-    config: Dict[str, Any]
+    config: dict[str, Any]
     selected_network: str
     db_pattern: str
     if in_db_path is None or out_db_path is None:
@@ -183,7 +183,7 @@ def convert_v1_to_v2(in_path: Path, out_path: Path) -> None:
         parameter_limit = get_host_parameter_limit()
         start_time = monotonic()
         block_start_time = start_time
-        rowids: List[int] = []
+        rowids: list[int] = []
         small_batch_size = BATCH_SIZE <= parameter_limit
         small_chain = peak_height <= parameter_limit
         current_header_hash = peak_hash

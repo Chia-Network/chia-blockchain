@@ -4,7 +4,7 @@ import logging
 import os
 from logging.handlers import SysLogHandler
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
@@ -17,7 +17,7 @@ from chia.util.path import path_from_root
 default_log_level = "WARNING"
 
 
-def get_beta_logging_config() -> Dict[str, Any]:
+def get_beta_logging_config() -> dict[str, Any]:
     return {
         "log_filename": f"{chia_short_version()}/chia-blockchain/beta.log",
         "log_level": "DEBUG",
@@ -29,7 +29,7 @@ def get_beta_logging_config() -> Dict[str, Any]:
 
 
 def get_file_log_handler(
-    formatter: logging.Formatter, root_path: Path, logging_config: Dict[str, object]
+    formatter: logging.Formatter, root_path: Path, logging_config: dict[str, object]
 ) -> ConcurrentRotatingFileHandler:
     log_path = path_from_root(root_path, str(logging_config.get("log_filename", "log/debug.log")))
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,7 +45,7 @@ def get_file_log_handler(
 
 def initialize_logging(
     service_name: str,
-    logging_config: Dict[str, Any],
+    logging_config: dict[str, Any],
     root_path: Path,
     beta_root_path: Optional[Path] = None,
 ) -> None:
@@ -57,7 +57,7 @@ def initialize_logging(
         f"%(levelname)-8s %(message)s",
         datefmt=log_date_format,
     )
-    handlers: List[logging.Handler] = []
+    handlers: list[logging.Handler] = []
     if logging_config["log_stdout"]:
         stdout_handler = colorlog.StreamHandler()
         stdout_handler.setFormatter(
@@ -106,7 +106,7 @@ def initialize_logging(
         logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
 
 
-def initialize_service_logging(service_name: str, config: Dict[str, Any]) -> None:
+def initialize_service_logging(service_name: str, config: dict[str, Any]) -> None:
     logging_root_path = DEFAULT_ROOT_PATH
     if service_name == "daemon":
         # TODO: Maybe introduce a separate `daemon` section in the config instead of having `daemon_port`, `logging`

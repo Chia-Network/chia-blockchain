@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field, replace
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import pytest
 
@@ -118,7 +118,7 @@ def get_dummy_record(wallet_id: int, seeded_random: random.Random) -> WalletCoin
 @dataclass
 class DummyWalletCoinRecords:
     seeded_random: random.Random
-    records_per_wallet: Dict[int, List[WalletCoinRecord]] = field(default_factory=dict)
+    records_per_wallet: dict[int, list[WalletCoinRecord]] = field(default_factory=dict)
 
     def generate(self, wallet_id: int, count: int) -> None:
         records = self.records_per_wallet.setdefault(wallet_id, [])
@@ -367,7 +367,7 @@ async def test_delete_coin_record() -> None:
         ).records == [record_2, record_3, record_4, record_5, record_6, record_7]
 
 
-get_coin_records_offset_limit_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_offset_limit_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(offset=uint32(0), limit=uint32(0)), []),
     (GetCoinRecords(offset=uint32(10), limit=uint32(0)), []),
     (GetCoinRecords(offset=uint32(0), limit=uint32(1)), [record_8]),
@@ -379,7 +379,7 @@ get_coin_records_offset_limit_tests: List[Tuple[GetCoinRecords, List[WalletCoinR
     (GetCoinRecords(coin_type=uint8(CoinType.CLAWBACK), offset=uint32(5), limit=uint32(1)), []),
 ]
 
-get_coin_records_wallet_id_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_wallet_id_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (
         GetCoinRecords(),
         [record_8, record_9, record_1, record_2, record_3, record_4, record_5, record_6, record_7],
@@ -389,13 +389,13 @@ get_coin_records_wallet_id_tests: List[Tuple[GetCoinRecords, List[WalletCoinReco
     (GetCoinRecords(wallet_id=uint32(2)), [record_9, record_6, record_7]),
 ]
 
-get_coin_records_wallet_type_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_wallet_type_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(wallet_id=uint32(2), wallet_type=uint8(WalletType.STANDARD_WALLET)), [record_9, record_6]),
     (GetCoinRecords(wallet_type=uint8(WalletType.POOLING_WALLET)), [record_7]),
     (GetCoinRecords(wallet_type=uint8(WalletType.NFT)), []),
 ]
 
-get_coin_records_coin_type_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_coin_type_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(wallet_id=uint32(0), coin_type=uint8(CoinType.NORMAL)), [record_1, record_2, record_3, record_4]),
     (GetCoinRecords(wallet_id=uint32(0), coin_type=uint8(CoinType.CLAWBACK)), []),
     (GetCoinRecords(wallet_id=uint32(1), coin_type=uint8(CoinType.NORMAL)), [record_5]),
@@ -403,7 +403,7 @@ get_coin_records_coin_type_tests: List[Tuple[GetCoinRecords, List[WalletCoinReco
     (GetCoinRecords(coin_type=uint8(CoinType.CLAWBACK)), [record_8, record_9]),
 ]
 
-get_coin_records_coin_id_filter_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_coin_id_filter_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(coin_id_filter=HashFilter.include([])), []),
     (GetCoinRecords(coin_id_filter=HashFilter.include([coin_1.name(), coin_4.name()])), [record_1, record_4]),
     (GetCoinRecords(coin_id_filter=HashFilter.include([coin_1.name(), coin_4.puzzle_hash])), [record_1]),
@@ -416,7 +416,7 @@ get_coin_records_coin_id_filter_tests: List[Tuple[GetCoinRecords, List[WalletCoi
 ]
 
 
-get_coin_records_puzzle_hash_filter_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_puzzle_hash_filter_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(puzzle_hash_filter=HashFilter.include([])), []),
     (
         GetCoinRecords(puzzle_hash_filter=HashFilter.include([coin_1.puzzle_hash, coin_4.puzzle_hash])),
@@ -439,7 +439,7 @@ get_coin_records_puzzle_hash_filter_tests: List[Tuple[GetCoinRecords, List[Walle
     ),
 ]
 
-get_coin_records_parent_coin_id_filter_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_parent_coin_id_filter_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(parent_coin_id_filter=HashFilter.include([])), []),
     (
         GetCoinRecords(parent_coin_id_filter=HashFilter.include([coin_5.name(), coin_4.parent_coin_info])),
@@ -463,7 +463,7 @@ get_coin_records_parent_coin_id_filter_tests: List[Tuple[GetCoinRecords, List[Wa
     ),
 ]
 
-get_coin_records_amount_filter_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_amount_filter_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(amount_filter=AmountFilter.include([])), []),
     (
         GetCoinRecords(amount_filter=AmountFilter.include([uint64(12312)])),
@@ -491,7 +491,7 @@ get_coin_records_amount_filter_tests: List[Tuple[GetCoinRecords, List[WalletCoin
     ),
 ]
 
-get_coin_records_amount_range_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_amount_range_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(amount_range=UInt64Range(start=uint64(1000000))), []),
     (GetCoinRecords(amount_range=UInt64Range(stop=uint64(0))), []),
     (
@@ -504,7 +504,7 @@ get_coin_records_amount_range_tests: List[Tuple[GetCoinRecords, List[WalletCoinR
     (GetCoinRecords(amount_range=UInt64Range(start=uint64(5), stop=uint64(12311))), [record_2]),
 ]
 
-get_coin_records_confirmed_range_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_confirmed_range_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(confirmed_range=UInt32Range(start=uint32(20))), []),
     (GetCoinRecords(confirmed_range=UInt32Range(stop=uint32(0))), []),
     (GetCoinRecords(confirmed_range=UInt32Range(start=uint32(2), stop=uint32(1))), []),
@@ -521,7 +521,7 @@ get_coin_records_confirmed_range_tests: List[Tuple[GetCoinRecords, List[WalletCo
     ),
 ]
 
-get_coin_records_spent_range_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_spent_range_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (GetCoinRecords(spent_range=UInt32Range(start=uint32(20))), []),
     (GetCoinRecords(spent_range=UInt32Range(stop=uint32(0))), [record_8, record_1, record_2, record_5, record_7]),
     (GetCoinRecords(spent_range=UInt32Range(start=uint32(2), stop=uint32(1))), []),
@@ -530,7 +530,7 @@ get_coin_records_spent_range_tests: List[Tuple[GetCoinRecords, List[WalletCoinRe
     (GetCoinRecords(spent_range=UInt32Range(start=uint32(5), stop=uint32(15))), [record_3, record_4, record_6]),
 ]
 
-get_coin_records_order_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_order_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (
         GetCoinRecords(wallet_id=uint32(0), order=uint8(CoinRecordOrder.spent_height)),
         [record_1, record_2, record_3, record_4],
@@ -544,7 +544,7 @@ get_coin_records_order_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]
     ),
 ]
 
-get_coin_records_reverse_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord]]] = [
+get_coin_records_reverse_tests: list[tuple[GetCoinRecords, list[WalletCoinRecord]]] = [
     (
         GetCoinRecords(wallet_id=uint32(0), order=uint8(CoinRecordOrder.spent_height), reverse=True),
         [record_4, record_3, record_1, record_2],
@@ -567,7 +567,7 @@ get_coin_records_reverse_tests: List[Tuple[GetCoinRecords, List[WalletCoinRecord
     ),
 ]
 
-get_coin_records_include_total_count_tests: List[Tuple[GetCoinRecords, int, List[WalletCoinRecord]]] = [
+get_coin_records_include_total_count_tests: list[tuple[GetCoinRecords, int, list[WalletCoinRecord]]] = [
     (GetCoinRecords(wallet_id=uint32(0), include_total_count=True), 4, [record_1, record_2, record_3, record_4]),
     (
         GetCoinRecords(wallet_id=uint32(0), offset=uint32(1), limit=uint32(2), include_total_count=True),
@@ -579,7 +579,7 @@ get_coin_records_include_total_count_tests: List[Tuple[GetCoinRecords, int, List
     (GetCoinRecords(wallet_type=uint8(WalletType.POOLING_WALLET), include_total_count=True), 1, [record_7]),
 ]
 
-get_coin_records_mixed_tests: List[Tuple[GetCoinRecords, int, List[WalletCoinRecord]]] = [
+get_coin_records_mixed_tests: list[tuple[GetCoinRecords, int, list[WalletCoinRecord]]] = [
     (
         GetCoinRecords(
             offset=uint32(2),
@@ -632,7 +632,7 @@ get_coin_records_mixed_tests: List[Tuple[GetCoinRecords, int, List[WalletCoinRec
 
 
 async def run_get_coin_records_test(
-    request: GetCoinRecords, total_count: Optional[int], coin_records: List[WalletCoinRecord]
+    request: GetCoinRecords, total_count: Optional[int], coin_records: list[WalletCoinRecord]
 ) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -665,38 +665,38 @@ async def run_get_coin_records_test(
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_offset_limit_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_offset_limit(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_offset_limit(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_wallet_id_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_wallet_id(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_wallet_id(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_wallet_type_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_wallet_type(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_wallet_type(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_coin_type_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_coin_type(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_coin_type(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_coin_id_filter_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_coin_id_filter(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_coin_id_filter(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_puzzle_hash_filter_tests])
 @pytest.mark.anyio
 async def test_get_coin_records_puzzle_hash_filter(
-    coins_request: GetCoinRecords, records: List[WalletCoinRecord]
+    coins_request: GetCoinRecords, records: list[WalletCoinRecord]
 ) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
@@ -704,51 +704,51 @@ async def test_get_coin_records_puzzle_hash_filter(
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_parent_coin_id_filter_tests])
 @pytest.mark.anyio
 async def test_get_coin_records_parent_coin_id_filter(
-    coins_request: GetCoinRecords, records: List[WalletCoinRecord]
+    coins_request: GetCoinRecords, records: list[WalletCoinRecord]
 ) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_amount_filter_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_amount_filter(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_amount_filter(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_confirmed_range_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_confirmed_range(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_confirmed_range(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_spent_range_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_spent_range(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_spent_range(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_amount_range_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_amount_range(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_amount_range(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_order_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_order(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_order(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, records", [*get_coin_records_reverse_tests])
 @pytest.mark.anyio
-async def test_get_coin_records_reverse(coins_request: GetCoinRecords, records: List[WalletCoinRecord]) -> None:
+async def test_get_coin_records_reverse(coins_request: GetCoinRecords, records: list[WalletCoinRecord]) -> None:
     await run_get_coin_records_test(coins_request, None, records)
 
 
 @pytest.mark.parametrize("coins_request, total_count, records", [*get_coin_records_include_total_count_tests])
 @pytest.mark.anyio
 async def test_get_coin_records_total_count(
-    coins_request: GetCoinRecords, total_count: int, records: List[WalletCoinRecord]
+    coins_request: GetCoinRecords, total_count: int, records: list[WalletCoinRecord]
 ) -> None:
     await run_get_coin_records_test(coins_request, total_count, records)
 
@@ -756,7 +756,7 @@ async def test_get_coin_records_total_count(
 @pytest.mark.parametrize("coins_request, total_count, records", [*get_coin_records_mixed_tests])
 @pytest.mark.anyio
 async def test_get_coin_records_mixed(
-    coins_request: GetCoinRecords, total_count: int, records: List[WalletCoinRecord]
+    coins_request: GetCoinRecords, total_count: int, records: list[WalletCoinRecord]
 ) -> None:
     await run_get_coin_records_test(coins_request, total_count, records)
 

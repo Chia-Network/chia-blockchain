@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Optional
 
 import click
 from chia_rs import PrivateKey
@@ -214,7 +214,7 @@ def sign_cmd(
     sign(message, resolved_sk, hd_path, as_bytes, json)
 
 
-def parse_signature_json(json_str: str) -> Tuple[str, str, str, str]:
+def parse_signature_json(json_str: str) -> tuple[str, str, str, str]:
     import json
 
     try:
@@ -320,11 +320,11 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
 @click.pass_context
 def search_cmd(
     ctx: click.Context,
-    search_terms: Tuple[str, ...],
+    search_terms: tuple[str, ...],
     limit: int,
     non_observer_derivation: bool,
     show_progress: bool,
-    search_type: Tuple[str, ...],
+    search_type: tuple[str, ...],
     derive_from_hd_path: Optional[str],
     prefix: Optional[str],
 ) -> None:
@@ -364,7 +364,7 @@ class ResolutionError(Exception):
 
 def _resolve_fingerprint_and_sk(
     filename: Optional[str], fingerprint: Optional[int], non_observer_derivation: bool
-) -> Tuple[Optional[int], Optional[PrivateKey]]:
+) -> tuple[Optional[int], Optional[PrivateKey]]:
     from .keys_funcs import resolve_derivation_master_key
 
     reolved_fp, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)

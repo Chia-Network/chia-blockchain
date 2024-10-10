@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Optional, Tuple
+from typing import Any, Optional
 
 from chia_rs import PrivateKey
 
@@ -34,7 +35,7 @@ These functions are used to test the simulator.
 """
 
 
-def mnemonic_fingerprint(keychain: Keychain) -> Tuple[str, int]:
+def mnemonic_fingerprint(keychain: Keychain) -> tuple[str, int]:
     mnemonic = (
         "today grape album ticket joy idle supreme sausage "
         "oppose voice angle roast you oven betray exact "
@@ -62,10 +63,10 @@ def get_puzzle_hash_from_key(keychain: Keychain, fingerprint: int, key_id: int =
 def create_config(
     chia_root: Path,
     fingerprint: int,
-    private_ca_crt_and_key: Tuple[bytes, bytes],
-    node_certs_and_keys: Dict[str, Dict[str, Dict[str, bytes]]],
+    private_ca_crt_and_key: tuple[bytes, bytes],
+    node_certs_and_keys: dict[str, dict[str, dict[str, bytes]]],
     keychain: Keychain,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # create chia directories
     create_default_chia_config(chia_root)
     create_all_ssl(
@@ -119,8 +120,8 @@ async def get_full_chia_simulator(
     chia_root: Path,
     keychain: Optional[Keychain] = None,
     automated_testing: bool = False,
-    config: Optional[Dict[str, Any]] = None,
-) -> AsyncGenerator[Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int, Keychain], None]:
+    config: Optional[dict[str, Any]] = None,
+) -> AsyncGenerator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain], None]:
     """
     A chia root Path is required.
     The chia root Path can be a temporary directory (tempfile.TemporaryDirectory)

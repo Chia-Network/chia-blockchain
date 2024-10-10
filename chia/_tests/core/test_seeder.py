@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address
 from socket import AF_INET, AF_INET6, SOCK_STREAM
-from typing import Dict, List, Tuple, cast
+from typing import cast
 
 import dns
 import pytest
@@ -17,7 +17,7 @@ from chia.util.ints import uint32, uint64
 timeout = 0.5
 
 
-def generate_test_combs() -> List[Tuple[bool, str, dns.rdatatype.RdataType]]:
+def generate_test_combs() -> list[tuple[bool, str, dns.rdatatype.RdataType]]:
     """
     Generates all the combinations of tests we want to run.
     """
@@ -60,7 +60,7 @@ class FakeDnsPacket:
 
 
 @pytest.fixture(scope="module")
-def database_peers() -> Dict[str, PeerReliability]:
+def database_peers() -> dict[str, PeerReliability]:
     """
     We override the values in the class with these dbs, to save time.
     """
@@ -98,7 +98,7 @@ async def make_dns_query(
     return await dns.asyncquery.udp(q=dns_message, where=target_address, timeout=d_timeout, port=port)
 
 
-def get_addresses(num_subnets: int = 10) -> Tuple[List[IPv4Address], List[IPv6Address]]:
+def get_addresses(num_subnets: int = 10) -> tuple[list[IPv4Address], list[IPv6Address]]:
     ipv4 = []
     ipv6 = []
     # generate 2500 ipv4 and 2500 ipv6 peers, it's just a string so who cares
@@ -110,7 +110,7 @@ def get_addresses(num_subnets: int = 10) -> Tuple[List[IPv4Address], List[IPv6Ad
 
 
 def assert_standard_results(
-    std_query_answer: List[dns.rrset.RRset], request_type: dns.rdatatype.RdataType, num_ns: int
+    std_query_answer: list[dns.rrset.RRset], request_type: dns.rdatatype.RdataType, num_ns: int
 ) -> None:
     if request_type == dns.rdatatype.A:
         assert len(std_query_answer) == 1  # only 1 kind of answer
@@ -278,7 +278,7 @@ async def test_dns_queries(
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_db_processing(
     seeder_service: DNSServer,
-    database_peers: Dict[str, PeerReliability],
+    database_peers: dict[str, PeerReliability],
     use_tcp: bool,
     target_address: str,
     request_type: dns.rdatatype.RdataType,

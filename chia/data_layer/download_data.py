@@ -5,7 +5,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import aiohttp
 from typing_extensions import Literal
@@ -237,7 +237,7 @@ async def insert_from_delta_file(
     store_id: bytes32,
     existing_generation: int,
     target_generation: int,
-    root_hashes: List[bytes32],
+    root_hashes: list[bytes32],
     server_info: ServerInfo,
     client_foldername: Path,
     timeout: aiohttp.ClientTimeout,

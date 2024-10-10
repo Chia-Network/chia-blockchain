@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import json
 import ssl
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, Optional
 
 import aiohttp
 
@@ -23,15 +24,15 @@ class DaemonProxy:
         max_message_size: int = 50 * 1000 * 1000,
     ):
         self._uri = uri
-        self._request_dict: Dict[str, asyncio.Event] = {}
-        self.response_dict: Dict[str, WsRpcMessage] = {}
+        self._request_dict: dict[str, asyncio.Event] = {}
+        self.response_dict: dict[str, WsRpcMessage] = {}
         self.ssl_context = ssl_context
         self.heartbeat = heartbeat
         self.client_session: Optional[aiohttp.ClientSession] = None
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
         self.max_message_size = max_message_size
 
-    def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
+    def format_request(self, command: str, data: dict[str, Any]) -> WsRpcMessage:
         request = create_payload_dict(command, data, "client", "daemon")
         return request
 
@@ -92,13 +93,13 @@ class DaemonProxy:
             raise Exception(f"No response from daemon for request_id: {request_id}")
 
     async def get_version(self) -> WsRpcMessage:
-        data: Dict[str, Any] = {}
+        data: dict[str, Any] = {}
         request = self.format_request("get_version", data)
         response = await self._get(request)
         return response
 
     async def get_network_info(self) -> WsRpcMessage:
-        data: Dict[str, Any] = {}
+        data: dict[str, Any] = {}
         request = self.format_request("get_network_info", data)
         response = await self._get(request)
         return response
@@ -124,7 +125,7 @@ class DaemonProxy:
         return False
 
     async def is_keyring_locked(self) -> bool:
-        data: Dict[str, Any] = {}
+        data: dict[str, Any] = {}
         request = self.format_request("is_keyring_locked", data)
         response = await self._get(request)
         if "is_keyring_locked" in response["data"]:
@@ -152,7 +153,7 @@ class DaemonProxy:
         request = self.format_request("exit", {})
         return await self._get(request)
 
-    async def get_keys_for_plotting(self, fingerprints: Optional[List[uint32]] = None) -> WsRpcMessage:
+    async def get_keys_for_plotting(self, fingerprints: Optional[list[uint32]] = None) -> WsRpcMessage:
         data = {"fingerprints": fingerprints} if fingerprints else {}
         request = self.format_request("get_keys_for_plotting", data)
         response = await self._get(request)
@@ -177,7 +178,7 @@ async def connect_to_daemon(
 
 
 async def connect_to_daemon_and_validate(
-    root_path: Path, config: Dict[str, Any], quiet: bool = False
+    root_path: Path, config: dict[str, Any], quiet: bool = False
 ) -> Optional[DaemonProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
@@ -213,7 +214,7 @@ async def connect_to_daemon_and_validate(
 
 @asynccontextmanager
 async def acquire_connection_to_daemon(
-    root_path: Path, config: Dict[str, Any], quiet: bool = False
+    root_path: Path, config: dict[str, Any], quiet: bool = False
 ) -> AsyncIterator[Optional[DaemonProxy]]:
     """
     Asynchronous context manager which attempts to create a connection to the daemon.

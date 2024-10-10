@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 from chia.rpc.farmer_rpc_api import PlotInfoRequestData, PlotPathRequestData
 from chia.rpc.rpc_client import RpcClient
@@ -17,16 +17,16 @@ class FarmerRpcClient(RpcClient):
     to the full node.
     """
 
-    async def get_signage_point(self, sp_hash: bytes32) -> Optional[Dict[str, Any]]:
+    async def get_signage_point(self, sp_hash: bytes32) -> Optional[dict[str, Any]]:
         try:
             return await self.fetch("get_signage_point", {"sp_hash": sp_hash.hex()})
         except ValueError:
             return None
 
-    async def get_signage_points(self) -> List[Dict[str, Any]]:
-        return cast(List[Dict[str, Any]], (await self.fetch("get_signage_points", {}))["signage_points"])
+    async def get_signage_points(self) -> list[dict[str, Any]]:
+        return cast(list[dict[str, Any]], (await self.fetch("get_signage_points", {}))["signage_points"])
 
-    async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> Dict[str, Any]:
+    async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> dict[str, Any]:
         response = await self.fetch(
             "get_reward_targets",
             {"search_for_private_key": search_for_private_key, "max_ph_to_search": max_ph_to_search},
@@ -45,7 +45,7 @@ class FarmerRpcClient(RpcClient):
         self,
         farmer_target: Optional[str] = None,
         pool_target: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         request = {}
         if farmer_target is not None:
             request["farmer_target"] = farmer_target
@@ -53,29 +53,29 @@ class FarmerRpcClient(RpcClient):
             request["pool_target"] = pool_target
         return await self.fetch("set_reward_targets", request)
 
-    async def get_pool_state(self) -> Dict[str, Any]:
+    async def get_pool_state(self) -> dict[str, Any]:
         return await self.fetch("get_pool_state", {})
 
-    async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str) -> Dict[str, Any]:
+    async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str) -> dict[str, Any]:
         request = {"launcher_id": launcher_id.hex(), "payout_instructions": payout_instructions}
         return await self.fetch("set_payout_instructions", request)
 
-    async def get_harvesters(self) -> Dict[str, Any]:
+    async def get_harvesters(self) -> dict[str, Any]:
         return await self.fetch("get_harvesters", {})
 
-    async def get_harvesters_summary(self) -> Dict[str, Any]:
+    async def get_harvesters_summary(self) -> dict[str, Any]:
         return await self.fetch("get_harvesters_summary", {})
 
-    async def get_harvester_plots_valid(self, request: PlotInfoRequestData) -> Dict[str, Any]:
+    async def get_harvester_plots_valid(self, request: PlotInfoRequestData) -> dict[str, Any]:
         return await self.fetch("get_harvester_plots_valid", recurse_jsonify(request))
 
-    async def get_harvester_plots_invalid(self, request: PlotPathRequestData) -> Dict[str, Any]:
+    async def get_harvester_plots_invalid(self, request: PlotPathRequestData) -> dict[str, Any]:
         return await self.fetch("get_harvester_plots_invalid", recurse_jsonify(request))
 
-    async def get_harvester_plots_keys_missing(self, request: PlotPathRequestData) -> Dict[str, Any]:
+    async def get_harvester_plots_keys_missing(self, request: PlotPathRequestData) -> dict[str, Any]:
         return await self.fetch("get_harvester_plots_keys_missing", recurse_jsonify(request))
 
-    async def get_harvester_plots_duplicates(self, request: PlotPathRequestData) -> Dict[str, Any]:
+    async def get_harvester_plots_duplicates(self, request: PlotPathRequestData) -> dict[str, Any]:
         return await self.fetch("get_harvester_plots_duplicates", recurse_jsonify(request))
 
     async def get_pool_login_link(self, launcher_id: bytes32) -> Optional[str]:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pytest
 from clvm_tools import binutils
@@ -36,7 +36,7 @@ def make_child_solution(
     return sol
 
 
-async def assert_db_spends(store: WalletPoolStore, wallet_id: int, spends: List[CoinSpend]) -> None:
+async def assert_db_spends(store: WalletPoolStore, wallet_id: int, spends: list[CoinSpend]) -> None:
     db_spends = await store.get_spends_for_wallet(wallet_id)
     assert len(db_spends) == len(spends)
     for spend, (_, db_spend) in zip(spends, db_spends):
@@ -46,7 +46,7 @@ async def assert_db_spends(store: WalletPoolStore, wallet_id: int, spends: List[
 @dataclass
 class DummySpends:
     seeded_random: random.Random
-    spends_per_wallet: Dict[int, List[CoinSpend]] = field(default_factory=dict)
+    spends_per_wallet: dict[int, list[CoinSpend]] = field(default_factory=dict)
 
     def generate(self, wallet_id: int, count: int) -> None:
         current = self.spends_per_wallet.setdefault(wallet_id, [])

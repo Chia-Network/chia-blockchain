@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia.util.config import load_config
 from chia.util.path import path_from_root
@@ -13,7 +13,7 @@ def db_backup_func(
     *,
     no_indexes: bool,
 ) -> None:
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
+    config: dict[str, Any] = load_config(root_path, "config.yaml")["full_node"]
     selected_network: str = config["selected_network"]
     db_pattern: str = config["database_path"]
     db_path_replaced: str = db_pattern.replace("CHALLENGE", selected_network)

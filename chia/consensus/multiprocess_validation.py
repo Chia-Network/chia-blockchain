@@ -5,9 +5,10 @@ import copy
 import logging
 import time
 import traceback
+from collections.abc import Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence
+from typing import Optional
 
 from chia_rs import AugSchemeMPL, SpendBundleConditions
 
@@ -52,27 +53,27 @@ class PreValidationResult(Streamable):
 
 def batch_pre_validate_blocks(
     constants: ConsensusConstants,
-    blocks_pickled: Dict[bytes, bytes],
-    full_blocks_pickled: List[bytes],
-    prev_transaction_generators: List[Optional[List[bytes]]],
-    conditions: Dict[uint32, bytes],
-    expected_difficulty: List[uint64],
-    expected_sub_slot_iters: List[uint64],
+    blocks_pickled: dict[bytes, bytes],
+    full_blocks_pickled: list[bytes],
+    prev_transaction_generators: list[Optional[list[bytes]]],
+    conditions: dict[uint32, bytes],
+    expected_difficulty: list[uint64],
+    expected_sub_slot_iters: list[uint64],
     validate_signatures: bool,
-    prev_ses_block_bytes: Optional[List[Optional[bytes]]] = None,
-) -> List[bytes]:
-    blocks: Dict[bytes32, BlockRecord] = {}
+    prev_ses_block_bytes: Optional[list[Optional[bytes]]] = None,
+) -> list[bytes]:
+    blocks: dict[bytes32, BlockRecord] = {}
     for k, v in blocks_pickled.items():
         blocks[bytes32(k)] = BlockRecord.from_bytes_unchecked(v)
-    results: List[PreValidationResult] = []
+    results: list[PreValidationResult] = []
 
     # In this case, we are validating full blocks, not headers
     for i in range(len(full_blocks_pickled)):
         try:
             validation_start = time.monotonic()
             block: FullBlock = FullBlock.from_bytes_unchecked(full_blocks_pickled[i])
-            tx_additions: List[Coin] = []
-            removals: List[bytes32] = []
+            tx_additions: list[Coin] = []
+            removals: list[bytes32] = []
             conds: Optional[SpendBundleConditions] = None
             if block.height in conditions:
                 conds = SpendBundleConditions.from_bytes(conditions[block.height])
@@ -166,12 +167,12 @@ async def pre_validate_blocks_multiprocessing(
     block_records: BlocksProtocol,
     blocks: Sequence[FullBlock],
     pool: Executor,
-    block_height_conds_map: Dict[uint32, SpendBundleConditions],
+    block_height_conds_map: dict[uint32, SpendBundleConditions],
     vs: ValidationState,
     *,
-    wp_summaries: Optional[List[SubEpochSummary]] = None,
+    wp_summaries: Optional[list[SubEpochSummary]] = None,
     validate_signatures: bool = True,
-) -> List[PreValidationResult]:
+) -> list[PreValidationResult]:
     """
     This method must be called under the blockchain lock
     If all the full blocks pass pre-validation, (only validates header), returns the list of required iters.
@@ -188,7 +189,7 @@ async def pre_validate_blocks_multiprocessing(
     prev_b: Optional[BlockRecord] = None
 
     # Collects all the recent blocks (up to the previous sub-epoch)
-    recent_blocks: Dict[bytes32, BlockRecord] = {}
+    recent_blocks: dict[bytes32, BlockRecord] = {}
     num_sub_slots_found = 0
     num_blocks_seen = 0
 
@@ -219,8 +220,8 @@ async def pre_validate_blocks_multiprocessing(
     # they won't actually be added to the underlying blockchain object
     blockchain = AugmentedBlockchain(block_records)
 
-    diff_ssis: List[ValidationState] = []
-    prev_ses_block_list: List[Optional[BlockRecord]] = []
+    diff_ssis: list[ValidationState] = []
+    prev_ses_block_list: list[Optional[BlockRecord]] = []
 
     for block in blocks:
         if len(block.finished_sub_slots) > 0:
@@ -286,8 +287,8 @@ async def pre_validate_blocks_multiprocessing(
     for i in range(0, len(blocks), batch_size):
         end_i = min(i + batch_size, len(blocks))
         blocks_to_validate = blocks[i:end_i]
-        b_pickled: List[bytes] = []
-        previous_generators: List[Optional[List[bytes]]] = []
+        b_pickled: list[bytes] = []
+        previous_generators: list[Optional[list[bytes]]] = []
         for block in blocks_to_validate:
             assert isinstance(block, FullBlock)
             b_pickled.append(bytes(block))
@@ -306,7 +307,7 @@ async def pre_validate_blocks_multiprocessing(
             else:
                 previous_generators.append(None)
 
-        ses_blocks_bytes_list: List[Optional[bytes]] = []
+        ses_blocks_bytes_list: list[Optional[bytes]] = []
         for j in range(i, end_i):
             ses_block_rec = prev_ses_block_list[j]
             if ses_block_rec is None:

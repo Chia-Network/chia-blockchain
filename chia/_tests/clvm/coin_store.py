@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterator
 from dataclasses import dataclass, replace
-from typing import Dict, Iterator, Optional
+from typing import Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
@@ -30,8 +31,8 @@ class CoinTimestamp:
 
 class CoinStore:
     def __init__(self, constants: ConsensusConstants, reward_mask: int = 0):
-        self._db: Dict[bytes32, CoinRecord] = dict()
-        self._ph_index: Dict = defaultdict(list)
+        self._db: dict[bytes32, CoinRecord] = dict()
+        self._ph_index: dict = defaultdict(list)
         self._reward_mask = reward_mask
         self._constants = constants
 

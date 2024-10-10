@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import zlib
-from typing import List
 
 from chia.types.blockchain_format.program import Program
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
@@ -85,7 +84,7 @@ def compress_object_with_puzzles(object_bytes: bytes, version: int) -> bytes:
     return version_blob + compressed_object_blob
 
 
-def lowest_best_version(puzzle_list: List[bytes], max_version: int = len(ZDICT)) -> int:
+def lowest_best_version(puzzle_list: list[bytes], max_version: int = len(ZDICT)) -> int:
     highest_version = 1
     for mod in puzzle_list:
         for version, dict in enumerate(ZDICT):

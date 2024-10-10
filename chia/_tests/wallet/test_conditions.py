@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, Optional, Union
 
 import pytest
 from clvm.casts import int_from_bytes
@@ -66,8 +66,8 @@ from chia.wallet.conditions import (
 class ConditionSerializations:
     opcode: bytes
     program_args: Program
-    json_keys: List[str]
-    json_args: List[Any]
+    json_keys: list[str]
+    json_args: list[Any]
 
     @property
     def program(self) -> Program:
@@ -203,9 +203,9 @@ def test_unknown_condition() -> None:
 )
 def test_announcement_inversions(
     drivers: Union[
-        Tuple[Type[CreateCoinAnnouncement], Type[AssertCoinAnnouncement]],
-        Tuple[Type[CreatePuzzleAnnouncement], Type[AssertPuzzleAnnouncement]],
-        Tuple[Type[CreateAnnouncement], Type[AssertAnnouncement]],
+        tuple[type[CreateCoinAnnouncement], type[AssertCoinAnnouncement]],
+        tuple[type[CreatePuzzleAnnouncement], type[AssertPuzzleAnnouncement]],
+        tuple[type[CreateAnnouncement], type[AssertAnnouncement]],
     ]
 ) -> None:
     create_driver, assert_driver = drivers
@@ -236,9 +236,9 @@ def test_announcement_inversions(
 
 @dataclass(frozen=True)
 class TimelockInfo:
-    drivers: List[Condition]
+    drivers: list[Condition]
     parsed_info: ConditionValidTimes
-    conditions_after: Optional[List[Condition]] = None
+    conditions_after: Optional[list[Condition]] = None
 
 
 @pytest.mark.parametrize(
@@ -336,7 +336,7 @@ def test_timelock_parsing(timelock_info: TimelockInfo) -> None:
     ],
 )
 def test_invalid_condition(
-    cond: Type[
+    cond: type[
         Union[
             AggSigParent,
             AggSigPuzzle,

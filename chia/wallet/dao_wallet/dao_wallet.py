@@ -6,7 +6,7 @@ import json
 import logging
 import re
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes
@@ -326,14 +326,14 @@ class DAOWallet:
                 parent_info = ccparent
         return parent_info
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)  # pragma: no cover
 
-    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_spendable_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         # No spendable or receivable value
         return uint128(1)
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         # No spendable or receivable value
         return uint128(1)
 
@@ -341,7 +341,7 @@ class DAOWallet:
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> Set[Coin]:
+    ) -> set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
@@ -353,13 +353,13 @@ class DAOWallet:
             self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
             return set()
 
-        spendable_coins: List[WalletCoinRecord] = list(
+        spendable_coins: list[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.wallet_info.id)
         )
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
-        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+        unconfirmed_removals: dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.wallet_info.id
         )
         async with action_scope.use() as interface:
@@ -379,7 +379,7 @@ class DAOWallet:
         # No spendable or receivable value
         return uint64(0)
 
-    async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_unconfirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         # No spendable or receivable value
         return uint128(1)
 
@@ -392,7 +392,7 @@ class DAOWallet:
     # if asset_id == None: then we get normal XCH
     async def select_coins_for_asset_type(
         self, amount: uint64, action_scope: WalletActionScope, asset_id: Optional[bytes32] = None
-    ) -> List[Coin]:
+    ) -> list[Coin]:
         puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=asset_id)
         records = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(puzhash)
         unspent_records = [r for r in records if not r.spent]
@@ -490,7 +490,7 @@ class DAOWallet:
             if len(children) == 0:
                 break
 
-            children_state_list: List[CoinState] = [child for child in children if child.coin.amount % 2 == 1]
+            children_state_list: list[CoinState] = [child for child in children if child.coin.amount % 2 == 1]
             # ensure children_state_list has only one odd amount coin (the treasury)
             if (len(children_state_list) == 0) or (len(children_state_list) > 1):  # pragma: no cover
                 raise RuntimeError("Could not retrieve child_state")
@@ -613,7 +613,7 @@ class DAOWallet:
         cat_tail_hash: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
         fee_for_cat: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         """
         Create a new DAO treasury using the dao_rules object. This does the first spend to create the launcher
@@ -846,7 +846,7 @@ class DAOWallet:
         action_scope: WalletActionScope,
         vote_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         dao_rules = get_treasury_rules_from_puzzle(self.dao_info.current_treasury_innerpuz)
         coins = await self.standard_wallet.select_coins(
@@ -1027,7 +1027,7 @@ class DAOWallet:
         is_yes_vote: bool,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
@@ -1145,7 +1145,7 @@ class DAOWallet:
         genesis_id: Optional[bytes32] = None,
         fee: uint64 = uint64(0),
         self_destruct: bool = False,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         self.log.info(f"Trying to create a proposal close spend with ID: {proposal_id}")
         proposal_info = None
@@ -1536,7 +1536,7 @@ class DAOWallet:
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         if funding_wallet.type() == WalletType.STANDARD_WALLET.value:
             p2_singleton_puzhash = get_p2_singleton_puzhash(self.dao_info.treasury_id, asset_id=None)
@@ -1569,7 +1569,7 @@ class DAOWallet:
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         funding_wallet_id: uint32 = uint32(1),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         # set up the p2_singleton
         funding_wallet = self.wallet_state_manager.wallets[funding_wallet_id]
@@ -1594,7 +1594,7 @@ class DAOWallet:
         self,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         spends = []
@@ -1648,7 +1648,7 @@ class DAOWallet:
         async with action_scope.use() as interface:
             interface.side_effects.transactions.append(record)
 
-    async def parse_proposal(self, proposal_id: bytes32) -> Dict[str, Any]:
+    async def parse_proposal(self, proposal_id: bytes32) -> dict[str, Any]:
         for prop_info in self.dao_info.proposals_list:
             if prop_info.proposal_id == proposal_id:
                 state = await self.get_proposal_state(proposal_id)
@@ -1675,10 +1675,10 @@ class DAOWallet:
                                 cc = {"puzzle_hash": cond.at("rf").as_atom(), "amount": cond.at("rrf").as_int()}
                                 xch_created_coins.append(cc)
 
-                    asset_create_coins: List[Dict[Any, Any]] = []
+                    asset_create_coins: list[dict[Any, Any]] = []
                     for asset in LIST_OF_TAILHASH_CONDITIONS.as_iter():
                         if asset == Program.to(0):  # pragma: no cover
-                            asset_dict: Optional[Dict[str, Any]] = None
+                            asset_dict: Optional[dict[str, Any]] = None
                         else:
                             asset_id = asset.first().as_atom()
                             cc_list = []
@@ -1691,7 +1691,7 @@ class DAOWallet:
                                     # cc_list.append([asset_id, asset_dict])
                                     cc_list.append(asset_dict)
                             asset_create_coins.append({"asset_id": asset_id, "conditions": cc_list})
-                    dictionary: Dict[str, Any] = {
+                    dictionary: dict[str, Any] = {
                         "state": state,
                         "proposal_type": proposal_type.value,
                         "proposed_puzzle_reveal": proposed_puzzle_reveal,
@@ -1761,7 +1761,7 @@ class DAOWallet:
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> List[TransactionRecord]:
+    ) -> list[TransactionRecord]:
         dao_cat_wallet: DAOCATWallet = self.wallet_state_manager.wallets[self.dao_info.dao_cat_wallet_id]
         return await dao_cat_wallet.enter_dao_cat_voting_mode(amount, action_scope)
 
@@ -2004,7 +2004,7 @@ class DAOWallet:
                 return
             index = index + 1
 
-    async def get_proposal_state(self, proposal_id: bytes32) -> Dict[str, Union[int, bool]]:
+    async def get_proposal_state(self, proposal_id: bytes32) -> dict[str, Union[int, bool]]:
         """
         Use this to figure out whether a proposal has passed or failed and whether it can be closed
         Given a proposal_id:

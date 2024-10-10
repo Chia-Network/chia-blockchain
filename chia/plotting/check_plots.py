@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 from threading import Lock
 from time import sleep, time
-from typing import List, Optional
+from typing import Optional
 
 from chia_rs import G1Element
 from chiapos import Verifier
@@ -103,7 +103,7 @@ def check_plots(
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
 
     if list_duplicates:
-        all_filenames: List[Path] = []
+        all_filenames: list[Path] = []
         for paths in get_plot_filenames(root_path).values():
             all_filenames += paths
         find_duplicate_plot_IDs(all_filenames)
@@ -135,7 +135,7 @@ def check_plots(
         log.info(f"Starting to test each plot with {num} challenges each\n")
     total_good_plots: Counter[str] = Counter()
     total_size = 0
-    bad_plots_list: List[Path] = []
+    bad_plots_list: list[Path] = []
 
     with plot_manager:
 

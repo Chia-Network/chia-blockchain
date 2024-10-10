@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import List, Tuple, Union
+from typing import Union
 
 import pytest
 
@@ -20,8 +20,8 @@ from chia.wallet.wallet import Wallet
 
 @pytest.mark.anyio
 async def test_protocol_messages(
-    simulator_and_wallet: Tuple[
-        List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools
+    simulator_and_wallet: tuple[
+        list[Union[FullNodeAPI, FullNodeSimulator]], list[tuple[Wallet, ChiaServer]], BlockTools
     ]
 ) -> None:
     full_nodes, wallets, bt = simulator_and_wallet

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm.casts import int_from_bytes, int_to_bytes
@@ -32,8 +32,8 @@ assert len(DEFAULT_SEED) == 32
 
 class WalletTool:
     next_address = 0
-    pubkey_num_lookup: Dict[bytes, uint32] = {}
-    puzzle_pk_cache: Dict[bytes32, PrivateKey] = {}
+    pubkey_num_lookup: dict[bytes, uint32] = {}
+    puzzle_pk_cache: dict[bytes32, PrivateKey] = {}
 
     def __init__(self, constants: ConsensusConstants, sk: Optional[PrivateKey] = None):
         self.constants = constants
@@ -43,8 +43,8 @@ class WalletTool:
             self.private_key = sk
         else:
             self.private_key = AugSchemeMPL.key_gen(DEFAULT_SEED)
-        self.generator_lookups: Dict = {}
-        self.puzzle_pk_cache: Dict = {}
+        self.generator_lookups: dict = {}
+        self.puzzle_pk_cache: dict = {}
         self.get_new_puzzle()
 
     def get_next_address_index(self) -> uint32:
@@ -83,13 +83,13 @@ class WalletTool:
         privatekey: PrivateKey = master_sk_to_wallet_sk(self.private_key, self.pubkey_num_lookup[pubkey])
         return AugSchemeMPL.sign(privatekey, value)
 
-    def make_solution(self, condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]]) -> Program:
+    def make_solution(self, condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]]) -> Program:
         ret = []
 
         for con_list in condition_dic.values():
             for cvp in con_list:
                 if cvp.opcode == ConditionOpcode.CREATE_COIN and len(cvp.vars) > 2:
-                    formatted: List[Any] = []
+                    formatted: list[Any] = []
                     formatted.extend(cvp.vars)
                     formatted[2] = cvp.vars[2:]
                     ret.append([cvp.opcode.value] + formatted)
@@ -101,13 +101,13 @@ class WalletTool:
         self,
         amount: uint64,
         new_puzzle_hash: bytes32,
-        coins: List[Coin],
-        condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]],
+        coins: list[Coin],
+        condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]],
         fee: int = 0,
         secret_key: Optional[PrivateKey] = None,
-        additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
+        additional_outputs: Optional[list[tuple[bytes32, int]]] = None,
         memo: Optional[bytes32] = None,
-    ) -> List[CoinSpend]:
+    ) -> list[CoinSpend]:
         spends = []
 
         spend_value = sum(c.amount for c in coins)
@@ -134,7 +134,7 @@ class WalletTool:
             change_output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [change_puzzle_hash, int_to_bytes(change)])
             condition_dic[output.opcode].append(change_output)
 
-        secondary_coins_cond_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = dict()
+        secondary_coins_cond_dic: dict[ConditionOpcode, list[ConditionWithArgs]] = dict()
         secondary_coins_cond_dic[ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT] = []
         for n, coin in enumerate(coins):
             puzzle_hash = coin.puzzle_hash
@@ -175,7 +175,7 @@ class WalletTool:
                 )
         return spends
 
-    def sign_transaction(self, coin_spends: List[CoinSpend]) -> SpendBundle:
+    def sign_transaction(self, coin_spends: list[CoinSpend]) -> SpendBundle:
         signatures = []
         data = agg_sig_additional_data(self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
         agg_sig_opcodes = [
@@ -214,9 +214,9 @@ class WalletTool:
         amount: uint64,
         new_puzzle_hash: bytes32,
         coin: Coin,
-        condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
+        condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]] = None,
         fee: int = 0,
-        additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
+        additional_outputs: Optional[list[tuple[bytes32, int]]] = None,
         memo: Optional[bytes32] = None,
     ) -> SpendBundle:
         if condition_dic is None:
@@ -231,10 +231,10 @@ class WalletTool:
         self,
         amount: uint64,
         new_puzzle_hash: bytes32,
-        coins: List[Coin],
-        condition_dic: Dict[ConditionOpcode, List[ConditionWithArgs]] = None,
+        coins: list[Coin],
+        condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]] = None,
         fee: int = 0,
-        additional_outputs: Optional[List[Tuple[bytes32, int]]] = None,
+        additional_outputs: Optional[list[tuple[bytes32, int]]] = None,
     ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}

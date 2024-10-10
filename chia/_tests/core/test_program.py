@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from clvm.SExp import CastableType
 from clvm_tools import binutils
 
@@ -26,7 +24,7 @@ def program_roundtrip(o: CastableType) -> None:
 
 def test_serialized_program_to() -> None:
     prg = "(q ((0x0101010101010101010101010101010101010101010101010101010101010101 80 123 (() (q . ())))))"  # noqa
-    tests: List[CastableType] = [
+    tests: list[CastableType] = [
         0,
         1,
         (1, 2),
