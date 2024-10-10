@@ -209,8 +209,8 @@ class PuzzleWithRestrictions:
         puzzle_hint: Union[MofNHint, PuzzleHint]
         if isinstance(self.puzzle, MofN):
             puzzle_hint = MofNHint(
-                self.puzzle.m, [member.memo() for member in self.puzzle.members]
-            )  # pylint: disable=no-member
+                self.puzzle.m, [member.memo() for member in self.puzzle.members]  # pylint: disable=no-member
+            )
         else:
             puzzle_hint = PuzzleHint(
                 self.puzzle.puzzle_hash(self.nonce),
@@ -286,15 +286,16 @@ class PuzzleWithRestrictions:
 
         new_puzzle: Puzzle
         if (
-            isinstance(self.puzzle, UnknownPuzzle) and self.puzzle.puzzle_hint.puzhash in puzzle_dict
-        ):  # pylint: disable=no-member
+            isinstance(self.puzzle, UnknownPuzzle)
+            and self.puzzle.puzzle_hint.puzhash in puzzle_dict  # pylint: disable=no-member
+        ):
             new_puzzle = puzzle_dict[self.puzzle.puzzle_hint.puzhash]  # pylint: disable=no-member
         elif isinstance(self.puzzle, MofN):
             new_puzzle = replace(
                 self.puzzle,
                 members=[
-                    puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.puzzle.members
-                ],  # pylint: disable=no-member
+                    puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.puzzle.members  # pylint: disable=no-member
+                ],
             )
         else:
             new_puzzle = self.puzzle
