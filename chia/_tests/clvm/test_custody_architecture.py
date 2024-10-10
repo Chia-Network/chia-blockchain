@@ -115,13 +115,13 @@ def test_unknown_puzzle_behavior() -> None:
     class PlaceholderPuzzle:
         @property
         def morpher_not_validator(self) -> bool:
-            raise NotImplementedError()
+            raise NotImplementedError()  # pragma: no cover
 
         def memo(self, nonce: int) -> Program:
-            raise NotImplementedError()
+            raise NotImplementedError()  # pragma: no cover
 
         def puzzle(self, nonce: int) -> Program:
-            raise NotImplementedError()
+            raise NotImplementedError()  # pragma: no cover
 
         def puzzle_hash(self, nonce: int) -> bytes32:
             return bytes32([nonce] * 32)
@@ -193,7 +193,7 @@ ACS_MEMBER_PH = ACS_MEMBER.get_tree_hash()
 @dataclass(frozen=True)
 class ACSMember:
     def memo(self, nonce: int) -> Program:
-        return Program.to(None)
+        raise NotImplementedError()  # pragma: no cover
 
     def puzzle(self, nonce: int) -> Program:
         # (r (c (q . nonce) ACS_MEMBER_PH))
@@ -269,7 +269,7 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
 @dataclass(frozen=True)
 class ACSPuzzle:
     def memo(self, nonce: int) -> Program:
-        return Program.to(None)
+        raise NotImplementedError()  # pragma: no cover
 
     def puzzle(self, nonce: int) -> Program:
         return Program.to(1)
@@ -283,7 +283,7 @@ class ACSMorpher:
     morpher_not_validator: Literal[True] = field(init=False, default=True)
 
     def memo(self, nonce: int) -> Program:
-        return Program.to(None)
+        raise NotImplementedError()  # pragma: no cover
 
     def puzzle(self, nonce: int) -> Program:
         # (mod (conditions . solution) solution)
@@ -298,7 +298,7 @@ class ACSValidator:
     morpher_not_validator: Literal[False] = field(init=False, default=False)
 
     def memo(self, nonce: int) -> Program:
-        return Program.to(None)
+        raise NotImplementedError()  # pragma: no cover
 
     def puzzle(self, nonce: int) -> Program:
         # (mod (conditions . program) (a program conditions))

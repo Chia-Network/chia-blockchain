@@ -57,7 +57,7 @@ class UnknownPuzzle:
         return self.puzzle_hint.memo
 
     def puzzle(self, nonce: int) -> Program:
-        raise NotImplementedError("An unknown puzzle type cannot generate a puzzle reveal")
+        raise NotImplementedError("An unknown puzzle type cannot generate a puzzle reveal")  # pragma: no cover
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle_hint.puzhash
@@ -106,7 +106,7 @@ class UnknownRestriction:
         return self.restriction_hint.memo
 
     def puzzle(self, nonce: int) -> Program:
-        raise NotImplementedError("An unknown restriction type cannot generate a puzzle reveal")
+        raise NotImplementedError("An unknown restriction type cannot generate a puzzle reveal")  # pragma: no cover
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.restriction_hint.puzhash
@@ -177,7 +177,7 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
     def merkle_tree(self) -> MofNMerkleTree:
         return MofNMerkleTree([member.puzzle_hash() for member in self.members])
 
-    def memo(self, nonce: int) -> Program:
+    def memo(self, nonce: int) -> Program:  # pragma: no cover
         raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
 
     def puzzle(self, nonce: int) -> Program:
