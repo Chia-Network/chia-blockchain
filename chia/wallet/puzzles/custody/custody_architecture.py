@@ -16,6 +16,9 @@ MofN_MOD = load_clvm_maybe_recompile(
 OneOfN_MOD = load_clvm_maybe_recompile(
     "1_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.optimization_puzzles"
 )
+NofN_MOD = load_clvm_maybe_recompile(
+    "n_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.optimization_puzzles"
+)
 RESTRICTION_MOD = load_clvm_maybe_recompile(
     "restrictions.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
 )
@@ -186,7 +189,9 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
 
     def generate_proof(self, spends_to_prove: Dict[bytes32, ProvenSpend]) -> Program:
         assert len(spends_to_prove) == self.m, "Must prove as many spends as the M value"
-        if self.m > 1:
+        if self.m == self.n:
+            return Program.to([spends_to_prove[node].solution for node in self._merkle_tree.nodes])
+        elif self.m > 1:
             return self._merkle_tree.generate_m_of_n_proof(spends_to_prove)  # type: ignore[attr-defined, no-any-return]
         else:
             only_key = list(spends_to_prove.keys())[0]
@@ -198,16 +203,23 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
         raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
 
     def puzzle(self, nonce: int) -> Program:
-        if self.m > 1:
+        if self.m == self.n:
+            return NofN_MOD.curry([member.puzzle_reveal() for member in self.members])
+        elif self.m > 1:
             return MofN_MOD.curry(self.m, self._merkle_tree.calculate_root())
         else:
             return OneOfN_MOD.curry(self._merkle_tree.calculate_root())
 
     def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()
+        if self.m == self.n:
+            member_hashes = [member.puzzle_hash() for member in self.members]
+            return NofN_MOD.curry(member_hashes).get_tree_hash_precalc(*member_hashes)
+        else:
+            return self.puzzle(nonce).get_tree_hash()
 
     def solve(self, proof: Program, delegated_puzzle: Program, delegated_solution: Program) -> Program:
         if self.m > 1:
+            # proof is member solutions when m == n
             return Program.to([proof, delegated_puzzle, delegated_solution])
         else:
             return Program.to([*proof.as_iter(), delegated_puzzle, delegated_solution])
