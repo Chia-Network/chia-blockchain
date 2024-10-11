@@ -220,7 +220,6 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         "--expires-at",
         "150",
     ]
-    # these are various things that should be in the output
     assert_list = []
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls = {
@@ -244,7 +243,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         ],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
-
+    # try the split the other way around
     command_args = [
         "wallet",
         "coins",
@@ -259,27 +258,5 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         "--expires-at",
         "150",
     ]
-    # these are various things that should be in the output
-    assert_list = []
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {
-        "get_wallets": [(None,)],
-        "get_sync_status": [()],
-        "split_coins": [
-            (
-                SplitCoins(
-                    wallet_id=uint32(1),
-                    number_of_coins=uint16(
-                        20
-                    ),  # this transaction should be equivalent to specifying 20 x  0.5xch coins
-                    amount_per_coin=uint64(500_000_000_000),
-                    target_coin_id=target_coin_id,
-                    fee=uint64(1_000_000_000),
-                    push=True,
-                ),
-                DEFAULT_TX_CONFIG,
-                test_condition_valid_times,
-            )
-        ],
-    }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
