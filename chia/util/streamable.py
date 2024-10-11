@@ -1,3 +1,5 @@
+# Package: utils
+
 from __future__ import annotations
 
 import dataclasses
@@ -23,12 +25,12 @@ from typing import (
     get_type_hints,
 )
 
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint16, uint32, uint64
 from typing_extensions import Literal, get_args, get_origin
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-from chia.util.ints import uint16, uint32, uint64
 
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
