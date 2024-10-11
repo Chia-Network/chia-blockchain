@@ -217,7 +217,7 @@ async def async_split(
         if number_of_coins is None:
             coins = await wallet_client.get_coin_records_by_names([target_coin_id])
             if len(coins) == 0:
-                print("Could not find target coin.") 
+                print("Could not find target coin.")
                 return []
             assert coins is not None
             assert amount_per_coin is not None
@@ -225,7 +225,7 @@ async def async_split(
         elif amount_per_coin is None:
             coins = await wallet_client.get_coin_records_by_names([target_coin_id])
             if len(coins) == 0:
-                print("Could not find target coin.") 
+                print("Could not find target coin.")
                 return []
             assert coins is not None
             assert number_of_coins is not None
