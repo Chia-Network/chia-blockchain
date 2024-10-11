@@ -107,7 +107,7 @@ def make_item(
     return MempoolItem(
         SpendBundle([], G2Element()),
         fee,
-        SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0),
+        SpendBundleConditions([], 0, 0, 0, None, None, [], cost, 0, 0, False),
         spend_bundle_name,
         uint32(0),
         assert_height,
