@@ -11,6 +11,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.types.full_block import FullBlock
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 
@@ -79,7 +80,7 @@ async def _validate_and_add_block(
         # validate the signature.
         futures = await pre_validate_blocks_multiprocessing(
             blockchain.constants,
-            blockchain,
+            AugmentedBlockchain(blockchain),
             [block],
             blockchain.pool,
             {},
