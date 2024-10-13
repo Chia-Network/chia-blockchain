@@ -63,6 +63,7 @@ from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -432,7 +433,7 @@ class TestFullNodeBlockCompression:
                 for i in range(1, height):
                     futures = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
-                        blockchain,
+                        AugmentedBlockchain(blockchain),
                         all_blocks[:i],
                         blockchain.pool,
                         {},
@@ -451,7 +452,7 @@ class TestFullNodeBlockCompression:
                 for i in range(1, height):
                     futures = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
-                        blockchain,
+                        AugmentedBlockchain(blockchain),
                         all_blocks[:i],
                         blockchain.pool,
                         {},

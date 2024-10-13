@@ -41,6 +41,7 @@ from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChai
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
@@ -439,7 +440,7 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
     ssi, diff = get_next_sub_slot_iters_and_difficulty(full_node.constants, new_slot, prev_b, full_node.blockchain)
     futures = await pre_validate_blocks_multiprocessing(
         full_node.blockchain.constants,
-        full_node.blockchain,
+        AugmentedBlockchain(full_node.blockchain),
         blocks,
         full_node.blockchain.pool,
         {},

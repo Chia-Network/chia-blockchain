@@ -605,7 +605,7 @@ class FullNode:
                     )
                     vs = ValidationState(ssi, diff, None)
                     success, state_change_summary, err = await self.add_block_batch(
-                        response.blocks, peer_info, fork_info, vs
+                        AugmentedBlockchain(self.blockchain), response.blocks, peer_info, fork_info, vs
                     )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
@@ -1095,6 +1095,14 @@ class FullNode:
             ssi, diff, prev_ses_block = await self.get_sub_slot_iters_difficulty_ses_block(prev_b, None, None)
         vs = ValidationState(ssi, diff, prev_ses_block)
 
+        # we need an augmented blockchain to validate blocks in batches. The
+        # batch must be treated as if it's part of the chain to validate the
+        # blocks in it. We also need them to keep appearing as if they're part
+        # of the chain when pipelining the validation of blocks. We start
+        # validating the next batch while still adding the first batch to the
+        # chain.
+        blockchain = AugmentedBlockchain(self.blockchain)
+
         async def fetch_block_batches(
             batch_queue: asyncio.Queue[Optional[tuple[WSChiaConnection, list[FullBlock]]]]
         ) -> None:
@@ -1134,6 +1142,7 @@ class FullNode:
             inner_batch_queue: asyncio.Queue[Optional[tuple[WSChiaConnection, list[FullBlock]]]]
         ) -> None:
             nonlocal fork_info
+            nonlocal vs
             block_rate = 0
             block_rate_time = time.monotonic()
             block_rate_height = -1
@@ -1165,6 +1174,7 @@ class FullNode:
                 # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
                 # call will update it
                 success, state_change_summary, err = await self.add_block_batch(
+                    blockchain,
                     blocks,
                     peer.get_peer_logging(),
                     fork_info,
@@ -1266,6 +1276,7 @@ class FullNode:
 
     async def add_block_batch(
         self,
+        blockchain: AugmentedBlockchain,
         all_blocks: list[FullBlock],
         peer_info: PeerInfo,
         fork_info: ForkInfo,
@@ -1283,6 +1294,7 @@ class FullNode:
             return True, None, None
 
         futures = await self.prevalidate_blocks(
+            blockchain,
             blocks_to_validate,
             peer_info,
             vs,
@@ -1311,7 +1323,7 @@ class FullNode:
         self,
         blockchain: AugmentedBlockchain,
         all_blocks: list[FullBlock],
-        fork_info: Optional[ForkInfo],
+        fork_info: ForkInfo,
         vs: ValidationState,  # in-out parameter
     ) -> list[FullBlock]:
 
@@ -1352,6 +1364,7 @@ class FullNode:
 
     async def prevalidate_blocks(
         self,
+        blockchain: AugmentedBlockchain,
         blocks_to_validate: list[FullBlock],
         peer_info: PeerInfo,
         vs: ValidationState,
@@ -1363,8 +1376,8 @@ class FullNode:
         # call below. pre_validate_blocks_multiprocessing() will update the
         # object we pass in.
         return await pre_validate_blocks_multiprocessing(
-            self.blockchain.constants,
-            self.blockchain,
+            self.constants,
+            blockchain,
             blocks_to_validate,
             self.blockchain.pool,
             {},
@@ -1378,7 +1391,7 @@ class FullNode:
         blockchain: AugmentedBlockchain,
         blocks_to_validate: list[FullBlock],
         pre_validation_results: list[PreValidationResult],
-        fork_info: Optional[ForkInfo],
+        fork_info: ForkInfo,
         peer_info: PeerInfo,
         vs: ValidationState,  # in-out parameter
     ) -> tuple[Optional[StateChangeSummary], Optional[Err]]:
@@ -1414,8 +1427,7 @@ class FullNode:
             if result == AddBlockResult.NEW_PEAK:
                 # since this block just added a new peak, we've don't need any
                 # fork history from fork_info anymore
-                if fork_info is not None:
-                    fork_info.reset(block.height, header_hash)
+                fork_info.reset(block.height, header_hash)
                 assert state_change_summary is not None
                 # Since all blocks are contiguous, we can simply append the rollback changes and npc results
                 if agg_state_change_summary is None:
@@ -1878,7 +1890,7 @@ class FullNode:
             ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
             futures = await pre_validate_blocks_multiprocessing(
                 self.blockchain.constants,
-                self.blockchain,
+                AugmentedBlockchain(self.blockchain),
                 [block],
                 self.blockchain.pool,
                 block_height_conds_map,

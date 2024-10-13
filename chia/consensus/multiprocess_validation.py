@@ -14,7 +14,7 @@ from chia_rs import AugSchemeMPL, SpendBundleConditions
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockRecordsProtocol, BlocksProtocol
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
@@ -132,7 +132,7 @@ def pre_validate_block(
 
 async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
-    block_records: BlocksProtocol,
+    blockchain: AugmentedBlockchain,
     blocks: Sequence[FullBlock],
     pool: Executor,
     block_height_conds_map: dict[uint32, SpendBundleConditions],
@@ -150,7 +150,7 @@ async def pre_validate_blocks_multiprocessing(
         constants:
         pool:
         constants:
-        block_records:
+        blockchain:
         blocks: list of full blocks to validate (must be connected to current chain)
         npc_results
     """
@@ -160,14 +160,10 @@ async def pre_validate_blocks_multiprocessing(
         return PreValidationResult(uint16(error_code.value), None, None, False, uint32(0))
 
     if blocks[0].height > 0:
-        curr = block_records.try_block_record(blocks[0].prev_header_hash)
+        curr = blockchain.try_block_record(blocks[0].prev_header_hash)
         if curr is None:
             return [return_error(Err.INVALID_PREV_BLOCK_HASH)]
         prev_b = curr
-
-    # the agumented blockchain object will let us add temporary block records
-    # they won't actually be added to the underlying blockchain object
-    blockchain = AugmentedBlockchain(block_records)
 
     futures = []
     # Pool of workers to validate blocks concurrently
