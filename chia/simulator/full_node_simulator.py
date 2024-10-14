@@ -306,7 +306,7 @@ class FullNodeSimulator(FullNodeAPI):
             guarantee_transaction_block=True,
             seed=seed,
         )
-        await add_blocks_in_batches(more_blocks, self.full_node, more_blocks[0].prev_header_hash)
+        await add_blocks_in_batches(more_blocks, self.full_node, current_blocks[old_index].header_hash)
 
     async def farm_blocks_to_puzzlehash(
         self,
