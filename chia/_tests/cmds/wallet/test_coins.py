@@ -136,6 +136,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
 
 def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
+    test_coin = Coin(Program.to(0).get_tree_hash(), Program.to(1).get_tree_hash(), uint64(10_000_000_000_000))
 
     # set RPC Client
     class CoinsSplitRpcClient(TestWalletRpcClient):
@@ -152,19 +153,21 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
             start_height: Optional[int] = None,
             end_height: Optional[int] = None,
         ) -> List[CoinRecord]:
-            coin = Coin(Program.to(0).get_tree_hash(), Program.to(1).get_tree_hash(), uint64(10_000_000_000_000))
             cr = CoinRecord(
-                coin,
+                test_coin,
                 uint32(10),
                 uint32(0),
                 False,
                 uint64(0),
             )
-            return [cr]
+            if names[0] == test_coin.name():
+                return [cr]
+            else:
+                return []
 
     inst_rpc_client = CoinsSplitRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
-    target_coin_id = get_bytes32(1)
+    target_coin_id = test_coin.name()
     command_args = [
         "wallet",
         "coins",
@@ -260,3 +263,54 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
+    # Test missing both inputs
+    command_args = [
+        "wallet",
+        "coins",
+        "split",
+        FINGERPRINT_ARG,
+        "-i1",
+        "-m0.001",
+        f"-t{target_coin_id.hex()}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
+    ]
+    # these are various things that should be in the output
+    assert_list = ["Must use either -a or -n. For more information run --help."]
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+
+    # Test missing coin not found both ways
+    target_coin_id = get_bytes32(1)
+    assert_list = ["Could not find target coin."]
+    command_args = [
+        "wallet",
+        "coins",
+        "split",
+        FINGERPRINT_ARG,
+        "-i1",
+        "-m0.001",
+        "-n20",  # split target coin into 20 coins of even amounts
+        f"-t{target_coin_id.hex()}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
+    ]
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+    command_args = [
+        "wallet",
+        "coins",
+        "split",
+        FINGERPRINT_ARG,
+        "-i1",
+        "-m0.001",
+        "-a0.5",  # split into coins of amount 0.5 XCH or 500_000_000_000 mojo
+        f"-t{target_coin_id.hex()}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
+    ]
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
