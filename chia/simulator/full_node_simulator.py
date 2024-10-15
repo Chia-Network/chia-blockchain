@@ -22,6 +22,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
+from chia.types.validation_state import ValidationState
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -176,9 +177,7 @@ class FullNodeSimulator(FullNodeAPI):
                     [genesis],
                     self.full_node.blockchain.pool,
                     {},
-                    sub_slot_iters=ssi,
-                    difficulty=diff,
-                    prev_ses_block=None,
+                    ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
                 assert pre_validation_results is not None
@@ -227,7 +226,7 @@ class FullNodeSimulator(FullNodeAPI):
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
         ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
-        diffculty = self.full_node.constants.DIFFICULTY_STARTING
+        diff = self.full_node.constants.DIFFICULTY_STARTING
         async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -239,9 +238,7 @@ class FullNodeSimulator(FullNodeAPI):
                     [genesis],
                     self.full_node.blockchain.pool,
                     {},
-                    sub_slot_iters=ssi,
-                    difficulty=diffculty,
-                    prev_ses_block=None,
+                    ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
                 assert pre_validation_results is not None

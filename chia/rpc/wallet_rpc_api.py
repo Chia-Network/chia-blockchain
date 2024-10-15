@@ -35,6 +35,7 @@ from chia.rpc.wallet_request_types import (
     GatherSigningInfo,
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
+    GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
@@ -42,8 +43,15 @@ from chia.rpc.wallet_request_types import (
     GetPrivateKeyFormat,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
+    GetSyncStatusResponse,
+    GetTimestampForHeight,
+    GetTimestampForHeightResponse,
     LogIn,
     LogInResponse,
+    PushTransactions,
+    PushTransactionsResponse,
+    PushTX,
+    SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -607,64 +615,55 @@ class WalletRpcApi:
     ##########################################################################################
     # Wallet Node
     ##########################################################################################
-    async def set_wallet_resync_on_startup(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    @marshal
+    async def set_wallet_resync_on_startup(self, request: SetWalletResyncOnStartup) -> Empty:
         """
         Resync the current logged in wallet. The transaction and offer records will be kept.
         :param request: optionally pass in `enable` as bool to enable/disable resync
         :return:
         """
         assert self.service.wallet_state_manager is not None
-        try:
-            enable = bool(request.get("enable", True))
-        except ValueError:
-            raise ValueError("Please provide a boolean value for `enable` parameter in request")
         fingerprint = self.service.logged_in_fingerprint
         if fingerprint is not None:
-            self.service.set_resync_on_startup(fingerprint, enable)
+            self.service.set_resync_on_startup(fingerprint, request.enable)
         else:
             raise ValueError("You need to login into wallet to use this RPC call")
-        return {"success": True}
+        return Empty()
 
-    async def get_sync_status(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_sync_status(self, request: Empty) -> GetSyncStatusResponse:
         sync_mode = self.service.wallet_state_manager.sync_mode
         has_pending_queue_items = self.service.new_peak_queue.has_pending_data_process_items()
         syncing = sync_mode or has_pending_queue_items
         synced = await self.service.wallet_state_manager.synced()
-        return {"synced": synced, "syncing": syncing, "genesis_initialized": True}
+        return GetSyncStatusResponse(synced=synced, syncing=syncing)
 
-    async def get_height_info(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_height_info(self, request: Empty) -> GetHeightInfoResponse:
         height = await self.service.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        return {"height": height}
+        return GetHeightInfoResponse(height=height)
 
-    async def push_tx(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def push_tx(self, request: PushTX) -> Empty:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(WalletSpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
-        return {}
+        await self.service.push_tx(WalletSpendBundle.from_bytes(request.spend_bundle))
+        return Empty()
 
     @tx_endpoint(push=True)
+    @marshal
     async def push_transactions(
         self,
-        request: Dict[str, Any],
+        request: PushTransactions,
         action_scope: WalletActionScope,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> PushTransactionsResponse:
         if not action_scope.config.push:
             raise ValueError("Cannot push transactions if push is False")
         async with action_scope.use() as interface:
-            for transaction_hexstr_or_json in request["transactions"]:
-                if isinstance(transaction_hexstr_or_json, str):
-                    tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr_or_json))
-                    interface.side_effects.transactions.append(tx)
-                else:
-                    try:
-                        tx = TransactionRecord.from_json_dict_convenience(transaction_hexstr_or_json)
-                    except AttributeError:
-                        tx = TransactionRecord.from_json_dict(transaction_hexstr_or_json)
-                    interface.side_effects.transactions.append(tx)
-
-            if request.get("fee", 0) != 0:
+            interface.side_effects.transactions.extend(request.transactions)
+            if request.fee != 0:
                 all_conditions_and_origins = [
                     (condition, cs.coin.name())
                     for tx in interface.side_effects.transactions
@@ -695,7 +694,7 @@ class WalletRpcApi:
                     push=False,
                 ) as inner_action_scope:
                     await self.service.wallet_state_manager.main_wallet.create_tandem_xch_tx(
-                        uint64(request["fee"]),
+                        request.fee,
                         inner_action_scope,
                         (
                             *extra_conditions,
@@ -707,20 +706,23 @@ class WalletRpcApi:
 
                 interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
 
-        return {}
+        return PushTransactionsResponse([], [])  # tx_endpoint takes care of this
 
-    async def get_timestamp_for_height(self, request: Dict[str, Any]) -> EndpointResult:
-        return {"timestamp": await self.service.get_timestamp_for_height(uint32(request["height"]))}
+    @marshal
+    async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
+        return GetTimestampForHeightResponse(await self.service.get_timestamp_for_height(request.height))
 
-    async def set_auto_claim(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
         """
         Set auto claim merkle coins config
         :param request: Example {"enable": true, "tx_fee": 100000, "min_amount": 0, "batch_size": 50}
         :return:
         """
-        return self.service.set_auto_claim(AutoClaimSettings.from_json_dict(request))
+        return AutoClaimSettings.from_json_dict(self.service.set_auto_claim(request))
 
-    async def get_auto_claim(self, request: Dict[str, Any]) -> EndpointResult:
+    @marshal
+    async def get_auto_claim(self, request: Empty) -> AutoClaimSettings:
         """
         Get auto claim merkle coins config
         :param request: None
@@ -729,7 +731,7 @@ class WalletRpcApi:
         auto_claim_settings = AutoClaimSettings.from_json_dict(
             self.service.wallet_state_manager.config.get("auto_claim", {})
         )
-        return auto_claim_settings.to_json_dict()
+        return auto_claim_settings
 
     ##########################################################################################
     # Wallet Management
@@ -1217,18 +1219,22 @@ class WalletRpcApi:
         async with action_scope.use() as interface:
             interface.side_effects.selected_coins.extend(coins)
 
-        # Next let's select enough coins to meet the target if there is one
-        if request.target_coin_amount is not None:
-            fungible_amount_needed = request.target_coin_amount
-            if isinstance(wallet, Wallet):
-                fungible_amount_needed = uint64(request.target_coin_amount + request.fee)
-            amount_selected = sum(c.amount for c in coins)
-            if amount_selected < fungible_amount_needed:
-                coins.extend(
-                    await wallet.select_coins(
-                        amount=uint64(fungible_amount_needed - amount_selected), action_scope=action_scope
-                    )
+        # Next let's select enough coins to meet the target + fee if there is one
+        fungible_amount_needed = uint64(0) if request.target_coin_amount is None else request.target_coin_amount
+        if isinstance(wallet, Wallet):
+            fungible_amount_needed = uint64(fungible_amount_needed + request.fee)
+        amount_selected = sum(c.amount for c in coins)
+        if amount_selected < fungible_amount_needed:  # implicit fungible_amount_needed > 0 here
+            coins.extend(
+                await wallet.select_coins(
+                    amount=uint64(fungible_amount_needed - amount_selected), action_scope=action_scope
                 )
+            )
+
+        if len(coins) > request.number_of_coins:
+            raise ValueError(
+                f"Options specified cannot be met without selecting more coins than specified: {len(coins)}"
+            )
 
         # Now let's select enough coins to get to the target number to combine
         if len(coins) < request.number_of_coins:
@@ -1256,6 +1262,7 @@ class WalletRpcApi:
             uint64(sum(c.amount for c in coins)) if request.target_coin_amount is None else request.target_coin_amount
         )
         if isinstance(wallet, Wallet):
+            primary_output_amount = uint64(primary_output_amount - request.fee)
             await wallet.generate_signed_transaction(
                 primary_output_amount,
                 await wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash),
@@ -2564,16 +2571,17 @@ class WalletRpcApi:
             if hinted_coin.coin.amount % 2 == 1 and hinted_coin.hint is not None:
                 hint = hinted_coin.hint
                 break
-        if hint is None:
+        derivation_record = None
+        if hint is not None:
+            derivation_record = (
+                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
+            )
+        if derivation_record is None:
             # This is an invalid DID, check if we are owner
             derivation_record = (
                 await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     p2_puzzle.get_tree_hash()
                 )
-            )
-        else:
-            derivation_record = (
-                await self.service.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(hint)
             )
 
         launcher_id = bytes32(singleton_struct.rest().first().as_atom())
