@@ -2,9 +2,9 @@
   (
     M  ; the number of necessary puzzles to execute
     MERKLE_ROOT  ; A root of all available puzzles
-    member_proof  ; A partially revealed merkle tree with only the leaves being used fully revealed
     delegated_puzzle  ; A puzzle to run that all members must agree to
     delegated_solution  ; The solution to the delegated puzzle
+    member_proof  ; A partially revealed merkle tree with only the leaves being used fully revealed
   )
 
   (include sha256tree.clib)

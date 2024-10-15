@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import ClassVar, Dict, List, Literal, Mapping, Protocol, TypeVar, Union
+from typing import ClassVar, Dict, List, Literal, Mapping, Optional, Protocol, Tuple, TypeVar, Union
 
 from typing_extensions import runtime_checkable
 
@@ -23,6 +23,10 @@ RESTRICTION_MOD = load_clvm_maybe_recompile(
     "restrictions.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
 )
 RESTRICTION_MOD_HASH = RESTRICTION_MOD.get_tree_hash()
+DELEGATED_PUZZLE_FEEDER = load_clvm_maybe_recompile(
+    "delegated_puzzle_feeder.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
+)
+DELEGATED_PUZZLE_FEEDER_HASH = DELEGATED_PUZZLE_FEEDER.get_tree_hash()
 # (mod (INDEX INNER_PUZZLE . inner_solution) (a INNER_PUZZLE inner_solution))
 INDEX_WRAPPER = Program.to([2, 5, 7])
 
@@ -181,18 +185,18 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
 
     @property
     def _merkle_tree(self) -> MerkleTree:
-        nodes = [member.puzzle_hash() for member in self.members]
+        nodes = [member.puzzle_hash(_top_level=False) for member in self.members]
         if self.m > 1:
             return MofNMerkleTree(nodes)
         else:
             return MerkleTree(nodes)
 
-    def generate_proof(self, spends_to_prove: Dict[bytes32, ProvenSpend]) -> Program:
+    def solve(self, spends_to_prove: Dict[bytes32, ProvenSpend]) -> Program:
         assert len(spends_to_prove) == self.m, "Must prove as many spends as the M value"
         if self.m == self.n:
-            return Program.to([spends_to_prove[node].solution for node in self._merkle_tree.nodes])
+            return Program.to([[spends_to_prove[node].solution for node in self._merkle_tree.nodes]])
         elif self.m > 1:
-            return self._merkle_tree.generate_m_of_n_proof(spends_to_prove)  # type: ignore[attr-defined, no-any-return]
+            return Program.to([self._merkle_tree.generate_m_of_n_proof(spends_to_prove)])  # type: ignore[attr-defined]
         else:
             only_key = list(spends_to_prove.keys())[0]
             proven_spend = spends_to_prove[only_key]
@@ -204,7 +208,7 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
 
     def puzzle(self, nonce: int) -> Program:
         if self.m == self.n:
-            return NofN_MOD.curry([member.puzzle_reveal() for member in self.members])
+            return NofN_MOD.curry([member.puzzle_reveal(_top_level=False) for member in self.members])
         elif self.m > 1:
             return MofN_MOD.curry(self.m, self._merkle_tree.calculate_root())
         else:
@@ -212,17 +216,10 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         if self.m == self.n:
-            member_hashes = [member.puzzle_hash() for member in self.members]
+            member_hashes = [member.puzzle_hash(_top_level=False) for member in self.members]
             return NofN_MOD.curry(member_hashes).get_tree_hash_precalc(*member_hashes)
         else:
             return self.puzzle(nonce).get_tree_hash()
-
-    def solve(self, proof: Program, delegated_puzzle: Program, delegated_solution: Program) -> Program:
-        if self.m > 1:
-            # proof is member solutions when m == n
-            return Program.to([proof, delegated_puzzle, delegated_solution])
-        else:
-            return Program.to([*proof.as_iter(), delegated_puzzle, delegated_solution])
 
 
 # The top-level object inside every "outer" puzzle
@@ -341,11 +338,16 @@ class PuzzleWithRestrictions:
             new_puzzle,
         )
 
-    def puzzle_reveal(self) -> Program:
+    def puzzle_reveal(self, _top_level: bool = True) -> Program:
         # TODO: optimizations on specific cases
         #   - 1 of N can be a simpler puzzle
         #   - Stacked MofNs could be a more complicated but more efficient puzzle (?)
         inner_puzzle = self.puzzle.puzzle(self.nonce)  # pylint: disable=assignment-from-no-return
+        if _top_level and not isinstance(self.puzzle, MofN):
+            fed_inner_puzzle = DELEGATED_PUZZLE_FEEDER.curry(inner_puzzle)
+        else:
+            fed_inner_puzzle = inner_puzzle
+
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             restricted_inner_puzzle = RESTRICTION_MOD.curry(
                 [
@@ -358,17 +360,26 @@ class PuzzleWithRestrictions:
                     for restriction in self.restrictions
                     if not restriction.morpher_not_validator
                 ],
-                inner_puzzle,
+                fed_inner_puzzle,
             )
         else:
-            restricted_inner_puzzle = inner_puzzle
+            restricted_inner_puzzle = fed_inner_puzzle
         return INDEX_WRAPPER.curry(self.nonce, restricted_inner_puzzle)
 
-    def puzzle_hash(self) -> bytes32:
+    def puzzle_hash(self, _top_level: bool = True) -> bytes32:
         # TODO: optimizations on specific cases
         #   - 1 of N can be a simpler puzzle
         #   - Stacked MofNs could be a more complicated but more efficient puzzle (?)
         inner_puzzle_hash = self.puzzle.puzzle_hash(self.nonce)  # pylint: disable=assignment-from-no-return
+        if _top_level and not isinstance(self.puzzle, MofN):
+            fed_inner_puzzle_hash = (
+                Program.to(DELEGATED_PUZZLE_FEEDER_HASH)
+                .curry(inner_puzzle_hash)
+                .get_tree_hash_precalc(DELEGATED_PUZZLE_FEEDER_HASH, inner_puzzle_hash)
+            )
+        else:
+            fed_inner_puzzle_hash = inner_puzzle_hash
+
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             morpher_hashes = [
                 restriction.puzzle_hash(self.nonce)
@@ -385,17 +396,29 @@ class PuzzleWithRestrictions:
                 .curry(
                     morpher_hashes,
                     validator_hashes,
-                    inner_puzzle_hash,
+                    fed_inner_puzzle_hash,
                 )
-                .get_tree_hash_precalc(*morpher_hashes, *validator_hashes, RESTRICTION_MOD_HASH, inner_puzzle_hash)
+                .get_tree_hash_precalc(*morpher_hashes, *validator_hashes, RESTRICTION_MOD_HASH, fed_inner_puzzle_hash)
             )
         else:
-            restricted_inner_puzzle_hash = inner_puzzle_hash
+            restricted_inner_puzzle_hash = fed_inner_puzzle_hash
         return INDEX_WRAPPER.curry(self.nonce, restricted_inner_puzzle_hash).get_tree_hash_precalc(
             restricted_inner_puzzle_hash
         )
 
     def solve(
-        self, morpher_solutions: List[Program], validator_solutions: List[Program], inner_solution: Program
+        self,
+        morpher_solutions: List[Program],
+        validator_solutions: List[Program],
+        member_solution: Program,
+        delegated_puzzle_and_solution: Optional[Tuple[Program, Program]] = None,
     ) -> Program:
-        return Program.to([morpher_solutions, validator_solutions, inner_solution])
+        if delegated_puzzle_and_solution is not None:
+            inner_solution = Program.to([*delegated_puzzle_and_solution, *member_solution.as_iter()])
+        else:
+            inner_solution = member_solution
+
+        if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
+            return Program.to([morpher_solutions, validator_solutions, inner_solution])
+        else:
+            return inner_solution
