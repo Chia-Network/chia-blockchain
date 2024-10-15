@@ -184,7 +184,6 @@ class Timelord:
             if self.bluebox_pool is not None:
                 self.bluebox_pool.shutdown()
 
-
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
