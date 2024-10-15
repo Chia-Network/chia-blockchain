@@ -3,15 +3,7 @@ from __future__ import annotations
 import io
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
 
-from chia_rs import (
-    ALLOW_BACKREFS,
-    DISALLOW_INFINITY_G1,
-    ENABLE_BLS_OPS_OUTSIDE_GUARD,
-    ENABLE_FIXED_DIV,
-    MEMPOOL_MODE,
-    run_chia_program,
-    tree_hash,
-)
+from chia_rs import ALLOW_BACKREFS, MEMPOOL_MODE, run_chia_program, tree_hash
 from clvm.casts import int_from_bytes
 from clvm.CLVMObject import CLVMStorage
 from clvm.EvalError import EvalError
@@ -26,7 +18,7 @@ from .tree_hash import sha256_treehash
 
 INFINITE_COST = 11000000000
 
-DEFAULT_FLAGS = ENABLE_BLS_OPS_OUTSIDE_GUARD | ENABLE_FIXED_DIV | DISALLOW_INFINITY_G1 | MEMPOOL_MODE
+DEFAULT_FLAGS = MEMPOOL_MODE
 
 T_CLVMStorage = TypeVar("T_CLVMStorage", bound=CLVMStorage)
 T_Program = TypeVar("T_Program", bound="Program")

@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, Union
 
-from chia_rs import AugSchemeMPL, BLSCache, G1Element
+from chia_rs import AugSchemeMPL, BLSCache, G1Element, SpendBundleConditions
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -14,7 +14,6 @@ from chia.consensus.block_root_validation import validate_block_merkle_roots
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.mempool_check_conditions import mempool_check_time_locks
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -85,7 +84,7 @@ class ForkInfo:
         self.removals_since_fork = {}
         self.block_hashes = []
 
-    def include_spends(self, npc_result: Optional[NPCResult], block: FullBlock, header_hash: bytes32) -> None:
+    def include_spends(self, conds: Optional[SpendBundleConditions], block: FullBlock, header_hash: bytes32) -> None:
         height = block.height
 
         assert self.peak_height == height - 1
@@ -97,11 +96,10 @@ class ForkInfo:
         self.peak_height = int(block.height)
         self.peak_hash = header_hash
 
-        if npc_result is not None:
-            assert npc_result.conds is not None
+        if conds is not None:
             assert block.foliage_transaction_block is not None
             timestamp = block.foliage_transaction_block.timestamp
-            for spend in npc_result.conds.spends:
+            for spend in conds.spends:
                 self.removals_since_fork[bytes32(spend.coin_id)] = ForkRem(bytes32(spend.puzzle_hash), height)
                 for puzzle_hash, amount, hint in spend.create_coin:
                     coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
@@ -126,19 +124,22 @@ async def validate_block_body(
     get_coin_records: Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]],
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
-    npc_result: Optional[NPCResult],
+    conds: Optional[SpendBundleConditions],
     fork_info: ForkInfo,
     bls_cache: Optional[BLSCache],
     *,
     validate_signature: bool = True,
-) -> Tuple[Optional[Err], Optional[NPCResult]]:
+) -> Tuple[Optional[Err], Optional[SpendBundleConditions]]:
     """
     This assumes the header block has been completely validated.
-    Validates the transactions and body of the block. Returns None for the first value if everything
-    validates correctly, or an Err if something does not validate. For the second value, returns a CostResult
-    only if validation succeeded, and there are transactions. In other cases it returns None. The NPC result is
-    the result of running the generator with the previous generators refs. It is only present for transaction
-    blocks which have spent coins.
+    Validates the transactions and body of the block.
+    Returns None for the first value if everything validates correctly, or an
+        Err if something does not validate.
+    For the second value, returns a SpendBundleConditions only if validation
+        succeeded, and there are transactions. In other cases it returns None.
+    conds is the result of running the generator with the previous generators
+        refs. It must be set for transaction blocks and must be None for
+        non-transaction blocks.
     fork_info specifies the fork context of this block. In case the block
         extends the main chain, it can be empty, but if the block extends a fork
         of the main chain, the fork info is mandatory in order to validate the block.
@@ -292,8 +293,7 @@ async def validate_block_body(
     if block.transactions_generator is not None:
         # Get List of names removed, puzzles hashes for removed coins and conditions created
 
-        assert npc_result is not None
-        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
+        cost = uint64(0 if conds is None else conds.cost)
 
         # 7. Check that cost <= MAX_BLOCK_COST_CLVM
         log.debug(
@@ -304,19 +304,16 @@ async def validate_block_body(
             return Err.BLOCK_COST_EXCEEDS_MAX, None
 
         # 8. The CLVM program must not return any errors
-        if npc_result.error is not None:
-            return Err(npc_result.error), None
+        assert conds is not None
 
-        assert npc_result.conds is not None
-
-        for spend in npc_result.conds.spends:
+        for spend in conds.spends:
             removals.append(bytes32(spend.coin_id))
             removals_puzzle_dic[bytes32(spend.coin_id)] = bytes32(spend.puzzle_hash)
             for puzzle_hash, amount, _ in spend.create_coin:
                 c = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
                 additions.append((c, c.name()))
     else:
-        assert npc_result is None
+        assert conds is None
 
     # 9. Check that the correct cost is in the transactions info
     if block.transactions_info.cost != cost:
@@ -367,8 +364,8 @@ async def validate_block_body(
 
     # 14. Check for duplicate spends inside block
     removal_counter = collections.Counter(removals)
-    for k, v in removal_counter.items():
-        if v > 1:
+    for count in removal_counter.values():
+        if count > 1:
             return Err.DOUBLE_SPEND, None
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
@@ -460,10 +457,7 @@ async def validate_block_body(
 
     # reserve fee cannot be greater than UINT64_MAX per consensus rule.
     # run_generator() would fail
-    assert_fee_sum: uint64 = uint64(0)
-    if npc_result:
-        assert npc_result.conds is not None
-        assert_fee_sum = uint64(npc_result.conds.reserve_fee)
+    assert_fee_sum = uint64(0 if conds is None else conds.reserve_fee)
 
     # 17. Check that the assert fee sum <= fees, and that each reserved fee is non-negative
     if fees < assert_fee_sum:
@@ -484,24 +478,21 @@ async def validate_block_body(
 
     # 21. Verify conditions
     # verify absolute/relative height/time conditions
-    if npc_result is not None:
-        assert npc_result.conds is not None
-
+    if conds is not None:
         error = mempool_check_time_locks(
             removal_coin_records,
-            npc_result.conds,
+            conds,
             prev_transaction_block_height,
             prev_transaction_block_timestamp,
         )
-        if error:
+        if error is not None:
             return error, None
 
     # create hash_key list for aggsig check
     pairs_pks: List[G1Element] = []
     pairs_msgs: List[bytes] = []
-    if npc_result:
-        assert npc_result.conds is not None
-        pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
+    if conds is not None:
+        pairs_pks, pairs_msgs = pkm_pairs(conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
 
     # 22. Verify aggregated signature
     # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
@@ -521,4 +512,4 @@ async def validate_block_body(
             if not bls_cache.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
                 return Err.BAD_AGGREGATE_SIGNATURE, None
 
-    return None, npc_result
+    return None, conds

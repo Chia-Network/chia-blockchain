@@ -326,7 +326,9 @@ class DIDWallet:
                 continue
 
             for coin in record.additions:
-                if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
+                if (await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id())) and (
+                    coin not in record.removals
+                ):
                     addition_amount += coin.amount
 
         return uint64(addition_amount)
@@ -1329,8 +1331,10 @@ class DIDWallet:
         return spendable_am
 
     async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None):
-        max_send_amount = await self.get_confirmed_balance()
-
+        spendable: List[WalletCoinRecord] = list(
+            await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
+        )
+        max_send_amount = sum(cr.coin.amount for cr in spendable)
         return max_send_amount
 
     async def add_parent(self, name: bytes32, parent: Optional[LineageProof]):
@@ -1441,7 +1445,11 @@ class DIDWallet:
         if num_of_backup_ids_needed > len(backup_ids):
             raise Exception
         innerpuz: Program = Program.from_bytes(bytes.fromhex(details[4]))
-        metadata: str = details[6]
+        metadata: str = ""
+        for d in details[6:]:
+            metadata = metadata + d + ":"
+        if len(metadata) > 0:
+            metadata = metadata[:-1]
         did_info = DIDInfo(
             origin_coin=origin,
             backup_ids=backup_ids,

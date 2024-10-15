@@ -19,6 +19,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.full_node.full_node import FullNode
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.full_block import FullBlock
+from chia.types.validation_state import ValidationState
 from chia.util.config import load_config
 
 
@@ -158,8 +159,8 @@ async def run_sync_checkpoint(
                 ssi, diff = get_next_sub_slot_iters_and_difficulty(
                     full_node.constants, True, block_record, full_node.blockchain
                 )
-                success, _, _, _, _, _ = await full_node.add_block_batch(
-                    block_batch, peer_info, None, current_ssi=ssi, current_difficulty=diff
+                success, _, err = await full_node.add_block_batch(
+                    block_batch, peer_info, None, ValidationState(ssi, diff, None)
                 )
                 end_height = block_batch[-1].height
                 full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)
@@ -176,8 +177,8 @@ async def run_sync_checkpoint(
                 ssi, diff = get_next_sub_slot_iters_and_difficulty(
                     full_node.constants, True, block_record, full_node.blockchain
                 )
-                success, _, _, _, _, _ = await full_node.add_block_batch(
-                    block_batch, peer_info, None, current_ssi=ssi, current_difficulty=diff
+                success, _, err = await full_node.add_block_batch(
+                    block_batch, peer_info, None, ValidationState(ssi, diff, None)
                 )
                 if not success:
                     raise RuntimeError("failed to ingest block batch")

@@ -858,18 +858,17 @@ async def print_balances(
         summaries_response = await wallet_client.get_wallets(wallet_type)
         address_prefix = selected_network_address_prefix(config)
 
-        is_synced: bool = await wallet_client.get_synced()
-        is_syncing: bool = await wallet_client.get_sync_status()
+        sync_response = await wallet_client.get_sync_status()
 
-        print(f"Wallet height: {await wallet_client.get_height_info()}")
-        if is_syncing:
+        print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
+        if sync_response.syncing:
             print("Sync status: Syncing...")
-        elif is_synced:
+        elif sync_response.synced:
             print("Sync status: Synced")
         else:
             print("Sync status: Not synced")
 
-        if not is_syncing and is_synced:
+        if not sync_response.syncing and sync_response.synced:
             if len(summaries_response) == 0:
                 type_hint = " " if wallet_type is None else f" from type {wallet_type.name} "
                 print(f"\nNo wallets{type_hint}available for fingerprint: {fingerprint}")

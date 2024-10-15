@@ -12,7 +12,7 @@ from chia.wallet.wallet_interested_store import WalletInterestedStore
 
 
 @pytest.mark.anyio
-async def test_store(seeded_random: random.Random):
+async def test_store(seeded_random: random.Random) -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletInterestedStore.create(db_wrapper)
         coin_1 = Coin(bytes32.random(seeded_random), bytes32.random(seeded_random), uint64(12312))

@@ -9,6 +9,7 @@ from chia_rs import G2Element
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.wallet_request_types import PushTransactions
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -224,7 +225,13 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
             action_scope,
         )
 
-    await env_2.rpc_client.push_transactions(action_scope.side_effects.transactions)
+    await env_2.rpc_client.push_transactions(
+        PushTransactions(  # pylint: disable=unexpected-keyword-arg
+            transactions=action_scope.side_effects.transactions,
+            sign=False,
+        ),
+        wallet_environments.tx_config,
+    )
 
     await wallet_environments.process_pending_states(
         [

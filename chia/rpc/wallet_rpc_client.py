@@ -45,6 +45,7 @@ from chia.rpc.wallet_request_types import (
     GatherSigningInfoResponse,
     GenerateMnemonicResponse,
     GetCATListResponse,
+    GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
     GetNotifications,
     GetNotificationsResponse,
@@ -52,6 +53,9 @@ from chia.rpc.wallet_request_types import (
     GetPrivateKey,
     GetPrivateKeyResponse,
     GetPublicKeysResponse,
+    GetSyncStatusResponse,
+    GetTimestampForHeight,
+    GetTimestampForHeightResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
     LogIn,
@@ -69,8 +73,12 @@ from chia.rpc.wallet_request_types import (
     NFTTransferBulk,
     NFTTransferBulkResponse,
     NFTTransferNFTResponse,
+    PushTransactions,
+    PushTransactionsResponse,
+    PushTX,
     SendTransactionMultiResponse,
     SendTransactionResponse,
+    SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
     SubmitTransactions,
@@ -100,7 +108,6 @@ from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
-from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -123,9 +130,6 @@ class WalletRpcClient(RpcClient):
     # Key Management APIs
     async def log_in(self, request: LogIn) -> LogInResponse:
         return LogInResponse.from_json_dict(await self.fetch("log_in", request.to_json_dict()))
-
-    async def set_wallet_resync_on_startup(self, enable: bool = True) -> Dict[str, Any]:
-        return await self.fetch(path="set_wallet_resync_on_startup", request_json={"enable": enable})
 
     async def get_logged_in_fingerprint(self) -> GetLoggedInFingerprintResponse:
         return GetLoggedInFingerprintResponse.from_json_dict(await self.fetch("get_logged_in_fingerprint", {}))
@@ -152,39 +156,35 @@ class WalletRpcClient(RpcClient):
         await self.fetch("delete_all_keys", {})
 
     # Wallet Node APIs
-    async def get_sync_status(self) -> bool:
-        response = await self.fetch("get_sync_status", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(bool, response["syncing"])
+    async def set_wallet_resync_on_startup(self, request: SetWalletResyncOnStartup) -> None:
+        await self.fetch("set_wallet_resync_on_startup", request.to_json_dict())
 
-    async def get_synced(self) -> bool:
-        response = await self.fetch("get_sync_status", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(bool, response["synced"])
+    async def get_sync_status(self) -> GetSyncStatusResponse:
+        return GetSyncStatusResponse.from_json_dict(await self.fetch("get_sync_status", {}))
 
-    async def get_height_info(self) -> uint32:
-        response = await self.fetch("get_height_info", {})
-        # TODO: casting due to lack of type checked deserialization
-        return cast(uint32, response["height"])
+    async def get_height_info(self) -> GetHeightInfoResponse:
+        return GetHeightInfoResponse.from_json_dict(await self.fetch("get_height_info", {}))
 
-    async def push_tx(self, spend_bundle: WalletSpendBundle) -> Dict[str, Any]:
-        return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
+    async def push_tx(self, request: PushTX) -> None:
+        await self.fetch("push_tx", request.to_json_dict())
 
     async def push_transactions(
-        self, txs: List[TransactionRecord], fee: uint64 = uint64(0), sign: bool = False
-    ) -> Dict[str, Any]:
-        transactions = [bytes(tx).hex() for tx in txs]
+        self,
+        request: PushTransactions,
+        tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> PushTransactionsResponse:
+        return PushTransactionsResponse.from_json_dict(
+            await self.fetch(
+                "push_transactions", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
-        return await self.fetch("push_transactions", {"transactions": transactions, "fee": fee, "sign": sign})
-
-    async def farm_block(self, address: str) -> Dict[str, Any]:
-        return await self.fetch("farm_block", {"address": address})
-
-    async def get_timestamp_for_height(self, height: uint32) -> uint64:
-        request = {"height": height}
-        response = await self.fetch("get_timestamp_for_height", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(uint64, response["timestamp"])
+    async def get_timestamp_for_height(self, request: GetTimestampForHeight) -> GetTimestampForHeightResponse:
+        return GetTimestampForHeightResponse.from_json_dict(
+            await self.fetch("get_timestamp_for_height", request.to_json_dict())
+        )
 
     async def set_auto_claim(self, request: AutoClaimSettings) -> AutoClaimSettings:
         return AutoClaimSettings.from_json_dict(await self.fetch("set_auto_claim", {**request.to_json_dict()}))

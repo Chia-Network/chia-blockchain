@@ -32,7 +32,7 @@ jobs:
         os:
           - runs-on: macos-latest
             matrix: macos-arm
-          - runs-on: macos-12
+          - runs-on: macos-13
             matrix: macos-intel
           - runs-on: ubuntu-latest
             matrix: linux

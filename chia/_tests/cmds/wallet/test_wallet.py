@@ -27,6 +27,7 @@ from chia.rpc.wallet_request_types import (
     CancelOfferResponse,
     CATSpendResponse,
     CreateOfferForIDsResponse,
+    GetHeightInfoResponse,
     SendTransactionResponse,
     TakeOfferResponse,
 )
@@ -227,9 +228,9 @@ def test_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
                 return [wallet_list[1]]
             return wallet_list
 
-        async def get_height_info(self) -> uint32:
+        async def get_height_info(self) -> GetHeightInfoResponse:
             self.add_to_log("get_height_info", ())
-            return uint32(10)
+            return GetHeightInfoResponse(uint32(10))
 
         async def get_wallet_balance(self, wallet_id: int) -> Dict[str, uint64]:
             self.add_to_log("get_wallet_balance", (wallet_id,))
@@ -291,7 +292,6 @@ def test_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path])
     # these are various things that should be in the output
     expected_calls: logType = {
         "get_wallets": [(None,), (WalletType.CAT,)],
-        "get_synced": [(), ()],
         "get_sync_status": [(), ()],
         "get_height_info": [(), ()],
         "get_wallet_balance": [(1,), (2,), (3,), (2,)],
