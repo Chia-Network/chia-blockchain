@@ -501,7 +501,7 @@ class SplitCoinsResponse(TransactionEndpointResponse):
 @kw_only_dataclass
 class CombineCoins(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
-    number_of_coins: uint16 = field(default_factory=default_raise)
+    number_of_coins: uint16 = uint16(500)
     largest_first: bool = False
     target_coin_ids: List[bytes32] = field(default_factory=list)
     target_coin_amount: Optional[uint64] = None
