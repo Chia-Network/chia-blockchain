@@ -143,6 +143,7 @@ class Timelord:
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
         self.max_allowed_inactivity_time = 60
+        self._executor_shutdown_tempfile: Optional[IO[bytes]] = None
         self.bluebox_pool: Optional[ThreadPoolExecutor] = None
 
     @contextlib.asynccontextmanager
@@ -161,7 +162,7 @@ class Timelord:
             if os.name == "nt" or slow_bluebox:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
                 workers = self.config.get("slow_bluebox_process_count", 1)
-                self._executor_shutdown_tempfile: IO[bytes] = _create_shutdown_file()
+                self._executor_shutdown_tempfile = _create_shutdown_file()
                 self.bluebox_pool = ThreadPoolExecutor(
                     max_workers=workers,
                 )
