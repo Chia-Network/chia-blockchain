@@ -143,7 +143,6 @@ class Timelord:
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
         self.max_allowed_inactivity_time = 60
-        self._executor_shutdown_tempfile: Optional[IO[bytes]] = None
         self.bluebox_pool: Optional[ThreadPoolExecutor] = None
 
     @contextlib.asynccontextmanager
