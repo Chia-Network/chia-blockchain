@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, TypeAlias, Union
 
 import chia_rs
 
@@ -16,7 +16,7 @@ from chia.util.errors import Err, ValidationError
 from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
-CoinSpend = chia_rs.CoinSpend
+CoinSpend: TypeAlias = chia_rs.CoinSpend
 
 
 def make_spend(

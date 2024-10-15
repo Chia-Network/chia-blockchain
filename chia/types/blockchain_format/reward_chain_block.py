@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import chia_rs
 
-RewardChainBlock = chia_rs.RewardChainBlock
-RewardChainBlockUnfinished = chia_rs.RewardChainBlockUnfinished
+RewardChainBlock: TypeAlias = chia_rs.RewardChainBlock
+RewardChainBlockUnfinished: TypeAlias = chia_rs.RewardChainBlockUnfinished

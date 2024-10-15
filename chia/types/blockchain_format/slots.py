@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import chia_rs
 
-ChallengeBlockInfo = chia_rs.ChallengeBlockInfo
-ChallengeChainSubSlot = chia_rs.ChallengeChainSubSlot
-InfusedChallengeChainSubSlot = chia_rs.InfusedChallengeChainSubSlot
-RewardChainSubSlot = chia_rs.RewardChainSubSlot
-SubSlotProofs = chia_rs.SubSlotProofs
+ChallengeBlockInfo: TypeAlias = chia_rs.ChallengeBlockInfo
+ChallengeChainSubSlot: TypeAlias = chia_rs.ChallengeChainSubSlot
+InfusedChallengeChainSubSlot: TypeAlias = chia_rs.InfusedChallengeChainSubSlot
+RewardChainSubSlot: TypeAlias = chia_rs.RewardChainSubSlot
+SubSlotProofs: TypeAlias = chia_rs.SubSlotProofs

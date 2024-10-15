@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TypeAlias
+
 import chia_rs
 
-EndOfSubSlotBundle = chia_rs.EndOfSubSlotBundle
+EndOfSubSlotBundle: TypeAlias = chia_rs.EndOfSubSlotBundle

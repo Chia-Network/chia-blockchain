@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import TypeAlias, TypeVar
 
 import chia_rs
 
@@ -9,7 +9,7 @@ from chia.util.errors import Err, ValidationError
 
 from .coin_spend import compute_additions_with_cost
 
-SpendBundle = chia_rs.SpendBundle
+SpendBundle: TypeAlias = chia_rs.SpendBundle
 T_SpendBundle = TypeVar("T_SpendBundle", bound="SpendBundle")
 
 

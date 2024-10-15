@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, cast
+from typing import Optional, TypeAlias, cast
 
 import chia_rs
 from bitstring import BitArray
@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
 
-ProofOfSpace = chia_rs.ProofOfSpace
+ProofOfSpace: TypeAlias = chia_rs.ProofOfSpace
 
 log = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TypeAlias
 
 import chia_rs
 
@@ -21,8 +21,8 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-CoinState = chia_rs.CoinState
-RespondToPhUpdates = chia_rs.RespondToPhUpdates
+CoinState: TypeAlias = chia_rs.CoinState
+RespondToPhUpdates: TypeAlias = chia_rs.RespondToPhUpdates
 
 
 @streamable

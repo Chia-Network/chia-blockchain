@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, TypeAlias
 
 import chia_rs
 from typing_extensions import Protocol
@@ -8,7 +8,7 @@ from typing_extensions import Protocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 
-BlockRecord = chia_rs.BlockRecord
+BlockRecord: TypeAlias = chia_rs.BlockRecord
 
 
 class BlockRecordProtocol(Protocol):
