@@ -271,7 +271,10 @@ async def test_vault_recovery(
             await wallet.generate_signed_transaction(amount, recipient_ph, action_scope, memos=[recipient_ph])
 
         await wallet_environments.environments[0].rpc_client.push_transactions(
-            PushTransactions(transactions=action_scope.side_effects.transactions, sign=True),
+            PushTransactions(  # pylint: disable=unexpected-keyword-arg
+                transactions=action_scope.side_effects.transactions,
+                sign=True,
+            ),
             tx_config=wallet_environments.tx_config,
         )
 
@@ -301,13 +304,18 @@ async def test_vault_recovery(
                 hp_index=uint32(0),
                 bls_pk=bls_pk,
                 timelock=timelock,
+                sign=False,
             ),
             tx_config=wallet_environments.tx_config,
         )
     ).transactions
 
     await wallet_environments.environments[1].rpc_client.push_transactions(
-        PushTransactions(transactions=[initiate_tx], sign=True), tx_config=wallet_environments.tx_config
+        PushTransactions(  # pylint: disable=unexpected-keyword-arg
+            transactions=[initiate_tx],
+            sign=True,
+        ),
+        tx_config=wallet_environments.tx_config,
     )
 
     vault_coin = wallet.vault_info.coin
@@ -373,7 +381,10 @@ async def test_vault_recovery(
 
     # Test we can push the transaction separately
     await wallet_environments.environments[0].rpc_client.push_transactions(
-        PushTransactions(transactions=action_scope.side_effects.transactions, sign=True),
+        PushTransactions(  # pylint: disable=unexpected-keyword-arg
+            transactions=action_scope.side_effects.transactions,
+            sign=True,
+        ),
         tx_config=wallet_environments.tx_config,
     )
     await wallet_environments.process_pending_states(
