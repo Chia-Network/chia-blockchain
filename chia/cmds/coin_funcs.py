@@ -219,7 +219,6 @@ async def async_split(
             if len(coins) == 0:
                 print("Could not find target coin.")
                 return []
-            assert coins is not None
             assert amount_per_coin is not None
             number_of_coins = int(coins[0].coin.amount // amount_per_coin.convert_amount(mojo_per_unit))
         elif amount_per_coin is None:
@@ -227,7 +226,6 @@ async def async_split(
             if len(coins) == 0:
                 print("Could not find target coin.")
                 return []
-            assert coins is not None
             assert number_of_coins is not None
             amount_per_coin = CliAmount(True, uint64(coins[0].coin.amount // number_of_coins))
 
