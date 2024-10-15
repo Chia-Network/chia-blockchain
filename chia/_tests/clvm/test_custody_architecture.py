@@ -228,15 +228,19 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
                 # Test a spend of every combination of m of n
                 for indexes in itertools.combinations(range(0, n), m):
                     proven_spends = {
-                        PuzzleWithRestrictions(index, [], ACSMember()).puzzle_hash(): ProvenSpend(
-                            PuzzleWithRestrictions(index, [], ACSMember()).puzzle_reveal(),
-                            Program.to(
-                                [announcement_1.to_program(), announcement_2.corresponding_assertion().to_program()]
+                        PuzzleWithRestrictions(index, [], ACSMember()).puzzle_hash(_top_level=False): ProvenSpend(
+                            PuzzleWithRestrictions(index, [], ACSMember()).puzzle_reveal(_top_level=False),
+                            PuzzleWithRestrictions(index, [], ACSMember()).solve(
+                                [],
+                                [],
+                                Program.to(
+                                    [announcement_1.to_program(), announcement_2.corresponding_assertion().to_program()]
+                                ),
                             ),
                         )
                         for index in indexes
                     }
-                    proof = m_of_n.generate_proof(proven_spends)
+                    proof = m_of_n.solve(proven_spends)
                     result = await client.push_tx(
                         cost_logger.add_cost(
                             f"M={m}, N={n}, indexes={indexes}",
@@ -245,15 +249,17 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
                                     make_spend(
                                         m_of_n_coin,
                                         m_of_n.puzzle(0),
-                                        m_of_n.solve(
-                                            proof,
-                                            Program.to(1),
-                                            Program.to(
-                                                [
-                                                    announcement_2.to_program(),
-                                                    announcement_1.corresponding_assertion().to_program(),
-                                                ]
-                                            ),
+                                        Program.to(  # usually completed by PuzzleWithRestrictions
+                                            [
+                                                Program.to(1),
+                                                Program.to(
+                                                    [
+                                                        announcement_2.to_program(),
+                                                        announcement_1.corresponding_assertion().to_program(),
+                                                    ]
+                                                ),
+                                                *proof.as_iter(),
+                                            ]
                                         ),
                                     )
                                 ],
@@ -264,18 +270,6 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
                     assert result == (MempoolInclusionStatus.SUCCESS, None)
                     await sim.farm_block()
                     await sim.rewind(block_height)
-
-
-@dataclass(frozen=True)
-class ACSPuzzle:
-    def memo(self, nonce: int) -> Program:
-        return Program.to(None)
-
-    def puzzle(self, nonce: int) -> Program:
-        return Program.to(1)
-
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()
 
 
 @dataclass(frozen=True)
@@ -314,7 +308,7 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
     This tests the capabilities of the optional restriction layer placed on inner puzzles.
     """
     async with sim_and_client() as (sim, client):
-        pwr = PuzzleWithRestrictions(0, [ACSMorpher(), ACSMorpher(), ACSValidator(), ACSValidator()], ACSPuzzle())
+        pwr = PuzzleWithRestrictions(0, [ACSMorpher(), ACSMorpher(), ACSValidator(), ACSValidator()], ACSMember())
 
         # Farm coin with puzzle inside
         await sim.farm_block(pwr.puzzle_hash())
@@ -326,6 +320,7 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
         announcement_1 = CreateCoinAnnouncement(msg=b"foo", coin_id=pwr_coin.name())
         announcement_2 = CreateCoinAnnouncement(msg=b"bar", coin_id=pwr_coin.name())
         announcement_3 = CreateCoinAnnouncement(msg=b"qux", coin_id=pwr_coin.name())
+        announcement_4 = CreateCoinAnnouncement(msg=b"qat", coin_id=pwr_coin.name())
 
         result = await client.push_tx(
             cost_logger.add_cost(
@@ -359,8 +354,17 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                                 Program.to(
                                     [
                                         announcement_3.to_program(),
-                                        announcement_1.corresponding_assertion().to_program(),
+                                        announcement_4.corresponding_assertion().to_program(),
                                     ]
+                                ),
+                                (
+                                    Program.to(1),
+                                    Program.to(
+                                        [
+                                            announcement_4.to_program(),
+                                            announcement_1.corresponding_assertion().to_program(),
+                                        ]
+                                    ),
                                 ),
                             ),
                         )

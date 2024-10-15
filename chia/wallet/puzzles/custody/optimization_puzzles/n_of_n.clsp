@@ -1,9 +1,9 @@
 (mod
   (
     MEMBERS
-    member_solutions
     delegated_puzzle
     delegated_solution
+    member_solutions
   )
 
   ; utility
