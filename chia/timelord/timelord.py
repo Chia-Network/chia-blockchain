@@ -1177,7 +1177,7 @@ class Timelord:
                         pool,
                         prove_bluebox_slow,
                         bytes(bluebox_process_data),
-                        self._executor_shutdown_tempfile.name,
+                        "" if self._executor_shutdown_tempfile is None else self._executor_shutdown_tempfile.name,
                     )
                     t2 = time.time()
                     delta = t2 - t1
