@@ -345,6 +345,7 @@ class Blockchain:
             if extending_main_chain:
                 await self.advance_fork_info(block, fork_info)
                 fork_info.include_spends(pre_validation_result.conds, block, header_hash)
+            self.add_block_record(block_rec)
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if fork_info.peak_hash != block.prev_header_hash:
