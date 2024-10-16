@@ -92,7 +92,8 @@ async def insert_into_data_store_from_file(
     store_id: bytes32,
     root_hash: Optional[bytes32],
     filename: Path,
-) -> None:
+) -> int:
+    num_inserted = 0
     with open(filename, "rb") as reader:
         while True:
             chunk = b""
@@ -119,8 +120,10 @@ async def insert_into_data_store_from_file(
 
             node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
             await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
+            num_inserted += 1
 
     await data_store.insert_root_with_ancestor_table(store_id=store_id, node_hash=root_hash, status=Status.COMMITTED)
+    return num_inserted
 
 
 @dataclass
@@ -233,6 +236,7 @@ async def insert_from_delta_file(
     data_store: DataStore,
     store_id: bytes32,
     existing_generation: int,
+    target_generation: int,
     root_hashes: List[bytes32],
     server_info: ServerInfo,
     client_foldername: Path,
@@ -241,6 +245,7 @@ async def insert_from_delta_file(
     proxy_url: str,
     downloader: Optional[PluginRemote],
     group_files_by_store: bool = False,
+    maximum_full_file_count: int = 1,
 ) -> bool:
     if group_files_by_store:
         client_foldername.joinpath(f"{store_id}").mkdir(parents=True, exist_ok=True)
@@ -283,7 +288,7 @@ async def insert_from_delta_file(
                 existing_generation,
                 group_files_by_store,
             )
-            await insert_into_data_store_from_file(
+            num_inserted = await insert_into_data_store_from_file(
                 data_store,
                 store_id,
                 None if root_hash == bytes32([0] * 32) else root_hash,
@@ -291,13 +296,17 @@ async def insert_from_delta_file(
             )
             log.info(
                 f"Successfully inserted hash {root_hash} from delta file. "
-                f"Generation: {existing_generation}. Store id: {store_id}."
+                f"Generation: {existing_generation}. Store id: {store_id}. Nodes inserted: {num_inserted}."
             )
 
-            root = await data_store.get_tree_root(store_id=store_id)
-            with open(filename_full_tree, "wb") as writer:
-                await data_store.write_tree_to_file(root, root_hash, store_id, False, writer)
-            log.info(f"Successfully written full tree filename {filename_full_tree}.")
+            if target_generation - existing_generation <= maximum_full_file_count - 1:
+                root = await data_store.get_tree_root(store_id=store_id)
+                with open(filename_full_tree, "wb") as writer:
+                    await data_store.write_tree_to_file(root, root_hash, store_id, False, writer)
+                log.info(f"Successfully written full tree filename {filename_full_tree}.")
+            else:
+                log.info(f"Skipping full file generation for {existing_generation}")
+
             await data_store.received_correct_file(store_id, server_info)
         except Exception:
             try:

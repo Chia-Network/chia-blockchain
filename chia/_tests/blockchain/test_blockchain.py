@@ -50,6 +50,7 @@ from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.validation_state import ValidationState
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
@@ -1826,9 +1827,7 @@ class TestPreValidation:
             [blocks[0], block_bad],
             empty_blockchain.pool,
             {},
-            sub_slot_iters=ssi,
-            difficulty=difficulty,
-            prev_ses_block=None,
+            ValidationState(ssi, difficulty, None),
             validate_signatures=True,
         )
         assert res[0].error is None
@@ -1855,9 +1854,7 @@ class TestPreValidation:
                 blocks_to_validate,
                 empty_blockchain.pool,
                 {},
-                sub_slot_iters=ssi,
-                difficulty=difficulty,
-                prev_ses_block=None,
+                ValidationState(ssi, difficulty, None),
                 validate_signatures=True,
             )
             end_pv = time.time()
@@ -1964,9 +1961,7 @@ class TestBodyValidation:
             [blocks[-1]],
             b.pool,
             {},
-            sub_slot_iters=ssi,
-            difficulty=diff,
-            prev_ses_block=None,
+            ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
@@ -2092,9 +2087,7 @@ class TestBodyValidation:
                 [blocks[-1]],
                 b.pool,
                 {},
-                sub_slot_iters=ssi,
-                difficulty=diff,
-                prev_ses_block=None,
+                ValidationState(ssi, diff, None),
                 validate_signatures=True,
             )
             assert pre_validation_results is not None
@@ -2177,9 +2170,7 @@ class TestBodyValidation:
             [blocks[-1]],
             b.pool,
             {},
-            sub_slot_iters=ssi,
-            difficulty=diff,
-            prev_ses_block=None,
+            ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
         # Ignore errors from pre-validation, we are testing block_body_validation
@@ -2307,9 +2298,7 @@ class TestBodyValidation:
                 [blocks[-1]],
                 b.pool,
                 {},
-                sub_slot_iters=ssi,
-                difficulty=diff,
-                prev_ses_block=None,
+                ValidationState(ssi, diff, None),
                 validate_signatures=True,
             )
             assert pre_validation_results is not None
@@ -2661,8 +2650,8 @@ class TestBodyValidation:
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
         err = (
             await b.add_block(
-                block,
-                PreValidationResult(None, uint64(1), npc_result, True, uint32(0)),
+                blocks[-1],
+                PreValidationResult(None, uint64(1), npc_result.conds, True, uint32(0)),
                 None,
                 sub_slot_iters=ssi,
                 fork_info=fork_info,
@@ -2675,9 +2664,7 @@ class TestBodyValidation:
             [blocks[-1]],
             b.pool,
             {},
-            sub_slot_iters=ssi,
-            difficulty=diff,
-            prev_ses_block=None,
+            ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
         assert results is not None
@@ -2743,7 +2730,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result, False, uint32(0)),
+            PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)),
             None,
             sub_slot_iters=ssi,
             fork_info=fork_info,
@@ -2777,7 +2764,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result, False, uint32(0)),
+            PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)),
             None,
             sub_slot_iters=ssi,
             fork_info=fork_info,
@@ -2812,7 +2799,7 @@ class TestBodyValidation:
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         result, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result, False, uint32(0)),
+            PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)),
             None,
             sub_slot_iters=ssi,
             fork_info=fork_info,
@@ -3283,9 +3270,7 @@ class TestBodyValidation:
             [last_block],
             b.pool,
             {},
-            sub_slot_iters=ssi,
-            difficulty=diff,
-            prev_ses_block=None,
+            ValidationState(ssi, diff, None),
             validate_signatures=True,
         )
         assert preval_results is not None
@@ -3404,9 +3389,7 @@ class TestReorgs:
             blocks,
             b.pool,
             {},
-            sub_slot_iters=ssi,
-            difficulty=diff,
-            prev_ses_block=None,
+            ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
         for i, block in enumerate(blocks):
@@ -3970,9 +3953,7 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
             [block1],
             b.pool,
             {},
-            sub_slot_iters=ssi,
-            difficulty=diff,
-            prev_ses_block=None,
+            ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
 
@@ -3985,9 +3966,7 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
             [block2],
             b.pool,
             {},
-            sub_slot_iters=ssi,
-            difficulty=diff,
-            prev_ses_block=None,
+            ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
 
@@ -4022,9 +4001,7 @@ async def test_get_tx_peak(default_400_blocks: List[FullBlock], empty_blockchain
         test_blocks,
         bc.pool,
         {},
-        sub_slot_iters=ssi,
-        difficulty=diff,
-        prev_ses_block=None,
+        ValidationState(ssi, diff, None),
         validate_signatures=False,
     )
 

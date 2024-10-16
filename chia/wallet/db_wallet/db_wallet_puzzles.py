@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterator, List, Tuple, Union
 
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -94,8 +94,11 @@ def create_mirror_puzzle() -> Program:
 MIRROR_PUZZLE_HASH = create_mirror_puzzle().get_tree_hash()
 
 
-def get_mirror_info(parent_puzzle: Program, parent_solution: Program) -> Tuple[bytes32, List[bytes]]:
-    conditions = parent_puzzle.run(parent_solution)
+def get_mirror_info(
+    parent_puzzle: Union[Program, SerializedProgram], parent_solution: Union[Program, SerializedProgram]
+) -> Tuple[bytes32, List[bytes]]:
+    assert type(parent_puzzle) is type(parent_solution)
+    _, conditions = parent_puzzle.run_with_cost(INFINITE_COST, parent_solution)
     for condition in conditions.as_iter():
         if (
             condition.first().as_python() == ConditionOpcode.CREATE_COIN

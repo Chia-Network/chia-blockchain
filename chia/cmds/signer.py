@@ -18,11 +18,17 @@ from chia.cmds.cmd_classes import NeedsWalletRPC, chia_command, command_helper, 
 from chia.cmds.cmds_util import TransactionBundle
 from chia.cmds.wallet import wallet_cmd
 from chia.rpc.util import ALL_TRANSLATION_LAYERS
-from chia.rpc.wallet_request_types import ApplySignatures, ExecuteSigningInstructions, GatherSigningInfo
+from chia.rpc.wallet_request_types import (
+    ApplySignatures,
+    ExecuteSigningInstructions,
+    GatherSigningInfo,
+    PushTransactions,
+)
 from chia.util.streamable import Streamable
 from chia.wallet.signer_protocol import SignedTransaction, SigningInstructions, SigningResponse, Spend
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import byte_deserialize_clvm_streamable, byte_serialize_clvm_streamable
+from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -292,7 +298,10 @@ class PushTransactionsCMD:
 
     async def run(self) -> None:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
-            await wallet_rpc.client.push_transactions(self.txs_in.transaction_bundle.txs)
+            # TODO: provide access to additional parameters instead of filling with the defaults constant
+            await wallet_rpc.client.push_transactions(
+                PushTransactions(transactions=self.txs_in.transaction_bundle.txs), DEFAULT_TX_CONFIG
+            )
 
 
 # Uncomment this for testing of qr code display

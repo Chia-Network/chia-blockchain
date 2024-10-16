@@ -41,6 +41,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
+from chia.types.validation_state import ValidationState
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -364,8 +365,7 @@ async def test_long_sync_wallet(
         blocks_reorg[-num_blocks - 10 : -1],
         PeerInfo("0.0.0.0", 0),
         ForkInfo(fork_height, fork_height, blocks_reorg[-num_blocks - 10].prev_header_hash),
-        current_ssi=sub_slot_iters,
-        current_difficulty=difficulty,
+        ValidationState(sub_slot_iters, difficulty, None),
     )
     await full_node.add_block(blocks_reorg[-1])
 
@@ -484,8 +484,7 @@ async def test_wallet_reorg_get_coinbase(
         blocks_reorg_2[-44:],
         PeerInfo("0.0.0.0", 0),
         ForkInfo(blocks_reorg_2[-45].height, blocks_reorg_2[-45].height, blocks_reorg_2[-45].header_hash),
-        current_ssi=sub_slot_iters,
-        current_difficulty=difficulty,
+        ValidationState(sub_slot_iters, difficulty, None),
     )
 
     for wallet_node, wallet_server in wallets:
