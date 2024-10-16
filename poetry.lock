@@ -796,7 +796,7 @@ dev = ["black (>=23.1.0)", "pytest (>=7.2.1)", "ruff (>=0.0.252)"]
 
 [[package]]
 name = "chia_rs"
-version = "0.15.0"
+version = "0.14.1"
 description = "Code useful for implementing chia consensus."
 optional = false
 python-versions = "*"
@@ -809,8 +809,8 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
-reference = "merkle_blob"
-resolved_reference = "32d8cdeb1531fc41aabe8d01e48adcf7482cad3f"
+reference = "87ac5b07cdbd4ef722bb1278ab8b96fd761dcc92"
+resolved_reference = "87ac5b07cdbd4ef722bb1278ab8b96fd761dcc92"
 subdirectory = "wheel/"
 
 [[package]]
@@ -3438,4 +3438,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.10, <3.13"
-content-hash = "776e19ecb56787e5f4d7d68d8c7941eab23f25ef3f605539a5a274b36b22e08d"
+content-hash = "1848133795697cfff491e06a7f325ed44abf9b978c4f2b8a7dfbafdb906618cd"
