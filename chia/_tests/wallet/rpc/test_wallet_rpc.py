@@ -3027,3 +3027,85 @@ async def test_combine_coins(wallet_environments: WalletTestFramework) -> None:
             )
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [2],
+            "trusted": True,  # irrelevant
+            "reuse_puzhash": True,  # irrelevant
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_fee_bigger_than_selection_coin_combining(wallet_environments: WalletTestFramework) -> None:
+    """
+    This tests the case where the coins we would otherwise select are not enough to pay the fee.
+    """
+
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
+    # Should have 4 coins, two 1.75 XCH, two 0.25 XCH
+
+    # Grab one of the 0.25 ones to specify
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
+        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        assert target_coin.amount == 250_000_000_000
+
+    fee = uint64(1_750_000_000_000)
+    # Under standard circumstances we would select the small coins, but this is not enough to pay the fee
+    # Instead, we will grab the big coin first and combine it with one of the smaller coins
+    xch_combine_request = CombineCoins(
+        wallet_id=uint32(1),
+        number_of_coins=uint16(2),
+        fee=fee,
+        largest_first=False,
+        push=True,
+    )
+
+    # First test an error where fee selection causes too many coins to be selected
+    with pytest.raises(ResponseFailureError, match="without selecting more coins than specified: 3"):
+        await env.rpc_client.combine_coins(
+            dataclasses.replace(xch_combine_request, fee=uint64(2_250_000_000_000)),
+            wallet_environments.tx_config,
+        )
+
+    await env.rpc_client.combine_coins(
+        xch_combine_request,
+        wallet_environments.tx_config,
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -fee,
+                        "spendable_balance": -2_000_000_000_000,
+                        "pending_change": 250_000_000_000,
+                        "max_send_amount": -2_000_000_000_000,
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -fee,
+                        "spendable_balance": 250_000_000_000,
+                        "pending_change": -250_000_000_000,
+                        "max_send_amount": 250_000_000_000,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": -1,  # combine 2 into 1
+                    }
+                },
+            )
+        ]
+    )

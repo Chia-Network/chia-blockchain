@@ -6,10 +6,8 @@ import enum
 import logging
 import time
 import traceback
-from concurrent.futures import Executor
-from concurrent.futures.process import ProcessPoolExecutor
+from concurrent.futures import Executor, ThreadPoolExecutor
 from enum import Enum
-from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
@@ -48,7 +46,6 @@ from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.priority_mutex import PriorityMutex
-from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +123,6 @@ class Blockchain:
         consensus_constants: ConsensusConstants,
         blockchain_dir: Path,
         reserved_cores: int,
-        multiprocessing_context: Optional[BaseContext] = None,
         *,
         single_threaded: bool = False,
     ) -> Blockchain:
@@ -145,11 +141,8 @@ class Blockchain:
         else:
             cpu_count = available_logical_cores()
             num_workers = max(cpu_count - reserved_cores, 1)
-            self.pool = ProcessPoolExecutor(
+            self.pool = ThreadPoolExecutor(
                 max_workers=num_workers,
-                mp_context=multiprocessing_context,
-                initializer=setproctitle,
-                initargs=(f"{getproctitle()}_block_validation_worker",),
             )
             log.info(f"Started {num_workers} processes for block validation")
 

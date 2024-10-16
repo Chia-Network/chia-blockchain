@@ -67,7 +67,7 @@ spends: List[SpendConditions] = [
 
 
 def test_tx_removals_and_additions() -> None:
-    conditions = SpendBundleConditions(spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0), 0, 0)
+    conditions = SpendBundleConditions(spends, uint64(0), uint32(0), uint64(0), None, None, [], uint64(0), 0, 0, False)
     expected_rems = [coin_ids[0], coin_ids[1]]
     expected_additions = []
     for spend in spends:

@@ -11,7 +11,15 @@ from typing import Callable, List, Optional, Tuple, Union
 
 import click
 import zstd
-from chia_rs import MEMPOOL_MODE, AugSchemeMPL, G1Element, SpendBundleConditions, run_block_generator
+from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    MEMPOOL_MODE,
+    AugSchemeMPL,
+    G1Element,
+    G2Element,
+    SpendBundleConditions,
+    run_block_generator,
+)
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.block_protocol import BlockInfo
@@ -34,7 +42,9 @@ def run_gen(
             bytes(generator_program),
             block_program_args,
             DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-            flags,
+            flags | DONT_VALIDATE_SIGNATURE,
+            G2Element(),
+            None,
             DEFAULT_CONSTANTS,
         )
         run_time = time() - start_time

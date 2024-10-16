@@ -108,6 +108,7 @@ def list_cmd(
     default=False,
     help="Sort coins from largest to smallest or smallest to largest.",
 )
+@click.option("--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False)
 @tx_out_cmd()
 def combine_cmd(
     wallet_rpc_port: Optional[int],
@@ -125,6 +126,7 @@ def combine_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
+    override: bool,
 ) -> List[TransactionRecord]:
     from .coin_funcs import async_combine
 
@@ -145,6 +147,7 @@ def combine_cmd(
             largest_first=largest_first,
             push=push,
             condition_valid_times=condition_valid_times,
+            override=override,
         )
     )
 

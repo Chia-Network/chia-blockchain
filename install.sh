@@ -172,7 +172,18 @@ fi
 .penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
 # shellcheck disable=SC2086
 .penv/bin/poetry install ${EXTRAS}
-ln -s -f .venv venv
+
+if [ -e venv ]; then
+  if [ -d venv ] && [ ! -L venv ]; then
+    echo "The 'venv' directory already exists. Please delete it before installing."
+    exit 1
+  elif [ -L venv ]; then
+    ln -sfn .venv venv
+  fi
+else
+  ln -s .venv venv
+fi
+
 if [ ! -f "activate" ]; then
   ln -s venv/bin/activate .
 fi
