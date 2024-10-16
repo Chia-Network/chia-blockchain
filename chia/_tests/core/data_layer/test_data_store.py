@@ -1285,6 +1285,7 @@ async def test_data_server_files(
                 counter += 1
             await data_store_server.insert_batch(store_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(store_id)
+            await data_store_server.add_node_hashes(store_id)
             await write_files_for_root(
                 data_store_server, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
             )
@@ -1686,6 +1687,7 @@ async def test_insert_from_delta_file(
             store_id=store_id,
             status=Status.COMMITTED,
         )
+        await data_store.add_node_hashes(store_id)
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
@@ -1758,6 +1760,9 @@ async def test_insert_from_delta_file(
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
+
+    async with data_store.db_wrapper.writer() as writer:
+        await writer.execute("DELETE FROM merkleblob")
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     with monkeypatch.context() as m:
@@ -1841,6 +1846,7 @@ async def test_insert_from_delta_file_correct_file_exists(
             store_id=store_id,
             status=Status.COMMITTED,
         )
+        await data_store.add_node_hashes(store_id)
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == num_files + 1
@@ -1863,6 +1869,8 @@ async def test_insert_from_delta_file_correct_file_exists(
     await data_store.rollback_to_generation(store_id, 0)
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
+    async with data_store.db_wrapper.writer() as writer:
+        await writer.execute("DELETE FROM merkleblob")
 
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     success = await insert_from_delta_file(
@@ -1906,6 +1914,7 @@ async def test_insert_from_delta_file_incorrect_file_exists(
         store_id=store_id,
         status=Status.COMMITTED,
     )
+    await data_store.add_node_hashes(store_id)
 
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 2

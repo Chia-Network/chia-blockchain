@@ -10,8 +10,18 @@ from typing import List, Optional
 import aiohttp
 from typing_extensions import Literal
 
-from chia.data_layer.data_layer_util import NodeType, PluginRemote, Root, SerializedNode, ServerInfo, Status
+from chia.data_layer.data_layer_util import (
+    NodeType,
+    PluginRemote,
+    Root,
+    SerializedNode,
+    ServerInfo,
+    Status,
+    internal_hash,
+    leaf_hash,
+)
 from chia.data_layer.data_store import DataStore
+from chia.data_layer.util.merkle_blob import MerkleBlob
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
@@ -93,6 +103,9 @@ async def insert_into_data_store_from_file(
     root_hash: Optional[bytes32],
     filename: Path,
 ) -> None:
+    internal_nodes: Dict[bytes32, Tuple[bytes32, bytes32]] = {}
+    terminal_nodes: Dict[bytes32, Tuple[KVId, KVId]] = {}
+
     with open(filename, "rb") as reader:
         while True:
             chunk = b""
@@ -118,9 +131,20 @@ async def insert_into_data_store_from_file(
             serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
             node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
-            await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
+            if node_type == NodeType.INTERNAL:
+                node_hash = internal_hash(serialized_node.value1, serialized_node.value2)
+                internal_nodes[node_hash] = (serialized_node.value1, serialized_node.value2)
+            else:
+                kid, vid = await data_store.add_key_value(serialized_node.value1, serialized_node.value2)
+                node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
+                terminal_nodes[node_hash] = (kid, vid)
 
-    await data_store.insert_root_with_ancestor_table(store_id=store_id, node_hash=root_hash, status=Status.COMMITTED)
+    merkle_blob = MerkleBlob(blob=bytearray())
+    if root_hash is not None:
+        await data_store.build_blob_from_nodes(internal_nodes, terminal_nodes, root_hash, merkle_blob)
+
+    await data_store.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED)
+    await data_store.add_node_hashes(store_id)
 
 
 @dataclass

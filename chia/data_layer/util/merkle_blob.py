@@ -254,6 +254,22 @@ class MerkleBlob:
 
         return key_to_index
 
+    def get_hashes_indexes(self) -> Dict[bytes32, TreeIndex]:
+        if len(self.blob) == 0:
+            return {}
+
+        hash_to_index: Dict[bytes32, TreeIndex] = {}
+        queue: List[TreeIndex] = [TreeIndex(0)]
+        while len(queue) > 0:
+            node_index = queue.pop()
+            node = self.get_raw_node(node_index)
+            hash_to_index[bytes32(node.hash)] = node_index
+            if isinstance(node, RawInternalMerkleNode):
+                queue.append(node.left)
+                queue.append(node.right)
+
+        return hash_to_index
+
     def get_keys_values(self) -> Dict[KVId, KVId]:
         if len(self.blob) == 0:
             return {}

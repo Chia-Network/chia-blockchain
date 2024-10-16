@@ -39,7 +39,17 @@ from chia.data_layer.data_layer_util import (
     row_to_node,
     unspecified,
 )
-from chia.data_layer.util.merkle_blob import KVId, MerkleBlob, RawInternalMerkleNode, RawLeafMerkleNode
+from chia.data_layer.util.merkle_blob import (
+    KVId,
+    MerkleBlob,
+    NodeMetadata,
+    NodeType as NodeTypeMerkleBlob,
+    RawInternalMerkleNode,
+    RawLeafMerkleNode,
+    null_parent,
+    pack_raw_node,
+    undefined_index,
+)
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
@@ -141,6 +151,18 @@ class DataStore:
                         vid INTEGER,
                         FOREIGN KEY (kid) REFERENCES ids(kv_id),
                         FOREIGN KEY (vid) REFERENCES ids(kv_id)
+                    )
+                    """
+                )
+                await writer.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS nodes(
+                        store_id BLOB NOT NULL CHECK(length(store_id) == 32),
+                        hash BLOB NOT NULL,
+                        root_hash BLOB NOT NULL,
+                        generation INTEGER NOT NULL CHECK(generation >= 0),
+                        idx INTEGER NOT NULL,
+                        PRIMARY KEY(store_id, hash)
                     )
                     """
                 )
@@ -272,6 +294,102 @@ class DataStore:
         kid, vid = await self.get_node_by_hash(node_hash)
         return await self.get_terminal_node(kid, vid)
 
+    async def get_first_generation(self, node_hash: bytes32, store_id: bytes32) -> Optional[int]:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
+                "SELECT generation FROM nodes WHERE hash = ? AND store_id = ?", (node_hash,store_id,)
+            )
+
+            row = await cursor.fetchone()
+            if row is None:
+                return None
+
+            return row[0]
+
+    async def add_node_hash(
+        self, store_id: bytes32, hash: bytes32, root_hash: bytes32, generation: int, index: int
+    ) -> None:
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
+                """
+                INSERT INTO nodes(store_id, hash, root_hash, generation, idx)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (store_id, hash, root_hash, generation, index)
+            )
+
+    async def add_node_hashes(self, store_id: bytes32) -> None:
+        root = await self.get_tree_root(store_id=store_id)
+        if root.node_hash is None:
+            return
+
+        merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
+        hash_to_index = merkle_blob.get_hashes_indexes()
+        for hash, index in hash_to_index.items():
+            existing_generation = await self.get_first_generation(hash, store_id)
+            if existing_generation is None:
+                await self.add_node_hash(store_id, hash, root.node_hash, root.generation, index)
+
+    async def build_blob_from_nodes(
+        self,
+        internal_nodes: Dict[bytes32, Tuple[bytes32, bytes32]],
+        terminal_nodes: Dict[bytes32, Tuple[KVId, KVId]],
+        node_hash: bytes32,
+        merkle_blob: MerkleBlob,
+    ) -> TreeIndex:
+        if node_hash not in terminal_nodes and node_hash not in internal_nodes:
+            async with self.db_wrapper.reader() as reader:
+                cursor = await reader.execute(
+                    "SELECT root_hash, idx FROM nodes WHERE hash = ?", (node_hash,)
+                )
+
+                row = await cursor.fetchone()
+                if row is None:
+                    raise Exception(f"Unknown hash {node_hash}")
+
+                root_hash = row["root_hash"]
+                index = row["idx"]
+
+            other_merkle_blob = await self.get_merkle_blob(root_hash)
+            nodes = other_merkle_blob.get_nodes(index=index)
+            index_to_hash = {node.index: bytes32(node.hash) for node in nodes}
+            for node in nodes:
+                if isinstance(node, RawLeafMerkleNode):
+                    terminal_nodes[bytes32(node.hash)] = (node.key, node.value)
+                elif isinstance(node, RawInternalMerkleNode):
+                    internal_nodes[bytes32(node.hash)] = (index_to_hash[node.left], index_to_hash[node.right])
+
+        index = merkle_blob.get_new_index()
+        if node_hash in terminal_nodes:
+            kid, vid = terminal_nodes[node_hash]
+            merkle_blob.insert_entry_to_blob(
+                index,
+                NodeMetadata(type=NodeTypeMerkleBlob.leaf, dirty=False).pack()
+                + pack_raw_node(RawLeafMerkleNode(node_hash, null_parent, kid, vid, index)),
+            )
+        elif node_hash in internal_nodes:
+            merkle_blob.insert_entry_to_blob(
+                index,
+                NodeMetadata(type=NodeTypeMerkleBlob.internal, dirty=False).pack()
+                + pack_raw_node(
+                    RawInternalMerkleNode(
+                        node_hash,
+                        null_parent,
+                        undefined_index,
+                        undefined_index,
+                        index,
+                    )
+                ),
+            )
+            left_hash, right_hash = internal_nodes[node_hash]
+            left_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, left_hash, merkle_blob)
+            right_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, right_hash, merkle_blob)
+            for child_index in (left_index, right_index):
+                merkle_blob.update_entry(index=child_index, parent=index)
+            merkle_blob.update_entry(index=index, left=left_index, right=right_index)
+
+        return index
+
     async def _insert_root(
         self,
         store_id: bytes32,
@@ -367,6 +485,8 @@ class DataStore:
                     root.generation,
                 ),
             )
+            if root.node_hash is not None and status == Status.COMMITTED:
+                await self.add_node_hashes(root.store_id)
 
     async def check(self) -> None:
         for check in self._checks:
@@ -1061,19 +1181,6 @@ class DataStore:
         kid = await self.get_kvid(key)
         return merkle_blob.get_proof_of_inclusion(kid)
 
-    async def get_first_generation(self, node_hash: bytes32, store_id: bytes32) -> int:
-        async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute(
-                "SELECT MIN(generation) AS generation FROM ancestors WHERE hash == :hash AND tree_id == :tree_id",
-                {"hash": node_hash, "tree_id": store_id},
-            )
-            row = await cursor.fetchone()
-            if row is None:
-                raise RuntimeError("Hash not found in ancestor table.")
-
-            generation = row["generation"]
-            return int(generation)
-
     async def write_tree_to_file(
         self,
         root: Root,
@@ -1081,22 +1188,35 @@ class DataStore:
         store_id: bytes32,
         deltas_only: bool,
         writer: BinaryIO,
+        merkle_blob: Optional[MerkleBlob] = None,
+        hash_to_index: Optional[Dict[bytes32, TreeIndex]] = None,
     ) -> None:
         if node_hash == bytes32([0] * 32):
             return
+
+        if merkle_blob is None:
+            merkle_blob = await self.get_merkle_blob(root.node_hash)
+        if hash_to_index is None:
+            hash_to_index = merkle_blob.get_hashes_indexes()
 
         if deltas_only:
             generation = await self.get_first_generation(node_hash, store_id)
             # Root's generation is not the first time we see this hash, so it's not a new delta.
             if root.generation != generation:
                 return
-        node = await self.get_node(node_hash)
+
+        raw_index = hash_to_index[node_hash]
+        raw_node = merkle_blob.get_raw_node(raw_index)
+
         to_write = b""
-        if isinstance(node, InternalNode):
-            await self.write_tree_to_file(root, node.left_hash, store_id, deltas_only, writer)
-            await self.write_tree_to_file(root, node.right_hash, store_id, deltas_only, writer)
-            to_write = bytes(SerializedNode(False, bytes(node.left_hash), bytes(node.right_hash)))
-        elif isinstance(node, TerminalNode):
+        if isinstance(raw_node, RawInternalMerkleNode):
+            left_hash = merkle_blob.get_hash_at_index(raw_node.left)
+            right_hash = merkle_blob.get_hash_at_index(raw_node.right)
+            await self.write_tree_to_file(root, left_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index)
+            await self.write_tree_to_file(root, right_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index)
+            to_write = bytes(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
+        elif isinstance(raw_node, RawLeafMerkleNode):
+            node = await self.get_terminal_node(raw_node.key, raw_node.value)
             to_write = bytes(SerializedNode(True, node.key, node.value))
         else:
             raise Exception(f"Node is neither InternalNode nor TerminalNode: {node}")
@@ -1270,6 +1390,10 @@ class DataStore:
             await writer.execute(
                 "DELETE FROM root WHERE tree_id == :tree_id AND generation > :target_generation",
                 {"tree_id": store_id, "target_generation": target_generation},
+            )
+            await writer.execute(
+                "DELETE FROM nodes WHERE store_id == :store_id AND generation > :target_generation",
+                {"store_id": store_id, "target_generation": target_generation},
             )
 
     async def update_server_info(self, store_id: bytes32, server_info: ServerInfo) -> None:
