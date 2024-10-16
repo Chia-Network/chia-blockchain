@@ -340,12 +340,12 @@ class Blockchain:
         if extending_main_chain:
             fork_info.reset(block.height - 1, block.prev_header_hash)
 
-            block_rec = await self.get_block_record_from_db(header_hash)
-            if block_rec is not None:
+        block_rec = await self.get_block_record_from_db(header_hash)
+        if block_rec is not None:
+            if extending_main_chain:
                 await self.advance_fork_info(block, fork_info)
                 fork_info.include_spends(pre_validation_result.conds, block, header_hash)
-                self.add_block_record(block_rec)
-                return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
+            return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if fork_info.peak_hash != block.prev_header_hash:
             await self.advance_fork_info(block, fork_info)
