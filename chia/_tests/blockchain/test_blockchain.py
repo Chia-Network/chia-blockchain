@@ -3603,9 +3603,10 @@ class TestReorgs:
         )
         for block in blocks:
             await _validate_and_add_block(b, block)
-
+        fork_block = blocks[11]
+        fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
         for block in blocks_fork:
-            await _validate_and_add_block_no_error(b, block)
+            await _validate_and_add_block_no_error(b, block, fork_info=fork_info)
 
     @pytest.mark.anyio
     async def test_get_header_blocks_in_range_tx_filter(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:

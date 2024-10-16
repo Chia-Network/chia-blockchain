@@ -403,8 +403,7 @@ async def test_wallet_reorg_sync(
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Insert 400 blocks
-    await full_node.add_block(default_400_blocks[0])
-    await add_blocks_in_batches(default_400_blocks[1:], full_node)
+    await add_blocks_in_batches(default_400_blocks, full_node)
     # Farm few more with reward
     for _ in range(num_blocks - 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(phs[0]))
@@ -426,8 +425,7 @@ async def test_wallet_reorg_sync(
     num_blocks = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
-    for block in blocks_reorg[-30:]:
-        await full_node.add_block(block)
+    await add_blocks_in_batches(blocks_reorg[-30:], full_node, blocks_reorg[-30].prev_header_hash)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
