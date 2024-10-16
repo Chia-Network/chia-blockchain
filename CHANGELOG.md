@@ -82,6 +82,10 @@ for setuptools_scm/PEP 440 reasons.
 - Fix install.sh upgrade issue (thanks @wallentx) (fixes #18672)
 - fix some comments typos (thanks @pengbanban, @murongshaozong, @linchizhen)
 
+### Known Issues
+
+- The wallet rpc `combine_coins` requires `number_of_coins` to be set explicitly in the request and otherwise will return an error
+
 ### Deprecated
 
 - Python 3.8 is deprecated per the Python EOL schedule and this release (2.4.4) will be the last to support Python 3.8
