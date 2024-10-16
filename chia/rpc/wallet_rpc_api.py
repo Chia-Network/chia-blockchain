@@ -1206,18 +1206,22 @@ class WalletRpcApi:
         async with action_scope.use() as interface:
             interface.side_effects.selected_coins.extend(coins)
 
-        # Next let's select enough coins to meet the target if there is one
-        if request.target_coin_amount is not None:
-            fungible_amount_needed = request.target_coin_amount
-            if isinstance(wallet, Wallet):
-                fungible_amount_needed = uint64(request.target_coin_amount + request.fee)
-            amount_selected = sum(c.amount for c in coins)
-            if amount_selected < fungible_amount_needed:
-                coins.extend(
-                    await wallet.select_coins(
-                        amount=uint64(fungible_amount_needed - amount_selected), action_scope=action_scope
-                    )
+        # Next let's select enough coins to meet the target + fee if there is one
+        fungible_amount_needed = uint64(0) if request.target_coin_amount is None else request.target_coin_amount
+        if isinstance(wallet, Wallet):
+            fungible_amount_needed = uint64(fungible_amount_needed + request.fee)
+        amount_selected = sum(c.amount for c in coins)
+        if amount_selected < fungible_amount_needed:  # implicit fungible_amount_needed > 0 here
+            coins.extend(
+                await wallet.select_coins(
+                    amount=uint64(fungible_amount_needed - amount_selected), action_scope=action_scope
                 )
+            )
+
+        if len(coins) > request.number_of_coins:
+            raise ValueError(
+                f"Options specified cannot be met without selecting more coins than specified: {len(coins)}"
+            )
 
         # Now let's select enough coins to get to the target number to combine
         if len(coins) < request.number_of_coins:
@@ -1245,6 +1249,7 @@ class WalletRpcApi:
             uint64(sum(c.amount for c in coins)) if request.target_coin_amount is None else request.target_coin_amount
         )
         if isinstance(wallet, Wallet):
+            primary_output_amount = uint64(primary_output_amount - request.fee)
             await wallet.generate_signed_transaction(
                 primary_output_amount,
                 await wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash),

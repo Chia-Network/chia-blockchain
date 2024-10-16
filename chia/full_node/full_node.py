@@ -275,7 +275,6 @@ class FullNode:
                 consensus_constants=self.constants,
                 blockchain_dir=self.db_path.parent,
                 reserved_cores=reserved_cores,
-                multiprocessing_context=self.multiprocessing_context,
                 single_threaded=single_threaded,
             )
 
