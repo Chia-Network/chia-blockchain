@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia.rpc.wallet_request_types import GetPrivateKey, VaultCreate, VaultRecovery
+from chia.rpc.wallet_request_types import GetPrivateKey, PushTransactions, VaultCreate, VaultRecovery
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import KeyTypes
@@ -271,7 +271,11 @@ async def test_vault_recovery(
             await wallet.generate_signed_transaction(amount, recipient_ph, action_scope, memos=[recipient_ph])
 
         await wallet_environments.environments[0].rpc_client.push_transactions(
-            action_scope.side_effects.transactions, sign=True
+            PushTransactions(  # pylint: disable=unexpected-keyword-arg
+                transactions=action_scope.side_effects.transactions,
+                sign=True,
+            ),
+            tx_config=wallet_environments.tx_config,
         )
 
         await wallet_environments.process_pending_states(
@@ -300,12 +304,19 @@ async def test_vault_recovery(
                 hp_index=uint32(0),
                 bls_pk=bls_pk,
                 timelock=timelock,
+                sign=False,
             ),
             tx_config=wallet_environments.tx_config,
         )
     ).transactions
 
-    await wallet_environments.environments[1].rpc_client.push_transactions([initiate_tx], sign=True)
+    await wallet_environments.environments[1].rpc_client.push_transactions(
+        PushTransactions(  # pylint: disable=unexpected-keyword-arg
+            transactions=[initiate_tx],
+            sign=True,
+        ),
+        tx_config=wallet_environments.tx_config,
+    )
 
     vault_coin = wallet.vault_info.coin
 
@@ -335,7 +346,9 @@ async def test_vault_recovery(
         count=2, guarantee_transaction_blocks=True, farm_to=bytes32(b"1" * 32)
     )
 
-    await wallet_environments.environments[1].rpc_client.push_transactions([finish_tx])
+    await wallet_environments.environments[1].rpc_client.push_transactions(
+        PushTransactions(transactions=[finish_tx]), tx_config=wallet_environments.tx_config
+    )
 
     await wallet_environments.process_pending_states(
         [
@@ -368,7 +381,11 @@ async def test_vault_recovery(
 
     # Test we can push the transaction separately
     await wallet_environments.environments[0].rpc_client.push_transactions(
-        action_scope.side_effects.transactions, sign=True
+        PushTransactions(  # pylint: disable=unexpected-keyword-arg
+            transactions=action_scope.side_effects.transactions,
+            sign=True,
+        ),
+        tx_config=wallet_environments.tx_config,
     )
     await wallet_environments.process_pending_states(
         [

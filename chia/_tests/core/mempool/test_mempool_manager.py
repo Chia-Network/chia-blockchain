@@ -227,6 +227,7 @@ def make_test_conds(
         cost,
         0,
         0,
+        False,
     )
 
 

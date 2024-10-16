@@ -62,6 +62,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
+from chia.types.validation_state import ValidationState
 from chia.util.batches import to_batches
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
@@ -705,18 +706,17 @@ async def add_blocks_in_batches(
         ssi, diff = get_next_sub_slot_iters_and_difficulty(
             full_node.constants, True, block_record, full_node.blockchain
         )
-    prev_ses_block = None
+    vs = ValidationState(ssi, diff, None)
     for block_batch in to_batches(blocks, 64):
         b = block_batch.entries[0]
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, _, ssi, diff, prev_ses_block, err = await full_node.add_block_batch(
+        # vs is updated by the call to add_block_batch()
+        success, _, err = await full_node.add_block_batch(
             block_batch.entries,
             PeerInfo("0.0.0.0", 0),
             None,
-            current_ssi=ssi,
-            current_difficulty=diff,
-            prev_ses_block=prev_ses_block,
+            vs,
         )
         assert err is None
         assert success is True

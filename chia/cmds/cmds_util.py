@@ -177,9 +177,10 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                 current_sync_status: str = ""
                 indent = "   "
                 if logged_in_key is not None:
-                    if await wallet_client.get_synced():
+                    sync_response = await wallet_client.get_sync_status()
+                    if sync_response.synced:
                         current_sync_status = "Synced"
-                    elif await wallet_client.get_sync_status():
+                    elif sync_response.syncing:
                         current_sync_status = "Syncing"
                     else:
                         current_sync_status = "Not Synced"
