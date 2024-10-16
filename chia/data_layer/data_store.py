@@ -232,9 +232,9 @@ class DataStore:
             if row is None:
                 return None
 
-            return row[0]
+            return KVId(row[0])
 
-    async def get_blob_from_kvid(self, kv_id: KVId) -> bytes:
+    async def get_blob_from_kvid(self, kv_id: KVId) -> Optional[bytes]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute("SELECT blob FROM ids WHERE kv_id = ?", (kv_id,))
             row = await cursor.fetchone()
@@ -242,7 +242,7 @@ class DataStore:
             if row is None:
                 return None
 
-            return row[0]
+            return bytes(row[0])
 
     async def get_terminal_node(self, kid: KVId, vid: KVId) -> TerminalNode:
         key = await self.get_blob_from_kvid(kid)
@@ -311,7 +311,7 @@ class DataStore:
             if row is None:
                 return None
 
-            return row[0]
+            return int(row[0])
 
     async def add_node_hash(
         self, store_id: bytes32, hash: bytes32, root_hash: bytes32, generation: int, index: int
@@ -393,7 +393,7 @@ class DataStore:
                 merkle_blob.update_entry(index=child_index, parent=index)
             merkle_blob.update_entry(index=index, left=left_index, right=right_index)
 
-        return index
+        return TreeIndex(index)
 
     async def _insert_root(
         self,
@@ -740,21 +740,6 @@ class DataStore:
 
             return KeysValuesCompressed(keys_values_hashed, key_hash_to_length, leaf_hash_to_length, resolved_root_hash)
 
-    async def get_leaf_hashes_by_hashed_key(
-        self, store_id: bytes32, root_hash: Optional[bytes32] = None
-    ) -> Dict[bytes32, bytes32]:
-        result: Dict[bytes32, bytes32] = {}
-        async with self.db_wrapper.reader() as reader:
-            if root_hash is None:
-                root = await self.get_tree_root(store_id=store_id)
-                root_hash = root.node_hash
-
-            cursor = await self.get_keys_values_cursor(reader, root_hash, True)
-            async for row in cursor:
-                result[key_hash(row["key"])] = bytes32(row["hash"])
-
-        return result
-
     async def get_keys_paginated(
         self,
         store_id: bytes32,
@@ -1093,22 +1078,6 @@ class DataStore:
             )
             rows = await cursor.fetchall()
             return [InternalNode.from_row(row=row) for row in rows]
-
-    async def insert_root_with_ancestor_table(
-        self, store_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING
-    ) -> None:
-        async with self.db_wrapper.writer():
-            await self._insert_root(store_id=store_id, node_hash=node_hash, status=status)
-            # Don't update the ancestor table for non-committed status.
-            if status == Status.COMMITTED:
-                await self.build_ancestor_table_for_latest_root(store_id=store_id)
-
-    async def maybe_get_node_by_key(self, key: bytes, store_id: bytes32) -> Optional[TerminalNode]:
-        try:
-            node = await self.get_node_by_key_latest_generation(key, store_id)
-            return node
-        except KeyNotFoundError:
-            return None
 
     async def get_node_by_key(
         self,
