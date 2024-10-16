@@ -6,6 +6,90 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.4.4 Chia blockchain 2024-10-15
+
+## What's Changed
+
+### Added
+
+- Build both sdist and wheel for upload to pypi
+- Add a `fee` option to `push_transactions`
+- Add bech32m options to some key functions
+- Add `--valid-at/--expires-at` to all CLI transaction RPC endpoints
+- Add TXConfig args to coin commands
+- Add missing client endpoints for corresponding Wallet RPC endpoints
+- Add version number to every log line
+
+### Changed
+
+- Remove `block_height_list` from `BlockGenerator`
+- Display sync percentage in 'chia show -s'
+- Make 'chia plotnft -f fingerprint -i wallet_id' output JSON
+- make Program.run() and Program.run_with_cost() default to enabling all the most recent features
+- Remove soft-fork 4 special cases
+- Log the rate at which blocks are added during long sync
+- Rename `Spend` to `SpendConditions`
+- Remove `Backend*` warning ignores
+- Replace `get_flags_for_height_and_constants()` with Rust version
+- Refactor `get_puzzle_and_solution_for_coin()` and introduce `get_puzzle_and_solution_for_coin2()`
+- Warm up the cache once per batch in `pre_validate_blocks_multiprocessing`
+- Cleanup and convert to a protocol for `BlockchainInterface`
+- Update `BlockGenerator` type
+- Extract coin splitting and combining logic from CLI and move to RPC
+- Update long-reorg tests along with the reorg test chains
+- Switch mempool TX prevalidation to the Rust version
+- Remove `initial_freeze_period` from RPCs
+- Introduce new `AugmentedBlockchain` class
+- Use smarter coin selection algorithm for DAO wallet `select_coins_for_asset_type`
+- Refactor `multiprocess_validation`
+- Deduct block overhead from the mempool's maximum block clvm cost limit
+- Update to macOS 13 for build and test
+- Simplify batch pre validate blocks
+- Add a configurable limit to the amount of DIDs that can be automatically added to the users wallet from transfer
+- Datalayer: Revert ancestors table schema change from #18100
+- Datalayer: separate DAT files in folders by store id
+- Datalayer: Reduce level log spam when downloading DAT files
+- Datalayer: Limit full file creation when processing subscription generations
+- Bump `aiohttp` to `3.10.4`
+- Bump `chia_rs` to `0.14.0`
+- Bump `chiavdf` to `1.1.6`
+- Bump `cryptography` to `43.0.1`
+- Bump `dnslib` to `0.9.25`
+- Bump `pip` to `24.2`
+- Bump `setuptools` to `75.1.0`
+
+### Fixed
+
+- refactor `new_peak_timelord`
+- Fixed missing partial count was incorrectly incremented on solo plotNFT farming
+- Timelord logging: Updated peak to hex from bytestring
+- Source offer confirmed height from original coin state (fixes #18330)
+- fix long sync cache
+- Fix `request_fee_estimates` (thanks @Yakuhito)
+- Fix confusing amount-related CLI help messages
+- Fix `raise` on too much decimal precision in CLI
+- Remove the coin amount from state layer solution
+- Fix `BrokenProcessPool` error for Windows installer blueboxing
+- Check to confirm external TXs submitted by wallet
+- Correctly set `start_index` in `create_more_puzzle_hashes`
+- Use better key resolution logic in derivation commands
+- Fix new pool url detection (thanks @felixbrucker)
+- Fixed logging for fast bluebox timelord (thanks @thesemaphoreslim)
+- remove no-wallet-found traceback from `/dl_owned_singletons` (fixes #18518)
+- Fix DID balance reporting, and port DID tests to `WalletTestFramwork`
+- Fix object has no attribute code errors
+- Fix fee behavior with `chia wallet coins combine`
+- Fix install.sh upgrade issue (thanks @wallentx) (fixes #18672)
+- fix some comments typos (thanks @pengbanban, @murongshaozong, @linchizhen)
+
+### Deprecated
+
+- Python 3.8 is deprecated per the Python EOL schedule and this release (2.4.4) will be the last to support Python 3.8
+
+### Removed
+
+- Support for macOS 12 (Monterey)
+
 ## 2.4.3 Chia blockchain 2024-08-21
 
 ## What's Changed
