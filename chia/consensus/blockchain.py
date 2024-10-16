@@ -342,6 +342,9 @@ class Blockchain:
 
         block_rec = await self.get_block_record_from_db(header_hash)
         if block_rec is not None:
+            # We have already validated the block, but if it's not part of the
+            # main chain, we still need to re-run it to update the additions and
+            # removals in fork_info.
             if extending_main_chain:
                 await self.advance_fork_info(block, fork_info)
                 fork_info.include_spends(pre_validation_result.conds, block, header_hash)
