@@ -10,7 +10,7 @@ import textwrap
 from contextlib import closing
 from pathlib import Path
 from time import monotonic
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import zstd
 

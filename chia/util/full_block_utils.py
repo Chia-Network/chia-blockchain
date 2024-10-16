@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 from chia_rs import G1Element, G2Element, serialized_length
 from chiabip158 import PyBIP158

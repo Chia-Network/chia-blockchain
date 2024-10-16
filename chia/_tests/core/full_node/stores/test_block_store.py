@@ -5,7 +5,7 @@ import logging
 import random
 import sqlite3
 from pathlib import Path
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 import pytest
 

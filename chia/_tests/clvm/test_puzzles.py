@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import List, Tuple
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 

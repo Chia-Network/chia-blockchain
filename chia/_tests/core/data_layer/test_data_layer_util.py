@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 from random import Random
-from typing import List, Tuple
 
 import pytest
 

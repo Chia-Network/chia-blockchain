@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple
-
 SSL_TEST_PRIVATE_CA_CRT = b"""-----BEGIN CERTIFICATE-----
 MIIDKTCCAhGgAwIBAgIUX9kvHEjir5fniTg3GRQ8wO7zOvAwDQYJKoZIhvcNAQEL
 BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY

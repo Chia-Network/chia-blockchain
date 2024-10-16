@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from subprocess import check_call
-from typing import Dict, List
 
 import click
 import psutil

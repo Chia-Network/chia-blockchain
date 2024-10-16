@@ -5,7 +5,7 @@ import signal
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import aiohttp.client_exceptions
 import pytest

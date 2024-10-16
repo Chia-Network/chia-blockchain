@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2

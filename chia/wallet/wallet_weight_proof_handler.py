@@ -6,7 +6,7 @@ import tempfile
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
-from typing import IO, List, Optional
+from typing import IO, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants

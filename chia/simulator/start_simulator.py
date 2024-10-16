@@ -5,7 +5,7 @@ import sys
 from dataclasses import dataclass
 from multiprocessing import freeze_support
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType

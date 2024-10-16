@@ -4,7 +4,7 @@ import asyncio
 import json
 import time
 from decimal import Decimal
-from typing import List, Optional
+from typing import Optional
 
 from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.param_types import CliAmount

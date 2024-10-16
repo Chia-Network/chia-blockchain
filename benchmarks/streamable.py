@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from statistics import stdev
 from time import process_time as clock
-from typing import Any, Callable, Dict, List, Optional, TextIO, Tuple, Type, Union
+from typing import Any, Callable, Optional, TextIO, Union
 
 import click
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import time
 from random import randrange
-from typing import List, Set
 
 import pytest
 

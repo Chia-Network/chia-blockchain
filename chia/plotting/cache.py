@@ -7,7 +7,7 @@ from collections.abc import ItemsView, KeysView, ValuesView
 from dataclasses import dataclass, field
 from math import ceil
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import G1Element
 from chiapos import DiskProver

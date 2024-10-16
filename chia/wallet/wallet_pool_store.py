@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Tuple
 
 from chia.types.coin_spend import CoinSpend
 from chia.util.db_wrapper import DBWrapper2

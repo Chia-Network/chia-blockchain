@@ -6,7 +6,7 @@ import time
 import traceback
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Optional
 
 from chia_rs import G1Element
 from chiapos import DiskProver, decompressor_context_queue

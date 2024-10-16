@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 from collections.abc import Awaitable, Collection
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, AugSchemeMPL, G2Element, get_conditions_from_spendbundle

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 
 from chia._tests.core.make_block_generator import make_block_generator

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Set, Tuple
+from typing import Optional
 
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 

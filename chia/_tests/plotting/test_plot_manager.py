@@ -8,7 +8,7 @@ from dataclasses import dataclass, replace
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
-from typing import Callable, List, Optional, cast
+from typing import Callable, Optional, cast
 
 import pytest
 from chia_rs import G1Element

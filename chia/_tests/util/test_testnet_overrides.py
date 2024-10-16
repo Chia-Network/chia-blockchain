@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from chia.consensus.default_constants import update_testnet_overrides
 

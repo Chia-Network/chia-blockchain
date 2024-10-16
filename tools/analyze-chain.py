@@ -7,7 +7,7 @@ import sys
 from functools import partial
 from pathlib import Path
 from time import time
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 import click
 import zstd

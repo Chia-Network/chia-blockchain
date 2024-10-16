@@ -8,7 +8,7 @@ import signal
 import sys
 from collections.abc import AsyncIterator
 from types import FrameType
-from typing import List, Optional, final
+from typing import Optional, final
 
 from typing_extensions import Protocol
 

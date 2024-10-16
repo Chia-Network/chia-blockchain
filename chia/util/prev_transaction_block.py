@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Tuple
-
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.util.ints import uint128

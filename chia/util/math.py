@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 
 def clamp(n: int, smallest: int, largest: int) -> int:
     return max(smallest, min(n, largest))

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Callable, Tuple, cast
+from typing import Callable, cast
 
 import pytest
 from packaging.version import Version

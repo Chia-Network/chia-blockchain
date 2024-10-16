@@ -5,7 +5,7 @@ from collections import OrderedDict
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from random import Random
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, Program

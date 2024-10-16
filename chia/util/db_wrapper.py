@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Tuple, Type, Union
+from typing import Any, Optional, TextIO, Union
 
 import aiosqlite
 import anyio

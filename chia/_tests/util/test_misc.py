@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import AsyncIterator, Iterator
-from typing import List, Optional, Tuple, Type, TypeVar
+from typing import Optional, TypeVar
 
 import aiohttp
 import anyio

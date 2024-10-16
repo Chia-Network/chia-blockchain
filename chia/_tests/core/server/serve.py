@@ -9,7 +9,7 @@ import logging.config
 import pathlib
 import sys
 import threading
-from typing import List, Optional, final, overload
+from typing import Optional, final, overload
 
 from chia._tests.util.misc import create_logger
 from chia.server.chia_policy import ChiaPolicy

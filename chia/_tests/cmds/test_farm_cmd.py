@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Tuple
 
 import pytest
 from _pytest.capture import CaptureFixture

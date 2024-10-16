@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, BinaryIO, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, BinaryIO, Optional, Union
 
 from chia_rs import G2Element
 from clvm_tools.binutils import disassemble

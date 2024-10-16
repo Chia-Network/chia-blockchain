@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass, field
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, Optional, Union, cast
 
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false

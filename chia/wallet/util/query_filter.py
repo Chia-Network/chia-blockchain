@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint8, uint64

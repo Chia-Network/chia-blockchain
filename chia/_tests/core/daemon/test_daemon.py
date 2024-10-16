@@ -4,7 +4,7 @@ import importlib.metadata
 import json
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Optional, Union, cast
 
 import aiohttp
 import pytest

@@ -4,7 +4,7 @@ import logging
 import traceback
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Tuple, Type, Union
+from typing import Union
 
 
 @contextmanager

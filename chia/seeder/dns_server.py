@@ -12,7 +12,7 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 from multiprocessing import freeze_support
 from pathlib import Path
 from types import FrameType
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import aiosqlite
 from dnslib import AAAA, EDNS0, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, DNSQuestion, DNSRecord

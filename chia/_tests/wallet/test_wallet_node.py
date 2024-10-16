@@ -5,7 +5,7 @@ import sys
 import time
 import types
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pytest
 from chia_rs import G1Element, PrivateKey

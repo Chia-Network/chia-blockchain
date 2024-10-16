@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from chia.cmds.cmds_util import NODE_TYPES, get_any_service_client
 from chia.rpc.rpc_client import RpcClient

@@ -5,7 +5,7 @@ import os
 import pickle
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants

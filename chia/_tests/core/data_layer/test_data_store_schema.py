@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 

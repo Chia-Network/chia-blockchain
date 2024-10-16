@@ -8,7 +8,7 @@ have to worry about blowing out the python stack.
 
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Set, Union
+from typing import Callable, Optional, Union
 
 from clvm.CLVMObject import CLVMStorage
 from clvm.SExp import SExp

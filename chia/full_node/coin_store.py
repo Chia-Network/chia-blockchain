@@ -5,7 +5,7 @@ import logging
 import sqlite3
 import time
 from collections.abc import Collection
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 import typing_extensions
 from aiosqlite import Cursor

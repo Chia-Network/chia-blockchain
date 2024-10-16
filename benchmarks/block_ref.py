@@ -6,7 +6,7 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
-from typing import List, Optional
+from typing import Optional
 
 import aiosqlite
 import click

@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar
+from typing import Any, Callable, Generic, Optional, TypeVar
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final

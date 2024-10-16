@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import G1Element
 from clvm.casts import int_to_bytes

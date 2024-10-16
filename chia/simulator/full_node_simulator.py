@@ -4,7 +4,7 @@ import asyncio
 import itertools
 import time
 from collections.abc import Collection
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Optional, Union
 
 import anyio
 

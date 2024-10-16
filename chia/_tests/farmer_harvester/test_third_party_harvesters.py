@@ -6,7 +6,7 @@ import dataclasses
 import json
 import logging
 from os.path import dirname
-from typing import Any, List, Optional, Tuple, Union, cast
+from typing import Any, Optional, Union, cast
 
 import pytest
 from chia_rs import G1Element

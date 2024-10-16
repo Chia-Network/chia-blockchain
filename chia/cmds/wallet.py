@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import pathlib
 from collections.abc import Sequence
-from typing import List, Optional
+from typing import Optional
 
 import click
 

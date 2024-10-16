@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Optional, Type, TypeVar
+from typing import Optional, TypeVar
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.program import Program

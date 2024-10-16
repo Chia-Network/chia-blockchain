@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, List
-
 import pytest
 
 from chia.cmds.check_wallet_db import DerivationPath, Wallet, check_addresses_used_contiguous, check_for_gaps

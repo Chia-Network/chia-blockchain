@@ -8,7 +8,7 @@ import random
 import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
-from typing import IO, Dict, List, Optional, Tuple
+from typing import IO, Optional
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord

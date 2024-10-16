@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address
 from socket import AF_INET, AF_INET6, SOCK_STREAM
-from typing import Dict, List, Tuple, cast
+from typing import cast
 
 import dns
 import pytest

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field
-from typing import Dict, Generic, List, Tuple, TypeVar
+from typing import Generic, TypeVar
 
 from chia.simulator.ssl_certs_1 import SSL_TEST_NODE_CERTS_AND_KEYS_1, SSL_TEST_PRIVATE_CA_CERT_AND_KEY_1
 from chia.simulator.ssl_certs_2 import SSL_TEST_NODE_CERTS_AND_KEYS_2, SSL_TEST_PRIVATE_CA_CERT_AND_KEY_2

@@ -4,7 +4,7 @@ import logging
 import time
 from collections.abc import Awaitable, Collection, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from typing_extensions import Protocol
 

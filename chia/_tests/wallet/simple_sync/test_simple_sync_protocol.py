@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List
 
 import pytest
 from clvm.casts import int_to_bytes

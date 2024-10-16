@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia.types.blockchain_format.foliage import Foliage
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock, RewardChainBlockUnfinished

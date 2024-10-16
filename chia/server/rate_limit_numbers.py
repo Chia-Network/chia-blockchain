@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import dataclasses
 import functools
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability

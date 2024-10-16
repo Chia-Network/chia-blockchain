@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import dataclass, replace
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 import importlib_resources
 import pytest

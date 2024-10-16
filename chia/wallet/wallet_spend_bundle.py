@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from chia_rs import AugSchemeMPL, G2Element
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

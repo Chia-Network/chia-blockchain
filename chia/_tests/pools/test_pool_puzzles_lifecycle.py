@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-from typing import List
 from unittest import TestCase
 
 import pytest

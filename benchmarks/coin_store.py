@@ -6,7 +6,6 @@ import random
 import sys
 from pathlib import Path
 from time import monotonic
-from typing import List, Tuple
 
 from benchmarks.utils import setup_db
 from chia._tests.util.benchmarks import rand_hash, rewards

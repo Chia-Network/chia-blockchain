@@ -7,7 +7,7 @@ import subprocess
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, Generic, Optional, Type, TypeVar, Union
+from typing import Any, Generic, Optional, TypeVar, Union
 
 import click
 

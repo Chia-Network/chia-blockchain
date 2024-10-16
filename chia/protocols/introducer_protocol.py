@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 from chia.types.peer_info import TimestampedPeerInfo
 from chia.util.streamable import Streamable, streamable

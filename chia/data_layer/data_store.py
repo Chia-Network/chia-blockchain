@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 

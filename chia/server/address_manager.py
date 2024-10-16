@@ -6,7 +6,7 @@ import time
 from asyncio import Lock
 from random import choice, randrange
 from secrets import randbits
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash

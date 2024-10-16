@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
 from sqlite3 import Row
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 
 from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on

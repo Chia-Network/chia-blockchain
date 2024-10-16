@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from bisect import bisect_left
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimation import MempoolItemInfo

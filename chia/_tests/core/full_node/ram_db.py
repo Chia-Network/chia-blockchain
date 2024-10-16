@@ -4,7 +4,6 @@ import contextlib
 import random
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Tuple
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants

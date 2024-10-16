@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, Optional, TypeVar
 
 import aiohttp
 

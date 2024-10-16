@@ -4,7 +4,7 @@ import tempfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional, Type
+from typing import Optional
 
 import aiosqlite
 

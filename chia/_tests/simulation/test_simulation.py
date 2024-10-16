@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib.metadata
 import json
 from collections.abc import AsyncIterator
-from typing import List, Tuple
 
 import aiohttp
 import pytest

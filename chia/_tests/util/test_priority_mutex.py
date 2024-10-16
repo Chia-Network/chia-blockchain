@@ -8,7 +8,7 @@ import logging
 import random
 import time
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import anyio
 import pytest

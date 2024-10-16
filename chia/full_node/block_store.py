@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import typing_extensions
 import zstd

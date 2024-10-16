@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

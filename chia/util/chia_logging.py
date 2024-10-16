@@ -4,7 +4,7 @@ import logging
 import os
 from logging.handlers import SysLogHandler
 from pathlib import Path
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler

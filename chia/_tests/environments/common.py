@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar, Protocol, Tuple, TypeVar
+from typing import ClassVar, Protocol, TypeVar
 
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol
 from chia.server.api_protocol import ApiProtocol

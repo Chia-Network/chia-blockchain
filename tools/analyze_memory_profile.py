@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from subprocess import check_call
 from sys import stdout
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 import click
 from colorama import Back, Fore, Style, init

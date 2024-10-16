@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlocksProtocol

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from clvm.casts import int_to_bytes
 

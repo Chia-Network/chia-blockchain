@@ -5,7 +5,7 @@ import functools
 import logging
 from collections.abc import Awaitable
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 from unittest.mock import MagicMock
 
 import pytest

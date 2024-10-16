@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Optional, TypeVar
 
 from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import dataclass_transform

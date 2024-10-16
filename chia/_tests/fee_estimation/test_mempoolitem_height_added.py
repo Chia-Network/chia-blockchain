@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 import pytest
 from chia_rs import Coin, G2Element

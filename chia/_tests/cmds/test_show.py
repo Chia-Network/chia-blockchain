@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from chia._tests.cmds.cmd_test_utils import TestFullNodeRpcClient, TestRpcClients, run_cli_command_and_assert
 from chia._tests.cmds.testing_classes import hash_to_height, height_hash

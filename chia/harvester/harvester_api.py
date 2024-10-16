@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 

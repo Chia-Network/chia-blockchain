@@ -10,7 +10,7 @@ from math import ceil
 from os import mkdir
 from pathlib import Path
 from shutil import copy
-from typing import Any, Callable, Dict, List, Union, cast
+from typing import Any, Callable, Union, cast
 
 import pytest
 

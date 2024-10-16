@@ -7,7 +7,7 @@ import itertools
 import logging
 import traceback
 from collections.abc import AsyncIterator, Iterator
-from typing import Dict, Generic, Optional, Protocol, TypeVar, final
+from typing import Generic, Optional, Protocol, TypeVar, final
 
 import anyio
 

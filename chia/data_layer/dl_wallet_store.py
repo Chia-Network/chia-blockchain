@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional, Type, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 from aiosqlite import Row
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from sqlite3 import Row
-from typing import List, Optional, Type, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program

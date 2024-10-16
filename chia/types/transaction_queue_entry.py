@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 from dataclasses import dataclass, field
-from typing import ClassVar, Generic, Optional, Tuple, TypeVar, Union
+from typing import ClassVar, Generic, Optional, TypeVar, Union
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32

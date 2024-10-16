@@ -6,7 +6,7 @@ import time
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 import colorama
 

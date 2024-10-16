@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from shutil import copy
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G1Element

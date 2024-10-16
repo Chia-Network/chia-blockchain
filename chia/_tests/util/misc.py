@@ -22,23 +22,7 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Protocol,
-    TextIO,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-    final,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Protocol, TextIO, TypeVar, Union, cast, final
 
 import aiohttp
 import pytest

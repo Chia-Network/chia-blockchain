@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Collection
 from dataclasses import dataclass
 from time import monotonic
-from typing import Dict, List, Optional
+from typing import Optional
 
 from chia_rs import G2Element
 from clvm.casts import int_to_bytes

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import pytest
 
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets

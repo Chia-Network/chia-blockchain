@@ -7,7 +7,7 @@ import traceback
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generic, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from typing_extensions import Protocol
 

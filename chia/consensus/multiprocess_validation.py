@@ -8,7 +8,7 @@ import traceback
 from collections.abc import Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Optional
 
 from chia_rs import AugSchemeMPL, SpendBundleConditions
 

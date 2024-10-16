@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import FrameType
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import click
 from aiohttp import web

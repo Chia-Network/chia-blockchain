@@ -4,7 +4,7 @@ import asyncio
 import logging
 import random
 from collections.abc import Coroutine
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import pytest
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pytest
 from clvm_tools import binutils

@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
-from typing import AsyncContextManager, ContextManager, Generic, List, TypeVar
+from typing import AsyncContextManager, ContextManager, Generic, TypeVar
 
 T = TypeVar("T")
 

@@ -6,7 +6,7 @@ helper it's required to install the `legacy_keyring` extra dependency which can 
 from __future__ import annotations
 
 import sys
-from typing import Callable, List, Union, cast
+from typing import Callable, Union, cast
 
 import click
 from chia_rs import G1Element

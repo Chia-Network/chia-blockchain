@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
+from typing import Optional
 
 from chia_rs import DONT_VALIDATE_SIGNATURE, MEMPOOL_MODE, G2Element, get_flags_for_height_and_constants
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust

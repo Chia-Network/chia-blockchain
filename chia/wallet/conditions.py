@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, fields, replace
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union, final, get_type_hints
+from typing import Any, Optional, TypeVar, Union, final, get_type_hints
 
 from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes

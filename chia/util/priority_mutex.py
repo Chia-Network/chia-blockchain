@@ -7,7 +7,7 @@ import dataclasses
 import logging
 from collections.abc import AsyncIterator
 from enum import IntEnum
-from typing import Dict, Generic, Optional, Type, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from typing_extensions import final
 

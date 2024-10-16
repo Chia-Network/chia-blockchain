@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, Optional, Union
 
 import pytest
 from clvm.casts import int_from_bytes
