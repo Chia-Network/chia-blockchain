@@ -4,8 +4,9 @@ import hashlib
 import struct
 from dataclasses import astuple, dataclass
 from random import Random
-from typing import Dict, Generic, List, Tuple, Type, TypeVar, final
+from typing import Dict, Generic, List, Protocol, Tuple, Type, TypeVar, final
 
+import chia_rs
 import pytest
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
@@ -33,6 +34,19 @@ from chia.data_layer.util.merkle_blob import (
     unpack_raw_node,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
+
+
+class MerkleBlobCallable(Protocol):
+    def __call__(self, blob: bytearray) -> MerkleBlob: ...
+
+
+@pytest.fixture(
+    name="merkle_blob_type",
+    params=[MerkleBlob, chia_rs.MerkleBlob],
+    ids=["python", "rust"],
+)
+def merkle_blob_type_fixture(request: SubRequest) -> MerkleBlobCallable:
+    return request.param  # type: ignore[no-any-return]
 
 
 @pytest.fixture(
@@ -469,3 +483,23 @@ def test_get_nodes() -> None:
         seen_indexes.add(node.index)
 
     assert keys == seen_keys
+
+
+def test_just_insert_a_bunch(merkle_blob_type: MerkleBlobCallable) -> None:
+    HASH = bytes(range(12, 44))
+
+    import pathlib
+
+    path = pathlib.Path("~/tmp/mbt/").expanduser()
+    path.joinpath("py").mkdir(parents=True, exist_ok=True)
+    path.joinpath("rs").mkdir(parents=True, exist_ok=True)
+
+    merkle_blob = merkle_blob_type(blob=bytearray())
+    import time
+
+    total_time = 0.0
+    for i in range(100000):
+        start = time.monotonic()
+        merkle_blob.insert(KVId(i), KVId(i), HASH)
+        end = time.monotonic()
+        total_time += end - start
