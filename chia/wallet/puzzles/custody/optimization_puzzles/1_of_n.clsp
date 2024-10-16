@@ -1,11 +1,11 @@
 (mod
   (
     MERKLE_ROOT
+    delegated_puzzle
+    delegated_solution
     merkle_proof
     member_puzzle
     member_solution
-    delegated_puzzle
-    delegated_solution
   )
 
   (include merkle_utils.clib)
