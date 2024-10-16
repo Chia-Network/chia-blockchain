@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import textwrap
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 import click
 import pytest
