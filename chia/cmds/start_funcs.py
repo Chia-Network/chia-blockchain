@@ -33,7 +33,7 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     print(f"Starting daemon: {cmd_to_execute} run_daemon --wait-for-unlock", flush=True)
     process = subprocess.Popen(
         [cmd_to_execute, "run_daemon", "--wait-for-unlock"],
-        encoding="utf-8",
+        text=True,
         stdout=subprocess.PIPE,
         creationflags=creationflags,
     )
