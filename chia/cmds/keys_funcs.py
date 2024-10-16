@@ -26,6 +26,7 @@ from chia.util.keychain import (
     mnemonic_to_seed,
 )
 from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.secret_info import SecretInfo
 from chia.wallet.derive_keys import (
     master_pk_to_wallet_pk_unhardened,
     master_sk_to_farmer_sk,
@@ -86,11 +87,11 @@ def add_key_info(mnemonic_or_pk: str, label: Optional[str]) -> None:
     unlock_keyring()
     try:
         if check_mnemonic_validity(mnemonic_or_pk):
-            sk = Keychain().add_key(mnemonic_or_pk, label, private=True)
-            fingerprint = sk.get_g1().get_fingerprint()
+            sk, _ = Keychain().add_key(mnemonic_or_pk, label, private=True)
+            fingerprint = sk.public_key().get_fingerprint()
             print(f"Added private key with public key fingerprint {fingerprint}")
         else:
-            pk = Keychain().add_key(mnemonic_or_pk, label, private=False)
+            pk, _ = Keychain().add_key(mnemonic_or_pk, label, private=False)
             fingerprint = pk.get_fingerprint()
             print(f"Added public key with fingerprint {fingerprint}")
 
@@ -181,39 +182,47 @@ def show_keys(
             key["label"] = key_data.label
 
         key["fingerprint"] = key_data.fingerprint
-        key["master_pk"] = bytes(key_data.public_key).hex()
-        if sk is not None:
+        if isinstance(key_data.observation_root, G1Element):
+            key["master_pk"] = key_data.public_key.hex()
+        else:  # pragma: no cover
+            # TODO: Add test coverage once vault wallet exists
+            key["observation_root"] = key_data.public_key.hex()
+        if sk is not None and isinstance(sk, PrivateKey):
             key["farmer_pk"] = bytes(master_sk_to_farmer_sk(sk).get_g1()).hex()
             key["pool_pk"] = bytes(master_sk_to_pool_sk(sk).get_g1()).hex()
         else:
             key["farmer_pk"] = None
             key["pool_pk"] = None
 
-        if non_observer_derivation:
-            if sk is None:
-                first_wallet_pk: Optional[G1Element] = None
+        if isinstance(key_data.observation_root, G1Element):
+            if non_observer_derivation:
+                if sk is None:
+                    first_wallet_pk: Optional[G1Element] = None
+                else:
+                    assert isinstance(sk, PrivateKey)
+                    first_wallet_pk = master_sk_to_wallet_sk(sk, uint32(0)).public_key()
             else:
-                first_wallet_pk = master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
-        else:
-            first_wallet_pk = master_pk_to_wallet_pk_unhardened(key_data.public_key, uint32(0))
+                first_wallet_pk = master_pk_to_wallet_pk_unhardened(key_data.observation_root, uint32(0))
 
-        if first_wallet_pk is not None:
-            wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_pk), prefix)
-            key["wallet_address"] = wallet_address
-        else:
-            key["wallet_address"] = None
+            if first_wallet_pk is not None:
+                wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_pk), prefix)
+                key["wallet_address"] = wallet_address
+            else:
+                key["wallet_address"] = None
 
         key["non_observer"] = non_observer_derivation
 
         if show_mnemonic and sk is not None:
             key["master_sk"] = bytes(sk).hex()
-            key["farmer_sk"] = bytes(master_sk_to_farmer_sk(sk)).hex()
-            key["wallet_sk"] = bytes(master_sk_to_wallet_sk(sk, uint32(0))).hex()
+            if isinstance(sk, PrivateKey):
+                key["farmer_sk"] = bytes(master_sk_to_farmer_sk(sk)).hex()
+                key["wallet_sk"] = bytes(master_sk_to_wallet_sk(sk, uint32(0))).hex()
             key["mnemonic"] = bytes_to_mnemonic(key_data.entropy)
         else:
             key["master_sk"] = None
-            key["farmer_sk"] = None
-            key["wallet_sk"] = None
+            if isinstance(key_data.observation_root, G1Element):
+                key["farmer_sk"] = None
+                key["wallet_sk"] = None
             key["mnemonic"] = None
 
         return key
@@ -310,15 +319,23 @@ def derive_pk_and_sk_from_hd_path(
     return (current_pk, current_sk, "m/" + "/".join(path) + "/")
 
 
-def sign(message: str, private_key: PrivateKey, hd_path: str, as_bytes: bool, json_output: bool) -> None:
-    sk = derive_pk_and_sk_from_hd_path(private_key.get_g1(), hd_path, master_sk=private_key)[1]
+def sign(message: str, private_key: SecretInfo[Any], hd_path: str, as_bytes: bool, json_output: bool) -> None:
+    if hd_path != "m":
+        if not isinstance(private_key, PrivateKey):
+            print("Cannot derive non-BLS keys")
+            return
+        sk: Optional[SecretInfo[Any]] = derive_pk_and_sk_from_hd_path(
+            private_key.public_key(), hd_path, master_sk=private_key
+        )[1]
+    else:
+        sk = private_key
     assert sk is not None
     data = bytes.fromhex(message) if as_bytes else bytes(message, "utf-8")
     signing_mode: SigningMode = (
         SigningMode.BLS_MESSAGE_AUGMENTATION_HEX_INPUT if as_bytes else SigningMode.BLS_MESSAGE_AUGMENTATION_UTF8_INPUT
     )
-    pubkey_hex: str = bytes(sk.get_g1()).hex()
-    signature_hex: str = bytes(AugSchemeMPL.sign(sk, data)).hex()
+    pubkey_hex: str = bytes(sk.public_key()).hex()
+    signature_hex: str = bytes(sk.sign(data)).hex()
     if json_output:
         print(
             json.dumps(
@@ -513,9 +530,10 @@ def search_derive(
         search_private_key = True
 
     if fingerprint is None and private_key is None:
-        public_keys: List[G1Element] = Keychain().get_all_public_keys()
+        public_keys: List[G1Element] = Keychain().get_all_public_keys_of_type(G1Element)
         private_keys: List[Optional[PrivateKey]] = [
-            data.private_key if data.secrets is not None else None for data in Keychain().get_keys(include_secrets=True)
+            data.private_key if data.secrets is not None and isinstance(data.private_key, PrivateKey) else None
+            for data in Keychain().get_keys(include_secrets=True)
         ]
     elif fingerprint is None:
         assert private_key is not None
@@ -523,8 +541,19 @@ def search_derive(
         private_keys = [private_key]
     else:
         master_key_data = Keychain().get_key(fingerprint, include_secrets=True)
-        public_keys = [master_key_data.public_key]
-        private_keys = [master_key_data.private_key if master_key_data.secrets is not None else None]
+        if isinstance(master_key_data.observation_root, G1Element):
+            public_keys = [master_key_data.observation_root]
+            private_keys = [
+                (
+                    master_key_data.private_key
+                    if master_key_data.secrets is not None and isinstance(master_key_data.private_key, PrivateKey)
+                    else None
+                )
+            ]
+        else:  # pragma: no cover
+            # TODO: Add test coverage once vault wallet exists
+            print("Cannot currently derive paths from non-BLS keys")
+            return True
 
     for pk, sk in zip(public_keys, private_keys):
         if sk is None and non_observer_derivation:
@@ -657,11 +686,19 @@ def derive_wallet_address(
     """
     if fingerprint is not None:
         key_data: KeyData = Keychain().get_key(fingerprint, include_secrets=non_observer_derivation)
-        if non_observer_derivation:
+        if not isinstance(key_data.observation_root, G1Element):  # pragma: no cover
+            # TODO: Add test coverage once vault wallet exists
+            print("Cannot currently derive from non-BLS keys")
+            return
+        if non_observer_derivation and key_data.secrets is None:
+            print("Need a private key for non observer derivation of wallet addresses")
+            return
+        elif non_observer_derivation:
+            assert isinstance(key_data.private_key, PrivateKey)
             sk = key_data.private_key
         else:
             sk = None
-        pk = key_data.public_key
+        pk: G1Element = key_data.observation_root
     else:
         assert private_key is not None
         sk = private_key
@@ -719,8 +756,17 @@ def derive_child_key(
 
     if fingerprint is not None:
         key_data: KeyData = Keychain().get_key(fingerprint, include_secrets=True)
-        current_pk: G1Element = key_data.public_key
-        current_sk: Optional[PrivateKey] = key_data.private_key if key_data.secrets is not None else None
+        if not isinstance(key_data.observation_root, G1Element):  # pragma: no cover
+            # TODO: Add coverage when vault wallet exists
+            print("Cannot currently derive from non-BLS keys")
+            return
+        if key_data.secrets is not None:
+            assert isinstance(key_data.private_key, PrivateKey)
+        current_pk: G1Element = key_data.observation_root
+        # mypy can't figure out the semantics here
+        current_sk: Optional[PrivateKey] = (
+            key_data.private_key if key_data.secrets is not None else None  # type: ignore[assignment]
+        )
     else:
         assert private_key is not None
         current_pk = private_key.get_g1()
@@ -791,12 +837,12 @@ def derive_child_key(
             print(f"{key_type_str} private key {i}{hd_path}: {private_key_string_repr(sk)}")
 
 
-def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
+def private_key_for_fingerprint(fingerprint: int) -> Optional[SecretInfo[Any]]:
     unlock_keyring()
     private_keys = Keychain().get_all_private_keys()
 
     for sk, _ in private_keys:
-        if sk.get_g1().get_fingerprint() == fingerprint:
+        if sk.public_key().get_fingerprint() == fingerprint:
             return sk
     return None
 
@@ -826,7 +872,7 @@ def prompt_for_fingerprint() -> Optional[int]:
 
 def get_private_key_with_fingerprint_or_prompt(
     fingerprint: Optional[int],
-) -> Tuple[Optional[int], Optional[PrivateKey]]:
+) -> Tuple[Optional[int], Optional[SecretInfo[Any]]]:
     """
     Get a private key with the specified fingerprint. If fingerprint is not
     specified, prompt the user to select a key.
@@ -852,7 +898,7 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
 
 def resolve_derivation_master_key(
     fingerprint_or_filename: Optional[Union[int, str, Path]]
-) -> Tuple[Optional[int], Optional[PrivateKey]]:
+) -> Tuple[Optional[int], Optional[SecretInfo[Any]]]:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.
     """

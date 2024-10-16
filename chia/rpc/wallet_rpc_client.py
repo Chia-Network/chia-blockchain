@@ -84,6 +84,10 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactions,
     SubmitTransactionsResponse,
     TakeOfferResponse,
+    VaultCreate,
+    VaultCreateResponse,
+    VaultRecovery,
+    VaultRecoveryResponse,
     VCMintResponse,
     VCRevokeResponse,
     VCSpendResponse,
@@ -1840,5 +1844,31 @@ class WalletRpcClient(RpcClient):
         return CombineCoinsResponse.from_json_dict(
             await self.fetch(
                 "combine_coins", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
+
+    async def vault_create(
+        self,
+        args: VaultCreate,
+        tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> VaultCreateResponse:
+        return VaultCreateResponse.from_json_dict(
+            await self.fetch(
+                "vault_create", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
+
+    async def vault_recovery(
+        self,
+        args: VaultRecovery,
+        tx_config: TXConfig,
+        extra_conditions: Tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> VaultRecoveryResponse:
+        return VaultRecoveryResponse.from_json_dict(
+            await self.fetch(
+                "vault_recovery", args.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
             )
         )

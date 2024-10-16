@@ -6,12 +6,15 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
-from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs import G1Element, G2Element
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
+from chia.util.keychain import KeyTypes
+from chia.util.observation_root import ObservationRoot
+from chia.util.secret_info import SecretInfo
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
@@ -31,6 +34,7 @@ from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
+_T_KW_Dataclass = TypeVar("_T_KW_Dataclass")
 
 
 @dataclass_transform(frozen_default=True, kw_only_default=True)
@@ -95,11 +99,17 @@ class GetPrivateKey(Streamable):
 @dataclass(frozen=True)
 class GetPrivateKeyFormat(Streamable):
     fingerprint: uint32
-    sk: PrivateKey
-    pk: G1Element
-    farmer_pk: G1Element
-    pool_pk: G1Element
+    sk: bytes
+    pk: bytes
+    farmer_pk: Optional[G1Element]
+    pool_pk: Optional[G1Element]
     seed: Optional[str]
+
+    def secret_info(self, key_type: KeyTypes = KeyTypes.G1_ELEMENT) -> SecretInfo[Any]:
+        return KeyTypes.parse_secret_info(self.sk, key_type)
+
+    def observation_root(self, key_type: KeyTypes = KeyTypes.G1_ELEMENT) -> ObservationRoot:
+        return KeyTypes.parse_observation_root(self.pk, key_type)
 
 
 @streamable
@@ -118,6 +128,7 @@ class GenerateMnemonicResponse(Streamable):
 @dataclass(frozen=True)
 class AddKey(Streamable):
     mnemonic: List[str]
+    key_type: Optional[str] = None
 
 
 @streamable
@@ -491,8 +502,6 @@ class SplitCoins(TransactionEndpointRequest):
     target_coin_id: bytes32 = field(default_factory=default_raise)
 
 
-@streamable
-@dataclass(frozen=True)
 class SplitCoinsResponse(TransactionEndpointResponse):
     pass
 
@@ -508,8 +517,6 @@ class CombineCoins(TransactionEndpointRequest):
     coin_num_limit: uint16 = uint16(500)
 
 
-@streamable
-@dataclass(frozen=True)
 class CombineCoinsResponse(TransactionEndpointResponse):
     pass
 
@@ -542,6 +549,46 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
     wallet_id: List[uint32]
     tx_num: uint16
     spend_bundle: WalletSpendBundle
+
+
+@streamable
+@kw_only_dataclass
+class VaultCreate(TransactionEndpointRequest):
+    secp_pk: bytes = field(default_factory=default_raise)
+    hp_index: uint32 = uint32(0)
+    bls_pk: Optional[G1Element] = None
+    timelock: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VaultCreateResponse(TransactionEndpointResponse):
+    pass
+
+
+@streamable
+@kw_only_dataclass
+class VaultRecovery(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    secp_pk: bytes = field(default_factory=default_raise)
+    hp_index: uint32 = uint32(0)
+    bls_pk: Optional[G1Element] = None
+    timelock: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VaultRecoveryResponse(TransactionEndpointResponse):
+    recovery_tx_id: bytes32
+    finish_tx_id: bytes32
+
+    @property
+    def recovery_tx(self) -> TransactionRecord:
+        return next(tx for tx in self.transactions if tx.name == self.recovery_tx_id)
+
+    @property
+    def finish_tx(self) -> TransactionRecord:
+        return next(tx for tx in self.transactions if tx.name == self.finish_tx_id)
 
 
 # TODO: The section below needs corresponding request types

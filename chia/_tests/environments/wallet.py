@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Union, 
 from chia._tests.environments.common import ServiceEnvironment
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
+from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -19,9 +20,9 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
-from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import Balance, WalletNode
 from chia.wallet.wallet_node_api import WalletNodeAPI
+from chia.wallet.wallet_protocol import MainWalletProtocol
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operator.ge}
@@ -96,8 +97,20 @@ class WalletEnvironment:
         return self.service._node.wallet_state_manager
 
     @property
-    def xch_wallet(self) -> Wallet:
+    def xch_wallet(self) -> MainWalletProtocol:
         return self.service._node.wallet_state_manager.main_wallet
+
+    async def restart(self, new_fingerprint: Optional[int]) -> None:
+        old_peer_info = next(v for v in self.node.server.all_connections.values()).peer_info
+        await self.rpc_client.log_in(
+            LogIn(uint32(new_fingerprint))
+            if new_fingerprint is not None
+            else LogIn(uint32(self.wallet_state_manager.observation_root.get_fingerprint()))
+        )
+
+        await self.node.server.start_client(old_peer_info, None)
+
+        self.wallet_states = {}
 
     def dealias_wallet_id(self, wallet_id_or_alias: Union[int, str]) -> uint32:
         """

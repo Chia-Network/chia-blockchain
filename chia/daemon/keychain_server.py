@@ -224,7 +224,7 @@ class KeychainServer:
             }
 
         try:
-            key = self.get_keychain_for_request(request).add_key(mnemonic_or_pk, label, private)
+            key, key_type = self.get_keychain_for_request(request).add_key(mnemonic_or_pk, label, private)
         except KeyError as e:
             return {
                 "success": False,
@@ -243,7 +243,7 @@ class KeychainServer:
         else:
             fingerprint = key.get_fingerprint()
 
-        return {"success": True, "fingerprint": fingerprint}
+        return {"success": True, "fingerprint": fingerprint, "key_type": key_type}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():
@@ -321,7 +321,7 @@ class KeychainServer:
 
         private_keys = self.get_keychain_for_request(request).get_all_private_keys()
         for sk, entropy in private_keys:
-            all_keys.append({"pk": bytes(sk.get_g1()).hex(), "entropy": entropy.hex()})
+            all_keys.append({"pk": bytes(sk.public_key()).hex(), "entropy": entropy.hex()})
 
         return {"success": True, "private_keys": all_keys}
 
@@ -334,7 +334,7 @@ class KeychainServer:
         if sk_ent is None:
             return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
 
-        pk_str = bytes(sk_ent[0].get_g1()).hex()
+        pk_str = bytes(sk_ent[0].public_key()).hex()
         ent_str = sk_ent[1].hex()
         key = {"pk": pk_str, "entropy": ent_str}
 
@@ -361,5 +361,6 @@ class KeychainServer:
         return {
             "success": True,
             "pk": bytes(key_data.public_key).hex(),
+            "key_type": key_data.key_type,
             "entropy": key_data.entropy.hex() if private else None,
         }

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
@@ -17,7 +17,8 @@ from chia.types.blockchain_format.proof_of_space import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
-from chia.util.keychain import Keychain
+from chia.util.keychain import Keychain, KeyTypes
+from chia.util.secret_info import SecretInfo
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk, master_sk_to_pool_sk
 
 log = logging.getLogger(__name__)
@@ -95,25 +96,27 @@ class PlotKeysResolver:
         return self.resolved_keys
 
     async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[PrivateKey]:
-        sk: Optional[PrivateKey] = None
+        sk: Optional[SecretInfo[Any]] = None
         if keychain_proxy:
             try:
                 if self.alt_fingerprint is not None:
                     sk = await keychain_proxy.get_key_for_fingerprint(self.alt_fingerprint)
                 else:
-                    sk = await keychain_proxy.get_first_private_key()
+                    sk = await keychain_proxy.get_first_private_key(KeyTypes.G1_ELEMENT)
             except Exception as e:
                 log.error(f"Keychain proxy failed with error: {e}")
         else:
-            sk_ent: Optional[Tuple[PrivateKey, bytes]] = None
+            sk_ent: Optional[Tuple[SecretInfo[Any], bytes]] = None
             keychain: Keychain = Keychain()
             if self.alt_fingerprint is not None:
                 sk_ent = keychain.get_private_key_by_fingerprint(self.alt_fingerprint)
             else:
-                sk_ent = keychain.get_first_private_key()
+                sk_ent = keychain.get_first_private_key(KeyTypes.G1_ELEMENT)
 
             if sk_ent:
                 sk = sk_ent[0]
+        if not isinstance(sk, PrivateKey):
+            raise ValueError("Cannot create plots with non-BLS key")
         return sk
 
     async def get_farmer_public_key(self, keychain_proxy: Optional[KeychainProxy] = None) -> G1Element:

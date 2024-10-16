@@ -20,7 +20,7 @@ from pathlib import Path
 from types import FrameType
 from typing import Any, AsyncIterator, Dict, List, Optional, Set, TextIO, Tuple
 
-from chia_rs import G1Element
+from chia_rs import G1Element, PrivateKey
 from typing_extensions import Protocol
 
 from chia import __version__
@@ -662,6 +662,10 @@ class WebSocketServer:
 
         wallet_addresses_by_fingerprint = {}
         for key in keys:
+            if not isinstance(key.observation_root, G1Element) or (
+                key.secrets is not None and not isinstance(key.private_key, PrivateKey)
+            ):
+                continue  # pragma: no cover
             address_entries = []
 
             # we require access to the private key to generate wallet addresses for non observer
@@ -670,10 +674,11 @@ class WebSocketServer:
 
             for i in range(index, index + count):
                 if non_observer_derivation:
-                    sk = master_sk_to_wallet_sk(key.private_key, uint32(i))
+                    # This ifs above are too complex for mypy but do rule out the possibility of a non-PrivateKey here
+                    sk = master_sk_to_wallet_sk(key.private_key, uint32(i))  # type: ignore[arg-type]
                     pk = sk.get_g1()
                 else:
-                    pk = master_pk_to_wallet_pk_unhardened(key.public_key, uint32(i))
+                    pk = master_pk_to_wallet_pk_unhardened(key.observation_root, uint32(i))
                 wallet_address = encode_puzzle_hash(create_puzzlehash_for_pk(pk), prefix)
                 if non_observer_derivation:
                     hd_path = f"m/12381n/8444n/2n/{i}n"
@@ -695,7 +700,7 @@ class WebSocketServer:
 
         keys_for_plot: Dict[uint32, Any] = {}
         for key in keys:
-            if key.secrets is None:
+            if key.secrets is None or not isinstance(key.private_key, PrivateKey):
                 continue
             sk = key.private_key
             farmer_public_key: G1Element = master_sk_to_farmer_sk(sk).get_g1()

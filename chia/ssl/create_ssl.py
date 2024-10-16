@@ -68,6 +68,7 @@ def generate_ca_signed_cert(ca_crt: bytes, ca_key: bytes, cert_out: Path, key_ou
     one_day = datetime.timedelta(1, 0, 0)
     root_cert = x509.load_pem_x509_certificate(ca_crt, default_backend())
     root_key = load_pem_private_key(ca_key, None, default_backend())
+    assert isinstance(root_key, rsa.RSAPrivateKey)
 
     cert_key = rsa.generate_private_key(public_exponent=65537, key_size=2048, backend=default_backend())
     new_subject = x509.Name(

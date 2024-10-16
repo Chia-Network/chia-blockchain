@@ -1,4 +1,4 @@
-;; Works with p2_singleton_via_delegated_puzzle
+;; Works with p2_singleton_via_delegated_puzzle_w_aggregator
 ;; When we have many p2_singleton coins and want to aggregate them together
 
 ;; all coins make announcements of their puzhash, amount, and ID

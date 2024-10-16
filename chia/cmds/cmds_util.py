@@ -354,6 +354,12 @@ class TransactionBundle(Streamable):
     txs: List[TransactionRecord]
 
 
+def write_transactions_to_file(txs: List[TransactionRecord], transaction_file: str) -> None:
+    print(f"Writing transactions to file {transaction_file}:")
+    with open(Path(transaction_file), "wb") as file:
+        file.write(bytes(TransactionBundle(txs)))
+
+
 def tx_out_cmd(
     enable_timelock_args: Optional[bool] = None,
 ) -> Callable[[Callable[..., List[TransactionRecord]]], Callable[..., None]]:
@@ -363,9 +369,7 @@ def tx_out_cmd(
         def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
             txs: List[TransactionRecord] = func(**kwargs)
             if transaction_file is not None:
-                print(f"Writing transactions to file {transaction_file}:")
-                with open(Path(transaction_file), "wb") as file:
-                    file.write(bytes(TransactionBundle(txs)))
+                write_transactions_to_file(txs, transaction_file)
 
         return click.option(
             "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True

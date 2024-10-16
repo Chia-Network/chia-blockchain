@@ -28,3 +28,10 @@ class DerivationRecord:
     def pubkey(self) -> G1Element:
         assert isinstance(self._pubkey, G1Element)
         return self._pubkey
+
+    @property
+    def pubkey_bytes(self) -> bytes:
+        if isinstance(self._pubkey, G1Element):
+            return bytes(self._pubkey)
+        else:
+            return self._pubkey

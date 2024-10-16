@@ -10,7 +10,7 @@ import aiohttp
 import pytest
 from aiohttp import WSMessage
 from aiohttp.web_ws import WebSocketResponse
-from chia_rs import G1Element
+from chia_rs import G1Element, PrivateKey
 from pytest_mock import MockerFixture
 
 from chia._tests.util.misc import Marks, datacases
@@ -32,7 +32,7 @@ from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
 from chia.util.config import load_config
 from chia.util.json_util import dict_to_json_str
-from chia.util.keychain import Keychain, KeyData, supports_os_passphrase_storage
+from chia.util.keychain import Keychain, KeyData, KeyTypes, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from chia.util.ws_message import create_payload, create_payload_dict
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
@@ -205,6 +205,8 @@ test_key_data_2 = KeyData.from_mnemonic(
     "hammer stable page grunt venture purse canyon discover "
     "egg vivid spare immune awake code announce message"
 )
+assert isinstance(test_key_data.private_key, PrivateKey)
+assert isinstance(test_key_data_2.private_key, PrivateKey)
 
 success_response_data = {
     "success": True,
@@ -237,6 +239,7 @@ plotter_request_ref = {
 def add_private_key_response_data(fingerprint: int) -> Dict[str, object]:
     return {
         "success": True,
+        "key_type": KeyTypes.G1_ELEMENT.value,
         "fingerprint": fingerprint,
     }
 

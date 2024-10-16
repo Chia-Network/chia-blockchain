@@ -26,6 +26,7 @@ from chia.cmds.rpc import rpc_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
+from chia.cmds.vault import vault_cmd
 from chia.cmds.wallet import wallet_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
@@ -131,6 +132,7 @@ cli.add_command(beta_cmd)
 cli.add_command(completion)
 cli.add_command(dao_cmd)
 cli.add_command(dev_cmd)
+cli.add_command(vault_cmd)
 
 
 def main() -> None:

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import click
 from chia_rs import PrivateKey
 
 from chia.cmds import options
+from chia.util.secret_info import SecretInfo
 
 
 @click.group("keys", help="Manage your keys")
@@ -342,6 +343,10 @@ def search_cmd(
         if resolved_sk is None:
             print("Could not resolve private key from fingerprint/mnemonic file")
 
+    if resolved_sk is not None and not isinstance(resolved_sk, PrivateKey):
+        print("Cannot derive from non-BLS keys")
+        return
+
     found: bool = search_derive(
         ctx.obj["root_path"],
         fingerprint,
@@ -364,7 +369,7 @@ class ResolutionError(Exception):
 
 def _resolve_fingerprint_and_sk(
     filename: Optional[str], fingerprint: Optional[int], non_observer_derivation: bool
-) -> Tuple[Optional[int], Optional[PrivateKey]]:
+) -> Tuple[Optional[int], Optional[SecretInfo[Any]]]:
     from .keys_funcs import resolve_derivation_master_key
 
     reolved_fp, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
@@ -416,6 +421,10 @@ def wallet_address_cmd(
     try:
         fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)
     except ResolutionError:
+        return
+
+    if sk is not None and not isinstance(sk, PrivateKey):
+        print("Cannot derive from non-BLS keys")
         return
 
     derive_wallet_address(
@@ -494,6 +503,10 @@ def child_key_cmd(
     try:
         fingerprint, sk = _resolve_fingerprint_and_sk(filename, fingerprint, non_observer_derivation)
     except ResolutionError:
+        return
+
+    if sk is not None and not isinstance(sk, PrivateKey):
+        print("Cannot derive from non-BLS keys")
         return
 
     derive_child_key(
