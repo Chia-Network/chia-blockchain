@@ -3035,13 +3035,13 @@ files = [
 
 [[package]]
 name = "types-pyyaml"
-version = "6.0.12.20240311"
+version = "6.0.12.20240917"
 description = "Typing stubs for PyYAML"
 optional = true
 python-versions = ">=3.8"
 files = [
-    {file = "types-PyYAML-6.0.12.20240311.tar.gz", hash = "sha256:a9e0f0f88dc835739b0c1ca51ee90d04ca2a897a71af79de9aec5f38cb0a5342"},
-    {file = "types_PyYAML-6.0.12.20240311-py3-none-any.whl", hash = "sha256:b845b06a1c7e54b8e5b4c683043de0d9caf205e7434b3edc678ff2411979b8f6"},
+    {file = "types-PyYAML-6.0.12.20240917.tar.gz", hash = "sha256:d1405a86f9576682234ef83bcb4e6fff7c9305c8b1fbad5e0bcd4f7dbdc9c587"},
+    {file = "types_PyYAML-6.0.12.20240917-py3-none-any.whl", hash = "sha256:392b267f1c0fe6022952462bf5d6523f31e37f6cea49b14cee7ad634b6301570"},
 ]
 
 [[package]]
@@ -3438,4 +3438,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.13"
-content-hash = "f5fa932e4e2facb84efb24d244d477db40be0eb4307378f3bea7355c5ccbb2e0"
+content-hash = "bf4ac39415de59a5ef57a696d79d1938c4b47daecee072974427c626b1ade5ca"
