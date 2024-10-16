@@ -7,7 +7,8 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator, List, Optional, cast
+from typing import Callable, List, Optional, cast
+from collections.abc import Iterator
 
 import aiosqlite
 import zstd
@@ -58,13 +59,13 @@ def enable_profiler(profile: bool, counter: int) -> Iterator[None]:
 
 class FakeServer:
     async def send_to_all(
-        self, messages: List[Message], node_type: NodeType, exclude: Optional[bytes32] = None
+        self, messages: list[Message], node_type: NodeType, exclude: Optional[bytes32] = None
     ) -> None:
         pass
 
     async def send_to_all_if(
         self,
-        messages: List[Message],
+        messages: list[Message],
         node_type: NodeType,
         predicate: Callable[[WSChiaConnection], bool],
         exclude: Optional[bytes32] = None,
@@ -79,7 +80,7 @@ class FakeServer:
 
     def get_connections(
         self, node_type: Optional[NodeType] = None, *, outbound: Optional[bool] = False
-    ) -> List[WSChiaConnection]:
+    ) -> list[WSChiaConnection]:
         return []
 
     def is_duplicate_or_self_connection(self, target_node: PeerInfo) -> bool:

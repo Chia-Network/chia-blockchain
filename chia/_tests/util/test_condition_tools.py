@@ -29,8 +29,8 @@ TEST_COIN = Coin(H1, H2, uint64(123))
 
 def mk_agg_sig_conditions(
     opcode: ConditionOpcode,
-    agg_sig_data: List[Tuple[G1Element, bytes]],
-    agg_sig_unsafe_data: List[Tuple[G1Element, bytes]] = [],
+    agg_sig_data: list[tuple[G1Element, bytes]],
+    agg_sig_unsafe_data: list[tuple[G1Element, bytes]] = [],
 ) -> SpendBundleConditions:
     spend = SpendConditions(
         coin_id=TEST_COIN.name(),

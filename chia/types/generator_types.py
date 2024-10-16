@@ -11,4 +11,4 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 class BlockGenerator(Streamable):
     program: SerializedProgram
-    generator_refs: List[bytes]
+    generator_refs: list[bytes]

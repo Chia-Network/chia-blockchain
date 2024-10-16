@@ -17,7 +17,7 @@ TRANSFER_PROGRAM_MOD = load_clvm_maybe_recompile(
 )
 
 
-def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, List[Program]]:
+def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
     if puzzle.mod == TRANSFER_PROGRAM_MOD:
         return True, list(puzzle.args.as_iter())
     return False, []

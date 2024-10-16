@@ -13,9 +13,9 @@ from chia.util.ints import uint16
 @dataclass
 class GetUnresolvedPeerInfosCase(DataCase):
     description: str
-    service_config: Dict[str, Any]
+    service_config: dict[str, Any]
     requested_node_type: NodeType
-    expected_peer_infos: Set[UnresolvedPeerInfo]
+    expected_peer_infos: set[UnresolvedPeerInfo]
     marks: Marks = ()
 
     @property
@@ -154,9 +154,9 @@ def test_get_unresolved_peer_infos(case: GetUnresolvedPeerInfosCase) -> None:
 @dataclass
 class SetPeerInfoCase(DataCase):
     description: str
-    service_config: Dict[str, Any]
+    service_config: dict[str, Any]
     requested_node_type: NodeType
-    expected_service_config: Dict[str, Any]
+    expected_service_config: dict[str, Any]
     peer_host: Optional[str] = None
     peer_port: Optional[int] = None
     marks: Marks = ()

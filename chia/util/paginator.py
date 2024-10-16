@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from math import ceil
-from typing import Sequence
+from collections.abc import Sequence
 
 
 class InvalidPageSizeLimit(Exception):

@@ -11,7 +11,7 @@ from chia.util.ints import uint128
 
 
 class SimulatorFullNodeRpcClient(FullNodeRpcClient):
-    async def get_all_blocks(self) -> List[FullBlock]:
+    async def get_all_blocks(self) -> list[FullBlock]:
         json_blocks = (await self.fetch("get_all_blocks", {}))["blocks"]
         return [FullBlock.from_json_dict(block) for block in json_blocks]
 
@@ -34,11 +34,11 @@ class SimulatorFullNodeRpcClient(FullNodeRpcClient):
         result = await self.fetch("get_farming_ph", {})
         return bytes32.from_hexstr(result["puzzle_hash"])
 
-    async def get_all_coins(self, include_spent_coins: bool = False) -> List[CoinRecord]:
+    async def get_all_coins(self, include_spent_coins: bool = False) -> list[CoinRecord]:
         json_result = await self.fetch("get_all_coins", {"include_spent_coins": include_spent_coins})
         return [CoinRecord.from_json_dict(coin_records) for coin_records in json_result["coin_records"]]
 
-    async def get_all_puzzle_hashes(self) -> Dict[bytes32, Tuple[uint128, int]]:
+    async def get_all_puzzle_hashes(self) -> dict[bytes32, tuple[uint128, int]]:
         str_result = (await self.fetch("get_all_puzzle_hashes", {}))["puzzle_hashes"]
         return {bytes32.from_hexstr(ph): (uint128(amount), num_tx) for (ph, (amount, num_tx)) in str_result.items()}
 

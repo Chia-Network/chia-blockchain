@@ -85,8 +85,8 @@ def get_key_data(keyring: LegacyKeyring, index: int) -> KeyData:
     )
 
 
-def get_keys(keyring: LegacyKeyring) -> List[KeyData]:
-    keys: List[KeyData] = []
+def get_keys(keyring: LegacyKeyring) -> list[KeyData]:
+    keys: list[KeyData] = []
     for index in range(MAX_KEYS):
         try:
             keys.append(get_key_data(keyring, index))

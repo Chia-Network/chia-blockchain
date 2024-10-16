@@ -29,7 +29,7 @@ class TestRequestType(Streamable):
 @streamable
 @dataclass(frozen=True)
 class TestResponseObject(Streamable):
-    qat: List[str]
+    qat: list[str]
     sub: SubObject
 
 

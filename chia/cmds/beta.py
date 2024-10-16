@@ -150,7 +150,7 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
         prepare_result / f"submission_{prepare_result.name}__{datetime.now().strftime('%m_%d_%Y__%H_%M_%S')}.zip"
     )
 
-    def add_files(paths: List[Path]) -> int:
+    def add_files(paths: list[Path]) -> int:
         added = 0
         for path in paths:
             if path.name.startswith("."):

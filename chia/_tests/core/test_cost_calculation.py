@@ -293,7 +293,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     )
 
     coin_spends = result.first()
-    spent_coins: List[Coin] = []
+    spent_coins: list[Coin] = []
     for spend in coin_spends.as_iter():
         parent, puzzle, amount_program, _ = spend.as_iter()
         parent_coin_info = parent.as_atom()

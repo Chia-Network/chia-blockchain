@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 import sys
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Tuple
+from collections.abc import Sequence
 
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
 from chia.cmds.param_types import CliAmount
@@ -84,7 +85,7 @@ async def async_list(
 
 
 def print_coins(
-    target_string: str, coins: List[Tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
+    target_string: str, coins: list[tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
 ) -> None:
     if len(coins) == 0:
         print("\tNo Coins.")
@@ -129,7 +130,7 @@ async def async_combine(
     push: bool,
     condition_valid_times: ConditionValidTimes,
     override: bool,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         try:
             wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
@@ -207,7 +208,7 @@ async def async_split(
     reuse_puzhash: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         try:
             wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
@@ -248,7 +249,7 @@ async def async_split(
             reuse_puzhash=reuse_puzhash,
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
-        transactions: List[TransactionRecord] = (
+        transactions: list[TransactionRecord] = (
             await wallet_client.split_coins(
                 SplitCoins(
                     wallet_id=uint32(wallet_id),

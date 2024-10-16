@@ -141,7 +141,7 @@ class KeyringWrapper:
 
     # Master passphrase support
 
-    def get_cached_master_passphrase(self) -> Tuple[Optional[str], bool]:
+    def get_cached_master_passphrase(self) -> tuple[Optional[str], bool]:
         """
         Returns a tuple including the currently cached passphrase and a bool
         indicating whether the passphrase has been previously validated.

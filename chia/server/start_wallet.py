@@ -30,7 +30,7 @@ SERVICE_NAME = "wallet"
 
 def create_wallet_service(
     root_path: pathlib.Path,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,

@@ -16,7 +16,7 @@ OWNERSHIP_LAYER_MOD = load_clvm_maybe_recompile(
 )
 
 
-def match_ownership_layer_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, List[Program]]:
+def match_ownership_layer_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
     if puzzle.mod == OWNERSHIP_LAYER_MOD:
         return True, list(puzzle.args.as_iter())
     return False, []

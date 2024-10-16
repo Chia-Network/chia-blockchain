@@ -41,7 +41,7 @@ retire_bytes = (
 )
 
 
-def find_retirement(tocheck: List[ConditionWithArgs]) -> bool:
+def find_retirement(tocheck: list[ConditionWithArgs]) -> bool:
     for c in tocheck:
         if c.opcode != ConditionOpcode.CREATE_COIN:
             continue

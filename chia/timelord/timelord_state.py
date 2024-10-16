@@ -44,7 +44,7 @@ class LastState:
         self.last_peak_challenge: bytes32 = constants.GENESIS_CHALLENGE
         self.difficulty: uint64 = constants.DIFFICULTY_STARTING
         self.sub_slot_iters: uint64 = constants.SUB_SLOT_ITERS_STARTING
-        self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [(constants.GENESIS_CHALLENGE, uint128(0))]
+        self.reward_challenge_cache: list[tuple[bytes32, uint128]] = [(constants.GENESIS_CHALLENGE, uint128(0))]
         self.new_epoch = False
         self.passed_ses_height_but_not_yet_included = False
         self.infused_ses = False

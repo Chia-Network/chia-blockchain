@@ -33,4 +33,4 @@ class WalletInfoBackup(Streamable):
     Used for transforming list of WalletInfo objects into bytes.
     """
 
-    wallet_list: List[WalletInfo]
+    wallet_list: list[WalletInfo]

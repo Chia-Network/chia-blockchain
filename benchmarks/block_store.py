@@ -72,7 +72,7 @@ async def run_add_block_benchmark(version: int) -> None:
         if verbose:
             print("profiling add_full_block", end="")
 
-        tx_block_heights: List[uint32] = []
+        tx_block_heights: list[uint32] = []
 
         for height in range(block_height, block_height + NUM_ITERS):
             is_transaction = transaction_block_counter == 0

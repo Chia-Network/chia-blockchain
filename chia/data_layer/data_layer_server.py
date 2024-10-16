@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class DataLayerServer:
     root_path: Path
-    config: Dict[str, Any]
+    config: dict[str, Any]
     log: logging.Logger
     shutdown_event: asyncio.Event
     webserver: Optional[WebServer] = None

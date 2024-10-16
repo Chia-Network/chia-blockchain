@@ -16,9 +16,9 @@ from chia.wallet.lineage_proof import LineageProof
 @dataclass(frozen=True)
 class DIDInfo(Streamable):
     origin_coin: Optional[Coin]  # Coin ID of this coin is our DID
-    backup_ids: List[bytes32]
+    backup_ids: list[bytes32]
     num_of_backup_ids_needed: uint64
-    parent_info: List[Tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
+    parent_info: list[tuple[bytes32, Optional[LineageProof]]]  # {coin.name(): LineageProof}
     current_inner: Optional[Program]  # represents a Program as bytes
     temp_coin: Optional[Coin]  # partially recovered wallet uses these to hold info
     temp_puzhash: Optional[bytes32]

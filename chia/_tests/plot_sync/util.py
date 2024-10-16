@@ -3,7 +3,8 @@ from __future__ import annotations
 import contextlib
 import time
 from dataclasses import dataclass
-from typing import AsyncIterator, Optional
+from typing import Optional
+from collections.abc import AsyncIterator
 
 from chia._tests.util.split_managers import SplitAsyncManager, split_async_manager
 from chia._tests.util.time_out_assert import time_out_assert

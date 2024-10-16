@@ -60,7 +60,7 @@ class CATLineageStore:
 
         return None
 
-    async def get_all_lineage_proofs(self) -> Dict[bytes32, LineageProof]:
+    async def get_all_lineage_proofs(self) -> dict[bytes32, LineageProof]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(f"SELECT * FROM {self.table_name}")
             rows = await cursor.fetchall()

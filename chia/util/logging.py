@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-from typing import Pattern
+from re import Pattern
 
 
 class TimedDuplicateFilter(logging.Filter):

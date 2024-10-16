@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, Dict, Optional
+from collections.abc import AsyncIterator
 
 import pytest
 
@@ -15,7 +16,7 @@ from chia.util.ints import uint16
 class InvalidCreateCase:
     id: str
     root_path: Optional[Path] = None
-    net_config: Optional[Dict[str, Any]] = None
+    net_config: Optional[dict[str, Any]] = None
     marks: Marks = ()
 
 

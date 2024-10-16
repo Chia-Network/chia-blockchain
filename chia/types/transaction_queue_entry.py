@@ -49,7 +49,7 @@ class TransactionQueueEntry:
     spend_name: bytes32
     peer: Optional[WSChiaConnection] = field(compare=False)
     test: bool = field(compare=False)
-    done: ValuedEvent[Tuple[MempoolInclusionStatus, Optional[Err]]] = field(
+    done: ValuedEvent[tuple[MempoolInclusionStatus, Optional[Err]]] = field(
         default_factory=ValuedEvent,
         compare=False,
     )

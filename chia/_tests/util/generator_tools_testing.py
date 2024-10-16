@@ -20,9 +20,9 @@ def run_and_get_removals_and_additions(
     height: uint32,
     constants: ConsensusConstants = DEFAULT_CONSTANTS,
     mempool_mode: bool = False,
-) -> Tuple[List[bytes32], List[Coin]]:
-    removals: List[bytes32] = []
-    additions: List[Coin] = []
+) -> tuple[list[bytes32], list[Coin]]:
+    removals: list[bytes32] = []
+    additions: list[Coin] = []
 
     assert len(block.transactions_generator_ref_list) == 0
     if not block.is_transaction_block():

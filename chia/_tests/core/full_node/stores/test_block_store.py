@@ -153,7 +153,7 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
         for block in blocks:
             await _validate_and_add_block(bc, block)
             block_records.append(bc.block_record(block.header_hash))
-        tasks: List[asyncio.Task[object]] = []
+        tasks: list[asyncio.Task[object]] = []
 
         for i in range(10000):
             rand_i = random.randint(0, 9)

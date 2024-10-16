@@ -32,7 +32,7 @@ def rand_bytes(num) -> bytes:
 async def test_blocks(default_1000_blocks, with_hints: bool):
     blocks = default_1000_blocks
 
-    hints: List[Tuple[bytes32, bytes]] = []
+    hints: list[tuple[bytes32, bytes]] = []
     for i in range(351):
         hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
 

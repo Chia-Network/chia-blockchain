@@ -24,8 +24,8 @@ class LineageProof(Streamable):
     amount: Optional[uint64] = None
 
     @classmethod
-    def from_program(cls, program: Program, fields: List[LineageProofField]) -> LineageProof:
-        lineage_proof_info: Dict[str, Any] = {}
+    def from_program(cls, program: Program, fields: list[LineageProofField]) -> LineageProof:
+        lineage_proof_info: dict[str, Any] = {}
         field_iter = iter(fields)
         program_iter = program.as_iter()
         for program_value in program_iter:
@@ -45,7 +45,7 @@ class LineageProof(Streamable):
         return LineageProof(**lineage_proof_info)
 
     def to_program(self) -> Program:
-        final_list: List[Any] = []
+        final_list: list[Any] = []
         if self.parent_name is not None:
             final_list.append(self.parent_name)
         if self.inner_puzzle_hash is not None:

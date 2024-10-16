@@ -65,7 +65,7 @@ def test_serialization():
         (0x7FFFFFFFFFFFFFFF, [0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]),
     ],
 )
-def test_name(amount: int, clvm: List[int]) -> None:
+def test_name(amount: int, clvm: list[int]) -> None:
     H1 = bytes32(b"a" * 32)
     H2 = bytes32(b"b" * 32)
 

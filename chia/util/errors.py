@@ -208,14 +208,14 @@ class TimestampError(Exception):
 
 
 class ConsensusError(Exception):
-    def __init__(self, code: Err, errors: List[Any] = []):
+    def __init__(self, code: Err, errors: list[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
 
 
 class ProtocolError(Exception):
-    def __init__(self, code: Err, errors: List[Any] = []):
+    def __init__(self, code: Err, errors: list[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors

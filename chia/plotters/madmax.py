@@ -100,8 +100,8 @@ def get_madmax_version(plotters_root_path: Path):
         return None, f"Failed to determine madmax version: {e} {tb}"
 
 
-def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
-    info: Dict[str, Any] = {"display_name": "madMAx Plotter"}
+def get_madmax_install_info(plotters_root_path: Path) -> Optional[dict[str, Any]]:
+    info: dict[str, Any] = {"display_name": "madMAx Plotter"}
     installed: bool = False
     supported: bool = is_madmax_supported()
 

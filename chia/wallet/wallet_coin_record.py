@@ -56,7 +56,7 @@ class WalletCoinRecord:
     def to_coin_record(self, timestamp: uint64) -> CoinRecord:
         return CoinRecord(self.coin, self.confirmed_block_height, self.spent_block_height, self.coinbase, timestamp)
 
-    def to_json_dict_parsed_metadata(self) -> Dict[str, Any]:
+    def to_json_dict_parsed_metadata(self) -> dict[str, Any]:
         # TODO: Merge wallet_type and wallet_id into `wallet_identifier`, make `spent` an attribute based
         #  on `spent_height` make `WalletCoinRecord` streamable and use Streamable.to_json_dict as base here if we have
         #  streamable enums.

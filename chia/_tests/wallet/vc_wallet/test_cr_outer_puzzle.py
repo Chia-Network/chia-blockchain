@@ -20,7 +20,7 @@ from chia.wallet.vc_wallet.cr_cat_drivers import construct_cr_layer
 
 
 def test_cat_outer_puzzle() -> None:
-    authorized_providers: List[bytes32] = [bytes32([0] * 32), bytes32([0] * 32)]
+    authorized_providers: list[bytes32] = [bytes32([0] * 32), bytes32([0] * 32)]
     proofs_checker: Program = Program.to(None)
     ACS: Program = Program.to(1)
     cr_puzzle: Program = construct_cr_layer(authorized_providers, proofs_checker, ACS)

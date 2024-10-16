@@ -6,7 +6,7 @@ from typing import List
 from chia.simulator.block_tools import get_plot_dir
 
 
-def get_test_plots(sub_dir: str = "") -> List[Path]:
+def get_test_plots(sub_dir: str = "") -> list[Path]:
     path = get_plot_dir()
     if sub_dir != "":
         path = path / sub_dir

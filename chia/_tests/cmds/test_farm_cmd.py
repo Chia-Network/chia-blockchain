@@ -18,7 +18,7 @@ from chia.types.aliases import FarmerService, HarvesterService, WalletService
 @pytest.mark.anyio
 async def test_farm_summary_command(
     capsys: CaptureFixture[str],
-    farmer_one_harvester_simulator_wallet: Tuple[
+    farmer_one_harvester_simulator_wallet: tuple[
         HarvesterService,
         FarmerService,
         SimulatorFullNodeService,
