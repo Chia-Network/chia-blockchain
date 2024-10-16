@@ -109,7 +109,7 @@ class PeakPostProcessingResult:
     mempool_peak_result: List[NewPeakItem]  # The new items from calling MempoolManager.new_peak
     mempool_removals: List[MempoolRemoveInfo]  # The removed mempool items from calling MempoolManager.new_peak
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
-    hints: List[Tuple[bytes32, bytes]]  # The hints added to the DB
+    hints: List[Tuple[bytes32, bytes]]  # The hints for coins affected by the peak
     lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
 
 
@@ -1608,10 +1608,19 @@ class FullNode:
             f"{len(block.transactions_generator_ref_list) if block.transactions_generator else 'No tx'}"
         )
 
+        removal_hints = dict()
+
+        for coin_id, _ in state_change_summary.removals:
+            hints = await self.hint_store.get_hints([coin_id])
+            if len(hints) != 1:
+                continue
+            removal_hints[coin_id] = hints[0]
+
         hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(
             state_change_summary,
             self.subscriptions.has_coin_subscription,
             self.subscriptions.has_puzzle_subscription,
+            removal_hints,
         )
         await self.hint_store.add_hints(hints_to_add)
 
@@ -1676,7 +1685,7 @@ class FullNode:
             mempool_new_peak_result.items,
             mempool_new_peak_result.removals,
             fns_peak_result,
-            hints_to_add,
+            hints_to_add + [(coin_id, hint) for coin_id, hint in removal_hints.items()],
             lookup_coin_ids,
         )
 

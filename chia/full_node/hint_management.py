@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from chia.consensus.blockchain import StateChangeSummary
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -10,7 +10,11 @@ def get_hints_and_subscription_coin_ids(
     state_change_summary: StateChangeSummary,
     has_coin_subscription: Callable[[bytes32], bool],
     has_puzzle_subscription: Callable[[bytes32], bool],
+    removal_hints: Optional[Dict[bytes32, bytes32]] = None,
 ) -> Tuple[List[Tuple[bytes32, bytes]], List[bytes32]]:
+    if removal_hints is None:
+        removal_hints = dict()
+
     # Precondition: all hints passed in are max 32 bytes long
     # Returns the hints that we need to add to the DB, and the coin ids that need to be looked up
 
@@ -33,6 +37,8 @@ def get_hints_and_subscription_coin_ids(
         # Record all coin_ids that we are interested in, that had changes
         add_if_coin_subscription(spend_id)
         add_if_ph_subscription(puzzle_hash, spend_id)
+        if spend_id in removal_hints:
+            add_if_ph_subscription(removal_hints[spend_id], spend_id)
 
     for addition_coin, hint in state_change_summary.additions:
         addition_coin_name = addition_coin.name()
