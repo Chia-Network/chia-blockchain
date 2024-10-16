@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
@@ -102,9 +103,6 @@ class FullNodeRpcApi:
             "/get_network_space": self.get_network_space,
             "/get_additions_and_removals": self.get_additions_and_removals,
             "/get_aggsig_additional_data": self.get_aggsig_additional_data,
-            # this function is just here for backwards-compatibility. It will probably
-            # be removed in the future
-            "/get_initial_freeze_period": self.get_initial_freeze_period,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
             # Coins
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
@@ -156,12 +154,6 @@ class FullNodeRpcApi:
             payloads.append(create_payload_dict(change, change_data, self.service_name, "unfinished_block_info"))
 
         return payloads
-
-    # this function is just here for backwards-compatibility. It will probably
-    # be removed in the future
-    async def get_initial_freeze_period(self, _: Dict[str, Any]) -> EndpointResult:
-        # Mon May 03 2021 17:00:00 GMT+0000
-        return {"INITIAL_FREEZE_END_TIMESTAMP": 1620061200}
 
     async def get_blockchain_state(self, _: Dict[str, Any]) -> EndpointResult:
         """
@@ -477,7 +469,7 @@ class FullNodeRpcApi:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
         spends: List[CoinSpend] = []
-        block_generator = await self.service.blockchain.get_block_generator(full_block)
+        block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": spends}
 
@@ -493,7 +485,7 @@ class FullNodeRpcApi:
         if full_block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
-        block_generator = await self.service.blockchain.get_block_generator(full_block)
+        block_generator = await get_block_generator(self.service.blockchain.lookup_block_generators, full_block)
         if block_generator is None:  # if block is not a transaction block.
             return {"block_spends_with_conditions": []}
 
@@ -774,7 +766,9 @@ class FullNodeRpcApi:
         if block is None or block.transactions_generator is None:
             raise ValueError("Invalid block or block generator")
 
-        block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
+        block_generator: Optional[BlockGenerator] = await get_block_generator(
+            self.service.blockchain.lookup_block_generators, block
+        )
         assert block_generator is not None
 
         spend_info = get_puzzle_and_solution_for_coin(
@@ -865,11 +859,8 @@ class FullNodeRpcApi:
             raise ValueError(f"Request must contain exactly one of {ns}")
 
         if "spend_bundle" in request:
-            spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
-            spend_name = spend_bundle.name()
-            conds: SpendBundleConditions = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_name
-            )
+            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+            conds: SpendBundleConditions = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle)
             cost = conds.cost
         elif "cost" in request:
             cost = request["cost"]

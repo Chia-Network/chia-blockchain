@@ -13,7 +13,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -23,6 +22,7 @@ from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import curry_singleton, get_p2_singleton_puzhash, get_treasury_puzzle
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.singleton import create_singleton_puzzle_hash
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
@@ -1249,7 +1249,7 @@ async def do_spend(
     spends = []
     for coin, puzzle, solution in zip(coins, puzzles, solutions):
         spends.append(make_spend(coin, puzzle, solution))
-    spend_bundle = SpendBundle(spends, AugSchemeMPL.aggregate([]))
+    spend_bundle = WalletSpendBundle(spends, AugSchemeMPL.aggregate([]))
     result = await sim_client.push_tx(spend_bundle)
     await sim.farm_block()
     return result

@@ -13,6 +13,7 @@ import click
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.consensus.get_block_generator import get_block_generator
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -80,7 +81,7 @@ async def main(db_path: Path) -> None:
             )
 
             start_time = monotonic()
-            gen = await blockchain.get_block_generator(block)
+            gen = await get_block_generator(blockchain.lookup_block_generators, block)
             one_call = monotonic() - start_time
             timing += one_call
             assert gen is not None

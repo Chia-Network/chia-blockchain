@@ -14,7 +14,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.spend_bundle import SpendBundle, estimate_fees
+from chia.types.spend_bundle import estimate_fees
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -52,6 +52,7 @@ from chia.wallet.wallet_protocol import WalletProtocol
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clsp")
 
@@ -186,7 +187,7 @@ class TradeManager:
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
         # If any of our settlement_payments were spent, this offer was a success!
         if set(our_addition_ids) == set(coin_state_names):
-            height = coin_states[0].created_height
+            height = coin_state.spent_height
             assert height is not None
             await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, index=height)
             tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(offer, False)
@@ -311,18 +312,15 @@ class TradeManager:
                     )
                 else:
                     announcement_conditions = tuple()
+                async with action_scope.use() as interface:
+                    interface.side_effects.selected_coins.append(coin)
                 # This should probably not switch on whether or not we're spending a XCH but it has to for now
                 if wallet.type() == WalletType.STANDARD_WALLET:
                     assert isinstance(wallet, Wallet)
                     if fee_to_pay > coin.amount:
                         selected_coins: Set[Coin] = await wallet.select_coins(
                             uint64(fee_to_pay - coin.amount),
-                            action_scope.config.tx_config.coin_selection_config.override(
-                                excluded_coin_ids=[
-                                    *action_scope.config.tx_config.coin_selection_config.excluded_coin_ids,
-                                    coin.name(),
-                                ],
-                            ),
+                            action_scope,
                         )
                         selected_coins.add(coin)
                     else:
@@ -381,7 +379,7 @@ class TradeManager:
                     confirmed=False,
                     sent=uint32(10),
                     spend_bundle=None,
-                    additions=cancellation_additions,
+                    additions=[],
                     removals=[coin],
                     wallet_id=wallet.id(),
                     sent_to=[],
@@ -402,7 +400,7 @@ class TradeManager:
                 interface.side_effects.transactions = [
                     tx for tx in interface.side_effects.transactions if tx.name not in all_tx_names
                 ]
-                final_spend_bundle = SpendBundle.aggregate(
+                final_spend_bundle = WalletSpendBundle.aggregate(
                     [tx.spend_bundle for tx in all_txs if tx.spend_bundle is not None]
                 )
                 interface.side_effects.transactions.append(
@@ -562,7 +560,7 @@ class TradeManager:
                         coins_to_offer[id] = await wallet.get_coins_to_offer(
                             asset_id=asset_id,
                             amount=uint64(amount_to_select),
-                            coin_selection_config=action_scope.config.tx_config.coin_selection_config,
+                            action_scope=action_scope,
                         )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
@@ -669,7 +667,7 @@ class TradeManager:
             async with action_scope.use() as interface:
                 interface.side_effects.transactions.extend(all_transactions)
 
-            total_spend_bundle = SpendBundle.aggregate(
+            total_spend_bundle = WalletSpendBundle.aggregate(
                 [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
             )
 
@@ -704,7 +702,7 @@ class TradeManager:
 
     async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
         if validate:
-            final_spend_bundle: SpendBundle = offer.to_valid_spend()
+            final_spend_bundle: WalletSpendBundle = offer.to_valid_spend()
             hint_dict: Dict[bytes32, bytes32] = {}
             additions_dict: Dict[bytes32, Coin] = {}
             for hinted_coins, _ in (
@@ -887,7 +885,7 @@ class TradeManager:
             )
         self.log.info("COMPLETE OFFER: %s", complete_offer.to_bech32())
         assert complete_offer.is_valid()
-        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend(
+        final_spend_bundle: WalletSpendBundle = complete_offer.to_valid_spend(
             solver=Solver({**valid_spend_solver.info, **solver.info})
         )
         await self.maybe_create_wallets_for_offer(complete_offer)
@@ -911,29 +909,9 @@ class TradeManager:
 
         await self.save_trade(trade_record, offer)
 
-        # Dummy transaction for the sake of the wallet push
-        push_tx = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=bytes32([1] * 32),
-            amount=uint64(0),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=final_spend_bundle,
-            additions=final_spend_bundle.additions(),
-            removals=final_spend_bundle.removals(),
-            wallet_id=uint32(0),
-            sent_to=[],
-            trade_id=bytes32([1] * 32),
-            type=uint32(TransactionType.OUTGOING_TRADE.value),
-            name=final_spend_bundle.name(),
-            memos=[],
-            valid_times=ConditionValidTimes(),
-        )
-
         async with action_scope.use() as interface:
-            interface.side_effects.transactions.extend([push_tx, *tx_records])
+            interface.side_effects.transactions.extend(tx_records)
+            interface.side_effects.extra_spends.append(final_spend_bundle)
 
         return trade_record
 

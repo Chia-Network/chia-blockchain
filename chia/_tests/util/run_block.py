@@ -61,7 +61,7 @@ def npc_to_dict(npc: NPC) -> Dict[str, Any]:
 
 
 def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> List[CAT]:
-    block_args = [bytes(a) for a in block_generator.generator_refs]
+    block_args = block_generator.generator_refs
     cost, block_result = block_generator.program.run_with_cost(max_cost, [DESERIALIZE_MOD, block_args])
 
     coin_spends = block_result.first()
@@ -126,18 +126,20 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
     return cat_list
 
 
-def ref_list_to_args(ref_list: List[uint32], root_path: Path) -> List[SerializedProgram]:
+def ref_list_to_args(ref_list: List[uint32], root_path: Path) -> List[bytes]:
     args = []
     for height in ref_list:
         with open(root_path / f"{height}.json", "rb") as f:
             program_str = json.load(f)["block"]["transactions_generator"]
-            args.append(SerializedProgram.fromhex(program_str))
+            # we need to SerializedProgram to handle possible leading 0x in the
+            # hex string
+            args.append(bytes(SerializedProgram.fromhex(program_str)))
     return args
 
 
 def run_generator_with_args(
     generator_program_hex: str,
-    generator_args: List[SerializedProgram],
+    generator_args: List[bytes],
     constants: ConsensusConstants,
     cost: uint64,
 ) -> List[CAT]:

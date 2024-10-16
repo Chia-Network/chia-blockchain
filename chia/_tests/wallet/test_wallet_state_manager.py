@@ -6,22 +6,23 @@ from typing import AsyncIterator, List
 import pytest
 from chia_rs import G2Element
 
-from chia._tests.environments.wallet import WalletTestFramework
+from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.wallet_request_types import PushTransactions
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
@@ -115,12 +116,6 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     env = wallet_environments.environments[0]
     wsm = env.wallet_state_manager
 
-    coins = list(
-        await wsm.main_wallet.select_coins(
-            uint64(2_000_000_000_000), coin_selection_config=wallet_environments.tx_config.coin_selection_config
-        )
-    )
-
     async with wsm.new_action_scope(
         wallet_environments.tx_config,
         push=False,
@@ -128,6 +123,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
         sign=False,
         extra_spends=[],
     ) as action_scope:
+        coins = list(await wsm.main_wallet.select_coins(uint64(2_000_000_000_000), action_scope))
         await wsm.main_wallet.generate_signed_transaction(
             uint64(0),
             bytes32([0] * 32),
@@ -143,7 +139,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
 
     created_txs = action_scope.side_effects.transactions
 
-    def flatten_spend_bundles(txs: List[TransactionRecord]) -> List[SpendBundle]:
+    def flatten_spend_bundles(txs: List[TransactionRecord]) -> List[WalletSpendBundle]:
         return [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
 
     assert (
@@ -163,7 +159,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     extra_coin_spend = make_spend(
         Coin(bytes32(b"1" * 32), bytes32(b"1" * 32), uint64(0)), Program.to(1), Program.to([])
     )
-    extra_spend = SpendBundle([extra_coin_spend], G2Element())
+    extra_spend = WalletSpendBundle([extra_coin_spend], G2Element())
 
     new_txs = await wsm.add_pending_transactions(
         created_txs,
@@ -208,3 +204,56 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
     )
 
     await wallet_environments.full_node.wait_transaction_records_entered_mempool(new_txs)
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [{"num_environments": 2, "blocks_needed": [1, 1], "trusted": True, "reuse_puzhash": True}],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework) -> None:
+    env_1 = wallet_environments.environments[0]
+    env_2 = wallet_environments.environments[1]
+
+    # Some transaction, doesn't matter what
+    async with env_1.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=False) as action_scope:
+        await env_1.xch_wallet.generate_signed_transaction(
+            uint64(1),
+            await env_1.xch_wallet.get_puzzle_hash(new=False),
+            action_scope,
+        )
+
+    await env_2.rpc_client.push_transactions(
+        PushTransactions(  # pylint: disable=unexpected-keyword-arg
+            transactions=action_scope.side_effects.transactions,
+            sign=False,
+        ),
+        wallet_environments.tx_config,
+    )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={},
+                post_block_balance_updates={
+                    1: {
+                        "unspent_coin_count": 1,  # We just split a coin so no other balance changes
+                    }
+                },
+            ),
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "pending_coin_removal_count": 1,  # not sure if this is desirable
+                    }
+                },
+                post_block_balance_updates={
+                    1: {
+                        "pending_coin_removal_count": -1,
+                    }
+                },
+            ),
+        ]
+    )

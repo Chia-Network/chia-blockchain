@@ -12,7 +12,7 @@ from chia.wallet.transaction_record import TransactionRecord
 
 def test_tx_out_cmd() -> None:
     @click.command()
-    @tx_out_cmd
+    @tx_out_cmd()
     def test_cmd(**kwargs: Any) -> List[TransactionRecord]:
         with open("./temp.push", "w") as file:
             file.write(str(kwargs["push"]))

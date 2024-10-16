@@ -16,7 +16,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions_with_cost
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
@@ -51,7 +50,6 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -59,6 +57,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -70,7 +69,7 @@ CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
-def not_ephemeral_additions(sp: SpendBundle) -> List[Coin]:
+def not_ephemeral_additions(sp: WalletSpendBundle) -> List[Coin]:
     removals: Set[Coin] = set()
     for cs in sp.coin_spends:
         removals.add(cs.coin)
@@ -511,7 +510,7 @@ class CATWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -525,14 +524,16 @@ class CATWallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-        coins = await select_coins(
-            spendable_amount,
-            coin_selection_config,
-            spendable_coins,
-            unconfirmed_removals,
-            self.log,
-            uint128(amount),
-        )
+        async with action_scope.use() as interface:
+            coins = await select_coins(
+                spendable_amount,
+                action_scope.config.adjust_for_side_effects(interface.side_effects).tx_config.coin_selection_config,
+                spendable_coins,
+                unconfirmed_removals,
+                self.log,
+                uint128(amount),
+            )
+            interface.side_effects.selected_coins.extend([*coins])
         assert sum(c.amount for c in coins) >= amount
         return coins
 
@@ -576,7 +577,7 @@ class CATWallet:
             if fee > amount_to_claim:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope.config.tx_config.coin_selection_config,
+                    action_scope,
                 )
                 origin_id = list(chia_coins)[0].name()
                 await self.standard_wallet.generate_signed_transaction(
@@ -592,7 +593,7 @@ class CATWallet:
             else:
                 chia_coins = await self.standard_wallet.select_coins(
                     fee,
-                    action_scope.config.tx_config.coin_selection_config,
+                    action_scope,
                 )
                 origin_id = list(chia_coins)[0].name()
                 selected_amount = sum(c.amount for c in chia_coins)
@@ -632,7 +633,7 @@ class CATWallet:
         cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
         coins: Optional[Set[Coin]] = None,
         extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> SpendBundle:
+    ) -> WalletSpendBundle:
         if cat_discrepancy is not None:
             extra_delta, tail_reveal, tail_solution = cat_discrepancy
         else:
@@ -642,7 +643,7 @@ class CATWallet:
         if coins is None:
             cat_coins = await self.select_coins(
                 uint64(starting_amount),
-                action_scope.config.tx_config.coin_selection_config,
+                action_scope,
             )
         else:
             cat_coins = coins
@@ -852,12 +853,14 @@ class CATWallet:
         self,
         asset_id: Optional[bytes32],
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         balance = await self.get_confirmed_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
-        return await self.select_coins(amount, coin_selection_config)
+        # We need to sandbox this because this method isn't supposed to lock up the coins
+        async with self.wallet_state_manager.new_action_scope(action_scope.config.tx_config) as sandbox:
+            return await self.select_coins(amount, sandbox)
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         return (

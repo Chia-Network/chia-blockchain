@@ -110,7 +110,7 @@ class LastState:
         reward_challenge: Optional[bytes32] = self.get_challenge(Chain.REWARD_CHAIN)
         assert reward_challenge is not None  # Reward chain always has VDFs
         self.reward_challenge_cache.append((reward_challenge, self.total_iters))
-        log.info(f"Updated timelord peak to {reward_challenge}, total iters: {self.total_iters}")
+        log.info(f"Updated timelord peak to {reward_challenge.hex()}, total iters: {self.total_iters}")
         while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             self.reward_challenge_cache.pop(0)
 

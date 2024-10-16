@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
-from typing import List, Optional, Tuple
-
-from chia_rs import Coin
+from typing import Tuple
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
-from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, get_bytes32
+from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
+from chia.rpc.wallet_request_types import CombineCoins, CombineCoinsResponse, SplitCoins, SplitCoinsResponse
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.coin_record import CoinRecord
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, CoinSelectionConfig, TXConfig
+
+test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
 # Coin Commands
 
@@ -33,7 +35,7 @@ def test_coins_get_info(capsys: object, get_test_cli_clients: Tuple[TestRpcClien
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_wallets": [(None,)],
-        "get_synced": [()],
+        "get_sync_status": [()],
         "get_spendable_coins": [
             (
                 1,
@@ -54,18 +56,14 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
 
     # set RPC Client
     class CoinsCombineRpcClient(TestWalletRpcClient):
-        async def select_coins(
+        async def combine_coins(
             self,
-            amount: int,
-            wallet_id: int,
-            coin_selection_config: CoinSelectionConfig,
-        ) -> List[Coin]:
-            self.add_to_log("select_coins", (amount, wallet_id, coin_selection_config))
-            return [
-                Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000)),
-                Coin(get_bytes32(3), get_bytes32(4), uint64(200000000000)),
-                Coin(get_bytes32(5), get_bytes32(6), uint64(300000000000)),
-            ]
+            args: CombineCoins,
+            tx_config: TXConfig,
+            timelock_info: ConditionValidTimes,
+        ) -> CombineCoinsResponse:
+            self.add_to_log("combine_coins", (args, tx_config, timelock_info))
+            return CombineCoinsResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = CoinsCombineRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -83,80 +81,50 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         "0.2",
         "--exclude-amount",
         "0.3",
+        "--target-amount",
+        "1",
+        "--input-coin",
+        bytes(32).hex(),
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     # these are various things that should be in the output
     assert_list = [
-        "Combining 2 coins.",
-        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{get_bytes32(2).hex()}",
-    ]
-    amount_assert_list = [
-        "Combining 3 coins.",
-        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{get_bytes32(2).hex()}",
+        "Transactions would combine up to 500 coins",
+        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{STD_TX.name.hex()}",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    run_cli_command_and_assert(capsys, root_dir, command_args + ["-a1"], amount_assert_list)
+    expected_tx_config = TXConfig(
+        min_coin_amount=uint64(100_000_000_000),
+        max_coin_amount=uint64(200_000_000_000),
+        excluded_coin_amounts=[uint64(300_000_000_000)],
+        excluded_coin_ids=[],
+        reuse_puzhash=False,
+    )
+    expected_request = CombineCoins(
+        wallet_id=uint32(1),
+        number_of_coins=uint16(500),
+        largest_first=True,
+        target_coin_ids=[bytes32([0] * 32)],
+        target_coin_amount=uint64(1_000_000_000_000),
+        fee=uint64(1_000_000_000),
+        push=False,
+    )
     expected_calls: logType = {
-        "get_wallets": [(None,), (None,)],
-        "get_synced": [(), ()],
-        "get_spendable_coins": [
+        "get_wallets": [(None,)],
+        "get_sync_status": [()],
+        "combine_coins": [
             (
-                1,
-                CoinSelectionConfig(
-                    min_coin_amount=uint64(100000000000),
-                    max_coin_amount=uint64(200000000000),
-                    excluded_coin_amounts=[uint64(300000000000), uint64(0)],
-                    excluded_coin_ids=[],
-                ),
-            )
-        ],
-        "select_coins": [
-            (
-                1001000000000,
-                1,
-                CoinSelectionConfig(
-                    excluded_coin_ids=[],
-                    min_coin_amount=uint64(100000000000),
-                    max_coin_amount=uint64(200000000000),
-                    excluded_coin_amounts=[uint64(300000000000), uint64(1000000000000)],
-                ),
-            )
-        ],
-        "get_next_address": [(1, False), (1, False)],
-        "send_transaction_multi": [
-            (
-                1,
-                [{"amount": 1469120000, "puzzle_hash": get_bytes32(0)}],
-                TXConfig(
-                    min_coin_amount=uint64(100000000000),
-                    max_coin_amount=uint64(200000000000),
-                    excluded_coin_amounts=[uint64(300000000000), uint64(0)],
-                    excluded_coin_ids=[],
-                    reuse_puzhash=False,
-                ),
-                [
-                    Coin(get_bytes32(1), get_bytes32(2), uint64(1234560000)),
-                    Coin(get_bytes32(3), get_bytes32(4), uint64(1234560000)),
-                ],
-                1000000000,
-                True,
+                expected_request,
+                expected_tx_config,
+                test_condition_valid_times,
             ),
             (
-                1,
-                [{"amount": 599000000000, "puzzle_hash": get_bytes32(1)}],
-                TXConfig(
-                    min_coin_amount=uint64(100000000000),
-                    max_coin_amount=uint64(200000000000),
-                    excluded_coin_amounts=[uint64(300000000000), uint64(1000000000000)],
-                    excluded_coin_ids=[],
-                    reuse_puzhash=False,
-                ),
-                [
-                    Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000)),
-                    Coin(get_bytes32(3), get_bytes32(4), uint64(200000000000)),
-                    Coin(get_bytes32(5), get_bytes32(6), uint64(300000000000)),
-                ],
-                1000000000,
-                True,
+                dataclasses.replace(expected_request, push=True),
+                expected_tx_config,
+                test_condition_valid_times,
             ),
         ],
     }
@@ -168,23 +136,11 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
 
     # set RPC Client
     class CoinsSplitRpcClient(TestWalletRpcClient):
-        async def get_coin_records_by_names(
-            self,
-            names: List[bytes32],
-            include_spent_coins: bool = True,
-            start_height: Optional[int] = None,
-            end_height: Optional[int] = None,
-        ) -> List[CoinRecord]:
-            self.add_to_log("get_coin_records_by_names", (names, include_spent_coins, start_height, end_height))
-            return [
-                CoinRecord(
-                    Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000)),
-                    uint32(123456),
-                    uint32(0),
-                    False,
-                    uint64(0),
-                ),
-            ]
+        async def split_coins(
+            self, args: SplitCoins, tx_config: TXConfig, timelock_info: ConditionValidTimes
+        ) -> SplitCoinsResponse:
+            self.add_to_log("split_coins", (args, tx_config, timelock_info))
+            return SplitCoinsResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = CoinsSplitRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -199,26 +155,32 @@ def test_coins_split(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
         "-n10",
         "-a0.0000001",
         f"-t{target_coin_id.hex()}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     # these are various things that should be in the output
     assert_list = [
-        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{get_bytes32(2).hex()}",
+        f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{STD_TX.name.hex()}",
         "WARNING: The amount per coin: 1E-7 is less than the dust threshold: 1e-06.",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "get_wallets": [(None,)],
-        "get_synced": [()],
-        "get_coin_records_by_names": [([target_coin_id], True, None, None)],
-        "get_next_address": [(1, True) for i in range(10)],
-        "send_transaction_multi": [
+        "get_sync_status": [()],
+        "split_coins": [
             (
-                1,
-                [{"amount": 100000, "puzzle_hash": bytes32([i] * 32)} for i in range(10)],
+                SplitCoins(
+                    wallet_id=uint32(1),
+                    number_of_coins=uint16(10),
+                    amount_per_coin=uint64(100_000),
+                    target_coin_id=target_coin_id,
+                    fee=uint64(1_000_000_000),
+                    push=True,
+                ),
                 DEFAULT_TX_CONFIG,
-                [Coin(get_bytes32(1), get_bytes32(2), uint64(100000000000))],
-                1000000000,
-                True,
+                test_condition_valid_times,
             )
         ],
     }

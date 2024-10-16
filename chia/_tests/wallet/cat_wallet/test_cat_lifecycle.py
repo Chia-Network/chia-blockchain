@@ -14,7 +14,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
@@ -25,6 +24,7 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.tails import DelegatedLimitations, EverythingWithSig, GenesisById, GenesisByPuzhash
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 acs = Program.to(1)
 acs_ph = acs.get_tree_hash()
@@ -42,7 +42,7 @@ async def do_spend(
     reveal_limitations_program: bool = True,
     signatures: List[G2Element] = [],
     extra_deltas: Optional[List[int]] = None,
-    additional_spends: List[SpendBundle] = [],
+    additional_spends: List[WalletSpendBundle] = [],
     limitations_solutions: Optional[List[Program]] = None,
     cost_logger: Optional[CostLogger] = None,
     cost_log_msg: str = "",
@@ -71,8 +71,8 @@ async def do_spend(
 
     spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cat_list)
     agg_sig = AugSchemeMPL.aggregate(signatures)
-    final_bundle = SpendBundle.aggregate(
-        [*additional_spends, spend_bundle, SpendBundle([], agg_sig)]  # "Signing" the spend bundle
+    final_bundle = WalletSpendBundle.aggregate(
+        [*additional_spends, spend_bundle, WalletSpendBundle([], agg_sig)]  # "Signing" the spend bundle
     )
     if cost_logger is not None:
         final_bundle = cost_logger.add_cost(cost_log_msg, final_bundle)
@@ -201,7 +201,7 @@ async def test_cat_mod(cost_logger: CostLogger, consensus_mode: ConsensusMode) -
         # Mint some value
         await sim.farm_block(acs_ph)
         acs_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
-        acs_bundle = SpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
+        acs_bundle = WalletSpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
         await do_spend(
             sim,
             sim_client,
@@ -297,7 +297,9 @@ async def test_genesis_by_id(cost_logger: CostLogger, consensus_mode: ConsensusM
         cat_ph = cat_puzzle.get_tree_hash()
 
         await sim_client.push_tx(
-            SpendBundle([make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element())
+            WalletSpendBundle(
+                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
+            )
         )
         await sim.farm_block()
 
@@ -327,7 +329,9 @@ async def test_genesis_by_puzhash(cost_logger: CostLogger, consensus_mode: Conse
         cat_ph = cat_puzzle.get_tree_hash()
 
         await sim_client.push_tx(
-            SpendBundle([make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element())
+            WalletSpendBundle(
+                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
+            )
         )
         await sim.farm_block()
 
@@ -400,7 +404,7 @@ async def test_everything_with_signature(cost_logger: CostLogger, consensus_mode
         # Need something to fund the minting
         await sim.farm_block(acs_ph)
         acs_coin = (await sim_client.get_coin_records_by_puzzle_hash(acs_ph, include_spent_coins=False))[0].coin
-        acs_bundle = SpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
+        acs_bundle = WalletSpendBundle([make_spend(acs_coin, acs, Program.to([]))], G2Element())
 
         await do_spend(
             sim,
@@ -431,7 +435,9 @@ async def test_delegated_tail(cost_logger: CostLogger, consensus_mode: Consensus
         cat_ph = cat_puzzle.get_tree_hash()
 
         await sim_client.push_tx(
-            SpendBundle([make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element())
+            WalletSpendBundle(
+                [make_spend(starting_coin, acs, Program.to([[51, cat_ph, starting_coin.amount]]))], G2Element()
+            )
         )
         await sim.farm_block()
 

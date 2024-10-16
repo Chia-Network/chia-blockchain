@@ -6,10 +6,11 @@ from typing import List, Optional, Sequence
 import click
 
 from chia.cmds import options
-from chia.cmds.cmds_util import tx_out_cmd
-from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount, cli_amount_none
+from chia.cmds.cmds_util import coin_selection_args, tx_config_args, tx_out_cmd
+from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -30,32 +31,7 @@ def coins_cmd(ctx: click.Context) -> None:
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-u", "--show-unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
-@click.option(
-    "--min-amount",
-    help="Ignore coins worth less then this much XCH or CAT units",
-    type=AmountParamType(),
-    default=cli_amount_none,
-)
-@click.option(
-    "--max-amount",
-    help="Ignore coins worth more then this much XCH or CAT units",
-    type=AmountParamType(),
-    default=cli_amount_none,
-)
-@click.option(
-    "--exclude-coin",
-    "coins_to_exclude",
-    multiple=True,
-    help="prevent this coin from being included.",
-    type=Bytes32ParamType(),
-)
-@click.option(
-    "--exclude-amount",
-    "amounts_to_exclude",
-    multiple=True,
-    type=AmountParamType(),
-    help="Exclude any coins with this XCH or CAT amount from being included.",
-)
+@coin_selection_args
 @click.option(
     "--paginate/--no-paginate",
     default=None,
@@ -68,8 +44,8 @@ def list_cmd(
     fingerprint: int,
     id: int,
     show_unconfirmed: bool,
-    min_amount: CliAmount,
-    max_amount: CliAmount,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
     coins_to_exclude: Sequence[bytes32],
     amounts_to_exclude: Sequence[CliAmount],
     paginate: Optional[bool],
@@ -81,8 +57,8 @@ def list_cmd(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
-            max_coin_amount=max_amount,
-            min_coin_amount=min_amount,
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
             excluded_amounts=amounts_to_exclude,
             excluded_coin_ids=coins_to_exclude,
             show_unconfirmed=show_unconfirmed,
@@ -107,20 +83,7 @@ def list_cmd(
     help="Select coins until this amount (in XCH or CAT) is reached. \
     Combine all selected coins into one coin, which will have a value of at least target-amount",
     type=AmountParamType(),
-    default=CliAmount(mojos=True, amount=uint64(0)),
-)
-@click.option(
-    "--min-amount",
-    help="Ignore coins worth less then this much XCH or CAT units",
-    type=AmountParamType(),
-    default=cli_amount_none,
-)
-@click.option(
-    "--exclude-amount",
-    "amounts_to_exclude",
-    multiple=True,
-    type=AmountParamType(),
-    help="Exclude any coins with this XCH or CAT amount from being included.",
+    default=None,
 )
 @click.option(
     "-n",
@@ -130,12 +93,7 @@ def list_cmd(
     show_default=True,
     help="The number of coins we are combining.",
 )
-@click.option(
-    "--max-amount",
-    help="Ignore coins worth more then this much XCH or CAT units",
-    type=AmountParamType(),
-    default=cli_amount_none,
-)
+@tx_config_args
 @options.create_fee()
 @click.option(
     "--input-coin",
@@ -150,20 +108,23 @@ def list_cmd(
     default=False,
     help="Sort coins from largest to smallest or smallest to largest.",
 )
-@tx_out_cmd
+@tx_out_cmd()
 def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
-    target_amount: CliAmount,
-    min_amount: CliAmount,
+    target_amount: Optional[CliAmount],
+    min_coin_amount: CliAmount,
     amounts_to_exclude: Sequence[CliAmount],
+    coins_to_exclude: Sequence[bytes32],
     number_of_coins: int,
-    max_amount: CliAmount,
+    max_coin_amount: CliAmount,
     fee: uint64,
     input_coins: Sequence[bytes32],
     largest_first: bool,
+    reuse: bool,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .coin_funcs import async_combine
 
@@ -173,14 +134,17 @@ def combine_cmd(
             fingerprint=fingerprint,
             wallet_id=id,
             fee=fee,
-            max_coin_amount=max_amount,
-            min_coin_amount=min_amount,
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
             excluded_amounts=amounts_to_exclude,
+            coins_to_exclude=coins_to_exclude,
+            reuse_puzhash=reuse,
             number_of_coins=number_of_coins,
             target_coin_amount=target_amount,
             target_coin_ids=input_coins,
             largest_first=largest_first,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )
 
@@ -206,12 +170,15 @@ def combine_cmd(
 @click.option(
     "-a",
     "--amount-per-coin",
-    help="The amount of each newly created coin, in XCH",
+    help="The amount of each newly created coin, in XCH or CAT units",
     type=AmountParamType(),
     required=True,
 )
-@click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")
-@tx_out_cmd
+@click.option(
+    "-t", "--target-coin-id", type=Bytes32ParamType(), required=True, help="The coin id of the coin we are splitting."
+)
+@tx_config_args
+@tx_out_cmd()
 def split_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -219,8 +186,14 @@ def split_cmd(
     number_of_coins: int,
     fee: uint64,
     amount_per_coin: CliAmount,
-    target_coin_id: str,
+    target_coin_id: bytes32,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    amounts_to_exclude: Sequence[CliAmount],
+    coins_to_exclude: Sequence[bytes32],
+    reuse: bool,
     push: bool,
+    condition_valid_times: ConditionValidTimes,
 ) -> List[TransactionRecord]:
     from .coin_funcs import async_split
 
@@ -230,9 +203,15 @@ def split_cmd(
             fingerprint=fingerprint,
             wallet_id=id,
             fee=fee,
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
+            excluded_amounts=amounts_to_exclude,
+            coins_to_exclude=coins_to_exclude,
+            reuse_puzhash=reuse,
             number_of_coins=number_of_coins,
             amount_per_coin=amount_per_coin,
-            target_coin_id_str=target_coin_id,
+            target_coin_id=target_coin_id,
             push=push,
+            condition_valid_times=condition_valid_times,
         )
     )

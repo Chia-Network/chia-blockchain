@@ -19,10 +19,11 @@ from chia._tests.connection_utils import add_dummy_connection, connect_and_get_p
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.core.node_height import node_height_at_least
-from chia._tests.util.misc import wallet_height_at_least
+from chia._tests.util.misc import add_blocks_in_batches, wallet_height_at_least
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
+from chia.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
@@ -59,7 +60,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.batches import to_batches
+from chia.types.validation_state import ValidationState
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -67,6 +68,7 @@ from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -125,23 +127,11 @@ async def test_sync_no_farmer(
     blocks = default_1000_blocks
 
     # full node 1 has the complete chain
-    for block_batch in to_batches(blocks, 64):
-        success, change, err = await full_node_1.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
     target_peak = full_node_1.full_node.blockchain.get_peak()
 
     # full node 2 is behind by 800 blocks
-    for block_batch in to_batches(blocks[:-800], 64):
-        success, change, err = await full_node_2.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(blocks[:-800], full_node_2.full_node)
     # connect the nodes and wait for node 2 to sync up to node 1
     await connect_and_get_peer(server_1, server_2, self_hostname)
 
@@ -338,7 +328,7 @@ class TestFullNodeBlockCompression:
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
-        extra_spend = SpendBundle(
+        extra_spend = WalletSpendBundle(
             [
                 make_spend(
                     next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
@@ -348,7 +338,7 @@ class TestFullNodeBlockCompression:
             ],
             G2Element(),
         )
-        new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
+        new_spend_bundle = WalletSpendBundle.aggregate([tr.spend_bundle, extra_spend])
         new_tr = dataclasses.replace(
             tr,
             spend_bundle=new_spend_bundle,
@@ -386,7 +376,7 @@ class TestFullNodeBlockCompression:
                 action_scope,
             )
         [tr] = action_scope.side_effects.transactions
-        extra_spend = SpendBundle(
+        extra_spend = WalletSpendBundle(
             [
                 make_spend(
                     next(coin for coin in tr.additions if coin.puzzle_hash == Program.to(1).get_tree_hash()),
@@ -396,7 +386,7 @@ class TestFullNodeBlockCompression:
             ],
             G2Element(),
         )
-        new_spend_bundle = SpendBundle.aggregate([tr.spend_bundle, extra_spend])
+        new_spend_bundle = WalletSpendBundle.aggregate([tr.spend_bundle, extra_spend])
         new_tr = dataclasses.replace(
             tr,
             spend_bundle=new_spend_bundle,
@@ -430,30 +420,42 @@ class TestFullNodeBlockCompression:
         assert height == len(all_blocks) - 1
 
         if test_reorgs:
+            ssi = bt.constants.SUB_SLOT_ITERS_STARTING
+            diff = bt.constants.DIFFICULTY_STARTING
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
                 for reorg_block in reog_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, reorg_block)
                 for i in range(1, height):
-                    for batch_size in range(1, height, 3):
-                        results = await blockchain.pre_validate_blocks_multiprocessing(
-                            all_blocks[:i], {}, batch_size, validate_signatures=False
-                        )
-                        assert results is not None
-                        for result in results:
-                            assert result.error is None
+                    results = await pre_validate_blocks_multiprocessing(
+                        blockchain.constants,
+                        blockchain,
+                        all_blocks[:i],
+                        blockchain.pool,
+                        {},
+                        ValidationState(ssi, diff, None),
+                        validate_signatures=False,
+                    )
+                    assert results is not None
+                    for result in results:
+                        assert result.error is None
 
             for r in range(0, len(all_blocks), 3):
                 for block in all_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, block)
                 for i in range(1, height):
-                    for batch_size in range(1, height, 3):
-                        results = await blockchain.pre_validate_blocks_multiprocessing(
-                            all_blocks[:i], {}, batch_size, validate_signatures=False
-                        )
-                        assert results is not None
-                        for result in results:
-                            assert result.error is None
+                    results = await pre_validate_blocks_multiprocessing(
+                        blockchain.constants,
+                        blockchain,
+                        all_blocks[:i],
+                        blockchain.pool,
+                        {},
+                        ValidationState(ssi, diff, None),
+                        validate_signatures=False,
+                    )
+                    assert results is not None
+                    for result in results:
+                        assert result.error is None
 
 
 class TestFullNodeProtocol:
@@ -736,9 +738,8 @@ class TestFullNodeProtocol:
         assert entry is not None
         result = entry.result
         assert result is not None
-        assert result.npc_result is not None
-        assert result.npc_result.conds is not None
-        assert result.npc_result.conds.cost > 0
+        assert result.conds is not None
+        assert result.conds.cost > 0
 
         assert not full_node_1.full_node.blockchain.contains_block(block.header_hash)
         assert block.transactions_generator is not None
@@ -874,7 +875,7 @@ class TestFullNodeProtocol:
         included_tx = 0
         not_included_tx = 0
         seen_bigger_transaction_has_high_fee = False
-        successful_bundle: Optional[SpendBundle] = None
+        successful_bundle: Optional[WalletSpendBundle] = None
 
         # Fill mempool
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -902,7 +903,7 @@ class TestFullNodeProtocol:
                     uint64(500), receiver_puzzlehash, coin_records[0].coin, fee=fee
                 )
             ]
-            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            spend_bundle = WalletSpendBundle.aggregate(spend_bundles)
             assert estimate_fees(spend_bundle) == fee
             respond_transaction = wallet_protocol.SendTransaction(spend_bundle)
 
@@ -1311,7 +1312,7 @@ class TestFullNodeProtocol:
         for idx in range(0, 6):
             # we include a different transaction in each block. This makes the
             # foliage different in each of them, but the reward block (plot) the same
-            tx: SpendBundle = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
+            tx = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
 
             # note that we use the same chain to build the new block on top of every time
             block = bt.get_consecutive_blocks(
@@ -1514,7 +1515,7 @@ class TestFullNodeProtocol:
         blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
 
         coin = blocks[-1].get_included_reward_coins()[0]
-        tx: SpendBundle = wallet_a.generate_signed_transaction(10000, wallet_receiver.get_new_puzzlehash(), coin)
+        tx = wallet_a.generate_signed_transaction(10000, wallet_receiver.get_new_puzzlehash(), coin)
 
         blocks = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
@@ -1576,7 +1577,7 @@ class TestFullNodeProtocol:
         for idx in range(0, 6):
             # we include a different transaction in each block. This makes the
             # foliage different in each of them, but the reward block (plot) the same
-            tx: SpendBundle = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
+            tx = wallet_a.generate_signed_transaction(100 * (idx + 1), puzzle_hash, coin)
 
             # note that we use the same chain to build the new block on top of every time
             block = bt.get_consecutive_blocks(
@@ -2256,32 +2257,23 @@ async def test_long_reorg(
     light_blocks: bool,
     one_node_one_block,
     default_10000_blocks: List[FullBlock],
-    test_long_reorg_blocks: List[FullBlock],
-    test_long_reorg_blocks_light: List[FullBlock],
+    test_long_reorg_1500_blocks: List[FullBlock],
+    test_long_reorg_1500_blocks_light: List[FullBlock],
     seeded_random: random.Random,
 ):
     node, server, bt = one_node_one_block
 
-    fork_point = 499
-    blocks = default_10000_blocks[:1600]
+    fork_point = 1499
+    blocks = default_10000_blocks[:3000]
 
     if light_blocks:
         # if the blocks have lighter weight, we need more height to compensate,
         # to force a reorg
-        reorg_blocks = test_long_reorg_blocks_light[:1650]
+        reorg_blocks = test_long_reorg_1500_blocks_light[:3050]
     else:
-        reorg_blocks = test_long_reorg_blocks[:1200]
+        reorg_blocks = test_long_reorg_1500_blocks[:2700]
 
-    for block_batch in to_batches(blocks, 64):
-        b = block_batch.entries[0]
-        if (b.height % 128) == 0:
-            print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await node.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(blocks, node.full_node)
     peak = node.full_node.blockchain.get_peak()
     chain_1_height = peak.height
     chain_1_weight = peak.weight
@@ -2322,11 +2314,12 @@ async def test_long_reorg(
     # now reorg back to the original chain
     # this exercises the case where we have some of the blocks in the DB already
     node.full_node.blockchain.clean_block_records()
-
+    # when using add_block manualy we must warmup the cache
+    await node.full_node.blockchain.warmup(fork_point - 100)
     if light_blocks:
-        blocks = default_10000_blocks[fork_point - 100 : 1800]
+        blocks = default_10000_blocks[fork_point - 100 : 3200]
     else:
-        blocks = default_10000_blocks[fork_point - 100 : 2600]
+        blocks = default_10000_blocks[fork_point - 100 : 5500]
 
     fork_block = blocks[0]
     fork_info = ForkInfo(fork_block.height - 1, fork_block.height - 1, fork_block.prev_header_hash)
@@ -2345,48 +2338,48 @@ async def test_long_reorg(
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
 @pytest.mark.parametrize("chain_length", [0, 100])
-@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="save time")
+@pytest.mark.parametrize("fork_point", [500, 1500])
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
 async def test_long_reorg_nodes(
     light_blocks: bool,
     chain_length: int,
+    fork_point: int,
     three_nodes,
     default_10000_blocks: List[FullBlock],
     test_long_reorg_blocks: List[FullBlock],
     test_long_reorg_blocks_light: List[FullBlock],
+    test_long_reorg_1500_blocks: List[FullBlock],
+    test_long_reorg_1500_blocks_light: List[FullBlock],
     self_hostname: str,
     seeded_random: random.Random,
 ):
     full_node_1, full_node_2, full_node_3 = three_nodes
 
-    blocks = default_10000_blocks[: 1600 - chain_length]
+    if fork_point == 1500:
+        blocks = default_10000_blocks[: 3600 - chain_length]
+    else:
+        blocks = default_10000_blocks[: 1600 - chain_length]
 
     if light_blocks:
-        reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
+        if fork_point == 1500:
+            reorg_blocks = test_long_reorg_1500_blocks_light[: 3600 - chain_length]
+            reorg_height = 4000
+        else:
+            reorg_blocks = test_long_reorg_blocks_light[: 1600 - chain_length]
+            reorg_height = 4000
     else:
-        reorg_blocks = test_long_reorg_blocks[: 1200 - chain_length]
+        if fork_point == 1500:
+            reorg_blocks = test_long_reorg_1500_blocks[: 3100 - chain_length]
+            reorg_height = 10000
+        else:
+            reorg_blocks = test_long_reorg_blocks[: 1200 - chain_length]
+            reorg_height = 4000
+            pytest.skip("We rely on the light-blocks test for a 0 forkpoint")
 
-    # full node 1 has the original chain
-    for block_batch in to_batches(blocks, 64):
-        b = block_batch.entries[0]
-        if (b.height % 128) == 0:
-            print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await full_node_1.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
 
     # full node 2 has the reorg-chain
-    for block_batch in to_batches(reorg_blocks[:-1], 64):
-        b = block_batch.entries[0]
-        if (b.height % 128) == 0:
-            print(f"reorg chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await full_node_2.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(reorg_blocks[:-1], full_node_2.full_node)
     await connect_and_get_peer(full_node_1.full_node.server, full_node_2.full_node.server, self_hostname)
 
     # TODO: There appears to be an issue where the node with the lighter chain
@@ -2413,19 +2406,14 @@ async def test_long_reorg_nodes(
     assert p1.header_hash == reorg_blocks[-1].header_hash
     assert p2.header_hash == reorg_blocks[-1].header_hash
 
-    blocks = default_10000_blocks[:4000]
+    blocks = default_10000_blocks[:reorg_height]
+
+    # this is a pre-requisite for a reorg to happen
+    assert blocks[-1].weight > p1.weight
+    assert blocks[-1].weight > p2.weight
 
     # full node 3 has the original chain, but even longer
-    for block_batch in to_batches(blocks, 64):
-        b = block_batch.entries[0]
-        if (b.height % 128) == 0:
-            print(f"main chain: {b.height:4} weight: {b.weight}")
-        success, change, err = await full_node_3.full_node.add_block_batch(
-            block_batch.entries, PeerInfo("0.0.0.0", 8884), None
-        )
-        assert err is None
-        assert success is True
-
+    await add_blocks_in_batches(blocks, full_node_3.full_node)
     print("connecting node 3")
     await connect_and_get_peer(full_node_3.full_node.server, full_node_1.full_node.server, self_hostname)
     await connect_and_get_peer(full_node_3.full_node.server, full_node_2.full_node.server, self_hostname)

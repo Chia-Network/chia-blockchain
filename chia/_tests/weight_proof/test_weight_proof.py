@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Tuple
 
 import pytest
 
+from chia._tests.util.blockchain_mock import BlockchainMock
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -16,7 +17,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
-from chia.util.block_cache import BlockCache
 from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32, uint64
 
@@ -32,11 +32,15 @@ async def load_blocks_dont_validate(
     sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
     prev_block = None
     difficulty = constants.DIFFICULTY_STARTING
+    sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
     block: FullBlock
     for block in blocks:
-        if block.height > 0:
+        if block.height > 0 and len(block.finished_sub_slots) > 0:
             assert prev_block is not None
-            difficulty = uint64(block.reward_chain_block.weight - prev_block.weight)
+            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
+            if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
 
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             assert block.reward_chain_block.signage_point_index == 0
@@ -63,10 +67,10 @@ async def load_blocks_dont_validate(
 
         sub_block = block_to_block_record(
             constants,
-            BlockCache(sub_blocks, height_to_hash=height_to_hash),
+            BlockchainMock(sub_blocks, height_to_hash=height_to_hash),
             required_iters,
             block,
-            None,
+            sub_slot_iters,
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash
@@ -93,7 +97,7 @@ async def _test_map_summaries(
         # next sub block
         curr = sub_blocks[curr.prev_hash]
 
-    wpf = WeightProofHandler(constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+    wpf = WeightProofHandler(constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries))
 
     wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
     assert wp is not None
@@ -138,7 +142,9 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
         )
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         summaries_here, sub_epoch_data_weight, _ = _map_sub_epoch_summaries(
@@ -158,7 +164,9 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
         )
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         wp = await wpf.get_proof_of_weight(bytes32(b"a" * 32))
         assert wp is None
 
@@ -171,7 +179,9 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
         )
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
@@ -254,10 +264,10 @@ class TestWeightProof:
         blocks = bt.get_consecutive_blocks(300, block_list_input=blocks, seed=b"asdfghjkl", force_overflow=False)
 
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks, bt.constants)
-        wpf = WeightProofHandler(bt.constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(bt.constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
-        wpf = WeightProofHandler(bt.constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        wpf = WeightProofHandler(bt.constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
         valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
@@ -271,10 +281,12 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
         )
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
         valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
@@ -289,10 +301,12 @@ class TestWeightProof:
             blocks, blockchain_constants
         )
 
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
         valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
@@ -306,10 +320,12 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
         )
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
         valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
@@ -328,10 +344,10 @@ class TestWeightProof:
             normalized_to_identity_icc_eos=True,
         )
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks, bt.constants)
-        wpf = WeightProofHandler(bt.constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(bt.constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
-        wpf = WeightProofHandler(bt.constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        wpf = WeightProofHandler(bt.constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {}))
         valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
@@ -345,11 +361,13 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
         )
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
 
         assert wp is not None
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, {}, height_to_hash, {}))
+        wpf = WeightProofHandler(blockchain_constants, BlockchainMock(sub_blocks, {}, height_to_hash, {}))
         valid, fork_point = wpf.validate_weight_proof_single_proc(wp)
 
         assert valid
@@ -363,7 +381,9 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             blocks, blockchain_constants
         )
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
         assert wp is not None
         curr = -1
@@ -384,13 +404,13 @@ class TestWeightProof:
         )
         last_ses_height = sorted(summaries.keys())[-1]
         wpf_synced = WeightProofHandler(
-            blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
         )
         wp = await wpf_synced.get_proof_of_weight(blocks[last_ses_height].header_hash)
         assert wp is not None
         # todo for each sampled sub epoch, validate number of segments
         wpf_not_synced = WeightProofHandler(
-            blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {})
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {})
         )
         valid, fork_point, _ = await wpf_not_synced.validate_weight_proof(wp)
         assert valid
@@ -415,26 +435,28 @@ class TestWeightProof:
         last_ses = summaries[last_ses_height]
         del summaries[last_ses_height]
         wpf_synced = WeightProofHandler(
-            blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
         )
         wp = await wpf_synced.get_proof_of_weight(blocks[last_ses_height - 10].header_hash)
         assert wp is not None
         wpf_not_synced = WeightProofHandler(
-            blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {})
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {})
         )
         valid, fork_point, _ = await wpf_not_synced.validate_weight_proof(wp)
         assert valid
         assert fork_point == 0
         # extend proof with 100 blocks
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         summaries[last_ses_height] = last_ses
-        wpf_synced.blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        wpf_synced.blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
         new_wp = await wpf_synced._create_proof_of_weight(blocks[-1].header_hash)
         assert new_wp is not None
         valid, fork_point, _ = await wpf_not_synced.validate_weight_proof(new_wp)
         assert valid
         assert fork_point == 0
-        wpf_synced.blockchain = BlockCache(sub_blocks, header_cache, height_to_hash, summaries)
+        wpf_synced.blockchain = BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
         new_wp = await wpf_synced._create_proof_of_weight(blocks[last_ses_height].header_hash)
         assert new_wp is not None
         valid, fork_point, _ = await wpf_not_synced.validate_weight_proof(new_wp)
@@ -456,8 +478,12 @@ class TestWeightProof:
         last_ses = summaries[last_ses_height]
         before_last_ses_height = sorted(summaries.keys())[-2]
         before_last_ses = summaries[before_last_ses_height]
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
-        wpf_verify = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, {}))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
+        wpf_verify = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, {})
+        )
         for x in range(10, -1, -1):
             wp = await wpf.get_proof_of_weight(blocks[before_last_ses_height - x].header_hash)
             assert wp is not None
@@ -467,7 +493,9 @@ class TestWeightProof:
         # extend proof with 100 blocks
         summaries[last_ses_height] = last_ses
         summaries[before_last_ses_height] = before_last_ses
-        wpf = WeightProofHandler(blockchain_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wpf = WeightProofHandler(
+            blockchain_constants, BlockchainMock(sub_blocks, header_cache, height_to_hash, summaries)
+        )
         new_wp = await wpf._create_proof_of_weight(blocks[-1].header_hash)
         assert new_wp is not None
         valid, fork_point, _ = await wpf.validate_weight_proof(new_wp)

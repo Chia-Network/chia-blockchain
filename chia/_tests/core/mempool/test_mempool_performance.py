@@ -4,7 +4,7 @@ from typing import List
 
 import pytest
 
-from chia._tests.util.misc import BenchmarkRunner, wallet_height_at_least
+from chia._tests.util.misc import BenchmarkRunner, add_blocks_in_batches, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.types.full_block import FullBlock
@@ -37,8 +37,7 @@ async def test_mempool_update_performance(
     # We need an initialized mempool as we want to add a transaction, so we use
     # the first block to achieve that
     await full_node.add_block(blocks[0])
-    await full_node.add_block_batch(blocks[1:], PeerInfo("0.0.0.0", 0), None)
-
+    await add_blocks_in_batches(blocks[1:], full_node)
     await wallet_server.start_client(PeerInfo(self_hostname, full_node.server.get_port()), None)
     await time_out_assert(30, wallet_height_at_least, True, wallet_node, 399)
     send_amount = uint64(40_000_000_000_000)

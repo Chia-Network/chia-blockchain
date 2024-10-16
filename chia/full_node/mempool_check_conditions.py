@@ -3,23 +3,14 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional
 
-from chia_rs import (
-    ALLOW_BACKREFS,
-    DISALLOW_INFINITY_G1,
-    ENABLE_BLS_OPS_OUTSIDE_GUARD,
-    ENABLE_FIXED_DIV,
-    ENABLE_MESSAGE_CONDITIONS,
-    MEMPOOL_MODE,
-)
-from chia_rs import get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
+from chia_rs import MEMPOOL_MODE, get_flags_for_height_and_constants
+from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_block_generator2, run_chia_program
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend, CoinSpendWithConditions, SpendInfo, make_spend
@@ -35,15 +26,6 @@ DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
 )
 
 log = logging.getLogger(__name__)
-
-
-def get_flags_for_height_and_constants(height: int, constants: ConsensusConstants) -> int:
-    flags = ENABLE_BLS_OPS_OUTSIDE_GUARD | ENABLE_FIXED_DIV | ALLOW_BACKREFS | ENABLE_MESSAGE_CONDITIONS
-
-    if height >= constants.SOFT_FORK5_HEIGHT:
-        flags = flags | DISALLOW_INFINITY_G1
-
-    return flags
 
 
 def get_name_puzzle_conditions(
@@ -65,8 +47,8 @@ def get_name_puzzle_conditions(
         run_block = run_block_generator
 
     try:
-        block_args = [bytes(gen) for gen in generator.generator_refs]
-        err, result = run_block(bytes(generator.program), block_args, max_cost, flags, DEFAULT_CONSTANTS)
+        block_args = generator.generator_refs
+        err, result = run_block(bytes(generator.program), block_args, max_cost, flags, constants)
         assert (err is None) != (result is None)
         if err is not None:
             return NPCResult(uint16(err), None)
@@ -82,22 +64,14 @@ def get_puzzle_and_solution_for_coin(
     generator: BlockGenerator, coin: Coin, height: int, constants: ConsensusConstants
 ) -> SpendInfo:
     try:
-        args = bytearray(b"\xff")
-        args += bytes(DESERIALIZE_MOD)
-        args += b"\xff"
-        args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
-        args += b"\x80\x80"
-
         puzzle, solution = get_puzzle_and_solution_for_coin_rust(
-            bytes(generator.program),
-            bytes(args),
-            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-            coin.parent_coin_info,
-            coin.amount,
-            coin.puzzle_hash,
+            generator.program,
+            generator.generator_refs,
+            constants.MAX_BLOCK_COST_CLVM,
+            coin,
             get_flags_for_height_and_constants(height, constants),
         )
-        return SpendInfo(SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution))
+        return SpendInfo(puzzle, solution)
     except Exception as e:
         raise ValueError(f"Failed to get puzzle and solution for coin {coin}, error: {e}") from e
 
@@ -106,13 +80,13 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
-    args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
+    args += bytes(Program.to(generator.generator_refs))
     args += b"\x80\x80"
 
     _, ret = run_chia_program(
         bytes(generator.program),
         bytes(args),
-        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        constants.MAX_BLOCK_COST_CLVM,
         get_flags_for_height_and_constants(height, constants),
     )
 
@@ -133,7 +107,7 @@ def get_spends_for_block_with_conditions(
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
-    args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
+    args += bytes(Program.to(generator.generator_refs))
     args += b"\x80\x80"
 
     flags = get_flags_for_height_and_constants(height, constants)
@@ -141,7 +115,7 @@ def get_spends_for_block_with_conditions(
     _, ret = run_chia_program(
         bytes(generator.program),
         bytes(args),
-        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+        constants.MAX_BLOCK_COST_CLVM,
         flags,
     )
 
@@ -152,7 +126,7 @@ def get_spends_for_block_with_conditions(
         puzzle_hash = puzzle.get_tree_hash()
         coin = Coin(parent.as_atom(), puzzle_hash, uint64(amount.as_int()))
         coin_spend = make_spend(coin, puzzle, solution)
-        conditions = conditions_for_solution(puzzle, solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
+        conditions = conditions_for_solution(puzzle, solution, constants.MAX_BLOCK_COST_CLVM)
         spends.append(CoinSpendWithConditions(coin_spend, conditions))
 
     return spends

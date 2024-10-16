@@ -10,7 +10,6 @@ from chia_rs import AugSchemeMPL
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
-from chia.types.spend_bundle import SpendBundle
 from chia.util.json_util import obj_to_response
 from chia.util.streamable import Streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_from_json_dicts, parse_timelock_info
@@ -25,6 +24,7 @@ from chia.wallet.util.clvm_streamable import (
 )
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig, TXConfigLoader
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 log = logging.getLogger(__name__)
 
@@ -224,7 +224,7 @@ def tx_endpoint(
                     tx.name.hex() for tx in new_txs if tx.type == TransactionType.OUTGOING_CLAWBACK.value
                 ]
             if "spend_bundle" in response:
-                response["spend_bundle"] = SpendBundle.aggregate(
+                response["spend_bundle"] = WalletSpendBundle.aggregate(
                     [tx.spend_bundle for tx in new_txs if tx.spend_bundle is not None]
                 )
             if "signed_txs" in response:
@@ -252,7 +252,7 @@ def tx_endpoint(
                 signed_coin_spends.extend(
                     [spend for spend in old_offer._bundle.coin_spends if spend.coin not in involved_coins]
                 )
-                new_offer_bundle: SpendBundle = SpendBundle(
+                new_offer_bundle = WalletSpendBundle(
                     signed_coin_spends,
                     AugSchemeMPL.aggregate(
                         [tx.spend_bundle.aggregated_signature for tx in new_txs if tx.spend_bundle is not None]

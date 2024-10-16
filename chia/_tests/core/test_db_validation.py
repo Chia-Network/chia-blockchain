@@ -139,10 +139,13 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
         coin_store = await CoinStore.create(db_wrapper)
 
         bc = await Blockchain.create(coin_store, block_store, test_constants, Path("."), reserved_cores=0)
-
+        sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
         for block in blocks:
+            if block.height != 0 and len(block.finished_sub_slots) > 0:
+                if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                    sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
             results = PreValidationResult(None, uint64(1), None, False, uint32(0))
-            result, err, _ = await bc.add_block(block, results, None)
+            result, err, _ = await bc.add_block(block, results, None, sub_slot_iters=sub_slot_iters)
             assert err is None
 
 

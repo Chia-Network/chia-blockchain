@@ -10,7 +10,7 @@ import anyio
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import BlockchainMutexPriority
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.rpc_server import default_get_connections
@@ -22,6 +22,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
+from chia.types.validation_state import ValidationState
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -163,18 +164,29 @@ class FullNodeSimulator(FullNodeAPI):
     async def farm_new_transaction_block(
         self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
     ) -> FullBlock:
+        ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+        diff = self.full_node.constants.DIFFICULTY_STARTING
         async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[PreValidationResult] = (
-                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                        [genesis], {}, validate_signatures=True
-                    )
+                pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                    self.full_node.blockchain.constants,
+                    self.full_node.blockchain,
+                    [genesis],
+                    self.full_node.blockchain.pool,
+                    {},
+                    ValidationState(ssi, diff, None),
+                    validate_signatures=True,
                 )
                 assert pre_validation_results is not None
-                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0], self.full_node._bls_cache)
+                await self.full_node.blockchain.add_block(
+                    genesis,
+                    pre_validation_results[0],
+                    self.full_node._bls_cache,
+                    self.full_node.constants.SUB_SLOT_ITERS_STARTING,
+                )
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
@@ -213,19 +225,29 @@ class FullNodeSimulator(FullNodeAPI):
         return more[-1]
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
+        ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+        diff = self.full_node.constants.DIFFICULTY_STARTING
         async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[PreValidationResult] = (
-                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                        [genesis], {}, validate_signatures=True
-                    )
+                pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                    self.full_node.blockchain.constants,
+                    self.full_node.blockchain,
+                    [genesis],
+                    self.full_node.blockchain.pool,
+                    {},
+                    ValidationState(ssi, diff, None),
+                    validate_signatures=True,
                 )
                 assert pre_validation_results is not None
-                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0], self.full_node._bls_cache)
-
+                await self.full_node.blockchain.add_block(
+                    genesis,
+                    pre_validation_results[0],
+                    self.full_node._bls_cache,
+                    ssi,
+                )
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
             curr: BlockRecord = peak
@@ -670,9 +692,13 @@ class FullNodeSimulator(FullNodeAPI):
                 return set()
 
             outputs: List[Payment] = []
+            amounts_seen: Set[uint64] = set()
             for amount in amounts:
-                puzzle_hash = await wallet.get_new_puzzlehash()
+                # We need unique puzzle hash amount combos so we'll only generate a new puzzle hash when we've already
+                # seen that amount sent to that puzzle hash
+                puzzle_hash = await wallet.get_puzzle_hash(new=amount in amounts_seen)
                 outputs.append(Payment(puzzle_hash, amount))
+                amounts_seen.add(amount)
 
             transaction_records: List[TransactionRecord] = []
             outputs_iterator = iter(outputs)
@@ -695,7 +721,8 @@ class FullNodeSimulator(FullNodeAPI):
                 else:
                     break
 
-            await self.process_transaction_records(records=transaction_records, timeout=None)
+            await self.wait_transaction_records_entered_mempool(transaction_records, timeout=None)
+            await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
             output_coins = {coin for transaction_record in transaction_records for coin in transaction_record.additions}
             puzzle_hashes = {output.puzzle_hash for output in outputs}

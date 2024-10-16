@@ -16,7 +16,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend, make_spend
-from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.streamable import Streamable
@@ -37,7 +36,6 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.tx_config import CoinSelectionConfig
 from chia.wallet.util.wallet_sync_utils import fetch_coin_spend_for_coin_state
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.cr_cat_drivers import CRCAT, CRCATSpend, ProofsChecker, construct_pending_approval_state
@@ -48,6 +46,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_protocol import GSTOptionalArgs, WalletProtocol
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager  # pragma: no cover
@@ -184,11 +183,7 @@ class VCWallet:
         if not found_did:
             raise ValueError(f"You don't own the DID {provider_did.hex()}")  # pragma: no cover
         # Mint VC
-        coins = list(
-            await self.standard_wallet.select_coins(
-                uint64(1 + fee), action_scope.config.tx_config.coin_selection_config
-            )
-        )
+        coins = list(await self.standard_wallet.select_coins(uint64(1 + fee), action_scope))
         if len(coins) == 0:
             raise ValueError("Cannot find a coin to mint the verified credential.")  # pragma: no cover
         if inner_puzzle_hash is None:  # pragma: no cover
@@ -207,7 +202,7 @@ class VCWallet:
             solution = solution_for_delegated_puzzle(dpuz, Program.to(None))
             puzzle = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
             coin_spends.append(make_spend(coin, puzzle, solution))
-        spend_bundle = SpendBundle(coin_spends, G2Element())
+        spend_bundle = WalletSpendBundle(coin_spends, G2Element())
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
         rem_list: List[Coin] = list(spend_bundle.removals())
@@ -307,7 +302,7 @@ class VCWallet:
             conditions=extra_conditions,
         )
         did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
-        spend_bundle = SpendBundle([coin_spend], G2Element())
+        spend_bundle = WalletSpendBundle([coin_spend], G2Element())
         if did_announcement is not None:
             # Need to spend DID
             for _, wallet in self.wallet_state_manager.wallets.items():
@@ -391,9 +386,7 @@ class VCWallet:
         coins = {await did_wallet.get_coin()}
         coins.add(vc.coin)
         if fee > 0:
-            coins.update(
-                await self.standard_wallet.select_coins(fee, action_scope.config.tx_config.coin_selection_config)
-            )
+            coins.update(await self.standard_wallet.select_coins(fee, action_scope))
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
         sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = SerializedProgram.to(sorted_coin_list).get_tree_hash()
@@ -411,7 +404,7 @@ class VCWallet:
             extra_conditions=(*extra_conditions, expected_did_announcement, vc_announcement),
         )
         async with action_scope.use() as interface:
-            interface.side_effects.extra_spends.append(SpendBundle([vc_spend], G2Element()))
+            interface.side_effects.extra_spends.append(WalletSpendBundle([vc_spend], G2Element()))
 
     async def add_vc_authorization(
         self, offer: Offer, solver: Solver, action_scope: WalletActionScope
@@ -556,9 +549,9 @@ class VCWallet:
             interface.side_effects.transactions.extend(inner_action_scope.side_effects.transactions)
 
         return Offer.from_spend_bundle(
-            SpendBundle.aggregate(
+            WalletSpendBundle.aggregate(
                 [
-                    SpendBundle(
+                    WalletSpendBundle(
                         [
                             *(
                                 spend
@@ -605,7 +598,7 @@ class VCWallet:
     async def select_coins(
         self,
         amount: uint64,
-        coin_selection_config: CoinSelectionConfig,
+        action_scope: WalletActionScope,
     ) -> Set[Coin]:
         raise RuntimeError("VCWallet does not support select_coins()")  # pragma: no cover
 

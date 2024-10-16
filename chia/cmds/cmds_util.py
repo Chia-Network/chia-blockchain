@@ -18,6 +18,7 @@ from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_client import ResponseFailureError, RpcClient
+from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -25,9 +26,10 @@ from chia.types.mempool_submission_status import MempoolSubmissionStatus
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError, InvalidPathError
-from chia.util.ints import uint16
+from chia.util.ints import uint16, uint32, uint64
 from chia.util.keychain import KeyData
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
 
@@ -168,16 +170,17 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                 # if only a single key is available, select it automatically
                 selected_fingerprint = fingerprints[0]
             else:
-                logged_in_fingerprint: Optional[int] = await wallet_client.get_logged_in_fingerprint()
+                logged_in_fingerprint: Optional[int] = (await wallet_client.get_logged_in_fingerprint()).fingerprint
                 logged_in_key: Optional[KeyData] = None
                 if logged_in_fingerprint is not None:
                     logged_in_key = next((key for key in all_keys if key.fingerprint == logged_in_fingerprint), None)
                 current_sync_status: str = ""
                 indent = "   "
                 if logged_in_key is not None:
-                    if await wallet_client.get_synced():
+                    sync_response = await wallet_client.get_sync_status()
+                    if sync_response.synced:
                         current_sync_status = "Synced"
-                    elif await wallet_client.get_sync_status():
+                    elif sync_response.syncing:
                         current_sync_status = "Syncing"
                     else:
                         current_sync_status = "Not Synced"
@@ -226,10 +229,11 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                 selected_fingerprint = fp
 
         if selected_fingerprint is not None:
-            log_in_response = await wallet_client.log_in(selected_fingerprint)
+            try:
+                await wallet_client.log_in(LogIn(uint32(selected_fingerprint)))
+            except ValueError as e:
+                raise CliRpcConnectionError(f"Login failed for fingerprint {selected_fingerprint}: {e.args[0]}")
 
-            if log_in_response["success"] is False:
-                raise CliRpcConnectionError(f"Login failed for fingerprint {selected_fingerprint}: {log_in_response}")
     finally:
         # Closing the keychain proxy takes a moment, so we wait until after the login is complete
         if keychain_proxy is not None:
@@ -311,22 +315,37 @@ def tx_config_args(func: Callable[..., None]) -> Callable[..., None]:
     )(coin_selection_args(func))
 
 
-def timelock_args(func: Callable[..., None]) -> Callable[..., None]:
-    return click.option(
-        "--valid-at",
-        help="UNIX timestamp at which the associated transactions become valid",
-        type=int,
-        required=False,
-        default=None,
-    )(
-        click.option(
-            "--expires-at",
-            help="UNIX timestamp at which the associated transactions expire",
+def timelock_args(enable: Optional[bool] = None) -> Callable[[Callable[..., None]], Callable[..., None]]:
+    def _timelock_args(func: Callable[..., None]) -> Callable[..., None]:
+        def _convert_timelock_args_to_cvt(*args: Any, **kwargs: Any) -> None:
+            func(
+                *args,
+                condition_valid_times=ConditionValidTimes(
+                    min_time=uint64.construct_optional(kwargs["valid_at"]),
+                    max_time=uint64.construct_optional(kwargs["expires_at"]),
+                ),
+                **{k: v for k, v in kwargs.items() if k not in ("valid_at", "expires_at")},
+            )
+
+        return click.option(
+            "--valid-at",
+            help="UNIX timestamp at which the associated transactions become valid",
             type=int,
             required=False,
             default=None,
-        )(func)
-    )
+            hidden=not enable,
+        )(
+            click.option(
+                "--expires-at",
+                help="UNIX timestamp at which the associated transactions expire",
+                type=int,
+                required=False,
+                default=None,
+                hidden=not enable,
+            )(_convert_timelock_args_to_cvt)
+        )
+
+    return _timelock_args
 
 
 @streamable
@@ -335,25 +354,32 @@ class TransactionBundle(Streamable):
     txs: List[TransactionRecord]
 
 
-def tx_out_cmd(func: Callable[..., List[TransactionRecord]]) -> Callable[..., None]:
-    def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
-        txs: List[TransactionRecord] = func(**kwargs)
-        if transaction_file is not None:
-            print(f"Writing transactions to file {transaction_file}:")
-            with open(Path(transaction_file), "wb") as file:
-                file.write(bytes(TransactionBundle(txs)))
+def tx_out_cmd(
+    enable_timelock_args: Optional[bool] = None,
+) -> Callable[[Callable[..., List[TransactionRecord]]], Callable[..., None]]:
 
-    return click.option(
-        "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
-    )(
-        click.option(
-            "--transaction-file",
-            help="A file to write relevant transactions to",
-            type=str,
-            required=False,
-            default=None,
-        )(original_cmd)
-    )
+    def _tx_out_cmd(func: Callable[..., List[TransactionRecord]]) -> Callable[..., None]:
+        @timelock_args(enable=enable_timelock_args)
+        def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
+            txs: List[TransactionRecord] = func(**kwargs)
+            if transaction_file is not None:
+                print(f"Writing transactions to file {transaction_file}:")
+                with open(Path(transaction_file), "wb") as file:
+                    file.write(bytes(TransactionBundle(txs)))
+
+        return click.option(
+            "--push/--no-push", help="Push the transaction to the network", type=bool, is_flag=True, default=True
+        )(
+            click.option(
+                "--transaction-file",
+                help="A file to write relevant transactions to",
+                type=str,
+                required=False,
+                default=None,
+            )(original_cmd)
+        )
+
+    return _tx_out_cmd
 
 
 @dataclasses.dataclass(frozen=True)

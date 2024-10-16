@@ -253,7 +253,7 @@ async def test_parser():
     for block in get_full_blocks():
         block_bytes = bytes(block)
         gen = generator_from_block(block_bytes)
-        assert gen == block.transactions_generator
+        assert gen == bytes(block.transactions_generator)
         bi = block_info_from_block(block_bytes)
         assert block.transactions_generator == bi.transactions_generator
         assert block.prev_header_hash == bi.prev_header_hash

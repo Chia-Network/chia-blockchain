@@ -7,13 +7,13 @@ from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.util.transaction_type import TransactionType
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 T = TypeVar("T")
 _T_TransactionRecord = TypeVar("_T_TransactionRecord", bound="TransactionRecordOld")
@@ -41,7 +41,7 @@ class TransactionRecordOld(Streamable):
     fee_amount: uint64
     confirmed: bool
     sent: uint32
-    spend_bundle: Optional[SpendBundle]
+    spend_bundle: Optional[WalletSpendBundle]
     additions: List[Coin]
     removals: List[Coin]
     wallet_id: uint32

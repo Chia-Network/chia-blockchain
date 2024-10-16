@@ -9,8 +9,11 @@ from chia.rpc.wallet_request_types import GetNotifications, GetNotificationsResp
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.notification_store import Notification
 from chia.wallet.transaction_record import TransactionRecord
+
+test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=uint64(100), max_time=uint64(150))
 
 # Notifications Commands
 
@@ -21,9 +24,15 @@ def test_notifications_send(capsys: object, get_test_cli_clients: Tuple[TestRpcC
     # set RPC Client
     class NotificationsSendRpcClient(TestWalletRpcClient):
         async def send_notification(
-            self, target: bytes32, msg: bytes, amount: uint64, fee: uint64 = uint64(0), push: bool = True
+            self,
+            target: bytes32,
+            msg: bytes,
+            amount: uint64,
+            fee: uint64 = uint64(0),
+            push: bool = True,
+            timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> TransactionRecord:
-            self.add_to_log("send_notification", (target, msg, amount, fee, push))
+            self.add_to_log("send_notification", (target, msg, amount, fee, push, timelock_info))
 
             class FakeTransactionRecord:
                 def __init__(self, name: str) -> None:
@@ -45,6 +54,10 @@ def test_notifications_send(capsys: object, get_test_cli_clients: Tuple[TestRpcC
         "-a0.00002",
         f"-t{target_addr}",
         f"-n{msg}",
+        "--valid-at",
+        "100",
+        "--expires-at",
+        "150",
     ]
     # these are various things that should be in the output
     assert_list = [
@@ -53,7 +66,7 @@ def test_notifications_send(capsys: object, get_test_cli_clients: Tuple[TestRpcC
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "send_notification": [(target_ph, bytes(msg, "utf8"), 20000000, 1000000000, True)],
+        "send_notification": [(target_ph, bytes(msg, "utf8"), 20000000, 1000000000, True, test_condition_valid_times)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 

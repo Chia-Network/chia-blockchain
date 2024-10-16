@@ -6,6 +6,72 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## 2.4.3 Chia blockchain 2024-08-21
+
+## What's Changed
+
+### Added
+
+- Add the concept of 'action scopes'
+- Add offer expiration to CLI
+- DL query multiple ancestors in upsert.
+- Add `WalletActionScope`
+- Add support for external signers
+- Add Soft Fork options to simulator config
+- Trusted wallet peer enhancements (thanks @spacefarmers)
+- Add action_scope: WalletActionScope to all tx endpoints
+- Add usage of action scope throughout wallet codebase
+- Add in connect timeout to DL http download
+- Send harvester version in pool partial header (thanks @xearl4)
+- Add get version RPC method for all services
+- Add wEURC.b to the list of known assets (thanks @Yakuhito)
+
+### Changed
+
+- drop support for testnet10
+- Rust BLS cache
+- Optimize build ancestors table.
+- Bump chia rs 0.10.0
+- minor fix for make_spend function (thanks @trepca)
+- remove coroutine never awaited warning ignore
+- Update to macos-12 for build and remove macos-11
+- Optimize min height leaf.
+- Send different uncompact buckets to blueboxes.
+- simplify hard-fork consensus rules
+- simplify `MempoolItem`
+- use rust version of SpendBundle
+- Drop unknown tables when resetting wallet sync DB
+- remove the original block compression
+- Use `poetry` for package management
+- default flags for `Program.run()` and `Program.run_with_cost()`
+- Add prune old peers functionality for crawler
+- Remove ALERTS_URL and CHIA_ALERTS_PUBKEY
+- Update all selected_network config values when setting up simulator
+- Changed: Enhance DataLayer Plugin Registration System for Improved Third-Party Integration (thanks @MichaelTaylor3D)
+- In cmd class framework: help -> short_help
+- Stop auto-subscribing to local stores
+- Bump the GUI submodule ref
+
+### Fixed
+
+- Removed `lerna` from build_scripts
+- (pylint) `==` -> `is`
+- Use tx_config in cancel_pending_trades
+- Fixed an issue where `npx --no lerna clean -f` didn't work
+- Fix for freebsd (thanks @alghmma)
+- Fix backwards compatibility for `add_private_key`
+- Fix timelord log spam.
+- Fix duplicate connection log spam.
+- Fix conversion error in fee calculation
+- Fix CATWallet pending_change calculation
+- Add a better clawback auto claim test and fix related issue
+- chore: remove repetitive words (thanks @peicuiping)
+- Conform to CHIP-0029
+- Use launcher_id as the primary key when updating (current) pool config.
+- Remove dangling reference to twine
+- Fix wallet observer mode log in while non-observer keys are present
+- Set public key when you find private key in wallet node
+
 ## 2.4.2 Chia blockchain 2024-07-10
 
 ## What's Changed

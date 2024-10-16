@@ -5,12 +5,11 @@ import contextlib
 import dataclasses
 import io
 import logging
-import multiprocessing
 import os
 import random
 import time
 import traceback
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, cast
 
@@ -39,9 +38,7 @@ from chia.types.blockchain_format.slots import (
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
-from chia.util.config import process_config_start_method
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
-from chia.util.setproctitle import getproctitle, setproctitle
 from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
@@ -123,9 +120,6 @@ class Timelord:
         # Used to label proofs in `finished_proofs` and to only filter proofs corresponding to the most recent state.
         self.num_resets: int = 0
 
-        multiprocessing_start_method = process_config_start_method(config=self.config, log=log)
-        self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
-
         self.process_communication_tasks: List[asyncio.Task[None]] = []
         self.main_loop: Optional[asyncio.Task[None]] = None
         self.vdf_server: Optional[asyncio.base_events.Server] = None
@@ -143,7 +137,7 @@ class Timelord:
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
         self.max_allowed_inactivity_time = 60
-        self.bluebox_pool: Optional[ProcessPoolExecutor] = None
+        self.bluebox_pool: Optional[ThreadPoolExecutor] = None
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
@@ -161,11 +155,8 @@ class Timelord:
             if os.name == "nt" or slow_bluebox:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
                 workers = self.config.get("slow_bluebox_process_count", 1)
-                self.bluebox_pool = ProcessPoolExecutor(
+                self.bluebox_pool = ThreadPoolExecutor(
                     max_workers=workers,
-                    mp_context=self.multiprocessing_context,
-                    initializer=setproctitle,
-                    initargs=(f"{getproctitle()}_worker",),
                 )
                 self.main_loop = asyncio.create_task(
                     self._start_manage_discriminant_queue_sanitizer_slow(self.bluebox_pool, workers)
@@ -1131,14 +1122,14 @@ class Timelord:
                     log.error(f"Exception manage discriminant queue: {e}")
             await asyncio.sleep(0.1)
 
-    async def _start_manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor, counter: int) -> None:
+    async def _start_manage_discriminant_queue_sanitizer_slow(self, pool: ThreadPoolExecutor, counter: int) -> None:
         tasks = []
         for _ in range(counter):
             tasks.append(asyncio.create_task(self._manage_discriminant_queue_sanitizer_slow(pool)))
         for task in tasks:
             await task
 
-    async def _manage_discriminant_queue_sanitizer_slow(self, pool: ProcessPoolExecutor) -> None:
+    async def _manage_discriminant_queue_sanitizer_slow(self, pool: ThreadPoolExecutor) -> None:
         log.info("Started task for managing bluebox queue.")
         while not self._shut_down:
             picked_info = None

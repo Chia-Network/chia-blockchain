@@ -11,13 +11,10 @@ from chia.util.ints import uint32
 
 class BlockInfo(Protocol):
     @property
-    def prev_header_hash(self) -> bytes32:
-        pass
+    def prev_header_hash(self) -> bytes32: ...
 
     @property
-    def transactions_generator(self) -> Optional[SerializedProgram]:
-        pass
+    def transactions_generator(self) -> Optional[SerializedProgram]: ...
 
     @property
-    def transactions_generator_ref_list(self) -> List[uint32]:
-        pass
+    def transactions_generator_ref_list(self) -> List[uint32]: ...

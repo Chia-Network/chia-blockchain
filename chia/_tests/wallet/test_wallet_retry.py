@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Tuple
 
 import pytest
 
@@ -13,11 +13,11 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 async def farm_blocks(full_node_api: FullNodeSimulator, ph: bytes32, num_blocks: int) -> int:
@@ -27,7 +27,7 @@ async def farm_blocks(full_node_api: FullNodeSimulator, ph: bytes32, num_blocks:
     return num_blocks
 
 
-def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
+def evict_from_pool(node: FullNodeAPI, sb: WalletSpendBundle) -> None:
     mempool_item = node.full_node.mempool_manager.mempool.get_item_by_id(sb.name())
     assert mempool_item is not None
     node.full_node.mempool_manager.mempool.remove_from_pool([mempool_item.name], MempoolRemoveReason.CONFLICT)
@@ -57,16 +57,16 @@ async def test_wallet_tx_retry(
     async with wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await wallet_1.generate_signed_transaction(uint64(100), reward_ph, action_scope)
     [transaction] = action_scope.side_effects.transactions
-    sb1: Optional[SpendBundle] = transaction.spend_bundle
+    sb1 = transaction.spend_bundle
     assert sb1 is not None
 
     async def sb_in_mempool() -> bool:
         return full_node_1.full_node.mempool_manager.get_spendbundle(transaction.name) == transaction.spend_bundle
 
-    # SpendBundle is accepted by peer
+    # Spend bundle is accepted by peer
     await time_out_assert(wait_secs, sb_in_mempool)
 
-    # Evict SpendBundle from peer
+    # Evict spend bundle from peer
     evict_from_pool(full_node_1, sb1)
     assert full_node_1.full_node.mempool_manager.get_spendbundle(sb1.name()) is None
     assert not full_node_1.full_node.mempool_manager.seen(sb1.name())
@@ -91,5 +91,5 @@ async def test_wallet_tx_retry(
         in_mempool: bool = full_node_sb.name() == sb.name()
         return txn.confirmed or in_mempool
 
-    # Check that wallet resent the unconfirmed SpendBundle
+    # Check that wallet resent the unconfirmed spend bundle
     await time_out_assert_custom_interval(wait_secs, 1, check_transaction_in_mempool_or_confirmed, True, transaction)

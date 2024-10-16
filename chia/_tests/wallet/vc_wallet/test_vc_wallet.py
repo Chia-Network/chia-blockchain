@@ -16,7 +16,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.peer_info import PeerInfo
-from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
@@ -31,6 +30,7 @@ from chia.wallet.vc_wallet.cr_cat_wallet import CRCATWallet
 from chia.wallet.vc_wallet.vc_store import VCProofs, VCRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
 async def mint_cr_cat(
@@ -69,7 +69,7 @@ async def mint_cr_cat(
 
     # Do the eve spend back to our wallet and add the CR layer
     cat_coin = next(c for c in spend_bundle.additions() if c.amount == CAT_AMOUNT_0)
-    eve_spend = SpendBundle(
+    eve_spend = WalletSpendBundle(
         [
             make_spend(
                 cat_coin,
@@ -104,7 +104,7 @@ async def mint_cr_cat(
         ],
         G2Element(),
     )
-    spend_bundle = SpendBundle.aggregate([spend_bundle, eve_spend])
+    spend_bundle = WalletSpendBundle.aggregate([spend_bundle, eve_spend])
     await wallet_node_0.wallet_state_manager.add_pending_transactions(
         [dataclasses.replace(tx, spend_bundle=spend_bundle, name=spend_bundle.name())]
     )
@@ -179,7 +179,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         # One existing coin has been removed and two ephemeral coins have been removed
                         # Does pending_coin_removal_count attempt to show the number of current pending removals
                         # Or does it intend to just mean all pending removals that we should eventually get states for?
-                        "pending_coin_removal_count": 5,  # 4 for VC mint, 1 for DID mint
+                        "pending_coin_removal_count": 3,
                         "<=#spendable_balance": -1_750_000_000_002,
                         "<=#max_send_amount": -1_750_000_000_002,
                         "set_remainder": True,
@@ -200,7 +200,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                     "xch": {
                         # 1_750_000_000_000 for VC mint fee, 1 for VC singleton, 1 for DID mint
                         "confirmed_wallet_balance": -1_750_000_000_002,
-                        "pending_coin_removal_count": -5,  # 3 for VC mint, 1 for DID mint
+                        "pending_coin_removal_count": -3,  # 3 for VC mint, 1 for DID mint
                         "set_remainder": True,
                     },
                     "did": {
@@ -241,6 +241,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "spendable_balance": -1,
                         "pending_change": 1,
                         "pending_coin_removal_count": 1,
+                        "max_send_amount": -1,
                     },
                     "vc": {
                         "pending_coin_removal_count": 1,
@@ -256,6 +257,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "spendable_balance": 1,
                         "pending_change": -1,
                         "pending_coin_removal_count": -1,
+                        "max_send_amount": 1,
                     },
                     "vc": {
                         "pending_coin_removal_count": -1,
@@ -600,6 +602,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "spendable_balance": -1,
                         "pending_change": 1,
                         "pending_coin_removal_count": 1,
+                        "max_send_amount": -1,
                     },
                 },
                 post_block_balance_updates={
@@ -612,6 +615,7 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
                         "spendable_balance": 1,
                         "pending_change": -1,
                         "pending_coin_removal_count": -1,
+                        "max_send_amount": 1,
                     },
                 },
             ),

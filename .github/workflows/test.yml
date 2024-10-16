@@ -69,7 +69,7 @@ on:
     - cron: "0 13 * * *"
 
 concurrency:
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow_ref, github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -120,7 +120,7 @@ jobs:
       concurrency-name: macos-intel
       configuration: ${{ needs.configure.outputs.configuration }}
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
-      runs-on: macos-12
+      runs-on: macos-13
       arch: intel
   macos-arm:
     if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
@@ -292,7 +292,7 @@ jobs:
       - name: Coverage report (diff)
         if: (github.base_ref != '' || github.event.before != '') && always()
         env:
-          compare-branch: ${{ github.base_ref == '' && steps.parent-commit.hash || format('origin/{0}', github.base_ref) }}
+          compare-branch: ${{ github.base_ref == '' && steps.parent-commit.outputs.hash || format('origin/{0}', github.base_ref) }}
         run: |
           set -o pipefail
           diff-cover --config-file=.diffcover.toml --compare-branch=${{ env.compare-branch }} --fail-under=100 --html-report=coverage-reports/diff-cover.html --markdown-report=coverage-reports/diff-cover.md coverage-reports/coverage.xml | tee coverage-reports/diff-cover-stdout

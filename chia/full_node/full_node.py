@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import copy
 import dataclasses
 import logging
 import multiprocessing
@@ -40,8 +41,9 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -83,6 +85,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
@@ -279,7 +282,6 @@ class FullNode:
             self._mempool_manager = MempoolManager(
                 get_coin_records=self.coin_store.get_coin_records,
                 consensus_constants=self.constants,
-                multiprocessing_context=self.multiprocessing_context,
                 single_threaded=single_threaded,
             )
 
@@ -599,7 +601,18 @@ class FullNode:
                     raise ValueError(f"Error short batch syncing, invalid/no response for {height}-{end_height}")
                 async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                     state_change_summary: Optional[StateChangeSummary]
-                    success, state_change_summary, _ = await self.add_block_batch(response.blocks, peer_info, None)
+                    prev_b = None
+                    if response.blocks[0].height > 0:
+                        prev_b = await self.blockchain.get_block_record_from_db(response.blocks[0].prev_header_hash)
+                        assert prev_b is not None
+                    new_slot = len(response.blocks[0].finished_sub_slots) > 0
+                    ssi, diff = get_next_sub_slot_iters_and_difficulty(
+                        self.constants, new_slot, prev_b, self.blockchain
+                    )
+                    vs = ValidationState(ssi, diff, None)
+                    success, state_change_summary, err = await self.add_block_batch(
+                        response.blocks, peer_info, None, vs
+                    )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
                     if state_change_summary is not None:
@@ -1057,10 +1070,36 @@ class FullNode:
             self.blockchain, fork_point_height, peers_with_peak, node_next_block_check
         )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
+        counter = 0
+        if fork_point_height != 0:
+            # warmup the cache
+            curr = self.blockchain.height_to_block_record(fork_point_height)
+            while (
+                curr.sub_epoch_summary_included is None
+                or counter < 3 * self.constants.MAX_SUB_SLOT_BLOCKS + self.constants.MIN_BLOCKS_PER_CHALLENGE_BLOCK + 3
+            ):
+                res = await self.blockchain.get_block_record_from_db(curr.prev_hash)
+                if res is None:
+                    break
+                curr = res
+                self.blockchain.add_block_record(curr)
+                counter += 1
 
         # normally "fork_point" or "fork_height" refers to the first common
         # block between the main chain and the fork. Here "fork_point_height"
         # seems to refer to the first diverging block
+        fork_info: Optional[ForkInfo] = None
+        if fork_point_height == 0:
+            ssi = self.constants.SUB_SLOT_ITERS_STARTING
+            diff = self.constants.DIFFICULTY_STARTING
+            prev_ses_block = None
+        else:
+            prev_b_hash = self.blockchain.height_to_hash(fork_point_height)
+            assert prev_b_hash is not None
+            prev_b = await self.blockchain.get_full_block(prev_b_hash)
+            assert prev_b is not None
+            ssi, diff, prev_ses_block = await self.get_sub_slot_iters_difficulty_ses_block(prev_b, None, None)
+        vs = ValidationState(ssi, diff, prev_ses_block)
 
         async def fetch_block_batches(
             batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
@@ -1100,8 +1139,7 @@ class FullNode:
         async def validate_block_batches(
             inner_batch_queue: asyncio.Queue[Optional[Tuple[WSChiaConnection, List[FullBlock]]]]
         ) -> None:
-            fork_info: Optional[ForkInfo] = None
-
+            nonlocal fork_info
             block_rate = 0
             block_rate_time = time.monotonic()
             block_rate_height = -1
@@ -1139,10 +1177,13 @@ class FullNode:
                             assert fork_hash is not None
                             fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
+                # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
+                # call will update it
                 success, state_change_summary, err = await self.add_block_batch(
                     blocks,
                     peer.get_peer_logging(),
                     fork_info,
+                    vs,
                     summaries,
                 )
                 if success is False:
@@ -1243,21 +1284,28 @@ class FullNode:
         all_blocks: List[FullBlock],
         peer_info: PeerInfo,
         fork_info: Optional[ForkInfo],
+        vs: ValidationState,  # in-out parameter
         wp_summaries: Optional[List[SubEpochSummary]] = None,
     ) -> Tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
         # Precondition: All blocks must be contiguous blocks, index i+1 must be the parent of index i
         # Returns a bool for success, as well as a StateChangeSummary if the peak was advanced
 
-        block_dict: Dict[bytes32, FullBlock] = {}
-        for block in all_blocks:
-            block_dict[block.header_hash] = block
-
         blocks_to_validate: List[FullBlock] = []
         for i, block in enumerate(all_blocks):
             header_hash = block.header_hash
-            if not await self.blockchain.contains_block_from_db(header_hash):
+            block_rec = await self.blockchain.get_block_record_from_db(header_hash)
+            if block_rec is None:
                 blocks_to_validate = all_blocks[i:]
                 break
+            else:
+                self.blockchain.add_block_record(block_rec)
+                if block_rec.sub_epoch_summary_included:
+                    # already validated block, update sub slot iters, difficulty and prev sub epoch summary
+                    vs.prev_ses_block = block_rec
+                    if block_rec.sub_epoch_summary_included.new_sub_slot_iters is not None:
+                        vs.current_ssi = block_rec.sub_epoch_summary_included.new_sub_slot_iters
+                    if block_rec.sub_epoch_summary_included.new_difficulty is not None:
+                        vs.current_difficulty = block_rec.sub_epoch_summary_included.new_difficulty
 
             if fork_info is None:
                 continue
@@ -1279,17 +1327,27 @@ class FullNode:
                 # We have already validated the block, but if it's not part of the
                 # main chain, we still need to re-run it to update the additions and
                 # removals in fork_info.
-                await self.blockchain.advance_fork_info(block, fork_info, block_dict)
-                await self.blockchain.run_single_block(block, fork_info, block_dict)
+                await self.blockchain.advance_fork_info(block, fork_info)
+                await self.blockchain.run_single_block(block, fork_info)
 
         if len(blocks_to_validate) == 0:
             return True, None, None
 
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
+        # We have to copy the ValidationState object to preserve it for the add_block()
+        # call below. pre_validate_blocks_multiprocessing() will update the
+        # object we pass in.
         pre_validate_start = time.monotonic()
-        pre_validation_results: List[PreValidationResult] = await self.blockchain.pre_validate_blocks_multiprocessing(
-            blocks_to_validate, {}, wp_summaries=wp_summaries, validate_signatures=True
+        pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            self.blockchain.constants,
+            self.blockchain,
+            blocks_to_validate,
+            self.blockchain.pool,
+            {},
+            copy.copy(vs),
+            wp_summaries=wp_summaries,
+            validate_signatures=True,
         )
         pre_validate_end = time.monotonic()
         pre_validate_time = pre_validate_end - pre_validate_start
@@ -1300,21 +1358,42 @@ class FullNode:
             f"CLVM: {sum(pvr.timing/1000.0 for pvr in pre_validation_results):0.2f}s "
             f"({len(blocks_to_validate)} blocks, start height: {blocks_to_validate[0].height})",
         )
+
         for i, block in enumerate(blocks_to_validate):
             if pre_validation_results[i].error is not None:
-                self.log.error(f"Invalid block from peer: {peer_info} {Err(pre_validation_results[i].error)}")
-                return False, None, Err(pre_validation_results[i].error)
+                self.log.error(
+                    f"Invalid block from peer: {peer_info} height {block.height} {Err(pre_validation_results[i].error)}"
+                )
+                return (
+                    False,
+                    None,
+                    Err(pre_validation_results[i].error),
+                )
 
         agg_state_change_summary: Optional[StateChangeSummary] = None
-
+        block_record = await self.blockchain.get_block_record_from_db(blocks_to_validate[0].prev_header_hash)
         for i, block in enumerate(blocks_to_validate):
+            assert vs.prev_ses_block is None or vs.prev_ses_block.height < block.height
             assert pre_validation_results[i].required_iters is not None
             state_change_summary: Optional[StateChangeSummary]
             # when adding blocks in batches, we won't have any overlapping
             # signatures with the mempool. There won't be any cache hits, so
             # there's no need to pass the BLS cache in
+
+            if len(block.finished_sub_slots) > 0:
+                cc_sub_slot = block.finished_sub_slots[0].challenge_chain
+                if cc_sub_slot.new_sub_slot_iters is not None or cc_sub_slot.new_difficulty is not None:
+                    expected_sub_slot_iters, expected_difficulty = get_next_sub_slot_iters_and_difficulty(
+                        self.constants, True, block_record, self.blockchain
+                    )
+                    assert cc_sub_slot.new_sub_slot_iters is not None
+                    vs.current_ssi = cc_sub_slot.new_sub_slot_iters
+                    assert cc_sub_slot.new_difficulty is not None
+                    vs.current_difficulty = cc_sub_slot.new_difficulty
+                    assert expected_sub_slot_iters == vs.current_ssi
+                    assert expected_difficulty == vs.current_difficulty
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], None, fork_info
+                block, pre_validation_results[i], None, vs.current_ssi, fork_info, prev_ses_block=vs.prev_ses_block
             )
 
             if result == AddBlockResult.NEW_PEAK:
@@ -1341,9 +1420,10 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return False, agg_state_change_summary, error
-            block_record = await self.blockchain.get_block_record_from_db(block.header_hash)
+            block_record = self.blockchain.block_record(block.header_hash)
             assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
+                vs.prev_ses_block = block_record
                 if self.weight_proof_handler is not None:
                     await self.weight_proof_handler.create_prev_sub_epoch_segments()
         if agg_state_change_summary is not None:
@@ -1353,6 +1433,45 @@ class FullNode:
                 f"advanced: True"
             )
         return True, agg_state_change_summary, None
+
+    async def get_sub_slot_iters_difficulty_ses_block(
+        self, block: FullBlock, ssi: Optional[uint64], diff: Optional[uint64]
+    ) -> Tuple[uint64, uint64, Optional[BlockRecord]]:
+        prev_ses_block = None
+        if ssi is None or diff is None:
+            if block.height == 0:
+                ssi = self.constants.SUB_SLOT_ITERS_STARTING
+                diff = self.constants.DIFFICULTY_STARTING
+        if ssi is None or diff is None:
+            if len(block.finished_sub_slots) > 0:
+                if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                    diff = block.finished_sub_slots[0].challenge_chain.new_difficulty
+                if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                    ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+
+        if block.height > 0:
+            prev_b = await self.blockchain.get_block_record_from_db(block.prev_header_hash)
+            curr = prev_b
+            while prev_ses_block is None or ssi is None or diff is None:
+                assert curr is not None
+                if curr.height == 0:
+                    if ssi is None or diff is None:
+                        ssi = self.constants.SUB_SLOT_ITERS_STARTING
+                        diff = self.constants.DIFFICULTY_STARTING
+                    if prev_ses_block is None:
+                        prev_ses_block = curr
+                if curr.sub_epoch_summary_included is not None:
+                    if prev_ses_block is None:
+                        prev_ses_block = curr
+                    if ssi is None or diff is None:
+                        if curr.sub_epoch_summary_included.new_difficulty is not None:
+                            diff = curr.sub_epoch_summary_included.new_difficulty
+                        if curr.sub_epoch_summary_included.new_sub_slot_iters is not None:
+                            ssi = curr.sub_epoch_summary_included.new_sub_slot_iters
+                curr = await self.blockchain.get_block_record_from_db(curr.prev_hash)
+        assert ssi is not None
+        assert diff is not None
+        return ssi, diff, prev_ses_block
 
     async def _finish_sync(self) -> None:
         """
@@ -1729,14 +1848,31 @@ class FullNode:
                 return None
             validation_start = time.monotonic()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
-            npc_results = {}
-            if pre_validation_result is not None and pre_validation_result.npc_result is not None:
-                npc_results[block.height] = pre_validation_result.npc_result
+            block_height_conds_map = {}
+            if pre_validation_result is not None and pre_validation_result.conds is not None:
+                block_height_conds_map[block.height] = pre_validation_result.conds
 
             # Don't validate signatures because we want to validate them in the main thread later, since we have a
             # cache available
-            pre_validation_results = await self.blockchain.pre_validate_blocks_multiprocessing(
-                [block], npc_results, validate_signatures=False
+            prev_b = None
+            prev_ses_block = None
+            if block.height > 0:
+                prev_b = await self.blockchain.get_block_record_from_db(block.prev_header_hash)
+                assert prev_b is not None
+                curr = prev_b
+                while curr.height > 0 and curr.sub_epoch_summary_included is None:
+                    curr = self.blockchain.block_record(curr.prev_hash)
+                prev_ses_block = curr
+            new_slot = len(block.finished_sub_slots) > 0
+            ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
+            pre_validation_results = await pre_validate_blocks_multiprocessing(
+                self.blockchain.constants,
+                self.blockchain,
+                [block],
+                self.blockchain.pool,
+                block_height_conds_map,
+                ValidationState(ssi, diff, prev_ses_block),
+                validate_signatures=False,
             )
             added: Optional[AddBlockResult] = None
             pre_validation_time = time.monotonic() - validation_start
@@ -1760,7 +1896,7 @@ class FullNode:
                     )
                     assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
-                        block, result_to_validate, bls_cache, fork_info
+                        block, result_to_validate, bls_cache, ssi, fork_info
                     )
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
                     return None
@@ -1960,7 +2096,9 @@ class FullNode:
             pre_validation_start = time.monotonic()
             assert block.transactions_info is not None
             try:
-                block_generator: Optional[BlockGenerator] = await self.blockchain.get_block_generator(block)
+                block_generator: Optional[BlockGenerator] = await get_block_generator(
+                    self.blockchain.lookup_block_generators, block
+                )
             except ValueError:
                 raise ConsensusError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
             if block_generator is None:
@@ -2312,12 +2450,7 @@ class FullNode:
         return None, False
 
     async def add_transaction(
-        self,
-        transaction: SpendBundle,
-        spend_name: bytes32,
-        peer: Optional[WSChiaConnection] = None,
-        test: bool = False,
-        tx_bytes: Optional[bytes] = None,
+        self, transaction: SpendBundle, spend_name: bytes32, peer: Optional[WSChiaConnection] = None, test: bool = False
     ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
         if self.sync_store.get_sync_mode():
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
@@ -2340,7 +2473,7 @@ class FullNode:
         else:
             try:
                 cost_result = await self.mempool_manager.pre_validate_spendbundle(
-                    transaction, tx_bytes, spend_name, self._bls_cache
+                    transaction, spend_name, self._bls_cache
                 )
             except ValidationError as e:
                 self.mempool_manager.remove_seen(spend_name)

@@ -210,7 +210,7 @@ def compare_results(
 ) -> None:
     old_version, new_version = pop_data("version", old=old, new=new)
     if old_version != new_version:
-        sys.exit(f"version missmatch: old: {old_version} vs new: {new_version}")
+        sys.exit(f"version mismatch: old: {old_version} vs new: {new_version}")
     old_commit_hash, new_commit_hash = pop_data("commit_hash", old=old, new=new)
     for data, modes in new.items():
         if data not in old:

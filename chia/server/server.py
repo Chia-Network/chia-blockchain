@@ -525,7 +525,7 @@ class ChiaServer:
         self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = False
     ) -> None:
         # closed_connection is true if the callback is being called with a connection that was previously closed
-        # in this case we still want to do the banning logic and remove the conection from the list
+        # in this case we still want to do the banning logic and remove the connection from the list
         # but the other cleanup should already have been done so we skip that
 
         if is_localhost(connection.peer_info.host) and ban_time != 0:
