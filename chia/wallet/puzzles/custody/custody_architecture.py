@@ -417,7 +417,5 @@ class PuzzleWithRestrictions:
 
         if delegated_puzzle_and_solution is not None:
             solution = Program.to([*delegated_puzzle_and_solution, *solution.as_iter()])
-        else:
-            solution = solution
 
         return solution
