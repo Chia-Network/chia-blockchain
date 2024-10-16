@@ -366,7 +366,7 @@ class Mempool:
 
         return MempoolRemoveInfo(removed_internal_items, reason)
 
-    def add_to_pool(self, item: MempoolItem) -> MempoolAddInfo:
+    def add_to_pool(self, item: MempoolItem, conflicting_items: List[bytes32] = []) -> MempoolAddInfo:
         """
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
         """
@@ -375,7 +375,9 @@ class Mempool:
         assert item.conds is not None
         assert item.cost <= self.mempool_info.max_block_clvm_cost
 
-        removals: List[MempoolRemoveInfo] = []
+        removals: List[MempoolRemoveInfo] = [
+            self.remove_from_pool(items=conflicting_items, reason=MempoolRemoveReason.CONFLICT)
+        ]
 
         # we have certain limits on transactions that will expire soon
         # (in the next 15 minutes)

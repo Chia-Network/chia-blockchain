@@ -358,11 +358,10 @@ class MempoolManager:
         if err is None:
             # No error, immediately add to mempool, after removing conflicting TXs.
             assert item is not None
-            conflict = self.mempool.remove_from_pool(remove_items, MempoolRemoveReason.CONFLICT)
-            info = self.mempool.add_to_pool(item)
+            info = self.mempool.add_to_pool(item=item, conflicting_items=remove_items)
             if info.error is not None:
                 return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.FAILED, [], info.error)
-            return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.SUCCESS, info.removals + [conflict], None)
+            return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.SUCCESS, info.removals, None)
         elif err is Err.MEMPOOL_CONFLICT and item is not None:
             # The transaction has a conflict with another item in the
             # mempool, put it aside and re-try it later
