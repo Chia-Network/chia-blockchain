@@ -339,9 +339,6 @@ class PuzzleWithRestrictions:
         )
 
     def puzzle_reveal(self, _top_level: bool = True) -> Program:
-        # TODO: optimizations on specific cases
-        #   - 1 of N can be a simpler puzzle
-        #   - Stacked MofNs could be a more complicated but more efficient puzzle (?)
         inner_puzzle = self.puzzle.puzzle(self.nonce)  # pylint: disable=assignment-from-no-return
         if _top_level and not isinstance(self.puzzle, MofN):
             fed_inner_puzzle = DELEGATED_PUZZLE_FEEDER.curry(inner_puzzle)
@@ -367,9 +364,6 @@ class PuzzleWithRestrictions:
         return INDEX_WRAPPER.curry(self.nonce, restricted_inner_puzzle)
 
     def puzzle_hash(self, _top_level: bool = True) -> bytes32:
-        # TODO: optimizations on specific cases
-        #   - 1 of N can be a simpler puzzle
-        #   - Stacked MofNs could be a more complicated but more efficient puzzle (?)
         inner_puzzle_hash = self.puzzle.puzzle_hash(self.nonce)  # pylint: disable=assignment-from-no-return
         if _top_level and not isinstance(self.puzzle, MofN):
             fed_inner_puzzle_hash = (
