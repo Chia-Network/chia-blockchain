@@ -4,7 +4,6 @@ import random
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import List
 
 import pytest
 
@@ -128,7 +127,7 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
             validate_v2(db_file, validate_blocks=False)
 
 
-async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
+async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
     async with DBWrapper2.managed(database=db_file, reader_count=1, db_version=2) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
             # this is done by chia init normally
@@ -150,7 +149,7 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
 
 
 @pytest.mark.anyio
-async def test_db_validate_default_1000_blocks(default_1000_blocks: List[FullBlock]) -> None:
+async def test_db_validate_default_1000_blocks(default_1000_blocks: list[FullBlock]) -> None:
     with TempFile() as db_file:
         await make_db(db_file, default_1000_blocks)
 

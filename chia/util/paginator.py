@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Sequence
 from math import ceil
-from typing import Sequence
 
 
 class InvalidPageSizeLimit(Exception):

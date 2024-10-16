@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, List
 
 import pytest
 from chia_rs import G2Element
@@ -139,7 +139,7 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
 
     created_txs = action_scope.side_effects.transactions
 
-    def flatten_spend_bundles(txs: List[TransactionRecord]) -> List[WalletSpendBundle]:
+    def flatten_spend_bundles(txs: list[TransactionRecord]) -> list[WalletSpendBundle]:
         return [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
 
     assert (

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional, Type, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 from aiosqlite import Row
 
@@ -30,7 +30,7 @@ def _row_to_singleton_record(row: Row) -> SingletonRecord:
 
 
 def _row_to_mirror(row: Row, confirmed_at_height: Optional[uint32]) -> Mirror:
-    urls: List[bytes] = []
+    urls: list[bytes] = []
     byte_list: bytes = row[3]
     while byte_list != b"":
         length = uint16.from_bytes(byte_list[0:2])
@@ -48,7 +48,7 @@ class DataLayerStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: Type[_T_DataLayerStore], db_wrapper: DBWrapper2) -> _T_DataLayerStore:
+    async def create(cls: type[_T_DataLayerStore], db_wrapper: DBWrapper2) -> _T_DataLayerStore:
         self = cls()
 
         self.db_wrapper = db_wrapper
@@ -131,11 +131,11 @@ class DataLayerStore:
         min_generation: Optional[uint32] = None,
         max_generation: Optional[uint32] = None,
         num_results: Optional[uint32] = None,
-    ) -> List[SingletonRecord]:
+    ) -> list[SingletonRecord]:
         """
         Returns stored singletons with a specific launcher ID.
         """
-        query_params: List[Union[bytes32, uint32]] = [launcher_id]
+        query_params: list[Union[bytes32, uint32]] = [launcher_id]
         for optional_param in (min_generation, max_generation, num_results):
             if optional_param is not None:
                 query_params.append(optional_param)
@@ -200,7 +200,7 @@ class DataLayerStore:
             return _row_to_singleton_record(row)
         return None
 
-    async def get_unconfirmed_singletons(self, launcher_id: bytes32) -> List[SingletonRecord]:
+    async def get_unconfirmed_singletons(self, launcher_id: bytes32) -> list[SingletonRecord]:
         """
         Returns all singletons with a specific launcher id that have not yet been marked confirmed
         """
@@ -214,7 +214,7 @@ class DataLayerStore:
 
         return records
 
-    async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
+    async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> list[SingletonRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 "SELECT * from singleton_records WHERE launcher_id=? AND root=? ORDER BY generation DESC",
@@ -276,7 +276,7 @@ class DataLayerStore:
             return Coin(bytes32(row[1][0:32]), bytes32(row[1][32:64]), uint64(int.from_bytes(row[1][64:72], "big")))
         return None
 
-    async def get_all_launchers(self) -> List[bytes32]:
+    async def get_all_launchers(self) -> list[bytes32]:
         """
         Checks DB for all launchers.
         """
@@ -329,7 +329,7 @@ class DataLayerStore:
                 ),
             )
 
-    async def get_mirrors(self, launcher_id: bytes32) -> List[Mirror]:
+    async def get_mirrors(self, launcher_id: bytes32) -> list[Mirror]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 "SELECT * from mirrors WHERE launcher_id=?",
@@ -337,7 +337,7 @@ class DataLayerStore:
             )
             rows = await cursor.fetchall()
             await cursor.close()
-            mirrors: List[Mirror] = []
+            mirrors: list[Mirror] = []
 
             for row in rows:
                 confirmation_height = await execute_fetchone(

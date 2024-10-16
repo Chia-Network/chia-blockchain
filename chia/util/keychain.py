@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import sys
 import unicodedata
+from collections.abc import Iterator
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, overload
+from typing import Any, Literal, Optional, Union, overload
 
 import importlib_resources
 from bitstring import BitArray  # pyright: reportMissingImports=false
@@ -41,7 +42,7 @@ def supports_os_passphrase_storage() -> bool:
     return sys.platform in ["darwin", "win32", "cygwin"]
 
 
-def passphrase_requirements() -> Dict[str, Any]:
+def passphrase_requirements() -> dict[str, Any]:
     """
     Returns a dictionary specifying current passphrase requirements
     """
@@ -93,7 +94,7 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
 
 
 def check_mnemonic_validity(mnemonic_str: str) -> bool:
-    mnemonic: List[str] = mnemonic_str.split(" ")
+    mnemonic: list[str] = mnemonic_str.split(" ")
     return len(mnemonic) in [12, 15, 18, 21, 24]
 
 
@@ -103,12 +104,12 @@ def mnemonic_from_short_words(mnemonic_str: str) -> str:
     practice to only store the first 4 letters of each word in many offline storage solutions, also support looking
     up words by the first 4 characters
     """
-    mnemonic: List[str] = mnemonic_str.split(" ")
+    mnemonic: list[str] = mnemonic_str.split(" ")
     if len(mnemonic) not in [12, 15, 18, 21, 24]:
         raise ValueError("Invalid mnemonic length")
 
     four_char_dict = {word[:4]: word for word in bip39_word_list().splitlines()}
-    full_words: List[str] = []
+    full_words: list[str] = []
     for word in mnemonic:
         full_word = four_char_dict.get(word[:4])
         if full_word is None:
@@ -120,7 +121,7 @@ def mnemonic_from_short_words(mnemonic_str: str) -> str:
 
 def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     full_mnemonic_str = mnemonic_from_short_words(mnemonic_str)
-    mnemonic: List[str] = full_mnemonic_str.split(" ")
+    mnemonic: list[str] = full_mnemonic_str.split(" ")
 
     word_list = {word: i for i, word in enumerate(bip39_word_list().splitlines())}
     bit_array = BitArray()
@@ -185,7 +186,7 @@ def get_private_key_user(user: str, index: int) -> str:
 @streamable
 @dataclass(frozen=True)
 class KeyDataSecrets(Streamable):
-    mnemonic: List[str]
+    mnemonic: list[str]
     entropy: bytes
     private_key: PrivateKey
 
@@ -259,7 +260,7 @@ class KeyData(Streamable):
         return cls.from_mnemonic(generate_mnemonic(), label)
 
     @property
-    def mnemonic(self) -> List[str]:
+    def mnemonic(self) -> list[str]:
         if self.secrets is None:
             raise KeychainSecretsMissing()
         return self.secrets.mnemonic
@@ -434,7 +435,7 @@ class Keychain:
                 pass
         return None
 
-    def get_first_private_key(self) -> Optional[Tuple[PrivateKey, bytes]]:
+    def get_first_private_key(self) -> Optional[tuple[PrivateKey, bytes]]:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
@@ -442,7 +443,7 @@ class Keychain:
             return key_data.private_key, key_data.entropy
         return None
 
-    def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[Tuple[PrivateKey, bytes]]:
+    def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[tuple[PrivateKey, bytes]]:
         """
         Return first private key which have the given public key fingerprint.
         """
@@ -451,12 +452,12 @@ class Keychain:
                 return key_data.private_key, key_data.entropy
         return None
 
-    def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
+    def get_all_private_keys(self) -> list[tuple[PrivateKey, bytes]]:
         """
         Returns all private keys which can be retrieved, with the given passphrases.
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
         """
-        all_keys: List[Tuple[PrivateKey, bytes]] = []
+        all_keys: list[tuple[PrivateKey, bytes]] = []
         for key_data in self._iterate_through_key_datas(skip_public_only=True):
             all_keys.append((key_data.private_key, key_data.entropy))
         return all_keys
@@ -470,21 +471,21 @@ class Keychain:
                 return key_data
         raise KeychainFingerprintNotFound(fingerprint)
 
-    def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
+    def get_keys(self, include_secrets: bool = False) -> list[KeyData]:
         """
         Returns the KeyData of all keys which can be retrieved.
         """
-        all_keys: List[KeyData] = []
+        all_keys: list[KeyData] = []
         for key_data in self._iterate_through_key_datas(include_secrets=include_secrets, skip_public_only=False):
             all_keys.append(key_data)
 
         return all_keys
 
-    def get_all_public_keys(self) -> List[G1Element]:
+    def get_all_public_keys(self) -> list[G1Element]:
         """
         Returns all public keys.
         """
-        all_keys: List[G1Element] = []
+        all_keys: list[G1Element] = []
         for key_data in self._iterate_through_key_datas(skip_public_only=False):
             all_keys.append(key_data.public_key)
 
@@ -521,7 +522,7 @@ class Keychain:
                 pass
         return removed
 
-    def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]) -> None:
+    def delete_keys(self, keys_to_delete: list[tuple[PrivateKey, bytes]]) -> None:
         """
         Deletes all keys in the list.
         """

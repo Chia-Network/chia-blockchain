@@ -5,9 +5,10 @@ import copy
 import logging
 import time
 import traceback
+from collections.abc import Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence
+from typing import Optional
 
 from chia_rs import AugSchemeMPL, SpendBundleConditions
 
@@ -53,7 +54,7 @@ def pre_validate_block(
     constants: ConsensusConstants,
     blockchain: BlockRecordsProtocol,
     block: FullBlock,
-    prev_generators: Optional[List[bytes]],
+    prev_generators: Optional[list[bytes]],
     conds: Optional[SpendBundleConditions],
     vs: ValidationState,
     validate_signatures: bool,
@@ -61,8 +62,8 @@ def pre_validate_block(
 
     try:
         validation_start = time.monotonic()
-        tx_additions: List[Coin] = []
-        removals: List[bytes32] = []
+        tx_additions: list[Coin] = []
+        removals: list[bytes32] = []
         if conds is not None:
             removals, tx_additions = tx_removals_and_additions(conds)
         elif block.transactions_generator is not None:
@@ -138,12 +139,12 @@ async def pre_validate_blocks_multiprocessing(
     block_records: BlocksProtocol,
     blocks: Sequence[FullBlock],
     pool: Executor,
-    block_height_conds_map: Dict[uint32, SpendBundleConditions],
+    block_height_conds_map: dict[uint32, SpendBundleConditions],
     vs: ValidationState,
     *,
-    wp_summaries: Optional[List[SubEpochSummary]] = None,
+    wp_summaries: Optional[list[SubEpochSummary]] = None,
     validate_signatures: bool = True,
-) -> List[PreValidationResult]:
+) -> list[PreValidationResult]:
     """
     This method must be called under the blockchain lock
     If all the full blocks pass pre-validation, (only validates header), returns the list of required iters.
@@ -221,7 +222,7 @@ async def pre_validate_blocks_multiprocessing(
         blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
         prev_b = block_rec
 
-        previous_generators: Optional[List[bytes]] = None
+        previous_generators: Optional[list[bytes]] = None
 
         try:
             block_generator: Optional[BlockGenerator] = await get_block_generator(

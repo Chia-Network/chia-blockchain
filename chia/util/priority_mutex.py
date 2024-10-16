@@ -5,8 +5,9 @@ import collections
 import contextlib
 import dataclasses
 import logging
+from collections.abc import AsyncIterator
 from enum import IntEnum
-from typing import AsyncIterator, Dict, Generic, Optional, Type, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from typing_extensions import final
 
@@ -45,11 +46,11 @@ class PriorityMutex(Generic[_T_Priority]):
     ```
     """
 
-    _deques: Dict[_T_Priority, collections.deque[_Element]]
+    _deques: dict[_T_Priority, collections.deque[_Element]]
     _active: Optional[_Element] = None
 
     @classmethod
-    def create(cls, priority_type: Type[_T_Priority]) -> PriorityMutex[_T_Priority]:
+    def create(cls, priority_type: type[_T_Priority]) -> PriorityMutex[_T_Priority]:
         return cls(
             _deques={priority: collections.deque() for priority in sorted(priority_type)},
         )

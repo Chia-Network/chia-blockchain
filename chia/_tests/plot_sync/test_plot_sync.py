@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import functools
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from shutil import copy
-from typing import Any, AsyncIterator, Callable, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G1Element
@@ -43,7 +44,7 @@ def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bo
     )
 
 
-def assert_path_list_matches(expected_list: List[str], actual_list: List[str]) -> None:
+def assert_path_list_matches(expected_list: list[str], actual_list: list[str]) -> None:
     assert len(expected_list) == len(actual_list)
     for item in expected_list:
         assert str(item) in actual_list
@@ -61,7 +62,7 @@ class ExpectedResult:
     duplicates_delta: PathListDelta = field(default_factory=PathListDelta)
     callback_passed: bool = False
 
-    def add_valid(self, list_plots: List[MockPlotInfo]) -> None:
+    def add_valid(self, list_plots: list[MockPlotInfo]) -> None:
         def create_mock_plot(info: MockPlotInfo) -> Plot:
             return Plot(
                 info.prover.get_filename(),
@@ -78,31 +79,31 @@ class ExpectedResult:
         self.valid_count += len(list_plots)
         self.valid_delta.additions.update({x.prover.get_filename(): create_mock_plot(x) for x in list_plots})
 
-    def remove_valid(self, list_paths: List[Path]) -> None:
+    def remove_valid(self, list_paths: list[Path]) -> None:
         self.valid_count -= len(list_paths)
         self.valid_delta.removals += [str(x) for x in list_paths]
 
-    def add_invalid(self, list_paths: List[Path]) -> None:
+    def add_invalid(self, list_paths: list[Path]) -> None:
         self.invalid_count += len(list_paths)
         self.invalid_delta.additions += [str(x) for x in list_paths]
 
-    def remove_invalid(self, list_paths: List[Path]) -> None:
+    def remove_invalid(self, list_paths: list[Path]) -> None:
         self.invalid_count -= len(list_paths)
         self.invalid_delta.removals += [str(x) for x in list_paths]
 
-    def add_keys_missing(self, list_paths: List[Path]) -> None:
+    def add_keys_missing(self, list_paths: list[Path]) -> None:
         self.keys_missing_count += len(list_paths)
         self.keys_missing_delta.additions += [str(x) for x in list_paths]
 
-    def remove_keys_missing(self, list_paths: List[Path]) -> None:
+    def remove_keys_missing(self, list_paths: list[Path]) -> None:
         self.keys_missing_count -= len(list_paths)
         self.keys_missing_delta.removals += [str(x) for x in list_paths]
 
-    def add_duplicates(self, list_paths: List[Path]) -> None:
+    def add_duplicates(self, list_paths: list[Path]) -> None:
         self.duplicates_count += len(list_paths)
         self.duplicates_delta.additions += [str(x) for x in list_paths]
 
-    def remove_duplicates(self, list_paths: List[Path]) -> None:
+    def remove_duplicates(self, list_paths: list[Path]) -> None:
         self.duplicates_count -= len(list_paths)
         self.duplicates_delta.removals += [str(x) for x in list_paths]
 
@@ -110,9 +111,9 @@ class ExpectedResult:
 @dataclass
 class Environment:
     root_path: Path
-    harvester_services: List[HarvesterService]
+    harvester_services: list[HarvesterService]
     farmer_service: FarmerService
-    harvesters: List[Harvester]
+    harvesters: list[Harvester]
     farmer: Farmer
     dir_1: Directory
     dir_2: Directory
@@ -121,9 +122,9 @@ class Environment:
     dir_invalid: Directory
     dir_keys_missing: Directory
     dir_duplicates: Directory
-    expected: List[ExpectedResult]
+    expected: list[ExpectedResult]
     split_farmer_service_manager: SplitAsyncManager[FarmerService]
-    split_harvester_managers: List[SplitAsyncManager[Harvester]]
+    split_harvester_managers: list[SplitAsyncManager[Harvester]]
 
     def get_harvester(self, peer_id: bytes32) -> Optional[Harvester]:
         for harvester in self.harvesters:
@@ -218,7 +219,7 @@ class Environment:
     async def run_sync_test(self) -> None:
         plot_manager: PlotManager
         assert len(self.harvesters) == len(self.expected)
-        last_sync_ids: List[uint64] = []
+        last_sync_ids: list[uint64] = []
         # Run the test in two steps, first trigger the refresh on both harvesters
         for harvester in self.harvesters:
             plot_manager = harvester.plot_manager
@@ -279,16 +280,16 @@ class Environment:
 @pytest.fixture(scope="function")
 async def environment(
     tmp_path: Path,
-    farmer_two_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    farmer_two_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> AsyncIterator[Environment]:
-    def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
+    def new_test_dir(name: str, plot_list: list[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
 
-    plots: List[Path] = get_test_plots()
-    plots_invalid: List[Path] = get_test_plots()[0:3]
-    plots_keys_missing: List[Path] = get_test_plots("not_in_keychain")
+    plots: list[Path] = get_test_plots()
+    plots_invalid: list[Path] = get_test_plots()[0:3]
+    plots_keys_missing: list[Path] = get_test_plots("not_in_keychain")
     # Create 4 directories where: dir_n contains n plots
-    directories: List[Directory] = []
+    directories: list[Directory] = []
     offset: int = 0
     while len(directories) < 4:
         dir_number = len(directories) + 1
@@ -535,7 +536,7 @@ async def test_farmer_restart(environment: Environment) -> None:
     env: Environment = environment
     # Load all directories for both harvesters
     await add_and_validate_all_directories(env)
-    last_sync_ids: List[uint64] = []
+    last_sync_ids: list[uint64] = []
     for i in range(0, len(env.harvesters)):
         last_sync_ids.append(env.harvesters[i].plot_sync_sender._last_sync_id)
     # Stop the farmer and make sure both receivers get dropped and refreshing gets stopped on the harvesters
@@ -569,7 +570,7 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.anyio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools]
 ) -> None:
     harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]

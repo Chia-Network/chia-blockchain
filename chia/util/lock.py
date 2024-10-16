@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
-from typing import Optional, Type
+from typing import Optional
 
 from filelock import BaseFileLock, FileLock, Timeout
 from typing_extensions import final
@@ -31,7 +31,7 @@ class Lockfile:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:

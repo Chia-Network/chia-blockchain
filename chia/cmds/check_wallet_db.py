@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
 from sqlite3 import Row
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Optional
 
 from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on
@@ -48,18 +49,18 @@ def _validate_args_addresses_used(wallet_id: int, last_index: int, last_hardened
             raise ValueError(f"Invalid argument: noncontiguous derivation_index at {last_index} wallet_id={wallet_id}")
 
 
-def check_addresses_used_contiguous(derivation_paths: List[DerivationPath]) -> List[str]:
+def check_addresses_used_contiguous(derivation_paths: list[DerivationPath]) -> list[str]:
     """
     The used column for addresses in the derivation_paths table should be a
     zero or greater run of 1's, followed by a zero or greater run of 0's.
     There should be no used derivations after seeing a used derivation.
     """
-    errors: List[str] = []
+    errors: list[str] = []
 
     for wallet_id, dps in dp_by_wallet_id(derivation_paths).items():
         saw_unused = False
-        bad_used_values: Set[int] = set()
-        ordering_errors: List[str] = []
+        bad_used_values: set[int] = set()
+        ordering_errors: list[str] = []
         # last_index = None
         # last_hardened = None
         for dp in dps:
@@ -89,7 +90,7 @@ def check_addresses_used_contiguous(derivation_paths: List[DerivationPath]) -> L
     return errors
 
 
-def check_for_gaps(array: List[int], start: int, end: int, *, data_type_plural: str = "Elements") -> List[str]:
+def check_for_gaps(array: list[int], start: int, end: int, *, data_type_plural: str = "Elements") -> list[str]:
     """
     Check for compact sequence:
     Check that every value from start to end is present in array, and no more.
@@ -100,7 +101,7 @@ def check_for_gaps(array: List[int], start: int, end: int, *, data_type_plural: 
 
     if start > end:
         raise ValueError(f"{__name__} called with incorrect arguments: start={start} end={end} (start > end)")
-    errors: List[str] = []
+    errors: list[str] = []
 
     if start == end and len(array) == 1:
         return errors
@@ -123,7 +124,7 @@ def check_for_gaps(array: List[int], start: int, end: int, *, data_type_plural: 
 
 
 class FromDB:
-    def __init__(self, row: Iterable[Any], fields: List[str]) -> None:
+    def __init__(self, row: Iterable[Any], fields: list[str]) -> None:
         self.fields = fields
         for field, value in zip(fields, row):
             setattr(self, field, value)
@@ -144,7 +145,7 @@ def wallet_type_name(
         return f"INVALID_WALLET_TYPE ({wallet_type})"
 
 
-def _cwr(row: Row) -> List[Any]:
+def _cwr(row: Row) -> list[Any]:
     r = []
     for i, v in enumerate(row):
         if i == 2:
@@ -175,7 +176,7 @@ class Wallet(FromDB):
     data: str
 
 
-def dp_by_wallet_id(derivation_paths: List[DerivationPath]) -> Dict[int, List[DerivationPath]]:
+def dp_by_wallet_id(derivation_paths: list[DerivationPath]) -> dict[int, list[DerivationPath]]:
     d = defaultdict(list)
     for derivation_path in derivation_paths:
         d[derivation_path.wallet_id].append(derivation_path)
@@ -184,7 +185,7 @@ def dp_by_wallet_id(derivation_paths: List[DerivationPath]) -> Dict[int, List[De
     return d
 
 
-def derivation_indices_by_wallet_id(derivation_paths: List[DerivationPath]) -> Dict[int, List[int]]:
+def derivation_indices_by_wallet_id(derivation_paths: list[DerivationPath]) -> dict[int, list[int]]:
     d = dp_by_wallet_id(derivation_paths)
     di = {}
     for k, v in d.items():
@@ -192,7 +193,7 @@ def derivation_indices_by_wallet_id(derivation_paths: List[DerivationPath]) -> D
     return di
 
 
-def print_min_max_derivation_for_wallets(derivation_paths: List[DerivationPath]) -> None:
+def print_min_max_derivation_for_wallets(derivation_paths: list[DerivationPath]) -> None:
     d = derivation_indices_by_wallet_id(derivation_paths)
     print("Min, Max, Count of derivations for each wallet:")
     for wallet_id, derivation_index_list in d.items():
@@ -209,7 +210,7 @@ class WalletDBReader:
     sql_log_path: Optional[Path] = None
     verbose = False
 
-    async def get_all_wallets(self) -> List[Wallet]:
+    async def get_all_wallets(self) -> list[Wallet]:
         wallet_fields = ["id", "name", "wallet_type", "data"]
         async with self.db_wrapper.reader_no_transaction() as reader:
             # TODO: if table doesn't exist
@@ -217,7 +218,7 @@ class WalletDBReader:
             rows = await cursor.fetchall()
             return [Wallet(r, wallet_fields) for r in rows]
 
-    async def get_derivation_paths(self) -> List[DerivationPath]:
+    async def get_derivation_paths(self) -> list[DerivationPath]:
         fields = ["derivation_index", "pubkey", "puzzle_hash", "wallet_type", "wallet_id", "used", "hardened"]
         async with self.db_wrapper.reader_no_transaction() as reader:
             # TODO: if table doesn't exist
@@ -225,7 +226,7 @@ class WalletDBReader:
             rows = await cursor.fetchall()
             return [DerivationPath(row, fields) for row in rows]
 
-    async def show_tables(self) -> List[str]:
+    async def show_tables(self) -> list[str]:
         async with self.db_wrapper.reader_no_transaction() as reader:
             cursor = await reader.execute("""SELECT name FROM sqlite_master WHERE type='table';""")
             print("\nWallet DB Tables:")
@@ -237,7 +238,7 @@ class WalletDBReader:
             print()
             return []
 
-    async def check_wallets(self) -> List[str]:
+    async def check_wallets(self) -> list[str]:
         # id, name, wallet_type, data
         # TODO: Move this SQL up a level
         async with self.db_wrapper.reader_no_transaction() as reader:
@@ -282,8 +283,8 @@ class WalletDBReader:
             return errors
 
     def check_wallets_missing_derivations(
-        self, wallets: List[Wallet], derivation_paths: List[DerivationPath]
-    ) -> List[str]:
+        self, wallets: list[Wallet], derivation_paths: list[DerivationPath]
+    ) -> list[str]:
         p = []
         d = derivation_indices_by_wallet_id(derivation_paths)  # TODO: calc this once, pass in
         for w in wallets:
@@ -293,7 +294,7 @@ class WalletDBReader:
             return [f"Wallet IDs with no derivations that require them: {p}"]
         return []
 
-    def check_derivations_are_compact(self, wallets: List[Wallet], derivation_paths: List[DerivationPath]) -> List[str]:
+    def check_derivations_are_compact(self, wallets: list[Wallet], derivation_paths: list[DerivationPath]) -> list[str]:
         errors = []
         """
         Gaps in derivation index
@@ -318,8 +319,8 @@ class WalletDBReader:
         return errors
 
     def check_unexpected_derivation_entries(
-        self, wallets: List[Wallet], derivation_paths: List[DerivationPath]
-    ) -> List[str]:
+        self, wallets: list[Wallet], derivation_paths: list[DerivationPath]
+    ) -> list[str]:
         """
         Check for unexpected derivation path entries
 

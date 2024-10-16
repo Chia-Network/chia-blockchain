@@ -6,11 +6,12 @@ import os
 import shutil
 import sys
 import threading
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Dict, Iterator, Optional, Union, cast
+from typing import Any, Optional, Union, cast
 
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
@@ -144,7 +145,7 @@ class FileKeyringContent:
         except PermissionError:
             shutil.move(str(temp_path), str(path))
 
-    def get_decrypted_data_dict(self, passphrase: str) -> Dict[str, Any]:
+    def get_decrypted_data_dict(self, passphrase: str) -> dict[str, Any]:
         if self.empty():
             return {}
         key = symmetric_key_from_passphrase(passphrase, self.salt)
@@ -165,7 +166,7 @@ class FileKeyringContent:
     def empty(self) -> bool:
         return self.data is None or len(self.data) == 0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
         result["salt"] = result["salt"].hex()
         result["nonce"] = result["nonce"].hex()
@@ -175,30 +176,30 @@ class FileKeyringContent:
 @dataclass(frozen=True)
 class Key:
     secret: bytes
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Optional[dict[str, Any]] = None
 
     @classmethod
-    def parse(cls, data: str, metadata: Optional[Dict[str, Any]]) -> Key:
+    def parse(cls, data: str, metadata: Optional[dict[str, Any]]) -> Key:
         return cls(
             bytes.fromhex(data),
             metadata,
         )
 
-    def to_data(self) -> Union[str, Dict[str, Any]]:
+    def to_data(self) -> Union[str, dict[str, Any]]:
         return self.secret.hex()
 
 
-Users = Dict[str, Key]
-Services = Dict[str, Users]
+Users = dict[str, Key]
+Services = dict[str, Users]
 
 
 @dataclass
 class DecryptedKeyringData:
     services: Services
-    labels: Dict[int, str]  # {fingerprint: label}
+    labels: dict[int, str]  # {fingerprint: label}
 
     @classmethod
-    def from_dict(cls, data_dict: Dict[str, Any]) -> DecryptedKeyringData:
+    def from_dict(cls, data_dict: dict[str, Any]) -> DecryptedKeyringData:
         return cls(
             {
                 service: {
@@ -210,7 +211,7 @@ class DecryptedKeyringData:
             data_dict.get("labels", {}),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "keys": {
                 service: {user: key.to_data() for user, key in users.items()}
@@ -243,7 +244,7 @@ class FileKeyring(FileSystemEventHandler):
     cached_data_dict: DecryptedKeyringData = field(default_factory=default_file_keyring_data)
     keyring_last_mod_time: Optional[float] = None
     # Key/value pairs to set on the outer payload on the next write
-    file_content_properties_for_next_write: Dict[str, Any] = field(default_factory=dict)
+    file_content_properties_for_next_write: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def create(cls, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH) -> FileKeyring:
@@ -320,7 +321,7 @@ class FileKeyring(FileSystemEventHandler):
         """
         return self.cached_data_dict.services
 
-    def cached_labels(self) -> Dict[int, str]:
+    def cached_labels(self) -> dict[int, str]:
         """
         Returns keyring.data.labels
         """

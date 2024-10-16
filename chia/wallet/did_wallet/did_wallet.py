@@ -5,7 +5,7 @@ import json
 import logging
 import re
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
@@ -77,12 +77,12 @@ class DIDWallet:
         wallet: Wallet,
         amount: uint64,
         action_scope: WalletActionScope,
-        backups_ids: List[bytes32] = [],
+        backups_ids: list[bytes32] = [],
         num_of_backup_ids_needed: uint64 = None,
-        metadata: Dict[str, str] = {},
+        metadata: dict[str, str] = {},
         name: Optional[str] = None,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ):
         """
         Create a brand new DID wallet
@@ -226,7 +226,7 @@ class DIDWallet:
         _, recovery_list_hash, num_verification, _, metadata = args
         full_solution: Program = Program.from_bytes(bytes(coin_spend.solution))
         inner_solution: Program = full_solution.rest().rest().first()
-        recovery_list: List[bytes32] = []
+        recovery_list: list[bytes32] = []
         backup_required: int = num_verification.as_int()
         if recovery_list_hash != NIL_TREEHASH:
             try:
@@ -340,7 +340,7 @@ class DIDWallet:
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> Set[Coin]:
+    ) -> set[Coin]:
         try:
             async with action_scope.use() as interface:
                 coin = await self.get_coin()
@@ -571,7 +571,7 @@ class DIDWallet:
         self,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
@@ -670,7 +670,7 @@ class DIDWallet:
         fee: uint64,
         with_recovery: bool,
         action_scope: WalletActionScope,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         """
         Transfer the current DID to another owner
@@ -759,7 +759,7 @@ class DIDWallet:
     async def create_message_spend(
         self,
         action_scope: WalletActionScope,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
@@ -892,8 +892,8 @@ class DIDWallet:
         newpuz: bytes32,
         pubkey: G1Element,
         action_scope: WalletActionScope,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> Tuple[WalletSpendBundle, str]:
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> tuple[WalletSpendBundle, str]:
         """
         Create an attestment
         TODO:
@@ -971,7 +971,7 @@ class DIDWallet:
         attest_str += f"{self.did_info.current_inner.get_tree_hash().hex()}:{coin.amount}"
         return message_spend_bundle, attest_str
 
-    async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
+    async def get_info_for_recovery(self) -> Optional[tuple[bytes32, bytes32, uint64]]:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         try:
@@ -983,7 +983,7 @@ class DIDWallet:
         amount = uint64(coin.amount)
         return (parent, innerpuzhash, amount)
 
-    async def load_attest_files_for_recovery_spend(self, attest_data: List[str]) -> Tuple[List, WalletSpendBundle]:
+    async def load_attest_files_for_recovery_spend(self, attest_data: list[str]) -> tuple[list, WalletSpendBundle]:
         spend_bundle_list = []
         info_dict = {}
         for attest in attest_data:
@@ -996,7 +996,7 @@ class DIDWallet:
             new_sb = WalletSpendBundle.from_bytes(bytes.fromhex(info[1]))
             spend_bundle_list.append(new_sb)
         # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-        my_recovery_list: List[bytes32] = self.did_info.backup_ids
+        my_recovery_list: list[bytes32] = self.did_info.backup_ids
 
         # convert info dict into recovery list - same order as wallet
         info_list = []
@@ -1018,7 +1018,7 @@ class DIDWallet:
         self,
         coin: Coin,
         puzhash: bytes32,
-        parent_innerpuzhash_amounts_for_recovery_ids: List[Tuple[bytes, bytes, int]],
+        parent_innerpuzhash_amounts_for_recovery_ids: list[tuple[bytes, bytes, int]],
         pubkey: G1Element,
         spend_bundle: WalletSpendBundle,
         action_scope: WalletActionScope,
@@ -1176,7 +1176,7 @@ class DIDWallet:
 
         return parent_info
 
-    async def sign_message(self, message: str, mode: SigningMode) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str, mode: SigningMode) -> tuple[G1Element, G2Element]:
         if self.did_info.current_inner is None:
             raise ValueError("Missing DID inner puzzle.")
         puzzle_args = did_wallet_puzzles.uncurry_innerpuz(self.did_info.current_inner)
@@ -1203,7 +1203,7 @@ class DIDWallet:
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         """
         This must be called under the wallet state manager lock
@@ -1300,7 +1300,7 @@ class DIDWallet:
         coin: Coin,
         full_puzzle: Program,
         innerpuz: Program,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ):
         assert self.did_info.origin_coin is not None
         uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
@@ -1330,8 +1330,8 @@ class DIDWallet:
         )
         return spendable_am
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None):
-        spendable: List[WalletCoinRecord] = list(
+    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None):
+        spendable: list[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
         max_send_amount = sum(cr.coin.amount for cr in spendable)
@@ -1355,7 +1355,7 @@ class DIDWallet:
         )
         await self.save_info(did_info)
 
-    async def update_recovery_list(self, recover_list: List[bytes32], num_of_backup_ids_needed: uint64) -> bool:
+    async def update_recovery_list(self, recover_list: list[bytes32], num_of_backup_ids_needed: uint64) -> bool:
         if num_of_backup_ids_needed > len(recover_list):
             return False
         did_info = DIDInfo(
@@ -1374,7 +1374,7 @@ class DIDWallet:
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
         return True
 
-    async def update_metadata(self, metadata: Dict[str, str]) -> bool:
+    async def update_metadata(self, metadata: dict[str, str]) -> bool:
         # validate metadata
         if not all(isinstance(k, str) and isinstance(v, str) for k, v in metadata.items()):
             raise ValueError("Metadata key value pairs must be strings.")
@@ -1468,7 +1468,7 @@ class DIDWallet:
         return True
 
     async def get_coin(self) -> Coin:
-        spendable_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+        spendable_coins: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
             self.wallet_info.id
         )
         if len(spendable_coins) == 0:

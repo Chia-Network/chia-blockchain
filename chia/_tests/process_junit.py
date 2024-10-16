@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import StatisticsError, mean, stdev
-from typing import Any, Dict, List, Optional, TextIO, Tuple, Type, final
+from typing import Any, Optional, TextIO, final
 
 import click
 import lxml.etree
@@ -15,22 +15,22 @@ import lxml.etree
 from chia._tests.util.misc import BenchmarkData, DataTypeProtocol, TestId
 from chia._tests.util.time_out_assert import TimeOutAssertData
 
-supported_data_types: List[Type[DataTypeProtocol]] = [TimeOutAssertData, BenchmarkData]
-supported_data_types_by_tag: Dict[str, Type[DataTypeProtocol]] = {cls.tag: cls for cls in supported_data_types}
+supported_data_types: list[type[DataTypeProtocol]] = [TimeOutAssertData, BenchmarkData]
+supported_data_types_by_tag: dict[str, type[DataTypeProtocol]] = {cls.tag: cls for cls in supported_data_types}
 
 
 @final
 @dataclass(frozen=True, order=True)
 class Result:
     file_path: Path
-    test_path: Tuple[str, ...]
-    ids: Tuple[str, ...]
+    test_path: tuple[str, ...]
+    ids: tuple[str, ...]
     label: str
     line: int = field(compare=False)
-    durations: Tuple[float, ...] = field(compare=False)
+    durations: tuple[float, ...] = field(compare=False)
     limit: float = field(compare=False)
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "file_path": self.file_path.as_posix(),
             "test_path": self.test_path,
@@ -133,7 +133,7 @@ def main(
     tree = lxml.etree.parse(xml_file)
     root = tree.getroot()
 
-    cases_by_test_id: defaultdict[TestId, List[lxml.etree.Element]] = defaultdict(list)
+    cases_by_test_id: defaultdict[TestId, list[lxml.etree.Element]] = defaultdict(list)
     for suite in root.findall("testsuite"):
         for case in suite.findall("testcase"):
             if case.find("skipped") is not None:
@@ -145,7 +145,7 @@ def main(
             )
             cases_by_test_id[test_id].append(case)
 
-    data_by_event_id: defaultdict[EventId, List[DataTypeProtocol]] = defaultdict(list)
+    data_by_event_id: defaultdict[EventId, list[DataTypeProtocol]] = defaultdict(list)
     for test_id, cases in cases_by_test_id.items():
         for case in cases:
             for property in case.findall(f"properties/property[@name='{tag}']"):
@@ -154,7 +154,7 @@ def main(
                 event_id = EventId(test_id=test_id, tag=tag, line=data.line, path=data.path, label=data.label)
                 data_by_event_id[event_id].append(data)
 
-    results: List[Result] = []
+    results: list[Result] = []
     for event_id, datas in data_by_event_id.items():
         [limit] = {data.limit for data in datas}
         results.append(
@@ -196,7 +196,7 @@ def output_benchmark(
     output: TextIO,
     percent_margin: int,
     randomoji: bool,
-    results: List[Result],
+    results: list[Result],
 ) -> None:
     if not markdown:
         for result in sorted(results):
@@ -273,7 +273,7 @@ def output_time_out_assert(
     output: TextIO,
     percent_margin: int,
     randomoji: bool,
-    results: List[Result],
+    results: list[Result],
 ) -> None:
     if not markdown:
         for result in sorted(results):

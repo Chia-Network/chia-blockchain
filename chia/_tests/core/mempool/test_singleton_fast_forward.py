@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -206,7 +206,7 @@ def test_perform_the_fast_forward() -> None:
         parent_parent_id=test_child_coin.parent_coin_info,
     )
     # Start from a fresh state of fast forward spends
-    fast_forward_spends: Dict[bytes32, UnspentLineageInfo] = {}
+    fast_forward_spends: dict[bytes32, UnspentLineageInfo] = {}
     # Perform the fast forward on the test coin (the grandparent)
     new_coin_spend, patched_additions = perform_the_fast_forward(
         test_unspent_lineage_info, test_spend_data, fast_forward_spends
@@ -246,14 +246,14 @@ def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
 async def make_and_send_spend_bundle(
     sim: SpendSim,
     sim_client: SimClient,
-    coin_spends: List[CoinSpend],
+    coin_spends: list[CoinSpend],
     is_eligible_for_ff: bool = True,
     *,
     is_launcher_coin: bool = False,
     signing_puzzle: Optional[Program] = None,
     signing_coin: Optional[Coin] = None,
     aggsig: G2Element = G2Element(),
-) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
+) -> tuple[MempoolInclusionStatus, Optional[Err]]:
     if is_launcher_coin or not is_eligible_for_ff:
         assert signing_puzzle is not None
         assert signing_coin is not None
@@ -268,7 +268,7 @@ async def make_and_send_spend_bundle(
     return status, error
 
 
-async def get_singleton_and_remaining_coins(sim: SpendSim) -> Tuple[Coin, List[Coin]]:
+async def get_singleton_and_remaining_coins(sim: SpendSim) -> tuple[Coin, list[Coin]]:
     coins = await sim.all_non_reward_coins()
     singletons = [coin for coin in coins if coin.amount & 1]
     assert len(singletons) == 1
@@ -281,9 +281,9 @@ def make_singleton_coin_spend(
     parent_coin_spend: CoinSpend,
     coin_to_spend: Coin,
     inner_puzzle: Program,
-    inner_conditions: List[List[Any]],
+    inner_conditions: list[list[Any]],
     is_eve_spend: bool = False,
-) -> Tuple[CoinSpend, Program]:
+) -> tuple[CoinSpend, Program]:
     lineage_proof = singleton_top_layer.lineage_proof_for_coinsol(parent_coin_spend)
     delegated_puzzle = Program.to((1, inner_conditions))
     inner_solution = Program.to([[], delegated_puzzle, []])
@@ -300,7 +300,7 @@ def make_singleton_coin_spend(
 
 async def prepare_singleton_eve(
     sim: SpendSim, sim_client: SimClient, is_eligible_for_ff: bool, start_amount: uint64, singleton_amount: uint64
-) -> Tuple[Program, CoinSpend, Program]:
+) -> tuple[Program, CoinSpend, Program]:
     # Generate starting info
     key_lookup = KeyTool()
     pk = G1Element.from_bytes(public_key_for_index(1, key_lookup))
@@ -350,7 +350,7 @@ async def prepare_singleton_eve(
 
 async def prepare_and_test_singleton(
     sim: SpendSim, sim_client: SimClient, is_eligible_for_ff: bool, start_amount: uint64, singleton_amount: uint64
-) -> Tuple[Coin, CoinSpend, Program, Coin]:
+) -> tuple[Coin, CoinSpend, Program, Coin]:
     inner_puzzle, eve_coin_spend, eve_signing_puzzle = await prepare_singleton_eve(
         sim, sim_client, is_eligible_for_ff, start_amount, singleton_amount
     )
@@ -407,7 +407,7 @@ async def test_singleton_fast_forward_different_block(is_eligible_for_ff: bool) 
         sk = AugSchemeMPL.key_gen(b"1" * 32)
         g1 = sk.get_g1()
         sig = AugSchemeMPL.sign(sk, b"foobar", g1)
-        inner_conditions: List[List[Any]] = [
+        inner_conditions: list[list[Any]] = [
             [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
             [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_CHILD_AMOUNT],
         ]
@@ -501,7 +501,7 @@ async def test_singleton_fast_forward_same_block() -> None:
         sk = AugSchemeMPL.key_gen(b"9" * 32)
         g1 = sk.get_g1()
         sig = AugSchemeMPL.sign(sk, b"foobar", g1)
-        inner_conditions: List[List[Any]] = [
+        inner_conditions: list[list[Any]] = [
             [ConditionOpcode.AGG_SIG_UNSAFE, bytes(g1), b"foobar"],
             [ConditionOpcode.CREATE_COIN, inner_puzzle_hash, SINGLETON_CHILD_AMOUNT],
         ]

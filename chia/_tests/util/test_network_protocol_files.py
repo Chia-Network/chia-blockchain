@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Tuple
 
 from chia._tests.util.build_network_protocol_files import get_network_protocol_filename
 from chia._tests.util.network_protocol_data import *  # noqa: F403
 from chia._tests.util.protocol_messages_json import *  # noqa: F403
 
 
-def parse_blob(input_bytes: bytes) -> Tuple[bytes, bytes]:
+def parse_blob(input_bytes: bytes) -> tuple[bytes, bytes]:
     size_bytes = input_bytes[:4]
     input_bytes = input_bytes[4:]
     size = int.from_bytes(size_bytes, "big")

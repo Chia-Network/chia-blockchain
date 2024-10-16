@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Collection, Iterator
 from dataclasses import dataclass
-from typing import Collection, Generic, Iterator, List, TypeVar
+from typing import Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -9,7 +10,7 @@ T = TypeVar("T")
 @dataclass(frozen=True)
 class Batch(Generic[T]):
     remaining: int
-    entries: List[T]
+    entries: list[T]
 
 
 def to_batches(to_split: Collection[T], batch_size: int) -> Iterator[Batch[T]]:

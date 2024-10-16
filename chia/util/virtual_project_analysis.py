@@ -7,7 +7,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Callable, Literal, Optional, Union
 
 import click
 import yaml
@@ -52,8 +52,8 @@ class ChiaFile:
             return cls(file_path, Annotation.parse(file_string))
 
 
-def build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[Path]]:
-    dependency_graph: Dict[Path, List[Path]] = {}
+def build_dependency_graph(dir_params: DirectoryParameters) -> dict[Path, list[Path]]:
+    dependency_graph: dict[Path, list[Path]] = {}
     for chia_file in dir_params.gather_non_empty_python_files():
         dependency_graph[chia_file.path] = []
         with open(chia_file.path, encoding="utf-8", errors="ignore") as f:
@@ -82,14 +82,14 @@ def build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[P
 
 
 def build_virtual_dependency_graph(
-    dir_params: DirectoryParameters, *, existing_graph: Optional[Dict[Path, List[Path]]] = None
-) -> Dict[str, List[str]]:
+    dir_params: DirectoryParameters, *, existing_graph: Optional[dict[Path, list[Path]]] = None
+) -> dict[str, list[str]]:
     if existing_graph is None:
         graph = build_dependency_graph(dir_params)
     else:
         graph = existing_graph
 
-    virtual_graph: Dict[str, List[str]] = {}
+    virtual_graph: dict[str, list[str]] = {}
     for file, imports in graph.items():
         file_path = Path(file)
         root_file = ChiaFile.parse(file_path)
@@ -113,7 +113,7 @@ class Cycle:
     dependent_package: str
     provider_path: Path
     provider_package: str
-    packages_after_provider: List[str]
+    packages_after_provider: list[str]
 
     def __repr__(self) -> str:
         return "".join(
@@ -124,7 +124,7 @@ class Cycle:
             )
         )[:-4]
 
-    def possible_edge_interpretations(self) -> List[Tuple[FileOrPackage, FileOrPackage]]:
+    def possible_edge_interpretations(self) -> list[tuple[FileOrPackage, FileOrPackage]]:
         edges_after_initial_files = []
         provider = self.packages_after_provider[0]
         for next_provider in self.packages_after_provider[1:]:
@@ -145,11 +145,11 @@ class Cycle:
         ]
 
 
-def find_all_dependency_paths(dependency_graph: Dict[str, List[str]], start: str, end: str) -> List[List[str]]:
+def find_all_dependency_paths(dependency_graph: dict[str, list[str]], start: str, end: str) -> list[list[str]]:
     all_paths = []
     visited = set()
 
-    def dfs(current: str, target: str, path: List[str]) -> None:
+    def dfs(current: str, target: str, path: list[str]) -> None:
         if current in visited:
             return
         if current == target and len(path) > 0:
@@ -164,13 +164,13 @@ def find_all_dependency_paths(dependency_graph: Dict[str, List[str]], start: str
 
 
 def find_cycles(
-    graph: Dict[Path, List[Path]],
-    virtual_graph: Dict[str, List[str]],
-    excluded_paths: List[Path],
-    ignore_cycles_in: List[str],
-    ignore_specific_files: List[Path],
-    ignore_specific_edges: List[Tuple[FileOrPackage, FileOrPackage]],
-) -> List[Cycle]:
+    graph: dict[Path, list[Path]],
+    virtual_graph: dict[str, list[str]],
+    excluded_paths: list[Path],
+    ignore_cycles_in: list[str],
+    ignore_specific_files: list[Path],
+    ignore_specific_edges: list[tuple[FileOrPackage, FileOrPackage]],
+) -> list[Cycle]:
     # Initialize an accumulator for paths that are part of cycles.
     path_accumulator = []
     # Iterate over each package (parent) in the graph.
@@ -222,7 +222,7 @@ def find_cycles(
     return path_accumulator
 
 
-def print_graph(graph: Union[Dict[str, List[str]], Dict[Path, List[Path]]]) -> None:
+def print_graph(graph: Union[dict[str, list[str]], dict[Path, list[Path]]]) -> None:
     print(json.dumps({str(k): list(str(v) for v in vs) for k, vs in graph.items()}, indent=4))
 
 
@@ -234,9 +234,9 @@ def cli() -> None:
 @dataclass(frozen=True)
 class DirectoryParameters:
     dir_path: Path
-    excluded_paths: List[Path] = field(default_factory=list)
+    excluded_paths: list[Path] = field(default_factory=list)
 
-    def gather_non_empty_python_files(self) -> List[ChiaFile]:
+    def gather_non_empty_python_files(self) -> list[ChiaFile]:
         """
         Gathers non-empty Python files in the specified directory while
         ignoring files and directories in the excluded paths.
@@ -263,9 +263,9 @@ class DirectoryParameters:
 @dataclass(frozen=True)
 class Config:
     directory_parameters: DirectoryParameters
-    ignore_cycles_in: List[str]
-    ignore_specific_files: List[Path]
-    ignore_specific_edges: List[Tuple[FileOrPackage, FileOrPackage]]  # (parent, child)
+    ignore_cycles_in: list[str]
+    ignore_specific_files: list[Path]
+    ignore_specific_edges: list[tuple[FileOrPackage, FileOrPackage]]  # (parent, child)
 
 
 @dataclass(frozen=True)
@@ -296,7 +296,7 @@ def parse_file_or_package(identifier: str) -> FileOrPackage:
     return Package(identifier)
 
 
-def parse_edge(user_string: str) -> Tuple[FileOrPackage, FileOrPackage]:
+def parse_edge(user_string: str) -> tuple[FileOrPackage, FileOrPackage]:
     split_string = user_string.split("->")
     dependent_side = split_string[0].strip()
     provider_side = split_string[1].strip()
@@ -329,9 +329,9 @@ def config(func: Callable[..., None]) -> Callable[..., None]:
     )
     def inner(config_path: Optional[str], *args: Any, **kwargs: Any) -> None:
         exclude_paths = []
-        ignore_cycles_in: List[str] = []
-        ignore_specific_files: List[str] = []
-        ignore_specific_edges: List[str] = []
+        ignore_cycles_in: list[str] = []
+        ignore_specific_files: list[str] = []
+        ignore_specific_edges: list[str] = []
         if config_path is not None:
             # Reading from the YAML configuration file
             with open(config_path) as file:

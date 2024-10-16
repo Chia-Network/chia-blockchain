@@ -5,9 +5,10 @@ import cProfile
 import logging
 import pathlib
 import tracemalloc
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncIterator, Optional
+from typing import Optional
 
 from chia.util.path import path_from_root
 

@@ -8,7 +8,7 @@ import logging
 import random
 import time
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import anyio
 import pytest
@@ -158,8 +158,8 @@ class Request:
 
 @dataclass(frozen=True)
 class OrderCase:
-    requests: List[Request]
-    expected_acquisitions: List[str]
+    requests: list[Request]
+    expected_acquisitions: list[str]
 
 
 @dataclass
@@ -268,7 +268,7 @@ async def test_order(case: OrderCase) -> None:
     assert sane(requests=case.requests)
 
 
-def expected_acquisition_order(requests: List[Request]) -> List[Request]:
+def expected_acquisition_order(requests: list[Request]) -> list[Request]:
     first_request, *other_requests = requests
     return [
         first_request,
@@ -375,7 +375,7 @@ async def test_retains_request_order_for_matching_priority(seed: int) -> None:
     assert sane(requests=all_requests)
 
 
-def sane(requests: List[Request]) -> bool:
+def sane(requests: list[Request]) -> bool:
     if any(not request.completed for request in requests):
         return False
 
@@ -387,7 +387,7 @@ def sane(requests: List[Request]) -> bool:
 class SaneCase:
     id: str
     good: bool
-    requests: List[Request]
+    requests: list[Request]
     marks: Marks = ()
 
 
@@ -434,10 +434,10 @@ def test_sane_all_in_order(case: SaneCase) -> None:
 
 
 async def create_acquire_tasks_in_controlled_order(
-    requests: List[Request],
+    requests: list[Request],
     mutex: PriorityMutex[MutexPriority],
-) -> List[asyncio.Task[None]]:
-    tasks: List[asyncio.Task[None]] = []
+) -> list[asyncio.Task[None]]:
+    tasks: list[asyncio.Task[None]] = []
     release_event = asyncio.Event()
 
     for request in requests:

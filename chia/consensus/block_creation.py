@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Callable, Optional
 
 import chia_rs
 from chia_rs import G1Element, G2Element, compute_merkle_set_root
@@ -56,8 +57,8 @@ def create_foliage(
     reward_block_unfinished: RewardChainBlockUnfinished,
     block_generator: Optional[BlockGenerator],
     aggregate_sig: G2Element,
-    additions: List[Coin],
-    removals: List[Coin],
+    additions: list[Coin],
+    removals: list[Coin],
     prev_block: Optional[BlockRecord],
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,
@@ -69,7 +70,7 @@ def create_foliage(
     seed: bytes,
     compute_cost: Callable[[BlockGenerator, ConsensusConstants, uint32], uint64],
     compute_fees: Callable[[Sequence[Coin], Sequence[Coin]], uint64],
-) -> Tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
+) -> tuple[Foliage, Optional[FoliageTransactionBlock], Optional[TransactionsInfo]]:
     """
     Creates a foliage for a given reward chain block. This may or may not be a tx block. In the case of a tx block,
     the return values are not None. This is called at the signage point, so some of this information may be
@@ -111,9 +112,9 @@ def create_foliage(
         height = uint32(prev_block.height + 1)
 
     # Create filter
-    byte_array_tx: List[bytearray] = []
-    tx_additions: List[Coin] = []
-    tx_removals: List[bytes32] = []
+    byte_array_tx: list[bytearray] = []
+    tx_additions: list[Coin] = []
+    tx_removals: list[bytes32] = []
 
     pool_target_signature: Optional[G2Element] = get_pool_signature(
         pool_target, reward_block_unfinished.proof_of_space.pool_public_key
@@ -202,10 +203,10 @@ def create_foliage(
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
 
-        additions_merkle_items: List[bytes32] = []
+        additions_merkle_items: list[bytes32] = []
 
         # Create addition Merkle set
-        puzzlehash_coin_map: Dict[bytes32, List[bytes32]] = {}
+        puzzlehash_coin_map: dict[bytes32, list[bytes32]] = {}
 
         for coin in tx_additions:
             if coin.puzzle_hash in puzzlehash_coin_map:
@@ -295,10 +296,10 @@ def create_unfinished_block(
     seed: bytes = b"",
     block_generator: Optional[BlockGenerator] = None,
     aggregate_sig: G2Element = G2Element(),
-    additions: Optional[List[Coin]] = None,
-    removals: Optional[List[Coin]] = None,
+    additions: Optional[list[Coin]] = None,
+    removals: Optional[list[Coin]] = None,
     prev_block: Optional[BlockRecord] = None,
-    finished_sub_slots_input: Optional[List[EndOfSubSlotBundle]] = None,
+    finished_sub_slots_input: Optional[list[EndOfSubSlotBundle]] = None,
     compute_cost: Callable[[BlockGenerator, ConsensusConstants, uint32], uint64] = compute_block_cost,
     compute_fees: Callable[[Sequence[Coin], Sequence[Coin]], uint64] = compute_block_fee,
 ) -> UnfinishedBlock:
@@ -334,7 +335,7 @@ def create_unfinished_block(
 
     """
     if finished_sub_slots_input is None:
-        finished_sub_slots: List[EndOfSubSlotBundle] = []
+        finished_sub_slots: list[EndOfSubSlotBundle] = []
     else:
         finished_sub_slots = finished_sub_slots_input.copy()
     overflow: bool = sp_iters > ip_iters
@@ -428,7 +429,7 @@ def unfinished_block_to_full_block(
     rc_ip_proof: VDFProof,
     icc_ip_vdf: Optional[VDFInfo],
     icc_ip_proof: Optional[VDFProof],
-    finished_sub_slots: List[EndOfSubSlotBundle],
+    finished_sub_slots: list[EndOfSubSlotBundle],
     prev_block: Optional[BlockRecord],
     blocks: BlockRecordsProtocol,
     total_iters_sp: uint128,

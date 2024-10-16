@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import AsyncIterator, Dict, List, Optional, Tuple
+from collections.abc import AsyncIterator
+from typing import Optional
 
 import pytest
 
@@ -82,7 +83,7 @@ async def test_unfinished_block_rank(
     # create variants of the unfinished block, where all we do is to change
     # the foliage_transaction_block_hash. As if they all had different foliage,
     # but the same reward block hash (i.e. the same proof-of-space)
-    unfinished: List[UnfinishedBlock] = [
+    unfinished: list[UnfinishedBlock] = [
         recursive_replace(unf, "foliage.foliage_transaction_block_hash", bytes32([idx + 4] * 32))
         for idx in range(num_duplicates)
     ]
@@ -130,12 +131,12 @@ async def test_unfinished_block_rank(
 )
 async def test_find_best_block(
     seeded_random: random.Random,
-    blocks: List[Tuple[Optional[int], bool]],
+    blocks: list[tuple[Optional[int], bool]],
     expected: Optional[int],
-    default_400_blocks: List[FullBlock],
+    default_400_blocks: list[FullBlock],
     bt: BlockTools,
 ) -> None:
-    result: Dict[Optional[bytes32], UnfinishedBlockEntry] = {}
+    result: dict[Optional[bytes32], UnfinishedBlockEntry] = {}
     i = 0
     for b, with_unf in blocks:
         unf: Optional[UnfinishedBlock]
@@ -958,7 +959,7 @@ async def test_basic_store(
         else:
             case_1 = True
             assert res.new_infusion_points == []
-            found_ips: List[timelord_protocol.NewInfusionPointVDF] = []
+            found_ips: list[timelord_protocol.NewInfusionPointVDF] = []
             peak = blockchain.get_peak()
 
             for ss in block.finished_sub_slots:
@@ -1015,7 +1016,7 @@ async def test_basic_store(
             and i1 > (i2 + 3)
         ):
             # We hit all the conditions that we want
-            all_sps: List[Optional[SignagePoint]] = [None] * custom_block_tools.constants.NUM_SPS_SUB_SLOT
+            all_sps: list[Optional[SignagePoint]] = [None] * custom_block_tools.constants.NUM_SPS_SUB_SLOT
 
             def assert_sp_none(sp_index: int, is_none: bool) -> None:
                 sp_to_check: Optional[SignagePoint] = all_sps[sp_index]
@@ -1126,7 +1127,7 @@ async def test_basic_store(
 @pytest.mark.anyio
 async def test_long_chain_slots(
     empty_blockchain_with_original_constants: Blockchain,
-    default_1000_blocks: List[FullBlock],
+    default_1000_blocks: list[FullBlock],
 ) -> None:
     blockchain = empty_blockchain_with_original_constants
     store = FullNodeStore(blockchain.constants)

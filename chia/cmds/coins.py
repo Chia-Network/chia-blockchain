@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import click
 
@@ -127,7 +128,7 @@ def combine_cmd(
     push: bool,
     condition_valid_times: ConditionValidTimes,
     override: bool,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .coin_funcs import async_combine
 
     return asyncio.run(
@@ -197,7 +198,7 @@ def split_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .coin_funcs import async_split
 
     return asyncio.run(

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -35,8 +35,8 @@ class WalletBlockchain:
     _finished_sync_up_to: uint32
 
     _peak: Optional[HeaderBlock]
-    _height_to_hash: Dict[uint32, bytes32]
-    _block_records: Dict[bytes32, BlockRecord]
+    _height_to_hash: dict[uint32, bytes32]
+    _block_records: dict[bytes32, BlockRecord]
     _latest_timestamp: uint64
     _sub_slot_iters: uint64
     _difficulty: uint64
@@ -69,7 +69,7 @@ class WalletBlockchain:
 
         return self
 
-    async def new_valid_weight_proof(self, weight_proof: WeightProof, records: List[BlockRecord]) -> None:
+    async def new_valid_weight_proof(self, weight_proof: WeightProof, records: list[BlockRecord]) -> None:
         peak: Optional[HeaderBlock] = await self.get_peak_block()
 
         if peak is not None and weight_proof.recent_chain_data[-1].weight <= peak.weight:
@@ -93,7 +93,7 @@ class WalletBlockchain:
             await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
             await self.clean_block_records()
 
-    async def add_block(self, block: HeaderBlock) -> Tuple[AddBlockResult, Optional[Err]]:
+    async def add_block(self, block: HeaderBlock) -> tuple[AddBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
             return AddBlockResult.ALREADY_HAVE_BLOCK, None
         if not self.contains_block(block.prev_header_hash) and block.height > 0:
@@ -217,7 +217,7 @@ class WalletBlockchain:
         # blockchain_interface
         return self._block_records.get(header_hash)
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         ret = []
         for h in header_hashes:
             ret.append(self._block_records[h].prev_hash)
@@ -235,7 +235,7 @@ class WalletBlockchain:
         if len(self._block_records) < self.CACHE_SIZE:
             return None
 
-        to_remove: List[bytes32] = []
+        to_remove: list[bytes32] = []
         for header_hash, block_record in self._block_records.items():
             if block_record.height < height_limit:
                 to_remove.append(header_hash)

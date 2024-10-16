@@ -10,22 +10,9 @@ import os
 import random
 import time
 import traceback
+from collections.abc import AsyncIterator, Awaitable
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncIterator,
-    Awaitable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-    cast,
-    final,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast, final
 
 import aiohttp
 
@@ -82,7 +69,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
-async def get_plugin_info(plugin_remote: PluginRemote) -> Tuple[PluginRemote, Dict[str, Any]]:
+async def get_plugin_info(plugin_remote: PluginRemote) -> tuple[PluginRemote, dict[str, Any]]:
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -107,15 +94,15 @@ class DataLayer:
         _protocol_check: ClassVar[RpcServiceProtocol] = cast("DataLayer", None)
 
     db_path: Path
-    config: Dict[str, Any]
+    config: dict[str, Any]
     root_path: Path
     log: logging.Logger
     wallet_rpc_init: Awaitable[WalletRpcClient]
-    downloaders: List[PluginRemote]
-    uploaders: List[PluginRemote]
+    downloaders: list[PluginRemote]
+    uploaders: list[PluginRemote]
     maximum_full_file_count: int
     server_files_location: Path
-    unsubscribe_data_queue: List[UnsubscribeData]
+    unsubscribe_data_queue: list[UnsubscribeData]
     _server: Optional[ChiaServer] = None
     none_bytes: bytes32 = bytes32([0] * 32)
     initialized: bool = False
@@ -161,11 +148,11 @@ class DataLayer:
     @classmethod
     def create(
         cls,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
-        downloaders: List[PluginRemote],
-        uploaders: List[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
+        downloaders: list[PluginRemote],
+        uploaders: list[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
         name: Optional[str] = None,
     ) -> DataLayer:
         if name == "":
@@ -236,7 +223,7 @@ class DataLayer:
     async def on_connect(self, connection: WSChiaConnection) -> None:
         pass
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     def set_server(self, server: ChiaServer) -> None:
@@ -252,7 +239,7 @@ class DataLayer:
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)
-    ) -> Tuple[List[TransactionRecord], bytes32]:
+    ) -> tuple[list[TransactionRecord], bytes32]:
         txs, store_id = await self.wallet_rpc.create_new_dl(root, fee)
         res = await self.data_store.create_tree(store_id=store_id)
         if res is None:
@@ -263,7 +250,7 @@ class DataLayer:
     async def batch_update(
         self,
         store_id: bytes32,
-        changelist: List[Dict[str, Any]],
+        changelist: list[dict[str, Any]],
         fee: uint64,
         submit_on_chain: bool = True,
     ) -> Optional[TransactionRecord]:
@@ -287,11 +274,11 @@ class DataLayer:
 
     async def multistore_batch_update(
         self,
-        store_updates: List[Dict[str, Any]],
+        store_updates: list[dict[str, Any]],
         fee: uint64,
         submit_on_chain: bool = True,
-    ) -> List[TransactionRecord]:
-        store_ids: Set[bytes32] = set()
+    ) -> list[TransactionRecord]:
+        store_ids: set[bytes32] = set()
         for update in store_updates:
             store_id = update["store_id"]
             changelist = update["changelist"]
@@ -306,7 +293,7 @@ class DataLayer:
         await self.data_store.clean_node_table()
 
         if submit_on_chain:
-            update_dictionary: Dict[bytes32, bytes32] = {}
+            update_dictionary: dict[bytes32, bytes32] = {}
             for store_id in store_ids:
                 await self._update_confirmation_status(store_id=store_id)
                 root_hash = await self._get_publishable_root_hash(store_id=store_id)
@@ -332,9 +319,9 @@ class DataLayer:
         await self.data_store.change_root_status(pending_root, Status.PENDING)
         return await self.publish_update(store_id, fee)
 
-    async def submit_all_pending_roots(self, fee: uint64) -> List[TransactionRecord]:
+    async def submit_all_pending_roots(self, fee: uint64) -> list[TransactionRecord]:
         pending_roots = await self.data_store.get_all_pending_batches_roots()
-        update_dictionary: Dict[bytes32, bytes32] = {}
+        update_dictionary: dict[bytes32, bytes32] = {}
         if len(pending_roots) == 0:
             raise Exception("No pending roots found to submit")
         for pending_root in pending_roots:
@@ -347,7 +334,7 @@ class DataLayer:
     async def batch_insert(
         self,
         store_id: bytes32,
-        changelist: List[Dict[str, Any]],
+        changelist: list[dict[str, Any]],
         status: Status = Status.PENDING,
         enable_batch_autoinsert: Optional[bool] = None,
     ) -> bytes32:
@@ -359,7 +346,7 @@ class DataLayer:
                 raise Exception("Already have a pending root waiting for confirmation.")
 
             # check before any DL changes that this singleton is currently owned by this wallet
-            singleton_records: List[SingletonRecord] = await self.get_owned_stores()
+            singleton_records: list[SingletonRecord] = await self.get_owned_stores()
             if not any(store_id == singleton.launcher_id for singleton in singleton_records):
                 raise ValueError(f"Singleton with launcher ID {store_id} is not owned by DL Wallet")
 
@@ -417,7 +404,7 @@ class DataLayer:
         self,
         store_id: bytes32,
         root_hash: Union[bytes32, Unspecified],
-    ) -> List[TerminalNode]:
+    ) -> list[TerminalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_keys_values(store_id, root_hash)
@@ -439,7 +426,7 @@ class DataLayer:
         res = await self.data_store.get_keys_values_paginated(store_id, page, max_page_size, root_hash)
         return res
 
-    async def get_keys(self, store_id: bytes32, root_hash: Union[bytes32, Unspecified]) -> List[bytes]:
+    async def get_keys(self, store_id: bytes32, root_hash: Union[bytes32, Unspecified]) -> list[bytes]:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_keys(store_id, root_hash)
@@ -459,7 +446,7 @@ class DataLayer:
         res = await self.data_store.get_keys_paginated(store_id, page, max_page_size, root_hash)
         return res
 
-    async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
+    async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> list[InternalNode]:
         await self._update_confirmation_status(store_id=store_id)
 
         res = await self.data_store.get_ancestors(node_hash=node_hash, store_id=store_id)
@@ -482,7 +469,7 @@ class DataLayer:
             return None
         return res.node_hash
 
-    async def get_root_history(self, store_id: bytes32) -> List[SingletonRecord]:
+    async def get_root_history(self, store_id: bytes32) -> list[SingletonRecord]:
         records = await self.wallet_rpc.dl_history(store_id)
         if records is None:
             self.log.error(f"Failed to get root history for {store_id.hex()}")
@@ -793,7 +780,7 @@ class DataLayer:
                         else:
                             self.log.debug(f"uploaded to uploader {uploader}")
 
-    async def subscribe(self, store_id: bytes32, urls: List[str]) -> Subscription:
+    async def subscribe(self, store_id: bytes32, urls: list[str]) -> Subscription:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
         await self.wallet_rpc.dl_track_new(subscription.store_id)
@@ -802,7 +789,7 @@ class DataLayer:
         self.log.info(f"Done adding subscription: {subscription.store_id}")
         return subscription
 
-    async def remove_subscriptions(self, store_id: bytes32, urls: List[str]) -> None:
+    async def remove_subscriptions(self, store_id: bytes32, urls: list[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
         async with self.subscription_lock:
             await self.data_store.remove_subscriptions(store_id, parsed_urls)
@@ -821,7 +808,7 @@ class DataLayer:
         subscriptions = await self.data_store.get_subscriptions()
         if store_id not in (subscription.store_id for subscription in subscriptions):
             raise RuntimeError("No subscription found for the given store_id.")
-        paths: List[Path] = []
+        paths: list[Path] = []
         if await self.data_store.store_id_exists(store_id) and not retain_data:
             generation = await self.data_store.get_tree_generation(store_id)
             all_roots = await self.data_store.get_roots_between(store_id, 1, generation + 1)
@@ -860,11 +847,11 @@ class DataLayer:
             except FileNotFoundError:
                 pass
 
-    async def get_subscriptions(self) -> List[Subscription]:
+    async def get_subscriptions(self) -> list[Subscription]:
         async with self.subscription_lock:
             return await self.data_store.get_subscriptions()
 
-    async def add_mirror(self, store_id: bytes32, urls: List[str], amount: uint64, fee: uint64) -> None:
+    async def add_mirror(self, store_id: bytes32, urls: list[str], amount: uint64, fee: uint64) -> None:
         if not urls:
             raise RuntimeError("URL list can't be empty")
         bytes_urls = [bytes(url, "utf8") for url in urls]
@@ -873,22 +860,22 @@ class DataLayer:
     async def delete_mirror(self, coin_id: bytes32, fee: uint64) -> None:
         await self.wallet_rpc.dl_delete_mirror(coin_id, fee)
 
-    async def get_mirrors(self, store_id: bytes32) -> List[Mirror]:
-        mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(store_id)
+    async def get_mirrors(self, store_id: bytes32) -> list[Mirror]:
+        mirrors: list[Mirror] = await self.wallet_rpc.dl_get_mirrors(store_id)
         return [mirror for mirror in mirrors if mirror.urls]
 
     async def update_subscriptions_from_wallet(self, store_id: bytes32) -> None:
-        mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(store_id)
-        urls: List[str] = []
+        mirrors: list[Mirror] = await self.wallet_rpc.dl_get_mirrors(store_id)
+        urls: list[str] = []
         for mirror in mirrors:
             urls = urls + [url.decode("utf8") for url in mirror.urls]
         urls = [url.rstrip("/") for url in urls]
         await self.data_store.update_subscriptions_from_wallet(store_id, urls)
 
-    async def get_owned_stores(self) -> List[SingletonRecord]:
+    async def get_owned_stores(self) -> list[SingletonRecord]:
         return await self.wallet_rpc.dl_owned_singletons()
 
-    async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Set[DiffData]:
+    async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> set[DiffData]:
         return await self.data_store.get_kv_diff(store_id, hash_1, hash_2)
 
     async def get_kv_diff_paginated(
@@ -1006,10 +993,10 @@ class DataLayer:
     async def build_offer_changelist(
         self,
         store_id: bytes32,
-        inclusions: Tuple[KeyValue, ...],
-    ) -> List[Dict[str, Any]]:
+        inclusions: tuple[KeyValue, ...],
+    ) -> list[dict[str, Any]]:
         async with self.data_store.transaction():
-            changelist: List[Dict[str, Any]] = []
+            changelist: list[dict[str, Any]] = []
             for entry in inclusions:
                 try:
                     existing_value = await self.get_value(store_id=store_id, key=entry.key)
@@ -1039,12 +1026,12 @@ class DataLayer:
 
             return changelist
 
-    async def process_offered_stores(self, offer_stores: Tuple[OfferStore, ...]) -> Dict[bytes32, StoreProofs]:
+    async def process_offered_stores(self, offer_stores: tuple[OfferStore, ...]) -> dict[bytes32, StoreProofs]:
         for offer_store in offer_stores:
             await self._update_confirmation_status(store_id=offer_store.store_id)
 
         async with self.data_store.transaction():
-            our_store_proofs: Dict[bytes32, StoreProofs] = {}
+            our_store_proofs: dict[bytes32, StoreProofs] = {}
             for offer_store in offer_stores:
                 changelist = await self.build_offer_changelist(
                     store_id=offer_store.store_id,
@@ -1066,7 +1053,7 @@ class DataLayer:
                 if new_root_hash is None:
                     raise Exception("only inserts are supported so a None root hash should not be possible")
 
-                proofs: List[Proof] = []
+                proofs: list[Proof] = []
                 for entry in offer_store.inclusions:
                     node_hash = await self.get_key_value_hash(
                         store_id=offer_store.store_id,
@@ -1098,19 +1085,19 @@ class DataLayer:
 
     async def make_offer(
         self,
-        maker: Tuple[OfferStore, ...],
-        taker: Tuple[OfferStore, ...],
+        maker: tuple[OfferStore, ...],
+        taker: tuple[OfferStore, ...],
         fee: uint64,
     ) -> Offer:
         async with self.data_store.transaction():
             our_store_proofs = await self.process_offered_stores(offer_stores=maker)
 
-            offer_dict: Dict[Union[uint32, str], int] = {
+            offer_dict: dict[Union[uint32, str], int] = {
                 **{offer_store.store_id.hex(): -1 for offer_store in maker},
                 **{offer_store.store_id.hex(): 1 for offer_store in taker},
             }
 
-            solver: Dict[str, Any] = {
+            solver: dict[str, Any] = {
                 "0x"
                 + our_offer_store.store_id.hex(): {
                     "new_root": "0x" + our_store_proofs[our_offer_store.store_id].proofs[0].root().hex(),
@@ -1158,8 +1145,8 @@ class DataLayer:
     async def take_offer(
         self,
         offer_bytes: bytes,
-        taker: Tuple[OfferStore, ...],
-        maker: Tuple[StoreProofs, ...],
+        taker: tuple[OfferStore, ...],
+        maker: tuple[StoreProofs, ...],
         fee: uint64,
     ) -> TradeRecord:
         async with self.data_store.transaction():
@@ -1170,10 +1157,10 @@ class DataLayer:
 
             verify_offer(maker=maker, taker=taker, summary=summary)
 
-            all_store_proofs: Dict[bytes32, StoreProofs] = {
+            all_store_proofs: dict[bytes32, StoreProofs] = {
                 store_proofs.proofs[0].root(): store_proofs for store_proofs in [*maker, *our_store_proofs.values()]
             }
-            proofs_of_inclusion: List[Tuple[str, str, List[str]]] = []
+            proofs_of_inclusion: list[tuple[str, str, list[str]]] = []
             for root, store_proofs in all_store_proofs.items():
                 for proof in store_proofs.proofs:
                     layers = [
@@ -1194,7 +1181,7 @@ class DataLayer:
                         )
                     )
 
-            solver: Dict[str, Any] = {
+            solver: dict[str, Any] = {
                 "proofs_of_inclusion": proofs_of_inclusion,
                 **{
                     "0x"
@@ -1232,7 +1219,7 @@ class DataLayer:
         return trade_record
 
     async def cancel_offer(self, trade_id: bytes32, secure: bool, fee: uint64) -> None:
-        store_ids: List[bytes32] = []
+        store_ids: list[bytes32] = []
 
         if not secure:
             trade_record = await self.wallet_rpc.get_offer(trade_id=trade_id, file_contents=True)
@@ -1270,7 +1257,7 @@ class DataLayer:
             target_generation=singleton_record.generation,
         )
 
-    async def get_uploaders(self, store_id: bytes32) -> List[PluginRemote]:
+    async def get_uploaders(self, store_id: bytes32) -> list[PluginRemote]:
         uploaders = []
         for uploader in self.uploaders:
             async with aiohttp.ClientSession() as session:

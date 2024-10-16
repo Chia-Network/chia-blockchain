@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+from collections.abc import Awaitable
 from dataclasses import dataclass
-from typing import Awaitable, Callable, List, Optional
+from typing import Callable, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -71,7 +72,7 @@ pytestmark = pytest.mark.standard_block_tools
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_request_block_headers(
-    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: list[FullBlock]
 ) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
     [full_node_api], [(wallet_node, _)], bt = simulator_and_wallet
@@ -108,7 +109,7 @@ async def test_request_block_headers(
 # )
 @pytest.mark.anyio
 async def test_request_block_headers_rejected(
-    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, default_400_blocks: list[FullBlock]
 ) -> None:
     # Tests the edge case of receiving funds right before the recent blocks  in weight proof
     [full_node_api], _, _ = simulator_and_wallet
@@ -155,7 +156,7 @@ async def test_request_block_headers_rejected(
 @pytest.mark.anyio
 async def test_basic_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
-    default_400_blocks: List[FullBlock],
+    default_400_blocks: list[FullBlock],
     self_hostname: str,
     use_delta_sync: bool,
 ) -> None:
@@ -206,7 +207,7 @@ async def test_basic_sync_wallet(
 @pytest.mark.anyio
 async def test_almost_recent(
     two_wallet_nodes: OldSimulatorsAndWallets,
-    default_400_blocks: List[FullBlock],
+    default_400_blocks: list[FullBlock],
     self_hostname: str,
     blockchain_constants: ConsensusConstants,
     use_delta_sync: bool,
@@ -256,7 +257,7 @@ async def test_almost_recent(
 @pytest.mark.anyio
 async def test_backtrack_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
-    default_400_blocks: List[FullBlock],
+    default_400_blocks: list[FullBlock],
     self_hostname: str,
     use_delta_sync: bool,
 ) -> None:
@@ -286,7 +287,7 @@ async def test_backtrack_sync_wallet(
 @pytest.mark.anyio
 async def test_short_batch_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
-    default_400_blocks: List[FullBlock],
+    default_400_blocks: list[FullBlock],
     self_hostname: str,
     use_delta_sync: bool,
 ) -> None:
@@ -315,8 +316,8 @@ async def test_short_batch_sync_wallet(
 @pytest.mark.anyio
 async def test_long_sync_wallet(
     two_wallet_nodes: OldSimulatorsAndWallets,
-    default_1000_blocks: List[FullBlock],
-    default_400_blocks: List[FullBlock],
+    default_1000_blocks: list[FullBlock],
+    default_400_blocks: list[FullBlock],
     self_hostname: str,
     use_delta_sync: bool,
 ) -> None:
@@ -377,7 +378,7 @@ async def test_long_sync_wallet(
 @pytest.mark.anyio
 async def test_wallet_reorg_sync(
     two_wallet_nodes: OldSimulatorsAndWallets,
-    default_400_blocks: List[FullBlock],
+    default_400_blocks: list[FullBlock],
     self_hostname: str,
     use_delta_sync: bool,
 ) -> None:
@@ -436,7 +437,7 @@ async def test_wallet_reorg_sync(
 @pytest.mark.limit_consensus_modes(reason="save time")
 @pytest.mark.anyio
 async def test_wallet_reorg_get_coinbase(
-    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: List[FullBlock], self_hostname: str
+    two_wallet_nodes: OldSimulatorsAndWallets, default_400_blocks: list[FullBlock], self_hostname: str
 ) -> None:
     [full_node_api], wallets, bt = two_wallet_nodes
     full_node = full_node_api.full_node
@@ -571,7 +572,7 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    payees: List[Payment] = []
+    payees: list[Payment] = []
     for i in range(10):
         payee_ph = await wallet.get_new_puzzlehash()
         payees.append(Payment(payee_ph, uint64(i + 100)))
@@ -643,7 +644,7 @@ async def test_request_additions_success(simulator_and_wallet: OldSimulatorsAndW
 
 @pytest.mark.anyio
 async def test_get_wp_fork_point(
-    default_10000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+    default_10000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
 ) -> None:
     blocks = default_10000_blocks
     header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks, blockchain_constants)
@@ -786,7 +787,7 @@ async def test_dusted_wallet(
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[farm_wallet_node, dust_wallet_node], timeout=20)
 
     # Part 1: create a single dust coin
-    payees: List[Payment] = []
+    payees: list[Payment] = []
     payee_ph = await dust_wallet.get_new_puzzlehash()
     payees.append(Payment(payee_ph, uint64(dust_value)))
 
@@ -1260,11 +1261,11 @@ async def test_retry_store(
 
     def flaky_get_coin_state(
         flakiness_info: FlakinessInfo,
-        func: Callable[[List[bytes32], WSChiaConnection, Optional[uint32]], Awaitable[List[CoinState]]],
-    ) -> Callable[[List[bytes32], WSChiaConnection, Optional[uint32]], Awaitable[List[CoinState]]]:
+        func: Callable[[list[bytes32], WSChiaConnection, Optional[uint32]], Awaitable[list[CoinState]]],
+    ) -> Callable[[list[bytes32], WSChiaConnection, Optional[uint32]], Awaitable[list[CoinState]]]:
         async def new_func(
-            coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
-        ) -> List[CoinState]:
+            coin_names: list[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
+        ) -> list[CoinState]:
             if flakiness_info.coin_state_flaky:
                 flakiness_info.coin_state_flaky = False
                 raise PeerRequestException()
@@ -1293,11 +1294,11 @@ async def test_retry_store(
 
     def flaky_fetch_children(
         flakiness_info: FlakinessInfo,
-        func: Callable[[bytes32, WSChiaConnection, Optional[uint32]], Awaitable[List[CoinState]]],
-    ) -> Callable[[bytes32, WSChiaConnection, Optional[uint32]], Awaitable[List[CoinState]]]:
+        func: Callable[[bytes32, WSChiaConnection, Optional[uint32]], Awaitable[list[CoinState]]],
+    ) -> Callable[[bytes32, WSChiaConnection, Optional[uint32]], Awaitable[list[CoinState]]]:
         async def new_func(
             coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
-        ) -> List[CoinState]:
+        ) -> list[CoinState]:
             if flakiness_info.fetch_children_flaky:
                 flakiness_info.fetch_children_flaky = False
                 raise PeerRequestException()
@@ -1403,7 +1404,7 @@ async def test_retry_store(
 @pytest.mark.skip("the test fails with 'wallet_state_manager not assigned'. This test doesn't work, skip it for now")
 async def test_bad_peak_mismatch(
     two_wallet_nodes: OldSimulatorsAndWallets,
-    default_1000_blocks: List[FullBlock],
+    default_1000_blocks: list[FullBlock],
     self_hostname: str,
     blockchain_constants: ConsensusConstants,
     monkeypatch: pytest.MonkeyPatch,
@@ -1462,8 +1463,8 @@ async def test_bad_peak_mismatch(
 @pytest.mark.anyio
 async def test_long_sync_untrusted_break(
     setup_two_nodes_and_wallet: OldSimulatorsAndWallets,
-    default_1000_blocks: List[FullBlock],
-    default_400_blocks: List[FullBlock],
+    default_1000_blocks: list[FullBlock],
+    default_400_blocks: list[FullBlock],
     self_hostname: str,
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,

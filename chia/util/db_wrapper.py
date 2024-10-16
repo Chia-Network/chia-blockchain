@@ -6,10 +6,11 @@ import functools
 import secrets
 import sqlite3
 import sys
+from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, List, Optional, TextIO, Tuple, Type, Union
+from typing import Any, Optional, TextIO, Union
 
 import aiosqlite
 import anyio
@@ -29,8 +30,8 @@ class DBWrapperError(Exception):
 
 
 class ForeignKeyError(DBWrapperError):
-    def __init__(self, violations: Iterable[Union[aiosqlite.Row, Tuple[str, object, str, object]]]) -> None:
-        self.violations: List[Dict[str, object]] = []
+    def __init__(self, violations: Iterable[Union[aiosqlite.Row, tuple[str, object, str, object]]]) -> None:
+        self.violations: list[dict[str, object]] = []
 
         for violation in violations:
             if isinstance(violation, tuple):
@@ -136,7 +137,7 @@ class DBWrapper2:
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     _read_connections: asyncio.Queue[aiosqlite.Connection] = field(default_factory=asyncio.Queue)
     _num_read_connections: int = 0
-    _in_use: Dict[asyncio.Task[object], aiosqlite.Connection] = field(default_factory=dict)
+    _in_use: dict[asyncio.Task[object], aiosqlite.Connection] = field(default_factory=dict)
     _current_writer: Optional[asyncio.Task[object]] = None
     _savepoint_name: int = 0
 
@@ -160,7 +161,7 @@ class DBWrapper2:
         journal_mode: str = "WAL",
         synchronous: Optional[str] = None,
         foreign_keys: Optional[bool] = None,
-        row_factory: Optional[Type[aiosqlite.Row]] = None,
+        row_factory: Optional[type[aiosqlite.Row]] = None,
     ) -> AsyncIterator[DBWrapper2]:
         if foreign_keys is None:
             foreign_keys = False
@@ -217,7 +218,7 @@ class DBWrapper2:
         journal_mode: str = "WAL",
         synchronous: Optional[str] = None,
         foreign_keys: bool = False,
-        row_factory: Optional[Type[aiosqlite.Row]] = None,
+        row_factory: Optional[type[aiosqlite.Row]] = None,
     ) -> DBWrapper2:
         # WARNING: please use .managed() instead
         if log_path is None:

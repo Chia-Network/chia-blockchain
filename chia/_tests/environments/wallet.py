@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import operator
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -28,9 +28,9 @@ OPP_DICT = {"<": operator.lt, ">": operator.gt, "<=": operator.le, ">=": operato
 
 
 class BalanceCheckingError(Exception):
-    errors: Dict[Union[int, str], List[str]]
+    errors: dict[Union[int, str], list[str]]
 
-    def __init__(self, errors: Dict[Union[int, str], List[str]]) -> None:
+    def __init__(self, errors: dict[Union[int, str], list[str]]) -> None:
         self.errors = errors
 
     def __repr__(self) -> str:
@@ -47,10 +47,10 @@ class WalletState:
 
 @dataclass
 class WalletStateTransition:
-    pre_block_balance_updates: Dict[Union[int, str], Dict[str, int]] = field(default_factory=dict)
-    post_block_balance_updates: Dict[Union[int, str], Dict[str, int]] = field(default_factory=dict)
-    pre_block_additional_balance_info: Dict[Union[int, str], Dict[str, int]] = field(default_factory=dict)
-    post_block_additional_balance_info: Dict[Union[int, str], Dict[str, int]] = field(default_factory=dict)
+    pre_block_balance_updates: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
+    post_block_balance_updates: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
+    pre_block_additional_balance_info: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
+    post_block_additional_balance_info: dict[Union[int, str], dict[str, int]] = field(default_factory=dict)
 
 
 @dataclass
@@ -60,14 +60,14 @@ class WalletEnvironment:
             "WalletEnvironment", None
         )
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
     service: Service[WalletNode, WalletNodeAPI, WalletRpcApi]
     # TODO: maybe put this in the protocol?
     rpc_client: WalletRpcClient
     # TODO: added the default, but should think through implementing it etc.  `.create()`?
-    wallet_states: Dict[uint32, WalletState] = field(default_factory=dict)
-    wallet_aliases: Dict[str, int] = field(default_factory=dict)
+    wallet_states: dict[uint32, WalletState] = field(default_factory=dict)
+    wallet_aliases: dict[str, int] = field(default_factory=dict)
 
     @property
     def node(self) -> WalletNode:
@@ -113,31 +113,31 @@ class WalletEnvironment:
         """
         This function turns a wallet id into an alias if one is available or the same wallet id if one is not.
         """
-        inverted_wallet_aliases: Dict[int, str] = {v: k for k, v in self.wallet_aliases.items()}
+        inverted_wallet_aliases: dict[int, str] = {v: k for k, v in self.wallet_aliases.items()}
         if wallet_id in inverted_wallet_aliases:
             return inverted_wallet_aliases[wallet_id]
         else:
             return wallet_id
 
-    async def check_balances(self, additional_balance_info: Dict[Union[int, str], Dict[str, int]] = {}) -> None:
+    async def check_balances(self, additional_balance_info: dict[Union[int, str], dict[str, int]] = {}) -> None:
         """
         This function checks the internal representation of what the balances should be against the balances that the
         wallet actually returns via the RPC.
 
         Likely this should be called as part of WalletTestFramework.process_pending_states instead of directly.
         """
-        dealiased_additional_balance_info: Dict[uint32, Dict[str, int]] = {
+        dealiased_additional_balance_info: dict[uint32, dict[str, int]] = {
             self.dealias_wallet_id(k): v for k, v in additional_balance_info.items()
         }
-        errors: Dict[Union[int, str], List[str]] = {}
+        errors: dict[Union[int, str], list[str]] = {}
         for wallet_id in self.wallet_state_manager.wallets:
             if wallet_id not in self.wallet_states:
                 raise KeyError(f"No wallet state for wallet id {wallet_id} (alias: {self.alias_wallet_id(wallet_id)})")
             wallet_state: WalletState = self.wallet_states[wallet_id]
-            wallet_errors: List[str] = []
+            wallet_errors: list[str] = []
 
             assert self.node.logged_in_fingerprint is not None
-            expected_result: Dict[str, int] = {
+            expected_result: dict[str, int] = {
                 **wallet_state.balance.to_json_dict(),
                 "wallet_id": wallet_id,
                 "wallet_type": self.wallet_state_manager.wallets[wallet_id].type().value,
@@ -148,7 +148,7 @@ class WalletEnvironment:
                     else {}
                 ),
             }
-            balance_response: Dict[str, int] = await self.rpc_client.get_wallet_balance(wallet_id)
+            balance_response: dict[str, int] = await self.rpc_client.get_wallet_balance(wallet_id)
 
             if not expected_result.items() <= balance_response.items():
                 for key, value in expected_result.items():
@@ -165,7 +165,7 @@ class WalletEnvironment:
         if errors != {}:
             raise BalanceCheckingError(errors)
 
-    async def change_balances(self, update_dictionary: Dict[Union[int, str], Dict[str, int]]) -> None:
+    async def change_balances(self, update_dictionary: dict[Union[int, str], dict[str, int]]) -> None:
         """
         This method changes the internal representation of what the wallet balances should be. This is probably
         necessary to call before check_balances as most wallet operations will result in a balance change that causes
@@ -193,7 +193,7 @@ class WalletEnvironment:
         for wallet_id_or_alias, kwargs in update_dictionary.items():
             wallet_id: uint32 = self.dealias_wallet_id(wallet_id_or_alias)
 
-            new_values: Dict[str, int] = {}
+            new_values: dict[str, int] = {}
             existing_values: Balance = await self.node.get_balance(wallet_id)
             if "init" in kwargs and kwargs["init"]:
                 new_values = {k: v for k, v in kwargs.items() if k not in ("set_remainder", "init")}
@@ -247,10 +247,10 @@ class WalletEnvironment:
             }
 
     async def wait_for_transactions_to_settle(
-        self, full_node_api: FullNodeSimulator, _exclude_from_mempool_check: List[bytes32] = []
-    ) -> List[TransactionRecord]:
+        self, full_node_api: FullNodeSimulator, _exclude_from_mempool_check: list[bytes32] = []
+    ) -> list[TransactionRecord]:
         # Gather all pending transactions
-        pending_txs: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
+        pending_txs: list[TransactionRecord] = await self.wallet_state_manager.tx_store.get_all_unconfirmed()
         # Filter clawback txs
         pending_txs = [
             tx
@@ -269,11 +269,11 @@ class WalletTestFramework:
     full_node: FullNodeSimulator
     full_node_rpc_client: FullNodeRpcClient
     trusted_full_node: bool
-    environments: List[WalletEnvironment]
+    environments: list[WalletEnvironment]
     tx_config: TXConfig = DEFAULT_TX_CONFIG
 
     async def process_pending_states(
-        self, state_transitions: List[WalletStateTransition], invalid_transactions: List[bytes32] = []
+        self, state_transitions: list[WalletStateTransition], invalid_transactions: list[bytes32] = []
     ) -> None:
         """
         This is the main entry point for processing state in wallet tests. It does the following things:
@@ -288,16 +288,16 @@ class WalletTestFramework:
         """
         # Take note of the number of puzzle hashes if we're supposed to be reusing
         if self.tx_config.reuse_puzhash:
-            puzzle_hash_indexes: List[Dict[uint32, Optional[DerivationRecord]]] = []
+            puzzle_hash_indexes: list[dict[uint32, Optional[DerivationRecord]]] = []
             for env in self.environments:
-                ph_indexes: Dict[uint32, Optional[DerivationRecord]] = {}
+                ph_indexes: dict[uint32, Optional[DerivationRecord]] = {}
                 for wallet_id in env.wallet_state_manager.wallets:
                     ph_indexes[wallet_id] = (
                         await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
                     )
                 puzzle_hash_indexes.append(ph_indexes)
 
-        pending_txs: List[List[TransactionRecord]] = []
+        pending_txs: list[list[TransactionRecord]] = []
 
         # Check balances prior to block
         try:
@@ -354,7 +354,7 @@ class WalletTestFramework:
             try:
                 await self.full_node.check_transactions_confirmed(env.wallet_state_manager, txs)
             except TimeoutError:  # pragma: no cover
-                unconfirmed: List[TransactionRecord] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
+                unconfirmed: list[TransactionRecord] = await env.wallet_state_manager.tx_store.get_all_unconfirmed()
                 raise TimeoutError(
                     f"ENV-{i} TXs not confirmed: {[tx.to_json_dict() for tx in unconfirmed if tx in txs]}"
                 )

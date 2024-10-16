@@ -9,7 +9,7 @@ import traceback
 from concurrent.futures import Executor, ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import BLSCache
 
@@ -68,12 +68,12 @@ class AddBlockResult(Enum):
 class StateChangeSummary:
     peak: BlockRecord
     fork_height: uint32
-    rolled_back_records: List[CoinRecord]
+    rolled_back_records: list[CoinRecord]
     # list of coin-id, puzzle-hash pairs
-    removals: List[Tuple[bytes32, bytes32]]
+    removals: list[tuple[bytes32, bytes32]]
     # new coin and hint
-    additions: List[Tuple[Coin, Optional[bytes]]]
-    new_rewards: List[Coin]
+    additions: list[tuple[Coin, Optional[bytes]]]
+    new_rewards: list[Coin]
 
 
 class BlockchainMutexPriority(enum.IntEnum):
@@ -94,9 +94,9 @@ class Blockchain:
     # peak of the blockchain
     _peak_height: Optional[uint32]
     # All blocks in peak path are guaranteed to be included, can include orphan blocks
-    __block_records: Dict[bytes32, BlockRecord]
+    __block_records: dict[bytes32, BlockRecord]
     # all hashes of blocks in block_record by height, used for garbage collection
-    __heights_in_cache: Dict[uint32, Set[bytes32]]
+    __heights_in_cache: dict[uint32, set[bytes32]]
     # maps block height (of the current heaviest chain) to block hash and sub
     # epoch summaries
     __height_map: BlockHeightMap
@@ -107,7 +107,7 @@ class Blockchain:
     # Used to verify blocks in parallel
     pool: Executor
     # Set holding seen compact proofs, in order to avoid duplicates.
-    _seen_compact_proofs: Set[Tuple[VDFInfo, uint32]]
+    _seen_compact_proofs: set[tuple[VDFInfo, uint32]]
 
     # Whether blockchain is shut down or not
     _shut_down: bool
@@ -285,7 +285,7 @@ class Blockchain:
         sub_slot_iters: uint64,
         fork_info: Optional[ForkInfo] = None,
         prev_ses_block: Optional[BlockRecord] = None,
-    ) -> Tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
+    ) -> tuple[AddBlockResult, Optional[Err], Optional[StateChangeSummary]]:
         """
         This method must be called under the blockchain lock
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -515,7 +515,7 @@ class Blockchain:
         block_record: BlockRecord,
         genesis: bool,
         fork_info: ForkInfo,
-    ) -> Tuple[List[BlockRecord], Optional[StateChangeSummary]]:
+    ) -> tuple[list[BlockRecord], Optional[StateChangeSummary]]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -524,7 +524,7 @@ class Blockchain:
         """
 
         peak = self.get_peak()
-        rolled_back_state: Dict[bytes32, CoinRecord] = {}
+        rolled_back_state: dict[bytes32, CoinRecord] = {}
 
         if genesis and peak is not None:
             return [], None
@@ -542,7 +542,7 @@ class Blockchain:
                     rolled_back_state[coin_record.name] = coin_record
 
         # Collects all blocks from fork point to new peak
-        records_to_add: List[BlockRecord] = []
+        records_to_add: list[BlockRecord] = []
 
         if genesis:
             records_to_add = [block_record]
@@ -621,7 +621,7 @@ class Blockchain:
 
     async def get_sp_and_ip_sub_slots(
         self, header_hash: bytes32
-    ) -> Optional[Tuple[Optional[EndOfSubSlotBundle], Optional[EndOfSubSlotBundle]]]:
+    ) -> Optional[tuple[Optional[EndOfSubSlotBundle], Optional[EndOfSubSlotBundle]]]:
         block: Optional[FullBlock] = await self.block_store.get_full_block(header_hash)
         if block is None:
             return None
@@ -672,11 +672,11 @@ class Blockchain:
             return None, ip_sub_slot
         return prev_curr.finished_sub_slots[-1], ip_sub_slot
 
-    def get_recent_reward_challenges(self) -> List[Tuple[bytes32, uint128]]:
+    def get_recent_reward_challenges(self) -> list[tuple[bytes32, uint128]]:
         peak = self.get_peak()
         if peak is None:
             return []
-        recent_rc: List[Tuple[bytes32, uint128]] = []
+        recent_rc: list[tuple[bytes32, uint128]] = []
         curr: Optional[BlockRecord] = peak
         while curr is not None and len(recent_rc) < 2 * self.constants.MAX_SUB_SLOT_BLOCKS:
             if curr != peak:
@@ -695,7 +695,7 @@ class Blockchain:
 
     async def validate_unfinished_block_header(
         self, block: UnfinishedBlock, skip_overflow_ss_validation: bool = True
-    ) -> Tuple[Optional[uint64], Optional[Err]]:
+    ) -> tuple[Optional[uint64], Optional[Err]]:
         if len(block.transactions_generator_ref_list) > self.constants.MAX_GENERATOR_REF_LIST_SIZE:
             return None, Err.TOO_MANY_GENERATOR_REFS
 
@@ -818,7 +818,7 @@ class Blockchain:
             raise ValueError(f"Height is not in blockchain: {height}")
         return self.block_record(header_hash)
 
-    def get_ses_heights(self) -> List[uint32]:
+    def get_ses_heights(self) -> list[uint32]:
         return self.__height_map.get_ses_heights()
 
     def get_ses(self, height: uint32) -> SubEpochSummary:
@@ -888,27 +888,27 @@ class Blockchain:
             return None
         self.clean_block_record(self._peak_height - self.constants.BLOCKS_CACHE_SIZE)
 
-    async def get_block_records_in_range(self, start: int, stop: int) -> Dict[bytes32, BlockRecord]:
+    async def get_block_records_in_range(self, start: int, stop: int) -> dict[bytes32, BlockRecord]:
         return await self.block_store.get_block_records_in_range(start, stop)
 
     async def get_header_blocks_in_range(
         self, start: int, stop: int, tx_filter: bool = True
-    ) -> Dict[bytes32, HeaderBlock]:
+    ) -> dict[bytes32, HeaderBlock]:
         hashes = []
         for height in range(start, stop + 1):
             header_hash: Optional[bytes32] = self.height_to_hash(uint32(height))
             if header_hash is not None:
                 hashes.append(header_hash)
 
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         for hash in hashes.copy():
             block = self.block_store.block_cache.get(hash)
             if block is not None:
                 blocks.append(block)
                 hashes.remove(hash)
-        blocks_on_disk: List[FullBlock] = await self.block_store.get_blocks_by_hash(hashes)
+        blocks_on_disk: list[FullBlock] = await self.block_store.get_blocks_by_hash(hashes)
         blocks.extend(blocks_on_disk)
-        header_blocks: Dict[bytes32, HeaderBlock] = {}
+        header_blocks: dict[bytes32, HeaderBlock] = {}
 
         for block in blocks:
             if self.height_to_hash(block.height) != block.header_hash:
@@ -916,10 +916,10 @@ class Blockchain:
             if tx_filter is False:
                 header = get_block_header(block, [], [])
             else:
-                tx_additions: List[CoinRecord] = [
+                tx_additions: list[CoinRecord] = [
                     c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
                 ]
-                removed: List[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
+                removed: list[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
                 header = get_block_header(
                     block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
                 )
@@ -930,19 +930,19 @@ class Blockchain:
     async def get_header_block_by_height(
         self, height: int, header_hash: bytes32, tx_filter: bool = True
     ) -> Optional[HeaderBlock]:
-        header_dict: Dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height, tx_filter)
+        header_dict: dict[bytes32, HeaderBlock] = await self.get_header_blocks_in_range(height, height, tx_filter)
         if len(header_dict) == 0:
             return None
         if header_hash not in header_dict:
             return None
         return header_dict[header_hash]
 
-    async def get_block_records_at(self, heights: List[uint32], batch_size: int = 900) -> List[BlockRecord]:
+    async def get_block_records_at(self, heights: list[uint32], batch_size: int = 900) -> list[BlockRecord]:
         """
         gets block records by height (only blocks that are part of the chain)
         """
-        records: List[BlockRecord] = []
-        hashes: List[bytes32] = []
+        records: list[BlockRecord] = []
+        hashes: list[bytes32] = []
         assert batch_size < self.block_store.db_wrapper.host_parameter_limit
         for height in heights:
             header_hash: Optional[bytes32] = self.height_to_hash(height)
@@ -970,7 +970,7 @@ class Blockchain:
             return ret
         return await self.block_store.get_block_record(header_hash)
 
-    async def prev_block_hash(self, header_hashes: List[bytes32]) -> List[bytes32]:
+    async def prev_block_hash(self, header_hashes: list[bytes32]) -> list[bytes32]:
         """
         Given a list of block header hashes, returns the previous header hashes
         for each block, in the order they were passed in.
@@ -1007,15 +1007,15 @@ class Blockchain:
         self.__heights_in_cache[block_record.height].add(block_record.header_hash)
 
     async def persist_sub_epoch_challenge_segments(
-        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
+        self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
     ) -> None:
         await self.block_store.persist_sub_epoch_challenge_segments(ses_block_hash, segments)
 
     async def get_sub_epoch_challenge_segments(
         self,
         ses_block_hash: bytes32,
-    ) -> Optional[List[SubEpochChallengeSegment]]:
-        segments: Optional[List[SubEpochChallengeSegment]] = await self.block_store.get_sub_epoch_challenge_segments(
+    ) -> Optional[list[SubEpochChallengeSegment]]:
+        segments: Optional[list[SubEpochChallengeSegment]] = await self.block_store.get_sub_epoch_challenge_segments(
             ses_block_hash
         )
         if segments is None:
@@ -1033,9 +1033,9 @@ class Blockchain:
         self._seen_compact_proofs.add(pot_tuple)
         return False
 
-    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: Set[uint32]) -> Dict[uint32, bytes]:
+    async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
 
-        generators: Dict[uint32, bytes] = {}
+        generators: dict[uint32, bytes] = {}
 
         # if this is empty, we shouldn't have called this function to begin with
         assert len(generator_refs)
@@ -1064,7 +1064,7 @@ class Blockchain:
         if self.height_to_hash(peak_block.height) != header_hash:
             peak: Optional[BlockRecord] = self.get_peak()
             assert peak is not None
-            reorg_chain: Dict[uint32, bytes32]
+            reorg_chain: dict[uint32, bytes32]
             # Then we look up blocks up to fork point one at a time, backtracking
             reorg_chain, _ = await lookup_fork_chain(
                 self,

@@ -6,7 +6,7 @@ import json
 import logging
 import pathlib
 import time
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, Tuple, cast, final
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast, final
 
 import chia
 import chia._tests
@@ -34,10 +34,10 @@ class TimeOutAssertData:
 
     label: str = ""
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> TimeOutAssertData:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> TimeOutAssertData:
         return cls(
             duration=marshalled["duration"],
             path=pathlib.Path(marshalled["path"]),
@@ -46,7 +46,7 @@ class TimeOutAssertData:
             timed_out=marshalled["timed_out"],
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "duration": self.duration,
             "path": self.path.as_posix(),

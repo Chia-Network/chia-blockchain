@@ -4,9 +4,10 @@ import asyncio
 import functools
 import json
 import time
+from collections.abc import Awaitable
 from dataclasses import replace
 from pprint import pprint
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import aiohttp
 
@@ -38,12 +39,12 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 
 
-async def create_pool_args(pool_url: str) -> Dict[str, Any]:
+async def create_pool_args(pool_url: str) -> dict[str, Any]:
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt())) as response:
                 if response.ok:
-                    json_dict: Dict[str, Any] = json.loads(await response.text())
+                    json_dict: dict[str, Any] = json.loads(await response.text())
                 else:
                     raise ValueError(f"Response from {pool_url} not OK: {response.status}")
     except Exception as e:
@@ -117,7 +118,7 @@ async def pprint_pool_wallet_state(
     wallet_id: int,
     pool_wallet_info: PoolWalletInfo,
     address_prefix: str,
-    pool_state_dict: Optional[Dict[str, Any]],
+    pool_state_dict: Optional[dict[str, Any]],
 ) -> None:
     print(f"Wallet ID: {wallet_id}")
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL.value and pool_wallet_info.target is None:
@@ -142,7 +143,7 @@ async def pprint_pool_wallet_state(
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
         print(f"Target pool URL: {pool_wallet_info.target.pool_url}")
     if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
-        balances: Dict[str, Any] = await wallet_client.get_wallet_balance(wallet_id)
+        balances: dict[str, Any] = await wallet_client.get_wallet_balance(wallet_id)
         balance = balances["confirmed_wallet_balance"]
         typ = WalletType(int(WalletType.POOLING_WALLET))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
@@ -177,9 +178,9 @@ async def pprint_pool_wallet_state(
 
 async def pprint_all_pool_wallet_state(
     wallet_client: WalletRpcClient,
-    get_wallets_response: List[Dict[str, Any]],
+    get_wallets_response: list[dict[str, Any]],
     address_prefix: str,
-    pool_state_dict: Dict[bytes32, Dict[str, Any]],
+    pool_state_dict: dict[bytes32, dict[str, Any]],
 ) -> None:
     print(f"Wallet height: {(await wallet_client.get_height_info()).height}")
     print(f"Sync status: {'Synced' if (await wallet_client.get_sync_status()).synced else 'Not synced'}")
@@ -205,7 +206,7 @@ async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_pass
                 address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
                 summaries_response = await wallet_client.get_wallets()
                 pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
-                pool_state_dict: Dict[bytes32, Dict[str, Any]] = {
+                pool_state_dict: dict[bytes32, dict[str, Any]] = {
                     bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
                     for pool_state_item in pool_state_list
                 }
@@ -246,7 +247,7 @@ async def get_login_link(launcher_id: bytes32) -> None:
 async def submit_tx_with_confirmation(
     message: str,
     prompt: bool,
-    func: Callable[[], Awaitable[Dict[str, Any]]],
+    func: Callable[[], Awaitable[dict[str, Any]]],
     wallet_client: WalletRpcClient,
     fingerprint: int,
     wallet_id: int,
@@ -355,11 +356,11 @@ async def claim_cmd(*, wallet_rpc_port: Optional[int], fingerprint: int, fee: ui
 
 
 async def change_payout_instructions(launcher_id: str, address: CliAddress) -> None:
-    new_pool_configs: List[PoolWalletConfig] = []
+    new_pool_configs: list[PoolWalletConfig] = []
     id_found = False
     puzzle_hash = address.validate_address_type_get_ph(AddressType.XCH)
 
-    old_configs: List[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
+    old_configs: list[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
     for pool_config in old_configs:
         if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
             id_found = True

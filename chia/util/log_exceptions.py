@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 import traceback
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator, Tuple, Type, Union
+from typing import Union
 
 
 @contextmanager
@@ -14,7 +15,7 @@ def log_exceptions(
     message: str = "Caught exception",
     level: int = logging.ERROR,
     show_traceback: bool = True,
-    exceptions_to_process: Union[Type[BaseException], Tuple[Type[BaseException], ...]] = Exception,
+    exceptions_to_process: Union[type[BaseException], tuple[type[BaseException], ...]] = Exception,
 ) -> Iterator[None]:
     try:
         yield
