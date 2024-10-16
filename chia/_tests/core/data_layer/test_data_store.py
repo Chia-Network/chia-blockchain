@@ -10,20 +10,18 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import aiohttp
-import aiosqlite
 import pytest
 
 from chia._tests.core.data_layer.util import Example, add_0123_example, add_01234567_example
 from chia._tests.util.misc import BenchmarkRunner, Marks, boolean_datacases, datacases
-from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
     Node,
-    NodeType,
     OperationType,
     ProofOfInclusion,
     ProofOfInclusionLayer,
@@ -517,7 +515,7 @@ async def test_get_pairs(
 
     pairs = await data_store.get_keys_values(store_id=store_id)
 
-    assert set(node.hash for node in pairs) == set(example.terminal_nodes)
+    assert {node.hash for node in pairs} == set(example.terminal_nodes)
 
 
 @pytest.mark.anyio

@@ -10,7 +10,7 @@ from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List
 
 import aiosqlite
 
-from chia.data_layer.data_layer_errors import KeyNotFoundError, NodeHashError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InsertResult,
@@ -23,7 +23,6 @@ from chia.data_layer.data_layer_util import (
     NodeType,
     OperationType,
     ProofOfInclusion,
-    ProofOfInclusionLayer,
     Root,
     SerializedNode,
     ServerInfo,
@@ -33,26 +32,23 @@ from chia.data_layer.data_layer_util import (
     TerminalNode,
     Unspecified,
     get_hashes_for_page,
-    internal_hash,
     key_hash,
     leaf_hash,
     row_to_node,
     unspecified,
 )
+from chia.data_layer.util.merkle_blob import KVId, MerkleBlob, NodeMetadata
+from chia.data_layer.util.merkle_blob import NodeType as NodeTypeMerkleBlob
 from chia.data_layer.util.merkle_blob import (
-    KVId,
-    MerkleBlob,
-    NodeMetadata,
-    NodeType as NodeTypeMerkleBlob,
     RawInternalMerkleNode,
     RawLeafMerkleNode,
+    TreeIndex,
     null_parent,
     pack_raw_node,
     undefined_index,
 )
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER, DBWrapper2
+from chia.util.db_wrapper import DBWrapper2
 
 log = logging.getLogger(__name__)
 
@@ -220,10 +216,10 @@ class DataStore:
             async with self.db_wrapper.writer() as writer:
                 await writer.execute(
                     """
-                    INSERT OR REPLACE INTO merkleblob (hash, blob) 
+                    INSERT OR REPLACE INTO merkleblob (hash, blob)
                     VALUES (?, ?)
                     """,
-                    (root_hash, merkle_blob.blob)
+                    (root_hash, merkle_blob.blob),
                 )
 
         return await self._insert_root(store_id, root_hash, status)
@@ -274,7 +270,14 @@ class DataStore:
         vid = await self.add_kvid(value)
         hash = leaf_hash(key, value)
         async with self.db_wrapper.writer() as writer:
-            await writer.execute("INSERT OR REPLACE INTO hashes (hash, kid, vid) VALUES (?, ?, ?)", (hash,kid,vid,))
+            await writer.execute(
+                "INSERT OR REPLACE INTO hashes (hash, kid, vid) VALUES (?, ?, ?)",
+                (
+                    hash,
+                    kid,
+                    vid,
+                ),
+            )
         return (kid, vid)
 
     async def get_node_by_hash(self, hash: bytes32) -> Tuple[KVId, KVId]:
@@ -297,7 +300,11 @@ class DataStore:
     async def get_first_generation(self, node_hash: bytes32, store_id: bytes32) -> Optional[int]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT generation FROM nodes WHERE hash = ? AND store_id = ?", (node_hash,store_id,)
+                "SELECT generation FROM nodes WHERE hash = ? AND store_id = ?",
+                (
+                    node_hash,
+                    store_id,
+                ),
             )
 
             row = await cursor.fetchone()
@@ -315,7 +322,7 @@ class DataStore:
                 INSERT INTO nodes(store_id, hash, root_hash, generation, idx)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (store_id, hash, root_hash, generation, index)
+                (store_id, hash, root_hash, generation, index),
             )
 
     async def add_node_hashes(self, store_id: bytes32) -> None:
@@ -339,9 +346,7 @@ class DataStore:
     ) -> TreeIndex:
         if node_hash not in terminal_nodes and node_hash not in internal_nodes:
             async with self.db_wrapper.reader() as reader:
-                cursor = await reader.execute(
-                    "SELECT root_hash, idx FROM nodes WHERE hash = ?", (node_hash,)
-                )
+                cursor = await reader.execute("SELECT root_hash, idx FROM nodes WHERE hash = ?", (node_hash,))
 
                 row = await cursor.fetchone()
                 if row is None:
@@ -513,9 +518,7 @@ class DataStore:
             if len(bad_trees) > 0:
                 raise TreeGenerationIncrementingError(store_ids=bad_trees)
 
-    _checks: Tuple[Callable[[DataStore], Awaitable[None]], ...] = (
-        _check_roots_are_incrementing,
-    )
+    _checks: Tuple[Callable[[DataStore], Awaitable[None]], ...] = (_check_roots_are_incrementing,)
 
     async def create_tree(self, store_id: bytes32, status: Status = Status.PENDING) -> bool:
         await self._insert_root(store_id=store_id, node_hash=None, status=status)
@@ -634,14 +637,13 @@ class DataStore:
         root_hash: Optional[bytes32] = None,
         generation: Optional[int] = None,
     ) -> List[InternalNode]:
-        async with self.db_wrapper.reader() as reader:
+        async with self.db_wrapper.reader():
             if root_hash is None:
                 root = await self.get_tree_root(store_id=store_id, generation=generation)
                 root_hash = root.node_hash
             if root_hash is None:
                 raise Exception(f"Root hash is unspecified for store ID: {store_id.hex()}")
 
-            ancestors: List[InternalNode] = []
             merkle_blob = await self.get_merkle_blob(root_hash=root_hash)
             reference_kid, _ = await self.get_node_by_hash(node_hash)
 
@@ -681,7 +683,7 @@ class DataStore:
         store_id: bytes32,
         root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> List[TerminalNode]:
-        async with self.db_wrapper.reader() as reader:
+        async with self.db_wrapper.reader():
             resolved_root_hash: Optional[bytes32]
             if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
@@ -710,7 +712,7 @@ class DataStore:
         store_id: bytes32,
         root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> KeysValuesCompressed:
-        async with self.db_wrapper.reader() as reader:
+        async with self.db_wrapper.reader():
             resolved_root_hash: Optional[bytes32]
             if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
@@ -888,7 +890,7 @@ class DataStore:
         store_id: bytes32,
         root_hash: Union[bytes32, Unspecified] = unspecified,
     ) -> List[bytes]:
-        async with self.db_wrapper.reader() as reader:
+        async with self.db_wrapper.reader():
             if root_hash is unspecified:
                 root = await self.get_tree_root(store_id=store_id)
                 resolved_root_hash = root.node_hash
@@ -972,7 +974,7 @@ class DataStore:
             if root is None:
                 root = await self.get_tree_root(store_id=store_id)
             merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
-            
+
             kid, vid = await self.add_key_value(key, new_value)
             hash = leaf_hash(key, new_value)
             merkle_blob.upsert(kid, vid, hash)
@@ -1138,7 +1140,7 @@ class DataStore:
         return node
 
     async def get_tree_as_nodes(self, store_id: bytes32) -> Node:
-        async with self.db_wrapper.reader() as reader:
+        async with self.db_wrapper.reader():
             root = await self.get_tree_root(store_id=store_id)
             merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
