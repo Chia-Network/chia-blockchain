@@ -214,6 +214,9 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
+      - name: Set up rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Verify source and installed tests collect and match
         run: |
           echo '==== collecting source tests ===='
