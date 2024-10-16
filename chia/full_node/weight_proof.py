@@ -560,8 +560,9 @@ class WeightProofHandler:
 
     def validate_weight_proof_single_proc(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
         assert self.blockchain is not None
-        assert len(weight_proof.sub_epochs) > 0
-        if len(weight_proof.sub_epochs) == 0:
+        sub_epochs = weight_proof.sub_epochs
+        assert len(sub_epochs) > 0
+        if len(sub_epochs) == 0:
             return False, uint32(0)
 
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
@@ -1655,8 +1656,9 @@ async def validate_weight_proof_inner(
     skip_segment_validation: bool,
     validate_from: int,
 ) -> Tuple[bool, List[BlockRecord]]:
-    assert len(weight_proof.sub_epochs) > 0
-    if len(weight_proof.sub_epochs) == 0:
+    sub_epochs = weight_proof.sub_epochs
+    assert len(sub_epochs) > 0
+    if len(sub_epochs) == 0:
         return False, []
 
     peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
