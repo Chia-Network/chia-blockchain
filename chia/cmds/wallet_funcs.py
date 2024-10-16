@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
 import os
 import pathlib
 import sys
 import time
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, TextIO, Tuple, Union
+
+from typing_extensions import final
 
 from chia.cmds.cmds_util import (
     CMDTXConfigLoader,
@@ -25,7 +29,8 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import selected_network_address_prefix
+from chia.util.config import load_config, selected_network_address_prefix
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes, CreateCoinAnnouncement, CreatePuzzleAnnouncement
 from chia.wallet.nft_wallet.nft_info import NFTInfo
@@ -252,6 +257,99 @@ async def get_transactions(
                     return None
                 elif entered_key == "c":
                     break
+
+
+@final
+@dataclass(frozen=True)
+class DumpRow:
+    token_name: str
+    transaction: bytes32
+    confirmed: bool
+    # TODO: make sure this works and doesn't turn into a float
+    amount: Decimal
+    sent: bool
+    type: str
+    destination: str
+    time: str
+
+    @classmethod
+    def create(cls, transaction: TransactionRecord, name: str, mojo_per_unit: int, address_prefix: str) -> DumpRow:
+        chia_amount = Decimal(int(transaction.amount)) / mojo_per_unit
+        to_address = encode_puzzle_hash(transaction.to_puzzle_hash, address_prefix)
+
+        return cls(
+            token_name=name,
+            transaction=transaction.name,
+            confirmed=transaction.confirmed,
+            amount=chia_amount,
+            # TODO: figure out why .sent is a uint32
+            sent=bool(transaction.sent),
+            type=TransactionType(transaction.type).name,
+            destination=to_address,
+            # to have this be a string and be sorted by .key() properly this must be iso formatted or similar
+            # TODO: add timezone
+            time=datetime.fromtimestamp(transaction.created_at_time).isoformat(),
+        )
+
+    # def key(self) -> Tuple[str, str, Decimal, str]:
+    #     return self.time, self.type, self.amount, self.token_name
+
+
+async def dump_transactions(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    wallet_ids: List[int],
+    output: TextIO,
+) -> None:
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+        writer = csv.DictWriter(f=output, fieldnames=[field.name for field in fields(DumpRow)])
+        writer.writeheader()
+
+        if len(wallet_ids) == 0:
+            supported_wallet_types = {WalletType.STANDARD_WALLET, WalletType.CAT}
+            wallet_ids = [
+                wallet["id"] for wallet in await wallet_client.get_wallets() if wallet["type"] in supported_wallet_types
+            ]
+
+        # TODO: don't hardcode wallet?  maybe?  it was SERVICE_NAME before
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "wallet")
+        address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+
+        for wallet_id in wallet_ids:
+            transactions: List[TransactionRecord] = await wallet_client.get_transactions(
+                wallet_id=wallet_id,
+                start=0,
+                # all transactions in a thousand years, should get all of yours...
+                end=40 * 60 * 60 * 24 * 365 * 1000,
+            )
+
+            transactions.sort(
+                key=lambda transaction: [
+                    transaction.created_at_time,
+                    transaction.type,
+                    transaction.amount,
+                    transaction.name,
+                ]
+            )
+            # transactions.sort(key=DumpRow.key)
+
+            wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+            mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
+            name = await get_unit_name_for_wallet_id(
+                config=config,
+                wallet_type=wallet_type,
+                wallet_id=wallet_id,
+                wallet_client=wallet_client,
+            )
+
+            for transaction in transactions:
+                row = DumpRow.create(
+                    transaction=transaction,
+                    name=name,
+                    mojo_per_unit=mojo_per_unit,
+                    address_prefix=address_prefix,
+                )
+                writer.writerow(rowdict=asdict(row))
 
 
 def check_unusual_transaction(amount: uint64, fee: uint64) -> bool:
