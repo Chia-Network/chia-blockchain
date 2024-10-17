@@ -1,3 +1,5 @@
+# Package: utils
+
 # Copyright (c) 2017 Pieter Wuille
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,7 +25,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Optional
 
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia_rs.sized_bytes import bytes32
 
 # Based on this specification from Pieter Wuille:
 # https://github.com/sipa/bips/blob/bip-bech32m/bip-bech32m.mediawiki
