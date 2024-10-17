@@ -340,10 +340,6 @@ class PuzzleWithRestrictions:
 
     def puzzle_reveal(self, _top_level: bool = True) -> Program:
         inner_puzzle = self.puzzle.puzzle(self.nonce)  # pylint: disable=assignment-from-no-return
-        if _top_level and not isinstance(self.puzzle, MofN):
-            fed_inner_puzzle = DELEGATED_PUZZLE_FEEDER.curry(inner_puzzle)
-        else:
-            fed_inner_puzzle = inner_puzzle
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             restricted_inner_puzzle = RESTRICTION_MOD.curry(
@@ -357,22 +353,20 @@ class PuzzleWithRestrictions:
                     for restriction in self.restrictions
                     if not restriction.morpher_not_validator
                 ],
-                fed_inner_puzzle,
+                inner_puzzle,
             )
         else:
-            restricted_inner_puzzle = fed_inner_puzzle
-        return INDEX_WRAPPER.curry(self.nonce, restricted_inner_puzzle)
+            restricted_inner_puzzle = inner_puzzle
+
+        if _top_level and not isinstance(self.puzzle, MofN):
+            fed_inner_puzzle = DELEGATED_PUZZLE_FEEDER.curry(restricted_inner_puzzle)
+        else:
+            fed_inner_puzzle = restricted_inner_puzzle
+
+        return INDEX_WRAPPER.curry(self.nonce, fed_inner_puzzle)
 
     def puzzle_hash(self, _top_level: bool = True) -> bytes32:
         inner_puzzle_hash = self.puzzle.puzzle_hash(self.nonce)  # pylint: disable=assignment-from-no-return
-        if _top_level and not isinstance(self.puzzle, MofN):
-            fed_inner_puzzle_hash = (
-                Program.to(DELEGATED_PUZZLE_FEEDER_HASH)
-                .curry(inner_puzzle_hash)
-                .get_tree_hash_precalc(DELEGATED_PUZZLE_FEEDER_HASH, inner_puzzle_hash)
-            )
-        else:
-            fed_inner_puzzle_hash = inner_puzzle_hash
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             morpher_hashes = [
@@ -390,15 +384,23 @@ class PuzzleWithRestrictions:
                 .curry(
                     morpher_hashes,
                     validator_hashes,
-                    fed_inner_puzzle_hash,
+                    inner_puzzle_hash,
                 )
-                .get_tree_hash_precalc(*morpher_hashes, *validator_hashes, RESTRICTION_MOD_HASH, fed_inner_puzzle_hash)
+                .get_tree_hash_precalc(*morpher_hashes, *validator_hashes, RESTRICTION_MOD_HASH, inner_puzzle_hash)
             )
         else:
-            restricted_inner_puzzle_hash = fed_inner_puzzle_hash
-        return INDEX_WRAPPER.curry(self.nonce, restricted_inner_puzzle_hash).get_tree_hash_precalc(
-            restricted_inner_puzzle_hash
-        )
+            restricted_inner_puzzle_hash = inner_puzzle_hash
+
+        if _top_level and not isinstance(self.puzzle, MofN):
+            fed_inner_puzzle_hash = (
+                Program.to(DELEGATED_PUZZLE_FEEDER_HASH)
+                .curry(restricted_inner_puzzle_hash)
+                .get_tree_hash_precalc(DELEGATED_PUZZLE_FEEDER_HASH, restricted_inner_puzzle_hash)
+            )
+        else:
+            fed_inner_puzzle_hash = restricted_inner_puzzle_hash
+
+        return INDEX_WRAPPER.curry(self.nonce, fed_inner_puzzle_hash).get_tree_hash_precalc(fed_inner_puzzle_hash)
 
     def solve(
         self,
@@ -407,12 +409,13 @@ class PuzzleWithRestrictions:
         member_solution: Program,
         delegated_puzzle_and_solution: Optional[Tuple[Program, Program]] = None,
     ) -> Program:
-        if delegated_puzzle_and_solution is not None:
-            inner_solution = Program.to([*delegated_puzzle_and_solution, *member_solution.as_iter()])
-        else:
-            inner_solution = member_solution
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
-            return Program.to([morpher_solutions, validator_solutions, inner_solution])
+            solution = Program.to([morpher_solutions, validator_solutions, member_solution])
         else:
-            return inner_solution
+            solution = member_solution
+
+        if delegated_puzzle_and_solution is not None:
+            solution = Program.to([*delegated_puzzle_and_solution, *solution.as_iter()])
+
+        return solution

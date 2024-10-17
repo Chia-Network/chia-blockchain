@@ -3,6 +3,7 @@
     MORPHERS  ; programs that can look at the conditions and add their own
     VALIDATORS  ; programs that look at the final set of conditions and optionally raise
     INNER_PUZZLE  ; the program that generates the conditions
+    delegated_puzzle_hash
     morpher_solutions
     validator_solutions
     inner_solution
@@ -37,11 +38,12 @@
     ()  ; false
     (run_restrictions
       1  ; true
-      (a INNER_PUZZLE inner_solution)
+      (a INNER_PUZZLE (c delegated_puzzle_hash inner_solution))
       MORPHERS
       morpher_solutions
     )
     VALIDATORS
     validator_solutions
   )
+
 )

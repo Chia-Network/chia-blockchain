@@ -203,16 +203,36 @@ class ACSMember:
         return self.puzzle(nonce).get_tree_hash()
 
 
+@dataclass(frozen=True)
+class ACSValidator:
+    morpher_not_validator: Literal[False] = field(init=False, default=False)
+
+    def memo(self, nonce: int) -> Program:
+        raise NotImplementedError()  # pragma: no cover
+
+    def puzzle(self, nonce: int) -> Program:
+        # (mod (conditions . program) (a program conditions))
+        return Program.to([2, 3, 2])
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()
+
+
 @pytest.mark.anyio
-async def test_m_of_n(cost_logger: CostLogger) -> None:
+@pytest.mark.parametrize(
+    "with_restrictions",
+    [True, False],
+)
+async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
     """
     This tests the various functionality of the MofN drivers including that m of n puzzles can be constructed and solved
     for every combination of its nodes from size 1 - 5.
     """
+    restrictions: List[Restriction[MorpherOrValidator]] = [ACSValidator()] if with_restrictions else []
     async with sim_and_client() as (sim, client):
         for m in range(1, 6):  # 1 - 5 inclusive
             for n in range(2, 6):
-                m_of_n = MofN(m, [PuzzleWithRestrictions(n_i, [], ACSMember()) for n_i in range(0, n)])
+                m_of_n = MofN(m, [PuzzleWithRestrictions(n_i, restrictions, ACSMember()) for n_i in range(0, n)])
 
                 # Farm and find coin
                 await sim.farm_block(m_of_n.puzzle_hash(0))
@@ -228,11 +248,13 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
                 # Test a spend of every combination of m of n
                 for indexes in itertools.combinations(range(0, n), m):
                     proven_spends = {
-                        PuzzleWithRestrictions(index, [], ACSMember()).puzzle_hash(_top_level=False): ProvenSpend(
-                            PuzzleWithRestrictions(index, [], ACSMember()).puzzle_reveal(_top_level=False),
-                            PuzzleWithRestrictions(index, [], ACSMember()).solve(
+                        PuzzleWithRestrictions(index, restrictions, ACSMember()).puzzle_hash(
+                            _top_level=False
+                        ): ProvenSpend(
+                            PuzzleWithRestrictions(index, restrictions, ACSMember()).puzzle_reveal(_top_level=False),
+                            PuzzleWithRestrictions(index, restrictions, ACSMember()).solve(
                                 [],
-                                [],
+                                [Program.to(None)] if with_restrictions else [],
                                 Program.to(
                                     [announcement_1.to_program(), announcement_2.corresponding_assertion().to_program()]
                                 ),
@@ -243,7 +265,7 @@ async def test_m_of_n(cost_logger: CostLogger) -> None:
                     proof = m_of_n.solve(proven_spends)
                     result = await client.push_tx(
                         cost_logger.add_cost(
-                            f"M={m}, N={n}, indexes={indexes}",
+                            f"M={m}, N={n}, indexes={indexes}{'w/ res.' if with_restrictions else ''}",
                             WalletSpendBundle(
                                 [
                                     make_spend(
@@ -282,21 +304,6 @@ class ACSMorpher:
     def puzzle(self, nonce: int) -> Program:
         # (mod (conditions . solution) solution)
         return Program.to(3)
-
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()
-
-
-@dataclass(frozen=True)
-class ACSValidator:
-    morpher_not_validator: Literal[False] = field(init=False, default=False)
-
-    def memo(self, nonce: int) -> Program:
-        raise NotImplementedError()  # pragma: no cover
-
-    def puzzle(self, nonce: int) -> Program:
-        # (mod (conditions . program) (a program conditions))
-        return Program.to([2, 3, 2])
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
