@@ -1,5 +1,5 @@
 {
-  "1_of_n": "6461e2a6b676a172dc966bcccde6a9505dd43cbec3ada1f6632d4e2a80d35ebd",
+  "1_of_n": "bcb9aa74893bebcfa2da87271b0330bf2773b6391144ae72262b6824d9c55939",
   "augmented_condition": "d303eafa617bedf0bc05850dd014e10fbddf622187dc07891a2aacba9d8a93f6",
   "block_program_zero": "f0a38c8efe58895ae527c65c37f700a4238504691b83990e5dd91bd8b3c30eae",
   "cat_v2": "37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a",
@@ -34,8 +34,8 @@
   "genesis_by_coin_id_or_singleton": "40170305e3a71c3e7523f37fbcfc3188f9f949da0818a6331f28251e76e8c56f",
   "genesis_by_puzzle_hash": "de5a6e06d41518be97ff6365694f4f89475dda773dede267caa33da63b434e36",
   "graftroot_dl_offers": "0893e36a88c064fddfa6f8abdb42c044584a98cb4273b80cccc83b4867b701a1",
-  "m_of_n": "3970e465c71e8d129513810ad7f643b84636e8b7a8a00714d526164de2a4db79",
-  "n_of_n": "582ac4b05b1e18532e2ca2a41ed4799d2887e4e8d94413b522e1d145d909ac3e",
+  "m_of_n": "de27deb2ebc7f1e1b77e1d38cc2f9d90fbd54d4b13dd4e6fa1f659177e36ed4f",
+  "n_of_n": "d4394f50cb1d6ef130788db2e69ab0087ef79b0737179f201c1d1d2a52df1e59",
   "nft_intermediate_launcher": "7a32d2d9571d3436791c0ad3d7fcfdb9c43ace2b0f0ff13f98d29f0cc093f445",
   "nft_metadata_updater_default": "fe8a4b4e27a2e29a4d3fc7ce9d527adbcaccbab6ada3903ccf3ba9a769d2d78b",
   "nft_metadata_updater_updateable": "0b1ffba1601777c06b78ab38636e9624f2f8da73be9b36e0ce17c8d8ef3bad9f",
