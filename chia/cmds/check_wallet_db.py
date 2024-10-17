@@ -11,7 +11,7 @@ from typing import Any, Optional
 from chia.util.collection import find_duplicates
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
-from chia.util.pprint import print_compact_ranges
+from chia.wallet.util.pprint import print_compact_ranges
 from chia.wallet.util.wallet_types import WalletType
 
 # TODO: Check for missing paired wallets (eg. No DID wallet for an NFT)

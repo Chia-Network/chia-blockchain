@@ -7,7 +7,8 @@ from typing import Union
 
 import pytest
 
-from chia.util.network import IPAddress, resolve
+from chia.util.ip_address import IPAddress
+from chia.util.network import resolve
 
 
 @pytest.mark.anyio
