@@ -31,6 +31,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
+from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import (
     RecentChainData,
     SubEpochChallengeSegment,
@@ -1253,8 +1254,9 @@ def validate_recent_blocks(
                 adjusted = True
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
+                vs = ValidationState(ssi, diff, None)
                 caluclated_required_iters, error = validate_finished_header_block(
-                    constants, sub_blocks, block, False, diff, ssi, ses_blocks > 2
+                    constants, sub_blocks, block, False, vs, ses_blocks > 2
                 )
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")
