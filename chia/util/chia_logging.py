@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import logging
 import os
 from logging.handlers import SysLogHandler
@@ -43,6 +44,24 @@ def get_file_log_handler(
     return handler
 
 
+def iso8601_format_time(
+    self: logging.Formatter,
+    record: logging.LogRecord,
+    datefmt: Optional[str] = None,
+) -> str:
+    as_utc = datetime.datetime.fromtimestamp(record.created, datetime.timezone.utc)
+    as_local = as_utc.astimezone()
+    return as_local.isoformat(timespec="milliseconds")
+
+
+class ISO8601Formatter(logging.Formatter):
+    formatTime = iso8601_format_time
+
+
+class ISO8601ColoredFormatter(colorlog.ColoredFormatter):
+    formatTime = iso8601_format_time
+
+
 def initialize_logging(
     service_name: str,
     logging_config: dict[str, Any],
@@ -51,20 +70,16 @@ def initialize_logging(
 ) -> None:
     log_level = logging_config.get("log_level", default_log_level)
     file_name_length = 33 - len(service_name)
-    log_date_format = "%Y-%m-%dT%H:%M:%S"
-    file_log_formatter = logging.Formatter(
-        fmt=f"%(asctime)s.%(msecs)03d {__version__} {service_name} %(name)-{file_name_length}s: "
-        f"%(levelname)-8s %(message)s",
-        datefmt=log_date_format,
+    file_log_formatter = ISO8601Formatter(
+        fmt=f"%(asctime)s {__version__} {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
     )
     handlers: list[logging.Handler] = []
     if logging_config["log_stdout"]:
         stdout_handler = colorlog.StreamHandler()
         stdout_handler.setFormatter(
-            colorlog.ColoredFormatter(
-                f"%(asctime)s.%(msecs)03d {__version__} {service_name} %(name)-{file_name_length}s: "
+            ISO8601ColoredFormatter(
+                f"%(asctime)s {__version__} {service_name} %(name)-{file_name_length}s: "
                 f"%(log_color)s%(levelname)-8s%(reset)s %(message)s",
-                datefmt=log_date_format,
                 reset=True,
             )
         )
@@ -76,7 +91,7 @@ def initialize_logging(
         log_syslog_host = logging_config.get("log_syslog_host", "localhost")
         log_syslog_port = logging_config.get("log_syslog_port", 514)
         log_syslog_handler = SysLogHandler(address=(log_syslog_host, log_syslog_port))
-        log_syslog_handler.setFormatter(logging.Formatter(fmt=f"{service_name} %(message)s", datefmt=log_date_format))
+        log_syslog_handler.setFormatter(ISO8601Formatter(fmt=f"%(asctime)s {service_name} %(message)s"))
         handlers.append(log_syslog_handler)
 
     if beta_root_path is not None:
