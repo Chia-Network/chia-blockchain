@@ -2,8 +2,7 @@
   (
     M  ; the number of necessary puzzles to execute
     MERKLE_ROOT  ; A root of all available puzzles
-    delegated_puzzle  ; A puzzle to run that all members must agree to
-    delegated_solution  ; The solution to the delegated puzzle
+    delegated_puzzle_hash  ; A puzzle hash to run that all members must agree to
     member_proof  ; A partially revealed merkle tree with only the leaves being used fully revealed
   )
 
@@ -49,8 +48,6 @@
     (
       M
       MERKLE_ROOT
-      delegated_puzzle
-      delegated_solution
       (
         proven_root
         conditions
@@ -59,7 +56,7 @@
     )
 
     (if (all (= M total_validations) (= MERKLE_ROOT proven_root))
-        (merge_list conditions (a delegated_puzzle delegated_solution))
+        conditions
         (x)
     )
   )
@@ -68,8 +65,6 @@
   (run_delegated_puzzle
     M
     MERKLE_ROOT
-    delegated_puzzle
-    delegated_solution
-    (hash_and_run member_proof (sha256tree delegated_puzzle))
+    (hash_and_run member_proof delegated_puzzle_hash)
   )
 )

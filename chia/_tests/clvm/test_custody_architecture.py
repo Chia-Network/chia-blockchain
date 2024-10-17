@@ -232,12 +232,14 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
     async with sim_and_client() as (sim, client):
         for m in range(1, 6):  # 1 - 5 inclusive
             for n in range(2, 6):
-                m_of_n = MofN(m, [PuzzleWithRestrictions(n_i, restrictions, ACSMember()) for n_i in range(0, n)])
+                m_of_n = PuzzleWithRestrictions(
+                    0, [], MofN(m, [PuzzleWithRestrictions(n_i, restrictions, ACSMember()) for n_i in range(0, n)])
+                )
 
                 # Farm and find coin
-                await sim.farm_block(m_of_n.puzzle_hash(0))
+                await sim.farm_block(m_of_n.puzzle_hash())
                 m_of_n_coin = (
-                    await client.get_coin_records_by_puzzle_hashes([m_of_n.puzzle_hash(0)], include_spent_coins=False)
+                    await client.get_coin_records_by_puzzle_hashes([m_of_n.puzzle_hash()], include_spent_coins=False)
                 )[0].coin
                 block_height = sim.block_height
 
@@ -262,7 +264,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                         )
                         for index in indexes
                     }
-                    proof = m_of_n.solve(proven_spends)
+                    assert isinstance(m_of_n.puzzle, MofN)
                     result = await client.push_tx(
                         cost_logger.add_cost(
                             f"M={m}, N={n}, indexes={indexes}{'w/ res.' if with_restrictions else ''}",
@@ -270,9 +272,12 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                 [
                                     make_spend(
                                         m_of_n_coin,
-                                        m_of_n.puzzle(0),
-                                        Program.to(  # usually completed by PuzzleWithRestrictions
-                                            [
+                                        m_of_n.puzzle_reveal(),
+                                        m_of_n.solve(
+                                            [],
+                                            [],
+                                            m_of_n.puzzle.solve(proven_spends),
+                                            (
                                                 Program.to(1),
                                                 Program.to(
                                                     [
@@ -280,8 +285,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                                         announcement_1.corresponding_assertion().to_program(),
                                                     ]
                                                 ),
-                                                *proof.as_iter(),
-                                            ]
+                                            ),
                                         ),
                                     )
                                 ],

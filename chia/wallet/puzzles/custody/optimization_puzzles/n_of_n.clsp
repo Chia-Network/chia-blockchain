@@ -1,8 +1,7 @@
 (mod
   (
     MEMBERS
-    delegated_puzzle
-    delegated_solution
+    delegated_puzzle_hash
     member_solutions
   )
 
@@ -31,8 +30,5 @@
   )
 
   ; main
-  (merge_list
-    (approve_delegated_puzzle MEMBERS member_solutions (sha256tree delegated_puzzle))
-    (a delegated_puzzle delegated_solution)
-  )
+  (approve_delegated_puzzle MEMBERS member_solutions delegated_puzzle_hash)
 )
