@@ -22,6 +22,7 @@ def get_vdf_info_and_proof(
         vdf_input.data,
         constants.DISCRIMINANT_SIZE_BITS,
         number_iters,
+        "",
     )
 
     output = ClassgroupElement.create(result[:form_size])
