@@ -7,12 +7,13 @@ import io
 import logging
 import os
 import random
+import tempfile
 import time
 import traceback
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
+from typing import IO, TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chiavdf import create_discriminant, prove
 
@@ -53,7 +54,7 @@ class BlueboxProcessData(Streamable):
     iters: uint64
 
 
-def prove_bluebox_slow(payload: bytes) -> bytes:
+def prove_bluebox_slow(payload: bytes, executor_shutdown_tempfile_name: str) -> bytes:
     bluebox_process_data = BlueboxProcessData.from_bytes(payload)
     initial_el = b"\x08" + (b"\x00" * 99)
     return cast(
@@ -63,8 +64,13 @@ def prove_bluebox_slow(payload: bytes) -> bytes:
             initial_el,
             bluebox_process_data.size_bits,
             bluebox_process_data.iters,
+            executor_shutdown_tempfile_name,
         ),
     )
+
+
+def _create_shutdown_file() -> IO[bytes]:
+    return tempfile.NamedTemporaryFile(prefix="chia_timelord_executor_shutdown_trigger")
 
 
 class Timelord:
@@ -138,6 +144,7 @@ class Timelord:
         self.pending_bluebox_info: list[tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
         self.max_allowed_inactivity_time = 60
+        self._executor_shutdown_tempfile: Optional[IO[bytes]] = None
         self.bluebox_pool: Optional[ThreadPoolExecutor] = None
 
     @contextlib.asynccontextmanager
@@ -156,6 +163,7 @@ class Timelord:
             if os.name == "nt" or slow_bluebox:
                 # `vdf_client` doesn't build on windows, use `prove()` from chiavdf.
                 workers = self.config.get("slow_bluebox_process_count", 1)
+                self._executor_shutdown_tempfile = _create_shutdown_file()
                 self.bluebox_pool = ThreadPoolExecutor(
                     max_workers=workers,
                 )
@@ -169,6 +177,8 @@ class Timelord:
             yield
         finally:
             self._shut_down = True
+            if self._executor_shutdown_tempfile is not None:
+                self._executor_shutdown_tempfile.close()
             for task in self.process_communication_tasks:
                 task.cancel()
             if self.main_loop is not None:
@@ -1168,6 +1178,7 @@ class Timelord:
                         pool,
                         prove_bluebox_slow,
                         bytes(bluebox_process_data),
+                        "" if self._executor_shutdown_tempfile is None else self._executor_shutdown_tempfile.name,
                     )
                     t2 = time.time()
                     delta = t2 - t1
@@ -1175,6 +1186,11 @@ class Timelord:
                         ips = picked_info.new_proof_of_time.number_of_iterations / delta
                     else:
                         ips = 0
+
+                    if len(proof) == 0:
+                        log.info(f"Empty VDF proof returned: {picked_info.height}. Time: {delta}s. IPS: {ips}.")
+                        return
+
                     log.info(f"Finished compact proof: {picked_info.height}. Time: {delta}s. IPS: {ips}.")
                     output = proof[:100]
                     proof_part = proof[100:200]
