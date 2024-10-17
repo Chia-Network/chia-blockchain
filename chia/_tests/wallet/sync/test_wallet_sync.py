@@ -42,6 +42,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -361,6 +362,7 @@ async def test_long_sync_wallet(
         full_node.constants, True, block_record, full_node.blockchain
     )
     await full_node.add_block_batch(
+        AugmentedBlockchain(full_node.blockchain),
         blocks_reorg[-num_blocks - 10 : -1],
         PeerInfo("0.0.0.0", 0),
         None,
@@ -480,6 +482,7 @@ async def test_wallet_reorg_get_coinbase(
         full_node.constants, True, block_record, full_node.blockchain
     )
     await full_node.add_block_batch(
+        AugmentedBlockchain(full_node.blockchain),
         blocks_reorg_2[-44:],
         PeerInfo("0.0.0.0", 0),
         None,

@@ -5,7 +5,7 @@ import copy
 import logging
 import time
 import traceback
-from collections.abc import Sequence
+from collections.abc import Awaitable, Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from typing import Optional
@@ -14,7 +14,7 @@ from chia_rs import AugSchemeMPL, SpendBundleConditions
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockRecordsProtocol, BlocksProtocol
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.full_block_to_block_record import block_to_block_record
@@ -136,7 +136,7 @@ def pre_validate_block(
 
 async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
-    block_records: BlocksProtocol,
+    blockchain: AugmentedBlockchain,
     blocks: Sequence[FullBlock],
     pool: Executor,
     block_height_conds_map: dict[uint32, SpendBundleConditions],
@@ -144,7 +144,7 @@ async def pre_validate_blocks_multiprocessing(
     *,
     wp_summaries: Optional[list[SubEpochSummary]] = None,
     validate_signatures: bool = True,
-) -> list[PreValidationResult]:
+) -> Sequence[Awaitable[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
     If all the full blocks pass pre-validation, (only validates header), returns the list of required iters.
@@ -154,21 +154,20 @@ async def pre_validate_blocks_multiprocessing(
         constants:
         pool:
         constants:
-        block_records:
+        blockchain:
         blocks: list of full blocks to validate (must be connected to current chain)
         npc_results
     """
     prev_b: Optional[BlockRecord] = None
 
-    if blocks[0].height > 0:
-        curr = block_records.try_block_record(blocks[0].prev_header_hash)
-        if curr is None:
-            return [PreValidationResult(uint16(Err.INVALID_PREV_BLOCK_HASH.value), None, None, False, uint32(0))]
-        prev_b = curr
+    async def return_error(error_code: Err) -> PreValidationResult:
+        return PreValidationResult(uint16(error_code.value), None, None, False, uint32(0))
 
-    # the agumented blockchain object will let us add temporary block records
-    # they won't actually be added to the underlying blockchain object
-    blockchain = AugmentedBlockchain(block_records)
+    if blocks[0].height > 0:
+        curr = blockchain.try_block_record(blocks[0].prev_header_hash)
+        if curr is None:
+            return [return_error(Err.INVALID_PREV_BLOCK_HASH)]
+        prev_b = curr
 
     futures = []
     # Pool of workers to validate blocks concurrently
@@ -190,7 +189,7 @@ async def pre_validate_blocks_multiprocessing(
             block.reward_chain_block.proof_of_space, constants, challenge, cc_sp_hash, height=block.height
         )
         if q_str is None:
-            return [PreValidationResult(uint16(Err.INVALID_POSPACE.value), None, None, False, uint32(0))]
+            return [return_error(Err.INVALID_POSPACE)]
 
         required_iters: uint64 = calculate_iterations_quality(
             constants.DIFFICULTY_CONSTANT_FACTOR,
@@ -211,13 +210,13 @@ async def pre_validate_blocks_multiprocessing(
             )
         except ValueError:
             log.exception("block_to_block_record()")
-            return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
+            return [return_error(Err.INVALID_SUB_EPOCH_SUMMARY)]
 
         if block_rec.sub_epoch_summary_included is not None and wp_summaries is not None:
             next_ses = wp_summaries[int(block.height / constants.SUB_EPOCH_BLOCKS) - 1]
             if not block_rec.sub_epoch_summary_included.get_hash() == next_ses.get_hash():
                 log.error("sub_epoch_summary does not match wp sub_epoch_summary list")
-                return [PreValidationResult(uint16(Err.INVALID_SUB_EPOCH_SUMMARY.value), None, None, False, uint32(0))]
+                return [return_error(Err.INVALID_SUB_EPOCH_SUMMARY)]
 
         blockchain.add_extra_block(block, block_rec)  # Temporarily add block to chain
         prev_b = block_rec
@@ -231,11 +230,7 @@ async def pre_validate_blocks_multiprocessing(
             if block_generator is not None:
                 previous_generators = block_generator.generator_refs
         except ValueError:
-            return [
-                PreValidationResult(
-                    uint16(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING.value), None, None, False, uint32(0)
-                )
-            ]
+            return [return_error(Err.FAILED_GETTING_GENERATOR_MULTIPROCESSING)]
 
         futures.append(
             asyncio.get_running_loop().run_in_executor(
@@ -255,7 +250,7 @@ async def pre_validate_blocks_multiprocessing(
             vs.prev_ses_block = block_rec
 
     # Collect all results into one flat list
-    return list(await asyncio.gather(*futures))
+    return futures
 
 
 def _run_generator(
