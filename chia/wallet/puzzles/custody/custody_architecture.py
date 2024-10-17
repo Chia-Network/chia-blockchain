@@ -74,31 +74,31 @@ class UnknownPuzzle:
 
 
 # A spec for "restrictions" on specific inner puzzles
-MorpherOrValidator = Literal[True, False]
+MemberOrDPuz = Literal[True, False]
 
-_T_MorpherNotValidator = TypeVar("_T_MorpherNotValidator", bound=MorpherOrValidator, covariant=True)
+_T_MemberNotDPuz = TypeVar("_T_MemberNotDPuz", bound=MemberOrDPuz, covariant=True)
 
 
 @runtime_checkable
-class Restriction(Puzzle, Protocol[_T_MorpherNotValidator]):
+class Restriction(Puzzle, Protocol[_T_MemberNotDPuz]):
     @property
-    def morpher_not_validator(self) -> _T_MorpherNotValidator: ...
+    def member_not_dpuz(self) -> _T_MemberNotDPuz: ...
 
 
 @dataclass(frozen=True)
 class RestrictionHint:
-    morpher_not_validator: bool
+    member_not_dpuz: bool
     puzhash: bytes32
     memo: Program
 
     def to_program(self) -> Program:
-        return Program.to([self.morpher_not_validator, self.puzhash, self.memo])
+        return Program.to([self.member_not_dpuz, self.puzhash, self.memo])
 
     @classmethod
     def from_program(cls, prog: Program) -> RestrictionHint:
-        morpher_not_validator, puzhash, memo = prog.as_iter()
+        member_not_dpuz, puzhash, memo = prog.as_iter()
         return RestrictionHint(
-            morpher_not_validator != Program.to(None),
+            member_not_dpuz != Program.to(None),
             bytes32(puzhash.as_atom()),
             memo,
         )
@@ -109,8 +109,8 @@ class UnknownRestriction:
     restriction_hint: RestrictionHint
 
     @property
-    def morpher_not_validator(self) -> bool:
-        return self.restriction_hint.morpher_not_validator
+    def member_not_dpuz(self) -> bool:
+        return self.restriction_hint.member_not_dpuz
 
     def memo(self, nonce: int) -> Program:
         return self.restriction_hint.memo
@@ -226,14 +226,14 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
 @dataclass(frozen=True)
 class PuzzleWithRestrictions:
     nonce: int  # Arbitrary nonce to make otherwise identical custody arrangements have different puzzle hashes
-    restrictions: List[Restriction[MorpherOrValidator]]
+    restrictions: List[Restriction[MemberOrDPuz]]
     puzzle: Puzzle
     spec_namespace: ClassVar[str] = "inner_puzzle_chip?"
 
     def memo(self) -> Program:
         restriction_hints: List[RestrictionHint] = [
             RestrictionHint(
-                restriction.morpher_not_validator, restriction.puzzle_hash(self.nonce), restriction.memo(self.nonce)
+                restriction.member_not_dpuz, restriction.puzzle_hash(self.nonce), restriction.memo(self.nonce)
             )
             for restriction in self.restrictions
         ]
@@ -306,7 +306,7 @@ class PuzzleWithRestrictions:
         }
 
     def fill_in_unknown_puzzles(self, puzzle_dict: Mapping[bytes32, Puzzle]) -> PuzzleWithRestrictions:
-        new_restrictions: List[Restriction[MorpherOrValidator]] = []
+        new_restrictions: List[Restriction[MemberOrDPuz]] = []
         for restriction in self.restrictions:
             if isinstance(restriction, UnknownRestriction) and restriction.restriction_hint.puzhash in puzzle_dict:
                 new = puzzle_dict[restriction.restriction_hint.puzhash]
@@ -343,15 +343,11 @@ class PuzzleWithRestrictions:
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             restricted_inner_puzzle = RESTRICTION_MOD.curry(
+                [restriction.puzzle(self.nonce) for restriction in self.restrictions if restriction.member_not_dpuz],
                 [
                     restriction.puzzle(self.nonce)
                     for restriction in self.restrictions
-                    if restriction.morpher_not_validator
-                ],
-                [
-                    restriction.puzzle(self.nonce)
-                    for restriction in self.restrictions
-                    if not restriction.morpher_not_validator
+                    if not restriction.member_not_dpuz
                 ],
                 inner_puzzle,
             )
@@ -369,24 +365,24 @@ class PuzzleWithRestrictions:
         inner_puzzle_hash = self.puzzle.puzzle_hash(self.nonce)  # pylint: disable=assignment-from-no-return
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
-            morpher_hashes = [
-                restriction.puzzle_hash(self.nonce)
-                for restriction in self.restrictions
-                if restriction.morpher_not_validator
+            member_validator_hashes = [
+                restriction.puzzle_hash(self.nonce) for restriction in self.restrictions if restriction.member_not_dpuz
             ]
-            validator_hashes = [
+            dpuz_validator_hashes = [
                 restriction.puzzle_hash(self.nonce)
                 for restriction in self.restrictions
-                if not restriction.morpher_not_validator
+                if not restriction.member_not_dpuz
             ]
             restricted_inner_puzzle_hash = (
                 Program.to(RESTRICTION_MOD_HASH)
                 .curry(
-                    morpher_hashes,
-                    validator_hashes,
+                    member_validator_hashes,
+                    dpuz_validator_hashes,
                     inner_puzzle_hash,
                 )
-                .get_tree_hash_precalc(*morpher_hashes, *validator_hashes, RESTRICTION_MOD_HASH, inner_puzzle_hash)
+                .get_tree_hash_precalc(
+                    *member_validator_hashes, *dpuz_validator_hashes, RESTRICTION_MOD_HASH, inner_puzzle_hash
+                )
             )
         else:
             restricted_inner_puzzle_hash = inner_puzzle_hash
@@ -404,14 +400,14 @@ class PuzzleWithRestrictions:
 
     def solve(
         self,
-        morpher_solutions: List[Program],
-        validator_solutions: List[Program],
+        member_validator_solutions: List[Program],
+        dpuz_validator_solutions: List[Program],
         member_solution: Program,
         delegated_puzzle_and_solution: Optional[Tuple[Program, Program]] = None,
     ) -> Program:
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
-            solution = Program.to([morpher_solutions, validator_solutions, member_solution])
+            solution = Program.to([member_validator_solutions, dpuz_validator_solutions, member_solution])
         else:
             solution = member_solution
 

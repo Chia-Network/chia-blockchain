@@ -14,8 +14,8 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.conditions import CreateCoinAnnouncement
 from chia.wallet.puzzles.custody.custody_architecture import (
+    MemberOrDPuz,
     MofN,
-    MorpherOrValidator,
     ProvenSpend,
     Puzzle,
     PuzzleHint,
@@ -39,9 +39,9 @@ ANY_PROGRAM = Program.to(None)
     [
         # no restrictions
         [],
-        # morpher
+        # member validator
         [UnknownRestriction(RestrictionHint(True, BUNCH_OF_ZEROS, ANY_PROGRAM))],
-        # validator
+        # dpuz validator
         [UnknownRestriction(RestrictionHint(False, BUNCH_OF_ZEROS, ANY_PROGRAM))],
         # multiple restrictions of various types
         [
@@ -88,7 +88,7 @@ ANY_PROGRAM = Program.to(None)
         ),
     ],
 )
-def test_back_and_forth_hint_parsing(restrictions: List[Restriction[MorpherOrValidator]], puzzle: Puzzle) -> None:
+def test_back_and_forth_hint_parsing(restrictions: List[Restriction[MemberOrDPuz]], puzzle: Puzzle) -> None:
     """
     This tests that a PuzzleWithRestrictions can be exported to a clvm program to be reimported from.
 
@@ -114,7 +114,7 @@ def test_unknown_puzzle_behavior() -> None:
     @dataclass(frozen=True)
     class PlaceholderPuzzle:
         @property
-        def morpher_not_validator(self) -> bool:
+        def member_not_dpuz(self) -> bool:
             raise NotImplementedError()  # pragma: no cover
 
         def memo(self, nonce: int) -> Program:
@@ -204,14 +204,14 @@ class ACSMember:
 
 
 @dataclass(frozen=True)
-class ACSValidator:
-    morpher_not_validator: Literal[False] = field(init=False, default=False)
+class ACSDPuzValidator:
+    member_not_dpuz: Literal[False] = field(init=False, default=False)
 
     def memo(self, nonce: int) -> Program:
         raise NotImplementedError()  # pragma: no cover
 
     def puzzle(self, nonce: int) -> Program:
-        # (mod (conditions . program) (a program conditions))
+        # (mod (dpuz . program) (a program conditions))
         return Program.to([2, 3, 2])
 
     def puzzle_hash(self, nonce: int) -> bytes32:
@@ -228,7 +228,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
     This tests the various functionality of the MofN drivers including that m of n puzzles can be constructed and solved
     for every combination of its nodes from size 1 - 5.
     """
-    restrictions: List[Restriction[MorpherOrValidator]] = [ACSValidator()] if with_restrictions else []
+    restrictions: List[Restriction[MemberOrDPuz]] = [ACSDPuzValidator()] if with_restrictions else []
     async with sim_and_client() as (sim, client):
         for m in range(1, 6):  # 1 - 5 inclusive
             for n in range(2, 6):
@@ -295,15 +295,15 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
 
 
 @dataclass(frozen=True)
-class ACSMorpher:
-    morpher_not_validator: Literal[True] = field(init=False, default=True)
+class ACSMemberValidator:
+    member_not_dpuz: Literal[True] = field(init=False, default=True)
 
     def memo(self, nonce: int) -> Program:
         raise NotImplementedError()  # pragma: no cover
 
     def puzzle(self, nonce: int) -> Program:
-        # (mod (conditions . solution) solution)
-        return Program.to(3)
+        # (mod (conditions . program) (a program conditions))
+        return Program.to([2, 3, 2])
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
@@ -315,7 +315,9 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
     This tests the capabilities of the optional restriction layer placed on inner puzzles.
     """
     async with sim_and_client() as (sim, client):
-        pwr = PuzzleWithRestrictions(0, [ACSMorpher(), ACSMorpher(), ACSValidator(), ACSValidator()], ACSMember())
+        pwr = PuzzleWithRestrictions(
+            0, [ACSMemberValidator(), ACSMemberValidator(), ACSDPuzValidator(), ACSDPuzValidator()], ACSMember()
+        )
 
         # Farm coin with puzzle inside
         await sim.farm_block(pwr.puzzle_hash())
@@ -323,15 +325,15 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
             0
         ].coin
 
-        # Some announcements to make a ring between the two morphers and the inner puzzle
+        # Some announcements to make a ring between the delegated puzzle and the inner puzzle
         announcement_1 = CreateCoinAnnouncement(msg=b"foo", coin_id=pwr_coin.name())
         announcement_2 = CreateCoinAnnouncement(msg=b"bar", coin_id=pwr_coin.name())
-        announcement_3 = CreateCoinAnnouncement(msg=b"qux", coin_id=pwr_coin.name())
-        announcement_4 = CreateCoinAnnouncement(msg=b"qat", coin_id=pwr_coin.name())
 
+        dpuz = Program.to(1)
+        dpuzhash = dpuz.get_tree_hash()
         result = await client.push_tx(
             cost_logger.add_cost(
-                "Puzzle with 4 restrictions (2 morphers & 2 validators) all ACS",
+                "Puzzle with 4 restrictions (2 member validators & 2 dpuz validators) all ACS",
                 WalletSpendBundle(
                     [
                         make_spend(
@@ -339,36 +341,28 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                             pwr.puzzle_reveal(),
                             pwr.solve(
                                 [
-                                    Program.to(
-                                        [
-                                            announcement_1.to_program(),
-                                            announcement_2.corresponding_assertion().to_program(),
-                                        ]
-                                    ),
-                                    Program.to(
-                                        [
-                                            announcement_2.to_program(),
-                                            announcement_3.corresponding_assertion().to_program(),
-                                        ]
-                                    ),
+                                    Program.to(None),
+                                    # (mod dpuzhash (if (= dpuzhash <dpuzhash>) () (x)))
+                                    # (a (i (= 1 (q . <dpuzhash>)) () (q 8)) 1)
+                                    Program.to([2, [3, [9, 1, (1, dpuzhash)], None, [1, 8]], 1]),
                                 ],
                                 [
                                     Program.to(None),
-                                    # (mod conditions (r (r (r (r (r (r conditions)))))))
-                                    # checks length >= 6
-                                    Program.to(127),
+                                    # (mod conditions (r (r conditions)))
+                                    # checks length >= 2
+                                    Program.to(7),
                                 ],
                                 Program.to(
                                     [
-                                        announcement_3.to_program(),
-                                        announcement_4.corresponding_assertion().to_program(),
+                                        announcement_1.to_program(),
+                                        announcement_2.corresponding_assertion().to_program(),
                                     ]
                                 ),
                                 (
-                                    Program.to(1),
+                                    dpuz,
                                     Program.to(
                                         [
-                                            announcement_4.to_program(),
+                                            announcement_2.to_program(),
                                             announcement_1.corresponding_assertion().to_program(),
                                         ]
                                     ),

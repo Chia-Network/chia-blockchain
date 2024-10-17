@@ -1,49 +1,37 @@
 (mod
   (
-    MORPHERS  ; programs that can look at the conditions and add their own
-    VALIDATORS  ; programs that look at the final set of conditions and optionally raise
+    DPUZ_VALIDATORS  ; programs that validate the delegated puzzle allowed IN
+    MEMBER_VALIDATORS  ; programs that look at the conditions allowed OUT
     INNER_PUZZLE  ; the program that generates the conditions
     delegated_puzzle_hash
-    morpher_solutions
-    validator_solutions
+    dpuz_val_solutions
+    member_val_solutions
     inner_solution
   )
 
-  ; utility
-  (defun merge_list (list_a list_b)
-    (if list_a
-        (c (f list_a) (merge_list (r list_a) list_b))
-        list_b
-    )
-  )
-
-  ; running restrictions
-  (defun run_restrictions (is_morpher conditions RESTRICTIONS restriction_solutions)
-    (if RESTRICTIONS
-        (run_restrictions
-          is_morpher
-          (i is_morpher  ; lazy eval because either way we want to run the puzzle
-            (merge_list (a (f RESTRICTIONS) (c conditions (f restriction_solutions))) conditions)
-            conditions
-          )
-          (r RESTRICTIONS)
-          (r restriction_solutions)
+  (defun run_validators (VALIDATORS val_solutions thing_to_check)
+    (if VALIDATORS
+        (i  ()  ; just using this as a hook to evaluate all children
+          (a (f VALIDATORS) (c thing_to_check (f val_solutions)))
+          (run_validators (r VALIDATORS) (r val_solutions) thing_to_check)
         )
-        conditions
+        ; else
+        ()
     )
   )
 
-  ; main
-  (run_restrictions
-    ()  ; false
-    (run_restrictions
-      1  ; true
-      (a INNER_PUZZLE (c delegated_puzzle_hash inner_solution))
-      MORPHERS
-      morpher_solutions
+  (defun run_member_validators_and_return (MEMBER_VALIDATORS member_val_solutions inner_conditions)
+    (i  ()  ; just using this as a hook to evaluate all children
+      (run_validators MEMBER_VALIDATORS member_val_solutions inner_conditions)
+      inner_conditions  ; actually returned
     )
-    VALIDATORS
-    validator_solutions
   )
 
+  (run_member_validators_and_return
+    MEMBER_VALIDATORS
+    member_val_solutions
+    (a INNER_PUZZLE (c delegated_puzzle_hash inner_solution))
+    ; not part of the function call but needs to run
+    (run_validators DPUZ_VALIDATORS dpuz_val_solutions delegated_puzzle_hash)
+  )
 )
