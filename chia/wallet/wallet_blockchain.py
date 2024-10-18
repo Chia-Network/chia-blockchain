@@ -11,6 +11,7 @@ from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
+from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
@@ -110,9 +111,8 @@ class WalletBlockchain:
             difficulty = self._difficulty
 
         # Validation requires a block cache (self) that goes back to a subepoch barrier
-        required_iters, error = validate_finished_header_block(
-            self.constants, self, block, False, difficulty, sub_slot_iters, False
-        )
+        vs = ValidationState(sub_slot_iters, difficulty, None)
+        required_iters, error = validate_finished_header_block(self.constants, self, block, False, vs, False)
         if error is not None:
             return AddBlockResult.INVALID_BLOCK, error.code
         if required_iters is None:

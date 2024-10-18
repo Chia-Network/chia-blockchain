@@ -94,9 +94,7 @@ def pre_validate_block(
             blockchain,
             header_block,
             True,  # check_filter
-            vs.current_difficulty,
-            vs.current_ssi,
-            prev_ses_block=vs.prev_ses_block,
+            vs,
         )
         error_int: Optional[uint16] = None
         if error is not None:
