@@ -276,7 +276,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                         m_of_n.solve(
                                             [],
                                             [],
-                                            m_of_n.puzzle.solve(proven_spends),
+                                            m_of_n.puzzle.solve(proven_spends),  # pylint: disable=no-member
                                             (
                                                 Program.to(1),
                                                 Program.to(
