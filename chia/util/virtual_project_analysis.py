@@ -49,6 +49,12 @@ class ChiaFile:
 
     @classmethod
     def parse(cls, file_path: Path) -> ChiaFile:
+        # everything under chia/_tests belong to the "tests" subproject. It
+        # (obviously) depends on everything, but no production code is allowed
+        # to depend back on the tests.
+        if list(file_path.parts[0:2]) == ["chia", "_tests"]:
+            return cls(file_path, Annotation("tests", True))
+
         with open(file_path, encoding="utf-8", errors="ignore") as f:
             file_string = f.read().strip()
             return cls(file_path, Annotation.parse(file_string))
