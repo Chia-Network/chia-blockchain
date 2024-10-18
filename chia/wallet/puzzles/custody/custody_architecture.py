@@ -354,7 +354,7 @@ class PuzzleWithRestrictions:
         else:
             restricted_inner_puzzle = inner_puzzle
 
-        if _top_level and not isinstance(self.puzzle, MofN):
+        if _top_level:
             fed_inner_puzzle = DELEGATED_PUZZLE_FEEDER.curry(restricted_inner_puzzle)
         else:
             fed_inner_puzzle = restricted_inner_puzzle
@@ -387,7 +387,7 @@ class PuzzleWithRestrictions:
         else:
             restricted_inner_puzzle_hash = inner_puzzle_hash
 
-        if _top_level and not isinstance(self.puzzle, MofN):
+        if _top_level:
             fed_inner_puzzle_hash = (
                 Program.to(DELEGATED_PUZZLE_FEEDER_HASH)
                 .curry(restricted_inner_puzzle_hash)

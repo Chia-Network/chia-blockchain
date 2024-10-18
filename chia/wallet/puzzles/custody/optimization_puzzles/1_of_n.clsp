@@ -1,8 +1,7 @@
 (mod
   (
     MERKLE_ROOT
-    delegated_puzzle
-    delegated_solution
+    delegated_puzzle_hash
     merkle_proof
     member_puzzle
     member_solution
@@ -16,15 +15,8 @@
         (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
   (sha256 1 TREE)))
 
-  (defun merge_list (list_a list_b)
-    (if list_a
-        (c (f list_a) (merge_list (r list_a) list_b))
-        list_b
-    )
-  )
-
   (if (= MERKLE_ROOT (simplify_merkle_proof (sha256tree member_puzzle) merkle_proof))
-      (merge_list (a member_puzzle (c (sha256tree delegated_puzzle) member_solution)) (a delegated_puzzle delegated_solution))
+      (a member_puzzle (c delegated_puzzle_hash member_solution))
       (x)
   )
 
