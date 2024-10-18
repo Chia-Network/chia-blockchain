@@ -167,14 +167,6 @@ class MerkleBlob:
 
         return ProofOfInclusion(node_hash=bytes32(node.hash), layers=layers)
 
-    def get_lineage(self, index: TreeIndex) -> List[RawMerkleNodeProtocol]:
-        node = self.get_raw_node(index=index)
-        lineage = [node]
-        while node.parent != null_parent:
-            node = self.get_raw_node(node.parent)
-            lineage.append(node)
-        return lineage
-
     def get_lineage_with_indexes(self, index: TreeIndex) -> List[Tuple[TreeIndex, RawMerkleNodeProtocol]]:
         node = self.get_raw_node(index=index)
         lineage = [(index, node)]
@@ -186,9 +178,9 @@ class MerkleBlob:
 
     def get_lineage_by_key_id(self, kid: KVId) -> List[InternalNode]:
         index = self.key_to_index[kid]
-        lineage = self.get_lineage(index)
+        lineage = self.get_lineage_with_indexes(index)
         internal_nodes: List[InternalNode] = []
-        for node in lineage[1:]:
+        for _, node in lineage[1:]:
             assert isinstance(node, RawInternalMerkleNode)
             left_node = self.get_raw_node(node.left)
             right_node = self.get_raw_node(node.right)
@@ -490,17 +482,6 @@ class MerkleBlob:
         node = self.get_raw_node(index)
         return bytes32(node.hash)
 
-    def get_nodes(self, index: TreeIndex = TreeIndex(0)) -> List[RawMerkleNodeProtocol]:
-        node = self.get_raw_node(index)
-        if isinstance(node, RawLeafMerkleNode):
-            return [node]
-
-        assert isinstance(node, RawInternalMerkleNode)
-        left_nodes = self.get_nodes(node.left)
-        right_nodes = self.get_nodes(node.right)
-
-        return [node] + left_nodes + right_nodes
-
     def get_nodes_with_indexes(self, index: TreeIndex = TreeIndex(0)) -> List[Tuple[TreeIndex, RawMerkleNodeProtocol]]:
         node = self.get_raw_node(index)
         this = [(index, node)]
@@ -572,7 +553,7 @@ class RawMerkleNodeProtocol(Protocol):
     struct: ClassVar[struct.Struct]
     type: ClassVar[NodeType]
 
-    def __init__(self, *args: object, index: TreeIndex) -> None: ...
+    def __init__(self, *args: object) -> None: ...
 
     @property
     def parent(self) -> TreeIndex: ...
@@ -603,7 +584,7 @@ class NodeMetadata:
 # TODO: allow broader bytes'ish types
 def unpack_raw_node(index: TreeIndex, metadata: NodeMetadata, data: bytes) -> RawMerkleNodeProtocol:
     cls = raw_node_type_to_class[metadata.type]
-    return cls(*cls.struct.unpack(data), index=index)
+    return cls(*cls.struct.unpack(data))
 
 
 # TODO: allow broader bytes'ish types
