@@ -1147,7 +1147,7 @@ class DataStore:
                 else:
                     assert isinstance(node, RawLeafMerkleNode)
                     tree_node = await self.get_terminal_node(node.key, node.value)
-                hash_to_node[node.hash] = tree_node
+                hash_to_node[bytes32(node.hash)] = tree_node
 
             root_node = hash_to_node[root.node_hash]
 
@@ -1216,7 +1216,7 @@ class DataStore:
             node = await self.get_terminal_node(raw_node.key, raw_node.value)
             to_write = bytes(SerializedNode(True, node.key, node.value))
         else:
-            raise Exception(f"Node is neither InternalNode nor TerminalNode: {node}")
+            raise Exception(f"Node is neither InternalNode nor TerminalNode: {raw_node}")
 
         writer.write(len(to_write).to_bytes(4, byteorder="big"))
         writer.write(to_write)
