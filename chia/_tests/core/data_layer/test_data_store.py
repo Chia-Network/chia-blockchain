@@ -259,6 +259,7 @@ async def test_get_ancestors_2(data_store: DataStore, store_id: bytes32) -> None
     node_count = 0
     node_hashes: List[bytes32] = []
     hash_to_key: Dict[bytes32, bytes] = {}
+    node_hash: Optional[bytes32]
 
     for i in range(1000):
         is_insert = False
@@ -591,7 +592,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, store_id:
 async def test_autoinsert_balances_gaps(data_store: DataStore, store_id: bytes32) -> None:
     random = Random()
     random.seed(101, version=2)
-    hashes = []
+    hashes: List[bytes32] = []
 
     for i in range(2000):
         key = (i + 100).to_bytes(4, byteorder="big")
@@ -2104,46 +2105,3 @@ async def _check_ancestors(
             assert ancestor_node.hash == ancestor_hash
 
     return ancestors
-
-
-async def get_all_nodes(data_store: DataStore, store_id: bytes32) -> List[Node]:
-    root = await data_store.get_tree_root(store_id)
-    assert root.node_hash is not None
-    root_node = await data_store.get_node(root.node_hash)
-    nodes: List[Node] = []
-    queue: List[Node] = [root_node]
-
-    while len(queue) > 0:
-        node = queue.pop(0)
-        nodes.append(node)
-        if isinstance(node, InternalNode):
-            left_node = await data_store.get_node(node.left_hash)
-            right_node = await data_store.get_node(node.right_hash)
-            queue.append(left_node)
-            queue.append(right_node)
-
-    return nodes
-
-
-@pytest.mark.anyio
-async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
-    num_values = 50
-    changelist: List[Dict[str, Any]] = []
-
-    for value in range(num_values):
-        value_bytes = value.to_bytes(4, byteorder="big")
-        changelist.append({"action": "upsert", "key": value_bytes, "value": value_bytes})
-    await data_store.insert_batch(
-        store_id=store_id,
-        changelist=changelist,
-        status=Status.COMMITTED,
-    )
-
-    expected_nodes = await get_all_nodes(data_store, store_id)
-    nodes = await data_store.get_nodes([node.hash for node in expected_nodes])
-    assert nodes == expected_nodes
-
-    node_hash = bytes32([0] * 32)
-    node_hash_2 = bytes32([0] * 31 + [1])
-    with pytest.raises(Exception, match=f"^Nodes not found for hashes: {node_hash.hex()}, {node_hash_2.hex()}"):
-        await data_store.get_nodes([node_hash, node_hash_2] + [node.hash for node in expected_nodes])

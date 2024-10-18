@@ -1105,9 +1105,11 @@ class DataStore:
     ) -> TerminalNode:
         if root_hash is unspecified:
             root = await self.get_tree_root(store_id=store_id)
-            root_hash = root.node_hash
+            resolved_root_hash = root.node_hash
+        else:
+            resolved_root_hash = root_hash
 
-        nodes = await self.get_keys_values(store_id=store_id, root_hash=root_hash)
+        nodes = await self.get_keys_values(store_id=store_id, root_hash=resolved_root_hash)
 
         for node in nodes:
             if node.key == key:
