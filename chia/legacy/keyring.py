@@ -23,7 +23,7 @@ except ImportError:
     CryptFileKeyring = None
 
 
-from chia.cmds.cmds_util import prompt_yes_no
+from chia.cmds.prompts import prompt_yes_no
 from chia.util.errors import KeychainUserNotFound
 from chia.util.keychain import MAX_KEYS, KeyData, KeyDataSecrets, get_private_key_user
 

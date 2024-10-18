@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 import colorama
 
-from chia.cmds.cmds_util import prompt_yes_no
+from chia.cmds.prompts import prompt_yes_no
 from chia.daemon.client import acquire_connection_to_daemon
 from chia.util.errors import KeychainMaxUnlockAttempts
 from chia.util.keychain import Keychain, supports_os_passphrase_storage
