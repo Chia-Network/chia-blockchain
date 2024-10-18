@@ -7,7 +7,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from chia.data_layer.data_layer_util import Side, TerminalNode, leaf_hash
 from chia.data_layer.data_store import DataStore

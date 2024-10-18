@@ -1132,6 +1132,9 @@ class DataStore:
     async def get_tree_as_nodes(self, store_id: bytes32) -> Node:
         async with self.db_wrapper.reader():
             root = await self.get_tree_root(store_id=store_id)
+            # TODO: consider actual proper behavior
+            assert root.node_hash is not None
+
             merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
             nodes = merkle_blob.get_nodes()
