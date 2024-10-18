@@ -154,7 +154,7 @@ class MerkleBlob:
 
         parents = self.get_lineage_with_indexes(index)
         layers: List[ProofOfInclusionLayer] = []
-        for index, parent in parents[1:]:
+        for next_index, parent in parents[1:]:
             assert isinstance(parent, RawInternalMerkleNode)
             sibling_index = parent.get_sibling_index(index)
             sibling = self.get_raw_node(sibling_index)
@@ -164,6 +164,7 @@ class MerkleBlob:
                 combined_hash=bytes32(parent.hash),
             )
             layers.append(layer)
+            index = next_index
 
         return ProofOfInclusion(node_hash=bytes32(node.hash), layers=layers)
 
