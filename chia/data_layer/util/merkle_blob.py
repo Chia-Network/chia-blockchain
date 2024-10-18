@@ -85,7 +85,7 @@ class MerkleBlob:
         metadata = NodeMetadata.unpack(block[:metadata_size])
         node = unpack_raw_node(
             metadata=metadata,
-            data=block[-data_size:],
+            data=block[-int(data_size) :],
             index=index,
         )
         return node
@@ -380,11 +380,11 @@ class MerkleBlob:
 
         seed = std_hash(key.to_bytes(8, byteorder="big"))
         if reference_kid is None:
-            old_leaf = self.get_random_leaf_node(bytes(seed))
+            old_leaf: RawMerkleNodeProtocol = self.get_random_leaf_node(bytes(seed))
         else:
             leaf_index = self.key_to_index[reference_kid]
             old_leaf = self.get_raw_node(leaf_index)
-            assert isinstance(old_leaf, RawLeafMerkleNode)
+        assert isinstance(old_leaf, RawLeafMerkleNode)
         if side is None:
             side = Side.LEFT if seed[0] < 128 else Side.RIGHT
 
@@ -505,6 +505,8 @@ class MerkleBlob:
         node = self.get_raw_node(index)
         if isinstance(node, RawLeafMerkleNode):
             return [node]
+
+        assert isinstance(node, RawInternalMerkleNode)
 
         left_nodes = self.get_nodes(node.left)
         right_nodes = self.get_nodes(node.right)
