@@ -15,7 +15,13 @@ from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TextIO, Union, cast, final
 
-from chia_rs import AugSchemeMPL, BLSCache
+from chia_rs import (
+    AugSchemeMPL,
+    BLSCache,
+    get_flags_for_height_and_constants,
+    run_block_generator,
+    run_block_generator2,
+)
 from packaging.version import Version
 
 from chia.consensus.block_body_validation import ForkInfo
@@ -26,7 +32,6 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.get_block_generator import get_block_generator
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.consensus.pot_iterations import calculate_sp_iters
@@ -63,7 +68,6 @@ from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFInfo, VDFP
 from chia.types.coin_record import CoinRecord
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
-from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
@@ -75,7 +79,6 @@ from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import WeightProof
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
-from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
@@ -2001,7 +2004,6 @@ class FullNode:
         block: UnfinishedBlock,
         peer: Optional[WSChiaConnection],
         farmed_block: bool = False,
-        block_bytes: Optional[bytes] = None,
     ) -> None:
         """
         We have received an unfinished block, either created by us, or from another peer.
@@ -2080,29 +2082,44 @@ class FullNode:
         if block.transactions_generator is not None:
             pre_validation_start = time.monotonic()
             assert block.transactions_info is not None
-            try:
-                block_generator: Optional[BlockGenerator] = await get_block_generator(
-                    self.blockchain.lookup_block_generators, block
+            if len(block.transactions_generator_ref_list) > 0:
+                generator_refs = set(block.transactions_generator_ref_list)
+                generators: dict[uint32, bytes] = await self.blockchain.lookup_block_generators(
+                    block.prev_header_hash, generator_refs
                 )
-            except ValueError:
-                raise ConsensusError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-            if block_generator is None:
-                raise ConsensusError(Err.GENERATOR_REF_HAS_NO_GENERATOR)
-            if block_bytes is None:
-                block_bytes = bytes(block)
+                generator_args = [generators[height] for height in block.transactions_generator_ref_list]
+            else:
+                generator_args = []
 
             height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
-            npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
-            pre_validation_time = time.monotonic() - pre_validation_start
+            flags = get_flags_for_height_and_constants(height, self.constants)
 
-            # blockchain.run_generator throws on errors, so npc_result is
-            # guaranteed to represent a successful run
-            assert npc_result.conds is not None
-            pairs_pks, pairs_msgs = pkm_pairs(npc_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA)
-            if not self._bls_cache.aggregate_verify(
-                pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature
-            ):
-                raise ConsensusError(Err.BAD_AGGREGATE_SIGNATURE)
+            # on mainnet we won't receive unfinished blocks for heights
+            # below the hard fork activation, but we have tests where we do
+            if height >= self.constants.HARD_FORK_HEIGHT:
+                run_block = run_block_generator2
+            else:
+                run_block = run_block_generator
+
+            # run_block() also validates the signature
+            err, conditions = await asyncio.get_running_loop().run_in_executor(
+                self.blockchain.pool,
+                run_block,
+                bytes(block.transactions_generator),
+                generator_args,
+                min(self.constants.MAX_BLOCK_COST_CLVM, block.transactions_info.cost),
+                flags,
+                block.transactions_info.aggregated_signature,
+                self._bls_cache,
+                self.constants,
+            )
+
+            if err is not None:
+                raise ConsensusError(Err(err))
+            assert conditions is not None
+            assert conditions.validated_signature
+            npc_result = NPCResult(None, conditions)
+            pre_validation_time = time.monotonic() - pre_validation_start
 
         async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             # TODO: pre-validate VDFs outside of lock
