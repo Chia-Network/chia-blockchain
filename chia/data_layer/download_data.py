@@ -135,7 +135,7 @@ async def insert_into_data_store_from_file(
                 node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
                 internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
             else:
-                kid, vid = await data_store.add_key_value(serialized_node.value1, serialized_node.value2)
+                kid, vid = await data_store.add_key_value(serialized_node.value1, serialized_node.value2, store_id)
                 node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
                 terminal_nodes[node_hash] = (kid, vid)
 

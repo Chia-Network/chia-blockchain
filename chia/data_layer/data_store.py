@@ -127,7 +127,8 @@ class DataStore:
                     CREATE TABLE IF NOT EXISTS merkleblob(
                         hash BLOB,
                         blob BLOB,
-                        PRIMARY KEY(hash)
+                        store_id BLOB NOT NULL CHECK(length(store_id) == 32),
+                        PRIMARY KEY(store_id, hash)
                     )
                     """
                 )
@@ -135,16 +136,19 @@ class DataStore:
                     """
                     CREATE TABLE IF NOT EXISTS ids(
                         kv_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        blob BLOB
+                        blob BLOB,
+                        store_id BLOB NOT NULL CHECK(length(store_id) == 32)
                     )
                     """
                 )
                 await writer.execute(
                     """
                     CREATE TABLE IF NOT EXISTS hashes(
-                        hash BLOB PRIMARY KEY,
+                        hash BLOB,
                         kid INTEGER,
                         vid INTEGER,
+                        store_id BLOB NOT NULL CHECK(length(store_id) == 32),
+                        PRIMARY KEY(store_id, hash),
                         FOREIGN KEY (kid) REFERENCES ids(kv_id),
                         FOREIGN KEY (vid) REFERENCES ids(kv_id)
                     )
@@ -165,6 +169,11 @@ class DataStore:
                 await writer.execute(
                     """
                     CREATE INDEX IF NOT EXISTS idx_ids ON ids(blob)
+                    """
+                )
+                await writer.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx2_ids ON ids(store_id)
                     """
                 )
 
@@ -216,10 +225,10 @@ class DataStore:
             async with self.db_wrapper.writer() as writer:
                 await writer.execute(
                     """
-                    INSERT OR REPLACE INTO merkleblob (hash, blob)
-                    VALUES (?, ?)
+                    INSERT OR REPLACE INTO merkleblob (hash, blob, store_id)
+                    VALUES (?, ?, ?)
                     """,
-                    (root_hash, merkle_blob.blob),
+                    (root_hash, merkle_blob.blob, store_id),
                 )
 
         return await self._insert_root(store_id, root_hash, status)
@@ -247,35 +256,36 @@ class DataStore:
     async def get_terminal_node(self, kid: KVId, vid: KVId) -> TerminalNode:
         key = await self.get_blob_from_kvid(kid)
         value = await self.get_blob_from_kvid(vid)
-        if kid is None or vid is None:
+        if key is None or value is None:
             raise Exception("Cannot find the key/value pair")
 
         return TerminalNode(hash=leaf_hash(key, value), key=key, value=value)
 
-    async def add_kvid(self, blob: bytes) -> KVId:
+    async def add_kvid(self, blob: bytes, store_id: bytes32) -> KVId:
         kv_id = await self.get_kvid(blob)
         if kv_id is not None:
             return kv_id
 
         async with self.db_wrapper.writer() as writer:
-            await writer.execute("INSERT OR REPLACE INTO ids (blob) VALUES (?)", (blob,))
+            await writer.execute("INSERT OR REPLACE INTO ids (blob, store_id) VALUES (?, ?)", (blob,store_id,))
 
         kv_id = await self.get_kvid(blob)
         if kv_id is None:
             raise Exception("Internal error")
         return kv_id
 
-    async def add_key_value(self, key: bytes, value: bytes) -> Tuple[KVId, KVId]:
-        kid = await self.add_kvid(key)
-        vid = await self.add_kvid(value)
+    async def add_key_value(self, key: bytes, value: bytes, store_id: bytes32) -> Tuple[KVId, KVId]:
+        kid = await self.add_kvid(key, store_id)
+        vid = await self.add_kvid(value, store_id)
         hash = leaf_hash(key, value)
         async with self.db_wrapper.writer() as writer:
             await writer.execute(
-                "INSERT OR REPLACE INTO hashes (hash, kid, vid) VALUES (?, ?, ?)",
+                "INSERT OR REPLACE INTO hashes (hash, kid, vid, store_id) VALUES (?, ?, ?, ?)",
                 (
                     hash,
                     kid,
                     vid,
+                    store_id,
                 ),
             )
         return (kid, vid)
@@ -893,6 +903,8 @@ class DataStore:
             keys: List[bytes] = []
             for kid in kv_ids.keys():
                 key = await self.get_blob_from_kvid(kid)
+                if key is None:
+                    raise Exception(f"Unknown key corresponding to KVId: {kid}")
                 keys.append(key)
 
         return keys
@@ -912,7 +924,7 @@ class DataStore:
                 root = await self.get_tree_root(store_id=store_id)
             merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
-            kid, vid = await self.add_key_value(key, value)
+            kid, vid = await self.add_key_value(key, value, store_id)
             hash = leaf_hash(key, value)
             reference_kid: Optional[KVId] = None
             if reference_node_hash is not None:
@@ -960,7 +972,7 @@ class DataStore:
                 root = await self.get_tree_root(store_id=store_id)
             merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
-            kid, vid = await self.add_key_value(key, new_value)
+            kid, vid = await self.add_key_value(key, new_value, store_id)
             hash = leaf_hash(key, new_value)
             merkle_blob.upsert(kid, vid, hash)
 
@@ -1001,7 +1013,7 @@ class DataStore:
                     if reference_node_hash is not None:
                         reference_kid, _ = await self.get_node_by_hash(reference_node_hash)
 
-                    kid, vid = await self.add_key_value(key, value)
+                    kid, vid = await self.add_key_value(key, value, store_id)
                     hash = leaf_hash(key, value)
                     try:
                         merkle_blob.insert(kid, vid, hash, reference_kid, side)
@@ -1017,7 +1029,7 @@ class DataStore:
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
-                    kid, vid = await self.add_key_value(key, new_value)
+                    kid, vid = await self.add_key_value(key, new_value, store_id)
                     hash = leaf_hash(key, new_value)
                     merkle_blob.upsert(kid, vid, hash)
                 else:
@@ -1354,6 +1366,22 @@ class DataStore:
             await writer.execute(
                 "DELETE FROM subscriptions WHERE tree_id == :tree_id",
                 {"tree_id": store_id},
+            )
+            await writer.execute(
+                "DELETE FROM hashes WHERE store_id == :store_id",
+                {"store_id": store_id},
+            )
+            await writer.execute(
+                "DELETE FROM merkleblob WHERE store_id == :store_id",
+                {"store_id": store_id},
+            )
+            await writer.execute(
+                "DELETE FROM ids WHERE store_id == :store_id",
+                {"store_id": store_id},
+            )
+            await writer.execute(
+                "DELETE FROM nodes WHERE store_id == :store_id",
+                {"store_id": store_id},
             )
 
     async def rollback_to_generation(self, store_id: bytes32, target_generation: int) -> None:

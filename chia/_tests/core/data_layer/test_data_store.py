@@ -58,9 +58,10 @@ table_columns: Dict[str, List[str]] = {
     "root": ["tree_id", "generation", "node_hash", "status"],
     "subscriptions": ["tree_id", "url", "ignore_till", "num_consecutive_failures", "from_wallet"],
     "schema": ["version_id", "applied_at"],
-    "merkleblob": ["hash", "blob"],
-    "ids": ["kv_id", "blob"],
-    "hashes": ["hash", "kid", "vid"],
+    "merkleblob": ["hash", "blob", "store_id"],
+    "ids": ["kv_id", "blob", "store_id"],
+    "hashes": ["hash", "kid", "vid", "store_id"],
+    "nodes": ["store_id", "hash", "root_hash", "generation", "idx"],
 }
 
 
@@ -1107,6 +1108,39 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
             store_id2, [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)]
         ),
     ]
+
+
+@pytest.mark.anyio
+async def test_unsubscribe_clears_databases(data_store: DataStore, store_id: bytes32) -> None:
+    num_inserts = 100
+    await data_store.subscribe(Subscription(store_id, []))
+    for value in range(num_inserts):
+        await data_store.insert(
+            key=value.to_bytes(4, byteorder="big"),
+            value=value.to_bytes(4, byteorder="big"),
+            store_id=store_id,
+            reference_node_hash=None,
+            side=None,
+            status=Status.COMMITTED,
+        )
+    await data_store.add_node_hashes(store_id)
+
+    tables = ["merkleblob", "ids", "hashes", "nodes"]
+    for table in tables:
+        async with data_store.db_wrapper.reader() as reader:
+            async with reader.execute(f"SELECT COUNT(*) FROM {table}") as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] > 0
+
+    await data_store.unsubscribe(store_id)
+
+    for table in tables:
+        async with data_store.db_wrapper.reader() as reader:
+            async with reader.execute(f"SELECT COUNT(*) FROM {table}") as cursor:
+                row_count = await cursor.fetchone()
+                assert row_count is not None
+                assert row_count[0] == 0
 
 
 @pytest.mark.anyio
