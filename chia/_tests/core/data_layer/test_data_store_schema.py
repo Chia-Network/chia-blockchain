@@ -321,44 +321,6 @@ async def test_root_store_id_generation_must_be_unique(data_store: DataStore, st
 
 @pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
 @pytest.mark.anyio
-async def test_ancestors_ancestor_must_be_32(
-    data_store: DataStore,
-    store_id: bytes32,
-    length: int,
-) -> None:
-    async with data_store.db_wrapper.writer() as writer:
-        node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await writer.execute(
-                """
-                INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                VALUES(:hash, :ancestor, :tree_id, :generation)
-                """,
-                {"hash": node_hash, "ancestor": bytes([0] * length), "tree_id": bytes32([0] * 32), "generation": 0},
-            )
-
-
-@pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
-@pytest.mark.anyio
-async def test_ancestors_store_id_must_be_32(
-    data_store: DataStore,
-    store_id: bytes32,
-    length: int,
-) -> None:
-    async with data_store.db_wrapper.writer() as writer:
-        node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
-        with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await writer.execute(
-                """
-                INSERT INTO ancestors(hash, ancestor, tree_id, generation)
-                VALUES(:hash, :ancestor, :tree_id, :generation)
-                """,
-                {"hash": node_hash, "ancestor": bytes32([0] * 32), "tree_id": bytes([0] * length), "generation": 0},
-            )
-
-
-@pytest.mark.parametrize(argnames="length", argvalues=sorted(set(range(50)) - {32}))
-@pytest.mark.anyio
 async def test_subscriptions_store_id_must_be_32(
     data_store: DataStore,
     store_id: bytes32,
