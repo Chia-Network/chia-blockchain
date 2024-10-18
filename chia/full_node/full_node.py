@@ -1165,9 +1165,7 @@ class FullNode:
                     # for deep reorgs
                     if fork_info is None:
                         peak = self.blockchain.get_peak()
-                        extending_main_chain: bool = peak is None or (
-                            peak.header_hash == blocks[0].prev_header_hash or peak.header_hash == blocks[0].header_hash
-                        )
+                        extending_main_chain: bool = peak is None or peak.header_hash == blocks[0].prev_header_hash
                         # if we're simply extending the main chain, it's important
                         # *not* to pass in a ForkInfo object, as it can potentially
                         # accrue a large state (with no value, since we can validate
@@ -1450,6 +1448,18 @@ class FullNode:
         vs: ValidationState,
         wp_summaries: Optional[list[SubEpochSummary]] = None,
     ) -> Sequence[Awaitable[PreValidationResult]]:
+        """
+        This is a thin wrapper over pre_validate_blocks_multiprocessing().
+
+        Args:
+            blockchain:
+            blocks_to_validate:
+            peer_info:
+            vs: The ValidationState for the first block in the batch. This is an in-out
+                parameter. It will be updated to be the validation state for the next
+                batch of blocks.
+            wp_summaries:
+        """
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
         # We have to copy the ValidationState object to preserve it for the add_block()
@@ -1528,7 +1538,7 @@ class FullNode:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return agg_state_change_summary, error
-            block_record = blockchain.block_record(block.header_hash)
+            block_record = blockchain.block_record(header_hash)
             assert block_record is not None
             if block_record.sub_epoch_summary_included is not None:
                 vs.prev_ses_block = block_record
