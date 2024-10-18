@@ -22,7 +22,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.find_fork_point import lookup_fork_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_generator import get_block_generator
-from chia.consensus.multiprocess_validation import PreValidationResult, _run_generator
+from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -40,7 +40,7 @@ from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.cpu import available_logical_cores
-from chia.util.errors import ConsensusError, Err
+from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.inline_executor import InlineExecutor
@@ -783,23 +783,6 @@ class Blockchain:
             return PreValidationResult(uint16(error_code.value), None, None, False, uint32(0))
 
         return PreValidationResult(None, required_iters, cost_result, False, uint32(0))
-
-    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator, height: uint32) -> NPCResult:
-        task = asyncio.get_running_loop().run_in_executor(
-            self.pool,
-            _run_generator,
-            self.constants,
-            unfinished_block,
-            bytes(generator),
-            height,
-        )
-        npc_result_bytes = await task
-        if npc_result_bytes is None:
-            raise ConsensusError(Err.UNKNOWN)
-        ret: NPCResult = NPCResult.from_bytes(npc_result_bytes)
-        if ret.error is not None:
-            raise ConsensusError(Err(ret.error))
-        return ret
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
