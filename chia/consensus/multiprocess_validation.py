@@ -143,16 +143,25 @@ async def pre_validate_blocks_multiprocessing(
 ) -> Sequence[Awaitable[PreValidationResult]]:
     """
     This method must be called under the blockchain lock
-    If all the full blocks pass pre-validation, (only validates header), returns the list of required iters.
-    if any validation issue occurs, returns False.
+    The blocks passed to this function are submitted to be validated in the
+    executor passed in as "pool". The futures for those jobs are then returned.
+    When awaited, the return value is the PreValidationResult for each block.
+    The PreValidationResult indicates whether the block was valid or not.
 
     Args:
         constants:
-        pool:
-        constants:
-        blockchain:
+        blockchain: The blockchain object to validate these blocks with respect to.
+            It's an AugmentedBlockchain to allow for previous batches of blocks to
+            be included, even if they haven't been added to the underlying blockchain
+            database yet. The blocks passed in will be added/augmented onto this blockchain.
+        pool: The executor to submit the validation jobs to
         blocks: list of full blocks to validate (must be connected to current chain)
-        npc_results
+        vs: The ValidationState refers to the state for the first block in the batch.
+            This is an in-out parameter that will be updated to the validation state
+            for the next batch of blocks. It includes subslot iterators, difficulty and
+            the previous sub epoch summary (ses) block.
+        wp_summaries:
+        validate_signatures:
     """
     prev_b: Optional[BlockRecord] = None
 
@@ -245,5 +254,4 @@ async def pre_validate_blocks_multiprocessing(
         if block_rec.sub_epoch_summary_included is not None:
             vs.prev_ses_block = block_rec
 
-    # Collect all results into one flat list
     return futures
