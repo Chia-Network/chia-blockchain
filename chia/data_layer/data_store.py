@@ -1106,6 +1106,7 @@ class DataStore:
         if root_hash is unspecified:
             root = await self.get_tree_root(store_id=store_id)
             resolved_root_hash = root.node_hash
+            assert resolved_root_hash is not None
         else:
             resolved_root_hash = root_hash
 
@@ -1135,15 +1136,18 @@ class DataStore:
 
             nodes = merkle_blob.get_nodes()
             hash_to_node: Dict[bytes32, Node] = {}
+            tree_node: Node
             for node in reversed(nodes):
                 if isinstance(node, RawInternalMerkleNode):
                     left_hash = merkle_blob.get_hash_at_index(node.left)
                     right_hash = merkle_blob.get_hash_at_index(node.right)
-                    node = InternalNode.from_child_nodes(left=hash_to_node[left_hash], right=hash_to_node[right_hash])
+                    tree_node = InternalNode.from_child_nodes(
+                        left=hash_to_node[left_hash], right=hash_to_node[right_hash]
+                    )
                 else:
                     assert isinstance(node, RawLeafMerkleNode)
-                    node = await self.get_terminal_node(node.key, node.value)
-                hash_to_node[node.hash] = node
+                    tree_node = await self.get_terminal_node(node.key, node.value)
+                hash_to_node[node.hash] = tree_node
 
             root_node = hash_to_node[root.node_hash]
 
@@ -1170,6 +1174,8 @@ class DataStore:
         root = await self.get_tree_root(store_id=store_id)
         merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
         kid = await self.get_kvid(key)
+        if kid is None:
+            raise Exception(f"Cannot find key: {key.hex()}")
         return merkle_blob.get_proof_of_inclusion(kid)
 
     async def write_tree_to_file(
