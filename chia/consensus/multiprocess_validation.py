@@ -16,7 +16,6 @@ from chia.consensus.block_header_validation import validate_finished_header_bloc
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol, BlocksProtocol
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.full_block_to_block_record import block_to_block_record
 from chia.consensus.get_block_challenge import get_block_challenge
 from chia.consensus.get_block_generator import get_block_generator
@@ -28,11 +27,10 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
-from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.condition_tools import pkm_pairs
-from chia.util.errors import Err, ValidationError
+from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
@@ -256,32 +254,3 @@ async def pre_validate_blocks_multiprocessing(
 
     # Collect all results into one flat list
     return list(await asyncio.gather(*futures))
-
-
-def _run_generator(
-    constants: ConsensusConstants,
-    unfinished_block_bytes: bytes,
-    block_generator_bytes: bytes,
-    height: uint32,
-) -> Optional[bytes]:
-    """
-    Runs the CLVM generator from bytes inputs. This is meant to be called under a ProcessPoolExecutor, in order to
-    validate the heavy parts of a block (clvm program) in a different process.
-    """
-    try:
-        unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
-        assert unfinished_block.transactions_info is not None
-        block_generator: BlockGenerator = BlockGenerator.from_bytes(block_generator_bytes)
-        assert block_generator.program == unfinished_block.transactions_generator
-        npc_result: NPCResult = get_name_puzzle_conditions(
-            block_generator,
-            min(constants.MAX_BLOCK_COST_CLVM, unfinished_block.transactions_info.cost),
-            mempool_mode=False,
-            height=height,
-            constants=constants,
-        )
-        return bytes(npc_result)
-    except ValidationError as e:
-        return bytes(NPCResult(uint16(e.code.value), None))
-    except Exception:
-        return bytes(NPCResult(uint16(Err.UNKNOWN.value), None))
