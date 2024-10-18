@@ -152,9 +152,9 @@ class MerkleBlob:
         node = self.get_raw_node(index)
         assert isinstance(node, RawLeafMerkleNode)
 
-        parents = self.get_lineage(index)
+        parents = self.get_lineage_with_indexes(index)
         layers: List[ProofOfInclusionLayer] = []
-        for parent in parents[1:]:
+        for index, parent in parents[1:]:
             assert isinstance(parent, RawInternalMerkleNode)
             sibling_index = parent.get_sibling_index(index)
             sibling = self.get_raw_node(sibling_index)
@@ -164,7 +164,6 @@ class MerkleBlob:
                 combined_hash=bytes32(parent.hash),
             )
             layers.append(layer)
-            index = parent.index
 
         return ProofOfInclusion(node_hash=bytes32(node.hash), layers=layers)
 
@@ -174,6 +173,15 @@ class MerkleBlob:
         while node.parent != null_parent:
             node = self.get_raw_node(node.parent)
             lineage.append(node)
+        return lineage
+
+    def get_lineage_with_indexes(self, index: TreeIndex) -> List[Tuple[TreeIndex, RawMerkleNodeProtocol]]:
+        node = self.get_raw_node(index=index)
+        lineage = [(index, node)]
+        while node.parent != null_parent:
+            index = node.parent
+            node = self.get_raw_node(index)
+            lineage.append((index, node))
         return lineage
 
     def get_lineage_by_key_id(self, kid: KVId) -> List[InternalNode]:
@@ -204,14 +212,12 @@ class MerkleBlob:
         if isinstance(node, RawInternalMerkleNode):
             new_left = left if left is not None else node.left
             new_right = right if right is not None else node.right
-            new_node: RawMerkleNodeProtocol = RawInternalMerkleNode(
-                new_hash, new_parent, new_left, new_right, node.index
-            )
+            new_node: RawMerkleNodeProtocol = RawInternalMerkleNode(new_hash, new_parent, new_left, new_right)
         else:
             assert isinstance(node, RawLeafMerkleNode)
             new_key = key if key is not None else node.key
             new_value = value if value is not None else node.value
-            new_node = RawLeafMerkleNode(new_hash, new_parent, new_key, new_value, node.index)
+            new_node = RawLeafMerkleNode(new_hash, new_parent, new_key, new_value)
             if new_key != node.key:
                 del self.key_to_index[node.key]
                 self.key_to_index[new_key] = index
@@ -306,10 +312,10 @@ class MerkleBlob:
         if side == Side.LEFT:
             internal_node_hash = internal_hash(bytes32(new_node.hash), bytes32(old_leaf.hash))
             left_index = new_index
-            right_index = old_leaf.index
+            right_index = old_leaf_index
         else:
             internal_node_hash = internal_hash(bytes32(old_leaf.hash), bytes32(new_node.hash))
-            left_index = old_leaf.index
+            left_index = old_leaf_index
             right_index = new_index
 
         self.insert_entry_to_blob(
@@ -321,7 +327,6 @@ class MerkleBlob:
                     old_leaf.parent,
                     left_index,
                     right_index,
-                    new_internal_node_index,
                 )
             ),
         )
@@ -330,14 +335,14 @@ class MerkleBlob:
         old_parent_index = old_leaf.parent
         assert old_parent_index != null_parent
 
-        self.update_entry(old_leaf.index, parent=new_internal_node_index)
+        self.update_entry(old_leaf_index, parent=new_internal_node_index)
         old_parent = self.get_raw_node(old_parent_index)
         assert isinstance(old_parent, RawInternalMerkleNode)
-        if old_leaf.index == old_parent.left:
-            self.update_entry(old_parent.index, left=new_internal_node_index)
+        if old_leaf_index == old_parent.left:
+            self.update_entry(old_parent_index, left=new_internal_node_index)
         else:
-            assert old_leaf.index == old_parent.right
-            self.update_entry(old_parent.index, right=new_internal_node_index)
+            assert old_leaf_index == old_parent.right
+            self.update_entry(old_parent_index, right=new_internal_node_index)
         self.mark_lineage_as_dirty(old_parent_index)
         if isinstance(new_node, RawLeafMerkleNode):
             self.key_to_index[new_node.key] = new_index
@@ -355,7 +360,7 @@ class MerkleBlob:
         if len(self.blob) == 0:
             self.blob.extend(
                 NodeMetadata(type=NodeType.leaf, dirty=False).pack()
-                + pack_raw_node(RawLeafMerkleNode(hash, null_parent, key, value, TreeIndex(0)))
+                + pack_raw_node(RawLeafMerkleNode(hash, null_parent, key, value))
             )
             self.key_to_index[key] = TreeIndex(0)
             self.free_indexes = []
@@ -369,6 +374,7 @@ class MerkleBlob:
             leaf_index = self.key_to_index[reference_kid]
             old_leaf = self.get_raw_node(leaf_index)
         assert isinstance(old_leaf, RawLeafMerkleNode)
+        old_leaf_index = self.key_to_index[old_leaf.key]
         if side is None:
             side = Side.LEFT if seed[0] < 128 else Side.RIGHT
 
@@ -383,12 +389,11 @@ class MerkleBlob:
                         null_parent,
                         TreeIndex(1),
                         TreeIndex(2),
-                        TreeIndex(0),
                     )
                 )
             )
-            leaf_1 = RawLeafMerkleNode(old_leaf.hash, TreeIndex(0), old_leaf.key, old_leaf.value, TreeIndex(1))
-            leaf_2 = RawLeafMerkleNode(hash, TreeIndex(0), key, value, TreeIndex(2))
+            leaf_1 = RawLeafMerkleNode(old_leaf.hash, TreeIndex(0), old_leaf.key, old_leaf.value)
+            leaf_2 = RawLeafMerkleNode(hash, TreeIndex(0), key, value)
             if side == Side.LEFT:
                 leaf_1, leaf_2 = leaf_2, leaf_1
             for index, leaf in enumerate([leaf_1, leaf_2], start=1):
@@ -402,9 +407,9 @@ class MerkleBlob:
         self.insert_entry_to_blob(
             new_leaf_index,
             NodeMetadata(type=NodeType.leaf, dirty=False).pack()
-            + pack_raw_node(RawLeafMerkleNode(hash, undefined_index, key, value, new_leaf_index)),
+            + pack_raw_node(RawLeafMerkleNode(hash, undefined_index, key, value)),
         )
-        self.insert_from_leaf(old_leaf.index, new_leaf_index, side)
+        self.insert_from_leaf(old_leaf_index, new_leaf_index, side)
 
     def delete(self, key: KVId) -> None:
         leaf_index = self.key_to_index[key]
@@ -496,6 +501,18 @@ class MerkleBlob:
 
         return [node] + left_nodes + right_nodes
 
+    def get_nodes_with_indexes(self, index: TreeIndex = TreeIndex(0)) -> List[Tuple[TreeIndex, RawMerkleNodeProtocol]]:
+        node = self.get_raw_node(index)
+        this = [(index, node)]
+        if isinstance(node, RawLeafMerkleNode):
+            return this
+
+        assert isinstance(node, RawInternalMerkleNode)
+        left_nodes = self.get_nodes_with_indexes(node.left)
+        right_nodes = self.get_nodes_with_indexes(node.right)
+
+        return this + left_nodes + right_nodes
+
     def batch_insert(self, keys_values: List[Tuple[KVId, KVId]], hashes: List[bytes]) -> None:
         indexes: List[TreeIndex] = []
 
@@ -512,7 +529,7 @@ class MerkleBlob:
             self.insert_entry_to_blob(
                 new_leaf_index,
                 NodeMetadata(type=NodeType.leaf, dirty=False).pack()
-                + pack_raw_node(RawLeafMerkleNode(hash, undefined_index, key, value, new_leaf_index)),
+                + pack_raw_node(RawLeafMerkleNode(hash, undefined_index, key, value)),
             )
             indexes.append(new_leaf_index)
             self.key_to_index[key] = new_leaf_index
@@ -535,7 +552,6 @@ class MerkleBlob:
                             undefined_index,
                             index_1,
                             index_2,
-                            new_internal_node_index,
                         )
                     ),
                 )
@@ -549,7 +565,7 @@ class MerkleBlob:
 
         if len(indexes) == 1:
             min_height_leaf = self.get_min_height_leaf()
-            self.insert_from_leaf(min_height_leaf.index, indexes[0])
+            self.insert_from_leaf(self.key_to_index[min_height_leaf.key], indexes[0])
 
 
 class RawMerkleNodeProtocol(Protocol):
@@ -557,9 +573,6 @@ class RawMerkleNodeProtocol(Protocol):
     type: ClassVar[NodeType]
 
     def __init__(self, *args: object, index: TreeIndex) -> None: ...
-
-    @property
-    def index(self) -> TreeIndex: ...
 
     @property
     def parent(self) -> TreeIndex: ...
@@ -619,8 +632,6 @@ class RawInternalMerkleNode:
 
     # TODO: maybe bytes32?  maybe that's not 'raw'
     # TODO: how much slower to just not store the hashes at all?
-    # TODO: this feels like a bit of a violation being aware of your location
-    index: TreeIndex
 
     def as_tuple(self) -> Tuple[bytes, TreeIndex, TreeIndex, TreeIndex]:
         return (self.hash, self.parent, self.left, self.right)
@@ -658,8 +669,6 @@ class RawLeafMerkleNode:
     key: KVId
     value: KVId
     # TODO: maybe bytes32?  maybe that's not 'raw'
-    # TODO: this feels like a bit of a violation being aware of your location
-    index: TreeIndex
 
     def as_tuple(self) -> Tuple[bytes, TreeIndex, KVId, KVId]:
         return (self.hash, self.parent, self.key, self.value)

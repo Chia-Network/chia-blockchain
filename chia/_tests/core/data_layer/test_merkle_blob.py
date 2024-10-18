@@ -113,7 +113,6 @@ reference_raw_nodes: List[DataCase] = [
             parent=TreeIndex(0x20212223),
             left=TreeIndex(0x24252627),
             right=TreeIndex(0x28292A2B),
-            index=TreeIndex(0),
         ),
     ),
     RawNodeFromBlobCase(
@@ -122,7 +121,6 @@ reference_raw_nodes: List[DataCase] = [
             parent=TreeIndex(0x20212223),
             key=KVId(0x2425262728292A2B),
             value=KVId(0x2C2D2E2F30313233),
-            index=TreeIndex(0),
         ),
     ),
 ]
@@ -157,7 +155,6 @@ def test_merkle_blob_one_leaf_loads() -> None:
         parent=null_parent,
         key=KVId(0x0405060708090A0B),
         value=KVId(0x0405060708090A1B),
-        index=TreeIndex(0),
     )
     blob = bytearray(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(leaf))
 
@@ -173,21 +170,18 @@ def test_merkle_blob_two_leafs_loads() -> None:
         parent=null_parent,
         left=TreeIndex(1),
         right=TreeIndex(2),
-        index=TreeIndex(0),
     )
     left_leaf = RawLeafMerkleNode(
         hash=bytes(range(32)),
         parent=TreeIndex(0),
         key=KVId(0x0405060708090A0B),
         value=KVId(0x0405060708090A1B),
-        index=TreeIndex(1),
     )
     right_leaf = RawLeafMerkleNode(
         hash=bytes(range(32)),
         parent=TreeIndex(0),
         key=KVId(0x1415161718191A1B),
         value=KVId(0x1415161718191A2B),
-        index=TreeIndex(2),
     )
     blob = bytearray()
     blob.extend(NodeMetadata(type=NodeType.internal, dirty=True).pack() + pack_raw_node(root))
@@ -452,13 +446,13 @@ def test_get_nodes() -> None:
         keys.add(key)
 
     merkle_blob.calculate_lazy_hashes()
-    all_nodes = merkle_blob.get_nodes()
-    for node in all_nodes:
+    all_nodes = merkle_blob.get_nodes_with_indexes()
+    for index, node in all_nodes:
         if isinstance(node, RawInternalMerkleNode):
             left = merkle_blob.get_raw_node(node.left)
             right = merkle_blob.get_raw_node(node.right)
-            assert left.parent == node.index
-            assert right.parent == node.index
+            assert left.parent == index
+            assert right.parent == index
             assert bytes32(node.hash) == internal_hash(bytes32(left.hash), bytes32(right.hash))
             # assert nodes are provided in left-to-right ordering
             assert node.left not in seen_indexes
@@ -466,6 +460,6 @@ def test_get_nodes() -> None:
         else:
             assert isinstance(node, RawLeafMerkleNode)
             seen_keys.add(node.key)
-        seen_indexes.add(node.index)
+        seen_indexes.add(index)
 
     assert keys == seen_keys
