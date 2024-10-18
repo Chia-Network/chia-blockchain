@@ -267,7 +267,13 @@ class DataStore:
             return kv_id
 
         async with self.db_wrapper.writer() as writer:
-            await writer.execute("INSERT OR REPLACE INTO ids (blob, store_id) VALUES (?, ?)", (blob,store_id,))
+            await writer.execute(
+                "INSERT OR REPLACE INTO ids (blob, store_id) VALUES (?, ?)",
+                (
+                    blob,
+                    store_id,
+                ),
+            )
 
         kv_id = await self.get_kvid(blob)
         if kv_id is None:
@@ -1023,9 +1029,9 @@ class DataStore:
                         raise
                 elif change["action"] == "delete":
                     key = change["key"]
-                    kid = await self.get_kvid(key)
-                    if kid is not None:
-                        merkle_blob.delete(kid)
+                    deletion_kid = await self.get_kvid(key)
+                    if deletion_kid is not None:
+                        merkle_blob.delete(deletion_kid)
                 elif change["action"] == "upsert":
                     key = change["key"]
                     new_value = change["value"]
