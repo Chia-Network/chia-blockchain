@@ -5,6 +5,8 @@ from typing import Any
 
 from aiohttp import web
 
+from chia.wallet.util.wallet_types import WalletType
+
 
 class EnhancedJSONEncoder(json.JSONEncoder):
     """
@@ -12,6 +14,8 @@ class EnhancedJSONEncoder(json.JSONEncoder):
     """
 
     def default(self, o: Any) -> Any:
+        if isinstance(o, WalletType):
+            raise RuntimeError("WalletType should not be serialized to JSON")
         if hasattr(type(o), "to_json_dict"):
             return o.to_json_dict()
         elif hasattr(type(o), "__bytes__"):
