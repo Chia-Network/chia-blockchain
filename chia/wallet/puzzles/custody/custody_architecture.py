@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import ClassVar, Dict, List, Literal, Mapping, Optional, Protocol, Tuple, TypeVar, Union
 
-from typing_extensions import runtime_checkable
 from chia_rs import G1Element
+from typing_extensions import runtime_checkable
+
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -235,6 +236,7 @@ class BLSMember:
     def puzzle_hash(self, nonce) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
 
+
 # The top-level object inside every "outer" puzzle
 @dataclass(frozen=True)
 class PuzzleWithRestrictions:
@@ -414,7 +416,7 @@ class PuzzleWithRestrictions:
     def solve(
         self,
         member_validator_solutions: List[Program],  # solution for the restriction puzzle
-        dpuz_validator_solutions: List[Program],  # 
+        dpuz_validator_solutions: List[Program],  #
         member_solution: Program,
         delegated_puzzle_and_solution: Optional[Tuple[Program, Program]] = None,
     ) -> Program:

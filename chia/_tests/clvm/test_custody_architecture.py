@@ -5,7 +5,7 @@ from dataclasses import dataclass, field, replace
 from typing import List, Literal
 
 import pytest
-from chia_rs import G1Element, G2Element, AugSchemeMPL
+from chia_rs import AugSchemeMPL, G2Element
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -321,7 +321,11 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
             sk = AugSchemeMPL.key_gen(bytes.fromhex(str(n) * 64))
             keys.append(sk)
         m_of_n = PuzzleWithRestrictions(
-            0, [], MofN(m, [PuzzleWithRestrictions(n_i, restrictions, BLSMember(keys[n_i].public_key())) for n_i in range(0, n)])
+            0,
+            [],
+            MofN(
+                m, [PuzzleWithRestrictions(n_i, restrictions, BLSMember(keys[n_i].public_key())) for n_i in range(0, n)]
+            ),
         )
 
         # Farm and find coin
@@ -332,8 +336,7 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
         block_height = sim.block_height
 
         # Create two announcements to be asserted from a) the delegated puzzle b) the puzzle in the MofN
-        announcement_1 = CreateCoinAnnouncement(msg=b"foo", coin_id=m_of_n_coin.name())
-        announcement_2 = CreateCoinAnnouncement(msg=b"bar", coin_id=m_of_n_coin.name())
+        announcement = CreateCoinAnnouncement(msg=b"foo", coin_id=m_of_n_coin.name())
 
         # Test a spend of every combination of m of n
         for indexes in itertools.combinations(range(0, n), m):
@@ -341,21 +344,27 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
                 PuzzleWithRestrictions(index, restrictions, BLSMember(keys[index].public_key())).puzzle_hash(
                     _top_level=False
                 ): ProvenSpend(
-                    PuzzleWithRestrictions(index, restrictions, BLSMember(keys[index].public_key())).puzzle_reveal(_top_level=False),
+                    PuzzleWithRestrictions(index, restrictions, BLSMember(keys[index].public_key())).puzzle_reveal(
+                        _top_level=False
+                    ),
                     PuzzleWithRestrictions(index, restrictions, BLSMember(keys[index].public_key())).solve(
                         [],
                         [Program.to(None)] if with_restrictions else [],
-                        []  # no solution required for this member puzzle, only sig
+                        [],  # no solution required for this member puzzle, only sig
                     ),
                 )
                 for index in indexes
             }
             sig = G2Element()
             for index in indexes:
-                sig = AugSchemeMPL.aggregate([
-                    sig, 
-                    keys[index].sign(delegated_puzzle_hash + m_of_n_coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),  # noqa)
-                ])
+                sig = AugSchemeMPL.aggregate(
+                    [
+                        sig,
+                        keys[index].sign(
+                            delegated_puzzle_hash + m_of_n_coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
+                        ),  # noqa)
+                    ]
+                )
             assert isinstance(m_of_n.puzzle, MofN)
             sb = WalletSpendBundle(
                 [
@@ -370,12 +379,12 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
                                 delegated_puzzle,
                                 Program.to(
                                     [
-                                        announcement_2.to_program(),
-                                        announcement_2.corresponding_assertion().to_program(),
+                                        announcement.to_program(),
+                                        announcement.corresponding_assertion().to_program(),
                                     ]
                                 ),
-                            )
-                        )
+                            ),
+                        ),
                     )
                 ],
                 sig,
