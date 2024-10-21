@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import BundleCoinSpend
@@ -16,4 +15,4 @@ class InternalMempoolItem:
     conds: SpendBundleConditions
     height_added_to_mempool: uint32
     # Map of coin ID to coin spend data between the bundle and its NPCResult
-    bundle_coin_spends: Dict[bytes32, BundleCoinSpend]
+    bundle_coin_spends: dict[bytes32, BundleCoinSpend]

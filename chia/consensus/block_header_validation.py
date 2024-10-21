@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional, Tuple
+from typing import Optional
 
 from chia_rs import AugSchemeMPL
 
@@ -48,7 +48,7 @@ def validate_unfinished_header_block(
     skip_vdf_is_valid: bool = False,
     check_sub_epoch_summary: bool = True,
     prev_ses_block: Optional[BlockRecord] = None,
-) -> Tuple[Optional[uint64], Optional[ValidationError]]:
+) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
     and without transactions and transaction info (header). Returns (required_iters, error).
@@ -838,7 +838,7 @@ def validate_finished_header_block(
     expected_sub_slot_iters: uint64,
     check_sub_epoch_summary: bool = True,
     prev_ses_block: Optional[BlockRecord] = None,
-) -> Tuple[Optional[uint64], Optional[ValidationError]]:
+) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
     without transactions and transaction info. Returns (required_iters, error).

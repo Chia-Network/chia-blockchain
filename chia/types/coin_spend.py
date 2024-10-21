@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Union
 
 import chia_rs
 
@@ -46,7 +46,7 @@ def compute_additions_with_cost(
     cs: CoinSpend,
     *,
     max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-) -> Tuple[List[Coin], int]:
+) -> tuple[list[Coin], int]:
     """
     Run the puzzle in the specified CoinSpend and return the cost and list of
     coins created by the puzzle, i.e. additions. If the cost (CLVM- and
@@ -56,7 +56,7 @@ def compute_additions_with_cost(
     measured at the block generator level.
     """
     parent_id = cs.coin.name()
-    ret: List[Coin] = []
+    ret: list[Coin] = []
     cost, r = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
     for cond in Program.to(r).as_iter():
         if cost > max_cost:
@@ -85,7 +85,7 @@ def compute_additions_with_cost(
     return ret, cost
 
 
-def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM) -> List[Coin]:
+def compute_additions(cs: CoinSpend, *, max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM) -> list[Coin]:
     return compute_additions_with_cost(cs, max_cost=max_cost)[0]
 
 
@@ -99,10 +99,10 @@ class SpendInfo(Streamable):
 @dataclass(frozen=True)
 class CoinSpendWithConditions:
     coin_spend: CoinSpend
-    conditions: List[ConditionWithArgs]
+    conditions: list[ConditionWithArgs]
 
     @staticmethod
-    def from_json_dict(dict: Dict[str, Any]) -> CoinSpendWithConditions:
+    def from_json_dict(dict: dict[str, Any]) -> CoinSpendWithConditions:
         return CoinSpendWithConditions(
             CoinSpend.from_json_dict(dict["coin_spend"]),
             [

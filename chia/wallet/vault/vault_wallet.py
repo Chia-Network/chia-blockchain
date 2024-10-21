@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 from chia_rs import G1Element, G2Element
 from cryptography.hazmat.primitives import hashes
@@ -129,11 +129,11 @@ class Vault(Wallet):
         puzzle_hash: bytes32,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[Set[Coin]] = None,
-        primaries: Optional[List[Payment]] = None,
-        memos: Optional[List[bytes]] = None,
-        puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        coins: Optional[set[Coin]] = None,
+        primaries: Optional[list[Payment]] = None,
+        memos: Optional[list[bytes]] = None,
+        puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
         """
@@ -188,13 +188,13 @@ class Vault(Wallet):
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
         origin_id: Optional[bytes32] = None,
-        coins: Optional[Set[Coin]] = None,
-        primaries_input: Optional[List[Payment]] = None,
-        memos: Optional[List[bytes]] = None,
+        coins: Optional[set[Coin]] = None,
+        primaries_input: Optional[list[Payment]] = None,
+        memos: Optional[list[bytes]] = None,
         negative_change_allowed: bool = False,
-        puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
-    ) -> List[CoinSpend]:
+        puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+    ) -> list[CoinSpend]:
         primaries = []
         if primaries_input is not None:
             primaries.extend(primaries_input)
@@ -235,7 +235,7 @@ class Vault(Wallet):
         delegated_puzzle = puzzle_for_conditions(conditions)
         delegated_solution = Program.to(None)
 
-        p2_singleton_spends: List[CoinSpend] = []
+        p2_singleton_spends: list[CoinSpend] = []
         for coin in coins:
             if not p2_singleton_spends:
                 p2_solution = Program.to(
@@ -251,7 +251,7 @@ class Vault(Wallet):
             if action_scope.config.tx_config.reuse_puzhash
             else (await self.get_new_vault_puzzlehash())
         )
-        vault_conditions: List[Program] = []
+        vault_conditions: list[Program] = []
         recreate_vault_condition = CreateCoin(
             next_puzzle_hash, uint64(self.vault_info.coin.amount), memos=[next_puzzle_hash]
         ).to_program()
@@ -321,7 +321,7 @@ class Vault(Wallet):
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         raise NotImplementedError("vault wallet")
 
-    async def sign_message(self, message: str, puzzle_hash: bytes32, mode: SigningMode) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str, puzzle_hash: bytes32, mode: SigningMode) -> tuple[G1Element, G2Element]:
         raise NotImplementedError("vault wallet")
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
@@ -335,7 +335,7 @@ class Vault(Wallet):
                 return self.get_p2_singleton_puzzle_hash()
             return record.puzzle_hash
 
-    async def gather_signing_info(self, coin_spends: List[Spend]) -> SigningInstructions:
+    async def gather_signing_info(self, coin_spends: list[Spend]) -> SigningInstructions:
         pk = self.vault_info.pubkey
 
         targets = []
@@ -363,7 +363,7 @@ class Vault(Wallet):
         return sig_info
 
     async def apply_signatures(
-        self, spends: List[Spend], signing_responses: List[SigningResponse]
+        self, spends: list[Spend], signing_responses: list[SigningResponse]
     ) -> SignedTransaction:
         signed_spends = []
         for spend in spends:
@@ -380,12 +380,12 @@ class Vault(Wallet):
 
     async def execute_signing_instructions(
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
-    ) -> List[SigningResponse]:
+    ) -> list[SigningResponse]:
         root_pubkey = self.wallet_state_manager.observation_root
         # Temporary access to private key
         sk: ec.EllipticCurvePrivateKey = self.wallet_state_manager.config["test_sk"]
-        sk_lookup: Dict[int, ec.EllipticCurvePrivateKey] = {root_pubkey.get_fingerprint(): sk}
-        responses: List[SigningResponse] = []
+        sk_lookup: dict[int, ec.EllipticCurvePrivateKey] = {root_pubkey.get_fingerprint(): sk}
+        responses: list[SigningResponse] = []
 
         # We don't need to expand path and sum hints since vault signer always uses the same keys
         # so just sign the targets
@@ -413,9 +413,9 @@ class Vault(Wallet):
 
     async def make_solution(
         self,
-        primaries: List[Payment],
+        primaries: list[Payment],
         action_scope: WalletActionScope,
-        conditions: Tuple[Condition, ...] = tuple(),
+        conditions: tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
         **kwargs: Any,
     ) -> Program:
@@ -463,8 +463,8 @@ class Vault(Wallet):
     def get_p2_singleton_puzzle_hash(self) -> bytes32:
         return get_p2_singleton_puzzle_hash(self.launcher_id)
 
-    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> Set[Coin]:
-        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+    async def select_coins(self, amount: uint64, action_scope: WalletActionScope) -> set[Coin]:
+        unconfirmed_removals: dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
         puzhash = self.get_p2_singleton_puzzle_hash()
@@ -483,7 +483,7 @@ class Vault(Wallet):
             interface.side_effects.selected_coins.extend([*coins])
         return coins
 
-    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
+    def derivation_for_index(self, index: int) -> list[DerivationRecord]:
         hidden_puzzle = get_vault_hidden_puzzle_with_index(uint32(index))
         hidden_puzzle_hash = hidden_puzzle.get_tree_hash()
         inner_puzzle_hash = get_vault_inner_puzzle_hash(
@@ -506,7 +506,7 @@ class Vault(Wallet):
         action_scope: WalletActionScope,
         bls_pk: Optional[G1Element] = None,
         timelock: Optional[uint64] = None,
-    ) -> Tuple[bytes32, bytes32]:
+    ) -> tuple[bytes32, bytes32]:
         """
         Returns two tx IDs
         1. Recover the vault which can be taken to the appropriate BLS wallet for signing

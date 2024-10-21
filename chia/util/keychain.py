@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import sys
 import unicodedata
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum
 from functools import cached_property
 from hashlib import pbkdf2_hmac
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Type, TypeVar, Union, overload
+from typing import Any, Literal, Optional, TypeVar, Union, overload
 
 import importlib_resources
-from bitstring import BitArray  # pyright: reportMissingImports=false
-from chia_rs import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
+from bitstring import BitArray
+from chia_rs import AugSchemeMPL, G1Element, PrivateKey
+from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint32
 from typing_extensions import final
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, convertbits
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.errors import (
@@ -28,7 +30,6 @@ from chia.util.errors import (
 )
 from chia.util.file_keyring import Key
 from chia.util.hash import std_hash
-from chia.util.ints import uint32
 from chia.util.key_types import Secp256r1PrivateKey, Secp256r1PublicKey
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.util.observation_root import ObservationRoot
@@ -50,7 +51,7 @@ def supports_os_passphrase_storage() -> bool:
     return sys.platform in ["darwin", "win32", "cygwin"]
 
 
-def passphrase_requirements() -> Dict[str, Any]:
+def passphrase_requirements() -> dict[str, Any]:
     """
     Returns a dictionary specifying current passphrase requirements
     """
@@ -102,7 +103,7 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
 
 
 def check_mnemonic_validity(mnemonic_str: str) -> bool:
-    mnemonic: List[str] = mnemonic_str.split(" ")
+    mnemonic: list[str] = mnemonic_str.split(" ")
     return len(mnemonic) in [12, 15, 18, 21, 24]
 
 
@@ -112,12 +113,12 @@ def mnemonic_from_short_words(mnemonic_str: str) -> str:
     practice to only store the first 4 letters of each word in many offline storage solutions, also support looking
     up words by the first 4 characters
     """
-    mnemonic: List[str] = mnemonic_str.split(" ")
+    mnemonic: list[str] = mnemonic_str.split(" ")
     if len(mnemonic) not in [12, 15, 18, 21, 24]:
         raise ValueError("Invalid mnemonic length")
 
     four_char_dict = {word[:4]: word for word in bip39_word_list().splitlines()}
-    full_words: List[str] = []
+    full_words: list[str] = []
     for word in mnemonic:
         full_word = four_char_dict.get(word[:4])
         if full_word is None:
@@ -129,7 +130,7 @@ def mnemonic_from_short_words(mnemonic_str: str) -> str:
 
 def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     full_mnemonic_str = mnemonic_from_short_words(mnemonic_str)
-    mnemonic: List[str] = full_mnemonic_str.split(" ")
+    mnemonic: list[str] = full_mnemonic_str.split(" ")
 
     word_list = {word: i for i, word in enumerate(bip39_word_list().splitlines())}
     bit_array = BitArray()
@@ -196,7 +197,7 @@ class KeyTypes(str, Enum):
     SECP_256_R1 = "SECP256r1"
 
     @classmethod
-    def parse_observation_root(cls: Type[KeyTypes], pk_bytes: bytes, key_type: KeyTypes) -> ObservationRoot:
+    def parse_observation_root(cls: type[KeyTypes], pk_bytes: bytes, key_type: KeyTypes) -> ObservationRoot:
         if key_type == cls.G1_ELEMENT:
             return G1Element.from_bytes(pk_bytes)
         if key_type == cls.VAULT_LAUNCHER:
@@ -208,7 +209,7 @@ class KeyTypes(str, Enum):
             raise RuntimeError("Not all key types have been handled in KeyTypes.parse_observation_root")
 
     @classmethod
-    def parse_secret_info(cls: Type[KeyTypes], sk_bytes: bytes, key_type: KeyTypes) -> SecretInfo[Any]:
+    def parse_secret_info(cls: type[KeyTypes], sk_bytes: bytes, key_type: KeyTypes) -> SecretInfo[Any]:
         if key_type == cls.G1_ELEMENT:
             return PrivateKey.from_bytes(sk_bytes)
         elif key_type == cls.SECP_256_R1:
@@ -218,7 +219,7 @@ class KeyTypes(str, Enum):
             raise RuntimeError("Not all key types have been handled in KeyTypes.parse_secret_info")
 
     @classmethod
-    def parse_secret_info_from_seed(cls: Type[KeyTypes], seed: bytes, key_type: KeyTypes) -> SecretInfo[Any]:
+    def parse_secret_info_from_seed(cls: type[KeyTypes], seed: bytes, key_type: KeyTypes) -> SecretInfo[Any]:
         if key_type == cls.G1_ELEMENT:
             return PrivateKey.from_seed(seed)
         elif key_type == cls.SECP_256_R1:
@@ -232,7 +233,7 @@ class KeyTypes(str, Enum):
 @streamable
 @dataclass(frozen=True)
 class KeyDataSecrets(Streamable):
-    mnemonic: List[str]
+    mnemonic: list[str]
     entropy: bytes
     secret_info_bytes: bytes
     key_type: str = KeyTypes.G1_ELEMENT.value
@@ -285,13 +286,13 @@ class KeyDataSecrets(Streamable):
         return " ".join(self.mnemonic)
 
 
-TYPES_TO_KEY_TYPES: Dict[Type[ObservationRoot], KeyTypes] = {
+TYPES_TO_KEY_TYPES: dict[type[ObservationRoot], KeyTypes] = {
     G1Element: KeyTypes.G1_ELEMENT,
     VaultRoot: KeyTypes.VAULT_LAUNCHER,
     Secp256r1PublicKey: KeyTypes.SECP_256_R1,
 }
-KEY_TYPES_TO_TYPES: Dict[KeyTypes, Type[ObservationRoot]] = {v: k for k, v in TYPES_TO_KEY_TYPES.items()}
-PUBLIC_TYPES_TO_PRIVATE_TYPES: Dict[Type[ObservationRoot], Type[SecretInfo[Any]]] = {
+KEY_TYPES_TO_TYPES: dict[KeyTypes, type[ObservationRoot]] = {v: k for k, v in TYPES_TO_KEY_TYPES.items()}
+PUBLIC_TYPES_TO_PRIVATE_TYPES: dict[type[ObservationRoot], type[SecretInfo[Any]]] = {
     G1Element: PrivateKey,
     Secp256r1PublicKey: Secp256r1PrivateKey,
 }
@@ -339,7 +340,7 @@ class KeyData(Streamable):
         return cls.from_mnemonic(generate_mnemonic(), label)
 
     @property
-    def mnemonic(self) -> List[str]:
+    def mnemonic(self) -> list[str]:
         if self.secrets is None:
             raise KeychainSecretsMissing()
         return self.secrets.mnemonic
@@ -438,51 +439,51 @@ class Keychain:
 
     # pylint requires these NotImplementedErrors for some reason
     @overload
-    def add_key(self, mnemonic_or_pk: str) -> Tuple[SecretInfo[Any], KeyTypes]:
+    def add_key(self, mnemonic_or_pk: str) -> tuple[SecretInfo[Any], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[SecretInfo[Any], KeyTypes]:
+    def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> tuple[SecretInfo[Any], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
-    def add_key(self, mnemonic_or_pk: str, *, key_type: KeyTypes) -> Tuple[SecretInfo[Any], KeyTypes]:
+    def add_key(self, mnemonic_or_pk: str, *, key_type: KeyTypes) -> tuple[SecretInfo[Any], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]
-    ) -> Tuple[SecretInfo[Any], KeyTypes]:
+    ) -> tuple[SecretInfo[Any], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
-    ) -> Tuple[ObservationRoot, KeyTypes]:
+    ) -> tuple[ObservationRoot, KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: bool
-    ) -> Tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
+    ) -> tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True], key_type: KeyTypes
-    ) -> Tuple[SecretInfo[Any], KeyTypes]:
+    ) -> tuple[SecretInfo[Any], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False], key_type: KeyTypes
-    ) -> Tuple[ObservationRoot, KeyTypes]:
+    ) -> tuple[ObservationRoot, KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     @overload
     def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: bool, key_type: KeyTypes
-    ) -> Tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
+    ) -> tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
         raise NotImplementedError()  # pragma: no cover
 
     def add_key(
@@ -491,7 +492,7 @@ class Keychain:
         label: Optional[str] = None,
         private: bool = True,
         key_type: KeyTypes = KeyTypes.G1_ELEMENT,
-    ) -> Tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
+    ) -> tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
         """
         Adds a key to the keychain. The keychain itself will store the public key, and the entropy bytes (if given),
         but not the passphrase.
@@ -565,7 +566,7 @@ class Keychain:
                 pass
         return None
 
-    def get_first_private_key(self, key_type: Optional[KeyTypes] = None) -> Optional[Tuple[SecretInfo[Any], bytes]]:
+    def get_first_private_key(self, key_type: Optional[KeyTypes] = None) -> Optional[tuple[SecretInfo[Any], bytes]]:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
@@ -575,7 +576,7 @@ class Keychain:
             return key_data.private_key, key_data.entropy
         return None
 
-    def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[Tuple[SecretInfo[Any], bytes]]:
+    def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[tuple[SecretInfo[Any], bytes]]:
         """
         Return first private key which have the given public key fingerprint.
         """
@@ -584,12 +585,12 @@ class Keychain:
                 return key_data.private_key, key_data.entropy
         return None
 
-    def get_all_private_keys(self) -> List[Tuple[SecretInfo[Any], bytes]]:
+    def get_all_private_keys(self) -> list[tuple[SecretInfo[Any], bytes]]:
         """
         Returns all private keys which can be retrieved, with the given passphrases.
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
         """
-        all_keys: List[Tuple[SecretInfo[Any], bytes]] = []
+        all_keys: list[tuple[SecretInfo[Any], bytes]] = []
         for key_data in self._iterate_through_key_datas(skip_public_only=True):
             all_keys.append((key_data.private_key, key_data.entropy))
         return all_keys
@@ -603,28 +604,28 @@ class Keychain:
                 return key_data
         raise KeychainFingerprintNotFound(fingerprint)
 
-    def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
+    def get_keys(self, include_secrets: bool = False) -> list[KeyData]:
         """
         Returns the KeyData of all keys which can be retrieved.
         """
-        all_keys: List[KeyData] = []
+        all_keys: list[KeyData] = []
         for key_data in self._iterate_through_key_datas(include_secrets=include_secrets, skip_public_only=False):
             all_keys.append(key_data)
 
         return all_keys
 
-    def get_all_public_keys(self) -> List[ObservationRoot]:
+    def get_all_public_keys(self) -> list[ObservationRoot]:
         """
         Returns all public keys.
         """
-        all_keys: List[ObservationRoot] = []
+        all_keys: list[ObservationRoot] = []
         for key_data in self._iterate_through_key_datas(skip_public_only=False):
             all_keys.append(key_data.observation_root)
 
         return all_keys
 
-    def get_all_public_keys_of_type(self, key_type: Type[_T_ObservationRoot]) -> List[_T_ObservationRoot]:
-        all_keys: List[_T_ObservationRoot] = []
+    def get_all_public_keys_of_type(self, key_type: type[_T_ObservationRoot]) -> list[_T_ObservationRoot]:
+        all_keys: list[_T_ObservationRoot] = []
         for key_data in self._iterate_through_key_datas(skip_public_only=False):
             if key_data.key_type == TYPES_TO_KEY_TYPES[key_type]:
                 assert isinstance(key_data.observation_root, key_type)

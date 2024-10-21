@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple
-
 SSL_TEST_PRIVATE_CA_CRT = b"""-----BEGIN CERTIFICATE-----
 MIIDKTCCAhGgAwIBAgIUD5VUdvJQlRhGJg2WJ+/K8I2sYZcwDQYJKoZIhvcNAQEL
 BQAwRDENMAsGA1UECgwEQ2hpYTEQMA4GA1UEAwwHQ2hpYSBDQTEhMB8GA1UECwwY
@@ -665,9 +663,9 @@ NCqsxWTlPvhxmdJj/TVownPJrzA=
 -----END PRIVATE KEY-----
 """
 
-SSL_TEST_PRIVATE_CA_CERT_AND_KEY_6: Tuple[bytes, bytes] = (SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY)
+SSL_TEST_PRIVATE_CA_CERT_AND_KEY_6: tuple[bytes, bytes] = (SSL_TEST_PRIVATE_CA_CRT, SSL_TEST_PRIVATE_CA_KEY)
 
-SSL_TEST_NODE_CERTS_AND_KEYS_6: Dict[str, Dict[str, Dict[str, bytes]]] = {
+SSL_TEST_NODE_CERTS_AND_KEYS_6: dict[str, dict[str, dict[str, bytes]]] = {
     "full_node": {
         "private": {"crt": SSL_TEST_FULLNODE_PRIVATE_CRT, "key": SSL_TEST_FULLNODE_PRIVATE_KEY},
         "public": {"crt": SSL_TEST_FULLNODE_PUBLIC_CRT, "key": SSL_TEST_FULLNODE_PUBLIC_KEY},

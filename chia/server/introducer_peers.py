@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import time
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import Optional
 
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
@@ -40,7 +40,7 @@ class IntroducerPeers:
     """
 
     def __init__(self) -> None:
-        self._peers: Set[VettedPeer] = set()
+        self._peers: set[VettedPeer] = set()
 
     def add(self, peer: Optional[PeerInfo]) -> bool:
         if peer is None or not peer.port:
@@ -66,7 +66,7 @@ class IntroducerPeers:
 
     def get_peers(
         self, max_peers: int = 0, randomize: bool = False, recent_threshold: float = 9999999
-    ) -> List[VettedPeer]:
+    ) -> list[VettedPeer]:
         target_peers = [peer for peer in self._peers if time.time() - float(peer.time_added) < recent_threshold]
         if not max_peers or max_peers > len(target_peers):
             max_peers = len(target_peers)

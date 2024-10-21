@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle_conditions import SpendBundleConditions, SpendConditions
@@ -12,7 +10,7 @@ from chia.util.ints import uint32, uint64
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 parent_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
 phs = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
-spends: List[SpendConditions] = [
+spends: list[SpendConditions] = [
     SpendConditions(
         coin_ids[0],
         parent_ids[0],

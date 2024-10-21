@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from functools import cmp_to_key
-from typing import Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Optional, TypeVar
 
 from aiosqlite import Row
 
@@ -19,10 +19,10 @@ from chia.wallet.vc_wallet.vc_drivers import VCLineageProof, VerifiedCredential
 
 @dataclasses.dataclass(frozen=True)
 class VCProofs:
-    key_value_pairs: Dict[str, str]
+    key_value_pairs: dict[str, str]
 
     def as_program(self) -> Program:
-        def byte_sort_pairs(f1: Tuple[str, str], f2: Tuple[str, str]) -> int:
+        def byte_sort_pairs(f1: tuple[str, str], f2: tuple[str, str]) -> int:
             return 1 if Program.to([10, (1, f1[0]), (1, f2[0])]).run([]) == Program.to(None) else -1
 
         prog: Program = Program.to(
@@ -45,7 +45,7 @@ class VCProofs:
         first: Program = prog.at("f")
         rest: Program = prog.at("r")
         if first.atom is None and rest.atom is None:
-            final_dict: Dict[str, str] = {}
+            final_dict: dict[str, str] = {}
             final_dict.update(VCProofs.from_program(first).key_value_pairs)
             final_dict.update(VCProofs.from_program(rest).key_value_pairs)
             return VCProofs(final_dict)
@@ -54,7 +54,7 @@ class VCProofs:
         else:
             raise ValueError("Malformatted VCProofs program")  # pragma: no cover
 
-    def prove_keys(self, keys: List[str], tree: Optional[Program] = None) -> Program:
+    def prove_keys(self, keys: list[str], tree: Optional[Program] = None) -> Program:
         if tree is None:
             tree = self.as_program()
 
@@ -114,7 +114,7 @@ class VCStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: Type[_T_VCStore], db_wrapper: DBWrapper2) -> _T_VCStore:
+    async def create(cls: type[_T_VCStore], db_wrapper: DBWrapper2) -> _T_VCStore:
         self = cls()
 
         self.db_wrapper = db_wrapper
@@ -191,7 +191,7 @@ class VCStore:
             return _row_to_vc_record(row)
         return None
 
-    async def get_vc_records_by_providers(self, provider_ids: List[bytes32]) -> List[VCRecord]:  # pragma: no cover
+    async def get_vc_records_by_providers(self, provider_ids: list[bytes32]) -> list[VCRecord]:  # pragma: no cover
         """
         Checks DB for VCs with a proof_provider in a specified list and returns them.
         """
@@ -206,7 +206,7 @@ class VCStore:
 
         return [_row_to_vc_record(row) for row in rows]
 
-    async def get_unconfirmed_vcs(self) -> List[VCRecord]:
+    async def get_unconfirmed_vcs(self) -> list[VCRecord]:
         """
         Returns all VCs that have not yet been marked confirmed (confirmed_height == 0)
         """
@@ -222,7 +222,7 @@ class VCStore:
         self,
         start_index: int = 0,
         count: int = 50,
-    ) -> List[VCRecord]:
+    ) -> list[VCRecord]:
         """
         Return all VCs
         :param start_index: Start index

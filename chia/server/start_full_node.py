@@ -5,7 +5,7 @@ import os
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
@@ -31,10 +31,10 @@ log = logging.getLogger(__name__)
 
 async def create_full_node_service(
     root_path: pathlib.Path,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-    override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+    override_capabilities: Optional[list[tuple[uint16, str]]] = None,
 ) -> FullNodeService:
     service_config = config[SERVICE_NAME]
 
@@ -70,7 +70,7 @@ async def create_full_node_service(
     )
 
 
-async def async_main(service_config: Dict[str, Any]) -> int:
+async def async_main(service_config: dict[str, Any]) -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config[SERVICE_NAME] = service_config

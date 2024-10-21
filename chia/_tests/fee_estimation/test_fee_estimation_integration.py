@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import types
-from typing import Dict, List
 
 import pytest
 from chia_rs import Coin
@@ -41,7 +40,7 @@ def make_mempoolitem() -> MempoolItem:
     block_height = 1
 
     fee = uint64(10000000)
-    spends: List[SpendConditions] = []
+    spends: list[SpendConditions] = []
     conds = SpendBundleConditions(spends, 0, 0, 0, None, None, [], cost, 0, 0, False)
     mempool_item = MempoolItem(
         spend_bundle,
@@ -125,7 +124,7 @@ def test_item_not_removed_if_not_added() -> None:
 
 
 def test_mempool_fee_estimator_remove_item() -> None:
-    should_call_fee_estimator_remove: Dict[MempoolRemoveReason, int] = {
+    should_call_fee_estimator_remove: dict[MempoolRemoveReason, int] = {
         MempoolRemoveReason.BLOCK_INCLUSION: 0,
         MempoolRemoveReason.CONFLICT: 1,
         MempoolRemoveReason.POOL_FULL: 1,
@@ -188,7 +187,7 @@ def test_current_block_height_new_block() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     height = uint32(10)
-    included_items: List[MempoolItemInfo] = []
+    included_items: list[MempoolItemInfo] = []
     mempool.fee_estimator.new_block(FeeBlockInfo(height, included_items))
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
 
@@ -197,7 +196,7 @@ def test_current_block_height_new_height_then_new_block() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     height = uint32(11)
-    included_items: List[MempoolItemInfo] = []
+    included_items: list[MempoolItemInfo] = []
     fee_estimator.new_block_height(uint32(height - 1))
     mempool.fee_estimator.new_block(FeeBlockInfo(height, included_items))
     assert mempool.fee_estimator.current_block_height == height  # type: ignore[attr-defined]
@@ -207,7 +206,7 @@ def test_current_block_height_new_block_then_new_height() -> None:
     fee_estimator = FeeEstimatorInterfaceIntegrationVerificationObject()
     mempool = Mempool(test_mempool_info, fee_estimator)
     height = uint32(12)
-    included_items: List[MempoolItemInfo] = []
+    included_items: list[MempoolItemInfo] = []
     fee_estimator.new_block_height(uint32(height - 1))
     mempool.fee_estimator.new_block(FeeBlockInfo(height, included_items))
     fee_estimator.new_block_height(uint32(height + 1))

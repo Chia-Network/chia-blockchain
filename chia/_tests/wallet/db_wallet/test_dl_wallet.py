@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import Any, List
+from typing import Any
 
 import pytest
 
@@ -591,7 +591,7 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
         await dl_wallet_1.create_new_mirror(
             launcher_id_2, uint64(3), [b"foo", b"bar"], action_scope, fee=uint64(1_999_999_999_999)
         )
-    additions: List[Coin] = []
+    additions: list[Coin] = []
     for tx in action_scope.side_effects.transactions:
         if tx.spend_bundle is not None:
             additions.extend(tx.spend_bundle.additions())

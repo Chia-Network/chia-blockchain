@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
-
 import pytest
 from chia_rs import G2Element
 
@@ -42,11 +40,11 @@ NIL_PH = Program.to(None).get_tree_hash()
 async def test_graftroot(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, sim_client):
         # Create the coin we're testing
-        all_values: List[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
+        all_values: list[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
         root, proofs = build_merkle_tree(all_values)
         p2_conditions = Program.to((1, [[51, ACS_PH, 0]]))  # An coin to create to make sure this hits the blockchain
         desired_key_values = ((bytes32([0] * 32), bytes32([1] * 32)), (bytes32([7] * 32), bytes32([8] * 32)))
-        desired_row_hashes: List[bytes32] = [build_merkle_tree_from_binary_tree(kv)[0] for kv in desired_key_values]
+        desired_row_hashes: list[bytes32] = [build_merkle_tree_from_binary_tree(kv)[0] for kv in desired_key_values]
         fake_struct: Program = Program.to((ACS_PH, NIL_PH))
         graftroot_puzzle: Program = GRAFTROOT_MOD.curry(
             # Do everything twice to test depending on multiple singleton updates
@@ -61,21 +59,21 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
         ].coin
 
         # Build some merkle trees that won't satidy the requirements
-        def filter_all(values: List[bytes32]) -> List[bytes32]:
+        def filter_all(values: list[bytes32]) -> list[bytes32]:
             return [h for i, h in enumerate(values) if (h, values[min(i, i + 1)]) not in desired_key_values]
 
-        def filter_to_only_one(values: List[bytes32]) -> List[bytes32]:
+        def filter_to_only_one(values: list[bytes32]) -> list[bytes32]:
             return [h for i, h in enumerate(values) if (h, values[min(i, i + 1)]) not in desired_key_values[1:]]
 
         # And one that will
-        def filter_none(values: List[bytes32]) -> List[bytes32]:
+        def filter_none(values: list[bytes32]) -> list[bytes32]:
             return values
 
         for list_filter in (filter_all, filter_to_only_one, filter_none):
             # Create the "singleton"
             filtered_values = list_filter(all_values)
             root, proofs = build_merkle_tree(filtered_values)
-            filtered_row_hashes: Dict[bytes32, Tuple[int, List[bytes32]]] = {
+            filtered_row_hashes: dict[bytes32, tuple[int, list[bytes32]]] = {
                 simplify_merkle_proof(v, (proofs[v][0], [proofs[v][1][0]])): (proofs[v][0] >> 1, proofs[v][1][1:])
                 for v in filtered_values
             }

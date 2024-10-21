@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -13,7 +13,7 @@ PUZZLE = load_clvm("p2_singleton_via_delegated_puzzle_safe.clsp")
 PUZZLE_HASH = PUZZLE.get_tree_hash()
 QUOTED_PUZZLE = Program.to((1, PUZZLE))
 QUOTED_PUZZLE_HASH = QUOTED_PUZZLE.get_tree_hash()
-PRE_HASHED_HASHES: Dict[bytes32, bytes32] = {
+PRE_HASHED_HASHES: dict[bytes32, bytes32] = {
     SINGLETON_MOD_HASH: shatree_atom(SINGLETON_MOD_HASH),
     SINGLETON_LAUNCHER_HASH: shatree_atom(SINGLETON_LAUNCHER_HASH),
 }

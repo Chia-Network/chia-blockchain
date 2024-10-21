@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from subprocess import check_call
-from typing import Dict, List
 
 import click
 import psutil
@@ -32,8 +31,8 @@ class Counters:
 def main(pid: int, output: str, threads: bool) -> None:
     process = psutil.Process(pid)
 
-    stats: Dict[int, Dict[int, Counters]] = {pid: {}}
-    timestamps: List[float] = []
+    stats: dict[int, dict[int, Counters]] = {pid: {}}
+    timestamps: list[float] = []
 
     try:
         step = 0

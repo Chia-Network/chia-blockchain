@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Awaitable
 from contextlib import AsyncExitStack
 from dataclasses import replace
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Literal, Optional, Tuple
+from typing import Any, Callable, Literal, Optional
 
 import pytest
 
@@ -55,7 +56,7 @@ async def ignore_block_validation(
     if "standard_block_tools" in request.keywords:
         return None
 
-    async def validate_block_body(*args: Any, **kwargs: Any) -> Tuple[Literal[None], NPCResult]:
+    async def validate_block_body(*args: Any, **kwargs: Any) -> tuple[Literal[None], NPCResult]:
         return None, args[7]
 
     def create_wrapper(original_create: Any) -> Any:
@@ -128,7 +129,7 @@ async def wallet_environments(
             pytest.skip("Skipping not specified reuse_puzhash mode")
     assert len(request.param["blocks_needed"]) == request.param["num_environments"]
     if "config_overrides" in request.param:
-        config_overrides: Dict[str, Any] = request.param["config_overrides"]
+        config_overrides: dict[str, Any] = request.param["config_overrides"]
     else:  # pragma: no cover
         config_overrides = {}
     async with setup_simulators_and_wallets_service(
@@ -141,7 +142,7 @@ async def wallet_environments(
 
         full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **config_overrides}
 
-        wallet_rpc_clients: List[WalletRpcClient] = []
+        wallet_rpc_clients: list[WalletRpcClient] = []
         async with AsyncExitStack() as astack:
             for service in wallet_services:
                 service._node.config = {
@@ -171,7 +172,7 @@ async def wallet_environments(
                     )
                 )
 
-            wallet_states: List[WalletState] = []
+            wallet_states: list[WalletState] = []
             for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
                 if blocks_needed > 0:
                     await full_node[0]._api.farm_blocks_to_wallet(

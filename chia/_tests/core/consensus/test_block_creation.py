@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 
 from chia._tests.core.make_block_generator import make_block_generator
@@ -15,9 +13,9 @@ from chia.util.ints import uint32, uint64
 
 @pytest.mark.parametrize("add_amount", [[0], [1, 2, 3], []])
 @pytest.mark.parametrize("rem_amount", [[0], [1, 2, 3], []])
-def test_compute_block_fee(add_amount: List[int], rem_amount: List[int]) -> None:
-    additions: List[Coin] = [Coin(bytes32.random(), bytes32.random(), uint64(amt)) for amt in add_amount]
-    removals: List[Coin] = [Coin(bytes32.random(), bytes32.random(), uint64(amt)) for amt in rem_amount]
+def test_compute_block_fee(add_amount: list[int], rem_amount: list[int]) -> None:
+    additions: list[Coin] = [Coin(bytes32.random(), bytes32.random(), uint64(amt)) for amt in add_amount]
+    removals: list[Coin] = [Coin(bytes32.random(), bytes32.random(), uint64(amt)) for amt in rem_amount]
 
     # the fee is the left-overs from the removals (spent) coins after deducting
     # the newly created coins (additions)

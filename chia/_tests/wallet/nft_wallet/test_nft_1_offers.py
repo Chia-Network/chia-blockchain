@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Any, Callable, Coroutine, Optional, Tuple
+from collections.abc import Coroutine
+from typing import Any, Callable, Optional
 
 import pytest
 
@@ -1104,7 +1105,7 @@ async def test_complex_nft_offer(
     self_hostname: str,
     two_wallet_nodes: Any,
     trusted: Any,
-    royalty_pts: Tuple[int, int, int],
+    royalty_pts: tuple[int, int, int],
     seeded_random: random.Random,
 ) -> None:
     """

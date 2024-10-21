@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 import time
 import types
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Type
+from collections.abc import Awaitable
+from typing import Any, Callable, Optional
 
 import pytest
 from chia_rs import G1Element, G2Element, PrivateKey
@@ -69,14 +70,14 @@ class AnyoneCanSpend(Wallet):
         puzzle_hash: bytes32,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[Set[Coin]] = None,
-        primaries: Optional[List[Payment]] = None,
-        memos: Optional[List[bytes]] = None,
-        puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        coins: Optional[set[Coin]] = None,
+        primaries: Optional[list[Payment]] = None,
+        memos: Optional[list[bytes]] = None,
+        puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
-        condition_list: List[Payment] = [] if primaries is None else primaries
+        condition_list: list[Payment] = [] if primaries is None else primaries
         condition_list.append(Payment(puzzle_hash, amount, [] if memos is None else memos))
         non_change_amount: int = (
             sum(c.amount for c in condition_list)
@@ -138,14 +139,14 @@ class AnyoneCanSpend(Wallet):
         else:
             raise ValueError("puzzle hash was not ACS_PH")  # pragma: no cover
 
-    async def sign_message(self, message: str, puzzle_hash: bytes32, mode: SigningMode) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str, puzzle_hash: bytes32, mode: SigningMode) -> tuple[G1Element, G2Element]:
         raise ValueError("This won't work")  # pragma: no cover
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         return ACS_PH
 
     async def apply_signatures(
-        self, spends: List[Spend], signing_responses: List[SigningResponse]
+        self, spends: list[Spend], signing_responses: list[SigningResponse]
     ) -> SignedTransaction:
         return SignedTransaction(
             TransactionInfo(spends),
@@ -154,7 +155,7 @@ class AnyoneCanSpend(Wallet):
 
     async def execute_signing_instructions(
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
-    ) -> List[SigningResponse]:
+    ) -> list[SigningResponse]:
         if len(signing_instructions.targets) > 0:
             raise ValueError("This won't work")  # pragma: no cover
         else:
@@ -168,13 +169,13 @@ class AnyoneCanSpend(Wallet):
 
     async def make_solution(
         self,
-        primaries: List[Payment],
+        primaries: list[Payment],
         action_scope: WalletActionScope,
-        conditions: Tuple[Condition, ...] = tuple(),
+        conditions: tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
         **kwargs: Any,
     ) -> Program:
-        condition_list: List[Condition] = [CreateCoin(p.puzzle_hash, p.amount, p.memos) for p in primaries]
+        condition_list: list[Condition] = [CreateCoin(p.puzzle_hash, p.amount, p.memos) for p in primaries]
         condition_list.append(ReserveFee(fee))
         condition_list.extend(conditions)
         prog: Program = Program.to([c.to_program() for c in condition_list])
@@ -198,7 +199,7 @@ class AnyoneCanSpend(Wallet):
     def handle_own_derivation(self) -> bool:
         return True
 
-    def derivation_for_index(self, index: int) -> List[DerivationRecord]:
+    def derivation_for_index(self, index: int) -> list[DerivationRecord]:
         return [
             DerivationRecord(
                 uint32(index),
@@ -212,7 +213,7 @@ class AnyoneCanSpend(Wallet):
 
 
 async def acs_setup(wallet_environments: WalletTestFramework, monkeypatch: pytest.MonkeyPatch) -> None:
-    def get_main_wallet_driver(self: WalletStateManager, observation_root: ObservationRoot) -> Type[MainWalletProtocol]:
+    def get_main_wallet_driver(self: WalletStateManager, observation_root: ObservationRoot) -> type[MainWalletProtocol]:
         return AnyoneCanSpend
 
     monkeypatch.setattr(

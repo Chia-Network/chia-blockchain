@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL
@@ -542,7 +542,7 @@ def test_validator() -> None:
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
     parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Optional[Any]] = []
+    cat_parent_amt_list: list[Optional[Any]] = []
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()])
 
     output_conds = spend_p2_singleton.run(spend_p2_singleton_solution)
@@ -721,7 +721,7 @@ def test_merge_p2_singleton() -> None:
     ]
     amounts = [uint64(1000), uint64(2000), uint64(3000)]
     parent_puzhash_amounts = []
-    merge_coin_ids: List[bytes32] = []
+    merge_coin_ids: list[bytes32] = []
     for pid, amt in zip(parent_ids, amounts):
         parent_puzhash_amounts.append([pid, my_puzhash, amt])
         merge_coin_ids.append(Coin(pid, my_puzhash, amt).name())
@@ -825,7 +825,7 @@ def test_treasury() -> None:
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
     parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Optional[Any]] = []
+    cat_parent_amt_list: list[Optional[Any]] = []
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()])
 
     proposal: Program = proposal_curry_one.curry(
@@ -1072,7 +1072,7 @@ def test_proposal_lifecycle() -> None:
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
     parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Optional[Any]] = []
+    cat_parent_amt_list: list[Optional[Any]] = []
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
 
     # Setup Proposal
@@ -1242,10 +1242,10 @@ def test_proposal_lifecycle() -> None:
 async def do_spend(
     sim: SpendSim,
     sim_client: SimClient,
-    coins: List[Coin],
-    puzzles: List[Program],
-    solutions: List[Program],
-) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
+    coins: list[Coin],
+    puzzles: list[Program],
+    solutions: list[Program],
+) -> tuple[MempoolInclusionStatus, Optional[Err]]:
     spends = []
     for coin, puzzle, solution in zip(coins, puzzles, solutions):
         spends.append(make_spend(coin, puzzle, solution))

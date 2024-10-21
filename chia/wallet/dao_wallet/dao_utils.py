@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
 from itertools import chain
-from typing import Any, Iterator, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from clvm.EvalError import EvalError
 
@@ -217,7 +218,7 @@ def get_p2_singleton_puzhash(treasury_id: bytes32, asset_id: Optional[bytes32] =
 
 def get_lockup_puzzle(
     cat_tail_hash: Union[bytes32, Program],
-    previous_votes_list: Union[List[Optional[bytes32]], Program],
+    previous_votes_list: Union[list[Optional[bytes32]], Program],
     innerpuz: Optional[Program],
 ) -> Program:
     self_hash: Program = DAO_LOCKUP_MOD.curry(
@@ -570,7 +571,7 @@ def uncurry_proposal_validator(proposal_validator_program: Program) -> Program:
     return curried_args
 
 
-def uncurry_treasury(treasury_puzzle: Program) -> List[Program]:
+def uncurry_treasury(treasury_puzzle: Program) -> list[Program]:
     try:
         mod, curried_args = treasury_puzzle.uncurry()
     except ValueError as e:  # pragma: no cover
@@ -582,7 +583,7 @@ def uncurry_treasury(treasury_puzzle: Program) -> List[Program]:
     return list(curried_args.as_iter())
 
 
-def uncurry_proposal(proposal_puzzle: Program) -> Tuple[Program, Program]:
+def uncurry_proposal(proposal_puzzle: Program) -> tuple[Program, Program]:
     try:
         mod, curried_args = proposal_puzzle.uncurry()
     except ValueError as e:  # pragma: no cover
@@ -598,7 +599,7 @@ def uncurry_proposal(proposal_puzzle: Program) -> Tuple[Program, Program]:
     return curried_args, c_a
 
 
-def uncurry_lockup(lockup_puzzle: Program) -> Tuple[Program, Program]:
+def uncurry_lockup(lockup_puzzle: Program) -> tuple[Program, Program]:
     try:
         mod, curried_args = lockup_puzzle.uncurry()
     except ValueError as e:  # pragma: no cover
@@ -615,7 +616,7 @@ def uncurry_lockup(lockup_puzzle: Program) -> Tuple[Program, Program]:
 
 
 # This is the proposed puzzle
-def get_proposal_args(puzzle: Program) -> Tuple[ProposalType, Program]:
+def get_proposal_args(puzzle: Program) -> tuple[ProposalType, Program]:
     try:
         mod, curried_args = puzzle.uncurry()
     except ValueError as e:  # pragma: no cover
@@ -697,7 +698,7 @@ def match_finished_puzzle(mod: Program, curried_args: Program) -> Optional[Itera
 
 # This is used in WSM to determine whether we have a dao funding spend
 def match_funding_puzzle(
-    uncurried: UncurriedPuzzle, solution: Program, coin: Coin, dao_ids: List[bytes32] = []
+    uncurried: UncurriedPuzzle, solution: Program, coin: Coin, dao_ids: list[bytes32] = []
 ) -> Optional[bool]:
     if not dao_ids:
         return None
@@ -744,14 +745,14 @@ def match_dao_cat_puzzle(uncurried: UncurriedPuzzle) -> Optional[Iterator[Progra
 
 def generate_simple_proposal_innerpuz(
     treasury_id: bytes32,
-    recipient_puzhashes: List[bytes32],
-    amounts: List[uint64],
-    asset_types: List[Optional[bytes32]] = [None],
+    recipient_puzhashes: list[bytes32],
+    amounts: list[uint64],
+    asset_types: list[Optional[bytes32]] = [None],
 ) -> Program:
     if len(recipient_puzhashes) != len(amounts) != len(asset_types):  # pragma: no cover
         raise ValueError("Mismatch in the number of recipients, amounts, or asset types")
-    xch_conds: List[Any] = []
-    cat_conds: List[Any] = []
+    xch_conds: list[Any] = []
+    cat_conds: list[Any] = []
     seen_assets = set()
     for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
         if asset_type:
