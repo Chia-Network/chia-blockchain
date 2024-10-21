@@ -5,7 +5,7 @@ from dataclasses import dataclass, field, replace
 from typing import List, Literal
 
 import pytest
-from chia_rs import G2Element
+from chia_rs import G1Element, G2Element, AugSchemeMPL
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.program import Program
@@ -14,6 +14,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.conditions import CreateCoinAnnouncement
 from chia.wallet.puzzles.custody.custody_architecture import (
+    BLSMember,
     MemberOrDPuz,
     MofN,
     ProvenSpend,
@@ -296,6 +297,80 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                     assert result == (MempoolInclusionStatus.SUCCESS, None)
                     await sim.farm_block()
                     await sim.rewind(block_height)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "with_restrictions",
+    [True, False],
+)
+async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bool) -> None:
+    """
+    This tests the various functionality of the MofN drivers including that m of n puzzles can be constructed and solved
+    for every combination of its nodes from size 1 - 5.
+    """
+    restrictions: List[Restriction[MemberOrDPuz]] = [ACSDPuzValidator()] if with_restrictions else []
+    async with sim_and_client() as (sim, client):
+        m = 2
+        n = 4
+        keys = []
+        for i in range(0, n):
+            sk = AugSchemeMPL.key_gen(bytes.fromhex(str(n) * 64))
+            keys.append(sk)
+        
+        m_of_n = MofN(m, [PuzzleWithRestrictions(n_i, restrictions, BLSMember(keys[n_i].public_key())) for n_i in range(0, n)])
+
+        # Farm and find coin
+        await sim.farm_block(m_of_n.puzzle_hash(0))
+        m_of_n_coin = (
+            await client.get_coin_records_by_puzzle_hashes([m_of_n.puzzle_hash(0)], include_spent_coins=False)
+        )[0].coin
+        block_height = sim.block_height
+
+        # Create two announcements to be asserted from a) the delegated puzzle b) the puzzle in the MofN
+        announcement_1 = CreateCoinAnnouncement(msg=b"foo", coin_id=m_of_n_coin.name())
+        announcement_2 = CreateCoinAnnouncement(msg=b"bar", coin_id=m_of_n_coin.name())
+
+        # Test a spend of every combination of m of n
+        for indexes in itertools.combinations(range(0, n), m):
+            breakpoint()
+            proven_spends = {
+                PuzzleWithRestrictions(index, restrictions, ACSMember()).puzzle_hash(
+                    _top_level=False
+                ): ProvenSpend(
+                    PuzzleWithRestrictions(index, restrictions, ACSMember()).puzzle_reveal(_top_level=False),
+                    PuzzleWithRestrictions(index, restrictions, ACSMember()).solve(
+                        [],
+                        [Program.to(None)] if with_restrictions else [],
+                        []  # no solution required for this member puzzle, only sig
+                    ),
+                )
+                for index in indexes
+            }
+            sig = None
+            for index in indexes:
+                keys[index].sign()
+            proof = m_of_n.solve(proven_spends)
+            sb = WalletSpendBundle(
+                [
+                    make_spend(
+                        m_of_n_coin,
+                        m_of_n.puzzle(0),
+                        m_of_n.solve(proven_spends)
+                    )
+                ],
+                sig,
+            )
+            breakpoint()
+            result = await client.push_tx(
+                cost_logger.add_cost(
+                    f"M={m}, N={n}, indexes={indexes}{'w/ res.' if with_restrictions else ''}",
+                    sb,
+                )
+            )
+            assert result == (MempoolInclusionStatus.SUCCESS, None)
+            await sim.farm_block()
+            await sim.rewind(block_height)
 
 
 @dataclass(frozen=True)

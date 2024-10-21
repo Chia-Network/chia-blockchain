@@ -209,7 +209,7 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
     def memo(self, nonce: int) -> Program:  # pragma: no cover
         raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
 
-    def puzzle(self, nonce: int) -> Program:
+    def puzzle(self, _nonce: int) -> Program:
         if self.m == self.n:
             return NofN_MOD.curry([member.puzzle_reveal(_top_level=False) for member in self.members])
         elif self.m > 1:
@@ -229,11 +229,11 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
 class BLSMember:
     public_key: G1Element
 
-    def puzzle(self) -> Program:
-        return BLS_MEMBER_MOD.curry(self.public_key)
+    def puzzle(self, _nonce) -> Program:
+        return BLS_MEMBER_MOD.curry(bytes(self.public_key))
 
-    def puzzle_hash(self) -> bytes32:
-        return self.puzzle().get_tree_hash()
+    def puzzle_hash(self, nonce) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()
 
 # The top-level object inside every "outer" puzzle
 @dataclass(frozen=True)
@@ -413,8 +413,8 @@ class PuzzleWithRestrictions:
 
     def solve(
         self,
-        member_validator_solutions: List[Program],
-        dpuz_validator_solutions: List[Program],
+        member_validator_solutions: List[Program],  # solution for the restriction puzzle
+        dpuz_validator_solutions: List[Program],  # 
         member_solution: Program,
         delegated_puzzle_and_solution: Optional[Tuple[Program, Program]] = None,
     ) -> Program:
