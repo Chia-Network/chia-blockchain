@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 from typing import ClassVar, Dict, List, Literal, Mapping, Optional, Protocol, Tuple, TypeVar, Union
 
 from typing_extensions import runtime_checkable
-
+from chia_rs import G1Element
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -18,6 +18,9 @@ OneOfN_MOD = load_clvm_maybe_recompile(
 )
 NofN_MOD = load_clvm_maybe_recompile(
     "n_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.optimization_puzzles"
+)
+BLS_MEMBER_MOD = load_clvm_maybe_recompile(
+    "bls_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
 )
 RESTRICTION_MOD = load_clvm_maybe_recompile(
     "restrictions.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
@@ -221,6 +224,16 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
         else:
             return self.puzzle(nonce).get_tree_hash()
 
+
+@dataclass(frozen=True)
+class BLSMember:
+    public_key: G1Element
+
+    def puzzle(self) -> Program:
+        return BLS_MEMBER_MOD.curry(self.public_key)
+
+    def puzzle_hash(self) -> bytes32:
+        return self.puzzle().get_tree_hash()
 
 # The top-level object inside every "outer" puzzle
 @dataclass(frozen=True)
