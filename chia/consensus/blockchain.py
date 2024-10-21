@@ -345,9 +345,8 @@ class Blockchain:
             # We have already validated the block, but if it's not part of the
             # main chain, we still need to re-run it to update the additions and
             # removals in fork_info.
-            if extending_main_chain:
-                await self.advance_fork_info(block, fork_info)
-                fork_info.include_spends(pre_validation_result.conds, block, header_hash)
+            await self.advance_fork_info(block, fork_info)
+            fork_info.include_spends(pre_validation_result.conds, block, header_hash)
             self.add_block_record(block_rec)
             return AddBlockResult.ALREADY_HAVE_BLOCK, None, None
 
