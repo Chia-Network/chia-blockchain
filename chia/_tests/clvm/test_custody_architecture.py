@@ -314,16 +314,19 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
         m = 2
         n = 4
         keys = []
-        for i in range(0, n):
+        delegated_puzzle = Program.to(1)
+        delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
+        for _ in range(0, n):
             sk = AugSchemeMPL.key_gen(bytes.fromhex(str(n) * 64))
             keys.append(sk)
-        
-        m_of_n = MofN(m, [PuzzleWithRestrictions(n_i, restrictions, BLSMember(keys[n_i].public_key())) for n_i in range(0, n)])
+        m_of_n = PuzzleWithRestrictions(
+            0, [], MofN(m, [PuzzleWithRestrictions(n_i, restrictions, BLSMember(keys[n_i].public_key())) for n_i in range(0, n)])
+        )
 
         # Farm and find coin
-        await sim.farm_block(m_of_n.puzzle_hash(0))
+        await sim.farm_block(m_of_n.puzzle_hash())
         m_of_n_coin = (
-            await client.get_coin_records_by_puzzle_hashes([m_of_n.puzzle_hash(0)], include_spent_coins=False)
+            await client.get_coin_records_by_puzzle_hashes([m_of_n.puzzle_hash()], include_spent_coins=False)
         )[0].coin
         block_height = sim.block_height
 
@@ -333,13 +336,12 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
 
         # Test a spend of every combination of m of n
         for indexes in itertools.combinations(range(0, n), m):
-            breakpoint()
             proven_spends = {
-                PuzzleWithRestrictions(index, restrictions, ACSMember()).puzzle_hash(
+                PuzzleWithRestrictions(index, restrictions, BLSMember(keys[index].public_key())).puzzle_hash(
                     _top_level=False
                 ): ProvenSpend(
-                    PuzzleWithRestrictions(index, restrictions, ACSMember()).puzzle_reveal(_top_level=False),
-                    PuzzleWithRestrictions(index, restrictions, ACSMember()).solve(
+                    PuzzleWithRestrictions(index, restrictions, BLSMember(keys[index].public_key())).puzzle_reveal(_top_level=False),
+                    PuzzleWithRestrictions(index, restrictions, BLSMember(keys[index].public_key())).solve(
                         [],
                         [Program.to(None)] if with_restrictions else [],
                         []  # no solution required for this member puzzle, only sig
@@ -347,16 +349,29 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
                 )
                 for index in indexes
             }
-            sig = None
+            sig = G2Element()
             for index in indexes:
-                keys[index].sign()
-            proof = m_of_n.solve(proven_spends)
+                sig = AugSchemeMPL.aggregate([sig, keys[index].sign(delegated_puzzle_hash)])
+            assert isinstance(m_of_n.puzzle, MofN)
             sb = WalletSpendBundle(
                 [
                     make_spend(
                         m_of_n_coin,
-                        m_of_n.puzzle(0),
-                        m_of_n.solve(proven_spends)
+                        m_of_n.puzzle_reveal(),
+                        m_of_n.solve(
+                            [],
+                            [],
+                            m_of_n.puzzle.solve(proven_spends),
+                            (
+                                delegated_puzzle,
+                                Program.to(
+                                    [
+                                        announcement_2.to_program(),
+                                        announcement_2.corresponding_assertion().to_program(),
+                                    ]
+                                ),
+                            )
+                        )
                     )
                 ],
                 sig,
