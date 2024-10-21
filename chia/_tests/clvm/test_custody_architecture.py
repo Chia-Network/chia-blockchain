@@ -8,6 +8,7 @@ import pytest
 from chia_rs import G1Element, G2Element, AugSchemeMPL
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
@@ -351,7 +352,10 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
             }
             sig = G2Element()
             for index in indexes:
-                sig = AugSchemeMPL.aggregate([sig, keys[index].sign(delegated_puzzle_hash)])
+                sig = AugSchemeMPL.aggregate([
+                    sig, 
+                    keys[index].sign(delegated_puzzle_hash + m_of_n_coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),  # noqa)
+                ])
             assert isinstance(m_of_n.puzzle, MofN)
             sb = WalletSpendBundle(
                 [
@@ -376,7 +380,6 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
                 ],
                 sig,
             )
-            breakpoint()
             result = await client.push_tx(
                 cost_logger.add_cost(
                     f"M={m}, N={n}, indexes={indexes}{'w/ res.' if with_restrictions else ''}",
