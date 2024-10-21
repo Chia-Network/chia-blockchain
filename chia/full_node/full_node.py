@@ -1164,6 +1164,7 @@ class FullNode:
         ) -> None:
             nonlocal blockchain
             nonlocal fork_info
+            first_batch = True
 
             vs = ValidationState(ssi, diff, prev_ses_block)
 
@@ -1175,11 +1176,18 @@ class FullNode:
                         return None
                     peer, blocks = res
 
-                    blocks_to_validate = await self.filter_blocks(blockchain, blocks, fork_info, vs)
+                    # skip_blocks is only relevant at the start of the sync,
+                    # to skip blocks we already have in the database (and have
+                    # been validated). Once we start validating blocks, we
+                    # shouldn't be skipping any.
+                    blocks_to_validate = await self.skip_blocks(blockchain, blocks, fork_info, vs)
+                    assert first_batch or len(blocks_to_validate) == len(blocks)
                     next_validation_state = copy.copy(vs)
 
                     if len(blocks_to_validate) == 0:
                         continue
+
+                    first_batch = False
 
                     futures: list[Awaitable[PreValidationResult]] = []
                     for block in blocks_to_validate:
@@ -1359,7 +1367,7 @@ class FullNode:
 
         pre_validate_start = time.monotonic()
         blockchain = AugmentedBlockchain(self.blockchain)
-        blocks_to_validate = await self.filter_blocks(blockchain, all_blocks, fork_info, vs)
+        blocks_to_validate = await self.skip_blocks(blockchain, all_blocks, fork_info, vs)
 
         if len(blocks_to_validate) == 0:
             return True, None, None
@@ -1390,7 +1398,7 @@ class FullNode:
             )
         return err is None, agg_state_change_summary, err
 
-    async def filter_blocks(
+    async def skip_blocks(
         self,
         blockchain: AugmentedBlockchain,
         all_blocks: list[FullBlock],
