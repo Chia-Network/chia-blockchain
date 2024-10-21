@@ -67,6 +67,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
 
     inst_rpc_client = CoinsCombineRpcClient()  # pylint: disable=no-value-for-parameter
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
+    assert sum(coin.amount for coin in STD_TX.removals) < 500_000_000_000
     command_args = [
         "wallet",
         "coins",
@@ -74,7 +75,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         FINGERPRINT_ARG,
         "-i1",
         "--largest-first",
-        "-m0.001",
+        "-m0.5",
         "--min-amount",
         "0.1",
         "--max-amount",
@@ -91,11 +92,13 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         "150",
     ]
     # these are various things that should be in the output
+    assert_list = ["Fee is >= the amount of coins selected. To continue, please use --override flag."]
+    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     assert_list = [
         "Transactions would combine up to 500 coins",
         f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{STD_TX.name.hex()}",
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
+    run_cli_command_and_assert(capsys, root_dir, command_args + ["--override"], assert_list)
     expected_tx_config = TXConfig(
         min_coin_amount=uint64(100_000_000_000),
         max_coin_amount=uint64(200_000_000_000),
@@ -109,13 +112,18 @@ def test_coins_combine(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
         largest_first=True,
         target_coin_ids=[bytes32([0] * 32)],
         target_coin_amount=uint64(1_000_000_000_000),
-        fee=uint64(1_000_000_000),
+        fee=uint64(500_000_000_000),
         push=False,
     )
     expected_calls: logType = {
-        "get_wallets": [(None,)],
-        "get_sync_status": [()],
+        "get_wallets": [(None,)] * 2,
+        "get_sync_status": [()] * 2,
         "combine_coins": [
+            (
+                expected_request,
+                expected_tx_config,
+                test_condition_valid_times,
+            ),
             (
                 expected_request,
                 expected_tx_config,

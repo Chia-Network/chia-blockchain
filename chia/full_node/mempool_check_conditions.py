@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional
 
-from chia_rs import MEMPOOL_MODE, get_flags_for_height_and_constants
+from chia_rs import DONT_VALIDATE_SIGNATURE, MEMPOOL_MODE, G2Element, get_flags_for_height_and_constants
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
 from chia_rs import run_block_generator, run_block_generator2, run_chia_program
 
@@ -36,7 +36,7 @@ def get_name_puzzle_conditions(
     height: uint32,
     constants: ConsensusConstants,
 ) -> NPCResult:
-    flags = get_flags_for_height_and_constants(height, constants)
+    flags = get_flags_for_height_and_constants(height, constants) | DONT_VALIDATE_SIGNATURE
 
     if mempool_mode:
         flags = flags | MEMPOOL_MODE
@@ -48,7 +48,7 @@ def get_name_puzzle_conditions(
 
     try:
         block_args = generator.generator_refs
-        err, result = run_block(bytes(generator.program), block_args, max_cost, flags, constants)
+        err, result = run_block(bytes(generator.program), block_args, max_cost, flags, G2Element(), None, constants)
         assert (err is None) != (result is None)
         if err is not None:
             return NPCResult(uint16(err), None)

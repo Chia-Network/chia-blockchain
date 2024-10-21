@@ -113,7 +113,6 @@ reference_raw_nodes: List[DataCase] = [
             parent=TreeIndex(0x20212223),
             left=TreeIndex(0x24252627),
             right=TreeIndex(0x28292A2B),
-            index=TreeIndex(0),
         ),
     ),
     RawNodeFromBlobCase(
@@ -122,7 +121,6 @@ reference_raw_nodes: List[DataCase] = [
             parent=TreeIndex(0x20212223),
             key=KVId(0x2425262728292A2B),
             value=KVId(0x2C2D2E2F30313233),
-            index=TreeIndex(0),
         ),
     ),
 ]
@@ -157,7 +155,6 @@ def test_merkle_blob_one_leaf_loads() -> None:
         parent=null_parent,
         key=KVId(0x0405060708090A0B),
         value=KVId(0x0405060708090A1B),
-        index=TreeIndex(0),
     )
     blob = bytearray(NodeMetadata(type=NodeType.leaf, dirty=False).pack() + pack_raw_node(leaf))
 
@@ -173,21 +170,18 @@ def test_merkle_blob_two_leafs_loads() -> None:
         parent=null_parent,
         left=TreeIndex(1),
         right=TreeIndex(2),
-        index=TreeIndex(0),
     )
     left_leaf = RawLeafMerkleNode(
         hash=bytes(range(32)),
         parent=TreeIndex(0),
         key=KVId(0x0405060708090A0B),
         value=KVId(0x0405060708090A1B),
-        index=TreeIndex(1),
     )
     right_leaf = RawLeafMerkleNode(
         hash=bytes(range(32)),
         parent=TreeIndex(0),
         key=KVId(0x1415161718191A1B),
         value=KVId(0x1415161718191A2B),
-        index=TreeIndex(2),
     )
     blob = bytearray()
     blob.extend(NodeMetadata(type=NodeType.internal, dirty=True).pack() + pack_raw_node(root))
@@ -201,8 +195,8 @@ def test_merkle_blob_two_leafs_loads() -> None:
     assert merkle_blob.get_raw_node(left_leaf.parent) == root
     assert merkle_blob.get_raw_node(right_leaf.parent) == root
 
-    assert merkle_blob.get_lineage(TreeIndex(0)) == [root]
-    assert merkle_blob.get_lineage(root.left) == [left_leaf, root]
+    assert merkle_blob.get_lineage_with_indexes(TreeIndex(0)) == [(0, root)]
+    assert merkle_blob.get_lineage_with_indexes(root.left) == [(1, left_leaf), (0, root)]
 
     merkle_blob.calculate_lazy_hashes()
     son_hash = bytes32(range(32))
@@ -258,7 +252,7 @@ def test_insert_delete_loads_all_keys() -> None:
             hash = generate_hash(seed)
             merkle_blob.insert(key, value, hash)
             key_index = merkle_blob.key_to_index[key]
-            lineage = merkle_blob.get_lineage(TreeIndex(key_index))
+            lineage = merkle_blob.get_lineage_with_indexes(TreeIndex(key_index))
             assert len(lineage) <= max_height
             keys_values[key] = value
             if current_num_entries == 0:
@@ -277,7 +271,7 @@ def test_insert_delete_loads_all_keys() -> None:
         hash = generate_hash(seed)
         merkle_blob_2.upsert(key, value, hash)
         key_index = merkle_blob_2.key_to_index[key]
-        lineage = merkle_blob_2.get_lineage(TreeIndex(key_index))
+        lineage = merkle_blob_2.get_lineage_with_indexes(TreeIndex(key_index))
         assert len(lineage) <= max_height
         keys_values[key] = value
     assert merkle_blob.get_keys_values() == keys_values
@@ -386,10 +380,9 @@ def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
 @pytest.mark.parametrize(argnames="cls", argvalues=raw_node_classes)
 def test_as_tuple_matches_dataclasses_astuple(cls: Type[RawMerkleNodeProtocol], seeded_random: Random) -> None:
     raw_bytes = bytes(seeded_random.getrandbits(8) for _ in range(cls.struct.size))
-    raw_node = cls(*cls.struct.unpack(raw_bytes), index=TreeIndex(seeded_random.randrange(1_000_000)))
-    # hacky [:-1] to exclude the index
+    raw_node = cls(*cls.struct.unpack(raw_bytes))
     # TODO: try again to indicate that the RawMerkleNodeProtocol requires the dataclass interface
-    assert raw_node.as_tuple() == astuple(raw_node)[:-1]  # type: ignore[call-overload]
+    assert raw_node.as_tuple() == astuple(raw_node)  # type: ignore[call-overload]
 
 
 def test_helper_methods() -> None:
@@ -428,7 +421,7 @@ def test_insert_with_reference_key_and_side() -> None:
                 assert parent.left == index
             else:
                 assert parent.right == index
-            assert len(merkle_blob.get_lineage(index)) == operation + 1
+            assert len(merkle_blob.get_lineage_with_indexes(index)) == operation + 1
         side = Side.LEFT if operation % 2 == 0 else Side.RIGHT
         reference_kid = key
 
@@ -455,13 +448,13 @@ def test_get_nodes() -> None:
         keys.add(key)
 
     merkle_blob.calculate_lazy_hashes()
-    all_nodes = merkle_blob.get_nodes()
-    for node in all_nodes:
+    all_nodes = merkle_blob.get_nodes_with_indexes()
+    for index, node in all_nodes:
         if isinstance(node, RawInternalMerkleNode):
             left = merkle_blob.get_raw_node(node.left)
             right = merkle_blob.get_raw_node(node.right)
-            assert left.parent == node.index
-            assert right.parent == node.index
+            assert left.parent == index
+            assert right.parent == index
             assert bytes32(node.hash) == internal_hash(bytes32(left.hash), bytes32(right.hash))
             # assert nodes are provided in left-to-right ordering
             assert node.left not in seen_indexes
@@ -469,6 +462,6 @@ def test_get_nodes() -> None:
         else:
             assert isinstance(node, RawLeafMerkleNode)
             seen_keys.add(node.key)
-        seen_indexes.add(node.index)
+        seen_indexes.add(index)
 
     assert keys == seen_keys
