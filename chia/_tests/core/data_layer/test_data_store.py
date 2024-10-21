@@ -318,7 +318,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, store_id: bytes32)
             if not deleted_all:
                 while node_count > 0:
                     node_count -= 1
-                    seed = bytes32.zeros
+                    seed = bytes32(b"0" * 32)
                     node_hash = await data_store.get_terminal_node_for_seed(store_id, seed)
                     assert node_hash is not None
                     node = await data_store.get_node(node_hash)
