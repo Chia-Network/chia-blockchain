@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import ast
 import inspect
-from typing import Any, Dict, Set, cast
+from typing import Any, cast
 
 from chia.protocols import (
     farmer_protocol,
@@ -21,7 +21,7 @@ from chia.protocols import (
 # stays up to date. It's a test for the test
 
 
-def types_in_module(mod: Any) -> Set[str]:
+def types_in_module(mod: Any) -> set[str]:
     parsed = ast.parse(inspect.getsource(mod))
     types = set()
     for line in parsed.body:
@@ -50,7 +50,7 @@ def test_missing_messages_state_machine() -> None:
 
 def test_message_ids() -> None:
     parsed = ast.parse(inspect.getsource(protocol_message_types))
-    message_ids: Dict[int, str] = {}
+    message_ids: dict[int, str] = {}
     for line in parsed.body:
         if not isinstance(line, ast.ClassDef) or line.name != "ProtocolMessageTypes":
             continue

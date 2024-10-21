@@ -5,9 +5,10 @@ import concurrent
 import contextlib
 import dataclasses
 import logging
+from collections.abc import AsyncIterator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from typing_extensions import Literal
 
@@ -71,7 +72,7 @@ class Harvester:
 
         return self._server
 
-    def __init__(self, root_path: Path, config: Dict[str, Any], constants: ConsensusConstants):
+    def __init__(self, root_path: Path, config: dict[str, Any], constants: ConsensusConstants):
         self.log = log
         self.root_path = root_path
         # TODO, remove checks below later after some versions / time
@@ -145,7 +146,7 @@ class Harvester:
 
             await self.plot_sync_sender.await_closed()
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def on_connect(self, connection: WSChiaConnection) -> None:
@@ -154,7 +155,7 @@ class Harvester:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
-    def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
+    def state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
@@ -181,9 +182,9 @@ class Harvester:
         asyncio.run_coroutine_threadsafe(self.plot_sync_sender.await_closed(), asyncio.get_running_loop())
         self.plot_manager.stop_refreshing()
 
-    def get_plots(self) -> Tuple[List[Dict[str, Any]], List[str], List[str]]:
+    def get_plots(self) -> tuple[list[dict[str, Any]], list[str], list[str]]:
         self.log.debug(f"get_plots prover items: {self.plot_manager.plot_count()}")
-        response_plots: List[Dict[str, Any]] = []
+        response_plots: list[dict[str, Any]] = []
         with self.plot_manager:
             for path, plot_info in self.plot_manager.plots.items():
                 prover = plot_info.prover
@@ -222,7 +223,7 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    async def get_plot_directories(self) -> List[str]:
+    async def get_plot_directories(self) -> list[str]:
         return get_plot_directories(self.root_path)
 
     async def remove_plot_directory(self, str_path: str) -> bool:
@@ -230,7 +231,7 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    async def get_harvester_config(self) -> Dict[str, Any]:
+    async def get_harvester_config(self) -> dict[str, Any]:
         return get_harvester_config(self.root_path)
 
     async def update_harvester_config(

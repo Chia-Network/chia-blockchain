@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pytest
 
@@ -123,7 +123,7 @@ async def test_nft_offer_with_fee(
     nft_to_offer = coins_maker[0]
     nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
-    driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
+    driver_dict: dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
     xch_request = 100
     maker_fee = uint64(10)
@@ -205,7 +205,7 @@ async def test_nft_offer_with_fee(
     nft_to_buy = coins_taker[0]
     nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
     nft_to_buy_asset_id: bytes32 = create_asset_id(nft_to_buy_info)  # type: ignore
-    driver_dict_to_buy: Dict[bytes32, Optional[PuzzleInfo]] = {nft_to_buy_asset_id: nft_to_buy_info}
+    driver_dict_to_buy: dict[bytes32, Optional[PuzzleInfo]] = {nft_to_buy_asset_id: nft_to_buy_info}
 
     xch_offered = 1000
     maker_fee = uint64(10)
@@ -327,7 +327,7 @@ async def test_nft_offer_cancellations(
     nft_to_offer = coins_maker[0]
     nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
-    driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
+    driver_dict: dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
     xch_request = 100
     maker_fee = uint64(10)
@@ -472,7 +472,7 @@ async def test_nft_offer_with_metadata_update(
     nft_to_offer = coins_maker[0]
     nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
-    driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
+    driver_dict: dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
     xch_request = 100
     maker_fee = uint64(10)
@@ -643,7 +643,7 @@ async def test_nft_offer_nft_for_cat(
     nft_to_offer = coins_maker[0]
     nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
-    driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
+    driver_dict: dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
     maker_fee = uint64(10)
     taker_cat_offered = 2500
@@ -732,7 +732,7 @@ async def test_nft_offer_nft_for_cat(
     nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
     nft_to_buy_asset_id: bytes32 = create_asset_id(nft_to_buy_info)  # type: ignore
 
-    driver_dict_to_buy: Dict[bytes32, Optional[PuzzleInfo]] = {
+    driver_dict_to_buy: dict[bytes32, Optional[PuzzleInfo]] = {
         nft_to_buy_asset_id: nft_to_buy_info,
     }
 
@@ -889,7 +889,7 @@ async def test_nft_offer_nft_for_nft(
     nft_to_take_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_take.full_puzzle))
     nft_to_take_asset_id: bytes32 = create_asset_id(nft_to_take_info)  # type: ignore
 
-    driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {
+    driver_dict: dict[bytes32, Optional[PuzzleInfo]] = {
         nft_to_offer_asset_id: nft_to_offer_info,
         nft_to_take_asset_id: nft_to_take_info,
     }
@@ -1064,7 +1064,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     nft_to_offer = coins_maker[0]
     nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
-    driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
+    driver_dict: dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
     maker_fee = uint64(10)
     maker_xch_offered = 1000
@@ -1160,7 +1160,7 @@ async def test_nft_offer_nft0_and_xch_for_cat(
     nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
     nft_to_buy_asset_id: bytes32 = create_asset_id(nft_to_buy_info)  # type: ignore
 
-    driver_dict_to_buy: Dict[bytes32, Optional[PuzzleInfo]] = {
+    driver_dict_to_buy: dict[bytes32, Optional[PuzzleInfo]] = {
         nft_to_buy_asset_id: nft_to_buy_info,
     }
 

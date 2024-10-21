@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Iterator, List, Tuple, Union
+from collections.abc import Iterator
+from typing import Union
 
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -40,7 +41,7 @@ def create_host_layer_puzzle(innerpuz: Union[Program, bytes32], current_root: by
     )
 
 
-def match_dl_singleton(puzzle: Union[Program, SerializedProgram]) -> Tuple[bool, Iterator[Program]]:
+def match_dl_singleton(puzzle: Union[Program, SerializedProgram]) -> tuple[bool, Iterator[Program]]:
     """
     Given a puzzle test if it's a CAT and, if it is, return the curried arguments
     """
@@ -56,7 +57,7 @@ def match_dl_singleton(puzzle: Union[Program, SerializedProgram]) -> Tuple[bool,
     return False, iter(())
 
 
-def launch_solution_to_singleton_info(launch_solution: Program) -> Tuple[bytes32, uint64, bytes32, bytes32]:
+def launch_solution_to_singleton_info(launch_solution: Program) -> tuple[bytes32, uint64, bytes32, bytes32]:
     solution = launch_solution.as_python()
     try:
         full_puzzle_hash = bytes32(solution[0])
@@ -77,7 +78,7 @@ def launcher_to_struct(launcher_id: bytes32) -> Program:
 
 
 def create_graftroot_offer_puz(
-    launcher_ids: List[bytes32], values_to_prove: List[List[bytes32]], inner_puzzle: Program
+    launcher_ids: list[bytes32], values_to_prove: list[list[bytes32]], inner_puzzle: Program
 ) -> Program:
     return GRAFTROOT_DL_OFFERS.curry(
         inner_puzzle,
@@ -96,7 +97,7 @@ MIRROR_PUZZLE_HASH = create_mirror_puzzle().get_tree_hash()
 
 def get_mirror_info(
     parent_puzzle: Union[Program, SerializedProgram], parent_solution: Union[Program, SerializedProgram]
-) -> Tuple[bytes32, List[bytes]]:
+) -> tuple[bytes32, list[bytes]]:
     assert type(parent_puzzle) is type(parent_solution)
     _, conditions = parent_puzzle.run_with_cost(INFINITE_COST, parent_solution)
     for condition in conditions.as_iter():
@@ -104,7 +105,7 @@ def get_mirror_info(
             condition.first().as_python() == ConditionOpcode.CREATE_COIN
             and condition.at("rf").as_python() == create_mirror_puzzle().get_tree_hash()
         ):
-            memos: List[bytes] = condition.at("rrrf").as_python()
+            memos: list[bytes] = condition.at("rrrf").as_python()
             launcher_id = bytes32(memos[0])
             return launcher_id, [url for url in memos[1:]]
     raise ValueError("The provided puzzle and solution do not create a mirror coin")

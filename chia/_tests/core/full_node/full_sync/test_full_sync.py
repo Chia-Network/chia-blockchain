@@ -5,7 +5,6 @@ import asyncio
 import dataclasses
 import logging
 import time
-from typing import List
 
 import pytest
 
@@ -31,7 +30,7 @@ class TestFullSync:
     async def test_long_sync_from_zero(self, five_nodes, default_400_blocks, bt, self_hostname):
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks = len(default_400_blocks)
-        blocks: List[FullBlock] = default_400_blocks
+        blocks: list[FullBlock] = default_400_blocks
         full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server
@@ -345,7 +344,7 @@ class TestFullSync:
             assert peak1 is not None
 
             summary_heights = full_node_1.full_node.blockchain.get_ses_heights()
-            summaries: List[SubEpochSummary] = []
+            summaries: list[SubEpochSummary] = []
 
             # get ses list
             for sub_epoch_n, ses_height in enumerate(summary_heights):
@@ -395,7 +394,7 @@ class TestFullSync:
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
 
-        peers: List = [c for c in full_node_2.full_node.server.all_connections.values()]
+        peers: list = [c for c in full_node_2.full_node.server.all_connections.values()]
         request = full_node_protocol.RequestProofOfWeight(
             blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
         )
@@ -406,7 +405,7 @@ class TestFullSync:
         log.info(f"result was {res}")
         assert duration < 1
 
-        peers: List = [c for c in full_node_3.full_node.server.all_connections.values()]
+        peers: list = [c for c in full_node_3.full_node.server.all_connections.values()]
         request = full_node_protocol.RequestProofOfWeight(
             blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
         )

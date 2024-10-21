@@ -12,6 +12,7 @@ import pathlib
 import ssl
 import subprocess
 import sys
+from collections.abc import Awaitable, Collection, Iterator
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import Enum
@@ -19,26 +20,7 @@ from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    ClassVar,
-    Collection,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Protocol,
-    TextIO,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-    final,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, Protocol, TextIO, TypeVar, Union, cast, final
 
 import aiohttp
 import pytest
@@ -187,7 +169,7 @@ def measure_overhead(
     ],
     cycles: int = 10,
 ) -> float:
-    times: List[float] = []
+    times: list[float] = []
 
     for _ in range(cycles):
         with manager_maker() as results:
@@ -258,10 +240,10 @@ class BenchmarkData:
 
     label: str
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> BenchmarkData:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> BenchmarkData:
         return cls(
             duration=marshalled["duration"],
             path=pathlib.Path(marshalled["path"]),
@@ -270,7 +252,7 @@ class BenchmarkData:
             label=marshalled["label"],
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "duration": self.duration,
             "path": self.path.as_posix(),
@@ -337,7 +319,7 @@ class _AssertRuntime:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
+        exc_type: Optional[type[BaseException]],
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
@@ -405,7 +387,7 @@ def assert_rpc_error(error: str) -> Iterator[None]:
 
 
 @contextlib.contextmanager
-def closing_chia_root_popen(chia_root: ChiaRoot, args: List[str]) -> Iterator[subprocess.Popen[Any]]:
+def closing_chia_root_popen(chia_root: ChiaRoot, args: list[str]) -> Iterator[subprocess.Popen[Any]]:
     environment = {**os.environ, "CHIA_ROOT": os.fspath(chia_root.path)}
 
     with subprocess.Popen(args=args, env=environment) as process:
@@ -476,7 +458,7 @@ class CoinGenerator:
         return HintedCoin(Coin(parent_coin_id, self._get_hash(), self._get_amount()), hint)
 
 
-def coin_creation_args(hinted_coin: HintedCoin) -> List[Any]:
+def coin_creation_args(hinted_coin: HintedCoin) -> list[Any]:
     if hinted_coin.hint is not None:
         memos = [hinted_coin.hint]
     else:
@@ -515,7 +497,7 @@ async def wallet_height_at_least(wallet_node: WalletNode, h: uint32) -> bool:
 @dataclass
 class RecordingWebServer:
     web_server: WebServer
-    requests: List[web.Request] = field(default_factory=list)
+    requests: list[web.Request] = field(default_factory=list)
 
     @classmethod
     async def create(
@@ -541,7 +523,7 @@ class RecordingWebServer:
         await web_server.start()
         return self
 
-    def get_routes(self) -> Dict[str, Callable[[web.Request], Awaitable[web.Response]]]:
+    def get_routes(self) -> dict[str, Callable[[web.Request], Awaitable[web.Response]]]:
         return {"/{path:.*}": self.handler}
 
     async def handler(self, request: web.Request) -> web.Response:
@@ -564,12 +546,12 @@ class RecordingWebServer:
 @dataclasses.dataclass(frozen=True)
 class TestId:
     platform: str
-    test_path: Tuple[str, ...]
-    ids: Tuple[str, ...]
+    test_path: tuple[str, ...]
+    ids: tuple[str, ...]
 
     @classmethod
     def create(cls, node: Node, platform: str = sys.platform) -> TestId:
-        test_path: List[str] = []
+        test_path: list[str] = []
         temp_node = node
         while True:
             name: str
@@ -589,7 +571,7 @@ class TestId:
 
         # TODO: can we avoid parsing the id's etc from the node name?
         test_name, delimiter, rest = node.name.partition("[")
-        ids: Tuple[str, ...]
+        ids: tuple[str, ...]
         if delimiter == "":
             ids = ()
         else:
@@ -602,14 +584,14 @@ class TestId:
         )
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> TestId:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> TestId:
         return cls(
             platform=marshalled["platform"],
             test_path=tuple(marshalled["test_path"]),
             ids=tuple(marshalled["ids"]),
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "platform": self.platform,
             "test_path": self.test_path,
@@ -659,7 +641,7 @@ class ComparableEnum(Enum):
 
 
 async def add_blocks_in_batches(
-    blocks: List[FullBlock],
+    blocks: list[FullBlock],
     full_node: FullNode,
     header_hash: Optional[bytes32] = None,
 ) -> None:

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 
 from chia.types.blockchain_format.program import Program
@@ -37,7 +35,7 @@ def test_curry_and_treehash() -> None:
 @pytest.mark.parametrize(
     "value", [[], [bytes32([3] * 32)], [bytes32([0] * 32), bytes32([1] * 32)], [bytes([1]), bytes([1, 2, 3])]]
 )
-def test_shatree_atom_list(value: List[bytes]) -> None:
+def test_shatree_atom_list(value: list[bytes]) -> None:
     h1 = shatree_atom_list(value)
     h2 = Program.to(value).get_tree_hash()
     assert h1 == h2

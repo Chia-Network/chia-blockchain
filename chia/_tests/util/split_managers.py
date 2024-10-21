@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import contextlib
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
-from typing import AsyncContextManager, AsyncIterator, ContextManager, Generic, Iterator, List, TypeVar
+from typing import AsyncContextManager, ContextManager, Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -16,7 +17,7 @@ class SplitManager(Generic[T]):
     _exited: bool = False
 
     def enter(self) -> None:
-        messages: List[str] = []
+        messages: list[str] = []
         if self._entered:
             messages.append("already entered")
         if self._exited:
@@ -31,7 +32,7 @@ class SplitManager(Generic[T]):
         if if_needed and (not self._entered or self._exited):
             return
 
-        messages: List[str] = []
+        messages: list[str] = []
         if not self._entered:
             messages.append("not yet entered")
         if self._exited:
@@ -52,7 +53,7 @@ class SplitAsyncManager(Generic[T]):
     _exited: bool = False
 
     async def enter(self) -> None:
-        messages: List[str] = []
+        messages: list[str] = []
         if self._entered:
             messages.append("already entered")
         if self._exited:
@@ -67,7 +68,7 @@ class SplitAsyncManager(Generic[T]):
         if if_needed and (not self._entered or self._exited):
             return
 
-        messages: List[str] = []
+        messages: list[str] = []
         if not self._entered:
             messages.append("not yet entered")
         if self._exited:

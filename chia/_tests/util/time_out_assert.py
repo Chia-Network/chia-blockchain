@@ -6,23 +6,10 @@ import json
 import logging
 import pathlib
 import time
+from collections.abc import Iterable
 from inspect import getframeinfo, stack
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    Iterable,
-    List,
-    Protocol,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-    final,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar, cast, final
 
 import chia
 import chia._tests
@@ -46,12 +33,12 @@ class DataTypeProtocol(Protocol):
     duration: float
     limit: float
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
     @classmethod
-    def unmarshal(cls: Type[T], marshalled: Dict[str, Any]) -> T: ...
+    def unmarshal(cls: type[T], marshalled: dict[str, Any]) -> T: ...
 
-    def marshal(self) -> Dict[str, Any]: ...
+    def marshal(self) -> dict[str, Any]: ...
 
 
 @final
@@ -70,10 +57,10 @@ class TimeOutAssertData:
 
     label: str = ""
 
-    __match_args__: ClassVar[Tuple[str, ...]] = ()
+    __match_args__: ClassVar[tuple[str, ...]] = ()
 
     @classmethod
-    def unmarshal(cls, marshalled: Dict[str, Any]) -> TimeOutAssertData:
+    def unmarshal(cls, marshalled: dict[str, Any]) -> TimeOutAssertData:
         return cls(
             duration=marshalled["duration"],
             path=pathlib.Path(marshalled["path"]),
@@ -82,7 +69,7 @@ class TimeOutAssertData:
             timed_out=marshalled["timed_out"],
         )
 
-    def marshal(self) -> Dict[str, Any]:
+    def marshal(self) -> dict[str, Any]:
         return {
             "duration": self.duration,
             "path": self.path.as_posix(),
@@ -190,11 +177,11 @@ def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int =
     return bool_f
 
 
-def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> Tuple[str, int]:
+def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> tuple[str, int]:
     caller = getframeinfo(stack()[distance + 1][0])
 
     caller_path = Path(caller.filename)
-    options: List[str] = [caller_path.as_posix()]
+    options: list[str] = [caller_path.as_posix()]
     for path in relative_to:
         try:
             options.append(caller_path.relative_to(path).as_posix())

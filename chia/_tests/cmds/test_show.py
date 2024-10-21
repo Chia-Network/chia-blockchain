@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from chia._tests.cmds.cmd_test_utils import TestFullNodeRpcClient, TestRpcClients, run_cli_command_and_assert
 from chia._tests.cmds.testing_classes import hash_to_height, height_hash
@@ -16,9 +16,9 @@ from chia.util.ints import uint32, uint64
 
 @dataclass
 class ShowFullNodeRpcClient(TestFullNodeRpcClient):
-    async def get_fee_estimate(self, target_times: Optional[List[int]], cost: Optional[int]) -> Dict[str, Any]:
+    async def get_fee_estimate(self, target_times: Optional[list[int]], cost: Optional[int]) -> dict[str, Any]:
         self.add_to_log("get_fee_estimate", (target_times, cost))
-        response: Dict[str, Any] = {
+        response: dict[str, Any] = {
             "current_fee_rate": 0,
             "estimates": [0, 0, 0],
             "fee_rate_last_block": 30769.681426718744,
@@ -82,7 +82,7 @@ class ShowFullNodeRpcClient(TestFullNodeRpcClient):
 RPC_CLIENT_TO_USE = ShowFullNodeRpcClient()  # pylint: disable=no-value-for-parameter
 
 
-def test_chia_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_chia_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
     # set RPC Client
     test_rpc_clients.full_node_rpc_client = RPC_CLIENT_TO_USE
@@ -106,7 +106,7 @@ def test_chia_show(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, P
         "Is a Transaction Block?True",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: dict[str, Optional[List[tuple[Any, ...]]]] = {  # name of rpc: (args)
+    expected_calls: dict[str, Optional[list[tuple[Any, ...]]]] = {  # name of rpc: (args)
         "get_blockchain_state": None,
         "get_block_record": [(height_hash(height),) for height in [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 11, 10]],
         "get_block_record_by_height": [(10,)],

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, Optional, TypeVar
 
 from typing_extensions import NotRequired, TypedDict, Unpack
 
@@ -17,10 +17,10 @@ from chia.util.streamable import Streamable, streamable
 class CoinSelectionConfig:
     min_coin_amount: uint64
     max_coin_amount: uint64
-    excluded_coin_amounts: List[uint64]
-    excluded_coin_ids: List[bytes32]
+    excluded_coin_amounts: list[uint64]
+    excluded_coin_ids: list[bytes32]
 
-    def to_json_dict(self) -> Dict[str, Any]:
+    def to_json_dict(self) -> dict[str, Any]:
         return CoinSelectionConfigLoader(
             self.min_coin_amount,
             self.max_coin_amount,
@@ -46,7 +46,7 @@ class TXConfig(CoinSelectionConfig):
             self.excluded_coin_ids,
         )
 
-    def to_json_dict(self) -> Dict[str, Any]:
+    def to_json_dict(self) -> dict[str, Any]:
         return TXConfigLoader(
             self.min_coin_amount,
             self.max_coin_amount,
@@ -62,7 +62,7 @@ class TXConfig(CoinSelectionConfig):
 
 class AutofillArgs(TypedDict):
     constants: ConsensusConstants
-    config: NotRequired[Dict[str, Any]]
+    config: NotRequired[dict[str, Any]]
     logged_in_fingerprint: NotRequired[int]
 
 
@@ -74,8 +74,8 @@ _T_CoinSelectionConfigLoader = TypeVar("_T_CoinSelectionConfigLoader", bound="Co
 class CoinSelectionConfigLoader(Streamable):
     min_coin_amount: Optional[uint64] = None
     max_coin_amount: Optional[uint64] = None
-    excluded_coin_amounts: Optional[List[uint64]] = None
-    excluded_coin_ids: Optional[List[bytes32]] = None
+    excluded_coin_amounts: Optional[list[uint64]] = None
+    excluded_coin_ids: Optional[list[bytes32]] = None
 
     def autofill(
         self,
@@ -91,11 +91,11 @@ class CoinSelectionConfigLoader(Streamable):
 
     @classmethod
     def from_json_dict(
-        cls: Type[_T_CoinSelectionConfigLoader], json_dict: Dict[str, Any]
+        cls: type[_T_CoinSelectionConfigLoader], json_dict: dict[str, Any]
     ) -> _T_CoinSelectionConfigLoader:
         if "excluded_coins" in json_dict:
-            excluded_coins: List[Coin] = [Coin.from_json_dict(c) for c in json_dict["excluded_coins"]]
-            excluded_coin_ids: List[str] = [c.name().hex() for c in excluded_coins]
+            excluded_coins: list[Coin] = [Coin.from_json_dict(c) for c in json_dict["excluded_coins"]]
+            excluded_coin_ids: list[str] = [c.name().hex() for c in excluded_coins]
             if "excluded_coin_ids" in json_dict:
                 json_dict["excluded_coin_ids"] = [*excluded_coin_ids, *json_dict["excluded_coin_ids"]]
             else:
@@ -118,7 +118,7 @@ class TXConfigLoader(CoinSelectionConfigLoader):
     ) -> TXConfig:
         constants: ConsensusConstants = kwargs["constants"]
         if self.reuse_puzhash is None:
-            config: Dict[str, Any] = kwargs.get("config", {})
+            config: dict[str, Any] = kwargs.get("config", {})
             logged_in_fingerprint: int = kwargs.get("logged_in_fingerprint", -1)
             reuse_puzhash_config = config.get("reuse_public_key_for_change", None)
             if reuse_puzhash_config is None:

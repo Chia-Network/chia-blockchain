@@ -4,7 +4,7 @@ import contextlib
 import dataclasses
 import logging
 import re
-from typing import Tuple, Type, Union
+from typing import Union
 
 import pytest
 
@@ -21,8 +21,8 @@ def logger_fixture() -> logging.Logger:
 
 @dataclasses.dataclass
 class ErrorCase:
-    type_to_raise: Type[BaseException]
-    type_to_catch: Union[Type[BaseException], Tuple[Type[BaseException], ...]]
+    type_to_raise: type[BaseException]
+    type_to_catch: Union[type[BaseException], tuple[type[BaseException], ...]]
     should_match: bool
 
 

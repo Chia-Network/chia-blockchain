@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, Optional
+from typing import Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -74,7 +74,7 @@ def create_asset_id(constructor: PuzzleInfo) -> Optional[bytes32]:
 
 function_args = (match_puzzle, construct_puzzle, solve_puzzle, get_inner_puzzle, get_inner_solution)
 
-driver_lookup: Dict[AssetType, DriverProtocol] = {
+driver_lookup: dict[AssetType, DriverProtocol] = {
     AssetType.CAT: CATOuterPuzzle(*function_args),
     AssetType.SINGLETON: SingletonOuterPuzzle(*function_args),
     AssetType.METADATA: MetadataOuterPuzzle(*function_args),

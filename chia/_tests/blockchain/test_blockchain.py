@@ -3,9 +3,10 @@ from __future__ import annotations
 import logging
 import random
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from typing import AsyncIterator, Dict, List, Optional
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, MerkleSet
@@ -81,7 +82,7 @@ async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncIterator[
 class TestGenesisBlock:
     @pytest.mark.anyio
     async def test_block_tools_proofs_400(
-        self, default_400_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_400_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         vdf, proof = get_vdf_info_and_proof(
             blockchain_constants,
@@ -94,7 +95,7 @@ class TestGenesisBlock:
 
     @pytest.mark.anyio
     async def test_block_tools_proofs_1000(
-        self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         vdf, proof = get_vdf_info_and_proof(
             blockchain_constants,
@@ -151,7 +152,7 @@ class TestGenesisBlock:
 class TestBlockHeaderValidation:
     @pytest.mark.limit_consensus_modes(reason="save time")
     @pytest.mark.anyio
-    async def test_long_chain(self, empty_blockchain: Blockchain, default_1000_blocks: List[FullBlock]) -> None:
+    async def test_long_chain(self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock]) -> None:
         blocks = default_1000_blocks
         for block in blocks:
             if (
@@ -372,7 +373,7 @@ class TestBlockHeaderValidation:
     async def test_one_sb_per_slot(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
         num_blocks = 20
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         for _ in range(num_blocks):
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
             await _validate_and_add_block(empty_blockchain, blocks[-1])
@@ -384,7 +385,7 @@ class TestBlockHeaderValidation:
     async def test_all_overflow(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
         num_rounds = 5
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         num_blocks = 0
         for i in range(1, num_rounds):
             num_blocks += i
@@ -401,7 +402,7 @@ class TestBlockHeaderValidation:
     ) -> None:
         blockchain = empty_blockchain
 
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         while True:
             # This creates an overflow block, then a normal block, and then an overflow in the next sub-slot
             # blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, force_overflow=True)
@@ -449,7 +450,7 @@ class TestBlockHeaderValidation:
     async def test_one_sb_per_two_slots(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
         num_blocks = 20
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         for _ in range(num_blocks):  # Same thing, but 2 sub-slots per block
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=2)
             await _validate_and_add_block(blockchain, blocks[-1])
@@ -461,7 +462,7 @@ class TestBlockHeaderValidation:
     async def test_one_sb_per_five_slots(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
         num_blocks = 10
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         for _ in range(num_blocks):  # Same thing, but 5 sub-slots per block
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=5)
             await _validate_and_add_block(blockchain, blocks[-1])
@@ -482,7 +483,7 @@ class TestBlockHeaderValidation:
     async def test_one_sb_per_two_slots_force_overflow(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         blockchain = empty_blockchain
         num_blocks = 10
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         for _ in range(num_blocks):
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=2, force_overflow=True)
             await _validate_and_add_block(blockchain, blocks[-1])
@@ -832,7 +833,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.anyio
     async def test_empty_sub_slots_epoch(
-        self, empty_blockchain: Blockchain, default_400_blocks: List[FullBlock], bt: BlockTools
+        self, empty_blockchain: Blockchain, default_400_blocks: list[FullBlock], bt: BlockTools
     ) -> None:
         # 2m
         # Tests adding an empty sub slot after the sub-epoch / epoch.
@@ -873,7 +874,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.anyio
     async def test_invalid_cc_sub_slot_vdf(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 2q
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         found_overflow_slot: bool = False
 
         while not found_overflow_slot:
@@ -971,7 +972,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.anyio
     async def test_invalid_rc_sub_slot_vdf(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 2p
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         found_block: bool = False
 
         while not found_block:
@@ -1224,7 +1225,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.anyio
     async def test_sp_0_no_sp(self, empty_blockchain: Blockchain, bt: BlockTools) -> None:
         # 7
-        blocks: List[FullBlock] = []
+        blocks: list[FullBlock] = []
         case_1, case_2 = False, False
         while not case_1 or not case_2:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
@@ -1835,7 +1836,7 @@ class TestPreValidation:
 
     @pytest.mark.anyio
     async def test_pre_validation(
-        self, empty_blockchain: Blockchain, default_1000_blocks: List[FullBlock], bt: BlockTools
+        self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock], bt: BlockTools
     ) -> None:
         blocks = default_1000_blocks[:100]
         start = time.time()
@@ -1938,7 +1939,7 @@ class TestBodyValidation:
         else:
             assert False
 
-        conditions: Dict[ConditionOpcode, List[ConditionWithArgs]] = {
+        conditions: dict[ConditionOpcode, list[ConditionWithArgs]] = {
             opcode: [ConditionWithArgs(opcode, args + ([b"garbage"] if with_garbage else []))]
         }
 
@@ -1955,7 +1956,7 @@ class TestBodyValidation:
         )
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
             b,
             [blocks[-1]],
@@ -2081,7 +2082,7 @@ class TestBodyValidation:
             )
             ssi = b.constants.SUB_SLOT_ITERS_STARTING
             diff = b.constants.DIFFICULTY_STARTING
-            pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
                 b.constants,
                 b,
                 [blocks[-1]],
@@ -2164,7 +2165,7 @@ class TestBodyValidation:
         )
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
             b,
             [blocks[-1]],
@@ -2292,7 +2293,7 @@ class TestBodyValidation:
             )
             ssi = b.constants.SUB_SLOT_ITERS_STARTING
             diff = b.constants.DIFFICULTY_STARTING
-            pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
                 b.constants,
                 b,
                 [blocks[-1]],
@@ -2622,7 +2623,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        condition_dict: Dict[ConditionOpcode, List[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
+        condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
         for i in range(7_000):
             output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(i)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
@@ -2658,7 +2659,7 @@ class TestBodyValidation:
             )
         )[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
-        results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
             b,
             [blocks[-1]],
@@ -2957,7 +2958,7 @@ class TestBodyValidation:
 
         wt: WalletTool = bt.get_pool_wallet_tool()
 
-        condition_dict: Dict[ConditionOpcode, List[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
+        condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
         for _ in range(2):
             output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt.pool_ph, int_to_bytes(1)])
             condition_dict[ConditionOpcode.CREATE_COIN].append(output)
@@ -3362,9 +3363,9 @@ class TestReorgs:
         self,
         light_blocks: bool,
         empty_blockchain: Blockchain,
-        default_10000_blocks: List[FullBlock],
-        test_long_reorg_blocks: List[FullBlock],
-        test_long_reorg_blocks_light: List[FullBlock],
+        default_10000_blocks: list[FullBlock],
+        test_long_reorg_blocks: list[FullBlock],
+        test_long_reorg_blocks_light: list[FullBlock],
     ) -> None:
         if light_blocks:
             reorg_blocks = test_long_reorg_blocks_light[:1650]
@@ -3383,7 +3384,7 @@ class TestReorgs:
         print(f"pre-validating {len(blocks)} blocks")
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
             b,
             blocks,
@@ -3517,7 +3518,7 @@ class TestReorgs:
 
     @pytest.mark.anyio
     async def test_long_compact_blockchain(
-        self, empty_blockchain: Blockchain, default_2000_blocks_compact: List[FullBlock]
+        self, empty_blockchain: Blockchain, default_2000_blocks_compact: list[FullBlock]
     ) -> None:
         b = empty_blockchain
         for block in default_2000_blocks_compact:
@@ -3642,7 +3643,7 @@ class TestReorgs:
         assert blocks_with_filter[header_hash].header_hash == blocks_without_filter[header_hash].header_hash
 
     @pytest.mark.anyio
-    async def test_get_blocks_at(self, empty_blockchain: Blockchain, default_1000_blocks: List[FullBlock]) -> None:
+    async def test_get_blocks_at(self, empty_blockchain: Blockchain, default_1000_blocks: list[FullBlock]) -> None:
         b = empty_blockchain
         heights = []
         for block in default_1000_blocks[:200]:
@@ -3948,7 +3949,7 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
             block1, block2 = b1, b2
         counter += 1
 
-        preval: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        preval: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             b.constants,
             b,
             [block1],
@@ -3991,7 +3992,7 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
         await _validate_and_add_block(b, block)
 
 
-async def test_get_tx_peak(default_400_blocks: List[FullBlock], empty_blockchain: Blockchain) -> None:
+async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain: Blockchain) -> None:
     bc = empty_blockchain
     test_blocks = default_400_blocks[:100]
     ssi = bc.constants.SUB_SLOT_ITERS_STARTING
@@ -4036,8 +4037,8 @@ def to_bytes(gen: Optional[SerializedProgram]) -> bytes:
 @pytest.mark.limit_consensus_modes(reason="block heights for generators differ between test chains in different modes")
 @pytest.mark.parametrize("clear_cache", [True, False])
 async def test_lookup_block_generators(
-    default_10000_blocks: List[FullBlock],
-    test_long_reorg_blocks_light: List[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    test_long_reorg_blocks_light: list[FullBlock],
     bt: BlockTools,
     empty_blockchain: Blockchain,
     clear_cache: bool,
