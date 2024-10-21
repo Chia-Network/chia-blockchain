@@ -3849,8 +3849,10 @@ async def test_chain_failed_rollback(empty_blockchain: Blockchain, bt: BlockTool
     await b.coin_store.rollback_to_block(2)
     print(f"{await b.coin_store.get_coin_record(spend_bundle.coin_spends[0].coin.name())}")
 
+    fork_block = blocks_reorg_chain[10 - 1]
+    fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
     with pytest.raises(ValueError, match="Invalid operation to set spent"):
-        await _validate_and_add_block(b, blocks_reorg_chain[-1])
+        await _validate_and_add_block(b, blocks_reorg_chain[-1], fork_info=fork_info)
 
     peak = b.get_peak()
     assert peak is not None
