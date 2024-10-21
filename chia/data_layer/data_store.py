@@ -372,9 +372,9 @@ class DataStore:
                 index = row["idx"]
 
             other_merkle_blob = await self.get_merkle_blob(root_hash)
-            _, nodes = other_merkle_blob.get_nodes_with_indexes(index=index)
-            index_to_hash = {node.index: bytes32(node.hash) for node in nodes}
-            for node in nodes:
+            nodes = other_merkle_blob.get_nodes_with_indexes(index=index)
+            index_to_hash = {index: bytes32(node.hash) for index, node in nodes}
+            for _, node in nodes:
                 if isinstance(node, RawLeafMerkleNode):
                     terminal_nodes[bytes32(node.hash)] = (node.key, node.value)
                 elif isinstance(node, RawInternalMerkleNode):
