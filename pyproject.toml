@@ -39,7 +39,7 @@ priority = "supplemental"
 [tool.poetry.dependencies]
 python = ">=3.8.10, <3.13"
 aiofiles = "24.1.0"  # Async IO for files
-aiohttp = "3.10.2"  # HTTP server for full node rpc
+aiohttp = "3.10.4"  # HTTP server for full node rpc
 aiosqlite = "0.20.0"  # asyncio wrapper for sqlite, to store blocks
 anyio = "4.3.0"
 bitstring = "4.1.4"  # Binary data management library
