@@ -491,7 +491,7 @@ async def test_insert_batch_reference_and_side(
     assert new_root_hash is not None, "batch insert failed or failed to update root"
 
     merkle_blob = await data_store.get_merkle_blob(new_root_hash)
-    nodes = merkle_blob.get_nodes()
+    _, nodes = merkle_blob.get_nodes()
     assert len(nodes) == 3
     assert isinstance(nodes[1], RawLeafMerkleNode)
     assert isinstance(nodes[2], RawLeafMerkleNode)

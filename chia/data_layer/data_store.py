@@ -372,9 +372,9 @@ class DataStore:
                 index = row["idx"]
 
             other_merkle_blob = await self.get_merkle_blob(root_hash)
-            nodes = other_merkle_blob.get_nodes(index=index)
+            nodes = other_merkle_blob.get_nodes_with_indexes(index=index)
             index_to_hash = {node.index: bytes32(node.hash) for node in nodes}
-            for node in nodes:
+            for _, node in nodes:
                 if isinstance(node, RawLeafMerkleNode):
                     terminal_nodes[bytes32(node.hash)] = (node.key, node.value)
                 elif isinstance(node, RawInternalMerkleNode):
@@ -386,7 +386,7 @@ class DataStore:
             merkle_blob.insert_entry_to_blob(
                 index,
                 NodeMetadata(type=NodeTypeMerkleBlob.leaf, dirty=False).pack()
-                + pack_raw_node(RawLeafMerkleNode(node_hash, null_parent, kid, vid, index)),
+                + pack_raw_node(RawLeafMerkleNode(node_hash, null_parent, kid, vid)),
             )
         elif node_hash in internal_nodes:
             merkle_blob.insert_entry_to_blob(
@@ -398,7 +398,6 @@ class DataStore:
                         null_parent,
                         undefined_index,
                         undefined_index,
-                        index,
                     )
                 ),
             )
@@ -1130,10 +1129,10 @@ class DataStore:
 
             merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
-            nodes = merkle_blob.get_nodes()
+            nodes = merkle_blob.get_nodes_with_indexes()
             hash_to_node: Dict[bytes32, Node] = {}
             tree_node: Node
-            for node in reversed(nodes):
+            for _, node in reversed(nodes):
                 if isinstance(node, RawInternalMerkleNode):
                     left_hash = merkle_blob.get_hash_at_index(node.left)
                     right_hash = merkle_blob.get_hash_at_index(node.right)
