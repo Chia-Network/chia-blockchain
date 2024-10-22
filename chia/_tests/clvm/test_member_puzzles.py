@@ -41,6 +41,61 @@ class ACSDPuzValidator:
 
 
 @pytest.mark.anyio
+async def test_bls_member(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        delegated_puzzle = Program.to(1)
+        delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
+        sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
+
+        bls_puzzle = PuzzleWithRestrictions(0, [], BLSMember(sk.public_key()))
+
+        # Farm and find coin
+        await sim.farm_block(bls_puzzle.puzzle_hash())
+        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.puzzle_hash()], include_spent_coins=False))[
+            0
+        ].coin
+        block_height = sim.block_height
+
+        # Create an announcements to be asserted in the delegated puzzle
+        announcement = CreateCoinAnnouncement(msg=b"foo", coin_id=coin.name())
+
+        # Get signature for AGG_SIG_ME
+        sig = sk.sign(delegated_puzzle_hash + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    bls_puzzle.puzzle_reveal(),
+                    bls_puzzle.solve(
+                        [],
+                        [],
+                        Program.to(0),
+                        (
+                            delegated_puzzle,
+                            Program.to(
+                                [
+                                    announcement.to_program(),
+                                    announcement.corresponding_assertion().to_program(),
+                                ]
+                            ),
+                        ),
+                    ),
+                )
+            ],
+            sig,
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "BLSMember spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        await sim.rewind(block_height)
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     "with_restrictions",
     [True, False],
