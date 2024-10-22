@@ -47,8 +47,8 @@ from chia._tests.util.setup_nodes import (
     setup_simulators_and_wallets_service,
     setup_two_nodes,
 )
+from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.clvm.spend_sim import CostLogger
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI

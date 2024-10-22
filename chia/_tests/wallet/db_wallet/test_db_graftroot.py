@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from chia_rs import G2Element
 
-from chia.clvm.spend_sim import CostLogger, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32

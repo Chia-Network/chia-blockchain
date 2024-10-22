@@ -7,7 +7,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from chia._tests.util.key_tool import KeyTool
-from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
