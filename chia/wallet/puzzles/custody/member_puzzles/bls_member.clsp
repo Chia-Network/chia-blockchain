@@ -1,5 +1,5 @@
 ; this puzzle belongs inside an M of N puzzle following the Standardised Inner Puzzle Spec SIPS01
-; this code just offers a secure approval of a delegated puzzle to be run elsewhere which will generate the majority of condition_codes
+; this code offers a secure approval of a delegated puzzle passed in as a Truth to be run elsewhere
 
 (mod (PUBLIC_KEY Delegated_Puzzle)  ; delegated puzzle is passed in from the above M of N layer
     (include condition_codes.clib)
