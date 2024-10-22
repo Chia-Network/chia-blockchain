@@ -47,8 +47,11 @@ class ACSDPuzValidator:
 )
 async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bool) -> None:
     """
-    This tests the various functionality of the MofN drivers including that m of n puzzles can be constructed and solved
-    for every combination of its nodes from size 1 - 5.
+    This tests the BLS Member puzzle with 4 different keys. 
+    It loops through every combination inside an M of N Puzzle where
+    m = 2
+    n = 4
+    and every member puzzle is a unique BLSMember puzzle.
     """
     restrictions: List[Restriction[MemberOrDPuz]] = [ACSDPuzValidator()] if with_restrictions else []
     async with sim_and_client() as (sim, client):
@@ -75,7 +78,7 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
         )[0].coin
         block_height = sim.block_height
 
-        # Create two announcements to be asserted from a) the delegated puzzle b) the puzzle in the MofN
+        # Create an announcements to be asserted in the delegated puzzle
         announcement = CreateCoinAnnouncement(msg=b"foo", coin_id=m_of_n_coin.name())
 
         # Test a spend of every combination of m of n
