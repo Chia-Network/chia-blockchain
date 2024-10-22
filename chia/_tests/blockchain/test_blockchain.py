@@ -3401,7 +3401,7 @@ class TestReorgs:
             if (block.height % 100) == 0:
                 print(f"main chain: {block.height:4} weight: {block.weight}")
 
-            fork_info: Optional[ForkInfo] = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
+            fork_info: ForkInfo = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
             assert fork_info is not None
             (result, err, _) = await b.add_block(
                 block, pre_validation_results[i], None, sub_slot_iters=ssi, fork_info=fork_info
@@ -3491,7 +3491,7 @@ class TestReorgs:
         # start the fork point a few blocks back, to test that the blockchain
         # can catch up
         fork_block = default_10000_blocks[num_blocks_chain_2_start - 200]
-        fork_info3 = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
+        fork_info = ForkInfo(fork_block.height, fork_block.height, fork_block.header_hash)
         await b.warmup(fork_block.height)
         for block in blocks:
             if (block.height % 128) == 0:
@@ -3508,7 +3508,7 @@ class TestReorgs:
                 expect = AddBlockResult.ADDED_AS_ORPHAN
             else:
                 expect = AddBlockResult.NEW_PEAK
-            await _validate_and_add_block(b, block, fork_info=fork_info3, expected_result=expect)
+            await _validate_and_add_block(b, block, fork_info=fork_info, expected_result=expect)
 
         # if these asserts fires, there was no reorg back to the original chain
         peak = b.get_peak()
