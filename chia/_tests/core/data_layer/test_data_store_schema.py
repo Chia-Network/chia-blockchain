@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any, Dict
 
 import pytest
 
-from chia._tests.core.data_layer.util import add_01234567_example, create_valid_node_values
-from chia.data_layer.data_layer_util import NodeType, Side, Status
+from chia._tests.core.data_layer.util import add_01234567_example
+from chia.data_layer.data_layer_util import Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
