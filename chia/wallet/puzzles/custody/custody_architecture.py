@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import ClassVar, Dict, List, Literal, Mapping, Optional, Protocol, Tuple, TypeVar, Union
+from typing import ClassVar, Dict, List, Literal, Mapping, Optional, Protocol, TypeVar, Union
 
 from typing_extensions import runtime_checkable
 
@@ -222,6 +222,13 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
             return self.puzzle(nonce).get_tree_hash()
 
 
+# A convenience object for hinting the two solution values that must always exist
+@dataclass(frozen=True)
+class DelegatedPuzzleAndSolution:
+    puzzle: Program
+    solution: Program
+
+
 # The top-level object inside every "outer" puzzle
 @dataclass(frozen=True)
 class PuzzleWithRestrictions:
@@ -403,7 +410,7 @@ class PuzzleWithRestrictions:
         member_validator_solutions: List[Program],
         dpuz_validator_solutions: List[Program],
         member_solution: Program,
-        delegated_puzzle_and_solution: Optional[Tuple[Program, Program]] = None,
+        delegated_puzzle_and_solution: Optional[DelegatedPuzzleAndSolution] = None,
     ) -> Program:
 
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
@@ -412,6 +419,8 @@ class PuzzleWithRestrictions:
             solution = member_solution
 
         if delegated_puzzle_and_solution is not None:
-            solution = Program.to([*delegated_puzzle_and_solution, *solution.as_iter()])
+            solution = Program.to(
+                [delegated_puzzle_and_solution.puzzle, delegated_puzzle_and_solution.solution, *solution.as_iter()]
+            )
 
         return solution

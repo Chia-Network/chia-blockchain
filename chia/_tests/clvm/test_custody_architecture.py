@@ -14,6 +14,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.conditions import CreateCoinAnnouncement
 from chia.wallet.puzzles.custody.custody_architecture import (
+    DelegatedPuzzleAndSolution,
     MemberOrDPuz,
     MofN,
     ProvenSpend,
@@ -277,7 +278,7 @@ async def test_m_of_n(cost_logger: CostLogger, with_restrictions: bool) -> None:
                                             [],
                                             [],
                                             m_of_n.puzzle.solve(proven_spends),  # pylint: disable=no-member
-                                            (
+                                            DelegatedPuzzleAndSolution(
                                                 Program.to(1),
                                                 Program.to(
                                                     [
@@ -346,15 +347,15 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                             pwr.solve(
                                 [
                                     Program.to(None),
-                                    # (mod dpuzhash (if (= dpuzhash <dpuzhash>) () (x)))
-                                    # (a (i (= 1 (q . <dpuzhash>)) () (q 8)) 1)
-                                    Program.to([2, [3, [9, 1, (1, dpuzhash)], None, [1, 8]], 1]),
-                                ],
-                                [
-                                    Program.to(None),
                                     # (mod conditions (r (r conditions)))
                                     # checks length >= 2
                                     Program.to(7),
+                                ],
+                                [
+                                    Program.to(None),
+                                    # (mod dpuzhash (if (= dpuzhash <dpuzhash>) () (x)))
+                                    # (a (i (= 1 (q . <dpuzhash>)) () (q 8)) 1)
+                                    Program.to([2, [3, [9, 1, (1, dpuzhash)], None, [1, 8]], 1]),
                                 ],
                                 Program.to(
                                     [
@@ -362,7 +363,7 @@ async def test_restriction_layer(cost_logger: CostLogger) -> None:
                                         announcement_2.corresponding_assertion().to_program(),
                                     ]
                                 ),
-                                (
+                                DelegatedPuzzleAndSolution(
                                     dpuz,
                                     Program.to(
                                         [
