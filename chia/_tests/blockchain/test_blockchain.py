@@ -1799,7 +1799,6 @@ class TestPreValidation:
             empty_blockchain.pool,
             {},
             ValidationState(ssi, difficulty, None),
-            validate_signatures=True,
         )
         res: list[PreValidationResult] = list(await asyncio.gather(*futures))
         assert res[0].error is None
@@ -1827,7 +1826,6 @@ class TestPreValidation:
                 empty_blockchain.pool,
                 {},
                 ValidationState(ssi, difficulty, None),
-                validate_signatures=True,
             )
             res: list[PreValidationResult] = list(await asyncio.gather(*futures))
             end_pv = time.time()
@@ -1839,7 +1837,7 @@ class TestPreValidation:
                 block = blocks_to_validate[n]
                 start_rb = time.time()
                 fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-                result, err, _ = await empty_blockchain.add_block(block, res[n], None, ssi, fork_info=fork_info)
+                result, err, _ = await empty_blockchain.add_block(block, res[n], ssi, fork_info=fork_info)
                 end_rb = time.time()
                 times_rb.append(end_rb - start_rb)
                 assert err is None
@@ -1935,16 +1933,13 @@ class TestBodyValidation:
             b.pool,
             {},
             ValidationState(ssi, diff, None),
-            validate_signatures=False,
         )
         pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
         block = blocks[-1]
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-        code, err, state_change = await b.add_block(
-            block, repl_preval_results, None, sub_slot_iters=ssi, fork_info=fork_info
-        )
+        code, err, state_change = await b.add_block(block, repl_preval_results, sub_slot_iters=ssi, fork_info=fork_info)
         assert code == AddBlockResult.NEW_PEAK
         assert err is None
         assert state_change is not None
@@ -2062,13 +2057,12 @@ class TestBodyValidation:
                 b.pool,
                 {},
                 ValidationState(ssi, diff, None),
-                validate_signatures=True,
             )
             pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
             assert pre_validation_results is not None
             block = blocks[-1]
             fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-            assert (await b.add_block(block, pre_validation_results[0], None, sub_slot_iters=ssi, fork_info=fork_info))[
+            assert (await b.add_block(block, pre_validation_results[0], sub_slot_iters=ssi, fork_info=fork_info))[
                 0
             ] == expected
 
@@ -2146,7 +2140,6 @@ class TestBodyValidation:
             b.pool,
             {},
             ValidationState(ssi, diff, None),
-            validate_signatures=False,
         )
         pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         # Ignore errors from pre-validation, we are testing block_body_validation
@@ -2154,7 +2147,7 @@ class TestBodyValidation:
         block = blocks[-1]
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
         res, error, state_change = await b.add_block(
-            block, repl_preval_results, None, sub_slot_iters=ssi, fork_info=fork_info
+            block, repl_preval_results, sub_slot_iters=ssi, fork_info=fork_info
         )
         assert res == AddBlockResult.NEW_PEAK
         assert error is None
@@ -2275,13 +2268,12 @@ class TestBodyValidation:
                 b.pool,
                 {},
                 ValidationState(ssi, diff, None),
-                validate_signatures=True,
             )
             pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
             assert pre_validation_results is not None
             block = blocks[-1]
             fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-            assert (await b.add_block(block, pre_validation_results[0], None, sub_slot_iters=ssi, fork_info=fork_info))[
+            assert (await b.add_block(block, pre_validation_results[0], sub_slot_iters=ssi, fork_info=fork_info))[
                 0
             ] == expected
 
@@ -2613,6 +2605,7 @@ class TestBodyValidation:
         )
 
         assert blocks[-1].transactions_generator is not None
+        assert blocks[-1].transactions_info is not None
         block_generator = BlockGenerator(blocks[-1].transactions_generator, [])
         npc_result = get_name_puzzle_conditions(
             block_generator,
@@ -2621,6 +2614,7 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
+        assert npc_result.conds is not None
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
         block = blocks[-1]
@@ -2628,8 +2622,9 @@ class TestBodyValidation:
         err = (
             await b.add_block(
                 blocks[-1],
-                PreValidationResult(None, uint64(1), npc_result.conds, True, uint32(0)),
-                None,
+                PreValidationResult(
+                    None, uint64(1), npc_result.conds.replace(validated_signature=True), True, uint32(0)
+                ),
                 sub_slot_iters=ssi,
                 fork_info=fork_info,
             )
@@ -2642,7 +2637,6 @@ class TestBodyValidation:
             b.pool,
             {},
             ValidationState(ssi, diff, None),
-            validate_signatures=False,
         )
         results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         assert results is not None
@@ -2704,12 +2698,12 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
+        assert npc_result.conds is not None
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)),
-            None,
+            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), True, uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -2739,11 +2733,11 @@ class TestBodyValidation:
             height=softfork_height,
             constants=bt.constants,
         )
+        assert npc_result.conds is not None
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)),
-            None,
+            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), True, uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -2772,13 +2766,17 @@ class TestBodyValidation:
             else b.constants.MAX_BLOCK_COST_CLVM * 1000
         )
         npc_result = get_name_puzzle_conditions(
-            block_generator, max_cost, mempool_mode=False, height=softfork_height, constants=bt.constants
+            block_generator,
+            max_cost,
+            mempool_mode=False,
+            height=softfork_height,
+            constants=bt.constants,
         )
+        assert npc_result.conds is not None
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
         _result, err, _ = await b.add_block(
             block_2,
-            PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)),
-            None,
+            PreValidationResult(None, uint64(1), npc_result.conds.replace(validated_signature=True), True, uint32(0)),
             sub_slot_iters=ssi,
             fork_info=fork_info,
         )
@@ -3236,8 +3234,6 @@ class TestBodyValidation:
 
         # Bad signature fails during add_block
         await _validate_and_add_block(b, last_block, expected_error=Err.BAD_AGGREGATE_SIGNATURE)
-        # Also test the same case but when using BLSCache
-        await _validate_and_add_block(b, last_block, expected_error=Err.BAD_AGGREGATE_SIGNATURE, use_bls_cache=True)
 
         # Bad signature also fails in prevalidation
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
@@ -3249,7 +3245,6 @@ class TestBodyValidation:
             b.pool,
             {},
             ValidationState(ssi, diff, None),
-            validate_signatures=True,
         )
         preval_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         assert preval_results is not None
@@ -3369,7 +3364,6 @@ class TestReorgs:
             b.pool,
             {},
             ValidationState(ssi, diff, None),
-            validate_signatures=False,
         )
         pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         for i, block in enumerate(blocks):
@@ -3383,7 +3377,7 @@ class TestReorgs:
             fork_info: ForkInfo = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
             assert fork_info is not None
             (result, err, _) = await b.add_block(
-                block, pre_validation_results[i], None, sub_slot_iters=ssi, fork_info=fork_info
+                block, pre_validation_results[i], sub_slot_iters=ssi, fork_info=fork_info
             )
             await check_block_store_invariant(b)
             assert err is None
@@ -3937,11 +3931,10 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
             b.pool,
             {},
             ValidationState(ssi, diff, None),
-            validate_signatures=False,
         )
         preval: list[PreValidationResult] = list(await asyncio.gather(*futures))
         fork_info = ForkInfo(block1.height - 1, block1.height - 1, block1.prev_header_hash)
-        _, err, _ = await b.add_block(block1, preval[0], None, sub_slot_iters=ssi, fork_info=fork_info)
+        _, err, _ = await b.add_block(block1, preval[0], sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
         futures = await pre_validate_blocks_multiprocessing(
             b.constants,
@@ -3950,11 +3943,10 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
             b.pool,
             {},
             ValidationState(ssi, diff, None),
-            validate_signatures=False,
         )
         preval = list(await asyncio.gather(*futures))
         fork_info = ForkInfo(block2.height - 1, block2.height - 1, block2.prev_header_hash)
-        _, err, _ = await b.add_block(block2, preval[0], None, sub_slot_iters=ssi, fork_info=fork_info)
+        _, err, _ = await b.add_block(block2, preval[0], sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
 
     peak = b.get_peak()
@@ -3985,7 +3977,6 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
         bc.pool,
         {},
         ValidationState(ssi, diff, None),
-        validate_signatures=False,
     )
     res: list[PreValidationResult] = list(await asyncio.gather(*futures))
 
@@ -3993,7 +3984,7 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
     for b, prevalidation_res in zip(test_blocks, res):
         assert bc.get_tx_peak() == last_tx_block_record
         fork_info = ForkInfo(b.height - 1, b.height - 1, b.prev_header_hash)
-        _, err, _ = await bc.add_block(b, prevalidation_res, None, sub_slot_iters=ssi, fork_info=fork_info)
+        _, err, _ = await bc.add_block(b, prevalidation_res, sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
 
         if b.is_transaction_block():

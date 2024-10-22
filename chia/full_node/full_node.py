@@ -1550,7 +1550,6 @@ class FullNode:
             {},
             vs,
             wp_summaries=wp_summaries,
-            validate_signatures=True,
         )
 
     async def add_prevalidated_blocks(
@@ -1586,7 +1585,7 @@ class FullNode:
                     assert expected_sub_slot_iters == vs.current_ssi
                     assert expected_difficulty == vs.current_difficulty
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], None, vs.current_ssi, fork_info, prev_ses_block=vs.prev_ses_block
+                block, pre_validation_results[i], vs.current_ssi, fork_info, prev_ses_block=vs.prev_ses_block
             )
             if error is None:
                 blockchain.remove_extra_block(header_hash)
@@ -1981,6 +1980,7 @@ class FullNode:
             unf_entry: Optional[UnfinishedBlockEntry] = self.full_node_store.get_unfinished_block_result(
                 unfinished_rh, foliage_hash
             )
+            assert unf_entry is None or unf_entry.result is None or unf_entry.result.validated_signature is True
             if (
                 unf_entry is not None
                 and unf_entry.unfinished_block is not None
@@ -2062,7 +2062,6 @@ class FullNode:
                 self.blockchain.pool,
                 block_height_conds_map,
                 ValidationState(ssi, diff, prev_ses_block),
-                validate_signatures=False,
             )
             pre_validation_results = list(await asyncio.gather(*futures))
             added: Optional[AddBlockResult] = None
@@ -2088,7 +2087,7 @@ class FullNode:
                     assert result_to_validate.required_iters == pre_validation_results[0].required_iters
                     fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
-                        block, result_to_validate, bls_cache, ssi, fork_info
+                        block, result_to_validate, ssi, fork_info
                     )
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
                     return None

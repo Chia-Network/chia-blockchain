@@ -99,6 +99,7 @@ async def test_basic_coin_store(db_version: int, softfork_height: uint32, bt: Bl
             should_be_included.add(pool_coin)
             if block.is_transaction_block():
                 if block.transactions_generator is not None:
+                    assert block.transactions_info is not None
                     block_gen: BlockGenerator = BlockGenerator(block.transactions_generator, [])
                     npc_result = get_name_puzzle_conditions(
                         block_gen,

@@ -437,7 +437,6 @@ class TestFullNodeBlockCompression:
                         blockchain.pool,
                         {},
                         ValidationState(ssi, diff, None),
-                        validate_signatures=False,
                     )
                     results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None
@@ -456,7 +455,6 @@ class TestFullNodeBlockCompression:
                         blockchain.pool,
                         {},
                         ValidationState(ssi, diff, None),
-                        validate_signatures=False,
                     )
                     results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None

@@ -445,7 +445,6 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
         full_node.blockchain.pool,
         {},
         ValidationState(ssi, diff, prev_ses_block),
-        validate_signatures=True,
     )
     pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
@@ -456,7 +455,7 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
                 ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
         r, _, _ = await full_node.blockchain.add_block(
-            blocks[i], pre_validation_results[i], None, sub_slot_iters=ssi, fork_info=fork_info
+            blocks[i], pre_validation_results[i], sub_slot_iters=ssi, fork_info=fork_info
         )
         assert r == AddBlockResult.NEW_PEAK
 
