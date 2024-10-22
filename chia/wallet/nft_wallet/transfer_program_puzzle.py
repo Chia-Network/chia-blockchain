@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -17,7 +17,7 @@ TRANSFER_PROGRAM_MOD = load_clvm_maybe_recompile(
 )
 
 
-def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, List[Program]]:
+def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
     if puzzle.mod == TRANSFER_PROGRAM_MOD:
         return True, list(puzzle.args.as_iter())
     return False, []
@@ -39,7 +39,7 @@ def solution_for_transfer_program(
     new_did_inner_hash: bytes32,
     trade_prices_list: Program,
 ) -> Program:
-    return Program.to([conditions, current_owner, [new_did, trade_prices_list, new_did_inner_hash]])  # type: ignore
+    return Program.to([conditions, current_owner, [new_did, trade_prices_list, new_did_inner_hash]])
 
 
 @dataclass(frozen=True)
@@ -79,4 +79,4 @@ class TransferProgramPuzzle:
         return None
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
-        return Program.to(None)  # type: ignore
+        return Program.to(None)

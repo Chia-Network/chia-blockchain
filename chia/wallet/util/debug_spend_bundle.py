@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from typing import List
-
-from chia_rs import AugSchemeMPL, G1Element
-from clvm import KEYWORD_FROM_ATOM
+from chia_rs import AugSchemeMPL
+from clvm.operators import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -76,9 +74,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     pks = []
     msgs = []
 
-    created_coin_announcements: List[List[bytes]] = []
+    created_coin_announcements: list[list[bytes]] = []
     asserted_coin_announcements = []
-    created_puzzle_announcements: List[List[bytes]] = []
+    created_puzzle_announcements: list[list[bytes]] = []
     asserted_puzzle_announcements = []
 
     print("=" * 80)
@@ -106,8 +104,8 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             continue
 
         conditions = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
-        for pk_bytes, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
-            pks.append(G1Element.from_bytes(pk_bytes))
+        for pk, m in pkm_pairs_for_conditions_dict(conditions, coin, agg_sig_additional_data):
+            pks.append(pk)
             msgs.append(m)
         print()
         cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
@@ -121,9 +119,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
                 for c in condition_programs:
                     if len(c.vars) == 0:
                         as_prog = Program.to([c.opcode])
-                    if len(c.vars) == 1:
+                    elif len(c.vars) == 1:
                         as_prog = Program.to([c.opcode, c.vars[0]])
-                    if len(c.vars) == 2:
+                    elif len(c.vars) == 2:
                         if c.opcode == ConditionOpcode.CREATE_COIN:
                             cc = next(
                                 cc
@@ -136,6 +134,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
                                 as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
                         else:
                             as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
+                    else:
+                        raise Exception(f"Unexpected number of vars: {len(c.vars)}")
+
                     print(f"  {disassemble(as_prog)}")
             created_coin_announcements.extend(
                 [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])

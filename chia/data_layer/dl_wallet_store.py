@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import List, Optional, Type, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 from aiosqlite import Row
 
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 
@@ -29,15 +29,15 @@ def _row_to_singleton_record(row: Row) -> SingletonRecord:
     )
 
 
-def _row_to_mirror(row: Row) -> Mirror:
-    urls: List[bytes] = []
+def _row_to_mirror(row: Row, confirmed_at_height: Optional[uint32]) -> Mirror:
+    urls: list[bytes] = []
     byte_list: bytes = row[3]
     while byte_list != b"":
         length = uint16.from_bytes(byte_list[0:2])
         url = byte_list[2 : length + 2]
         byte_list = byte_list[length + 2 :]
         urls.append(url)
-    return Mirror(bytes32(row[0]), bytes32(row[1]), uint64.from_bytes(row[2]), urls, bool(row[4]))
+    return Mirror(bytes32(row[0]), bytes32(row[1]), uint64.from_bytes(row[2]), urls, bool(row[4]), confirmed_at_height)
 
 
 class DataLayerStore:
@@ -48,7 +48,7 @@ class DataLayerStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: Type[_T_DataLayerStore], db_wrapper: DBWrapper2) -> _T_DataLayerStore:
+    async def create(cls: type[_T_DataLayerStore], db_wrapper: DBWrapper2) -> _T_DataLayerStore:
         self = cls()
 
         self.db_wrapper = db_wrapper
@@ -74,6 +74,12 @@ class DataLayerStore:
                 "amount blob,"
                 "urls blob,"
                 "ours tinyint)"
+            )
+
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS mirror_confirmations("
+                "coin_id blob PRIMARY KEY,"
+                "confirmed_at_height int)"
             )
 
             await conn.execute(
@@ -125,11 +131,11 @@ class DataLayerStore:
         min_generation: Optional[uint32] = None,
         max_generation: Optional[uint32] = None,
         num_results: Optional[uint32] = None,
-    ) -> List[SingletonRecord]:
+    ) -> list[SingletonRecord]:
         """
         Returns stored singletons with a specific launcher ID.
         """
-        query_params: List[Union[bytes32, uint32]] = [launcher_id]
+        query_params: list[Union[bytes32, uint32]] = [launcher_id]
         for optional_param in (min_generation, max_generation, num_results):
             if optional_param is not None:
                 query_params.append(optional_param)
@@ -194,7 +200,7 @@ class DataLayerStore:
             return _row_to_singleton_record(row)
         return None
 
-    async def get_unconfirmed_singletons(self, launcher_id: bytes32) -> List[SingletonRecord]:
+    async def get_unconfirmed_singletons(self, launcher_id: bytes32) -> list[SingletonRecord]:
         """
         Returns all singletons with a specific launcher id that have not yet been marked confirmed
         """
@@ -208,7 +214,7 @@ class DataLayerStore:
 
         return records
 
-    async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
+    async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> list[SingletonRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 "SELECT * from singleton_records WHERE launcher_id=? AND root=? ORDER BY generation DESC",
@@ -243,7 +249,7 @@ class DataLayerStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM singleton_records WHERE launcher_id=?", (launcher_id,))).close()
 
-    async def add_launcher(self, launcher: Coin) -> None:
+    async def add_launcher(self, launcher: Coin, confirmed_at_height: uint32) -> None:
         """
         Add a new launcher coin's information to the DB
         """
@@ -251,9 +257,10 @@ class DataLayerStore:
             launcher.parent_coin_info + launcher.puzzle_hash + uint64(launcher.amount).stream_to_bytes()
         )
         async with self.db_wrapper.writer_maybe_transaction() as conn:
+            launcher_id = launcher.name()
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO launchers VALUES (?, ?)",
-                (launcher.name(), launcher_bytes),
+                (launcher_id, launcher_bytes),
             )
 
     async def get_launcher(self, launcher_id: bytes32) -> Optional[Coin]:
@@ -269,7 +276,7 @@ class DataLayerStore:
             return Coin(bytes32(row[1][0:32]), bytes32(row[1][32:64]), uint64(int.from_bytes(row[1][64:72], "big")))
         return None
 
-    async def get_all_launchers(self) -> List[bytes32]:
+    async def get_all_launchers(self) -> list[bytes32]:
         """
         Checks DB for all launchers.
         """
@@ -314,8 +321,15 @@ class DataLayerStore:
                     1 if mirror.ours else 0,
                 ),
             )
+            await conn.execute_insert(
+                "INSERT OR REPLACE INTO mirror_confirmations (coin_id, confirmed_at_height) VALUES (?, ?)",
+                (
+                    mirror.coin_id,
+                    mirror.confirmed_at_height,
+                ),
+            )
 
-    async def get_mirrors(self, launcher_id: bytes32) -> List[Mirror]:
+    async def get_mirrors(self, launcher_id: bytes32) -> list[Mirror]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 "SELECT * from mirrors WHERE launcher_id=?",
@@ -323,10 +337,15 @@ class DataLayerStore:
             )
             rows = await cursor.fetchall()
             await cursor.close()
-        mirrors: List[Mirror] = []
+            mirrors: list[Mirror] = []
 
-        for row in rows:
-            mirrors.append(_row_to_mirror(row))
+            for row in rows:
+                confirmation_height = await execute_fetchone(
+                    conn, "SELECT * FROM mirror_confirmations WHERE coin_id=?", (row[0],)
+                )
+                mirrors.append(
+                    _row_to_mirror(row, None if confirmation_height is None else uint32(confirmation_height[1]))
+                )
 
         return mirrors
 
@@ -338,10 +357,51 @@ class DataLayerStore:
             )
             row = await cursor.fetchone()
             await cursor.close()
-        assert row is not None
+            assert row is not None
+            confirmation_height = await execute_fetchone(
+                conn, "SELECT * FROM mirror_confirmations WHERE coin_id=?", (row[0],)
+            )
 
-        return _row_to_mirror(row)
+        return _row_to_mirror(row, None if confirmation_height is None else uint32(confirmation_height[1]))
 
     async def delete_mirror(self, coin_id: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM mirrors WHERE coin_id=?", (coin_id,))).close()
+            await (await conn.execute("DELETE FROM mirror_confirmations WHERE coin_id=?", (coin_id,))).close()
+
+    async def rollback_to_block(self, height: int) -> None:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            cursor = await conn.execute(
+                "SELECT * from mirror_confirmations WHERE confirmed_at_height>?",
+                (height,),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+
+            for row in rows:
+                await conn.execute(
+                    "DELETE from mirror_confirmations WHERE coin_id=?",
+                    (row[0],),
+                )
+                await conn.execute(
+                    "DELETE from mirrors WHERE coin_id=?",
+                    (row[0],),
+                )
+
+            cursor = await conn.execute(
+                "SELECT launcher_id from singleton_records WHERE confirmed_at_height>? AND generation=0",
+                (height,),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+            for row in rows:
+                await conn.execute(
+                    "DELETE from launchers WHERE id=?",
+                    (row[0],),
+                )
+
+            await conn.execute(
+                "UPDATE singleton_records SET "
+                "confirmed_at_height = 0, confirmed = 0, timestamp = 0 WHERE confirmed_at_height > ?",
+                (height,),
+            )

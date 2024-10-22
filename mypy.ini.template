@@ -1,5 +1,5 @@
 [mypy]
-files = benchmarks,build_scripts,chia,tests,tools,*.py
+files = benchmarks,build_scripts,chia,tools,*.py
 ignore_missing_imports = True
 show_error_codes = True
 warn_unused_ignores = True

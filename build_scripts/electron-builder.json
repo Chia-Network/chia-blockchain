@@ -1,0 +1,102 @@
+{
+  "productName": "chia",
+  "appId": "net.chia.blockchain",
+  "asar": true,
+  "asarUnpack": "**/daemon/**",
+  "npmRebuild": false,
+  "files": ["build", "daemon", "!node_modules", "!src", "!public"],
+  "protocols": [
+    {
+      "name": "Chia URL",
+      "schemes": ["chia"]
+    },
+    {
+      "name": "Chia XCH Address",
+      "schemes": ["xch"]
+    }
+  ],
+  "win": {
+    "target": "nsis",
+    "icon": "src/assets/img/chia.ico",
+    "timeStampServer": "http://timestamp.comodoca.com",
+    "executableName": "Chia"
+  },
+  "nsis": {
+    "artifactName": "ChiaSetup-${env.CHIA_INSTALLER_VERSION}.exe",
+    "oneClick": false,
+    "deleteAppDataOnUninstall": true,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "license": "../../LICENSE",
+    "include": "installer.nsh"
+  },
+  "mac": {
+    "executableName": "Chia",
+    "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
+    "category": "public.app-category.finance",
+    "target": "dmg",
+    "icon": "src/assets/img/chia.icns",
+    "entitlements": "entitlements.mac.plist",
+    "provisioningProfile": "chiablockchain.provisionprofile",
+    "darkModeSupport": true,
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false
+  },
+  "dmg": {
+    "background": "../../../build_scripts/assets/dmg/background.tiff",
+    "iconSize": 80,
+    "contents": [
+      {
+        "x": 466,
+        "y": 280,
+        "type": "link",
+        "path": "/Applications"
+      },
+      {
+        "x": 192,
+        "y": 280,
+        "type": "file"
+      }
+    ],
+    "window": {
+      "width": 658,
+      "height": 498
+    }
+  },
+  "linux": {
+    "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
+    "icon": "src/assets/img/chia.icns"
+  },
+  "deb": {
+    "afterInstall": "../../../build_scripts/assets/deb/postinst.sh",
+    "afterRemove": "../../../build_scripts/assets/deb/prerm.sh",
+    "depends": [
+      "libgbm1",
+      "libgtk-3-0",
+      "libnotify4",
+      "libnss3",
+      "libxss1",
+      "libxtst6",
+      "xdg-utils",
+      "libatspi2.0-0",
+      "libuuid1",
+      "libsecret-1-0"
+    ]
+  },
+  "rpm": {
+    "afterInstall": "../../../build_scripts/assets/rpm/postinst.sh",
+    "afterRemove": "../../../build_scripts/assets/rpm/prerm.sh",
+    "fpm": [
+      "--rpm-rpmbuild-define=_build_id_links none",
+      "--rpm-rpmbuild-define=_enable_debug_package 0",
+      "--rpm-rpmbuild-define=debug_package %{nil}",
+      "--rpm-rpmbuild-define=__os_install_post /usr/lib/rpm/brp-compress %{nil}",
+      "--rpm-attr=4755,root,root:/opt/chia/chrome-sandbox",
+      "--rpm-tag=Recommends: libxcrypt-compat",
+      "--directories=/opt/chia",
+      "--rpm-tag=Requires(pre): findutils",
+      "--before-install=../../../build_scripts/assets/rpm/before-install.sh"
+    ]
+  }
+}

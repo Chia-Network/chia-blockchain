@@ -1,8 +1,10 @@
+# Package: utils
+
 from __future__ import annotations
 
 from pathlib import Path
 from sys import platform
-from typing import Optional, Tuple, Union, overload
+from typing import ClassVar, Optional, Union, overload
 
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
@@ -63,8 +65,8 @@ class KeyringWrapper:
     """
 
     # Static members
-    __shared_instance = None
-    __keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH
+    __shared_instance: ClassVar[Optional[KeyringWrapper]] = None
+    __keys_root_path: ClassVar[Path] = DEFAULT_KEYS_ROOT_PATH
 
     # Instance members
     keys_root_path: Path
@@ -112,18 +114,15 @@ class KeyringWrapper:
 
     @overload
     @staticmethod
-    def get_shared_instance() -> KeyringWrapper:
-        ...
+    def get_shared_instance() -> KeyringWrapper: ...
 
     @overload
     @staticmethod
-    def get_shared_instance(create_if_necessary: Literal[True]) -> KeyringWrapper:
-        ...
+    def get_shared_instance(create_if_necessary: Literal[True]) -> KeyringWrapper: ...
 
     @overload
     @staticmethod
-    def get_shared_instance(create_if_necessary: bool) -> Optional[KeyringWrapper]:
-        ...
+    def get_shared_instance(create_if_necessary: bool) -> Optional[KeyringWrapper]: ...
 
     @staticmethod
     def get_shared_instance(create_if_necessary: bool = True) -> Optional[KeyringWrapper]:
@@ -144,7 +143,7 @@ class KeyringWrapper:
 
     # Master passphrase support
 
-    def get_cached_master_passphrase(self) -> Tuple[Optional[str], bool]:
+    def get_cached_master_passphrase(self) -> tuple[Optional[str], bool]:
         """
         Returns a tuple including the currently cached passphrase and a bool
         indicating whether the passphrase has been previously validated.
@@ -267,23 +266,3 @@ class KeyringWrapper:
 
     def get_master_passphrase_hint(self) -> Optional[str]:
         return self.keyring.get_passphrase_hint()
-
-    # Keyring interface
-
-    def get_passphrase(self, service: str, user: str) -> Optional[str]:
-        return self.get_keyring().get_password(service, user)
-
-    def set_passphrase(self, service: str, user: str, passphrase: str) -> None:
-        self.get_keyring().set_password(service, user, passphrase)
-
-    def delete_passphrase(self, service: str, user: str) -> None:
-        self.get_keyring().delete_password(service, user)
-
-    def get_label(self, fingerprint: int) -> Optional[str]:
-        return self.keyring.get_label(fingerprint)
-
-    def set_label(self, fingerprint: int, label: str) -> None:
-        self.keyring.set_label(fingerprint, label)
-
-    def delete_label(self, fingerprint: int) -> None:
-        self.keyring.delete_label(fingerprint)

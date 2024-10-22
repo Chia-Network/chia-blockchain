@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import pathlib
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.server.outbound_message import NodeType
+from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import Service, async_run
 from chia.types.aliases import IntroducerService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.misc import SignalHandlers
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -22,7 +22,7 @@ SERVICE_NAME = "introducer"
 
 def create_introducer_service(
     root_path: pathlib.Path,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     advertised_port: Optional[int] = None,
     connect_to_daemon: bool = True,
 ) -> IntroducerService:

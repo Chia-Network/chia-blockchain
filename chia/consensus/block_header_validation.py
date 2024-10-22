@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import dataclasses
 import logging
 import time
-from typing import Optional, Tuple
+from typing import Optional
 
 from chia_rs import AugSchemeMPL
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.deficit import calculate_deficit
 from chia.consensus.difficulty_adjustment import can_finish_sub_and_full_epoch
@@ -40,7 +39,7 @@ log = logging.getLogger(__name__)
 # noinspection PyCallByClass
 def validate_unfinished_header_block(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     header_block: UnfinishedHeaderBlock,
     check_filter: bool,
     expected_difficulty: uint64,
@@ -48,7 +47,8 @@ def validate_unfinished_header_block(
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
     check_sub_epoch_summary: bool = True,
-) -> Tuple[Optional[uint64], Optional[ValidationError]]:
+    prev_ses_block: Optional[BlockRecord] = None,
+) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
     and without transactions and transaction info (header). Returns (required_iters, error).
@@ -96,6 +96,7 @@ def validate_unfinished_header_block(
                 prev_b.prev_hash,
                 prev_b.deficit,
                 prev_b.sub_epoch_summary_included is not None,
+                prev_ses_block=prev_ses_block,
             )
         else:
             can_finish_se = False
@@ -194,9 +195,9 @@ def validate_unfinished_header_block(
                         icc_iters_proof,
                         sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
                     )
-                    if sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != dataclasses.replace(
-                        target_vdf_info,
-                        number_of_iterations=icc_iters_committed,
+                    if (
+                        sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
+                        != target_vdf_info.replace(number_of_iterations=icc_iters_committed)
                     ):
                         return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
                     if not skip_vdf_is_valid:
@@ -338,9 +339,8 @@ def validate_unfinished_header_block(
                 else:
                     cc_eos_vdf_info_iters = expected_sub_slot_iters
             # Check that the modified data is correct
-            if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf != dataclasses.replace(
-                partial_cc_vdf_info,
-                number_of_iterations=cc_eos_vdf_info_iters,
+            if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf != partial_cc_vdf_info.replace(
+                number_of_iterations=cc_eos_vdf_info_iters
             ):
                 return None, ValidationError(Err.INVALID_CC_EOS_VDF, "wrong challenge chain end of slot vdf")
 
@@ -424,6 +424,7 @@ def validate_unfinished_header_block(
                         blocks.block_record(prev_b.prev_hash),
                         expected_difficulty if can_finish_epoch else None,
                         expected_sub_slot_iters if can_finish_epoch else None,
+                        prev_ses_block,
                     )
                     expected_hash = expected_sub_epoch_summary.get_hash()
                     if expected_hash != ses_hash:
@@ -659,9 +660,8 @@ def validate_unfinished_header_block(
             header_block.reward_chain_block.challenge_chain_sp_vdf.output,
         )
 
-        if header_block.reward_chain_block.challenge_chain_sp_vdf != dataclasses.replace(
-            target_vdf_info,
-            number_of_iterations=sp_iters,
+        if header_block.reward_chain_block.challenge_chain_sp_vdf != target_vdf_info.replace(
+            number_of_iterations=sp_iters
         ):
             return None, ValidationError(Err.INVALID_CC_SP_VDF)
         if not skip_vdf_is_valid:
@@ -831,13 +831,14 @@ def validate_unfinished_header_block(
 
 def validate_finished_header_block(
     constants: ConsensusConstants,
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     header_block: HeaderBlock,
     check_filter: bool,
     expected_difficulty: uint64,
     expected_sub_slot_iters: uint64,
     check_sub_epoch_summary: bool = True,
-) -> Tuple[Optional[uint64], Optional[ValidationError]]:
+    prev_ses_block: Optional[BlockRecord] = None,
+) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
     without transactions and transaction info. Returns (required_iters, error).
@@ -861,6 +862,7 @@ def validate_finished_header_block(
         expected_sub_slot_iters,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
+        prev_ses_block=prev_ses_block,
     )
 
     genesis_block = False
@@ -944,15 +946,11 @@ def validate_finished_header_block(
         ip_vdf_iters,
         header_block.reward_chain_block.challenge_chain_ip_vdf.output,
     )
-    if header_block.reward_chain_block.challenge_chain_ip_vdf != dataclasses.replace(
-        cc_target_vdf_info,
-        number_of_iterations=ip_iters,
+    if header_block.reward_chain_block.challenge_chain_ip_vdf != cc_target_vdf_info.replace(
+        number_of_iterations=ip_iters
     ):
-        expected = dataclasses.replace(
-            cc_target_vdf_info,
-            number_of_iterations=ip_iters,
-        )
-        log.error(f"{header_block.reward_chain_block.challenge_chain_ip_vdf }. expected {expected}")
+        expected = cc_target_vdf_info.replace(number_of_iterations=ip_iters)
+        log.error(f"{header_block.reward_chain_block.challenge_chain_ip_vdf}. expected {expected}")
         log.error(f"Block: {header_block}")
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
     if not header_block.challenge_chain_ip_proof.normalized_to_identity and not validate_vdf(

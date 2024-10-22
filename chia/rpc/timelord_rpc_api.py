@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from collections.abc import Awaitable
+from typing import Any, Callable, Optional
 
 from chia.rpc.rpc_server import Endpoint, ServiceManagementMessage
 from chia.timelord.timelord import Timelord
@@ -16,10 +17,10 @@ class TimelordRpcApi:
         self.service = timelord
         self.service_name = "chia_timelord"
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def get_routes(self) -> dict[str, Endpoint]:
         return {}
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
         payloads = []
 
         if change_data is None:

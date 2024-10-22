@@ -6,7 +6,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia.plotters.plotters_util import get_venv_bin, reset_loop_policy_for_windows, run_command, run_plotter
 from chia.plotting.create_plots import resolve_plot_keys
@@ -26,7 +26,10 @@ def get_madmax_src_path(plotters_root_path: Path) -> Path:
 
 
 def get_madmax_package_path() -> Path:
-    return Path(os.path.dirname(sys.executable)) / "madmax"
+    p = Path(os.path.dirname(sys.executable)).joinpath("_internal/madmax")
+    if p.exists():
+        return p
+    return Path(os.path.dirname(sys.executable)).joinpath("madmax")
 
 
 def get_madmax_exec_venv_path(ksize: int = 32) -> Optional[Path]:
@@ -97,8 +100,8 @@ def get_madmax_version(plotters_root_path: Path):
         return None, f"Failed to determine madmax version: {e} {tb}"
 
 
-def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
-    info: Dict[str, Any] = {"display_name": "madMAx Plotter"}
+def get_madmax_install_info(plotters_root_path: Path) -> Optional[dict[str, Any]]:
+    info: dict[str, Any] = {"display_name": "madMAx Plotter"}
     installed: bool = False
     supported: bool = is_madmax_supported()
 

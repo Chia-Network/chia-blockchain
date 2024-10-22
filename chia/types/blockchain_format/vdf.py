@@ -2,20 +2,21 @@ from __future__ import annotations
 
 import logging
 import traceback
-from dataclasses import dataclass
 from enum import IntEnum
 from functools import lru_cache
 from typing import Optional
 
+from chia_rs import VDFInfo, VDFProof
 from chiavdf import create_discriminant, verify_n_wesolowski
 
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
 from chia.util.ints import uint8, uint64
-from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
+
+__all__ = ["VDFInfo", "VDFProof"]
 
 
 @lru_cache(maxsize=200)
@@ -44,22 +45,6 @@ def verify_vdf(
         discriminant_size,
         witness_type,
     )
-
-
-@streamable
-@dataclass(frozen=True)
-class VDFInfo(Streamable):
-    challenge: bytes32  # Used to generate the discriminant (VDF group)
-    number_of_iterations: uint64
-    output: ClassgroupElement
-
-
-@streamable
-@dataclass(frozen=True)
-class VDFProof(Streamable):
-    witness_type: uint8
-    witness: bytes
-    normalized_to_identity: bool
 
 
 def validate_vdf(

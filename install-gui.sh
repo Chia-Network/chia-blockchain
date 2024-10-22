@@ -4,7 +4,10 @@ set -o errexit
 
 export NODE_OPTIONS="--max-old-space-size=3000"
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "$0")"; pwd)
+SCRIPT_DIR=$(
+  cd -- "$(dirname -- "$0")"
+  pwd
+)
 
 if [ "${SCRIPT_DIR}" != "$(pwd)" ]; then
   echo "Please change working directory by the command below"
@@ -26,14 +29,14 @@ fi
 # Allows overriding the branch or commit to build in chia-blockchain-gui
 SUBMODULE_BRANCH=$1
 
-nodejs_is_installed(){
+nodejs_is_installed() {
   if ! npm version >/dev/null 2>&1; then
     return 1
   fi
   return 0
 }
 
-do_install_npm_locally(){
+do_install_npm_locally() {
   NODEJS_VERSION="$(node -v | cut -d'.' -f 1 | sed -e 's/^v//')"
   NPM_VERSION="$(npm -v | cut -d'.' -f 1)"
 
@@ -89,7 +92,7 @@ do_install_npm_locally(){
 
 # Work around for inconsistent `npm` exec path issue
 # https://github.com/Chia-Network/chia-blockchain/pull/10460#issuecomment-1054492495
-patch_inconsistent_npm_issue(){
+patch_inconsistent_npm_issue() {
   node_module_dir=$1
   if [ ! -d "$node_module_dir" ]; then
     mkdir "$node_module_dir"
@@ -110,11 +113,11 @@ if [ "$(uname)" = "Linux" ]; then
     # Debian/Ubuntu
 
     # Check if we are running a Raspberry PI 4
-    if [ "$(uname -m)" = "aarch64" ] \
-    && [ "$(uname -n)" = "raspberrypi" ]; then
+    if [ "$(uname -m)" = "aarch64" ] &&
+      [ "$(uname -n)" = "raspberrypi" ]; then
       # Check if NodeJS & NPM is installed
       type npm >/dev/null 2>&1 || {
-          echo >&2 "Please install NODEJS&NPM manually"
+        echo >&2 "Please install NODEJS&NPM manually"
       }
     else
       if ! nodejs_is_installed; then
@@ -124,7 +127,7 @@ if [ "$(uname)" = "Linux" ]; then
       fi
       do_install_npm_locally
     fi
-  elif type yum >/dev/null 2>&1 &&  [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
+  elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f /etc/rocky-release ] && [ ! -f /etc/fedora-release ]; then
     # AMZN 2
     if ! nodejs_is_installed; then
       echo "Installing nodejs on Amazon Linux 2."
@@ -191,8 +194,7 @@ if [ ! "$CI" ]; then
   git submodule update
   cd chia-blockchain-gui
 
-  if [ "$SUBMODULE_BRANCH" ];
-  then
+  if [ "$SUBMODULE_BRANCH" ]; then
     git fetch --all
     git reset --hard "$SUBMODULE_BRANCH"
     echo ""

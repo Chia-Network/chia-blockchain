@@ -6,9 +6,9 @@ import random
 import sys
 from pathlib import Path
 from time import monotonic
-from typing import List, Tuple
 
-from benchmarks.utils import rand_hash, rewards, setup_db
+from benchmarks.utils import setup_db
+from chia._tests.util.benchmarks import rand_hash, rewards
 from chia.full_node.coin_store import CoinStore
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -27,9 +27,9 @@ def make_coin() -> Coin:
     return Coin(rand_hash(), rand_hash(), uint64(1))
 
 
-def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
-    additions: List[Coin] = []
-    hashes: List[bytes32] = []
+def make_coins(num: int) -> tuple[list[Coin], list[bytes32]]:
+    additions: list[Coin] = []
+    hashes: list[bytes32] = []
     for i in range(num):
         c = make_coin()
         additions.append(c)
@@ -47,8 +47,8 @@ async def run_new_block_benchmark(version: int) -> None:
     async with setup_db("coin-store-benchmark.db", version) as db_wrapper:
         coin_store = await CoinStore.create(db_wrapper)
 
-        all_unspent: List[bytes32] = []
-        all_coins: List[bytes32] = []
+        all_unspent: list[bytes32] = []
+        all_coins: list[bytes32] = []
 
         block_height = 1
         timestamp = 1631794488

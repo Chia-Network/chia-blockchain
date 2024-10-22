@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, TypeVar
 
 from typing_extensions import Protocol
 
@@ -13,15 +13,13 @@ _T = TypeVar("_T")
 
 class MarshallableProtocol(Protocol):
     @classmethod
-    def unmarshal(cls: Type[_T], marshalled: Dict[str, Any]) -> _T:
-        ...
+    def unmarshal(cls: type[_T], marshalled: dict[str, Any]) -> _T: ...
 
-    def marshal(self) -> Dict[str, Any]:
-        ...
+    def marshal(self) -> dict[str, Any]: ...
 
 
 class UnboundRoute(Protocol):
-    async def __call__(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def __call__(self, request: dict[str, Any]) -> dict[str, Any]:
         pass
 
 
@@ -44,17 +42,17 @@ def marshal() -> RouteDecorator:
         from typing import get_type_hints
 
         hints = get_type_hints(route)
-        request_class: Type[MarshallableProtocol] = hints["request"]
+        request_class: type[MarshallableProtocol] = hints["request"]
 
-        async def wrapper(self: object, request: Dict[str, object]) -> Dict[str, object]:
+        async def wrapper(self: object, request: dict[str, object]) -> dict[str, object]:
             # import json
             # name = route.__name__
-            # print(f"\n ==== {name} request.json\n{json.dumps(request, indent=4)}")
+            # print(f"\n ==== {name} request.json\n{json.dumps(request, indent=2)}")
             unmarshalled_request = request_class.unmarshal(request)
 
             response = await route(self, request=unmarshalled_request)
             marshalled_response = response.marshal()
-            # print(f"\n ==== {name} response.json\n{json.dumps(marshalled_response, indent=4)}")
+            # print(f"\n ==== {name} response.json\n{json.dumps(marshalled_response, indent=2)}")
 
             return marshalled_response
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -24,10 +24,10 @@ def compute_spend_hints_and_additions(
     cs: CoinSpend,
     *,
     max_cost: int = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
-) -> Tuple[Dict[bytes32, HintedCoin], int]:
+) -> tuple[dict[bytes32, HintedCoin], int]:
     cost, result_program = cs.puzzle_reveal.run_with_cost(max_cost, cs.solution)
 
-    hinted_coins: Dict[bytes32, HintedCoin] = {}
+    hinted_coins: dict[bytes32, HintedCoin] = {}
     for condition in result_program.as_iter():
         if cost > max_cost:
             raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_spend_hints_and_additions() for CoinSpend")
@@ -49,7 +49,10 @@ def compute_spend_hints_and_additions(
             continue
         cost += ConditionCost.CREATE_COIN.value
 
-        coin: Coin = Coin(cs.coin.name(), bytes32(condition.at("rf").atom), uint64(condition.at("rrf").as_int()))
+        rf = condition.at("rf").atom
+        assert rf is not None
+
+        coin: Coin = Coin(cs.coin.name(), bytes32(rf), uint64(condition.at("rrf").as_int()))
         hint: Optional[bytes32] = None
         if (
             condition.at("rrr") != Program.to(None)  # There's more than two arguments

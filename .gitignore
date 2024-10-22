@@ -11,7 +11,6 @@
 nohup.out
 mongod.log*
 fndb_test*
-blockchain_test*
 *.db
 *.db-journal
 
@@ -42,12 +41,16 @@ build_scripts/build
 
 # pyenv
 .python-version
+.penv*/
+.venv*/
 venv*/
+venv*
 activate
 
 # Editors
 .vscode
 .idea
+.vs
 
 # Packaging
 chia-blockchain.tar.gz
@@ -86,6 +89,7 @@ chia-blockchain-gui/src/locales/_build
 build_scripts\win_build
 build_scripts/win_build
 win_code_sign_cert.p12
+build_scripts/**/.nx/cache
 
 # chia-blockchain wheel build folder
 build/

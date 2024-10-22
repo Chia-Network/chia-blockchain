@@ -5,16 +5,17 @@ import logging
 import math
 import time
 import traceback
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
-from aiohttp import ClientSession, WSCloseCode, WSMessage, WSMsgType
+from aiohttp import ClientSession, WebSocketError, WSCloseCode, WSMessage, WSMsgType
 from aiohttp.client import ClientWebSocketResponse
 from aiohttp.web import WebSocketResponse
 from packaging.version import Version
 from typing_extensions import Protocol, final
 
-from chia.cmds.init_funcs import chia_full_version_str
+from chia import __version__
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import (
@@ -22,7 +23,7 @@ from chia.protocols.protocol_timing import (
     CONSENSUS_ERROR_BAN_SECONDS,
     INTERNAL_PROTOCOL_ERROR_BAN_SECONDS,
 )
-from chia.protocols.shared_protocol import Capability, Error, Handshake
+from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
 from chia.server.api_protocol import ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -47,7 +48,7 @@ ConnectionCallback = Callable[["WSChiaConnection"], Awaitable[None]]
 error_response_version = Version("0.0.35")
 
 
-def create_default_last_message_time_dict() -> Dict[ProtocolMessageTypes, float]:
+def create_default_last_message_time_dict() -> dict[ProtocolMessageTypes, float]:
     return {message_type: -math.inf for message_type in ProtocolMessageTypes}
 
 
@@ -57,8 +58,7 @@ class ConnectionClosedCallbackProtocol(Protocol):
         connection: WSChiaConnection,
         ban_time: int,
         closed_connection: bool = ...,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 @final
@@ -74,8 +74,8 @@ class WSChiaConnection:
     api: ApiProtocol = field(repr=False)
     local_type: NodeType
     local_port: Optional[int]
-    local_capabilities_for_handshake: List[Tuple[uint16, str]] = field(repr=False)
-    local_capabilities: List[Capability]
+    local_capabilities_for_handshake: list[tuple[uint16, str]] = field(repr=False)
+    local_capabilities: list[Capability]
     peer_info: PeerInfo
     peer_node_id: bytes32
     log: logging.Logger = field(repr=False)
@@ -91,9 +91,9 @@ class WSChiaConnection:
     received_message_callback: Optional[ConnectionCallback] = field(repr=False)
     incoming_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
     outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue, repr=False)
-    api_tasks: Dict[bytes32, asyncio.Task[None]] = field(default_factory=dict, repr=False)
+    api_tasks: dict[bytes32, asyncio.Task[None]] = field(default_factory=dict, repr=False)
     # Contains task ids of api tasks which should not be canceled
-    execute_tasks: Set[bytes32] = field(default_factory=set, repr=False)
+    execute_tasks: set[bytes32] = field(default_factory=set, repr=False)
 
     # ChiaConnection metrics
     creation_time: float = field(default_factory=time.time)
@@ -108,17 +108,17 @@ class WSChiaConnection:
     _close_event: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
     session: Optional[ClientSession] = field(default=None, repr=False)
 
-    pending_requests: Dict[uint16, asyncio.Event] = field(default_factory=dict, repr=False)
-    request_results: Dict[uint16, Message] = field(default_factory=dict, repr=False)
+    pending_requests: dict[uint16, asyncio.Event] = field(default_factory=dict, repr=False)
+    request_results: dict[uint16, Message] = field(default_factory=dict, repr=False)
     closed: bool = False
     connection_type: Optional[NodeType] = None
     request_nonce: uint16 = uint16(0)
-    peer_capabilities: List[Capability] = field(default_factory=list)
+    peer_capabilities: list[Capability] = field(default_factory=list)
     # Used by the Chia Seeder.
     version: str = field(default_factory=str)
     protocol_version: Version = field(default_factory=lambda: Version("0"))
 
-    log_rate_limit_last_time: Dict[ProtocolMessageTypes, float] = field(
+    log_rate_limit_last_time: dict[ProtocolMessageTypes, float] = field(
         default_factory=create_default_last_message_time_dict,
         repr=False,
     )
@@ -137,7 +137,7 @@ class WSChiaConnection:
         peer_id: bytes32,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
-        local_capabilities_for_handshake: List[Tuple[uint16, str]],
+        local_capabilities_for_handshake: list[tuple[uint16, str]],
         session: Optional[ClientSession] = None,
     ) -> WSChiaConnection:
         assert ws._writer is not None
@@ -189,22 +189,21 @@ class WSChiaConnection:
     async def perform_handshake(
         self,
         network_id: str,
-        protocol_version: str,
         server_port: int,
         local_type: NodeType,
     ) -> None:
-        outbound_handshake = make_msg(
-            ProtocolMessageTypes.handshake,
-            Handshake(
-                network_id,
-                protocol_version,
-                chia_full_version_str(),
-                uint16(server_port),
-                uint8(local_type.value),
-                self.local_capabilities_for_handshake,
-            ),
-        )
         if self.is_outbound:
+            outbound_handshake = make_msg(
+                ProtocolMessageTypes.handshake,
+                Handshake(
+                    network_id,
+                    protocol_version[local_type],
+                    __version__,
+                    uint16(server_port),
+                    uint8(local_type.value),
+                    self.local_capabilities_for_handshake,
+                ),
+            )
             await self._send_message(outbound_handshake)
             inbound_handshake_msg = await self._read_one_message()
             if inbound_handshake_msg is None:
@@ -222,6 +221,17 @@ class WSChiaConnection:
 
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            if (
+                local_type in [NodeType.FARMER, NodeType.HARVESTER]
+                and inbound_handshake.protocol_version != protocol_version[local_type]
+            ):
+                self.log.warning(
+                    f"protocol version mismatch: "
+                    f"local_type={local_type} "
+                    f"incoming={inbound_handshake.protocol_version} "
+                    f"our={protocol_version[local_type]}"
+                )
 
             self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
@@ -250,11 +260,36 @@ class WSChiaConnection:
             inbound_handshake = Handshake.from_bytes(message.data)
             if inbound_handshake.network_id != network_id:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
+
+            remote_node_type = NodeType(inbound_handshake.node_type)
+
+            if (
+                remote_node_type in [NodeType.FARMER, NodeType.HARVESTER]
+                and inbound_handshake.protocol_version != protocol_version[remote_node_type]
+            ):
+                self.log.warning(
+                    f"protocol version mismatch: "
+                    f"remote_type={remote_node_type} "
+                    f"incoming={inbound_handshake.protocol_version} "
+                    f"our={protocol_version[remote_node_type]}"
+                )
+
+            outbound_handshake = make_msg(
+                ProtocolMessageTypes.handshake,
+                Handshake(
+                    network_id,
+                    protocol_version[remote_node_type],
+                    __version__,
+                    uint16(server_port),
+                    uint8(local_type.value),
+                    self.local_capabilities_for_handshake,
+                ),
+            )
             await self._send_message(outbound_handshake)
             self.version = inbound_handshake.software_version
             self.protocol_version = Version(inbound_handshake.protocol_version)
             self.peer_server_port = inbound_handshake.server_port
-            self.connection_type = NodeType(inbound_handshake.node_type)
+            self.connection_type = remote_node_type
             # "1" means capability is enabled
             self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 
@@ -551,9 +586,7 @@ class WSChiaConnection:
         if self.is_outbound:
             self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**15 - 1) else uint16(0)
         else:
-            self.request_nonce = (
-                uint16(self.request_nonce + 1) if self.request_nonce != (2**16 - 1) else uint16(2**15)
-            )
+            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**16 - 1) else uint16(2**15)
 
         message = Message(message_no_id.type, request_id, message_no_id.data)
         assert message.id is not None
@@ -619,15 +652,7 @@ class WSChiaConnection:
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Message]:
-        try:
-            message: WSMessage = await self.ws.receive(30)
-        except asyncio.TimeoutError:
-            # self.ws._closed if we didn't receive a ping / pong
-            if self.ws.closed:
-                asyncio.create_task(self.close())
-                await asyncio.sleep(3)
-                return None
-            return None
+        message: WSMessage = await self.ws.receive()
 
         if self.connection_type is not None:
             connection_type_str = NodeType(self.connection_type).name.lower()
@@ -684,7 +709,7 @@ class WSChiaConnection:
             return full_message_loaded
         elif message.type == WSMsgType.ERROR:
             self.log.error(f"WebSocket Error: {message}")
-            if message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
+            if isinstance(message.data, WebSocketError) and message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
                 asyncio.create_task(self.close(300))
             else:
                 asyncio.create_task(self.close())

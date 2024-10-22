@@ -5,20 +5,21 @@ import random
 import sqlite3
 import sys
 import time
+from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
-from typing import Iterator, List, Optional
+from typing import Optional
 
 import click
 import zstd
 
+from chia._tests.util.constants import test_constants
 from chia.simulator.block_tools import create_block_tools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chia_logging import initialize_logging
 from chia.util.ints import uint32, uint64
-from tools.test_constants import test_constants
 
 
 @contextmanager
@@ -97,7 +98,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
             wallet = bt.get_farmer_wallet_tool()
             farmer_puzzlehash = wallet.get_new_puzzlehash()
             pool_puzzlehash = wallet.get_new_puzzlehash()
-            transaction_blocks: List[uint32] = []
+            transaction_blocks: list[uint32] = []
 
             blocks = bt.get_consecutive_blocks(
                 3,
@@ -107,7 +108,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                 genesis_timestamp=uint64(1234567890),
             )
 
-            unspent_coins: List[Coin] = []
+            unspent_coins: list[Coin] = []
 
             for b in blocks:
                 for coin in b.get_included_reward_coins():
@@ -133,8 +134,8 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                 with enable_profiler(profile, b.height):
                     start_time = time.monotonic()
 
-                    new_coins: List[Coin] = []
-                    spend_bundles: List[SpendBundle] = []
+                    new_coins: list[Coin] = []
+                    spend_bundles: list[SpendBundle] = []
                     i = 0
                     for i in range(num_tx_per_block):
                         if unspent_coins == []:
@@ -145,7 +146,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                         new_coins.extend(bundle.additions())
                         spend_bundles.append(bundle)
 
-                    block_references: List[uint32]
+                    block_references: list[uint32]
                     if block_refs:
                         block_references = random.sample(transaction_blocks, min(len(transaction_blocks), 512))
                         random.shuffle(block_references)
@@ -162,7 +163,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
                         pool_reward_puzzle_hash=pool_puzzlehash,
                         keep_going_until_tx_block=True,
                         transaction_data=SpendBundle.aggregate(spend_bundles),
-                        previous_generator=block_references,
+                        block_refs=block_references,
                     )
                     prev_tx_block = b
                     prev_block = blocks[-2]

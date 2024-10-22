@@ -6,21 +6,20 @@ import time
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 import colorama
 
+from chia.cmds.cmds_util import prompt_yes_no
 from chia.daemon.client import acquire_connection_to_daemon
 from chia.util.errors import KeychainMaxUnlockAttempts
 from chia.util.keychain import Keychain, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
-from chia.util.misc import prompt_yes_no
 
 DEFAULT_PASSPHRASE_PROMPT = (
     colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
 )  # noqa: E501
 FAILED_ATTEMPT_DELAY = 0.5
-MAX_KEYS = 100
 MAX_RETRIES = 3
 SAVE_MASTER_PASSPHRASE_WARNING = (
     colorama.Fore.YELLOW
@@ -74,7 +73,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
 
 def verify_passphrase_meets_requirements(
     new_passphrase: str, confirmation_passphrase: str
-) -> Tuple[bool, Optional[str]]:
+) -> tuple[bool, Optional[str]]:
     match = new_passphrase == confirmation_passphrase
     min_length = Keychain.minimum_passphrase_length()
     meets_len_requirement = len(new_passphrase) >= min_length
@@ -132,7 +131,7 @@ def prompt_to_save_passphrase() -> bool:
     return save
 
 
-def prompt_for_new_passphrase() -> Tuple[str, bool]:
+def prompt_for_new_passphrase() -> tuple[str, bool]:
     min_length: int = Keychain.minimum_passphrase_length()
     if min_length > 0:
         n = min_length
@@ -325,7 +324,7 @@ def remove_passphrase_hint() -> None:
         print("Passphrase hint was not removed")
 
 
-async def async_update_daemon_passphrase_cache_if_running(root_path: Path, config: Dict[str, Any]) -> None:
+async def async_update_daemon_passphrase_cache_if_running(root_path: Path, config: dict[str, Any]) -> None:
     """
     Attempt to connect to the daemon and update the cached passphrase
     """

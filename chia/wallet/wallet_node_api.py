@@ -58,7 +58,7 @@ class WalletNodeAPI:
             else:
                 timestamp = None
             if timestamp is not None and self.wallet_node.is_timestamp_in_sync(timestamp):
-                self.log.info("Connected to a a synced trusted peer, disconnecting from all untrusted nodes.")
+                self.log.info("Connected to a synced trusted peer, disconnecting from all untrusted nodes.")
                 # Stop peer discovery/connect tasks first
                 if self.wallet_node.wallet_peers is not None:
                     await self.wallet_node.wallet_peers.ensure_is_closed()

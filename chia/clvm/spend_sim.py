@@ -3,10 +3,11 @@ from __future__ import annotations
 import contextlib
 import json
 import random
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import anyio
 
@@ -17,6 +18,7 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
+from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MempoolManager
@@ -28,12 +30,13 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
-from chia.types.spend_bundle import SpendBundle
+from chia.types.spend_bundle import SpendBundle, T_SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.util.compute_hints import HintedCoin, compute_spend_hints_and_additions
 
 """
 The purpose of this file is to provide a lightweight simulator for the testing of Chialisp smart contracts.
@@ -49,7 +52,7 @@ and is designed so that you could test with it and then swap in a real rpc clien
 @asynccontextmanager
 async def sim_and_client(
     db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS, pass_prefarm: bool = True
-) -> AsyncIterator[Tuple[SpendSim, SimClient]]:
+) -> AsyncIterator[tuple[SpendSim, SimClient]]:
     async with SpendSim.managed(db_path, defaults) as sim:
         client: SimClient = SimClient(sim)
         if pass_prefarm:
@@ -59,10 +62,10 @@ async def sim_and_client(
 
 class CostLogger:
     def __init__(self) -> None:
-        self.cost_dict: Dict[str, int] = {}
-        self.cost_dict_no_puzs: Dict[str, int] = {}
+        self.cost_dict: dict[str, int] = {}
+        self.cost_dict_no_puzs: dict[str, int] = {}
 
-    def add_cost(self, descriptor: str, spend_bundle: SpendBundle) -> SpendBundle:
+    def add_cost(self, descriptor: str, spend_bundle: T_SpendBundle) -> T_SpendBundle:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
         npc_result: NPCResult = get_name_puzzle_conditions(
             program,
@@ -71,11 +74,12 @@ class CostLogger:
             height=DEFAULT_CONSTANTS.HARD_FORK_HEIGHT,
             constants=DEFAULT_CONSTANTS,
         )
-        self.cost_dict[descriptor] = npc_result.cost
+        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
+        self.cost_dict[descriptor] = cost
         cost_to_subtract: int = 0
         for cs in spend_bundle.coin_spends:
             cost_to_subtract += len(bytes(cs.puzzle_reveal)) * DEFAULT_CONSTANTS.COST_PER_BYTE
-        self.cost_dict_no_puzs[descriptor] = npc_result.cost - cost_to_subtract
+        self.cost_dict_no_puzs[descriptor] = cost - cost_to_subtract
         return spend_bundle
 
     def log_cost_statistics(self) -> str:
@@ -83,7 +87,7 @@ class CostLogger:
             "standard cost": self.cost_dict,
             "no puzzle reveals": self.cost_dict_no_puzs,
         }
-        return json.dumps(merged_dict, indent=4)
+        return json.dumps(merged_dict, indent=2)
 
 
 @streamable
@@ -99,7 +103,7 @@ _T_SimBlockRecord = TypeVar("_T_SimBlockRecord", bound="SimBlockRecord")
 @streamable
 @dataclass(frozen=True)
 class SimBlockRecord(Streamable):
-    reward_claims_incorporated: List[Coin]
+    reward_claims_incorporated: list[Coin]
     height: uint32
     prev_transaction_block_height: uint32
     timestamp: uint64
@@ -108,7 +112,7 @@ class SimBlockRecord(Streamable):
     prev_transaction_block_hash: bytes32
 
     @classmethod
-    def create(cls: Type[_T_SimBlockRecord], rci: List[Coin], height: uint32, timestamp: uint64) -> _T_SimBlockRecord:
+    def create(cls: type[_T_SimBlockRecord], rci: list[Coin], height: uint32, timestamp: uint64) -> _T_SimBlockRecord:
         prev_transaction_block_height = uint32(height - 1 if height > 0 else 0)
         return cls(
             rci,
@@ -126,8 +130,8 @@ class SimBlockRecord(Streamable):
 class SimStore(Streamable):
     timestamp: uint64
     block_height: uint32
-    block_records: List[SimBlockRecord]
-    blocks: List[SimFullBlock]
+    block_records: list[SimBlockRecord]
+    blocks: list[SimFullBlock]
 
 
 _T_SpendSim = TypeVar("_T_SpendSim", bound="SpendSim")
@@ -137,16 +141,17 @@ class SpendSim:
     db_wrapper: DBWrapper2
     coin_store: CoinStore
     mempool_manager: MempoolManager
-    block_records: List[SimBlockRecord]
-    blocks: List[SimFullBlock]
+    block_records: list[SimBlockRecord]
+    blocks: list[SimFullBlock]
     timestamp: uint64
     block_height: uint32
     defaults: ConsensusConstants
+    hint_store: HintStore
 
     @classmethod
     @contextlib.asynccontextmanager
     async def managed(
-        cls: Type[_T_SpendSim], db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
+        cls: type[_T_SpendSim], db_path: Optional[Path] = None, defaults: ConsensusConstants = DEFAULT_CONSTANTS
     ) -> AsyncIterator[_T_SpendSim]:
         self = cls()
         if db_path is None:
@@ -156,12 +161,13 @@ class SpendSim:
 
         async with DBWrapper2.managed(database=uri, uri=True, reader_count=1, db_version=2) as self.db_wrapper:
             self.coin_store = await CoinStore.create(self.db_wrapper)
-            self.mempool_manager = MempoolManager(self.coin_store.get_coin_record, defaults)
+            self.hint_store = await HintStore.create(self.db_wrapper)
+            self.mempool_manager = MempoolManager(self.coin_store.get_coin_records, defaults)
             self.defaults = defaults
 
             # Load the next data if there is any
             async with self.db_wrapper.writer_maybe_transaction() as conn:
-                await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
+                await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY KEY)")
                 cursor = await conn.execute("SELECT * from block_data")
                 row = await cursor.fetchone()
                 await cursor.close()
@@ -191,7 +197,7 @@ class SpendSim:
                         )
                         await c.close()
 
-    async def new_peak(self, spent_coins_ids: Optional[List[bytes32]]) -> None:
+    async def new_peak(self, spent_coins_ids: Optional[list[bytes32]]) -> None:
         await self.mempool_manager.new_peak(self.block_records[-1], spent_coins_ids)
 
     def new_coin_record(self, coin: Coin, coinbase: bool = False) -> CoinRecord:
@@ -203,7 +209,7 @@ class SpendSim:
             self.timestamp,
         )
 
-    async def all_non_reward_coins(self) -> List[Coin]:
+    async def all_non_reward_coins(self) -> list[Coin]:
         coins = set()
         async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
@@ -226,7 +232,7 @@ class SpendSim:
         self,
         puzzle_hash: bytes32 = bytes32(b"0" * 32),
         item_inclusion_filter: Optional[Callable[[bytes32], bool]] = None,
-    ) -> Tuple[List[Coin], List[Coin]]:
+    ) -> tuple[list[Coin], list[Coin]]:
         # Fees get calculated
         fees = uint64(0)
         for item in self.mempool_manager.mempool.all_items():
@@ -252,21 +258,32 @@ class SpendSim:
 
         # Coin store gets updated
         generator_bundle: Optional[SpendBundle] = None
-        return_additions: List[Coin] = []
-        return_removals: List[Coin] = []
+        return_additions: list[Coin] = []
+        return_removals: list[Coin] = []
         spent_coins_ids = None
         if (len(self.block_records) > 0) and (self.mempool_manager.mempool.size() > 0):
             peak = self.mempool_manager.peak
             if peak is not None:
-                result = self.mempool_manager.create_bundle_from_mempool(peak.header_hash, item_inclusion_filter)
+                result = await self.mempool_manager.create_bundle_from_mempool(
+                    last_tb_header_hash=peak.header_hash,
+                    get_unspent_lineage_info_for_puzzle_hash=self.coin_store.get_unspent_lineage_info_for_puzzle_hash,
+                    item_inclusion_filter=item_inclusion_filter,
+                )
 
                 if result is not None:
                     bundle, additions = result
                     generator_bundle = bundle
+                    for spend in generator_bundle.coin_spends:
+                        hint_dict, _ = compute_spend_hints_and_additions(spend)
+                        hints: list[tuple[bytes32, bytes]] = []
+                        hint_obj: HintedCoin
+                        for coin_name, hint_obj in hint_dict.items():
+                            if hint_obj.hint is not None:
+                                hints.append((coin_name, bytes(hint_obj.hint)))
+                        await self.hint_store.add_hints(hints)
                     return_additions = additions
                     return_removals = bundle.removals()
                     spent_coins_ids = [r.name() for r in return_removals]
-
                     await self.coin_store._add_coin_records([self.new_coin_record(addition) for addition in additions])
                     await self.coin_store._set_spent(spent_coins_ids, uint32(self.block_height + 1))
 
@@ -318,31 +335,29 @@ class SimClient:
     def __init__(self, service: SpendSim) -> None:
         self.service = service
 
-    async def push_tx(self, spend_bundle: SpendBundle) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
+    async def push_tx(self, spend_bundle: SpendBundle) -> tuple[MempoolInclusionStatus, Optional[Err]]:
         try:
             spend_bundle_id = spend_bundle.name()
-            cost_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
-                spend_bundle, None, spend_bundle_id
-            )
+            sbc = await self.service.mempool_manager.pre_validate_spendbundle(spend_bundle, spend_bundle_id)
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
-        assert self.service.mempool_manager.peak
-        cost, status, error = await self.service.mempool_manager.add_spend_bundle(
-            spend_bundle, cost_result, spend_bundle_id, self.service.mempool_manager.peak.height
+        assert self.service.mempool_manager.peak is not None
+        info = await self.service.mempool_manager.add_spend_bundle(
+            spend_bundle, sbc, spend_bundle_id, self.service.mempool_manager.peak.height
         )
-        return status, error
+        return info.status, info.error
 
     async def get_coin_record_by_name(self, name: bytes32) -> Optional[CoinRecord]:
         return await self.service.coin_store.get_coin_record(name)
 
     async def get_coin_records_by_names(
         self,
-        names: List[bytes32],
+        names: list[bytes32],
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
         include_spent_coins: bool = False,
-    ) -> List[CoinRecord]:
-        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "names": names}
+    ) -> list[CoinRecord]:
+        kwargs: dict[str, Any] = {"include_spent_coins": include_spent_coins, "names": names}
         if start_height is not None:
             kwargs["start_height"] = start_height
         if end_height is not None:
@@ -351,12 +366,12 @@ class SimClient:
 
     async def get_coin_records_by_parent_ids(
         self,
-        parent_ids: List[bytes32],
+        parent_ids: list[bytes32],
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
         include_spent_coins: bool = False,
-    ) -> List[CoinRecord]:
-        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "parent_ids": parent_ids}
+    ) -> list[CoinRecord]:
+        kwargs: dict[str, Any] = {"include_spent_coins": include_spent_coins, "parent_ids": parent_ids}
         if start_height is not None:
             kwargs["start_height"] = start_height
         if end_height is not None:
@@ -369,8 +384,8 @@ class SimClient:
         include_spent_coins: bool = True,
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
-    ) -> List[CoinRecord]:
-        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "puzzle_hash": puzzle_hash}
+    ) -> list[CoinRecord]:
+        kwargs: dict[str, Any] = {"include_spent_coins": include_spent_coins, "puzzle_hash": puzzle_hash}
         if start_height is not None:
             kwargs["start_height"] = start_height
         if end_height is not None:
@@ -379,12 +394,12 @@ class SimClient:
 
     async def get_coin_records_by_puzzle_hashes(
         self,
-        puzzle_hashes: List[bytes32],
+        puzzle_hashes: list[bytes32],
         include_spent_coins: bool = True,
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
-    ) -> List[CoinRecord]:
-        kwargs: Dict[str, Any] = {"include_spent_coins": include_spent_coins, "puzzle_hashes": puzzle_hashes}
+    ) -> list[CoinRecord]:
+        kwargs: dict[str, Any] = {"include_spent_coins": include_spent_coins, "puzzle_hashes": puzzle_hashes}
         if start_height is not None:
             kwargs["start_height"] = start_height
         if end_height is not None:
@@ -397,7 +412,7 @@ class SimClient:
     async def get_block_record(self, header_hash: bytes32) -> SimBlockRecord:
         return list(filter(lambda block: block.header_hash == header_hash, self.service.block_records))[0]
 
-    async def get_block_records(self, start: uint32, end: uint32) -> List[SimBlockRecord]:
+    async def get_block_records(self, start: uint32, end: uint32) -> list[SimBlockRecord]:
         return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.block_records))
 
     async def get_block(self, header_hash: bytes32) -> SimFullBlock:
@@ -408,16 +423,16 @@ class SimClient:
         block: SimFullBlock = list(filter(lambda block: block.height == block_height, self.service.blocks))[0]
         return block
 
-    async def get_all_block(self, start: uint32, end: uint32) -> List[SimFullBlock]:
+    async def get_all_block(self, start: uint32, end: uint32) -> list[SimFullBlock]:
         return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.blocks))
 
-    async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:
+    async def get_additions_and_removals(self, header_hash: bytes32) -> tuple[list[CoinRecord], list[CoinRecord]]:
         selected_block: SimBlockRecord = list(
             filter(lambda br: br.header_hash == header_hash, self.service.block_records)
         )[0]
         block_height: uint32 = selected_block.height
-        additions: List[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block_height)
-        removals: List[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block_height)
+        additions: list[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block_height)
+        removals: list[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block_height)
         return additions, removals
 
     async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> CoinSpend:
@@ -429,18 +444,46 @@ class SimClient:
         spend_info = get_puzzle_and_solution_for_coin(generator, coin_record.coin, height, self.service.defaults)
         return CoinSpend(coin_record.coin, spend_info.puzzle, spend_info.solution)
 
-    async def get_all_mempool_tx_ids(self) -> List[bytes32]:
+    async def get_all_mempool_tx_ids(self) -> list[bytes32]:
         return self.service.mempool_manager.mempool.all_item_ids()
 
-    async def get_all_mempool_items(self) -> Dict[bytes32, MempoolItem]:
+    async def get_all_mempool_items(self) -> dict[bytes32, MempoolItem]:
         spends = {}
         for item in self.service.mempool_manager.mempool.all_items():
             spends[item.name] = item
         return spends
 
-    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[Dict[str, Any]]:
+    async def get_mempool_item_by_tx_id(self, tx_id: bytes32) -> Optional[dict[str, Any]]:
         item = self.service.mempool_manager.get_mempool_item(tx_id)
         if item is None:
             return None
         else:
             return item.__dict__
+
+    async def get_coin_records_by_hint(
+        self,
+        hint: bytes32,
+        include_spent_coins: bool = True,
+        start_height: Optional[int] = None,
+        end_height: Optional[int] = None,
+    ) -> list[CoinRecord]:
+        """
+        Retrieves coins by hint, by default returns unspent coins.
+        """
+        names: list[bytes32] = await self.service.hint_store.get_coin_ids(hint)
+
+        kwargs: dict[str, Any] = {
+            "include_spent_coins": False,
+            "names": names,
+        }
+        if start_height:
+            kwargs["start_height"] = uint32(start_height)
+        if end_height:
+            kwargs["end_height"] = uint32(end_height)
+
+        if include_spent_coins:
+            kwargs["include_spent_coins"] = include_spent_coins
+
+        coin_records = await self.service.coin_store.get_coin_records_by_names(**kwargs)
+
+        return coin_records

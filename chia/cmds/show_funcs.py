@@ -2,17 +2,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[str, Any]) -> bool:
+async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[str, Any]) -> bool:
     import time
 
+    from chia.cmds.cmds_util import format_bytes
     from chia.consensus.block_record import BlockRecord
     from chia.util.ints import uint64
-    from chia.util.misc import format_bytes
 
     blockchain_state = await node_client.get_blockchain_state()
     if blockchain_state is None:
@@ -36,15 +37,15 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
 
     if synced:
         print("Current Blockchain Status: Full Node Synced")
-        print("\nPeak: Hash:", peak.header_hash if peak is not None else "")
+        print("\nPeak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
     elif peak is not None and sync_mode:
         sync_max_block = blockchain_state["sync"]["sync_tip_height"]
         sync_current_block = blockchain_state["sync"]["sync_progress_height"]
         print(
             f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block} "
-            f"({sync_max_block - sync_current_block} behind)."
+            f"({sync_max_block - sync_current_block} behind). ({sync_current_block*100.0/sync_max_block:2.2f}% synced)"
         )
-        print("Peak: Hash:", peak.header_hash if peak is not None else "")
+        print("Peak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
     elif peak is not None:
         print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
     else:
@@ -55,7 +56,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
         if peak.is_transaction_block:
             peak_time = peak.timestamp
         else:
-            peak_hash = peak.header_hash
+            peak_hash = bytes32(peak.header_hash)
             curr = await node_client.get_block_record(peak_hash)
             while curr is not None and not curr.is_transaction_block:
                 curr = await node_client.get_block_record(curr.prev_hash)
@@ -77,21 +78,21 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
         print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
         print("\n  Height: |   Hash:")
 
-        added_blocks: List[BlockRecord] = []
+        added_blocks: list[BlockRecord] = []
         curr = await node_client.get_block_record(peak.header_hash)
         while curr is not None and len(added_blocks) < num_blocks and curr.height > 0:
             added_blocks.append(curr)
             curr = await node_client.get_block_record(curr.prev_hash)
 
         for b in added_blocks:
-            print(f"{b.height:>9} | {b.header_hash}")
+            print(f"{b.height:>9} | {bytes32(b.header_hash)}")
     else:
         print("Blockchain has no blocks yet")
     return False
 
 
 async def print_block_from_hash(
-    node_client: FullNodeRpcClient, config: Dict[str, Any], block_by_header_hash: str
+    node_client: FullNodeRpcClient, config: dict[str, Any], block_by_header_hash: str
 ) -> None:
     import time
 
@@ -121,7 +122,7 @@ async def print_block_from_hash(
             cost = str(full_block.transactions_info.cost)
             tx_filter_hash: Union[str, bytes32] = "Not a transaction block"
             if full_block.foliage_transaction_block:
-                tx_filter_hash = full_block.foliage_transaction_block.filter_hash
+                tx_filter_hash = bytes32(full_block.foliage_transaction_block.filter_hash)
             fees: Any = block.fees
         else:
             block_time_string = "Not a transaction block"

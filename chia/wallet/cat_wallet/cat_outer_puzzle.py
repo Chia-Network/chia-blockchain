@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Any, Callable, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -33,9 +33,9 @@ class CATOuterPuzzle:
         if args is None:
             return None
         _, tail_hash, inner_puzzle = args
-        constructor_dict = {
+        constructor_dict: dict[str, Any] = {
             "type": "CAT",
-            "tail": "0x" + tail_hash.atom.hex(),
+            "tail": "0x" + tail_hash.as_atom().hex(),
         }
         next_constructor = self._match(uncurry_puzzle(inner_puzzle))
         if next_constructor is not None:
@@ -74,7 +74,7 @@ class CATOuterPuzzle:
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         tail_hash: bytes32 = constructor["tail"]
-        spendable_cats: List[SpendableCAT] = []
+        spendable_cats: list[SpendableCAT] = []
         target_coin: Coin
         ring = [
             *zip(
@@ -102,7 +102,7 @@ class CATOuterPuzzle:
             if also is not None:
                 solution = self._solve(also, solver, puzzle, solution)
                 puzzle = self._construct(also, puzzle)
-            args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal.to_program()))
+            args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal))
             assert args is not None
             _, _, parent_inner_puzzle = args
             spendable_cats.append(

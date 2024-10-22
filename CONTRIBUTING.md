@@ -87,7 +87,7 @@ provided configuration with `pre-commit install`.
 4. Preferences > Settings > Python > Linting > flake8 enabled
 5. Preferences > Settings > Python > Linting > mypy enabled
 6. Preferences > Settings > Formatting > Python > Provider > black
-7. Preferences > Settings > mypy > Targets: set to `./chia` and `./tests`
+7. Preferences > Settings > mypy > Targets: set to `./chia`
 
 ## Configure Pycharm
 

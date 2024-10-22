@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
-import multiprocessing
 from collections import Counter
 from pathlib import Path
 from threading import Lock
 from time import sleep, time
-from typing import List, Optional
+from typing import Optional
 
 from chia_rs import G1Element
 from chiapos import Verifier
@@ -24,6 +23,7 @@ from chia.plotting.util import (
 )
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
+from chia.util.cpu import available_logical_cores
 from chia.util.hash import std_hash
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain
@@ -57,8 +57,9 @@ def check_plots(
 
     context_count = config["harvester"].get("parallel_decompressor_count", 5)
     thread_count = config["harvester"].get("decompressor_thread_count", 0)
+    cpu_count = available_logical_cores()
     if thread_count == 0:
-        thread_count = multiprocessing.cpu_count() // 2
+        thread_count = cpu_count // 2
     disable_cpu_affinity = config["harvester"].get("disable_cpu_affinity", False)
     max_compression_level_allowed = config["harvester"].get("max_compression_level_allowed", 7)
     use_gpu_harvesting = config["harvester"].get("use_gpu_harvesting", False)
@@ -102,7 +103,7 @@ def check_plots(
         log.info("Plot filenames expected to end with -[64 char plot ID].plot")
 
     if list_duplicates:
-        all_filenames: List[Path] = []
+        all_filenames: list[Path] = []
         for paths in get_plot_filenames(root_path).values():
             all_filenames += paths
         find_duplicate_plot_IDs(all_filenames)
@@ -134,7 +135,7 @@ def check_plots(
         log.info(f"Starting to test each plot with {num} challenges each\n")
     total_good_plots: Counter[str] = Counter()
     total_size = 0
-    bad_plots_list: List[Path] = []
+    bad_plots_list: list[Path] = []
 
     with plot_manager:
 

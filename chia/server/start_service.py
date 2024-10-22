@@ -6,27 +6,12 @@ import logging
 import logging.config
 import os
 import signal
+from collections.abc import AsyncIterator, Awaitable, Coroutine
 from functools import partial
 from pathlib import Path
 from types import FrameType
-from typing import (
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Coroutine,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-)
+from typing import Any, Callable, Generic, Optional, TypeVar, cast
 
-from chia.cmds.init_funcs import chia_full_version_str
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import (
     EmptyServiceManagementMessage,
@@ -41,6 +26,7 @@ from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.signal_handlers import SignalHandlers
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
@@ -48,11 +34,11 @@ from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
-from chia.util.misc import SignalHandlers
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
-from ..protocols.shared_protocol import capabilities
+from ..protocols.shared_protocol import default_capabilities
+from ..util.chia_version import chia_short_version
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -63,7 +49,7 @@ _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtoco
 _T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
 _T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound=RpcApiProtocol)
 
-RpcInfo = Tuple[Type[_T_RpcApiProtocol], int]
+RpcInfo = tuple[type[_T_RpcApiProtocol], int]
 
 log = logging.getLogger(__name__)
 
@@ -83,14 +69,14 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         service_name: str,
         network_id: str,
         *,
-        config: Dict[str, Any],
-        upnp_ports: Optional[List[int]] = None,
-        connect_peers: Optional[Set[UnresolvedPeerInfo]] = None,
+        config: dict[str, Any],
+        upnp_ports: Optional[list[int]] = None,
+        connect_peers: Optional[set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
         rpc_info: Optional[RpcInfo[_T_RpcApiProtocol]] = None,
         connect_to_daemon: bool = True,
         max_request_body_size: Optional[int] = None,
-        override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+        override_capabilities: Optional[list[tuple[uint16, str]]] = None,
     ) -> None:
         if upnp_ports is None:
             upnp_ports = []
@@ -114,7 +100,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
 
         self._log = logging.getLogger(service_name)
         self._log.info(f"Starting service {self._service_name} ...")
-        self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
+        self._log.info(f"chia-blockchain version: {chia_short_version()}")
 
         self.service_config = self.config[service_name]
 
@@ -126,7 +112,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         if node_type == NodeType.WALLET:
             inbound_rlp = self.service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
-        capabilities_to_use: List[Tuple[uint16, str]] = capabilities
+        capabilities_to_use: list[tuple[uint16, str]] = default_capabilities[node_type]
         if override_capabilities is not None:
             capabilities_to_use = override_capabilities
 
@@ -177,7 +163,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self._service_management_queue.put_nowait(message)
 
     async def _connect_peers_task_handler(self) -> None:
-        resolved_peers: Dict[UnresolvedPeerInfo, PeerInfo] = {}
+        resolved_peers: dict[UnresolvedPeerInfo, PeerInfo] = {}
         prefer_ipv6 = self.config.get("prefer_ipv6", False)
         while True:
             for unresolved in self._connect_peers:
@@ -192,6 +178,11 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                     resolved_peers[unresolved] = resolved
 
                 if any(connection.peer_info == resolved for connection in self._server.all_connections.values()):
+                    continue
+                if any(
+                    connection.peer_info.host == resolved.host and connection.peer_server_port == resolved.port
+                    for connection in self._server.all_connections.values()
+                ):
                     continue
 
                 if not await self._server.start_client(resolved, None):

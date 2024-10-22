@@ -1,0 +1,56 @@
+name: identify version
+
+on:
+  workflow_call:
+    outputs:
+      chia-installer-version:
+        value: ${{ jobs.version.outputs.chia-installer-version }}
+      tag-type:
+        value: ${{ jobs.version.outputs.tag-type }}
+
+jobs:
+  version:
+    name: identify version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      chia-dev-version: ${{ steps.version-number.outputs.chia-dev-version }}
+      chia-installer-version: ${{ steps.version-number.outputs.chia-installer-version }}
+      tag-type: ${{ steps.tag-type.outputs.tag-type }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: Chia-Network/actions/git-ssh-to-https@main
+
+      - name: Check tag type
+        id: tag-type
+        shell: bash
+        run: |
+          REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
+          REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"
+          if [[ "${{ github.event.release.tag_name }}" =~ $REG_B ]] || [[ "${{ inputs.release_type }}" =~ $REG_B ]]; then
+            TAG_TYPE=beta
+          elif [[ "${{ github.event.release.tag_name }}" =~ $REG_RC ]] || [[ "${{ inputs.release_type }}" =~ $REG_RC ]]; then
+            TAG_TYPE=rc
+          fi
+          echo "tag-type=${TAG_TYPE}" | tee -a "$$GITHUB_OUTPUT"
+
+      - name: Create installer version number
+        id: version-number
+        # TODO figure out better way to handle versioning
+        run: |
+          python3 -m venv ../venv
+          . ../venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install poetry "poetry-dynamic-versioning[plugin]"
+
+          VERSION=$(poetry version -s)
+          echo "chia-installer-version=${VERSION}" >> "$GITHUB_OUTPUT"
+          GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
+          echo "chia-dev-version=${VERSION}-${GIT_SHORT_HASH}" >> "$GITHUB_OUTPUT"
+
+          deactivate

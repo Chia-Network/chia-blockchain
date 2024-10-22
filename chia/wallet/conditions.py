@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass, fields, replace
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union, final, get_type_hints
+from typing import Any, Optional, TypeVar, Union, final, get_type_hints
 
 from chia_rs import G1Element
 from clvm.casts import int_from_bytes, int_to_bytes
@@ -11,7 +12,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 
 _T_Condition = TypeVar("_T_Condition", bound="Condition")
@@ -19,13 +20,11 @@ _T_Condition = TypeVar("_T_Condition", bound="Condition")
 
 class Condition(Streamable, ABC):
     @abstractmethod
-    def to_program(self) -> Program:
-        ...
+    def to_program(self) -> Program: ...
 
     @classmethod
     @abstractmethod
-    def from_program(cls: Type[_T_Condition], program: Program) -> _T_Condition:
-        ...
+    def from_program(cls: type[_T_Condition], program: Program) -> _T_Condition: ...
 
 
 @final
@@ -43,8 +42,8 @@ class AggSigParent(Condition):
     @classmethod
     def from_program(cls, program: Program, parent_id: Optional[bytes32] = None) -> AggSigParent:
         return cls(
-            G1Element.from_bytes(program.at("rf").atom),
-            program.at("rrf").atom,
+            G1Element.from_bytes(program.at("rf").as_atom()),
+            program.at("rrf").as_atom(),
             parent_id,
         )
 
@@ -64,8 +63,8 @@ class AggSigPuzzle(Condition):
     @classmethod
     def from_program(cls, program: Program, puzzle_hash: Optional[bytes32] = None) -> AggSigPuzzle:
         return cls(
-            G1Element.from_bytes(program.at("rf").atom),
-            program.at("rrf").atom,
+            G1Element.from_bytes(program.at("rf").as_atom()),
+            program.at("rrf").as_atom(),
             puzzle_hash,
         )
 
@@ -85,8 +84,8 @@ class AggSigAmount(Condition):
     @classmethod
     def from_program(cls, program: Program, amount: Optional[uint64] = None) -> AggSigAmount:
         return cls(
-            G1Element.from_bytes(program.at("rf").atom),
-            program.at("rrf").atom,
+            G1Element.from_bytes(program.at("rf").as_atom()),
+            program.at("rrf").as_atom(),
             amount,
         )
 
@@ -112,8 +111,8 @@ class AggSigPuzzleAmount(Condition):
         amount: Optional[uint64] = None,
     ) -> AggSigPuzzleAmount:
         return cls(
-            G1Element.from_bytes(program.at("rf").atom),
-            program.at("rrf").atom,
+            G1Element.from_bytes(program.at("rf").as_atom()),
+            program.at("rrf").as_atom(),
             puzzle_hash,
             amount,
         )
@@ -140,8 +139,8 @@ class AggSigParentAmount(Condition):
         amount: Optional[uint64] = None,
     ) -> AggSigParentAmount:
         return cls(
-            G1Element.from_bytes(program.at("rf").atom),
-            program.at("rrf").atom,
+            G1Element.from_bytes(program.at("rf").as_atom()),
+            program.at("rrf").as_atom(),
             parent_id,
             amount,
         )
@@ -168,8 +167,8 @@ class AggSigParentPuzzle(Condition):
         puzzle_hash: Optional[bytes32] = None,
     ) -> AggSigParentPuzzle:
         return cls(
-            G1Element.from_bytes(program.at("rf").atom),
-            program.at("rrf").atom,
+            G1Element.from_bytes(program.at("rf").as_atom()),
+            program.at("rrf").as_atom(),
             parent_id,
             puzzle_hash,
         )
@@ -189,8 +188,8 @@ class AggSigUnsafe(Condition):
     @classmethod
     def from_program(cls, program: Program) -> AggSigUnsafe:
         return cls(
-            G1Element.from_bytes(program.at("rf").atom),
-            program.at("rrf").atom,
+            G1Element.from_bytes(program.at("rf").as_atom()),
+            program.at("rrf").as_atom(),
         )
 
 
@@ -215,8 +214,8 @@ class AggSigMe(Condition):
         additional_data: Optional[bytes32] = None,
     ) -> AggSigMe:
         return cls(
-            G1Element.from_bytes(program.at("rf").atom),
-            program.at("rrf").atom,
+            G1Element.from_bytes(program.at("rf").as_atom()),
+            program.at("rrf").as_atom(),
             coin_id,
             additional_data,
         )
@@ -228,7 +227,7 @@ class AggSigMe(Condition):
 class CreateCoin(Condition):
     puzzle_hash: bytes32
     amount: uint64
-    memos: Optional[List[bytes]] = None
+    memos: Optional[list[bytes]] = None
 
     def to_program(self) -> Program:
         condition_args = [ConditionOpcode.CREATE_COIN, self.puzzle_hash, self.amount]
@@ -241,9 +240,13 @@ class CreateCoin(Condition):
     def from_program(cls, program: Program) -> CreateCoin:
         potential_memos: Program = program.at("rrr")
         return cls(
-            bytes32(program.at("rf").atom),
+            bytes32(program.at("rf").as_atom()),
             uint64(program.at("rrf").as_int()),
-            None if potential_memos == Program.to(None) else [memo.atom for memo in potential_memos.at("f").as_iter()],
+            (
+                None
+                if potential_memos == Program.to(None)
+                else [memo.as_atom() for memo in potential_memos.at("f").as_iter()]
+            ),
         )
 
 
@@ -302,7 +305,7 @@ class AssertCoinAnnouncement(Condition):
         asserted_msg: Optional[bytes] = None,
     ) -> AssertCoinAnnouncement:
         return cls(
-            bytes32(program.at("rf").atom),
+            bytes32(program.at("rf").as_atom()),
             asserted_id,
             asserted_msg,
         )
@@ -328,7 +331,7 @@ class CreateCoinAnnouncement(Condition):
     @classmethod
     def from_program(cls, program: Program, coin_id: Optional[bytes32] = None) -> CreateCoinAnnouncement:
         return cls(
-            program.at("rf").atom,
+            program.at("rf").as_atom(),
             coin_id,
         )
 
@@ -371,7 +374,7 @@ class AssertPuzzleAnnouncement(Condition):
         asserted_msg: Optional[bytes] = None,
     ) -> AssertPuzzleAnnouncement:
         return cls(
-            bytes32(program.at("rf").atom),
+            bytes32(program.at("rf").as_atom()),
             asserted_ph,
             asserted_msg,
         )
@@ -397,8 +400,50 @@ class CreatePuzzleAnnouncement(Condition):
     @classmethod
     def from_program(cls, program: Program, puzzle_hash: Optional[bytes32] = None) -> CreatePuzzleAnnouncement:
         return cls(
-            program.at("rf").atom,
+            program.at("rf").as_atom(),
             puzzle_hash,
+        )
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class SendMessage(Condition):
+    mode: uint8
+    msg: bytes
+    args: Program
+
+    def to_program(self) -> Program:
+        condition: Program = Program.to([ConditionOpcode.SEND_MESSAGE, self.mode, self.msg, self.args])
+        return condition
+
+    @classmethod
+    def from_program(cls, program: Program) -> SendMessage:
+        return cls(
+            uint8(program.at("rf").as_int()),
+            program.at("rrf").as_atom(),
+            program.at("rrrf"),
+        )
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class ReceiveMessage(Condition):
+    mode: uint8
+    msg: bytes
+    args: Program
+
+    def to_program(self) -> Program:
+        condition: Program = Program.to([ConditionOpcode.RECEIVE_MESSAGE, self.mode, self.msg, self.args])
+        return condition
+
+    @classmethod
+    def from_program(cls, program: Program) -> ReceiveMessage:
+        return cls(
+            uint8(program.at("rf").as_int()),
+            program.at("rrf").as_atom(),
+            program.at("rrrf"),
         )
 
 
@@ -415,7 +460,7 @@ class AssertConcurrentSpend(Condition):
     @classmethod
     def from_program(cls, program: Program) -> AssertConcurrentSpend:
         return cls(
-            bytes32(program.at("rf").atom),
+            bytes32(program.at("rf").as_atom()),
         )
 
 
@@ -432,7 +477,7 @@ class AssertConcurrentPuzzle(Condition):
     @classmethod
     def from_program(cls, program: Program) -> AssertConcurrentPuzzle:
         return cls(
-            bytes32(program.at("rf").atom),
+            bytes32(program.at("rf").as_atom()),
         )
 
 
@@ -449,7 +494,7 @@ class AssertMyCoinID(Condition):
     @classmethod
     def from_program(cls, program: Program) -> AssertMyCoinID:
         return cls(
-            bytes32(program.at("rf").atom),
+            bytes32(program.at("rf").as_atom()),
         )
 
 
@@ -466,7 +511,7 @@ class AssertMyParentID(Condition):
     @classmethod
     def from_program(cls, program: Program) -> AssertMyParentID:
         return cls(
-            bytes32(program.at("rf").atom),
+            bytes32(program.at("rf").as_atom()),
         )
 
 
@@ -483,7 +528,7 @@ class AssertMyPuzzleHash(Condition):
     @classmethod
     def from_program(cls, program: Program) -> AssertMyPuzzleHash:
         return cls(
-            bytes32(program.at("rf").atom),
+            bytes32(program.at("rf").as_atom()),
         )
 
 
@@ -692,7 +737,7 @@ class AssertBeforeHeightAbsolute(Condition):
 @dataclass(frozen=True)
 class Softfork(Condition):
     cost: uint64
-    conditions: List[Program]
+    conditions: list[Program]
 
     def to_program(self) -> Program:
         condition: Program = Program.to([ConditionOpcode.SOFTFORK, self.cost, self.conditions])
@@ -728,11 +773,10 @@ class Remark(Condition):
 @dataclass(frozen=True)
 class UnknownCondition(Condition):
     opcode: Program
-    args: List[Program]
+    args: list[Program]
 
     def to_program(self) -> Program:
-        prog: Program = self.opcode.cons(self.args)
-        return prog
+        return self.opcode.cons(Program.to(self.args))
 
     @classmethod
     def from_program(cls, program: Program) -> UnknownCondition:
@@ -761,7 +805,7 @@ class AggSig(Condition):
 
     @classmethod
     def from_program(cls, program: Program, **kwargs: Optional[Union[uint64, bytes32]]) -> AggSig:
-        opcode: bytes = program.at("f").atom
+        opcode: bytes = program.at("f").as_atom()
         condition_driver: Condition = CONDITION_DRIVERS[opcode].from_program(program, **kwargs)
         return cls(
             # We are either parsing an agg sig condition, all of which have these, or we want to error
@@ -794,7 +838,7 @@ class CreateAnnouncement(Condition):
 
     @classmethod
     def from_program(cls, program: Program, **kwargs: Optional[bytes32]) -> CreateAnnouncement:
-        if program.at("f").atom == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
+        if program.at("f").as_atom() == ConditionOpcode.CREATE_COIN_ANNOUNCEMENT:
             coin_not_puzzle: bool = True
             condition: Union[CreateCoinAnnouncement, CreatePuzzleAnnouncement] = CreateCoinAnnouncement.from_program(
                 program, **kwargs
@@ -848,7 +892,7 @@ class AssertAnnouncement(Condition):
 
     @classmethod
     def from_program(cls, program: Program, **kwargs: Optional[bytes32]) -> AssertAnnouncement:
-        if program.at("f").atom == ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
+        if program.at("f").as_atom() == ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT:
             coin_not_puzzle: bool = True
             condition: Union[AssertCoinAnnouncement, AssertPuzzleAnnouncement] = AssertCoinAnnouncement.from_program(
                 program, **kwargs
@@ -880,15 +924,15 @@ TIMELOCK_TYPES = Union[
 ]
 
 
-TIMELOCK_DRIVERS: Tuple[
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
-    Type[TIMELOCK_TYPES],
+TIMELOCK_DRIVERS: tuple[
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
+    type[TIMELOCK_TYPES],
 ] = (
     AssertSecondsRelative,
     AssertHeightRelative,
@@ -899,46 +943,46 @@ TIMELOCK_DRIVERS: Tuple[
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 )
-SECONDS_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+SECONDS_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsRelative,
     AssertSecondsAbsolute,
     AssertBeforeSecondsRelative,
     AssertBeforeSecondsAbsolute,
 }
-HEIGHT_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+HEIGHT_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertHeightRelative,
     AssertHeightAbsolute,
     AssertBeforeHeightRelative,
     AssertBeforeHeightAbsolute,
 }
-AFTER_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+AFTER_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsRelative,
     AssertHeightRelative,
     AssertSecondsAbsolute,
     AssertHeightAbsolute,
 }
-BEFORE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+BEFORE_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertBeforeSecondsRelative,
     AssertBeforeHeightRelative,
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 }
-RELATIVE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+RELATIVE_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsRelative,
     AssertHeightRelative,
     AssertBeforeSecondsRelative,
     AssertBeforeHeightRelative,
 }
-ABSOLUTE_TIMELOCK_DRIVERS: Set[Type[TIMELOCK_TYPES]] = {
+ABSOLUTE_TIMELOCK_DRIVERS: set[type[TIMELOCK_TYPES]] = {
     AssertSecondsAbsolute,
     AssertHeightAbsolute,
     AssertBeforeSecondsAbsolute,
     AssertBeforeHeightAbsolute,
 }
-TIMELOCK_DRIVERS_SET: Set[Type[TIMELOCK_TYPES]] = set(TIMELOCK_DRIVERS)
+TIMELOCK_DRIVERS_SET: set[type[TIMELOCK_TYPES]] = set(TIMELOCK_DRIVERS)
 
 
-TIMELOCK_OPCODES: Set[bytes] = {
+TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
@@ -948,37 +992,37 @@ TIMELOCK_OPCODES: Set[bytes] = {
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 }
-SECONDS_TIMELOCK_OPCODES: Set[bytes] = {
+SECONDS_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
 }
-HEIGHT_TIMELOCK_OPCODES: Set[bytes] = {
+HEIGHT_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 }
-AFTER_TIMELOCK_OPCODES: Set[bytes] = {
+AFTER_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
 }
-BEFORE_TIMELOCK_OPCODES: Set[bytes] = {
+BEFORE_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_ABSOLUTE.value,
 }
-RELATIVE_TIMELOCK_OPCODES: Set[bytes] = {
+RELATIVE_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_HEIGHT_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_RELATIVE.value,
     ConditionOpcode.ASSERT_BEFORE_HEIGHT_RELATIVE.value,
 }
-ABSOLUTE_TIMELOCK_OPCODES: Set[bytes] = {
+ABSOLUTE_TIMELOCK_OPCODES: set[bytes] = {
     ConditionOpcode.ASSERT_SECONDS_ABSOLUTE.value,
     ConditionOpcode.ASSERT_HEIGHT_ABSOLUTE.value,
     ConditionOpcode.ASSERT_BEFORE_SECONDS_ABSOLUTE.value,
@@ -1011,7 +1055,7 @@ class Timelock(Condition):
         else:
             potential_drivers -= SECONDS_TIMELOCK_DRIVERS
 
-        driver: Type[TIMELOCK_TYPES] = next(iter(potential_drivers))
+        driver: type[TIMELOCK_TYPES] = next(iter(potential_drivers))
 
         if self.seconds_not_height:
             # Semantics here mean that we're assuredly passing a uint64 to a class that expects it
@@ -1022,7 +1066,7 @@ class Timelock(Condition):
 
     @classmethod
     def from_program(cls, program: Program) -> Timelock:
-        opcode: bytes = program.at("f").atom
+        opcode: bytes = program.at("f").as_atom()
         if opcode in AFTER_TIMELOCK_OPCODES:
             after_not_before = True
         else:
@@ -1046,7 +1090,7 @@ class Timelock(Condition):
         )
 
 
-CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
+CONDITION_DRIVERS: dict[bytes, type[Condition]] = {
     ConditionOpcode.AGG_SIG_PARENT.value: AggSigParent,
     ConditionOpcode.AGG_SIG_PUZZLE.value: AggSigPuzzle,
     ConditionOpcode.AGG_SIG_AMOUNT.value: AggSigAmount,
@@ -1061,6 +1105,8 @@ CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.value: AssertCoinAnnouncement,
     ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT.value: CreatePuzzleAnnouncement,
     ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT.value: AssertPuzzleAnnouncement,
+    ConditionOpcode.SEND_MESSAGE.value: SendMessage,
+    ConditionOpcode.RECEIVE_MESSAGE.value: ReceiveMessage,
     ConditionOpcode.ASSERT_CONCURRENT_SPEND.value: AssertConcurrentSpend,
     ConditionOpcode.ASSERT_CONCURRENT_PUZZLE.value: AssertConcurrentPuzzle,
     ConditionOpcode.ASSERT_MY_COIN_ID.value: AssertMyCoinID,
@@ -1081,10 +1127,10 @@ CONDITION_DRIVERS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.SOFTFORK.value: Softfork,
     ConditionOpcode.REMARK.value: Remark,
 }
-DRIVERS_TO_OPCODES: Dict[Type[Condition], bytes] = {v: k for k, v in CONDITION_DRIVERS.items()}
+DRIVERS_TO_OPCODES: dict[type[Condition], bytes] = {v: k for k, v in CONDITION_DRIVERS.items()}
 
 
-CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
+CONDITION_DRIVERS_W_ABSTRACTIONS: dict[bytes, type[Condition]] = {
     ConditionOpcode.AGG_SIG_PARENT.value: AggSig,
     ConditionOpcode.AGG_SIG_PUZZLE.value: AggSig,
     ConditionOpcode.AGG_SIG_AMOUNT.value: AggSig,
@@ -1099,6 +1145,8 @@ CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
     ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT.value: AssertAnnouncement,
     ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT.value: CreateAnnouncement,
     ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT.value: AssertAnnouncement,
+    ConditionOpcode.SEND_MESSAGE.value: SendMessage,
+    ConditionOpcode.RECEIVE_MESSAGE.value: ReceiveMessage,
     ConditionOpcode.ASSERT_CONCURRENT_SPEND.value: AssertConcurrentSpend,
     ConditionOpcode.ASSERT_CONCURRENT_PUZZLE.value: AssertConcurrentPuzzle,
     ConditionOpcode.ASSERT_MY_COIN_ID.value: AssertMyCoinID,
@@ -1124,22 +1172,22 @@ CONDITION_DRIVERS_W_ABSTRACTIONS: Dict[bytes, Type[Condition]] = {
 def parse_conditions_non_consensus(
     conditions: Iterable[Program],
     abstractions: bool = True,  # Use abstractions like *Announcement or Timelock instead of specific condition class
-) -> List[Condition]:
-    driver_dictionary: Dict[bytes, Type[Condition]] = (
+) -> list[Condition]:
+    driver_dictionary: dict[bytes, type[Condition]] = (
         CONDITION_DRIVERS_W_ABSTRACTIONS if abstractions else CONDITION_DRIVERS
     )
-    final_condition_list: List[Condition] = []
+    final_condition_list: list[Condition] = []
     for condition in conditions:
         try:
-            final_condition_list.append(driver_dictionary[condition.at("f").atom].from_program(condition))
+            final_condition_list.append(driver_dictionary[condition.at("f").as_atom()].from_program(condition))
         except Exception:
             final_condition_list.append(UnknownCondition.from_program(condition))
 
     return final_condition_list
 
 
-def conditions_from_json_dicts(conditions: Iterable[Dict[str, Any]]) -> List[Condition]:
-    final_condition_list: List[Condition] = []
+def conditions_from_json_dicts(conditions: Iterable[dict[str, Any]]) -> list[Condition]:
+    final_condition_list: list[Condition] = []
     for condition in conditions:
         opcode_specified: Union[str, int] = condition["opcode"]
         if isinstance(opcode_specified, str):
@@ -1162,7 +1210,7 @@ def conditions_from_json_dicts(conditions: Iterable[Dict[str, Any]]) -> List[Con
     return final_condition_list
 
 
-def conditions_to_json_dicts(conditions: Iterable[Condition]) -> List[Dict[str, Any]]:
+def conditions_to_json_dicts(conditions: Iterable[Condition]) -> list[dict[str, Any]]:
     return [
         {
             "opcode": int_from_bytes(DRIVERS_TO_OPCODES[condition.__class__]),
@@ -1184,8 +1232,8 @@ class ConditionValidTimes(Streamable):
     max_blocks_after_created: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_RELATIVE
     max_height: Optional[uint32] = None  # ASSERT_BEFORE_HEIGHT_ABSOLUTE
 
-    def to_conditions(self) -> List[Condition]:
-        final_condition_list: List[Condition] = []
+    def to_conditions(self) -> list[Condition]:
+        final_condition_list: list[Condition] = []
         if self.min_secs_since_created is not None:
             final_condition_list.append(AssertSecondsRelative(self.min_secs_since_created))
         if self.min_time is not None:
@@ -1207,7 +1255,7 @@ class ConditionValidTimes(Streamable):
 
 
 condition_valid_times_hints = get_type_hints(ConditionValidTimes)
-condition_valid_times_types: Dict[str, Type[int]] = {}
+condition_valid_times_types: dict[str, type[int]] = {}
 for field in fields(ConditionValidTimes):
     hint = condition_valid_times_hints[field.name]
     [type_] = [type_ for type_ in hint.__args__ if type_ is not type(None)]
@@ -1215,23 +1263,23 @@ for field in fields(ConditionValidTimes):
 
 
 # Properties of the dataclass above, grouped by their property
-SECONDS_PROPERTIES: Set[str] = {"min_secs_since_created", "min_time", "max_secs_after_created", "max_time"}
-HEIGHT_PROPERTIES: Set[str] = {"min_blocks_since_created", "min_height", "max_blocks_after_created", "max_height"}
-AFTER_PROPERTIES: Set[str] = {"min_blocks_since_created", "min_height", "min_secs_since_created", "min_time"}
-BEFORE_PROPERTIES: Set[str] = {"max_blocks_after_created", "max_height", "max_secs_after_created", "max_time"}
-RELATIVE_PROPERTIES: Set[str] = {
+SECONDS_PROPERTIES: set[str] = {"min_secs_since_created", "min_time", "max_secs_after_created", "max_time"}
+HEIGHT_PROPERTIES: set[str] = {"min_blocks_since_created", "min_height", "max_blocks_after_created", "max_height"}
+AFTER_PROPERTIES: set[str] = {"min_blocks_since_created", "min_height", "min_secs_since_created", "min_time"}
+BEFORE_PROPERTIES: set[str] = {"max_blocks_after_created", "max_height", "max_secs_after_created", "max_time"}
+RELATIVE_PROPERTIES: set[str] = {
     "min_blocks_since_created",
     "min_secs_since_created",
     "max_secs_after_created",
     "max_blocks_after_created",
 }
-ABSOLUTE_PROPERTIES: Set[str] = {"min_time", "max_time", "min_height", "max_height"}
-ALL_PROPERTIES: Set[str] = SECONDS_PROPERTIES | HEIGHT_PROPERTIES
+ABSOLUTE_PROPERTIES: set[str] = {"min_time", "max_time", "min_height", "max_height"}
+ALL_PROPERTIES: set[str] = SECONDS_PROPERTIES | HEIGHT_PROPERTIES
 
 
 def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
     valid_times: ConditionValidTimes = ConditionValidTimes()
-    properties: Set[str] = ALL_PROPERTIES.copy()
+    properties: set[str] = ALL_PROPERTIES.copy()
     for condition in conditions:
         if isinstance(condition, TIMELOCK_DRIVERS):
             timelock: Timelock = Timelock.from_program(condition.to_program())
@@ -1272,7 +1320,7 @@ def parse_timelock_info(conditions: Iterable[Condition]) -> ConditionValidTimes:
             new_value = timelock.timestamp
 
         final_type = condition_valid_times_types[final_property]
-        replacement: Dict[str, int] = {final_property: final_type(new_value)}
+        replacement: dict[str, int] = {final_property: final_type(new_value)}
         # the type is enforced above
         valid_times = replace(valid_times, **replacement)  # type: ignore[arg-type]
 

@@ -134,6 +134,8 @@ cli.add_command(dev_cmd)
 
 
 def main() -> None:
+    import chia.cmds.signer  # noqa
+
     cli()  # pylint: disable=no-value-for-parameter
 
 

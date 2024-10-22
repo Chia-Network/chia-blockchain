@@ -1,9 +1,12 @@
+# Package: utils
+
 from __future__ import annotations
 
 import os
 import sys
 import time
-from typing import Callable, Iterator, Optional, overload
+from collections.abc import Iterator
+from typing import Callable, Optional, overload
 
 system_delays = {
     # based on data from https://github.com/Chia-Network/chia-blockchain/pull/13724
@@ -25,17 +28,18 @@ if os.environ.get("GITHUB_ACTIONS") == "true":
     # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
     _system_delay = system_delays["github"][sys.platform]
 else:
-    _system_delay = system_delays["local"][sys.platform]
+    try:
+        _system_delay = system_delays["local"][sys.platform]
+    except KeyError:
+        _system_delay = system_delays["local"]["linux"]
 
 
 @overload
-def adjusted_timeout(timeout: float) -> float:
-    ...
+def adjusted_timeout(timeout: float) -> float: ...
 
 
 @overload
-def adjusted_timeout(timeout: None) -> None:
-    ...
+def adjusted_timeout(timeout: None) -> None: ...
 
 
 def adjusted_timeout(timeout: Optional[float]) -> Optional[float]:

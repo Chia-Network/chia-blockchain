@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import asyncio
-from decimal import Decimal
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import click
 
 from chia.cmds import options
+from chia.cmds.cmds_util import coin_selection_args, tx_config_args, tx_out_cmd
+from chia.cmds.param_types import AmountParamType, Bytes32ParamType, CliAmount
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
+from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.transaction_record import TransactionRecord
 
 
 @click.group("coins", help="Manage your wallets coins")
@@ -26,30 +32,7 @@ def coins_cmd(ctx: click.Context) -> None:
 @options.create_fingerprint()
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-u", "--show-unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
-@click.option(
-    "--min-amount",
-    help="Ignore coins worth less then this much XCH or CAT units",
-    type=str,
-    default="0",
-)
-@click.option(
-    "--max-amount",
-    help="Ignore coins worth more then this much XCH or CAT units",
-    type=str,
-    default="0",
-)
-@click.option(
-    "--exclude-coin",
-    "coins_to_exclude",
-    multiple=True,
-    help="prevent this coin from being included.",
-)
-@click.option(
-    "--exclude-amount",
-    "amounts_to_exclude",
-    multiple=True,
-    help="Exclude any coins with this XCH or CAT amount from being included.",
-)
+@coin_selection_args
 @click.option(
     "--paginate/--no-paginate",
     default=None,
@@ -62,10 +45,10 @@ def list_cmd(
     fingerprint: int,
     id: int,
     show_unconfirmed: bool,
-    min_amount: str,
-    max_amount: str,
-    coins_to_exclude: Sequence[str],
-    amounts_to_exclude: Sequence[str],
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    coins_to_exclude: Sequence[bytes32],
+    amounts_to_exclude: Sequence[CliAmount],
     paginate: Optional[bool],
 ) -> None:
     from .coin_funcs import async_list
@@ -75,8 +58,8 @@ def list_cmd(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
-            max_coin_amount=max_amount,
-            min_coin_amount=min_amount,
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
             excluded_amounts=amounts_to_exclude,
             excluded_coin_ids=coins_to_exclude,
             show_unconfirmed=show_unconfirmed,
@@ -100,20 +83,8 @@ def list_cmd(
     "--target-amount",
     help="Select coins until this amount (in XCH or CAT) is reached. \
     Combine all selected coins into one coin, which will have a value of at least target-amount",
-    type=str,
-    default="0",
-)
-@click.option(
-    "--min-amount",
-    help="Ignore coins worth less then this much XCH or CAT units",
-    type=str,
-    default="0",
-)
-@click.option(
-    "--exclude-amount",
-    "amounts_to_exclude",
-    multiple=True,
-    help="Exclude any coins with this XCH or CAT amount from being included.",
+    type=AmountParamType(),
+    default=None,
 )
 @click.option(
     "-n",
@@ -123,26 +94,14 @@ def list_cmd(
     show_default=True,
     help="The number of coins we are combining.",
 )
-@click.option(
-    "--max-amount",
-    help="Ignore coins worth more then this much XCH or CAT units",
-    type=str,
-    default="0",  # 0 means no limit
-)
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees for the transaction, in XCH",
-    type=str,
-    default="0",
-    show_default=True,
-    required=True,
-)
+@tx_config_args
+@options.create_fee()
 @click.option(
     "--input-coin",
     "input_coins",
     multiple=True,
     help="Only combine coins with these ids.",
+    type=Bytes32ParamType(),
 )
 @click.option(
     "--largest-first/--smallest-first",
@@ -150,34 +109,46 @@ def list_cmd(
     default=False,
     help="Sort coins from largest to smallest or smallest to largest.",
 )
+@click.option("--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False)
+@tx_out_cmd()
 def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
-    target_amount: str,
-    min_amount: str,
-    amounts_to_exclude: Sequence[str],
+    target_amount: Optional[CliAmount],
+    min_coin_amount: CliAmount,
+    amounts_to_exclude: Sequence[CliAmount],
+    coins_to_exclude: Sequence[bytes32],
     number_of_coins: int,
-    max_amount: str,
-    fee: str,
-    input_coins: Sequence[str],
+    max_coin_amount: CliAmount,
+    fee: uint64,
+    input_coins: Sequence[bytes32],
     largest_first: bool,
-) -> None:
+    reuse: bool,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+    override: bool,
+) -> list[TransactionRecord]:
     from .coin_funcs import async_combine
 
-    asyncio.run(
+    return asyncio.run(
         async_combine(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
-            fee=Decimal(fee),
-            max_coin_amount=max_amount,
-            min_coin_amount=min_amount,
+            fee=fee,
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
             excluded_amounts=amounts_to_exclude,
+            coins_to_exclude=coins_to_exclude,
+            reuse_puzhash=reuse,
             number_of_coins=number_of_coins,
-            target_coin_amount=Decimal(target_amount),
-            target_coin_ids_str=input_coins,
+            target_coin_amount=target_amount,
+            target_coin_ids=input_coins,
             largest_first=largest_first,
+            push=push,
+            condition_valid_times=condition_valid_times,
+            override=override,
         )
     )
 
@@ -197,44 +168,54 @@ def combine_cmd(
     "--number-of-coins",
     type=int,
     help="The number of coins we are creating.",
-    required=True,
+    default=None,
 )
-@click.option(
-    "-m",
-    "--fee",
-    help="Set the fees for the transaction, in XCH",
-    type=str,
-    default="0",
-    show_default=True,
-    required=True,
-)
+@options.create_fee()
 @click.option(
     "-a",
     "--amount-per-coin",
-    help="The amount of each newly created coin, in XCH",
-    type=str,
-    required=True,
+    help="The amount of each newly created coin, in XCH or CAT units",
+    type=AmountParamType(),
+    default=None,
 )
-@click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")
+@click.option(
+    "-t", "--target-coin-id", type=Bytes32ParamType(), required=True, help="The coin id of the coin we are splitting."
+)
+@tx_config_args
+@tx_out_cmd()
 def split_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
     number_of_coins: int,
-    fee: str,
-    amount_per_coin: str,
-    target_coin_id: str,
-) -> None:
+    fee: uint64,
+    amount_per_coin: CliAmount,
+    target_coin_id: bytes32,
+    min_coin_amount: CliAmount,
+    max_coin_amount: CliAmount,
+    amounts_to_exclude: Sequence[CliAmount],
+    coins_to_exclude: Sequence[bytes32],
+    reuse: bool,
+    push: bool,
+    condition_valid_times: ConditionValidTimes,
+) -> list[TransactionRecord]:
     from .coin_funcs import async_split
 
-    asyncio.run(
+    return asyncio.run(
         async_split(
             wallet_rpc_port=wallet_rpc_port,
             fingerprint=fingerprint,
             wallet_id=id,
-            fee=Decimal(fee),
+            fee=fee,
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
+            excluded_amounts=amounts_to_exclude,
+            coins_to_exclude=coins_to_exclude,
+            reuse_puzhash=reuse,
             number_of_coins=number_of_coins,
-            amount_per_coin=Decimal(amount_per_coin),
-            target_coin_id_str=target_coin_id,
+            amount_per_coin=amount_per_coin,
+            target_coin_id=target_coin_id,
+            push=push,
+            condition_valid_times=condition_valid_times,
         )
     )

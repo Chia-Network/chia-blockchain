@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from os.path import exists
 
-from pkg_resources import parse_version
+from packaging.version import Version
 
 
 #
@@ -20,29 +21,29 @@ from pkg_resources import parse_version
 # Copyright (C) 2015-2018 CERN.
 #
 def make_semver(version_str: str) -> str:
-    v = parse_version(version_str)
-    major = v._version.release[0]  # type: ignore[attr-defined]
+    v = Version(version_str)
+    major = v.release[0]
     try:
-        minor = v._version.release[1]  # type: ignore[attr-defined]
+        minor = v.release[1]
     except IndexError:
         minor = 0
     try:
-        patch = v._version.release[2]  # type: ignore[attr-defined]
+        patch = v.release[2]
     except IndexError:
         patch = 0
 
     prerelease = []
-    if v._version.pre:  # type: ignore[attr-defined]
-        prerelease.append("".join(str(x) for x in v._version.pre))  # type: ignore[attr-defined]
-    if v._version.dev:  # type: ignore[attr-defined]
-        prerelease.append("".join(str(x) for x in v._version.dev))  # type: ignore[attr-defined]
+    if v.pre:
+        prerelease.append("".join(str(x) for x in v.pre))
+    if v.dev is not None:
+        prerelease.append(f"dev{v.dev}")
 
     local = v.local
 
     version = f"{major}.{minor}.{patch}"
 
     if prerelease:
-        version += "-{}".format(".".join(prerelease))
+        version += f"-{'.'.join(prerelease)}"
     if local:
         version += f"+{local}"
 
@@ -51,7 +52,10 @@ def make_semver(version_str: str) -> str:
 
 def get_chia_version() -> str:
     version: str = "0.0"
-    output = subprocess.run(["chia", "version"], capture_output=True)
+    chia_executable = shutil.which("chia")
+    if chia_executable is None:
+        chia_executable = "chia"
+    output = subprocess.run([chia_executable, "version"], capture_output=True)
     if output.returncode == 0:
         version = str(output.stdout.strip(), "utf-8").splitlines()[-1]
     return make_semver(version)
@@ -67,7 +71,7 @@ def update_version(package_json_path: str):
     data["version"] = get_chia_version()
 
     with open(package_json_path, "w") as w:
-        json.dump(data, indent=4, fp=w)
+        json.dump(data, indent=2, fp=w)
 
 
 if __name__ == "__main__":

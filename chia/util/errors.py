@@ -1,8 +1,10 @@
+# Package: utils
+
 from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from click import ClickException
 
@@ -186,7 +188,12 @@ class Err(Enum):
     # raised if a spend issues too many assert spend, assert puzzle,
     # assert announcement or create announcement
     TOO_MANY_ANNOUNCEMENTS = 144
-    CHIP_0013_VALIDATION = 145
+    # the message mode in SEND_MESSAGE or RECEIVE_MESSAGE condition is not valid
+    INVALID_MESSAGE_MODE = 145
+    # the specified coin ID is not valid
+    INVALID_COIN_ID = 146
+    # message not sent/received
+    MESSAGE_NOT_SENT_OR_RECEIVED = 147
 
 
 class ValidationError(Exception):
@@ -203,14 +210,14 @@ class TimestampError(Exception):
 
 
 class ConsensusError(Exception):
-    def __init__(self, code: Err, errors: List[Any] = []):
+    def __init__(self, code: Err, errors: list[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
 
 
 class ProtocolError(Exception):
-    def __init__(self, code: Err, errors: List[Any] = []):
+    def __init__(self, code: Err, errors: list[Any] = []):
         super().__init__(f"Error code: {code.name} {errors}")
         self.code = code
         self.errors = errors
