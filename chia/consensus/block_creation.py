@@ -222,7 +222,7 @@ def create_foliage(
         additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
         removals_root = bytes32(compute_merkle_set_root(tx_removals))
 
-        generator_hash = bytes32([0] * 32)
+        generator_hash = bytes32.zeros
         if block_generator is not None:
             generator_hash = std_hash(block_generator.program)
 

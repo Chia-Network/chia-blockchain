@@ -33,7 +33,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             True,
             server.received_message_callback,
             None,
-            bytes32(b"\x00" * 32),
+            bytes32.zeros,
             100,
             30,
             local_capabilities_for_handshake=default_capabilities[NodeType.FULL_NODE],

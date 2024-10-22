@@ -263,7 +263,7 @@ async def test_request_coin_state(one_node: OneNode, self_hostname: str) -> None
     # Add coin records
     coin_records = [
         CoinRecord(
-            coin=Coin(bytes32(b"\0" * 32), bytes32(b"\0" * 32), uint64(i)),
+            coin=Coin(bytes32.zeros, bytes32.zeros, uint64(i)),
             confirmed_block_index=uint32(1),
             spent_block_index=uint32(1 if i % 2 == 0 else 0),
             coinbase=False,
@@ -340,7 +340,7 @@ async def test_request_coin_state_reorg(one_node: OneNode, self_hostname: str) -
 
     # Reorg
     await simulator.reorg_from_index_to_new_index(
-        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32(b"\0" * 32))
+        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32.zeros)
     )
 
     # Request coin state, should reject due to reorg
@@ -425,7 +425,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
         for i in range(5):
             coin_records.append(
                 CoinRecord(
-                    coin=Coin(bytes32(b"\0" * 32), puzzle_hash, uint64(i)),
+                    coin=Coin(bytes32.zeros, puzzle_hash, uint64(i)),
                     confirmed_block_index=uint32(1),
                     spent_block_index=uint32(1 if i % 2 == 0 else 0),
                     coinbase=False,
@@ -525,7 +525,7 @@ async def test_request_puzzle_state_reorg(one_node: OneNode, self_hostname: str)
 
     # Reorg
     await simulator.reorg_from_index_to_new_index(
-        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32(b"\0" * 32))
+        simulator_protocol.ReorgProtocol(uint32(3), uint32(10), bytes32(b"\1" * 32), bytes32.zeros)
     )
 
     # Request coin state, should reject due to reorg
@@ -711,7 +711,7 @@ async def test_sync_puzzle_state(
             if rng.choice([True, False, False, False, False]):
                 coin_ph = std_hash(coin_ph)
 
-            coin = Coin(bytes32(b"\0" * 32), coin_ph, uint64(base_amount + added_amount))
+            coin = Coin(bytes32.zeros, coin_ph, uint64(base_amount + added_amount))
 
             coin_records[coin.name()] = CoinRecord(
                 coin=coin,
@@ -847,8 +847,8 @@ async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bo
 
 async def make_coin(full_node: FullNode) -> tuple[Coin, bytes32]:
     ph = IDENTITY_PUZZLE_HASH
-    coin = Coin(bytes32(b"\0" * 32), ph, uint64(1000))
-    hint = bytes32(b"\0" * 32)
+    coin = Coin(bytes32.zeros, ph, uint64(1000))
+    hint = bytes32.zeros
 
     height = full_node.blockchain.get_peak_height()
     assert height is not None

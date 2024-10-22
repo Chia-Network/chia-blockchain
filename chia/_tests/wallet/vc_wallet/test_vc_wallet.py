@@ -699,7 +699,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
             await (await wallet_node_0.wallet_state_manager.get_or_create_vc_wallet()).generate_signed_transaction(
                 new_vc_record.vc.launcher_id,
                 action_scope,
-                new_proof_hash=bytes32([0] * 32),
+                new_proof_hash=bytes32.zeros,
                 self_revoke=True,
             )
 
@@ -707,7 +707,7 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     async with did_wallet.wallet_state_manager.new_action_scope(
         wallet_environments.tx_config, push=True
     ) as action_scope:
-        await did_wallet.transfer_did(bytes32([0] * 32), uint64(0), False, action_scope)
+        await did_wallet.transfer_did(bytes32.zeros, uint64(0), False, action_scope)
 
     await wallet_environments.process_pending_states(
         [
@@ -788,7 +788,7 @@ async def test_cat_wallet_conversion(
         wallet_node_0.wallet_state_manager, wallet_0, Program.to(None).get_tree_hash().hex()
     )
 
-    did_id = bytes32([0] * 32)
+    did_id = bytes32.zeros
     await mint_cr_cat(num_blocks, wallet_0, wallet_node_0, client_0, full_node_api, [did_id])
     await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet_0)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, timeout=20)

@@ -320,7 +320,7 @@ async def test_create_insert_get(
             await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
         wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
-        assert wallet_root["hash"] == bytes32([0] * 32)
+        assert wallet_root["hash"] == bytes32.zeros
         assert local_root["hash"] is None
 
         # test empty changelist
@@ -505,7 +505,7 @@ async def test_get_roots(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         roots = await data_rpc_api.get_roots({"ids": [store_id1.hex(), store_id2.hex()]})
         assert roots["root_hashes"][1]["id"] == store_id2
-        assert roots["root_hashes"][1]["hash"] == bytes32([0] * 32)
+        assert roots["root_hashes"][1]["hash"] == bytes32.zeros
         assert roots["root_hashes"][1]["confirmed"] is True
         assert roots["root_hashes"][1]["timestamp"] > 0
         key4 = b"d"
@@ -520,7 +520,7 @@ async def test_get_roots(
         roots = await data_rpc_api.get_roots({"ids": [store_id1.hex(), store_id2.hex()]})
         assert roots["root_hashes"][1]["id"] == store_id2
         assert roots["root_hashes"][1]["hash"] is not None
-        assert roots["root_hashes"][1]["hash"] != bytes32([0] * 32)
+        assert roots["root_hashes"][1]["hash"] != bytes32.zeros
         assert roots["root_hashes"][1]["confirmed"] is True
         assert roots["root_hashes"][1]["timestamp"] > 0
 
@@ -552,10 +552,10 @@ async def test_get_root_history(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         history1 = await data_rpc_api.get_root_history({"id": store_id1.hex()})
         assert len(history1["root_history"]) == 2
-        assert history1["root_history"][0]["root_hash"] == bytes32([0] * 32)
+        assert history1["root_history"][0]["root_hash"] == bytes32.zeros
         assert history1["root_history"][0]["confirmed"] is True
         assert history1["root_history"][0]["timestamp"] > 0
-        assert history1["root_history"][1]["root_hash"] != bytes32([0] * 32)
+        assert history1["root_history"][1]["root_hash"] != bytes32.zeros
         assert history1["root_history"][1]["confirmed"] is True
         assert history1["root_history"][1]["timestamp"] > 0
         key4 = b"d"
@@ -569,7 +569,7 @@ async def test_get_root_history(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
         history2 = await data_rpc_api.get_root_history({"id": store_id1.hex()})
         assert len(history2["root_history"]) == 3
-        assert history2["root_history"][0]["root_hash"] == bytes32([0] * 32)
+        assert history2["root_history"][0]["root_hash"] == bytes32.zeros
         assert history2["root_history"][0]["confirmed"] is True
         assert history2["root_history"][0]["timestamp"] > 0
         assert history2["root_history"][1]["root_hash"] == history1["root_history"][1]["root_hash"]
@@ -608,7 +608,7 @@ async def test_get_kv_diff(
         diff_res = await data_rpc_api.get_kv_diff(
             {
                 "id": store_id1.hex(),
-                "hash_1": bytes32([0] * 32).hex(),
+                "hash_1": bytes32.zeros.hex(),
                 "hash_2": history["root_history"][1]["root_hash"].hex(),
             }
         )
@@ -688,7 +688,7 @@ async def test_batch_update_matches_single_operations(
 
         root_1 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         expected_res_hash = root_1["root_hashes"][0]["hash"]
-        assert expected_res_hash != bytes32([0] * 32)
+        assert expected_res_hash != bytes32.zeros
 
         changelist = [{"action": "delete", "key": key_2.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
@@ -702,7 +702,7 @@ async def test_batch_update_matches_single_operations(
 
         root_2 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         hash_2 = root_2["root_hashes"][0]["hash"]
-        assert hash_2 == bytes32([0] * 32)
+        assert hash_2 == bytes32.zeros
 
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         changelist.append({"action": "insert", "key": key_2.hex(), "value": value_2.hex()})
@@ -867,7 +867,7 @@ async def offer_setup_fixture(
                 StoreSetup(
                     api=data_rpc_api,
                     id=bytes32.from_hexstr(create_response["id"]),
-                    original_hash=bytes32([0] * 32),
+                    original_hash=bytes32.zeros,
                     data_layer=data_layer,
                     data_rpc_client=data_rpc_client,
                 )
@@ -1650,13 +1650,13 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 
     assert [generation["confirmed"] for generation in maker_history] == [True] * len(maker_history)
     assert [generation["root_hash"] for generation in maker_history] == [
-        bytes32([0] * 32),
+        bytes32.zeros,
         *reference.maker_root_history,
     ]
 
     assert [generation["confirmed"] for generation in taker_history] == [True] * len(taker_history)
     assert [generation["root_hash"] for generation in taker_history] == [
-        bytes32([0] * 32),
+        bytes32.zeros,
         *reference.taker_root_history,
     ]
 
@@ -1753,7 +1753,7 @@ async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None
                 "inclusions": reference.maker_inclusions,
             },
             {
-                "store_id": bytes32([0] * 32).hex(),
+                "store_id": bytes32.zeros.hex(),
                 "inclusions": [],
             },
         ],
@@ -2531,7 +2531,7 @@ async def populate_proof_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
         taker=StoreSetup(
             api=offer_setup.taker.api,
             id=offer_setup.taker.id,
-            original_hash=bytes32([0] * 32),
+            original_hash=bytes32.zeros,
             data_layer=offer_setup.taker.data_layer,
             data_rpc_client=offer_setup.taker.data_rpc_client,
         ),
@@ -3053,7 +3053,7 @@ async def test_pagination_cmds(
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
-        hash_1 = bytes32([0] * 32)
+        hash_1 = bytes32.zeros
         hash_2 = local_root["hash"]
         # `InterfaceLayer.direct` is not tested here since test `test_pagination_rpcs` extensively use it.
         if layer == InterfaceLayer.funcs:

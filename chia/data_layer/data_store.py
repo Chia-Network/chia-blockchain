@@ -924,11 +924,11 @@ class DataStore:
         hash2: bytes32,
     ) -> KVDiffPaginationData:
         old_pairs = await self.get_keys_values_compressed(store_id, hash1)
-        if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32([0] * 32):
+        if len(old_pairs.keys_values_hashed) == 0 and hash1 != bytes32.zeros:
             raise Exception(f"Unable to diff: Can't find keys and values for {hash1}")
 
         new_pairs = await self.get_keys_values_compressed(store_id, hash2)
-        if len(new_pairs.keys_values_hashed) == 0 and hash2 != bytes32([0] * 32):
+        if len(new_pairs.keys_values_hashed) == 0 and hash2 != bytes32.zeros:
             raise Exception(f"Unable to diff: Can't find keys and values for {hash2}")
 
         old_pairs_leaf_hashes = {v for v in old_pairs.keys_values_hashed.values()}
@@ -1960,7 +1960,7 @@ class DataStore:
         deltas_only: bool,
         writer: BinaryIO,
     ) -> None:
-        if node_hash == bytes32([0] * 32):
+        if node_hash == bytes32.zeros:
             return
 
         if deltas_only:
@@ -2248,11 +2248,11 @@ class DataStore:
     ) -> set[DiffData]:
         async with self.db_wrapper.reader():
             old_pairs = set(await self.get_keys_values(store_id, hash_1))
-            if len(old_pairs) == 0 and hash_1 != bytes32([0] * 32):
+            if len(old_pairs) == 0 and hash_1 != bytes32.zeros:
                 raise Exception(f"Unable to diff: Can't find keys and values for {hash_1}")
 
             new_pairs = set(await self.get_keys_values(store_id, hash_2))
-            if len(new_pairs) == 0 and hash_2 != bytes32([0] * 32):
+            if len(new_pairs) == 0 and hash_2 != bytes32.zeros:
                 raise Exception(f"Unable to diff: Can't find keys and values for {hash_2}")
 
             insertions = {

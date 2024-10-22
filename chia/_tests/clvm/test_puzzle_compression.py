@@ -24,9 +24,8 @@ from chia.wallet.util.puzzle_compression import (
     lowest_best_version,
 )
 
-ZERO_32 = bytes32([0] * 32)
 ONE_32 = bytes32([17] * 32)
-COIN = Coin(ZERO_32, ZERO_32, uint64(0))
+COIN = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
 SOLUTION = Program.to([])
 
 

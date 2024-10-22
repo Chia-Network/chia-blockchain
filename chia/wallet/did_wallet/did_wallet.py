@@ -530,14 +530,14 @@ class DIDWallet:
             return create_singleton_puzzle(innerpuz, self.did_info.origin_coin.name())
         else:
             innerpuz = Program.to((8, 0))
-            return create_singleton_puzzle(innerpuz, bytes32([0] * 32))
+            return create_singleton_puzzle(innerpuz, bytes32.zeros)
 
     def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         if self.did_info.origin_coin is None:
             # TODO: this seem dumb. Why bother with this case? Is it ever used?
             # inner puzzle: (8 . 0)
             innerpuz_hash = shatree_pair(shatree_int(8), NIL_TREEHASH)
-            return create_singleton_puzzle_hash(innerpuz_hash, bytes32([0] * 32))
+            return create_singleton_puzzle_hash(innerpuz_hash, bytes32.zeros)
         origin_coin_name = self.did_info.origin_coin.name()
         innerpuz_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
             p2_puzhash=puzzle_hash_for_pk(pubkey),

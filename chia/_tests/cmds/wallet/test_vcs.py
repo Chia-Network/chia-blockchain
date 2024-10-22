@@ -47,7 +47,7 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                         LineageProof(None, None, None),
                         VCLineageProof(None, None, None, None),
                         bytes32([3] * 32),
-                        bytes32([0] * 32),
+                        bytes32.zeros,
                         bytes32([1] * 32),
                         None,
                     ),

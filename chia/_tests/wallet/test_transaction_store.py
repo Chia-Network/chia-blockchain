@@ -842,7 +842,7 @@ async def test_valid_times_migration() -> None:
         old_record = TransactionRecordOld(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(1000000000),
-            to_puzzle_hash=bytes32([0] * 32),
+            to_puzzle_hash=bytes32.zeros,
             amount=uint64(0),
             fee_amount=uint64(0),
             confirmed=False,
@@ -854,7 +854,7 @@ async def test_valid_times_migration() -> None:
             sent_to=[],
             trade_id=None,
             type=uint32(TransactionType.INCOMING_TX.value),
-            name=bytes32([0] * 32),
+            name=bytes32.zeros,
             memos=[],
         )
 
@@ -893,7 +893,7 @@ async def test_large_tx_record_query() -> None:
             record = TransactionRecordOld(
                 confirmed_at_height=uint32(0),
                 created_at_time=uint64(1000000000),
-                to_puzzle_hash=bytes32([0] * 32),
+                to_puzzle_hash=bytes32.zeros,
                 amount=uint64(0),
                 fee_amount=uint64(0),
                 confirmed=False,

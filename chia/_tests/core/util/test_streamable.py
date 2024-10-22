@@ -493,7 +493,7 @@ def test_variable_size() -> None:
 
 
 def test_json(bt: BlockTools) -> None:
-    block = bt.create_genesis_block(test_constants, bytes32([0] * 32), uint64(0))
+    block = bt.create_genesis_block(test_constants, bytes32.zeros, uint64(0))
     dict_block = block.to_json_dict()
     assert FullBlock.from_json_dict(dict_block) == block
 
