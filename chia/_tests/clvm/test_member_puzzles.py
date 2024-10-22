@@ -7,6 +7,7 @@ from typing import List, Literal
 import pytest
 from chia_rs import AugSchemeMPL, G2Element
 
+from chia._tests.clvm.test_custody_architecture import ACSDPuzValidator
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
@@ -23,21 +24,6 @@ from chia.wallet.puzzles.custody.custody_architecture import (
 )
 from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import BLSMember
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
-
-
-@dataclass(frozen=True)
-class ACSDPuzValidator:
-    member_not_dpuz: Literal[False] = field(init=False, default=False)
-
-    def memo(self, nonce: int) -> Program:
-        raise NotImplementedError()  # pragma: no cover
-
-    def puzzle(self, nonce: int) -> Program:
-        # (mod (dpuz . program) (a program conditions))
-        return Program.to([2, 3, 2])
-
-    def puzzle_hash(self, nonce: int) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()
 
 
 @pytest.mark.anyio
