@@ -47,7 +47,7 @@ class ACSDPuzValidator:
 )
 async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bool) -> None:
     """
-    This tests the BLS Member puzzle with 4 different keys. 
+    This tests the BLS Member puzzle with 4 different keys.
     It loops through every combination inside an M of N Puzzle where
     m = 2
     n = 4
