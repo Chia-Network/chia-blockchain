@@ -12,8 +12,8 @@ from typing import Any, Optional, TextIO, final
 import click
 import lxml.etree
 
-from chia._tests.util.misc import BenchmarkData, DataTypeProtocol, TestId
-from chia._tests.util.time_out_assert import TimeOutAssertData
+from chia._tests.util.misc import BenchmarkData, TestId
+from chia._tests.util.time_out_assert import DataTypeProtocol, TimeOutAssertData
 
 supported_data_types: list[type[DataTypeProtocol]] = [TimeOutAssertData, BenchmarkData]
 supported_data_types_by_tag: dict[str, type[DataTypeProtocol]] = {cls.tag: cls for cls in supported_data_types}

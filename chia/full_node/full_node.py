@@ -580,6 +580,12 @@ class FullNode:
 
         try:
             peer_info = peer.get_peer_logging()
+            if start_height > 0:
+                fork_hash = self.blockchain.height_to_hash(uint32(start_height - 1))
+            else:
+                fork_hash = self.constants.GENESIS_CHALLENGE
+            assert fork_hash
+            fork_info = ForkInfo(start_height - 1, start_height - 1, fork_hash)
             for height in range(start_height, target_height, batch_size):
                 end_height = min(target_height, height + batch_size)
                 request = RequestBlocks(uint32(height), uint32(end_height), True)
@@ -598,7 +604,7 @@ class FullNode:
                     )
                     vs = ValidationState(ssi, diff, None)
                     success, state_change_summary, err = await self.add_block_batch(
-                        response.blocks, peer_info, None, vs
+                        response.blocks, peer_info, fork_info, vs
                     )
                     if not success:
                         raise ValueError(f"Error short batch syncing, failed to validate blocks {height}-{end_height}")
@@ -1148,21 +1154,12 @@ class FullNode:
                 # for deep reorgs
                 peak: Optional[BlockRecord]
                 if fork_info is None:
-                    peak = self.blockchain.get_peak()
-                    extending_main_chain: bool = peak is None or (
-                        peak.header_hash == blocks[0].prev_header_hash or peak.header_hash == blocks[0].header_hash
-                    )
-                    # if we're simply extending the main chain, it's important
-                    # *not* to pass in a ForkInfo object, as it can potentially
-                    # accrue a large state (with no value, since we can validate
-                    # against the CoinStore)
-                    if not extending_main_chain:
-                        if fork_point_height == 0:
-                            fork_info = ForkInfo(-1, -1, self.constants.GENESIS_CHALLENGE)
-                        else:
-                            fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
-                            assert fork_hash is not None
-                            fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
+                    if fork_point_height > 0:
+                        fork_hash = self.blockchain.height_to_hash(uint32(fork_point_height - 1))
+                        assert fork_hash is not None
+                    else:
+                        fork_hash = self.constants.GENESIS_CHALLENGE
+                    fork_info = ForkInfo(fork_point_height - 1, fork_point_height - 1, fork_hash)
 
                 # The ValidationState object (vs) is an in-out parameter. the add_block_batch()
                 # call will update it
@@ -1270,7 +1267,7 @@ class FullNode:
         self,
         all_blocks: list[FullBlock],
         peer_info: PeerInfo,
-        fork_info: Optional[ForkInfo],
+        fork_info: ForkInfo,
         vs: ValidationState,  # in-out parameter
         wp_summaries: Optional[list[SubEpochSummary]] = None,
     ) -> tuple[bool, Optional[StateChangeSummary], Optional[Err]]:
@@ -1294,16 +1291,10 @@ class FullNode:
                     if block_rec.sub_epoch_summary_included.new_difficulty is not None:
                         vs.current_difficulty = block_rec.sub_epoch_summary_included.new_difficulty
 
-            if fork_info is None:
-                continue
             # the below section updates the fork_info object, if
             # there is one.
-
-            # TODO: it seems unnecessary to request overlapping block ranges
-            # when syncing
             if block.height <= fork_info.peak_height:
                 continue
-
             # we have already validated this block once, no need to do it again.
             # however, if this block is not part of the main chain, we need to
             # update the fork context with its additions and removals
@@ -1751,7 +1742,6 @@ class FullNode:
         peer: Optional[WSChiaConnection] = None,
         bls_cache: Optional[BLSCache] = None,
         raise_on_disconnected: bool = False,
-        fork_info: Optional[ForkInfo] = None,
     ) -> Optional[Message]:
         """
         Add a full block from a peer full node (or ourselves).
@@ -1883,6 +1873,7 @@ class FullNode:
                         pre_validation_results[0] if pre_validation_result is None else pre_validation_result
                     )
                     assert result_to_validate.required_iters == pre_validation_results[0].required_iters
+                    fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
                         block, result_to_validate, bls_cache, ssi, fork_info
                     )

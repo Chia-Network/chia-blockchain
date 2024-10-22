@@ -7,6 +7,7 @@ from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.generator_tools_testing import run_and_get_removals_and_additions
+from chia._tests.util.misc import add_blocks_in_batches
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.server.server import ChiaServer
@@ -320,8 +321,7 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
             guarantee_transaction_block=True,
         )
-
-        await full_node_api_1.full_node.add_block(new_blocks[-1])
+        await add_blocks_in_batches([new_blocks[-1]], full_node_api_1.full_node, blocks[5].prev_header_hash)
 
         coin_2 = None
         for coin in run_and_get_removals_and_additions(
@@ -345,7 +345,7 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
             guarantee_transaction_block=True,
         )
-        await full_node_api_1.full_node.add_block(new_blocks[-1])
+        await add_blocks_in_batches([new_blocks[-1]], full_node_api_1.full_node, blocks[5].prev_header_hash)
 
         coin_3 = None
         for coin in run_and_get_removals_and_additions(
@@ -369,8 +369,7 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
             guarantee_transaction_block=True,
         )
-
-        await full_node_api_1.full_node.add_block(new_blocks[-1])
+        await add_blocks_in_batches([new_blocks[-1]], full_node_api_1.full_node, blocks[5].prev_header_hash)
 
     @pytest.mark.anyio
     async def test_validate_blockchain_spend_reorg_cb_coin(
@@ -382,9 +381,7 @@ class TestBlockchainTransactions:
         receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
         full_node_api_1, _, _, _, bt = two_nodes
         blocks = bt.get_consecutive_blocks(num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash)
-
-        for block in blocks:
-            await full_node_api_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_api_1.full_node)
 
         # Spends a coinbase created in reorg
         new_blocks = bt.get_consecutive_blocks(
@@ -395,8 +392,7 @@ class TestBlockchainTransactions:
             guarantee_transaction_block=True,
         )
 
-        for block in new_blocks:
-            await full_node_api_1.full_node.add_block(block)
+        await add_blocks_in_batches(new_blocks, full_node_api_1.full_node, blocks[6].prev_header_hash)
 
         spend_block = new_blocks[-1]
         spend_coin = None
@@ -414,8 +410,7 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
             guarantee_transaction_block=True,
         )
-
-        await full_node_api_1.full_node.add_block(new_blocks[-1])
+        await add_blocks_in_batches([new_blocks[-1]], full_node_api_1.full_node, blocks[6].prev_header_hash)
 
     @pytest.mark.anyio
     async def test_validate_blockchain_spend_reorg_since_genesis(

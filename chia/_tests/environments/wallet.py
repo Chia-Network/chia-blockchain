@@ -298,11 +298,12 @@ class WalletTestFramework:
                 puzzle_hash_indexes.append(ph_indexes)
 
         pending_txs: list[list[TransactionRecord]] = []
-
+        peak = self.full_node.full_node.blockchain.get_peak_height()
+        assert peak is not None
         # Check balances prior to block
         try:
             for i, env in enumerate(self.environments):
-                await self.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20)
+                await self.full_node.wait_for_wallet_synced(wallet_node=env.node, timeout=20, peak_height=peak)
                 try:
                     pending_txs.append(
                         await env.wait_for_transactions_to_settle(
@@ -322,8 +323,6 @@ class WalletTestFramework:
             raise ValueError("Error before block was farmed")
 
         # Farm block
-        peak = self.full_node.full_node.blockchain.get_peak_height()
-        assert peak is not None
         await self.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
         # Check balances after block

@@ -15,6 +15,7 @@ import zstd
 
 from chia._tests.util.constants import test_constants as TEST_CONSTANTS
 from chia.cmds.init_funcs import chia_init
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.constants import replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
@@ -208,8 +209,13 @@ async def run_sync_test(
                             ssi, diff = get_next_sub_slot_iters_and_difficulty(
                                 full_node.constants, True, block_record, full_node.blockchain
                             )
+                            fork_height = block_batch[0].height - 1
+                            header_hash = block_batch[0].prev_header_hash
                             success, summary, err = await full_node.add_block_batch(
-                                block_batch, peer_info, None, ValidationState(ssi, diff, None)
+                                block_batch,
+                                peer_info,
+                                ForkInfo(fork_height, fork_height, header_hash),
+                                ValidationState(ssi, diff, None),
                             )
                             end_height = block_batch[-1].height
                             full_node.blockchain.clean_block_record(end_height - full_node.constants.BLOCKS_CACHE_SIZE)

@@ -6,16 +6,39 @@ import json
 import logging
 import pathlib
 import time
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast, final
+from collections.abc import Iterable
+from inspect import getframeinfo, stack
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar, cast, final
 
 import chia
 import chia._tests
 from chia._tests import ether
-from chia._tests.util.misc import DataTypeProtocol, caller_file_and_line
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.timing import adjusted_timeout
 
 log = logging.getLogger(__name__)
+
+
+T = TypeVar("T")
+
+
+@dataclasses.dataclass(frozen=True)
+class DataTypeProtocol(Protocol):
+    tag: ClassVar[str]
+
+    line: int
+    path: Path
+    label: str
+    duration: float
+    limit: float
+
+    __match_args__: ClassVar[tuple[str, ...]] = ()
+
+    @classmethod
+    def unmarshal(cls: type[T], marshalled: dict[str, Any]) -> T: ...
+
+    def marshal(self) -> dict[str, Any]: ...
 
 
 @final
@@ -152,3 +175,17 @@ def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int =
         return True
 
     return bool_f
+
+
+def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> tuple[str, int]:
+    caller = getframeinfo(stack()[distance + 1][0])
+
+    caller_path = Path(caller.filename)
+    options: list[str] = [caller_path.as_posix()]
+    for path in relative_to:
+        try:
+            options.append(caller_path.relative_to(path).as_posix())
+        except ValueError:
+            pass
+
+    return min(options, key=len), caller.lineno

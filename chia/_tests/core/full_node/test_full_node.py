@@ -425,8 +425,9 @@ class TestFullNodeBlockCompression:
             diff = bt.constants.DIFFICULTY_STARTING
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
+                fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
                 for reorg_block in reog_blocks[:r]:
-                    await _validate_and_add_block_no_error(blockchain, reorg_block)
+                    await _validate_and_add_block_no_error(blockchain, reorg_block, fork_info=fork_info)
                 for i in range(1, height):
                     results = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
@@ -442,8 +443,9 @@ class TestFullNodeBlockCompression:
                         assert result.error is None
 
             for r in range(0, len(all_blocks), 3):
+                fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
                 for block in all_blocks[:r]:
-                    await _validate_and_add_block_no_error(blockchain, block)
+                    await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
                 for i in range(1, height):
                     results = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
@@ -984,9 +986,7 @@ class TestFullNodeProtocol:
             block_list_input=blocks[:-1],
             guarantee_transaction_block=True,
         )
-        for block in blocks[-2:]:
-            await full_node_1.full_node.add_block(block, peer)
-
+        await add_blocks_in_batches(blocks[-2:], full_node_1.full_node, blocks[-2].prev_header_hash)
         # Can now resubmit a transaction after the reorg
         status, err = await full_node_1.full_node.add_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
@@ -2287,16 +2287,7 @@ async def test_long_reorg(
     # not in the cache. We need to explicitly prune the cache to get that
     # effect.
     node.full_node.blockchain.clean_block_records()
-
-    fork_info: Optional[ForkInfo] = None
-    for b in reorg_blocks:
-        if (b.height % 128) == 0:
-            peak = node.full_node.blockchain.get_peak()
-            print(f"reorg chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
-        if b.height > fork_point and fork_info is None:
-            fork_info = ForkInfo(fork_point, fork_point, reorg_blocks[fork_point].header_hash)
-        await node.full_node.add_block(b, fork_info=fork_info)
-
+    await add_blocks_in_batches(reorg_blocks, node.full_node)
     # if these asserts fires, there was no reorg
     peak = node.full_node.blockchain.get_peak()
     assert peak.header_hash != chain_1_peak
@@ -2311,7 +2302,6 @@ async def test_long_reorg(
         assert peak.height > chain_1_height
     else:
         assert peak.height < chain_1_height
-
     # now reorg back to the original chain
     # this exercises the case where we have some of the blocks in the DB already
     node.full_node.blockchain.clean_block_records()
@@ -2321,15 +2311,7 @@ async def test_long_reorg(
         blocks = default_10000_blocks[fork_point - 100 : 3200]
     else:
         blocks = default_10000_blocks[fork_point - 100 : 5500]
-
-    fork_block = blocks[0]
-    fork_info = ForkInfo(fork_block.height - 1, fork_block.height - 1, fork_block.prev_header_hash)
-    for b in blocks:
-        if (b.height % 128) == 0:
-            peak = node.full_node.blockchain.get_peak()
-            print(f"original chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
-        await node.full_node.add_block(b, fork_info=fork_info)
-
+    await add_blocks_in_batches(blocks, node.full_node)
     # if these asserts fires, there was no reorg back to the original chain
     peak = node.full_node.blockchain.get_peak()
     assert peak.header_hash != chain_2_peak

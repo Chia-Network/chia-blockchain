@@ -54,7 +54,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
     full_node_api = wallet_environments.full_node
     wsm = wallet_environments.environments[0].wallet_state_manager
     wallet = wallet_environments.environments[0].xch_wallet
-
+    wallet_node = wallet_environments.environments[0].node
     wallet_environments.environments[0].wallet_aliases = {
         "xch": 1,
         "cat": 2,
@@ -138,7 +138,7 @@ async def test_cat_creation(wallet_environments: WalletTestFramework) -> None:
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32(32 * b"1"), None)
     )
-
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, peak_height=uint32(height + 1))
     # The "set_remainder" sections here are due to a peculiarity with how the creation method creates an incoming TX
     # The creation method is for testing purposes only so we're not going to bother fixing it for any real reason
     await wallet_environments.process_pending_states(
@@ -459,7 +459,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32(32 * b"1"), None)
     )
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, peak_height=uint32(height + 1))
     await env_1.change_balances(
         {
             "cat": {

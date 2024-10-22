@@ -13,6 +13,7 @@ from chia_rs import G1Element
 from pytest_mock import MockerFixture
 
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
@@ -451,7 +452,10 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
         if block.height != 0 and len(block.finished_sub_slots) > 0:  # pragma: no cover
             if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
                 ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
-        r, _, _ = await full_node.blockchain.add_block(blocks[i], pre_validation_results[i], None, sub_slot_iters=ssi)
+        fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
+        r, _, _ = await full_node.blockchain.add_block(
+            blocks[i], pre_validation_results[i], None, sub_slot_iters=ssi, fork_info=fork_info
+        )
         assert r == AddBlockResult.NEW_PEAK
 
 
