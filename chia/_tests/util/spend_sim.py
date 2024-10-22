@@ -10,17 +10,17 @@ from pathlib import Path
 from typing import Any, Callable, Optional, TypeVar
 
 import anyio
+from chia_rs import DONT_VALIDATE_SIGNATURE, G2Element, get_flags_for_height_and_constants, run_block_generator2
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool import Mempool
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MempoolManager
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST
@@ -67,14 +67,17 @@ class CostLogger:
 
     def add_cost(self, descriptor: str, spend_bundle: T_SpendBundle) -> T_SpendBundle:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
-        npc_result: NPCResult = get_name_puzzle_conditions(
-            program,
+        flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.HARD_FORK_HEIGHT, DEFAULT_CONSTANTS)
+        err, conds = run_block_generator2(
+            bytes(program.program),
+            [],
             INFINITE_COST,
-            mempool_mode=True,
-            height=DEFAULT_CONSTANTS.HARD_FORK_HEIGHT,
-            constants=DEFAULT_CONSTANTS,
+            flags | DONT_VALIDATE_SIGNATURE,
+            G2Element(),
+            None,
+            DEFAULT_CONSTANTS,
         )
-        cost = uint64(0 if npc_result.conds is None else npc_result.conds.cost)
+        cost = uint64(0 if conds is None else conds.cost)
         self.cost_dict[descriptor] = cost
         cost_to_subtract: int = 0
         for cs in spend_bundle.coin_spends:
