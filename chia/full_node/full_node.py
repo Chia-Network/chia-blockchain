@@ -47,7 +47,6 @@ from chia.full_node.signage_point import SignagePoint
 from chia.full_node.subscriptions import PeerSubscriptions, peers_for_spend_bundle
 from chia.full_node.sync_store import Peak, SyncStore
 from chia.full_node.tx_processing_queue import TransactionQueue
-from chia.full_node.util.safe_cancel_task import cancel_task_safe
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.farmer_protocol import SignagePointSourceData, SPSubSlotSourceData, SPVDFSourceData
@@ -89,6 +88,7 @@ from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.log_exceptions import log_exceptions
 from chia.util.path import path_from_root
 from chia.util.profiler import enable_profiler, mem_profile_task, profile_task
+from chia.util.safe_cancel_task import cancel_task_safe
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2
