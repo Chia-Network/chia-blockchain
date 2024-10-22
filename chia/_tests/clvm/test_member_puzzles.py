@@ -117,7 +117,7 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
                         m_of_n.solve(
                             [],
                             [],
-                            m_of_n.puzzle.solve(proven_spends),
+                            m_of_n.puzzle.solve(proven_spends),  # pylint: disable=no-member
                             (
                                 delegated_puzzle,
                                 Program.to(
