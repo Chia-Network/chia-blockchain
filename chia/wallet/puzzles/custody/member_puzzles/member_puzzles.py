@@ -19,7 +19,7 @@ class BLSMember(Puzzle):
     public_key: G1Element
 
     def memo(self, nonce: int) -> Program:
-        return Program.to(bytes(self.public_key))
+        return Program.to(0)
 
     def puzzle(self, nonce: int) -> Program:
         return BLS_MEMBER_MOD.curry(bytes(self.public_key))
