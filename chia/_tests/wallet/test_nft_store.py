@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 import pytest
 
@@ -29,7 +28,7 @@ def get_dummy_nft(random_: random.Random) -> NFTCoinInfo:
 @dataclass
 class DummyNFTs:
     seeded_random: random.Random
-    nfts_per_wallet: Dict[uint32, List[NFTCoinInfo]] = field(default_factory=dict)
+    nfts_per_wallet: dict[uint32, list[NFTCoinInfo]] = field(default_factory=dict)
 
     def generate(self, wallet_id: int, count: int) -> None:
         nfts = self.nfts_per_wallet.setdefault(uint32(wallet_id), [])

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Optional, TypeVar
 
 from chia_rs import G1Element, G2Element, PrivateKey
 from typing_extensions import dataclass_transform
@@ -34,7 +34,7 @@ _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndp
 
 
 @dataclass_transform(frozen_default=True, kw_only_default=True)
-def kw_only_dataclass(cls: Type[Any]) -> Type[Any]:
+def kw_only_dataclass(cls: type[Any]) -> type[Any]:
     if sys.version_info < (3, 10):
         return dataclass(frozen=True)(cls)  # pragma: no cover
     else:
@@ -73,10 +73,10 @@ class GetLoggedInFingerprintResponse(Streamable):
 @dataclass(frozen=True)
 class GetPublicKeysResponse(Streamable):
     keyring_is_locked: bool
-    public_key_fingerprints: Optional[List[uint32]] = None
+    public_key_fingerprints: Optional[list[uint32]] = None
 
     @property
-    def pk_fingerprints(self) -> List[uint32]:
+    def pk_fingerprints(self) -> list[uint32]:
         if self.keyring_is_locked:
             raise RuntimeError("get_public_keys cannot return public keys because the keyring is locked")
         else:
@@ -111,13 +111,13 @@ class GetPrivateKeyResponse(Streamable):
 @streamable
 @dataclass(frozen=True)
 class GenerateMnemonicResponse(Streamable):
-    mnemonic: List[str]
+    mnemonic: list[str]
 
 
 @streamable
 @dataclass(frozen=True)
 class AddKey(Streamable):
-    mnemonic: List[str]
+    mnemonic: list[str]
 
 
 @streamable
@@ -189,7 +189,7 @@ class GetTimestampForHeightResponse(Streamable):
 @streamable
 @dataclass(frozen=True)
 class GetNotifications(Streamable):
-    ids: Optional[List[bytes32]] = None
+    ids: Optional[list[bytes32]] = None
     start: Optional[uint32] = None
     end: Optional[uint32] = None
 
@@ -197,7 +197,7 @@ class GetNotifications(Streamable):
 @streamable
 @dataclass(frozen=True)
 class GetNotificationsResponse(Streamable):
-    notifications: List[Notification]
+    notifications: list[Notification]
 
 
 @streamable
@@ -228,17 +228,17 @@ class GetTransactionMemo(Streamable):
 @dataclass(frozen=True)
 class CoinIDWithMemos(Streamable):
     coin_id: bytes32
-    memos: List[bytes]
+    memos: list[bytes]
 
 
 @streamable
 @dataclass(frozen=True)
 class GetTransactionMemoResponse(Streamable):
     transaction_id: bytes32
-    coins_with_memos: List[CoinIDWithMemos]
+    coins_with_memos: list[CoinIDWithMemos]
 
     # TODO: deprecate the kinda silly format of this RPC and delete these functions
-    def to_json_dict(self) -> Dict[str, Any]:
+    def to_json_dict(self) -> dict[str, Any]:
         return {
             self.transaction_id.hex(): {
                 cwm.coin_id.hex(): [memo.hex() for memo in cwm.memos] for cwm in self.coins_with_memos
@@ -246,7 +246,7 @@ class GetTransactionMemoResponse(Streamable):
         }
 
     @classmethod
-    def from_json_dict(cls, json_dict: Dict[str, Any]) -> GetTransactionMemoResponse:
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> GetTransactionMemoResponse:
         return cls(
             bytes32.from_hexstr(list(json_dict.keys())[0]),
             [
@@ -275,7 +275,7 @@ class DefaultCAT(Streamable):
 @streamable
 @dataclass(frozen=True)
 class GetCATListResponse(Streamable):
-    cat_list: List[DefaultCAT]
+    cat_list: list[DefaultCAT]
 
 
 @streamable
@@ -304,7 +304,7 @@ class DIDGetRecoveryInfoResponse(Streamable):
     coin_name: bytes32
     newpuzhash: bytes32
     pubkey: G1Element
-    backup_dids: List[bytes32]
+    backup_dids: list[bytes32]
 
 
 @streamable
@@ -355,7 +355,7 @@ class NFTWalletWithDID(Streamable):
 @streamable
 @dataclass(frozen=True)
 class NFTGetWalletsWithDIDsResponse(Streamable):
-    nft_wallets: List[NFTWalletWithDID]
+    nft_wallets: list[NFTWalletWithDID]
 
 
 # utility for NFTSetDIDBulk
@@ -369,7 +369,7 @@ class NFTCoin(Streamable):
 @streamable
 @dataclass(frozen=True)
 class GatherSigningInfo(Streamable):
-    spends: List[Spend]
+    spends: list[Spend]
 
 
 @streamable
@@ -381,26 +381,26 @@ class GatherSigningInfoResponse(Streamable):
 @streamable
 @dataclass(frozen=True)
 class ApplySignatures(Streamable):
-    spends: List[Spend]
-    signing_responses: List[SigningResponse]
+    spends: list[Spend]
+    signing_responses: list[SigningResponse]
 
 
 @streamable
 @dataclass(frozen=True)
 class ApplySignaturesResponse(Streamable):
-    signed_transactions: List[SignedTransaction]
+    signed_transactions: list[SignedTransaction]
 
 
 @streamable
 @dataclass(frozen=True)
 class SubmitTransactions(Streamable):
-    signed_transactions: List[SignedTransaction]
+    signed_transactions: list[SignedTransaction]
 
 
 @streamable
 @dataclass(frozen=True)
 class SubmitTransactionsResponse(Streamable):
-    mempool_ids: List[bytes32]
+    mempool_ids: list[bytes32]
 
 
 @streamable
@@ -413,7 +413,7 @@ class ExecuteSigningInstructions(Streamable):
 @streamable
 @dataclass(frozen=True)
 class ExecuteSigningInstructionsResponse(Streamable):
-    signing_responses: List[SigningResponse]
+    signing_responses: list[SigningResponse]
 
 
 # When inheriting from this class you must set any non default arguments with:
@@ -426,7 +426,7 @@ class TransactionEndpointRequest(Streamable):
     push: Optional[bool] = None
     sign: Optional[bool] = None
 
-    def to_json_dict(self, _avoid_ban: bool = False) -> Dict[str, Any]:
+    def to_json_dict(self, _avoid_ban: bool = False) -> dict[str, Any]:
         if not _avoid_ban:
             raise NotImplementedError(
                 "to_json_dict is banned on TransactionEndpointRequest, please use .json_serialize_for_transport"
@@ -435,8 +435,8 @@ class TransactionEndpointRequest(Streamable):
             return super().to_json_dict()
 
     def json_serialize_for_transport(
-        self, tx_config: TXConfig, extra_conditions: Tuple[Condition, ...], timelock_info: ConditionValidTimes
-    ) -> Dict[str, Any]:
+        self, tx_config: TXConfig, extra_conditions: tuple[Condition, ...], timelock_info: ConditionValidTimes
+    ) -> dict[str, Any]:
         return {
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
@@ -448,20 +448,20 @@ class TransactionEndpointRequest(Streamable):
 @streamable
 @dataclass(frozen=True)
 class TransactionEndpointResponse(Streamable):
-    unsigned_transactions: List[UnsignedTransaction]
-    transactions: List[TransactionRecord]
+    unsigned_transactions: list[UnsignedTransaction]
+    transactions: list[TransactionRecord]
 
 
 @streamable
 @dataclass(frozen=True)
 class PushTransactions(TransactionEndpointRequest):
-    transactions: List[TransactionRecord] = field(default_factory=default_raise)
+    transactions: list[TransactionRecord] = field(default_factory=default_raise)
     push: Optional[bool] = True
 
     # We allow for flexibility in transaction parsing here so we need to override
     @classmethod
-    def from_json_dict(cls, json_dict: Dict[str, Any]) -> PushTransactions:
-        transactions: List[TransactionRecord] = []
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> PushTransactions:
+        transactions: list[TransactionRecord] = []
         for transaction_hexstr_or_json in json_dict["transactions"]:
             if isinstance(transaction_hexstr_or_json, str):
                 tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr_or_json))
@@ -501,9 +501,9 @@ class SplitCoinsResponse(TransactionEndpointResponse):
 @kw_only_dataclass
 class CombineCoins(TransactionEndpointRequest):
     wallet_id: uint32 = field(default_factory=default_raise)
-    number_of_coins: uint16 = field(default_factory=default_raise)
+    number_of_coins: uint16 = uint16(500)
     largest_first: bool = False
-    target_coin_ids: List[bytes32] = field(default_factory=list)
+    target_coin_ids: list[bytes32] = field(default_factory=list)
     target_coin_amount: Optional[uint64] = None
     coin_num_limit: uint16 = uint16(500)
 
@@ -517,14 +517,14 @@ class CombineCoinsResponse(TransactionEndpointResponse):
 @streamable
 @kw_only_dataclass
 class NFTSetDIDBulk(TransactionEndpointRequest):
-    nft_coin_list: List[NFTCoin] = field(default_factory=default_raise)
+    nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     did_id: Optional[str] = None
 
 
 @streamable
 @dataclass(frozen=True)
 class NFTSetDIDBulkResponse(TransactionEndpointResponse):
-    wallet_id: List[uint32]
+    wallet_id: list[uint32]
     tx_num: uint16
     spend_bundle: WalletSpendBundle
 
@@ -532,14 +532,14 @@ class NFTSetDIDBulkResponse(TransactionEndpointResponse):
 @streamable
 @kw_only_dataclass
 class NFTTransferBulk(TransactionEndpointRequest):
-    nft_coin_list: List[NFTCoin] = field(default_factory=default_raise)
+    nft_coin_list: list[NFTCoin] = field(default_factory=default_raise)
     target_address: str = field(default_factory=default_raise)
 
 
 @streamable
 @dataclass(frozen=True)
 class NFTTransferBulkResponse(TransactionEndpointResponse):
-    wallet_id: List[uint32]
+    wallet_id: list[uint32]
     tx_num: uint16
     spend_bundle: WalletSpendBundle
 
@@ -563,7 +563,7 @@ class SendTransactionMultiResponse(TransactionEndpointResponse):
 @streamable
 @dataclass(frozen=True)
 class CreateSignedTransactionsResponse(TransactionEndpointResponse):
-    signed_txs: List[TransactionRecord]
+    signed_txs: list[TransactionRecord]
     signed_tx: TransactionRecord
 
 
@@ -607,7 +607,7 @@ class _OfferEndpointResponse(TransactionEndpointResponse):
     trade_record: TradeRecord
 
     @classmethod
-    def from_json_dict(cls: Type[_T_OfferEndpointResponse], json_dict: Dict[str, Any]) -> _T_OfferEndpointResponse:
+    def from_json_dict(cls: type[_T_OfferEndpointResponse], json_dict: dict[str, Any]) -> _T_OfferEndpointResponse:
         tx_endpoint: TransactionEndpointResponse = json_deserialize_with_clvm_streamable(
             json_dict, TransactionEndpointResponse
         )
@@ -677,7 +677,7 @@ class NFTSetNFTDIDResponse(TransactionEndpointResponse):
 @dataclass(frozen=True)
 class NFTMintBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
-    nft_id_list: List[str]
+    nft_id_list: list[str]
 
 
 @streamable
@@ -730,7 +730,7 @@ class DAOAddFundsToTreasuryResponse(TransactionEndpointResponse):
 @dataclass(frozen=True)
 class DAOSendToLockupResponse(TransactionEndpointResponse):
     tx_id: bytes32
-    txs: List[TransactionRecord]
+    txs: list[TransactionRecord]
 
 
 @streamable

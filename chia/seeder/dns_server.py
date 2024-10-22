@@ -5,13 +5,14 @@ import logging
 import signal
 import sys
 import traceback
+from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from multiprocessing import freeze_support
 from pathlib import Path
 from types import FrameType
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 import aiosqlite
 from dnslib import AAAA, EDNS0, NS, QTYPE, RCODE, RD, RR, SOA, A, DNSError, DNSHeader, DNSQuestion, DNSRecord
@@ -38,8 +39,8 @@ class DomainName(str):
 
 @dataclass(frozen=True)
 class PeerList:
-    ipv4: List[IPv4Address]
-    ipv6: List[IPv6Address]
+    ipv4: list[IPv4Address]
+    ipv6: list[IPv6Address]
 
     @property
     def no_peers(self) -> bool:
@@ -121,7 +122,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
     peer_info: str = field(init=False, default="")
     expected_length: int = 0
     buffer: bytearray = field(init=False, default_factory=lambda: bytearray(2))
-    futures: List[asyncio.Future[None]] = field(init=False, default_factory=list)
+    futures: list[asyncio.Future[None]] = field(init=False, default_factory=list)
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         """
@@ -263,7 +264,7 @@ async def get_dns_reply(callback: DnsCallback, dns_request: DNSRecord) -> DNSRec
 
 @dataclass
 class DNSServer:
-    config: Dict[str, Any]
+    config: dict[str, Any]
     root_path: Path
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     shutdown_event: asyncio.Event = field(default_factory=asyncio.Event)
@@ -282,11 +283,11 @@ class DNSServer:
     db_path: Path = field(init=False)
     domain: DomainName = field(init=False)
     ns1: DomainName = field(init=False)
-    ns_records: List[RR] = field(init=False)
+    ns_records: list[RR] = field(init=False)
     ttl: int = field(init=False)
     soa_record: RR = field(init=False)
-    reliable_peers_v4: List[IPv4Address] = field(default_factory=list)
-    reliable_peers_v6: List[IPv6Address] = field(default_factory=list)
+    reliable_peers_v4: list[IPv4Address] = field(default_factory=list)
+    reliable_peers_v6: list[IPv6Address] = field(default_factory=list)
     pointer_v4: int = 0
     pointer_v6: int = 0
 
@@ -307,7 +308,7 @@ class DNSServer:
         if not self.domain.endswith("."):
             self.domain = DomainName(self.domain + ".")  # Make sure the domain ends with a period, as per RFC 1035.
         self.ns1: DomainName = DomainName(self.config["nameserver"])
-        self.ns_records: List[NS] = [NS(self.ns1)]
+        self.ns_records: list[NS] = [NS(self.ns1)]
         self.ttl: int = self.config["ttl"]
         self.soa_record: SOA = SOA(
             mname=self.ns1,  # primary name server
@@ -427,7 +428,7 @@ class DNSServer:
     async def get_peers_to_respond(self, ipv4_count: int, ipv6_count: int) -> PeerList:
         async with self.lock:
             # Append IPv4.
-            ipv4_peers: List[IPv4Address] = []
+            ipv4_peers: list[IPv4Address] = []
             size = len(self.reliable_peers_v4)
             if ipv4_count > 0 and size <= ipv4_count:
                 ipv4_peers = self.reliable_peers_v4
@@ -437,7 +438,7 @@ class DNSServer:
                 ]
                 self.pointer_v4 = (self.pointer_v4 + ipv4_count) % size  # mark where we left off
             # Append IPv6.
-            ipv6_peers: List[IPv6Address] = []
+            ipv6_peers: list[IPv6Address] = []
             size = len(self.reliable_peers_v6)
             if ipv6_count > 0 and size <= ipv6_count:
                 ipv6_peers = self.reliable_peers_v6
@@ -473,7 +474,7 @@ class DNSServer:
 
         ttl: int = self.ttl
         # we add these to the list as it will allow us to respond to ns and soa requests
-        ips: List[RD] = [self.soa_record] + self.ns_records
+        ips: list[RD] = [self.soa_record] + self.ns_records
         ipv4_count = 0
         ipv6_count = 0
         if question_type is QTYPE.A:
@@ -493,7 +494,7 @@ class DNSServer:
         ips.extend([A(str(peer)) for peer in peers.ipv4])
         ips.extend([AAAA(str(peer)) for peer in peers.ipv6])
 
-        records: Dict[DomainName, List[RD]] = {  # this is where we can add other records we want to serve
+        records: dict[DomainName, list[RD]] = {  # this is where we can add other records we want to serve
             self.domain: ips,
         }
 
@@ -521,7 +522,7 @@ async def run_dns_server(dns_server: DNSServer) -> None:  # pragma: no cover
             await dns_server.shutdown_event.wait()  # this is released on SIGINT or SIGTERM or any unhandled exception
 
 
-def create_dns_server_service(config: Dict[str, Any], root_path: Path) -> DNSServer:
+def create_dns_server_service(config: dict[str, Any], root_path: Path) -> DNSServer:
     service_config = config[SERVICE_NAME]
 
     return DNSServer(service_config, root_path)

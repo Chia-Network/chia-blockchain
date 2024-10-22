@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Optional
 
 from chia_rs import G1Element, G2Element
 from typing_extensions import Unpack
@@ -82,7 +82,7 @@ class CRCATWallet(CATWallet):
     async def create_new_cat_wallet(
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
-        cat_tail_info: Dict[str, Any],
+        cat_tail_info: dict[str, Any],
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
@@ -97,7 +97,7 @@ class CRCATWallet(CATWallet):
         wallet: Wallet,
         limitations_program_hash_hex: str,
         name: Optional[str] = None,
-        authorized_providers: Optional[List[bytes32]] = None,
+        authorized_providers: Optional[list[bytes32]] = None,
         proofs_checker: Optional[ProofsChecker] = None,
     ) -> CRCATWallet:
         if authorized_providers is None or proofs_checker is None:  # pragma: no cover
@@ -134,7 +134,7 @@ class CRCATWallet(CATWallet):
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
-        potential_subclasses: Dict[AssetType, Any] = {},
+        potential_subclasses: dict[AssetType, Any] = {},
     ) -> Any:
         cr_layer: Optional[PuzzleInfo] = puzzle_driver.also()
         if cr_layer is None:  # pragma: no cover
@@ -167,7 +167,7 @@ class CRCATWallet(CATWallet):
     async def convert_to_cr(
         cls,
         cat_wallet: CATWallet,
-        authorized_providers: List[bytes32],
+        authorized_providers: list[bytes32],
         proofs_checker: ProofsChecker,
     ) -> None:
         replace_self = cls()
@@ -216,7 +216,7 @@ class CRCATWallet(CATWallet):
 
     async def add_crcat_coin(self, coin_spend: CoinSpend, coin: Coin, height: uint32) -> None:
         try:
-            new_cr_cats: List[CRCAT] = CRCAT.get_next_from_coin_spend(coin_spend)
+            new_cr_cats: list[CRCAT] = CRCAT.get_next_from_coin_spend(coin_spend)
             hint_dict = {
                 id: hc.hint
                 for id, hc in compute_spend_hints_and_additions(coin_spend)[0].items()
@@ -316,10 +316,10 @@ class CRCATWallet(CATWallet):
             "inner_puzzle_for_cat_puzhash is a legacy method and is not available on CR-CAT wallets"
         )
 
-    async def get_cat_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> List[WalletCoinRecord]:
-        result: List[WalletCoinRecord] = []
+    async def get_cat_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> list[WalletCoinRecord]:
+        result: list[WalletCoinRecord] = []
 
-        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+        record_list: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
             self.id(), records
         )
 
@@ -330,7 +330,7 @@ class CRCATWallet(CATWallet):
 
         return result
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
                 self.id(), CoinType.CRCAT
@@ -344,7 +344,7 @@ class CRCATWallet(CATWallet):
         self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
         return uint128(amount)
 
-    async def get_pending_approval_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_pending_approval_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
                 self.id(), CoinType.CRCAT_PENDING
@@ -397,12 +397,12 @@ class CRCATWallet(CATWallet):
 
     async def _generate_unsigned_spendbundle(
         self,
-        payments: List[Payment],
+        payments: list[Payment],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
-        coins: Optional[Set[Coin]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
+        coins: Optional[set[Coin]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         add_authorizations_to_cr_cats: bool = True,
     ) -> WalletSpendBundle:
         if cat_discrepancy is not None:
@@ -438,7 +438,7 @@ class CRCATWallet(CATWallet):
 
         # Calculate standard puzzle solutions
         change = selected_cat_amount - starting_amount
-        primaries: List[Payment] = []
+        primaries: list[Payment] = []
         for payment in payments:
             primaries.append(payment)
 
@@ -474,12 +474,12 @@ class CRCATWallet(CATWallet):
 
         # Loop through the coins we've selected and gather the information we need to spend them
         vc: Optional[VerifiedCredential] = None
-        vc_announcements_to_make: List[bytes] = []
-        inner_spends: List[Tuple[CRCAT, int, Program, Program]] = []
+        vc_announcements_to_make: list[bytes] = []
+        inner_spends: list[tuple[CRCAT, int, Program, Program]] = []
         first = True
         announcement: CreateCoinAnnouncement
-        coin_ids: List[bytes32] = [coin.name() for coin in cat_coins]
-        coin_records: List[WalletCoinRecord] = (
+        coin_ids: list[bytes32] = [coin.name() for coin in cat_coins]
+        coin_records: list[WalletCoinRecord] = (
             await self.wallet_state_manager.coin_store.get_coin_records(coin_id_filter=HashFilter.include(coin_ids))
         ).records
         assert len(coin_records) == len(cat_coins)
@@ -596,17 +596,17 @@ class CRCATWallet(CATWallet):
 
     async def generate_signed_transaction(
         self,
-        amounts: List[uint64],
-        puzzle_hashes: List[bytes32],
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[Set[Coin]] = None,
-        memos: Optional[List[List[bytes]]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        coins: Optional[set[Coin]] = None,
+        memos: Optional[list[list[bytes]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
         # (extra_delta, tail_reveal, tail_solution)
-        cat_discrepancy: Optional[Tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
+        cat_discrepancy: Optional[tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
         add_authorizations_to_cr_cats: bool = kwargs.get("add_authorizations_to_cr_cats", True)
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -616,7 +616,7 @@ class CRCATWallet(CATWallet):
 
         payments = []
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
-            memos_with_hint: List[bytes] = [puzhash]
+            memos_with_hint: list[bytes] = [puzhash]
             memos_with_hint.extend(memo_list)
             # Force wrap the outgoing coins in the pending state if not going to us
             payments.append(
@@ -643,10 +643,10 @@ class CRCATWallet(CATWallet):
         )
 
         async with action_scope.use() as interface:
-            other_tx_removals: Set[Coin] = {
+            other_tx_removals: set[Coin] = {
                 removal for tx in interface.side_effects.transactions for removal in tx.removals
             }
-            other_tx_additions: Set[Coin] = {
+            other_tx_additions: set[Coin] = {
                 addition for tx in interface.side_effects.transactions for addition in tx.additions
             }
             tx_list = [
@@ -679,15 +679,15 @@ class CRCATWallet(CATWallet):
         min_amount_to_claim: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[Set[Coin]] = None,
+        coins: Optional[set[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        excluded_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coin_amounts: Optional[list[uint64]] = None,
         reuse_puzhash: Optional[bool] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None:
         # Select the relevant CR-CAT coins
-        crcat_records: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
+        crcat_records: set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
             self.id(), CoinType.CRCAT_PENDING
         )
         if coins is None:
@@ -730,7 +730,7 @@ class CRCATWallet(CATWallet):
         ).get_tree_hash()
 
         # Make CR-CAT bundle
-        crcats_and_puzhashes: List[Tuple[CRCAT, bytes32]] = [
+        crcats_and_puzhashes: list[tuple[CRCAT, bytes32]] = [
             (crcat, CRCATWallet.get_metadata_from_record(record).inner_puzzle_hash)
             for record in [r for r in crcat_records if r.coin in coins]
             for crcat in [self.coin_record_to_crcat(record)]
@@ -775,8 +775,8 @@ class CRCATWallet(CATWallet):
         )
 
         async with action_scope.use() as interface:
-            other_additions: Set[Coin] = {rem for tx in interface.side_effects.transactions for rem in tx.additions}
-            other_removals: Set[Coin] = {rem for tx in interface.side_effects.transactions for rem in tx.removals}
+            other_additions: set[Coin] = {rem for tx in interface.side_effects.transactions for rem in tx.additions}
+            other_removals: set[Coin] = {rem for tx in interface.side_effects.transactions for rem in tx.removals}
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),

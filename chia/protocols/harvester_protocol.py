@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import G1Element, G2Element
 
@@ -29,8 +29,8 @@ class PoolDifficulty(Streamable):
 @streamable
 @dataclass(frozen=True)
 class HarvesterHandshake(Streamable):
-    farmer_public_keys: List[G1Element]
-    pool_public_keys: List[G1Element]
+    farmer_public_keys: list[G1Element]
+    pool_public_keys: list[G1Element]
 
 
 @streamable
@@ -41,7 +41,7 @@ class NewSignagePointHarvester(Streamable):
     sub_slot_iters: uint64
     signage_point_index: uint8
     sp_hash: bytes32
-    pool_difficulties: List[PoolDifficulty]
+    pool_difficulties: list[PoolDifficulty]
     filter_prefix_bits: uint8
 
 
@@ -90,9 +90,9 @@ class RequestSignatures(Streamable):
     plot_identifier: str
     challenge_hash: bytes32
     sp_hash: bytes32
-    messages: List[bytes32]
+    messages: list[bytes32]
     # This, and rc_block_unfinished are only set when using a third-party harvester (see CHIP-22)
-    message_data: Optional[List[Optional[SignatureRequestSourceData]]]
+    message_data: Optional[list[Optional[SignatureRequestSourceData]]]
     rc_block_unfinished: Optional[RewardChainBlockUnfinished]
 
 
@@ -104,7 +104,7 @@ class RespondSignatures(Streamable):
     sp_hash: bytes32
     local_pk: G1Element
     farmer_pk: G1Element
-    message_signatures: List[Tuple[bytes32, G2Element]]
+    message_signatures: list[tuple[bytes32, G2Element]]
     include_source_signature_data: bool
     farmer_reward_address_override: Optional[bytes32]
 
@@ -132,9 +132,9 @@ class RequestPlots(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RespondPlots(Streamable):
-    plots: List[Plot]
-    failed_to_open_filenames: List[str]
-    no_key_filenames: List[str]
+    plots: list[Plot]
+    failed_to_open_filenames: list[str]
+    no_key_filenames: list[str]
 
 
 @streamable
@@ -166,7 +166,7 @@ class PlotSyncStart(Streamable):
 @dataclass(frozen=True)
 class PlotSyncPathList(Streamable):
     identifier: PlotSyncIdentifier
-    data: List[str]
+    data: list[str]
     final: bool
 
     def __str__(self) -> str:
@@ -177,7 +177,7 @@ class PlotSyncPathList(Streamable):
 @dataclass(frozen=True)
 class PlotSyncPlotList(Streamable):
     identifier: PlotSyncIdentifier
-    data: List[Plot]
+    data: list[Plot]
     final: bool
 
     def __str__(self) -> str:

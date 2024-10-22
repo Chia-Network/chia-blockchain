@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import collections
 import logging
+from collections.abc import Awaitable, Collection
 from dataclasses import dataclass, field
-from typing import Awaitable, Callable, Collection, Dict, List, Optional, Set, Tuple, Union
+from typing import Callable, Optional, Union
 
 from chia_rs import AugSchemeMPL, BLSCache, G1Element, SpendBundleConditions
 from chiabip158 import PyBIP158
@@ -68,13 +69,13 @@ class ForkInfo:
     # the header hash of the peak block of this fork
     peak_hash: bytes32
     # The additions include coinbase additions
-    additions_since_fork: Dict[bytes32, ForkAdd] = field(default_factory=dict)
+    additions_since_fork: dict[bytes32, ForkAdd] = field(default_factory=dict)
     # coin-id, ForkRem
-    removals_since_fork: Dict[bytes32, ForkRem] = field(default_factory=dict)
+    removals_since_fork: dict[bytes32, ForkRem] = field(default_factory=dict)
     # the header hashes of the blocks, starting with the one-past fork_height
     # i.e. the header hash of fork_height + 1 is stored in block_hashes[0]
     # followed by fork_height + 2, and so on.
-    block_hashes: List[bytes32] = field(default_factory=list)
+    block_hashes: list[bytes32] = field(default_factory=list)
 
     def reset(self, fork_height: int, header_hash: bytes32) -> None:
         self.fork_height = fork_height
@@ -110,6 +111,36 @@ class ForkInfo:
             assert coin.name() not in self.additions_since_fork
             self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
 
+    def include_block(
+        self,
+        additions: list[tuple[Coin, Optional[bytes]]],
+        removals: list[Coin],
+        block: FullBlock,
+        header_hash: bytes32,
+    ) -> None:
+        height = block.height
+
+        assert self.peak_height == height - 1
+
+        assert len(self.block_hashes) == self.peak_height - self.fork_height
+        assert block.height == self.fork_height + 1 + len(self.block_hashes)
+        self.block_hashes.append(header_hash)
+
+        self.peak_height = int(block.height)
+        self.peak_hash = header_hash
+
+        if block.foliage_transaction_block is not None:
+            timestamp = block.foliage_transaction_block.timestamp
+            for spend in removals:
+                self.removals_since_fork[bytes32(spend.name())] = ForkRem(bytes32(spend.puzzle_hash), height)
+            for coin, hint in additions:
+                self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
+        for coin in block.get_included_reward_coins():
+            assert block.foliage_transaction_block is not None
+            timestamp = block.foliage_transaction_block.timestamp
+            assert coin.name() not in self.additions_since_fork
+            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
+
     def rollback(self, header_hash: bytes32, height: int) -> None:
         assert height <= self.peak_height
         self.peak_height = height
@@ -121,7 +152,7 @@ class ForkInfo:
 async def validate_block_body(
     constants: ConsensusConstants,
     records: BlockRecordsProtocol,
-    get_coin_records: Callable[[Collection[bytes32]], Awaitable[List[CoinRecord]]],
+    get_coin_records: Callable[[Collection[bytes32]], Awaitable[list[CoinRecord]]],
     block: Union[FullBlock, UnfinishedBlock],
     height: uint32,
     conds: Optional[SpendBundleConditions],
@@ -129,7 +160,7 @@ async def validate_block_body(
     bls_cache: Optional[BLSCache],
     *,
     validate_signature: bool = True,
-) -> Tuple[Optional[Err], Optional[SpendBundleConditions]]:
+) -> tuple[Optional[Err], Optional[SpendBundleConditions]]:
     """
     This assumes the header block has been completely validated.
     Validates the transactions and body of the block.
@@ -180,7 +211,7 @@ async def validate_block_body(
     assert block.foliage_transaction_block is not None
 
     # keeps track of the reward coins that need to be incorporated
-    expected_reward_coins: Set[Coin] = set()
+    expected_reward_coins: set[Coin] = set()
 
     # 3. The transaction info hash in the Foliage block must match the transaction info
     if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
@@ -246,14 +277,14 @@ async def validate_block_body(
     if len(block.transactions_info.reward_claims_incorporated) != len(expected_reward_coins):
         return Err.INVALID_REWARD_COINS, None
 
-    removals: List[bytes32] = []
+    removals: list[bytes32] = []
 
     # we store coins paired with their names in order to avoid computing the
     # coin name multiple times, we store it next to the coin while validating
     # the block
-    coinbase_additions: List[Tuple[Coin, bytes32]] = [(c, c.name()) for c in expected_reward_coins]
-    additions: List[Tuple[Coin, bytes32]] = []
-    removals_puzzle_dic: Dict[bytes32, bytes32] = {}
+    coinbase_additions: list[tuple[Coin, bytes32]] = [(c, c.name()) for c in expected_reward_coins]
+    additions: list[tuple[Coin, bytes32]] = []
+    removals_puzzle_dic: dict[bytes32, bytes32] = {}
     cost: uint64 = uint64(0)
 
     # In header validation we check that timestamp is not more than 5 minutes into the future
@@ -319,7 +350,7 @@ async def validate_block_body(
     if block.transactions_info.cost != cost:
         return Err.INVALID_BLOCK_COST, None
 
-    additions_dic: Dict[bytes32, Coin] = {}
+    additions_dic: dict[bytes32, Coin] = {}
     # 10. Check additions for max coin amount
     # Be careful to check for 64 bit overflows in other languages. This is the max 64 bit unsigned integer
     # We will not even reach here because Coins do type checking (uint64)
@@ -342,7 +373,7 @@ async def validate_block_body(
         return root_error, None
 
     # 12. The additions and removals must result in the correct filter
-    byte_array_tx: List[bytearray] = []
+    byte_array_tx: list[bytearray] = []
 
     for coin, _ in additions + coinbase_additions:
         byte_array_tx.append(bytearray(coin.puzzle_hash))
@@ -358,8 +389,8 @@ async def validate_block_body(
 
     # 13. Check for duplicate outputs in additions
     addition_counter = collections.Counter(coin_name for _, coin_name in additions + coinbase_additions)
-    for k, v in addition_counter.items():
-        if v > 1:
+    for count in addition_counter.values():
+        if count > 1:
             return Err.DUPLICATE_OUTPUT, None
 
     # 14. Check for duplicate spends inside block
@@ -374,10 +405,10 @@ async def validate_block_body(
     assert fork_info.fork_height < height
     assert fork_info.peak_height == height - 1
 
-    removal_coin_records: Dict[bytes32, CoinRecord] = {}
+    removal_coin_records: dict[bytes32, CoinRecord] = {}
     # the removed coins we need to look up from the DB
     # i.e. all non-ephemeral coins
-    removals_from_db: List[bytes32] = []
+    removals_from_db: list[bytes32] = []
     for rem in removals:
         if rem in additions_dic:
             # Ephemeral coin
@@ -403,7 +434,7 @@ async def validate_block_body(
 
     # some coin spends we need to ensure exist in the fork branch. Both coins we
     # can't find in the DB, but also coins that were spent after the fork point
-    look_in_fork: List[bytes32] = []
+    look_in_fork: list[bytes32] = []
     for unspent in unspent_records:
         if unspent.confirmed_block_index <= fork_info.fork_height:
             # Spending something in the current chain, confirmed before fork
@@ -418,7 +449,7 @@ async def validate_block_body(
     if len(unspent_records) != len(removals_from_db):
         # some coins could not be found in the DB. We need to find out which
         # ones and look for them in additions_since_fork
-        found: Set[bytes32] = {u.name for u in unspent_records}
+        found: set[bytes32] = {u.name for u in unspent_records}
         for rem in removals_from_db:
             if rem in found:
                 continue
@@ -489,8 +520,8 @@ async def validate_block_body(
             return error, None
 
     # create hash_key list for aggsig check
-    pairs_pks: List[G1Element] = []
-    pairs_msgs: List[bytes] = []
+    pairs_pks: list[G1Element] = []
+    pairs_msgs: list[bytes] = []
     if conds is not None:
         pairs_pks, pairs_msgs = pkm_pairs(conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
 

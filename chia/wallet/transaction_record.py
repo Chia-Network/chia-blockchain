@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import builtins
 from dataclasses import dataclass
-from typing import Any, Dict, Generic, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.types.blockchain_format.coin import Coin
@@ -24,7 +25,7 @@ minimum_send_attempts = 6
 @dataclass
 class ItemAndTransactionRecords(Generic[T]):
     item: T
-    transaction_records: List[TransactionRecord]
+    transaction_records: list[TransactionRecord]
 
 
 @streamable
@@ -42,19 +43,19 @@ class TransactionRecordOld(Streamable):
     confirmed: bool
     sent: uint32
     spend_bundle: Optional[WalletSpendBundle]
-    additions: List[Coin]
-    removals: List[Coin]
+    additions: list[Coin]
+    removals: list[Coin]
     wallet_id: uint32
 
     # Represents the list of peers that we sent the transaction to, whether each one
     # included it in the mempool, and what the error message (if any) was
-    sent_to: List[Tuple[str, uint8, Optional[str]]]
+    sent_to: list[tuple[str, uint8, Optional[str]]]
     trade_id: Optional[bytes32]
     type: uint32  # TransactionType
 
     # name is also called bundle_id and tx_id
     name: bytes32
-    memos: List[Tuple[bytes32, List[bytes]]]
+    memos: list[tuple[bytes32, list[bytes]]]
 
     def is_in_mempool(self) -> bool:
         # If one of the nodes we sent it to responded with success or pending, we return True
@@ -78,19 +79,21 @@ class TransactionRecordOld(Streamable):
                     return uint32(block_index)
         return None
 
-    def get_memos(self) -> Dict[bytes32, List[bytes]]:
+    def get_memos(self) -> dict[bytes32, list[bytes]]:
         return {coin_id: ms for coin_id, ms in self.memos}
 
     @classmethod
-    def from_json_dict_convenience(cls: Type[_T_TransactionRecord], modified_tx_input: Dict) -> _T_TransactionRecord:
+    def from_json_dict_convenience(
+        cls: builtins.type[_T_TransactionRecord], modified_tx_input: dict
+    ) -> _T_TransactionRecord:
         modified_tx = modified_tx_input.copy()
         if "to_address" in modified_tx:
             modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
         if "to_address" in modified_tx:
             del modified_tx["to_address"]
         # Converts memos from a flat dict into a nested list
-        memos_dict: Dict[str, List[str]] = {}
-        memos_list: List = []
+        memos_dict: dict[str, list[str]] = {}
+        memos_list: list = []
         if "memos" in modified_tx:
             for coin_id, memo in modified_tx["memos"].items():
                 if coin_id not in memos_dict:
@@ -102,13 +105,13 @@ class TransactionRecordOld(Streamable):
         return cls.from_json_dict(modified_tx)
 
     @classmethod
-    def from_json_dict(cls: Type[_T_TransactionRecord], json_dict: Dict[str, Any]) -> _T_TransactionRecord:
+    def from_json_dict(cls: builtins.type[_T_TransactionRecord], json_dict: dict[str, Any]) -> _T_TransactionRecord:
         try:
             return super().from_json_dict(json_dict)
         except Exception:
             return cls.from_json_dict_convenience(json_dict)
 
-    def to_json_dict_convenience(self, config: Dict) -> Dict:
+    def to_json_dict_convenience(self, config: dict) -> dict:
         selected = config["selected_network"]
         prefix = config["network_overrides"]["config"][selected]["address_prefix"]
         formatted = self.to_json_dict()
@@ -133,7 +136,7 @@ class TransactionRecordOld(Streamable):
             return True
         return False
 
-    def hint_dict(self) -> Dict[bytes32, bytes32]:
+    def hint_dict(self) -> dict[bytes32, bytes32]:
         return {coin_id: bytes32(memos[0]) for coin_id, memos in self.memos if len(memos) > 0 and len(memos[0]) == 32}
 
 

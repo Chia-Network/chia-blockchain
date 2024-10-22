@@ -33,7 +33,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             True,
             server.received_message_callback,
             None,
-            bytes32(b"\x00" * 32),
+            bytes32.zeros,
             100,
             30,
             local_capabilities_for_handshake=default_capabilities[NodeType.FULL_NODE],
@@ -151,8 +151,10 @@ class TestSSL:
 
                 ssl_context = ssl_context_for_client(ca_private_crt_path, ca_private_key_path, pub_crt, pub_key)
                 caplog.clear()
-                with pytest.raises(Exception), ignore_ssl_cert_error(), caplog.at_level(
-                    logging.DEBUG, logger="asyncio"
+                with (
+                    pytest.raises(Exception),
+                    ignore_ssl_cert_error(),
+                    caplog.at_level(logging.DEBUG, logger="asyncio"),
                 ):
                     await establish_connection(farmer_server, self_hostname, ssl_context)
 

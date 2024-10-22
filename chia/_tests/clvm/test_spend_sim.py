@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from chia_rs import G2Element
 
-from chia.clvm.spend_sim import sim_and_client
+from chia._tests.util.spend_sim import sim_and_client
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import compute_additions, make_spend
@@ -41,7 +41,7 @@ async def test_all_endpoints():
     async with sim_and_client() as (sim, sim_client):
         for i in range(0, 5):
             await sim.farm_block()
-        await sim.farm_block(bytes32([0] * 32))
+        await sim.farm_block(bytes32.zeros)
         await sim.farm_block(bytes32([1] * 32))
         for i in range(0, 5):
             await sim.farm_block()
@@ -95,19 +95,19 @@ async def test_all_endpoints():
         assert len(coin_records) == 0
 
         # get_coin_records_by_puzzle_hash
-        coin_records = await sim_client.get_coin_records_by_puzzle_hash(bytes32([0] * 32))
+        coin_records = await sim_client.get_coin_records_by_puzzle_hash(bytes32.zeros)
         coin_record_name = coin_records[0].coin.name()
         assert len(coin_records) == 2
 
-        coin_records = await sim_client.get_coin_records_by_puzzle_hash(bytes32([0] * 32), start_height=0, end_height=2)
+        coin_records = await sim_client.get_coin_records_by_puzzle_hash(bytes32.zeros, start_height=0, end_height=2)
         assert len(coin_records) == 0
 
         # get_coin_records_by_puzzle_hashes
-        coin_records = await sim_client.get_coin_records_by_puzzle_hashes([bytes32([0] * 32), bytes32([1] * 32)])
+        coin_records = await sim_client.get_coin_records_by_puzzle_hashes([bytes32.zeros, bytes32([1] * 32)])
         assert len(coin_records) == 4
 
         coin_records = await sim_client.get_coin_records_by_puzzle_hashes(
-            [bytes32([0] * 32), bytes32([1] * 32)], start_height=0, end_height=2
+            [bytes32.zeros, bytes32([1] * 32)], start_height=0, end_height=2
         )
         assert len(coin_records) == 0
 

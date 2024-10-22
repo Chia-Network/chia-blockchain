@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-from typing import List
 from unittest import TestCase
 
 import pytest
@@ -205,7 +204,7 @@ class TestPoolPuzzles(TestCase):
         assert launcher_id_to_p2_puzzle_hash(launcher_id, DELAY_TIME, DELAY_PH) == p2_singleton_ph
         assert get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(p2_singleton_puz) == (DELAY_TIME, DELAY_PH)
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
-        coin_sols: List[CoinSpend] = create_absorb_spend(
+        coin_sols: list[CoinSpend] = create_absorb_spend(
             launcher_coinsol,
             pool_state,
             launcher_coin,
@@ -226,7 +225,7 @@ class TestPoolPuzzles(TestCase):
                 coin_sols,
             )
         )[0]
-        coin_sols: List[CoinSpend] = create_absorb_spend(
+        coin_sols: list[CoinSpend] = create_absorb_spend(
             last_coinsol,
             pool_state,
             launcher_coin,
@@ -332,7 +331,7 @@ class TestPoolPuzzles(TestCase):
         # create the farming reward
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
         # generate relevant coin solutions
-        coin_sols: List[CoinSpend] = create_absorb_spend(
+        coin_sols: list[CoinSpend] = create_absorb_spend(
             travel_coinsol,
             target_pool_state,
             launcher_coin,
@@ -383,7 +382,7 @@ class TestPoolPuzzles(TestCase):
         time = CoinTimestamp(20000000, 10005)
         # create the farming  reward
         coin_db.farm_coin(p2_singleton_ph, time, 1750000000000)
-        coin_sols: List[CoinSpend] = create_absorb_spend(
+        coin_sols: list[CoinSpend] = create_absorb_spend(
             return_coinsol,
             pool_state,
             launcher_coin,

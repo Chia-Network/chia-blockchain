@@ -1,8 +1,6 @@
 # flake8: noqa: F811, F401
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
@@ -11,6 +9,7 @@ from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
+from chia._tests.util.misc import add_blocks_in_batches
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_record import BlockRecord
@@ -408,14 +407,14 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         await client.close_connection(connections[0]["node_id"])
         await time_out_assert(10, num_connections, 0)
 
-        blocks: List[FullBlock] = await client.get_blocks(0, 5)
+        blocks: list[FullBlock] = await client.get_blocks(0, 5)
         assert len(blocks) == 5
 
         await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32), None))
-        new_blocks_0: List[FullBlock] = await client.get_blocks(0, 5)
+        new_blocks_0: list[FullBlock] = await client.get_blocks(0, 5)
         assert len(new_blocks_0) == 7
 
-        new_blocks: List[FullBlock] = await client.get_blocks(0, 5, exclude_reorged=True)
+        new_blocks: list[FullBlock] = await client.get_blocks(0, 5, exclude_reorged=True)
         assert len(new_blocks) == 5
         assert blocks[0].header_hash == new_blocks[0].header_hash
         assert blocks[1].header_hash == new_blocks[1].header_hash
@@ -537,8 +536,7 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 
         # Perform a reorg
         blocks = bt.get_consecutive_blocks(12, seed=b"1234")
-        for block in blocks:
-            await full_node_api_1.full_node.add_block(block)
+        await add_blocks_in_batches(blocks, full_node_api_1.full_node)
 
         # Signage point is no longer in the blockchain
         res = await client.get_recent_signage_point_or_eos(sp.cc_vdf.output.get_hash(), None)
@@ -620,7 +618,7 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         assert state["space"] == 0
         assert state["average_block_time"] is None
 
-        blocks: List[FullBlock] = bt.get_consecutive_blocks(num_blocks)
+        blocks: list[FullBlock] = bt.get_consecutive_blocks(num_blocks)
         blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=blocks, guarantee_transaction_block=True)
 
         for block in blocks:
@@ -643,7 +641,7 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         assert state["space"] > 0
         assert state["average_block_time"] > 0
 
-        block_records: List[BlockRecord] = [
+        block_records: list[BlockRecord] = [
             await full_node_api_1.full_node.blockchain.get_block_record_from_db(rec.header_hash) for rec in blocks
         ]
         first_non_transaction_block_index = -1
@@ -655,8 +653,8 @@ async def test_get_blockchain_state(one_wallet_and_one_simulator_services, self_
         # so first_non_transaction_block_index != 0
         assert first_non_transaction_block_index > 0
 
-        transaction_blocks: List[BlockRecord] = [b for b in block_records if b.is_transaction_block]
-        non_transaction_block: List[BlockRecord] = [b for b in block_records if not b.is_transaction_block]
+        transaction_blocks: list[BlockRecord] = [b for b in block_records if b.is_transaction_block]
+        non_transaction_block: list[BlockRecord] = [b for b in block_records if not b.is_transaction_block]
         assert len(transaction_blocks) > 0
         assert len(non_transaction_block) > 0
         assert transaction_blocks[0] == await get_nearest_transaction_block(
@@ -713,7 +711,7 @@ async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
             full_node_service.config,
         )
 
-        empty_coin_name = bytes32([0] * 32)
+        empty_coin_name = bytes32.zeros
         mempool_item = await client.get_mempool_items_by_coin_name(empty_coin_name)
         assert mempool_item["success"] == True
         assert "mempool_items" in mempool_item

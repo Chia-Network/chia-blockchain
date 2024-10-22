@@ -4,7 +4,8 @@ import os
 import pathlib
 import sys
 import time
-from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator
+from collections.abc import AsyncIterable, Awaitable, Iterator
+from typing import Any, Callable
 
 import pytest
 
@@ -84,7 +85,7 @@ async def valid_node_values_fixture(
     data_store: DataStore,
     store_id: bytes32,
     node_type: NodeType,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     await add_01234567_example(data_store=data_store, store_id=store_id)
 
     if node_type == NodeType.INTERNAL:
@@ -98,7 +99,7 @@ async def valid_node_values_fixture(
 
 
 @pytest.fixture(name="bad_node_type", params=range(2 * len(NodeType)))
-def bad_node_type_fixture(request: SubRequest, valid_node_values: Dict[str, Any]) -> int:
+def bad_node_type_fixture(request: SubRequest, valid_node_values: dict[str, Any]) -> int:
     if request.param == valid_node_values["node_type"]:
         pytest.skip("Actually, this is a valid node type")
 

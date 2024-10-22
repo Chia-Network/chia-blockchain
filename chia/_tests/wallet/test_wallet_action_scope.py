@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import G2Element
@@ -17,9 +17,9 @@ from chia.wallet.wallet_action_scope import WalletSideEffects
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
-MOCK_SR = SigningResponse(b"hey", bytes32([0] * 32))
+MOCK_SR = SigningResponse(b"hey", bytes32.zeros)
 MOCK_SB = WalletSpendBundle([], G2Element())
-MOCK_COIN = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+MOCK_COIN = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
 
 
 def test_back_and_forth_serialization() -> None:
@@ -36,18 +36,18 @@ def test_back_and_forth_serialization() -> None:
 @dataclass
 class MockWalletStateManager:
     most_recent_call: Optional[
-        Tuple[List[TransactionRecord], bool, bool, bool, List[SigningResponse], List[WalletSpendBundle]]
+        tuple[list[TransactionRecord], bool, bool, bool, list[SigningResponse], list[WalletSpendBundle]]
     ] = None
 
     async def add_pending_transactions(
         self,
-        txs: List[TransactionRecord],
+        txs: list[TransactionRecord],
         push: bool,
         merge_spends: bool,
         sign: bool,
-        additional_signing_responses: List[SigningResponse],
-        extra_spends: List[WalletSpendBundle],
-    ) -> List[TransactionRecord]:
+        additional_signing_responses: list[SigningResponse],
+        extra_spends: list[WalletSpendBundle],
+    ) -> list[TransactionRecord]:
         self.most_recent_call = (txs, push, merge_spends, sign, additional_signing_responses, extra_spends)
         return txs
 

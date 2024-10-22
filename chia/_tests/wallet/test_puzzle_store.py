@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 import pytest
 from chia_rs import AugSchemeMPL
@@ -29,8 +28,8 @@ def get_dummy_record(index: int, wallet_id: int, seeded_random: random.Random) -
 @dataclass
 class DummyDerivationRecords:
     seeded_random: random.Random
-    index_per_wallet: Dict[int, int] = field(default_factory=dict)
-    records_per_wallet: Dict[int, List[DerivationRecord]] = field(default_factory=dict)
+    index_per_wallet: dict[int, int] = field(default_factory=dict)
+    records_per_wallet: dict[int, list[DerivationRecord]] = field(default_factory=dict)
 
     def generate(self, wallet_id: int, count: int) -> None:
         records = self.records_per_wallet.setdefault(wallet_id, [])

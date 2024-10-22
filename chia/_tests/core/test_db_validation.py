@@ -4,12 +4,12 @@ import random
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import List
 
 import pytest
 
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_validate_func import validate_v2
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -128,7 +128,7 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
             validate_v2(db_file, validate_blocks=False)
 
 
-async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
+async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
     async with DBWrapper2.managed(database=db_file, reader_count=1, db_version=2) as db_wrapper:
         async with db_wrapper.writer_maybe_transaction() as conn:
             # this is done by chia init normally
@@ -145,12 +145,15 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
                 if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
                     sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
             results = PreValidationResult(None, uint64(1), None, False, uint32(0))
-            result, err, _ = await bc.add_block(block, results, None, sub_slot_iters=sub_slot_iters)
+            fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
+            result, err, _ = await bc.add_block(
+                block, results, None, sub_slot_iters=sub_slot_iters, fork_info=fork_info
+            )
             assert err is None
 
 
 @pytest.mark.anyio
-async def test_db_validate_default_1000_blocks(default_1000_blocks: List[FullBlock]) -> None:
+async def test_db_validate_default_1000_blocks(default_1000_blocks: list[FullBlock]) -> None:
     with TempFile() as db_file:
         await make_db(db_file, default_1000_blocks)
 

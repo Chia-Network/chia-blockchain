@@ -23,22 +23,22 @@ def test_debug_spend_bundle() -> None:
     sig = AugSchemeMPL.sign(sk, msg)
     ACS = Program.to(15).curry(Program.to("hey").curry("now")).curry("brown", "cow")
     ACS_PH = ACS.get_tree_hash()
-    coin: Coin = Coin(bytes32([0] * 32), ACS_PH, uint64(3))
+    coin: Coin = Coin(bytes32.zeros, ACS_PH, uint64(3))
     child_coin: Coin = Coin(coin.name(), ACS_PH, uint64(0))
-    coin_bad_reveal: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+    coin_bad_reveal: Coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
     solution = Program.to(
         [
             [ConditionOpcode.AGG_SIG_UNSAFE, pk, msg],
             [ConditionOpcode.REMARK],
             [ConditionOpcode.CREATE_COIN, ACS_PH, 0],
-            [ConditionOpcode.CREATE_COIN, bytes32([0] * 32), 1],
-            [ConditionOpcode.CREATE_COIN, bytes32([0] * 32), 2, [b"memo", b"memo", b"memo"]],
+            [ConditionOpcode.CREATE_COIN, bytes32.zeros, 1],
+            [ConditionOpcode.CREATE_COIN, bytes32.zeros, 2, [b"memo", b"memo", b"memo"]],
             [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, None],
-            [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, bytes32([0] * 32)],
+            [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, bytes32.zeros],
             [ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, std_hash(coin.name())],
             [ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, b"hey"],
             [ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, None],
-            [ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, bytes32([0] * 32)],
+            [ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, bytes32.zeros],
             [ConditionOpcode.ASSERT_PUZZLE_ANNOUNCEMENT, std_hash(coin.puzzle_hash)],
             [ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, b"hey"],
         ]
