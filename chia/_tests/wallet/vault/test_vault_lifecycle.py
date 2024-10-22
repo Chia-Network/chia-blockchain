@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
@@ -99,7 +99,7 @@ async def test_vault_inner(cost_logger: CostLogger) -> None:
             SpendBundle([make_spend(vault_coin, vault_puzzle, vault_solution_secp)], G2Element()),
         )
 
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(vault_spendbundle)
+        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(vault_spendbundle)
         assert result[0] == MempoolInclusionStatus.SUCCESS
         await sim.farm_block()
 

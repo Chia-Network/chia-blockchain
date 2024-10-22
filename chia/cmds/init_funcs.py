@@ -4,7 +4,7 @@ import os
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import yaml
 from chia_rs import PrivateKey
@@ -41,7 +41,7 @@ from chia.wallet.derive_keys import (
 )
 
 
-def dict_add_new_default(updated: Dict[str, Any], default: Dict[str, Any], do_not_migrate_keys: Dict[str, Any]) -> None:
+def dict_add_new_default(updated: dict[str, Any], default: dict[str, Any], do_not_migrate_keys: dict[str, Any]) -> None:
     for k in do_not_migrate_keys:
         if k in updated and do_not_migrate_keys[k] == "":
             updated.pop(k)
@@ -65,7 +65,7 @@ def dict_add_new_default(updated: Dict[str, Any], default: Dict[str, Any], do_no
 def check_keys(new_root: Path, keychain: Optional[Keychain] = None) -> None:
     if keychain is None:
         keychain = Keychain()
-    all_sks: List[PrivateKey] = [sk for sk, _ in keychain.get_all_private_keys() if isinstance(sk, PrivateKey)]
+    all_sks: list[PrivateKey] = [sk for sk, _ in keychain.get_all_private_keys() if isinstance(sk, PrivateKey)]
     if len(all_sks) == 0:
         print("No keys are present in the keychain. Generate them with 'chia keys generate'")
         return None
@@ -169,8 +169,8 @@ def copy_files_rec(old_path: Path, new_path: Path) -> None:
 def migrate_from(
     old_root: Path,
     new_root: Path,
-    manifest: List[str],
-    do_not_migrate_settings: List[str],
+    manifest: list[str],
+    do_not_migrate_settings: list[str],
 ) -> int:
     """
     Copy all the files in "manifest" to the new config directory.
@@ -193,7 +193,7 @@ def migrate_from(
 
     with lock_and_load_config(new_root, "config.yaml") as config:
         config_str: str = initial_config_file("config.yaml")
-        default_config: Dict[str, Any] = yaml.safe_load(config_str)
+        default_config: dict[str, Any] = yaml.safe_load(config_str)
         flattened_keys = unflatten_properties({k: "" for k in do_not_migrate_settings})
         dict_add_new_default(config, default_config, flattened_keys)
 
@@ -332,7 +332,7 @@ def chia_init(
     if should_check_keys:
         check_keys(root_path)
 
-    config: Dict[str, Any]
+    config: dict[str, Any]
 
     db_path_replaced: str
     if v1_db:

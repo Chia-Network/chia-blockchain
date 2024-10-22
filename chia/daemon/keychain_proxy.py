@@ -5,7 +5,7 @@ import logging
 import ssl
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, overload
+from typing import Any, Literal, Optional, Union, overload
 
 from aiohttp import ClientConnectorError, ClientSession
 from chia_rs import AugSchemeMPL
@@ -73,7 +73,7 @@ class KeychainProxy(DaemonProxy):
         """
         return self.keychain is not None
 
-    def format_request(self, command: str, data: Dict[str, Any]) -> WsRpcMessage:
+    def format_request(self, command: str, data: dict[str, Any]) -> WsRpcMessage:
         """
         Overrides DaemonProxy.format_request() to add keychain-specific RPC params
         """
@@ -143,7 +143,7 @@ class KeychainProxy(DaemonProxy):
         if self.keychain_connection_task is not None:
             await self.keychain_connection_task
 
-    async def get_response_for_request(self, request_name: str, data: Dict[str, Any]) -> Tuple[WsRpcMessage, bool]:
+    async def get_response_for_request(self, request_name: str, data: dict[str, Any]) -> tuple[WsRpcMessage, bool]:
         request = self.format_request(request_name, data)
         response = await self._get(request)
         success = response["data"].get("success", False)
@@ -173,33 +173,33 @@ class KeychainProxy(DaemonProxy):
                 raise Exception(f"{error}")
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str) -> Tuple[SecretInfo[Any], KeyTypes]: ...
+    async def add_key(self, mnemonic_or_pk: str) -> tuple[SecretInfo[Any], KeyTypes]: ...
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> Tuple[SecretInfo[Any], KeyTypes]: ...
+    async def add_key(self, mnemonic_or_pk: str, label: Optional[str]) -> tuple[SecretInfo[Any], KeyTypes]: ...
 
     @overload
-    async def add_key(self, mnemonic_or_pk: str, *, key_type: KeyTypes) -> Tuple[SecretInfo[Any], KeyTypes]: ...
+    async def add_key(self, mnemonic_or_pk: str, *, key_type: KeyTypes) -> tuple[SecretInfo[Any], KeyTypes]: ...
 
     @overload
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True]
-    ) -> Tuple[SecretInfo[Any], KeyTypes]: ...
+    ) -> tuple[SecretInfo[Any], KeyTypes]: ...
 
     @overload
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[True], key_type: KeyTypes
-    ) -> Tuple[SecretInfo[Any], KeyTypes]: ...
+    ) -> tuple[SecretInfo[Any], KeyTypes]: ...
 
     @overload
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False]
-    ) -> Tuple[ObservationRoot, KeyTypes]: ...
+    ) -> tuple[ObservationRoot, KeyTypes]: ...
 
     @overload
     async def add_key(
         self, mnemonic_or_pk: str, label: Optional[str], private: Literal[False], key_type: KeyTypes
-    ) -> Tuple[ObservationRoot, KeyTypes]: ...
+    ) -> tuple[ObservationRoot, KeyTypes]: ...
 
     async def add_key(
         self,
@@ -207,7 +207,7 @@ class KeychainProxy(DaemonProxy):
         label: Optional[str] = None,
         private: bool = True,
         key_type: KeyTypes = KeyTypes.G1_ELEMENT,
-    ) -> Tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
+    ) -> tuple[Union[SecretInfo[Any], ObservationRoot], KeyTypes]:
         """
         Forwards to Keychain.add_key()
         """
@@ -271,11 +271,11 @@ class KeychainProxy(DaemonProxy):
             if not success:
                 self.handle_error(response)
 
-    async def get_all_private_keys(self) -> List[Tuple[SecretInfo[Any], bytes]]:
+    async def get_all_private_keys(self) -> list[tuple[SecretInfo[Any], bytes]]:
         """
         Forwards to Keychain.get_all_private_keys()
         """
-        keys: List[Tuple[SecretInfo[Any], bytes]] = []
+        keys: list[tuple[SecretInfo[Any], bytes]] = []
         if self.use_local_keychain():
             keys = self.keychain.get_all_private_keys()
         else:
@@ -434,11 +434,11 @@ class KeychainProxy(DaemonProxy):
                 self.handle_error(response)
         return key_data
 
-    async def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
+    async def get_keys(self, include_secrets: bool = False) -> list[KeyData]:
         """
         Returns all KeyData
         """
-        keys: List[KeyData] = []
+        keys: list[KeyData] = []
         if self.use_local_keychain():
             keys = self.keychain.get_keys(include_secrets)
         else:

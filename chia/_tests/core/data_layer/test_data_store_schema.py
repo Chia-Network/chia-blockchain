@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -35,7 +35,7 @@ async def test_node_hash_must_be_32(
     data_store: DataStore,
     store_id: bytes32,
     length: int,
-    valid_node_values: Dict[str, Any],
+    valid_node_values: dict[str, Any],
 ) -> None:
     valid_node_values["hash"] = bytes([0] * length)
 
@@ -54,7 +54,7 @@ async def test_node_hash_must_be_32(
 async def test_node_hash_must_not_be_null(
     data_store: DataStore,
     store_id: bytes32,
-    valid_node_values: Dict[str, Any],
+    valid_node_values: dict[str, Any],
 ) -> None:
     valid_node_values["hash"] = None
 
@@ -74,7 +74,7 @@ async def test_node_type_must_be_valid(
     data_store: DataStore,
     node_type: NodeType,
     bad_node_type: int,
-    valid_node_values: Dict[str, Any],
+    valid_node_values: dict[str, Any],
 ) -> None:
     valid_node_values["node_type"] = bad_node_type
 

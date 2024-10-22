@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import G2Element
@@ -36,18 +36,18 @@ def test_back_and_forth_serialization() -> None:
 @dataclass
 class MockWalletStateManager:
     most_recent_call: Optional[
-        Tuple[List[TransactionRecord], bool, bool, bool, List[SigningResponse], List[WalletSpendBundle]]
+        tuple[list[TransactionRecord], bool, bool, bool, list[SigningResponse], list[WalletSpendBundle]]
     ] = None
 
     async def add_pending_transactions(
         self,
-        txs: List[TransactionRecord],
+        txs: list[TransactionRecord],
         push: bool,
         merge_spends: bool,
         sign: bool,
-        additional_signing_responses: List[SigningResponse],
-        extra_spends: List[WalletSpendBundle],
-    ) -> List[TransactionRecord]:
+        additional_signing_responses: list[SigningResponse],
+        extra_spends: list[WalletSpendBundle],
+    ) -> list[TransactionRecord]:
         self.most_recent_call = (txs, push, merge_spends, sign, additional_signing_responses, extra_spends)
         return txs
 

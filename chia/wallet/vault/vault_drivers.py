@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from chia_rs import G1Element
 
@@ -101,7 +101,7 @@ def get_vault_full_puzzle_hash(launcher_id: bytes32, inner_puzzle_hash: bytes32)
 
 
 def get_recovery_finish_puzzle(
-    new_vault_inner_puzhash: bytes32, timelock: uint64, amount: uint64, memos: Union[List[bytes], Program]
+    new_vault_inner_puzhash: bytes32, timelock: uint64, amount: uint64, memos: Union[list[bytes], Program]
 ) -> Program:
     recovery_condition = Program.to([[51, new_vault_inner_puzhash, amount, memos]])
     return RECOVERY_FINISH_MOD.curry(timelock, recovery_condition)
@@ -160,7 +160,7 @@ def get_recovery_puzzle_from_spend(spend: CoinSpend) -> Program:
     return recovery_inner_puzzle
 
 
-def get_new_vault_info_from_spend(spend: CoinSpend) -> Tuple[bytes, bytes32, Optional[G1Element], Optional[uint64]]:
+def get_new_vault_info_from_spend(spend: CoinSpend) -> tuple[bytes, bytes32, Optional[G1Element], Optional[uint64]]:
     solution = spend.solution.to_program()
     delegated_puz = solution.at("rrfrf")
     conds = delegated_puz.at("rrfrrfrfr")
@@ -186,7 +186,7 @@ def match_finish_spend(spend: CoinSpend) -> bool:
 
 
 # SOLUTIONS
-def get_recovery_solution(new_vault_inner_puzhash: bytes32, amount: uint64, memos: List[bytes]) -> Program:
+def get_recovery_solution(new_vault_inner_puzhash: bytes32, amount: uint64, memos: list[bytes]) -> Program:
     recovery_condition = Program.to([[51, new_vault_inner_puzhash, amount, memos]])
     recovery_solution: Program = Program.to([amount, recovery_condition])
     return recovery_solution

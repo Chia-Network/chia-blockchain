@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Optional, TypeVar, runtime_checkable
 
 from chia_rs import G1Element, G2Element
 from typing_extensions import NotRequired, Protocol, TypedDict, Unpack
@@ -50,17 +50,17 @@ class WalletProtocol(Protocol[T]):
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> Set[Coin]: ...
+    ) -> set[Coin]: ...
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128: ...
+    async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128: ...
 
-    async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128: ...
+    async def get_unconfirmed_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128: ...
 
-    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128: ...
+    async def get_spendable_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128: ...
 
     async def get_pending_change_balance(self) -> uint64: ...
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128: ...
+    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128: ...
 
     # not all wallet supports this. To signal support, make
     # require_derivation_paths() return true
@@ -74,7 +74,7 @@ class WalletProtocol(Protocol[T]):
 
     def handle_own_derivation(self) -> bool: ...
 
-    def derivation_for_index(self, index: int) -> List[DerivationRecord]: ...
+    def derivation_for_index(self, index: int) -> list[DerivationRecord]: ...
 
     wallet_info: WalletInfo
     # WalletStateManager is only imported for type hinting thus leaving pylint
@@ -106,11 +106,11 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         puzzle_hash: bytes32,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[Set[Coin]] = None,
-        primaries: Optional[List[Payment]] = None,
-        memos: Optional[List[bytes]] = None,
-        puzzle_decorator_override: Optional[List[Dict[str, Any]]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        coins: Optional[set[Coin]] = None,
+        primaries: Optional[list[Payment]] = None,
+        memos: Optional[list[bytes]] = None,
+        puzzle_decorator_override: Optional[list[dict[str, Any]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None: ...
 
@@ -120,17 +120,17 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
 
     async def sign_message(
         self, message: str, puzzle_hash: bytes32, mode: SigningMode
-    ) -> Tuple[G1Element, G2Element]: ...
+    ) -> tuple[G1Element, G2Element]: ...
 
     async def get_puzzle_hash(self, new: bool) -> bytes32: ...
 
     async def apply_signatures(
-        self, spends: List[Spend], signing_responses: List[SigningResponse]
+        self, spends: list[Spend], signing_responses: list[SigningResponse]
     ) -> SignedTransaction: ...
 
     async def execute_signing_instructions(
         self, signing_instructions: SigningInstructions, partial_allowed: bool = False
-    ) -> List[SigningResponse]: ...
+    ) -> list[SigningResponse]: ...
 
     async def gather_signing_info(self, coin_spends: list[Spend]) -> SigningInstructions: ...
 
@@ -142,14 +142,14 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         self,
         fee: uint64,
         action_scope: WalletActionScope,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> None: ...
 
     async def make_solution(
         self,
-        primaries: List[Payment],
+        primaries: list[Payment],
         action_scope: WalletActionScope,
-        conditions: Tuple[Condition, ...] = tuple(),
+        conditions: tuple[Condition, ...] = tuple(),
         fee: uint64 = uint64(0),
     ) -> Program: ...
 
@@ -162,7 +162,7 @@ class MainWalletProtocol(WalletProtocol[ClawbackMetadata], Protocol):
         asset_id: Optional[bytes32],
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> Set[Coin]: ...
+    ) -> set[Coin]: ...
 
 
 class GSTOptionalArgs(TypedDict):
@@ -173,14 +173,14 @@ class GSTOptionalArgs(TypedDict):
     add_pending_singleton: NotRequired[bool]
     announce_new_state: NotRequired[bool]
     # CATWallet
-    cat_discrepancy: NotRequired[Optional[Tuple[int, Program, Program]]]
+    cat_discrepancy: NotRequired[Optional[tuple[int, Program, Program]]]
     # NFTWallet
     nft_coin: NotRequired[Optional[NFTCoinInfo]]
     new_owner: NotRequired[Optional[bytes]]
     new_did_inner_hash: NotRequired[Optional[bytes]]
     trade_prices_list: NotRequired[Optional[Program]]
-    additional_bundles: NotRequired[List[WalletSpendBundle]]
-    metadata_update: NotRequired[Optional[Tuple[str, str]]]
+    additional_bundles: NotRequired[list[WalletSpendBundle]]
+    metadata_update: NotRequired[Optional[tuple[str, str]]]
     # CR-CAT Wallet
     add_authorizations_to_cr_cats: NotRequired[bool]
     # VCWallet

@@ -6,7 +6,7 @@ or that they're failing for the right reason when they're invalid.
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element
@@ -46,7 +46,7 @@ EASY_PUZZLE = SerializedProgram.from_bytes(b"\x01")
 EASY_PUZZLE_HASH = EASY_PUZZLE.get_tree_hash()
 
 
-async def initial_blocks(bt: BlockTools, block_count: int = 4) -> List[FullBlock]:
+async def initial_blocks(bt: BlockTools, block_count: int = 4) -> list[FullBlock]:
     blocks = bt.get_consecutive_blocks(
         block_count,
         guarantee_transaction_block=True,
@@ -60,10 +60,10 @@ async def initial_blocks(bt: BlockTools, block_count: int = 4) -> List[FullBlock
 
 async def check_spend_bundle_validity(
     bt: BlockTools,
-    blocks: List[FullBlock],
+    blocks: list[FullBlock],
     spend_bundle: SpendBundle,
     expected_err: Optional[Err] = None,
-) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
+) -> tuple[list[CoinRecord], list[CoinRecord], FullBlock]:
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `add_block` to ensure that it's accepted (if `expected_err=None`)
@@ -103,7 +103,7 @@ async def check_conditions(
     spend_reward_index: int = -2,
     *,
     aggsig: G2Element = G2Element(),
-) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
+) -> tuple[list[CoinRecord], list[CoinRecord], FullBlock]:
     blocks = await initial_blocks(bt)
     coin = blocks[spend_reward_index].get_included_reward_coins()[0]
 

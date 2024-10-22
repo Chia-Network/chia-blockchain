@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast, get_args, get_origin
+from typing import Any, Callable, Optional, TypeVar, cast, get_args, get_origin
 
 from chia_rs import G1Element, G2Element
 from clvm_tools import binutils
@@ -40,7 +40,7 @@ MAX_BLOCK_COST_CLVM = int(1e18)
 T = TypeVar("T")
 
 
-def satisfies_hint(obj: T, type_hint: Type[T]) -> bool:
+def satisfies_hint(obj: T, type_hint: type[T]) -> bool:
     """
     Check if an object satisfies a type hint.
     This is a simplified version of `isinstance` that also handles generic types.
@@ -75,7 +75,7 @@ def satisfies_hint(obj: T, type_hint: Type[T]) -> bool:
 
 class PuzzleDB:
     def __init__(self) -> None:
-        self._db: Dict[bytes32, Program] = {}
+        self._db: dict[bytes32, Program] = {}
 
     def add_puzzle(self, puzzle: Program) -> None:
         self._db[puzzle.get_tree_hash()] = Program.from_bytes(bytes(puzzle))
@@ -84,7 +84,7 @@ class PuzzleDB:
         return self._db.get(puzzle_hash)
 
 
-def from_kwargs(kwargs: Dict[str, Any], key: str, type_info: Type[T]) -> T:
+def from_kwargs(kwargs: dict[str, Any], key: str, type_info: type[T]) -> T:
     """Raise an exception if `kwargs[key]` is missing or the wrong type"""
     if key not in kwargs:
         raise ValueError(f"`{key}` missing in call to `solve`")
@@ -93,7 +93,7 @@ def from_kwargs(kwargs: Dict[str, Any], key: str, type_info: Type[T]) -> T:
     return cast(T, kwargs[key])
 
 
-Solver_F = Callable[["Solver", PuzzleDB, List[Program], Any], Program]
+Solver_F = Callable[["Solver", PuzzleDB, list[Program], Any], Program]
 
 
 class Solver:
@@ -102,14 +102,14 @@ class Solver:
     """
 
     def __init__(self) -> None:
-        self.solvers_by_puzzle_hash: Dict[bytes32, Solver_F] = {}
+        self.solvers_by_puzzle_hash: dict[bytes32, Solver_F] = {}
 
     def register_solver(self, puzzle_hash: bytes32, solver_f: Solver_F) -> None:
         if puzzle_hash in self.solvers_by_puzzle_hash:
             raise ValueError(f"solver registered for {puzzle_hash}")
         self.solvers_by_puzzle_hash[puzzle_hash] = solver_f
 
-    def solve(self, puzzle_db: PuzzleDB, puzzle: Program, **kwargs: Dict[str, Any]) -> Program:
+    def solve(self, puzzle_db: PuzzleDB, puzzle: Program, **kwargs: dict[str, Any]) -> Program:
         """
         The legal values and types for `kwargs` depends on the underlying solver
         that's invoked. The `kwargs` are passed through to any inner solvers
@@ -128,34 +128,34 @@ class Solver:
         raise ValueError("can't solve")
 
 
-def solve_launcher(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
+def solve_launcher(solver: Solver, puzzle_db: PuzzleDB, args: list[Program], kwargs: dict[str, Any]) -> Program:
     launcher_amount = from_kwargs(kwargs, "launcher_amount", uint64)
     destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", bytes32)
-    metadata = from_kwargs(kwargs, "metadata", List[Tuple[str, str]])
+    metadata = from_kwargs(kwargs, "metadata", list[tuple[str, str]])
     solution = Program.to([destination_puzzle_hash, launcher_amount, metadata])
     return solution
 
 
-def solve_anyone_can_spend(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
+def solve_anyone_can_spend(solver: Solver, puzzle_db: PuzzleDB, args: list[Program], kwargs: dict[str, Any]) -> Program:
     """
     This is the anyone-can-spend puzzle `1`. Note that farmers can easily steal this coin, so don't use
     it except for testing.
     """
-    conditions = from_kwargs(kwargs, "conditions", List[Program])
+    conditions = from_kwargs(kwargs, "conditions", list[Program])
     solution = Program.to(conditions)
     return solution
 
 
 def solve_anyone_can_spend_with_padding(
-    solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]
+    solver: Solver, puzzle_db: PuzzleDB, args: list[Program], kwargs: dict[str, Any]
 ) -> Program:
     """This is the puzzle `(a (q . 1) 3)`. It's only for testing."""
-    conditions = from_kwargs(kwargs, "conditions", List[Program])
+    conditions = from_kwargs(kwargs, "conditions", list[Program])
     solution = Program.to((0, conditions))
     return solution
 
 
-def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
+def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: list[Program], kwargs: dict[str, Any]) -> Program:
     """
     `lineage_proof`: a `Program` that proves the parent is also a singleton (or the launcher).
     `coin_amount`: a necessarily-odd value of mojos in this coin.
@@ -168,7 +168,7 @@ def solve_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kw
     return solution
 
 
-def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
+def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: list[Program], kwargs: dict[str, Any]) -> Program:
     pool_member_spend_type = from_kwargs(kwargs, "pool_member_spend_type", str)
     allowable = ["to-waiting-room", "claim-p2-nft"]
     if pool_member_spend_type not in allowable:
@@ -185,7 +185,7 @@ def solve_pool_member(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], 
 
 
 def solve_pool_waiting_room(
-    solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]
+    solver: Solver, puzzle_db: PuzzleDB, args: list[Program], kwargs: dict[str, Any]
 ) -> Program:
     pool_leaving_spend_type = from_kwargs(kwargs, "pool_leaving_spend_type", str)
     allowable = ["exit-waiting-room", "claim-p2-nft"]
@@ -193,7 +193,7 @@ def solve_pool_waiting_room(
         raise ValueError(f"`pool_leaving_spend_type` must be one of {'/'.join(allowable)} for POOL_MEMBER puzzle")
     exit_waiting_room = pool_leaving_spend_type == "exit-waiting-room"
     if exit_waiting_room:
-        key_value_list = from_kwargs(kwargs, "key_value_list", List[Tuple[str, str]])
+        key_value_list = from_kwargs(kwargs, "key_value_list", list[tuple[str, str]])
         destination_puzzle_hash = from_kwargs(kwargs, "destination_puzzle_hash", bytes32)
         return Program.to([0, 1, key_value_list, destination_puzzle_hash])
     # it's an "absorb_pool_reward" type
@@ -203,7 +203,7 @@ def solve_pool_waiting_room(
     return solution
 
 
-def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: List[Program], kwargs: Dict[str, Any]) -> Program:
+def solve_p2_singleton(solver: Solver, puzzle_db: PuzzleDB, args: list[Program], kwargs: dict[str, Any]) -> Program:
     p2_singleton_spend_type = from_kwargs(kwargs, "p2_singleton_spend_type", str)
     allowable = ["claim-p2-nft", "delayed-spend"]
     if p2_singleton_spend_type not in allowable:
@@ -261,7 +261,7 @@ class SingletonWallet:
         )
         return make_spend(coin, puzzle_reveal, solution)
 
-    def update_state(self, puzzle_db: PuzzleDB, removals: List[CoinSpend]) -> int:
+    def update_state(self, puzzle_db: PuzzleDB, removals: list[CoinSpend]) -> int:
         state_change_count = 0
         current_coin_name = self.current_state.name()
         for coin_spend in removals:
@@ -303,9 +303,9 @@ def launcher_conditions_and_spend_bundle(
     parent_coin_id: bytes32,
     launcher_amount: uint64,
     initial_singleton_inner_puzzle: Program,
-    metadata: List[Tuple[str, str]],
+    metadata: list[tuple[str, str]],
     launcher_puzzle: Program,
-) -> Tuple[bytes32, List[Program], WalletSpendBundle]:
+) -> tuple[bytes32, list[Program], WalletSpendBundle]:
     puzzle_db.add_puzzle(launcher_puzzle)
     launcher_puzzle_hash = launcher_puzzle.get_tree_hash()
     launcher_coin = Coin(parent_coin_id, launcher_puzzle_hash, launcher_amount)
@@ -374,7 +374,7 @@ def p2_singleton_puzzle_hash_for_launcher(
 
 def claim_p2_singleton(
     puzzle_db: PuzzleDB, singleton_wallet: SingletonWallet, p2_singleton_coin: Coin
-) -> Tuple[CoinSpend, List[Program]]:
+) -> tuple[CoinSpend, list[Program]]:
     inner_puzzle = singleton_wallet.inner_puzzle(puzzle_db)
     assert inner_puzzle
     inner_puzzle_hash = inner_puzzle.get_tree_hash()
@@ -432,7 +432,7 @@ def assert_coin_spent(coin_store: CoinStore, coin: Coin, is_spent: bool = True) 
 
 def spend_coin_to_singleton(
     puzzle_db: PuzzleDB, launcher_puzzle: Program, coin_store: CoinStore, now: CoinTimestamp
-) -> Tuple[List[Coin], List[CoinSpend]]:
+) -> tuple[list[Coin], list[CoinSpend]]:
     farmed_coin_amount = 100000
     metadata = [("foo", "bar")]
 
@@ -468,7 +468,7 @@ def spend_coin_to_singleton(
     return additions, removals
 
 
-def find_interesting_singletons(removals: List[CoinSpend]) -> List[SingletonWallet]:
+def find_interesting_singletons(removals: list[CoinSpend]) -> list[SingletonWallet]:
     singletons = []
     for coin_spend in removals:
         if coin_spend.coin.puzzle_hash == LAUNCHER_PUZZLE_HASH:
@@ -484,7 +484,7 @@ def find_interesting_singletons(removals: List[CoinSpend]) -> List[SingletonWall
     return singletons
 
 
-def filter_p2_singleton(puzzle_db: PuzzleDB, additions: List[Coin]) -> List[Coin]:
+def filter_p2_singleton(puzzle_db: PuzzleDB, additions: list[Coin]) -> list[Coin]:
     r = []
     for coin in additions:
         puzzle = puzzle_db.puzzle_for_hash(coin.puzzle_hash)

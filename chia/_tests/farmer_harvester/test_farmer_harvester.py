@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from math import floor
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 from chia_rs import G1Element
@@ -32,19 +32,19 @@ def farmer_is_started(farmer: Farmer) -> bool:
     return farmer.started
 
 
-async def get_harvester_config(harvester_rpc_port: Optional[int], root_path: Path) -> Dict[str, Any]:
+async def get_harvester_config(harvester_rpc_port: Optional[int], root_path: Path) -> dict[str, Any]:
     async with get_any_service_client(HarvesterRpcClient, harvester_rpc_port, root_path) as (harvester_client, _):
         return await harvester_client.get_harvester_config()
 
 
-async def update_harvester_config(harvester_rpc_port: Optional[int], root_path: Path, config: Dict[str, Any]) -> bool:
+async def update_harvester_config(harvester_rpc_port: Optional[int], root_path: Path, config: dict[str, Any]) -> bool:
     async with get_any_service_client(HarvesterRpcClient, harvester_rpc_port, root_path) as (harvester_client, _):
         return await harvester_client.update_harvester_config(config)
 
 
 @pytest.mark.anyio
 async def test_start_with_empty_keychain(
-    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools]
 ) -> None:
     _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
@@ -67,7 +67,7 @@ async def test_start_with_empty_keychain(
 
 @pytest.mark.anyio
 async def test_harvester_handshake(
-    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools]
 ) -> None:
     harvesters, farmer_service, bt = farmer_one_harvester_not_started
     harvester_service = harvesters[0]
@@ -169,7 +169,7 @@ async def test_farmer_respond_signatures(
 
 
 @pytest.mark.anyio
-async def test_harvester_config(farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools]) -> None:
+async def test_harvester_config(farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools]) -> None:
     harvester_services, farmer_service, bt = farmer_one_harvester
     harvester_service = harvester_services[0]
 
@@ -179,7 +179,7 @@ async def test_harvester_config(farmer_one_harvester: Tuple[List[HarvesterServic
     harvester_config = await get_harvester_config(harvester_rpc_port, bt.root_path)
     assert harvester_config["success"] is True
 
-    def check_config_match(config1: Dict[str, Any], config2: Dict[str, Any]) -> None:
+    def check_config_match(config1: dict[str, Any], config2: dict[str, Any]) -> None:
         assert config1["harvester"]["use_gpu_harvesting"] == config2["use_gpu_harvesting"]
         assert config1["harvester"]["gpu_index"] == config2["gpu_index"]
         assert config1["harvester"]["enforce_gpu_index"] == config2["enforce_gpu_index"]
@@ -212,13 +212,13 @@ async def test_harvester_config(farmer_one_harvester: Tuple[List[HarvesterServic
 
 @pytest.mark.anyio
 async def test_missing_signage_point(
-    farmer_one_harvester: Tuple[List[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools]
 ) -> None:
     _, farmer_service, bt = farmer_one_harvester
     farmer_api = farmer_service._api
     farmer = farmer_api.farmer
 
-    def create_sp(index: int, challenge_hash: bytes32) -> Tuple[uint64, farmer_protocol.NewSignagePoint]:
+    def create_sp(index: int, challenge_hash: bytes32) -> tuple[uint64, farmer_protocol.NewSignagePoint]:
         time = uint64(index + 1)
         sp = farmer_protocol.NewSignagePoint(
             challenge_hash, std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(index), uint32(1)
@@ -271,7 +271,7 @@ async def test_missing_signage_point(
     assert original_state_changed_callback is not None
     number_of_missing_sps: uint32 = uint32(0)
 
-    def state_changed(change: str, data: Dict[str, Any]) -> None:
+    def state_changed(change: str, data: dict[str, Any]) -> None:
         nonlocal number_of_missing_sps
         number_of_missing_sps = data["missing_signage_points"][1]
         original_state_changed_callback(change, data)
@@ -284,7 +284,7 @@ async def test_missing_signage_point(
 
 @pytest.mark.anyio
 async def test_harvester_has_no_server(
-    farmer_one_harvester: Tuple[List[FarmerService], HarvesterService, BlockTools],
+    farmer_one_harvester: tuple[list[FarmerService], HarvesterService, BlockTools],
 ) -> None:
     harvesters, _, bt = farmer_one_harvester
     harvester_server = harvesters[0]._server

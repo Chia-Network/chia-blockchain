@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from asyncio import Queue
+from collections import OrderedDict
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from random import Random
-from typing import TYPE_CHECKING, AsyncGenerator, Dict, List, Optional, OrderedDict, Set, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, Coin, CoinSpend, CoinState, Program
@@ -32,19 +34,15 @@ from chia.util.ints import uint8, uint16, uint32, uint64
 IDENTITY_PUZZLE = Program.to(1)
 IDENTITY_PUZZLE_HASH = IDENTITY_PUZZLE.get_tree_hash()
 
-OneNode = Tuple[List[SimulatorFullNodeService], List[WalletService], BlockTools]
-# python 3.8 workaround follows - can be removed when 3.8 support is removed
-if TYPE_CHECKING:
-    Mpu = Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]
-else:
-    Mpu = Tuple[FullNodeSimulator, Queue, WSChiaConnection]
+OneNode = tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]
+Mpu = tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]
 
 ALL_FILTER = wallet_protocol.CoinStateFilters(True, True, True, uint64(0))
 
 
 async def connect_to_simulator(
     one_node: OneNode, self_hostname: str, mempool_updates: bool = True
-) -> Tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]:
+) -> tuple[FullNodeSimulator, Queue[Message], WSChiaConnection]:
     [full_node_service], _, _ = one_node
 
     full_node_api = full_node_service._api
@@ -417,8 +415,8 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
     assert peak_header_hash is not None
 
     # Add coin records
-    coin_records: List[CoinRecord] = []
-    puzzle_hashes: List[bytes32] = []
+    coin_records: list[CoinRecord] = []
+    puzzle_hashes: list[bytes32] = []
 
     for ph_i in range(10):
         puzzle_hash = bytes32(ph_i.to_bytes(1, "big") * 32)
@@ -621,14 +619,14 @@ async def test_request_puzzle_state_limit(one_node: OneNode, self_hostname: str)
 
 @dataclass(frozen=True)
 class PuzzleStateData:
-    coin_states: List[CoinState]
+    coin_states: list[CoinState]
     end_of_batch: bool
     previous_height: Optional[uint32]
     header_hash: bytes32
 
 
 async def sync_puzzle_hashes(
-    puzzle_hashes: List[bytes32],
+    puzzle_hashes: list[bytes32],
     *,
     initial_previous_height: Optional[uint32],
     initial_header_hash: bytes32,
@@ -693,9 +691,9 @@ async def test_sync_puzzle_state(
     simulator.full_node.config["max_subscribe_response_items"] = 7400
 
     # Generate coin records
-    puzzle_hashes: List[bytes32] = []
-    hints: List[Tuple[bytes32, bytes]] = []
-    coin_records: Dict[bytes32, CoinRecord] = dict()
+    puzzle_hashes: list[bytes32] = []
+    hints: list[tuple[bytes32, bytes]] = []
+    coin_records: dict[bytes32, CoinRecord] = dict()
 
     rng = Random(0)
 
@@ -736,7 +734,7 @@ async def test_sync_puzzle_state(
 
     async def run_test(include_spent: bool, include_unspent: bool, include_hinted: bool, min_amount: uint64) -> None:
         # Calculate expected coin records based on filters
-        expected_coin_records: Dict[bytes32, CoinRecord] = dict()
+        expected_coin_records: dict[bytes32, CoinRecord] = dict()
 
         for coin_id, coin_record in coin_records.items():
             if not include_spent and coin_record.spent_block_index > 0:
@@ -751,7 +749,7 @@ async def test_sync_puzzle_state(
             expected_coin_records[coin_id] = coin_record
 
         # Sync all coin states
-        coin_ids: Set[bytes32] = set()
+        coin_ids: set[bytes32] = set()
         last_height = -1
 
         async for batch in sync_puzzle_hashes(
@@ -784,7 +782,7 @@ async def test_sync_puzzle_state(
                     await run_test(include_spent, include_unspent, include_hinted, uint64(min_amount))
 
 
-async def assert_mempool_added(queue: Queue[Message], transaction_ids: Set[bytes32]) -> None:
+async def assert_mempool_added(queue: Queue[Message], transaction_ids: set[bytes32]) -> None:
     message = await queue.get()
     assert message.type == ProtocolMessageTypes.mempool_items_added.value
 
@@ -794,7 +792,7 @@ async def assert_mempool_added(queue: Queue[Message], transaction_ids: Set[bytes
 
 async def assert_mempool_removed(
     queue: Queue[Message],
-    removed_items: Set[wallet_protocol.RemovedMempoolItem],
+    removed_items: set[wallet_protocol.RemovedMempoolItem],
 ) -> None:
     message = await queue.get()
     assert message.type == ProtocolMessageTypes.mempool_items_removed.value
@@ -818,7 +816,7 @@ async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bo
     await simulator.farm_blocks_to_puzzlehash(1)
     await queue.get()
 
-    new_coins: List[Tuple[Coin, bytes32]] = []
+    new_coins: list[tuple[Coin, bytes32]] = []
 
     for i in range(10):
         puzzle = Program.to(2)
@@ -847,7 +845,7 @@ async def raw_mpu_setup(one_node: OneNode, self_hostname: str, no_capability: bo
     return simulator, queue, peer
 
 
-async def make_coin(full_node: FullNode) -> Tuple[Coin, bytes32]:
+async def make_coin(full_node: FullNode) -> tuple[Coin, bytes32]:
     ph = IDENTITY_PUZZLE_HASH
     coin = Coin(bytes32(b"\0" * 32), ph, uint64(1000))
     hint = bytes32(b"\0" * 32)

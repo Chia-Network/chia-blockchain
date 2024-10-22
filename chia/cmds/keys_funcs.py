@@ -5,7 +5,7 @@ import os
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
@@ -175,8 +175,8 @@ def show_keys(
             msg = "Showing all public and private keys"
         print(msg)
 
-    def process_key_data(key_data: KeyData) -> Dict[str, Any]:
-        key: Dict[str, Any] = {}
+    def process_key_data(key_data: KeyData) -> dict[str, Any]:
+        key: dict[str, Any] = {}
         sk = key_data.private_key if key_data.secrets is not None else None
         if key_data.label is not None:
             key["label"] = key_data.label
@@ -261,7 +261,7 @@ def delete(fingerprint: int) -> None:
 
 def derive_pk_and_sk_from_hd_path(
     master_pk: G1Element, hd_path_root: str, master_sk: Optional[PrivateKey] = None
-) -> Tuple[G1Element, Optional[PrivateKey], str]:
+) -> tuple[G1Element, Optional[PrivateKey], str]:
     """
     Derive a private key from the provided HD path. Takes a master key and HD path as input,
     and returns the derived key and the HD path that was used to derive it.
@@ -273,7 +273,7 @@ def derive_pk_and_sk_from_hd_path(
         NONOBSERVER = 0
         OBSERVER = 1
 
-    path: List[str] = hd_path_root.split("/")
+    path: list[str] = hd_path_root.split("/")
     if len(path) == 0 or path[0] != "m":
         raise ValueError("Invalid HD path. Must start with 'm'")
 
@@ -282,7 +282,7 @@ def derive_pk_and_sk_from_hd_path(
     if len(path) > 0 and path[-1] == "":  # remove trailing slash
         path = path[:-1]
 
-    index_and_derivation_types: List[Tuple[int, DerivationType]] = []
+    index_and_derivation_types: list[tuple[int, DerivationType]] = []
 
     # Validate path
     for current_index_str in path:
@@ -378,9 +378,9 @@ def _clear_line_part(n: int) -> None:
 def _search_derived(
     current_pk: G1Element,
     current_sk: Optional[PrivateKey],
-    search_terms: Tuple[str, ...],
+    search_terms: tuple[str, ...],
     path: str,
-    path_indices: Optional[List[int]],
+    path_indices: Optional[list[int]],
     limit: int,
     non_observer_derivation: bool,
     show_progress: bool,
@@ -388,7 +388,7 @@ def _search_derived(
     search_private_key: bool,
     search_address: bool,
     prefix: str,
-) -> List[str]:  # Return a subset of search_terms that were found
+) -> list[str]:  # Return a subset of search_terms that were found
     """
     Performs a shallow search of keys derived from the current pk/sk for items matching
     the provided search terms.
@@ -401,15 +401,15 @@ def _search_derived(
         PRIVATE_KEY = "private key"
         WALLET_ADDRESS = "wallet address"
 
-    remaining_search_terms: Dict[str, None] = dict.fromkeys(search_terms)
+    remaining_search_terms: dict[str, None] = dict.fromkeys(search_terms)
     current_path: str = path
-    current_path_indices: List[int] = path_indices if path_indices is not None else []
-    found_search_terms: List[str] = []
+    current_path_indices: list[int] = path_indices if path_indices is not None else []
+    found_search_terms: list[str] = []
 
     assert not (non_observer_derivation and current_sk is None)
 
     for index in range(limit):
-        found_items: List[Tuple[str, str, DerivedSearchResultType]] = []
+        found_items: list[tuple[str, str, DerivedSearchResultType]] = []
         printed_match: bool = False
         current_index_str = str(index) + ("n" if non_observer_derivation else "")
         current_path += f"{current_index_str}"
@@ -497,11 +497,11 @@ def _search_derived(
 def search_derive(
     root_path: Path,
     fingerprint: Optional[int],
-    search_terms: Tuple[str, ...],
+    search_terms: tuple[str, ...],
     limit: int,
     non_observer_derivation: bool,
     show_progress: bool,
-    search_types: Tuple[str, ...],
+    search_types: tuple[str, ...],
     derive_from_hd_path: Optional[str],
     prefix: Optional[str],
     private_key: Optional[PrivateKey],
@@ -514,13 +514,13 @@ def search_derive(
     from time import perf_counter
 
     start_time = perf_counter()
-    remaining_search_terms: Dict[str, None] = dict.fromkeys(search_terms)  # poor man's ordered set
+    remaining_search_terms: dict[str, None] = dict.fromkeys(search_terms)  # poor man's ordered set
     search_address = "address" in search_types
     search_public_key = "public_key" in search_types
     search_private_key = "private_key" in search_types
 
     if prefix is None:
-        config: Dict[str, Any] = load_config(root_path, "config.yaml")
+        config: dict[str, Any] = load_config(root_path, "config.yaml")
         selected: str = config["selected_network"]
         prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
@@ -530,8 +530,8 @@ def search_derive(
         search_private_key = True
 
     if fingerprint is None and private_key is None:
-        public_keys: List[G1Element] = Keychain().get_all_public_keys_of_type(G1Element)
-        private_keys: List[Optional[PrivateKey]] = [
+        public_keys: list[G1Element] = Keychain().get_all_public_keys_of_type(G1Element)
+        private_keys: list[Optional[PrivateKey]] = [
             data.private_key if data.secrets is not None and isinstance(data.private_key, PrivateKey) else None
             for data in Keychain().get_keys(include_secrets=True)
         ]
@@ -559,7 +559,7 @@ def search_derive(
         if sk is None and non_observer_derivation:
             continue
         current_path: str = ""
-        found_terms: List[str] = []
+        found_terms: list[str] = []
 
         if show_progress:
             print(f"Searching keys derived from: {pk.get_fingerprint()}")
@@ -600,7 +600,7 @@ def search_derive(
             current_path = hd_path_root
         # Otherwise derive from well-known derivation paths
         else:
-            current_path_indices: List[int] = [12381, 8444]
+            current_path_indices: list[int] = [12381, 8444]
             path_root: str = "m/"
             for i in [12381, 8444]:
                 path_root += f"{i}{'n' if non_observer_derivation else ''}/"
@@ -705,10 +705,10 @@ def derive_wallet_address(
         pk = sk.get_g1()
 
     if prefix is None:
-        config: Dict[str, Any] = load_config(root_path, "config.yaml")
+        config: dict[str, Any] = load_config(root_path, "config.yaml")
         selected: str = config["selected_network"]
         prefix = config["network_overrides"]["config"][selected]["address_prefix"]
-    path_indices: List[int] = [12381, 8444, 2]
+    path_indices: list[int] = [12381, 8444, 2]
     wallet_hd_path_root: str = "m/"
     for i in path_indices:
         wallet_hd_path_root += f"{i}{'n' if non_observer_derivation else ''}/"
@@ -774,7 +774,7 @@ def derive_child_key(
 
     # Key type was specified
     if key_type is not None:
-        path_indices: List[int] = [12381, 8444]
+        path_indices: list[int] = [12381, 8444]
         path_indices.append(
             {
                 "farmer": 0,
@@ -848,7 +848,7 @@ def private_key_for_fingerprint(fingerprint: int) -> Optional[SecretInfo[Any]]:
 
 
 def prompt_for_fingerprint() -> Optional[int]:
-    fingerprints: List[int] = [pk.get_fingerprint() for pk in Keychain().get_all_public_keys()]
+    fingerprints: list[int] = [pk.get_fingerprint() for pk in Keychain().get_all_public_keys()]
     while True:
         print("Choose key:")
         for i, fp in enumerate(fingerprints):
@@ -872,7 +872,7 @@ def prompt_for_fingerprint() -> Optional[int]:
 
 def get_private_key_with_fingerprint_or_prompt(
     fingerprint: Optional[int],
-) -> Tuple[Optional[int], Optional[SecretInfo[Any]]]:
+) -> tuple[Optional[int], Optional[SecretInfo[Any]]]:
     """
     Get a private key with the specified fingerprint. If fingerprint is not
     specified, prompt the user to select a key.
@@ -898,7 +898,7 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
 
 def resolve_derivation_master_key(
     fingerprint_or_filename: Optional[Union[int, str, Path]]
-) -> Tuple[Optional[int], Optional[SecretInfo[Any]]]:
+) -> tuple[Optional[int], Optional[SecretInfo[Any]]]:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.
     """

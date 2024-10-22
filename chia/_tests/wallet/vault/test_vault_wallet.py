@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Awaitable, Callable
+from collections.abc import Awaitable
+from typing import Callable
 
 import pytest
 from chia_rs import G1Element

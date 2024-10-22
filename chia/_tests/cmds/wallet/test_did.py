@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from chia_rs import G2Element
 
@@ -22,7 +22,7 @@ test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=u
 # DID Commands
 
 
-def test_did_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_did_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -33,11 +33,11 @@ def test_did_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
             tx_config: TXConfig,
             fee: int = 0,
             name: Optional[str] = "DID Wallet",
-            backup_ids: Optional[List[str]] = None,
+            backup_ids: Optional[list[str]] = None,
             required_num: int = 0,
             push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        ) -> Dict[str, Union[str, int]]:
+        ) -> dict[str, Union[str, int]]:
             if backup_ids is None:
                 backup_ids = []
             self.add_to_log(
@@ -74,7 +74,7 @@ def test_did_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_did_sign_message(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_did_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -97,12 +97,12 @@ def test_did_sign_message(capsys: object, get_test_cli_clients: Tuple[TestRpcCli
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_did_set_name(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_did_set_name(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class DidSetNameRpcClient(TestWalletRpcClient):
-        async def did_set_wallet_name(self, wallet_id: int, name: str) -> Dict[str, Union[str, int]]:
+        async def did_set_wallet_name(self, wallet_id: int, name: str) -> dict[str, Union[str, int]]:
             self.add_to_log("did_set_wallet_name", (wallet_id, name))
             return {}
 
@@ -120,12 +120,12 @@ def test_did_set_name(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_did_get_did(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_did_get_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class DidGetDidRpcClient(TestWalletRpcClient):
-        async def get_did_id(self, wallet_id: int) -> Dict[str, str]:
+        async def get_did_id(self, wallet_id: int) -> dict[str, str]:
             self.add_to_log("get_did_id", (wallet_id,))
             return {"my_did": encode_puzzle_hash(get_bytes32(1), "did:chia:"), "coin_id": get_bytes32(2).hex()}
 
@@ -143,12 +143,12 @@ def test_did_get_did(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_did_get_details(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_did_get_details(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
     class DidGetDetailsRpcClient(TestWalletRpcClient):
-        async def get_did_info(self, coin_id: str, latest: bool) -> Dict[str, object]:
+        async def get_did_info(self, coin_id: str, latest: bool) -> dict[str, object]:
             self.add_to_log("get_did_info", (coin_id, latest))
             response = {
                 "did_id": encode_puzzle_hash(get_bytes32(2), "did:chia:"),
@@ -191,7 +191,7 @@ def test_did_get_details(capsys: object, get_test_cli_clients: Tuple[TestRpcClie
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_did_update_metadata(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_did_update_metadata(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -199,7 +199,7 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: Tuple[TestRpc
         async def update_did_metadata(
             self,
             wallet_id: int,
-            metadata: Dict[str, object],
+            metadata: dict[str, object],
             tx_config: TXConfig,
             push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
@@ -237,7 +237,7 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: Tuple[TestRpc
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_did_find_lost(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_did_find_lost(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -246,9 +246,9 @@ def test_did_find_lost(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
             self,
             coin_id: str,
             recovery_list_hash: Optional[str],
-            metadata: Optional[Dict[str, object]],
+            metadata: Optional[dict[str, object]],
             num_verification: Optional[int],
-        ) -> Dict[str, Union[bool, str]]:
+        ) -> dict[str, Union[bool, str]]:
             self.add_to_log("find_lost_did", (coin_id, recovery_list_hash, metadata, num_verification))
             return {"success": True, "latest_coin_id": get_bytes32(2).hex()}
 
@@ -275,7 +275,7 @@ def test_did_find_lost(capsys: object, get_test_cli_clients: Tuple[TestRpcClient
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_did_message_spend(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_did_message_spend(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -284,7 +284,7 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
             self,
             wallet_id: int,
             tx_config: TXConfig,
-            extra_conditions: Tuple[Condition, ...],
+            extra_conditions: tuple[Condition, ...],
             push: bool,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DIDMessageSpendResponse:
@@ -332,7 +332,7 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: Tuple[TestRpcCl
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_did_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_did_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client

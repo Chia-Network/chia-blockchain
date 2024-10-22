@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 import click
 from click.testing import CliRunner
@@ -13,7 +13,7 @@ from chia.wallet.transaction_record import TransactionRecord
 def test_tx_out_cmd() -> None:
     @click.command()
     @tx_out_cmd()
-    def test_cmd(**kwargs: Any) -> List[TransactionRecord]:
+    def test_cmd(**kwargs: Any) -> list[TransactionRecord]:
         with open("./temp.push", "w") as file:
             file.write(str(kwargs["push"]))
         return [STD_TX, STD_TX]

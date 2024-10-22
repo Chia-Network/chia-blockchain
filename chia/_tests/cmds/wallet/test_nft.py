@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 from chia_rs import G2Element
 
@@ -27,7 +27,7 @@ test_condition_valid_times: ConditionValidTimes = ConditionValidTimes(min_time=u
 # NFT Commands
 
 
-def test_nft_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_nft_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -49,7 +49,7 @@ def test_nft_create(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, 
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_nft_sign_message(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_nft_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -73,7 +73,7 @@ def test_nft_sign_message(capsys: object, get_test_cli_clients: Tuple[TestRpcCli
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -88,11 +88,11 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
             royalty_address: Optional[str],
             target_address: Optional[str],
             hash: str,
-            uris: List[str],
+            uris: list[str],
             meta_hash: str = "",
-            meta_uris: Optional[List[str]] = None,
+            meta_uris: Optional[list[str]] = None,
             license_hash: str = "",
-            license_uris: Optional[List[str]] = None,
+            license_uris: Optional[list[str]] = None,
             edition_total: uint8 = uint8(1),
             edition_number: uint8 = uint8(1),
             fee: uint64 = uint64(0),
@@ -190,7 +190,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_nft_add_uri(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -250,7 +250,7 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_nft_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -316,7 +316,7 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: Tuple[TestRpcClients
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_nft_list(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -378,7 +378,7 @@ def test_nft_list(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Pa
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_nft_set_did(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
@@ -442,7 +442,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: Tuple[TestRpcClients,
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
-def test_nft_get_info(capsys: object, get_test_cli_clients: Tuple[TestRpcClients, Path]) -> None:
+def test_nft_get_info(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client

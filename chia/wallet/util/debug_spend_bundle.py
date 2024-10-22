@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from chia_rs import AugSchemeMPL
 from clvm.operators import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
@@ -76,9 +74,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     pks = []
     msgs = []
 
-    created_coin_announcements: List[List[bytes]] = []
+    created_coin_announcements: list[list[bytes]] = []
     asserted_coin_announcements = []
-    created_puzzle_announcements: List[List[bytes]] = []
+    created_puzzle_announcements: list[list[bytes]] = []
     asserted_puzzle_announcements = []
 
     print("=" * 80)

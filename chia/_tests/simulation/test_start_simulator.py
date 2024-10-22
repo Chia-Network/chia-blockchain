@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Tuple
+from typing import Any
 
 import pytest
 
@@ -28,13 +29,13 @@ class TestStartSimulator:
     @pytest.fixture(scope="function")
     async def get_chia_simulator(
         self, tmp_path: Path, empty_keyring: Keychain
-    ) -> AsyncGenerator[Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int, Keychain], None]:
+    ) -> AsyncGenerator[tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain], None]:
         async for simulator_args in get_full_chia_simulator(chia_root=tmp_path, keychain=empty_keyring):
             yield simulator_args
 
     @pytest.mark.anyio
     async def test_start_simulator(
-        self, get_chia_simulator: Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int, Keychain]
+        self, get_chia_simulator: tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain]
     ) -> None:
         simulator, root_path, config, mnemonic, fingerprint, keychain = get_chia_simulator
         ph_1: bytes32 = get_puzzle_hash_from_key(keychain=keychain, fingerprint=fingerprint, key_id=1)

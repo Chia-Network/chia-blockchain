@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import dataclass, replace
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import importlib_resources
 import pytest
@@ -120,7 +120,7 @@ class TestKeychain:
         assert kc._get_free_private_key_index() == 2
         assert len(kc.get_all_private_keys()) == 2
         assert len(kc.get_all_public_keys()) == 2
-        all_pks: List[G1Element] = kc.get_all_public_keys_of_type(G1Element)
+        all_pks: list[G1Element] = kc.get_all_public_keys_of_type(G1Element)
         assert len(all_pks) == 2
 
         assert kc.get_all_private_keys()[0] == kc.get_first_private_key()
@@ -326,7 +326,7 @@ def test_key_data_without_secrets(key_info: KeyInfo) -> None:
         ((_24keyinfo.mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().secret_info_bytes), "private_key"),
     ],
 )
-def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, bytes], data_type: str) -> None:
+def test_key_data_secrets_post_init(input_data: tuple[list[str], bytes, bytes], data_type: str) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyDataSecrets(*input_data)
 
@@ -348,7 +348,7 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, bytes], 
     ],
 )
 def test_key_data_post_init(
-    input_data: Tuple[uint32, bytes, Optional[str], Optional[KeyDataSecrets], str], data_type: str
+    input_data: tuple[uint32, bytes, Optional[str], Optional[KeyDataSecrets], str], data_type: str
 ) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)
@@ -534,7 +534,7 @@ def test_key_type_support(key_type: str, key_info: KeyInfo) -> None:
     vault_root = VaultRoot(launcher_id)
     secp_sk = Secp256r1PrivateKey.from_seed(mnemonic_to_seed(key_info.mnemonic))
     secp_pk = secp_sk.public_key()
-    generate_test_key_for_key_type: Dict[str, Tuple[int, ObservationRoot, Optional[SecretInfo[Any]]]] = {
+    generate_test_key_for_key_type: dict[str, tuple[int, ObservationRoot, Optional[SecretInfo[Any]]]] = {
         KeyTypes.G1_ELEMENT.value: (
             G1Element().get_fingerprint(),
             G1Element(),

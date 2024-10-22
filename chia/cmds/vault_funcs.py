@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 from chia_rs import G1Element
 
@@ -29,7 +30,7 @@ async def create_vault(
     reuse_puzhash: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         assert hidden_puzzle_index >= 0
         tx_config = CMDTXConfigLoader(
