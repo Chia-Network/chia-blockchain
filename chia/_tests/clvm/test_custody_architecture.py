@@ -8,7 +8,6 @@ import pytest
 from chia_rs import G2Element
 
 from chia.clvm.spend_sim import CostLogger, sim_and_client
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend

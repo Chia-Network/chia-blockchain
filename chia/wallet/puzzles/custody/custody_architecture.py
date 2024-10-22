@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import ClassVar, Dict, List, Literal, Mapping, Optional, Protocol, Tuple, TypeVar, Union
 
-from chia_rs import G1Element
 from typing_extensions import runtime_checkable
 
 from chia.types.blockchain_format.program import Program
