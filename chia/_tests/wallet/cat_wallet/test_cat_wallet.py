@@ -459,7 +459,7 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
     await full_node_api.reorg_from_index_to_new_index(
         ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32(32 * b"1"), None)
     )
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, peak_height=uint32(height + 1))
     await env_1.change_balances(
         {
             "cat": {
