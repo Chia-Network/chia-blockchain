@@ -359,8 +359,8 @@ async def validate_block_body(
 
     # 13. Check for duplicate outputs in additions
     addition_counter = collections.Counter(coin_name for _, coin_name in additions + coinbase_additions)
-    for k, v in addition_counter.items():
-        if v > 1:
+    for count in addition_counter.values():
+        if count > 1:
             return Err.DUPLICATE_OUTPUT, None
 
     # 14. Check for duplicate spends inside block
