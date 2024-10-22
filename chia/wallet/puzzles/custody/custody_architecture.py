@@ -20,9 +20,6 @@ OneOfN_MOD = load_clvm_maybe_recompile(
 NofN_MOD = load_clvm_maybe_recompile(
     "n_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.optimization_puzzles"
 )
-BLS_MEMBER_MOD = load_clvm_maybe_recompile(
-    "bls_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
-)
 RESTRICTION_MOD = load_clvm_maybe_recompile(
     "restrictions.clsp", package_or_requirement="chia.wallet.puzzles.custody.architecture_puzzles"
 )
@@ -210,7 +207,7 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
     def memo(self, nonce: int) -> Program:  # pragma: no cover
         raise NotImplementedError("PuzzleWithRestrictions handles MofN memos, this method should not be called")
 
-    def puzzle(self, _nonce: int) -> Program:
+    def puzzle(self, nonce: int) -> Program:
         if self.m == self.n:
             return NofN_MOD.curry([member.puzzle_reveal(_top_level=False) for member in self.members])
         elif self.m > 1:
@@ -224,17 +221,6 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
             return NofN_MOD.curry(member_hashes).get_tree_hash_precalc(*member_hashes)
         else:
             return self.puzzle(nonce).get_tree_hash()
-
-
-@dataclass(frozen=True)
-class BLSMember:
-    public_key: G1Element
-
-    def puzzle(self, _nonce) -> Program:
-        return BLS_MEMBER_MOD.curry(bytes(self.public_key))
-
-    def puzzle_hash(self, nonce) -> bytes32:
-        return self.puzzle(nonce).get_tree_hash()
 
 
 # The top-level object inside every "outer" puzzle
