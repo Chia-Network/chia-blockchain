@@ -90,7 +90,7 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
                     PuzzleWithRestrictions(index, restrictions, BLSMember(keys[index].public_key())).solve(
                         [],
                         [Program.to(None)] if with_restrictions else [],
-                        [],  # no solution required for this member puzzle, only sig
+                        Program.to(0),  # no solution required for this member puzzle, only sig
                     ),
                 )
                 for index in indexes
