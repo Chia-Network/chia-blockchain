@@ -301,7 +301,8 @@ async def test_nft_wallet_creation_and_transfer(wallet_environments: WalletTestF
         ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
     )
     await time_out_assert(60, full_node_api.full_node.blockchain.get_peak_height, height + 1)
-    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, peak_height=uint32(height + 1))
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_0, peak_height=uint32(height + 1), timeout=10)
+    await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node_1, peak_height=uint32(height + 1), timeout=10)
     await env_0.change_balances(
         {
             "xch": {
