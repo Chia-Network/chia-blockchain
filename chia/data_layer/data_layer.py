@@ -846,8 +846,6 @@ class DataLayer:
         # stop tracking first, then unsubscribe from the data store
         await self.wallet_rpc.dl_stop_tracking(store_id)
         await self.data_store.unsubscribe(store_id)
-        if not retain_data:
-            await self.data_store.delete_store_data(store_id)
 
         self.log.info(f"Unsubscribed to {store_id}")
         for file_path in paths:
