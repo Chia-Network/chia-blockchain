@@ -10,7 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import BLSCache
+from chia_rs import BLSCache, additions_and_removals, get_flags_for_height_and_constants
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
@@ -25,7 +25,6 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
@@ -259,22 +258,22 @@ class Blockchain:
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
-        npc: Optional[NPCResult] = None
+        additions: list[tuple[Coin, Optional[bytes]]] = []
+        removals: list[Coin] = []
         if block.transactions_generator is not None:
             block_generator: Optional[BlockGenerator] = await get_block_generator(self.lookup_block_generators, block)
             assert block_generator is not None
             assert block.transactions_info is not None
             assert block.foliage_transaction_block is not None
-            npc = get_name_puzzle_conditions(
-                block_generator,
-                block.transactions_info.cost,
-                mempool_mode=False,
-                height=block.height,
-                constants=self.constants,
+            flags = get_flags_for_height_and_constants(block.height, self.constants)
+            additions, removals = additions_and_removals(
+                bytes(block.transactions_generator),
+                block_generator.generator_refs,
+                flags,
+                self.constants,
             )
-            assert npc.error is None
 
-        fork_info.include_spends(None if npc is None else npc.conds, block, block.header_hash)
+        fork_info.include_block(additions, removals, block, block.header_hash)
 
     async def add_block(
         self,
