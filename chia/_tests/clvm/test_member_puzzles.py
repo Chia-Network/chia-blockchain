@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from dataclasses import dataclass, field
-from typing import List, Literal
+from typing import List
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element
@@ -11,7 +10,6 @@ from chia._tests.clvm.test_custody_architecture import ACSDPuzValidator
 from chia.clvm.spend_sim import CostLogger, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.conditions import CreateCoinAnnouncement
