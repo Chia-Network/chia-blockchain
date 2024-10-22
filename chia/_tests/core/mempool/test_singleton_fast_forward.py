@@ -17,7 +17,7 @@ from chia._tests.core.mempool.test_mempool_manager import (
     spend_bundle_from_conditions,
 )
 from chia._tests.util.key_tool import KeyTool
-from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
+from chia._tests.util.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
