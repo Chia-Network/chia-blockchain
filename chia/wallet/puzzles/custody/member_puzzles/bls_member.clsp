@@ -2,7 +2,7 @@
 ; this code offers a secure approval of a delegated puzzle passed in as a Truth to be run elsewhere
 
 (mod (PUBLIC_KEY Delegated_Puzzle)  ; delegated puzzle is passed in from the above M of N layer
-    (include condition_codes.clib)
+  (include condition_codes.clib)
 
-    (list (list AGG_SIG_ME PUBLIC_KEY Delegated_Puzzle))
+  (list (list AGG_SIG_ME PUBLIC_KEY Delegated_Puzzle))
 )
