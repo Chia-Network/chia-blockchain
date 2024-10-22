@@ -15,7 +15,7 @@ from colorlog import getLogger
 
 from chia._tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from chia._tests.util.blockchain_mock import BlockchainMock
-from chia._tests.util.misc import add_blocks_in_batches, wallet_height_at_least
+from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.weight_proof.test_weight_proof import load_blocks_dont_validate
@@ -37,6 +37,7 @@ from chia.protocols.wallet_protocol import (
 )
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
