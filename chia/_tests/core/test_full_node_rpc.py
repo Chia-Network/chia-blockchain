@@ -9,7 +9,6 @@ from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
-from chia._tests.util.misc import add_blocks_in_batches
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_record import BlockRecord
@@ -19,6 +18,7 @@ from chia.protocols import full_node_protocol
 from chia.rpc.full_node_rpc_api import get_average_block_time, get_nearest_transaction_block
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.server.outbound_message import NodeType
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import get_signage_point
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.wallet_tools import WalletTool
