@@ -5,13 +5,23 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import aiohttp
 from typing_extensions import Literal
 
-from chia.data_layer.data_layer_util import NodeType, PluginRemote, Root, SerializedNode, ServerInfo, Status
+from chia.data_layer.data_layer_util import (
+    NodeType,
+    PluginRemote,
+    Root,
+    SerializedNode,
+    ServerInfo,
+    Status,
+    internal_hash,
+    leaf_hash,
+)
 from chia.data_layer.data_store import DataStore
+from chia.data_layer.util.merkle_blob import KVId, MerkleBlob
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
@@ -92,8 +102,10 @@ async def insert_into_data_store_from_file(
     store_id: bytes32,
     root_hash: Optional[bytes32],
     filename: Path,
-) -> int:
-    num_inserted = 0
+) -> None:
+    internal_nodes: Dict[bytes32, Tuple[bytes32, bytes32]] = {}
+    terminal_nodes: Dict[bytes32, Tuple[KVId, KVId]] = {}
+
     with open(filename, "rb") as reader:
         while True:
             chunk = b""
@@ -119,11 +131,20 @@ async def insert_into_data_store_from_file(
             serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
             node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
-            await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
-            num_inserted += 1
+            if node_type == NodeType.INTERNAL:
+                node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
+                internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
+            else:
+                kid, vid = await data_store.add_key_value(serialized_node.value1, serialized_node.value2, store_id)
+                node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
+                terminal_nodes[node_hash] = (kid, vid)
 
-    await data_store.insert_root_with_ancestor_table(store_id=store_id, node_hash=root_hash, status=Status.COMMITTED)
-    return num_inserted
+    merkle_blob = MerkleBlob(blob=bytearray())
+    if root_hash is not None:
+        await data_store.build_blob_from_nodes(internal_nodes, terminal_nodes, root_hash, merkle_blob)
+
+    await data_store.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED)
+    await data_store.add_node_hashes(store_id)
 
 
 @dataclass
@@ -288,7 +309,7 @@ async def insert_from_delta_file(
                 existing_generation,
                 group_files_by_store,
             )
-            num_inserted = await insert_into_data_store_from_file(
+            await insert_into_data_store_from_file(
                 data_store,
                 store_id,
                 None if root_hash == bytes32([0] * 32) else root_hash,
@@ -296,7 +317,7 @@ async def insert_from_delta_file(
             )
             log.info(
                 f"Successfully inserted hash {root_hash} from delta file. "
-                f"Generation: {existing_generation}. Store id: {store_id}. Nodes inserted: {num_inserted}."
+                f"Generation: {existing_generation}. Store id: {store_id}."
             )
 
             if target_generation - existing_generation <= maximum_full_file_count - 1:
@@ -386,4 +407,4 @@ async def http_download(
                     new_percentage = f"{progress_byte / size:.0%}"
                     if new_percentage != progress_percentage:
                         progress_percentage = new_percentage
-                        log.debug(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
+                        log.info(f"Downloading delta file {filename}. {progress_percentage} of {size} bytes.")
