@@ -37,7 +37,8 @@ async def test_bls_member(cost_logger: CostLogger) -> None:
             bls_puzzle.puzzle.puzzle_hash(0),
             bls_puzzle.puzzle.memo(0),
         )
-        memo = Program.to(
+
+        assert bls_puzzle.memo() == Program.to(
             (
                 bls_puzzle.spec_namespace,
                 [
@@ -48,7 +49,6 @@ async def test_bls_member(cost_logger: CostLogger) -> None:
                 ],
             )
         )
-        assert bls_puzzle.memo() == memo
 
         # Farm and find coin
         await sim.farm_block(bls_puzzle.puzzle_hash())
