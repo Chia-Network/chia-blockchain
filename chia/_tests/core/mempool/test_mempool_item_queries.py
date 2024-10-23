@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from chia_rs import AugSchemeMPL, Coin, Program
 from chia_rs.sized_bytes import bytes32
 from chia_rs.sized_ints import uint32, uint64
@@ -43,7 +41,7 @@ OTHER_COIN_3 = Coin(bytes32(b"5" * 32), OTHER_PUZZLE_HASH, uint64(1000))
 EMPTY_SIGNATURE = AugSchemeMPL.aggregate([])
 
 
-def make_item(coin_spends: List[CoinSpend]) -> MempoolItem:
+def make_item(coin_spends: list[CoinSpend]) -> MempoolItem:
     spend_bundle = SpendBundle(coin_spends, EMPTY_SIGNATURE)
     generator = simple_solution_generator(spend_bundle)
     npc_result = get_name_puzzle_conditions(

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Awaitable, Collection, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Optional, Union
 
 from typing_extensions import Protocol
 
@@ -82,10 +83,10 @@ class Receiver:
     _connection: WSChiaConnection
     _current_sync: Sync
     _last_sync: Sync
-    _plots: Dict[str, Plot]
-    _invalid: List[str]
-    _keys_missing: List[str]
-    _duplicates: List[str]
+    _plots: dict[str, Plot]
+    _invalid: list[str]
+    _keys_missing: list[str]
+    _duplicates: list[str]
     _total_plot_size: int
     _total_effective_plot_size: int
     _update_callback: ReceiverUpdateCallback
@@ -138,16 +139,16 @@ class Receiver:
     def initial_sync(self) -> bool:
         return self._last_sync.sync_id == 0
 
-    def plots(self) -> Dict[str, Plot]:
+    def plots(self) -> dict[str, Plot]:
         return self._plots
 
-    def invalid(self) -> List[str]:
+    def invalid(self) -> list[str]:
         return self._invalid
 
-    def keys_missing(self) -> List[str]:
+    def keys_missing(self) -> list[str]:
         return self._keys_missing
 
-    def duplicates(self) -> List[str]:
+    def duplicates(self) -> list[str]:
         return self._duplicates
 
     def total_plot_size(self) -> int:
@@ -245,7 +246,7 @@ class Receiver:
         state: State,
         next_state: State,
         target: Collection[str],
-        delta: List[str],
+        delta: list[str],
         paths: PlotSyncPathList,
         is_removal: bool = False,
     ) -> None:
@@ -359,7 +360,7 @@ class Receiver:
     async def sync_done(self, data: PlotSyncDone) -> None:
         await self._process(self._sync_done, ProtocolMessageTypes.plot_sync_done, data)
 
-    def to_dict(self, counts_only: bool = False) -> Dict[str, Any]:
+    def to_dict(self, counts_only: bool = False) -> dict[str, Any]:
         syncing = None
         if self._current_sync.in_progress():
             syncing = {

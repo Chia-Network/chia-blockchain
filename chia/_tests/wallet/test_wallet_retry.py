@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, List, Tuple
+from typing import Any
 
 import pytest
 
@@ -36,7 +36,7 @@ def evict_from_pool(node: FullNodeAPI, sb: WalletSpendBundle) -> None:
 
 @pytest.mark.anyio
 async def test_wallet_tx_retry(
-    setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]], BlockTools],
+    setup_two_nodes_and_wallet_fast_retry: tuple[list[FullNodeSimulator], list[tuple[Any, Any]], BlockTools],
     self_hostname: str,
 ) -> None:
     wait_secs = 20

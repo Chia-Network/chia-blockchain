@@ -3,7 +3,8 @@ from __future__ import annotations
 import dataclasses
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, Tuple, get_type_hints
+from collections.abc import Awaitable
+from typing import TYPE_CHECKING, Any, Callable, Optional, get_type_hints
 
 import aiohttp
 from chia_rs import AugSchemeMPL
@@ -31,11 +32,11 @@ log = logging.getLogger(__name__)
 # TODO: consolidate this with chia.rpc.rpc_server.Endpoint
 # Not all endpoints only take a dictionary so that definition is imperfect
 # This definition is weaker than that one however because the arguments can be anything
-RpcEndpoint = Callable[..., Awaitable[Dict[str, Any]]]
+RpcEndpoint = Callable[..., Awaitable[dict[str, Any]]]
 MarshallableRpcEndpoint = Callable[..., Awaitable[Streamable]]
 
 
-ALL_TRANSLATION_LAYERS: Dict[str, TranslationLayer] = {"CHIP-0028": BLIND_SIGNER_TRANSLATION}
+ALL_TRANSLATION_LAYERS: dict[str, TranslationLayer] = {"CHIP-0028": BLIND_SIGNER_TRANSLATION}
 
 
 def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
@@ -44,7 +45,7 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     assert issubclass(request_hint, Streamable)
     request_class = request_hint
 
-    async def rpc_endpoint(self, request: Dict[str, Any], *args: object, **kwargs: object) -> Dict[str, Any]:
+    async def rpc_endpoint(self, request: dict[str, Any], *args: object, **kwargs: object) -> dict[str, Any]:
         response_obj: Streamable = await func(
             self,
             (
@@ -104,7 +105,7 @@ def tx_endpoint(
     merge_spends: bool = True,
 ) -> Callable[[RpcEndpoint], RpcEndpoint]:
     def _inner(func: RpcEndpoint) -> RpcEndpoint:
-        async def rpc_endpoint(self, request: Dict[str, Any], *args, **kwargs) -> Dict[str, Any]:
+        async def rpc_endpoint(self, request: dict[str, Any], *args, **kwargs) -> dict[str, Any]:
             if TYPE_CHECKING:
                 from chia.rpc.wallet_rpc_api import WalletRpcApi
 
@@ -122,7 +123,7 @@ def tx_endpoint(
                     excluded_coin_amounts=request.get("exclude_coin_amounts"),
                 )
             if tx_config_loader.excluded_coin_ids is None:
-                excluded_coins: Optional[List[Dict[str, Any]]] = request.get(
+                excluded_coins: Optional[list[dict[str, Any]]] = request.get(
                     "exclude_coins", request.get("excluded_coins")
                 )
                 if excluded_coins is not None:
@@ -136,7 +137,7 @@ def tx_endpoint(
                 logged_in_fingerprint=self.service.logged_in_fingerprint,
             )
 
-            extra_conditions: Tuple[Condition, ...] = tuple()
+            extra_conditions: tuple[Condition, ...] = tuple()
             if "extra_conditions" in request:
                 extra_conditions = tuple(conditions_from_json_dicts(request["extra_conditions"]))
             extra_conditions = (*extra_conditions, *ConditionValidTimes.from_json_dict(request).to_conditions())
@@ -156,7 +157,7 @@ def tx_endpoint(
                 merge_spends=request.get("merge_spends", merge_spends),
                 sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
             ) as action_scope:
-                response: Dict[str, Any] = await func(
+                response: dict[str, Any] = await func(
                     self,
                     request,
                     *args,
@@ -242,13 +243,13 @@ def tx_endpoint(
                 response["tx_id"] = new_txs[0].name
             if "trade_record" in response:
                 old_offer: Offer = Offer.from_bech32(response["offer"])
-                signed_coin_spends: List[CoinSpend] = [
+                signed_coin_spends: list[CoinSpend] = [
                     coin_spend
                     for tx in new_txs
                     if tx.spend_bundle is not None
                     for coin_spend in tx.spend_bundle.coin_spends
                 ]
-                involved_coins: List[Coin] = [spend.coin for spend in signed_coin_spends]
+                involved_coins: list[Coin] = [spend.coin for spend in signed_coin_spends]
                 signed_coin_spends.extend(
                     [spend for spend in old_offer._bundle.coin_spends if spend.coin not in involved_coins]
                 )

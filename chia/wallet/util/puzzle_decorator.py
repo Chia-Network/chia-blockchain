@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from typing_extensions import Protocol
 
@@ -14,27 +14,27 @@ from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 
 class PuzzleDecoratorProtocol(Protocol):
     @staticmethod
-    def create(config: Dict[str, Any]) -> PuzzleDecoratorProtocol: ...
+    def create(config: dict[str, Any]) -> PuzzleDecoratorProtocol: ...
 
     def decorate(self, inner_puzzle: Program) -> Program: ...
 
     def decorate_target_puzzle_hash(
         self, inner_puzzle: Program, target_puzzle_hash: bytes32
-    ) -> Tuple[Program, bytes32]: ...
+    ) -> tuple[Program, bytes32]: ...
 
     def decorate_memos(
-        self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: List[bytes]
-    ) -> Tuple[Program, List[bytes]]: ...
+        self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: list[bytes]
+    ) -> tuple[Program, list[bytes]]: ...
 
-    def solve(self, puzzle: Program, primaries: List[Payment], inner_solution: Program) -> Tuple[Program, Program]: ...
+    def solve(self, puzzle: Program, primaries: list[Payment], inner_solution: Program) -> tuple[Program, Program]: ...
 
 
 class PuzzleDecoratorManager:
-    decorator_list: List[PuzzleDecoratorProtocol]
+    decorator_list: list[PuzzleDecoratorProtocol]
     log: logging.Logger
 
     @staticmethod
-    def create(config: List[Dict[str, Any]]) -> PuzzleDecoratorManager:
+    def create(config: list[dict[str, Any]]) -> PuzzleDecoratorManager:
         """
         Create a new puzzle decorator manager
         :param config: Config
@@ -75,7 +75,7 @@ class PuzzleDecoratorManager:
             inner_puzzle, target_puzzle_hash = decorator.decorate_target_puzzle_hash(inner_puzzle, target_puzzle_hash)
         return target_puzzle_hash
 
-    def solve(self, inner_puzzle: Program, primaries: List[Payment], inner_solution: Program) -> Program:
+    def solve(self, inner_puzzle: Program, primaries: list[Payment], inner_solution: Program) -> Program:
         """
         Generate the solution of the puzzle
         :param inner_puzzle: Inner puzzle
@@ -87,7 +87,7 @@ class PuzzleDecoratorManager:
             inner_puzzle, inner_solution = decorator.solve(inner_puzzle, primaries, inner_solution)
         return inner_solution
 
-    def decorate_memos(self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: List[bytes]) -> List[bytes]:
+    def decorate_memos(self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: list[bytes]) -> list[bytes]:
         """
         Decorate a memo list
         :param inner_puzzle: Inner puzzle

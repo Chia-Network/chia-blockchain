@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
@@ -84,7 +84,7 @@ class NotificationStore:
             )
             await cursor.close()
 
-    async def get_notifications(self, coin_ids: List[bytes32]) -> List[Notification]:
+    async def get_notifications(self, coin_ids: list[bytes32]) -> list[Notification]:
         """
         Checks DB for Notification with id: id and returns it.
         """
@@ -111,15 +111,15 @@ class NotificationStore:
         ]
 
     async def get_all_notifications(
-        self, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None
-    ) -> List[Notification]:
+        self, pagination: Optional[tuple[Optional[int], Optional[int]]] = None
+    ) -> list[Notification]:
         """
         Checks DB for Notification with id: id and returns it.
         """
         if pagination is not None:
             if pagination[1] is not None and pagination[0] is not None:
                 pagination_str = " LIMIT ?, ?"
-                pagination_params: Tuple[int, ...] = (pagination[0], pagination[1] - pagination[0])
+                pagination_params: tuple[int, ...] = (pagination[0], pagination[1] - pagination[0])
             elif pagination[1] is None and pagination[0] is not None:
                 pagination_str = " LIMIT ?, (SELECT COUNT(*) from notifications)"
                 pagination_params = (pagination[0],)
@@ -148,7 +148,7 @@ class NotificationStore:
             for row in rows
         ]
 
-    async def delete_notifications(self, coin_ids: List[bytes32]) -> None:
+    async def delete_notifications(self, coin_ids: list[bytes32]) -> None:
         coin_ids_str_list = "("
         for _ in coin_ids:
             coin_ids_str_list += "?"

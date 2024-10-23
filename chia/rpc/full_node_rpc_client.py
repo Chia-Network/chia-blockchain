@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 from chia.consensus.block_record import BlockRecord
 from chia.full_node.signage_point import SignagePoint
@@ -15,7 +15,7 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.ints import uint32
 
 
-def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]) -> Dict[str, Any]:
+def coin_record_dict_backwards_compat(coin_record: dict[str, Any]) -> dict[str, Any]:
     del coin_record["spent"]
     return coin_record
 
@@ -29,11 +29,11 @@ class FullNodeRpcClient(RpcClient):
     to the full node.
     """
 
-    async def get_blockchain_state(self) -> Dict[str, Any]:
+    async def get_blockchain_state(self) -> dict[str, Any]:
         response = await self.fetch("get_blockchain_state", {})
         if response["blockchain_state"]["peak"] is not None:
             response["blockchain_state"]["peak"] = BlockRecord.from_json_dict(response["blockchain_state"]["peak"])
-        return cast(Dict[str, Any], response["blockchain_state"])
+        return cast(dict[str, Any], response["blockchain_state"])
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         try:
@@ -42,7 +42,7 @@ class FullNodeRpcClient(RpcClient):
             return None
         return FullBlock.from_json_dict(response["block"])
 
-    async def get_blocks(self, start: int, end: int, exclude_reorged: bool = False) -> List[FullBlock]:
+    async def get_blocks(self, start: int, end: int, exclude_reorged: bool = False) -> list[FullBlock]:
         response = await self.fetch(
             "get_blocks", {"start": start, "end": end, "exclude_header_hash": True, "exclude_reorged": exclude_reorged}
         )
@@ -64,11 +64,11 @@ class FullNodeRpcClient(RpcClient):
             return None
         return BlockRecord.from_json_dict(response["block_record"])
 
-    async def get_unfinished_block_headers(self) -> List[UnfinishedHeaderBlock]:
+    async def get_unfinished_block_headers(self) -> list[UnfinishedHeaderBlock]:
         response = await self.fetch("get_unfinished_block_headers", {})
         return [UnfinishedHeaderBlock.from_json_dict(r) for r in response["headers"]]
 
-    async def get_all_block(self, start: uint32, end: uint32) -> List[FullBlock]:
+    async def get_all_block(self, start: uint32, end: uint32) -> list[FullBlock]:
         response = await self.fetch("get_blocks", {"start": start, "end": end, "exclude_header_hash": True})
         return [FullBlock.from_json_dict(r) for r in response["blocks"]]
 
@@ -93,11 +93,11 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_coin_records_by_names(
         self,
-        names: List[bytes32],
+        names: list[bytes32],
         include_spent_coins: bool = True,
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
-    ) -> List[CoinRecord]:
+    ) -> list[CoinRecord]:
         names_hex = [name.hex() for name in names]
         d = {"names": names_hex, "include_spent_coins": include_spent_coins}
         if start_height is not None:
@@ -114,7 +114,7 @@ class FullNodeRpcClient(RpcClient):
         include_spent_coins: bool = True,
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
-    ) -> List[CoinRecord]:
+    ) -> list[CoinRecord]:
         d = {"puzzle_hash": puzzle_hash.hex(), "include_spent_coins": include_spent_coins}
         if start_height is not None:
             d["start_height"] = start_height
@@ -126,11 +126,11 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_coin_records_by_puzzle_hashes(
         self,
-        puzzle_hashes: List[bytes32],
+        puzzle_hashes: list[bytes32],
         include_spent_coins: bool = True,
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
-    ) -> List[CoinRecord]:
+    ) -> list[CoinRecord]:
         puzzle_hashes_hex = [ph.hex() for ph in puzzle_hashes]
         d = {"puzzle_hashes": puzzle_hashes_hex, "include_spent_coins": include_spent_coins}
         if start_height is not None:
@@ -143,11 +143,11 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_coin_records_by_parent_ids(
         self,
-        parent_ids: List[bytes32],
+        parent_ids: list[bytes32],
         include_spent_coins: bool = True,
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
-    ) -> List[CoinRecord]:
+    ) -> list[CoinRecord]:
         parent_ids_hex = [pid.hex() for pid in parent_ids]
         d = {"parent_ids": parent_ids_hex, "include_spent_coins": include_spent_coins}
         if start_height is not None:
@@ -168,7 +168,7 @@ class FullNodeRpcClient(RpcClient):
         include_spent_coins: bool = True,
         start_height: Optional[int] = None,
         end_height: Optional[int] = None,
-    ) -> List[CoinRecord]:
+    ) -> list[CoinRecord]:
         d = {"hint": hint.hex(), "include_spent_coins": include_spent_coins}
         if start_height is not None:
             d["start_height"] = start_height
@@ -178,7 +178,7 @@ class FullNodeRpcClient(RpcClient):
         response = await self.fetch("get_coin_records_by_hint", d)
         return [CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin)) for coin in response["coin_records"]]
 
-    async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:
+    async def get_additions_and_removals(self, header_hash: bytes32) -> tuple[list[CoinRecord], list[CoinRecord]]:
         try:
             response = await self.fetch("get_additions_and_removals", {"header_hash": header_hash.hex()})
         except Exception:
@@ -191,7 +191,7 @@ class FullNodeRpcClient(RpcClient):
             additions.append(CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin_record)))
         return additions, removals
 
-    async def get_block_records(self, start: int, end: int) -> List[Dict[str, Any]]:
+    async def get_block_records(self, start: int, end: int) -> list[dict[str, Any]]:
         try:
             response = await self.fetch("get_block_records", {"start": start, "end": end})
             if response["block_records"] is None:
@@ -199,9 +199,9 @@ class FullNodeRpcClient(RpcClient):
         except Exception:
             return []
         # TODO: return block records
-        return cast(List[Dict[str, Any]], response["block_records"])
+        return cast(list[dict[str, Any]], response["block_records"])
 
-    async def get_block_spends(self, header_hash: bytes32) -> Optional[List[CoinSpend]]:
+    async def get_block_spends(self, header_hash: bytes32) -> Optional[list[CoinSpend]]:
         try:
             response = await self.fetch("get_block_spends", {"header_hash": header_hash.hex()})
             block_spends = []
@@ -211,10 +211,10 @@ class FullNodeRpcClient(RpcClient):
         except Exception:
             return None
 
-    async def get_block_spends_with_conditions(self, header_hash: bytes32) -> Optional[List[CoinSpendWithConditions]]:
+    async def get_block_spends_with_conditions(self, header_hash: bytes32) -> Optional[list[CoinSpendWithConditions]]:
         try:
             response = await self.fetch("get_block_spends_with_conditions", {"header_hash": header_hash.hex()})
-            block_spends: List[CoinSpendWithConditions] = []
+            block_spends: list[CoinSpendWithConditions] = []
             for block_spend in response["block_spends_with_conditions"]:
                 block_spends.append(CoinSpendWithConditions.from_json_dict(block_spend))
             return block_spends
@@ -222,7 +222,7 @@ class FullNodeRpcClient(RpcClient):
         except Exception:
             return None
 
-    async def push_tx(self, spend_bundle: SpendBundle) -> Dict[str, Any]:
+    async def push_tx(self, spend_bundle: SpendBundle) -> dict[str, Any]:
         return await self.fetch("push_tx", {"spend_bundle": spend_bundle.to_json_dict()})
 
     async def get_puzzle_and_solution(self, coin_id: bytes32, height: uint32) -> Optional[CoinSpend]:
@@ -232,13 +232,13 @@ class FullNodeRpcClient(RpcClient):
         except Exception:
             return None
 
-    async def get_all_mempool_tx_ids(self) -> List[bytes32]:
+    async def get_all_mempool_tx_ids(self) -> list[bytes32]:
         response = await self.fetch("get_all_mempool_tx_ids", {})
         return [bytes32.from_hexstr(tx_id_hex) for tx_id_hex in response["tx_ids"]]
 
-    async def get_all_mempool_items(self) -> Dict[bytes32, Dict[str, Any]]:
+    async def get_all_mempool_items(self) -> dict[bytes32, dict[str, Any]]:
         response = await self.fetch("get_all_mempool_items", {})
-        converted: Dict[bytes32, Dict[str, Any]] = {}
+        converted: dict[bytes32, dict[str, Any]] = {}
         for tx_id_hex, item in response["mempool_items"].items():
             converted[bytes32.from_hexstr(tx_id_hex)] = item
         return converted
@@ -247,16 +247,16 @@ class FullNodeRpcClient(RpcClient):
         self,
         tx_id: bytes32,
         include_pending: bool = False,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         try:
             response = await self.fetch(
                 "get_mempool_item_by_tx_id", {"tx_id": tx_id.hex(), "include_pending": include_pending}
             )
-            return cast(Dict[str, Any], response["mempool_item"])
+            return cast(dict[str, Any], response["mempool_item"])
         except Exception:
             return None
 
-    async def get_mempool_items_by_coin_name(self, coin_name: bytes32) -> Dict[str, Any]:
+    async def get_mempool_items_by_coin_name(self, coin_name: bytes32) -> dict[str, Any]:
         response = await self.fetch("get_mempool_items_by_coin_name", {"coin_name": coin_name.hex()})
         return response
 
@@ -285,8 +285,8 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_fee_estimate(
         self,
-        target_times: Optional[List[int]],
+        target_times: Optional[list[int]],
         cost: Optional[int],
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         response = await self.fetch("get_fee_estimate", {"cost": cost, "target_times": target_times})
         return response

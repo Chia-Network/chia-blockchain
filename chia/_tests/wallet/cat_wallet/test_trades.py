@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 import pytest
 from chia_rs import G2Element
@@ -36,7 +36,7 @@ from chia.wallet.vc_wallet.vc_store import VCProofs
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
-OfferSummary = Dict[Union[int, bytes32], int]
+OfferSummary = dict[Union[int, bytes32], int]
 
 
 async def get_trade_and_status(trade_manager: TradeManager, trade: TradeRecord) -> TradeStatus:
@@ -166,7 +166,7 @@ async def test_cat_trades(
         tail_taker = Program.to([3, (1, "taker"), None, None])
         proofs_checker_maker = ProofsChecker(["foo", "bar"])
         proofs_checker_taker = ProofsChecker(["bar", "zap"])
-        authorized_providers: List[bytes32] = [did_id_maker, did_id_taker]
+        authorized_providers: list[bytes32] = [did_id_maker, did_id_taker]
         cat_wallet_maker: CATWallet = await CRCATWallet.get_or_create_wallet_for_cat(
             wallet_node_maker.wallet_state_manager,
             wallet_maker,
@@ -445,10 +445,10 @@ async def test_cat_trades(
         new_cat_wallet_maker.id(): 15,
     }
 
-    driver_dict: Dict[bytes32, PuzzleInfo] = {}
+    driver_dict: dict[bytes32, PuzzleInfo] = {}
     for wallet in (cat_wallet_maker, new_cat_wallet_maker):
         asset_id: str = wallet.get_asset_id()
-        driver_item: Dict[str, Any] = {
+        driver_item: dict[str, Any] = {
             "type": AssetType.CAT.value,
             "tail": "0x" + asset_id,
         }
@@ -1701,7 +1701,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
         wallet_environments.tx_config, push=False
     ) as action_scope:
         await trade_manager_maker.cancel_pending_offers(
-            [trade_make.trade_id, bytes32([0] * 32)], action_scope, secure=False
+            [trade_make.trade_id, bytes32.zeros], action_scope, secure=False
         )
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
@@ -1851,7 +1851,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     chia_and_cat_for_something: OfferSummary = {
         env_maker.wallet_aliases["xch"]: -5,
         env_maker.wallet_aliases["cat"]: -6,
-        bytes32([0] * 32): 1,  # Doesn't matter
+        bytes32.zeros: 1,  # Doesn't matter
     }
 
     # Now we're going to create the other way around for test coverage sake
@@ -1861,7 +1861,7 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
             chia_and_cat_for_something,
             action_scope,
-            driver_dict={bytes32([0] * 32): PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
+            driver_dict={bytes32.zeros: PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + bytes(32).hex()})},
         )
     assert error is None
     assert success is True
@@ -1876,8 +1876,8 @@ async def test_trade_cancellation(wallet_environments: WalletTestFramework) -> N
     total_spend = SpendBundle.aggregate(
         [tx.spend_bundle for tx in action_scope.side_effects.transactions if tx.spend_bundle is not None]
     )
-    all_conditions: List[Program] = []
-    creations: List[CreateCoinAnnouncement] = []
+    all_conditions: list[Program] = []
+    creations: list[CreateCoinAnnouncement] = []
     announcement_nonce = std_hash(trade_make.trade_id)
     for spend in total_spend.coin_spends:
         all_conditions.extend(

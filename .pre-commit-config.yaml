@@ -17,7 +17,7 @@ repos:
     hooks:
       - id: pyupgrade
         name: pyupgrade
-        entry: ./activated.py pyupgrade --py38-plus --keep-runtime-typing
+        entry: ./activated.py pyupgrade --py39-plus --keep-runtime-typing
         language: system
         types: [python]
   - repo: local

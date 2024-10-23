@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -21,7 +21,7 @@ class ClawbackPuzzleDecorator:
     time_lock: uint64
 
     @staticmethod
-    def create(config: Dict[str, Any]) -> ClawbackPuzzleDecorator:
+    def create(config: dict[str, Any]) -> ClawbackPuzzleDecorator:
         self = ClawbackPuzzleDecorator()
         self.time_lock = uint64(config.get("clawback_timelock", 0))
         return self
@@ -34,15 +34,15 @@ class ClawbackPuzzleDecorator:
         self,
         inner_puzzle: Program,
         target_puzzle_hash: bytes32,
-    ) -> Tuple[Program, bytes32]:
+    ) -> tuple[Program, bytes32]:
         return (
             self.decorate(inner_puzzle),
             create_merkle_puzzle(self.time_lock, inner_puzzle.get_tree_hash(), target_puzzle_hash).get_tree_hash(),
         )
 
     def solve(
-        self, inner_puzzle: Program, primaries: List[Payment], inner_solution: Program
-    ) -> Tuple[Program, Program]:
+        self, inner_puzzle: Program, primaries: list[Payment], inner_solution: Program
+    ) -> tuple[Program, Program]:
         # Append REMARK condition [1, "CLAWBACK", TIME_LOCK, SENDER_PUZHSAH, RECIPIENT_PUZHSAH]
         if len(primaries) == 1:
             recipient_puzhash = primaries[0].puzzle_hash
@@ -61,7 +61,7 @@ class ClawbackPuzzleDecorator:
         return self.decorate(inner_puzzle), inner_solution
 
     def decorate_memos(
-        self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: List[bytes]
-    ) -> Tuple[Program, List[bytes]]:
+        self, inner_puzzle: Program, target_puzzle_hash: bytes32, memos: list[bytes]
+    ) -> tuple[Program, list[bytes]]:
         memos.insert(0, target_puzzle_hash)
         return self.decorate(inner_puzzle), memos

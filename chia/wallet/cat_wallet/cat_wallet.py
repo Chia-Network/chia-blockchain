@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 import traceback
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia_rs import G1Element
 from typing_extensions import Unpack
@@ -69,12 +69,12 @@ CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
 QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
-def not_ephemeral_additions(sp: WalletSpendBundle) -> List[Coin]:
-    removals: Set[Coin] = set()
+def not_ephemeral_additions(sp: WalletSpendBundle) -> list[Coin]:
+    removals: set[Coin] = set()
     for cs in sp.coin_spends:
         removals.add(cs.coin)
 
-    additions: List[Coin] = []
+    additions: list[Coin] = []
     max_cost = int(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM)
     for cs in sp.coin_spends:
         coins, cost = compute_additions_with_cost(cs, max_cost=max_cost)
@@ -106,7 +106,7 @@ class CATWallet:
     async def create_new_cat_wallet(
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
-        cat_tail_info: Dict[str, Any],
+        cat_tail_info: dict[str, Any],
         amount: uint64,
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
@@ -160,7 +160,7 @@ class CATWallet:
             await self.set_name(name)
 
         # Change and actual CAT coin
-        non_ephemeral_coins: List[Coin] = not_ephemeral_additions(spend_bundle)
+        non_ephemeral_coins: list[Coin] = not_ephemeral_additions(spend_bundle)
         cat_coin = None
         puzzle_store = self.wallet_state_manager.puzzle_store
         for c in non_ephemeral_coins:
@@ -257,7 +257,7 @@ class CATWallet:
         puzzle_driver: PuzzleInfo,
         name: Optional[str] = None,
         # We're hinting this as Any for mypy by should explore adding this to the wallet protocol and hinting properly
-        potential_subclasses: Dict[AssetType, Any] = {},
+        potential_subclasses: dict[AssetType, Any] = {},
     ) -> Any:
         next_layer: Optional[PuzzleInfo] = puzzle_driver.also()
         if next_layer is not None:
@@ -310,7 +310,7 @@ class CATWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_confirmed_balance(self, record_list: Optional[set[WalletCoinRecord]] = None) -> uint128:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
@@ -323,7 +323,7 @@ class CATWallet:
         self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
         return uint128(amount)
 
-    async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
     @property
@@ -335,14 +335,14 @@ class CATWallet:
         # avoid full block TXs
         return int(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM / 2 / self.cost_of_single_tx)
 
-    async def get_max_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> Set[WalletCoinRecord]:
-        spendable: List[WalletCoinRecord] = list(
+    async def get_max_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> set[WalletCoinRecord]:
+        spendable: list[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         return set(spendable[0 : min(len(spendable), self.max_send_quantity)])
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_max_send_amount(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         return uint128(sum(cr.coin.amount for cr in await self.get_max_spendable_coins()))
 
     def get_name(self) -> str:
@@ -459,7 +459,7 @@ class CATWallet:
     async def get_new_cat_puzzle_hash(self) -> bytes32:
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
-    async def get_spendable_balance(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+    async def get_spendable_balance(self, records: Optional[set[WalletCoinRecord]] = None) -> uint128:
         coins = await self.get_cat_spendable_coins(records)
         amount = 0
         for record in coins:
@@ -493,10 +493,10 @@ class CATWallet:
 
         return uint64(addition_amount)
 
-    async def get_cat_spendable_coins(self, records: Optional[Set[WalletCoinRecord]] = None) -> List[WalletCoinRecord]:
-        result: List[WalletCoinRecord] = []
+    async def get_cat_spendable_coins(self, records: Optional[set[WalletCoinRecord]] = None) -> list[WalletCoinRecord]:
+        result: list[WalletCoinRecord] = []
 
-        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+        record_list: set[WalletCoinRecord] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
             self.id(), records
         )
 
@@ -511,17 +511,17 @@ class CATWallet:
         self,
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> Set[Coin]:
+    ) -> set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
         """
         spendable_amount: uint128 = await self.get_spendable_balance()
-        spendable_coins: List[WalletCoinRecord] = await self.get_cat_spendable_coins()
+        spendable_coins: list[WalletCoinRecord] = await self.get_cat_spendable_coins()
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
-        unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+        unconfirmed_removals: dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
         async with action_scope.use() as interface:
@@ -563,7 +563,7 @@ class CATWallet:
         fee: uint64,
         amount_to_claim: uint64,
         action_scope: WalletActionScope,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> Optional[AssertCoinAnnouncement]:
         """
         This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
@@ -627,12 +627,12 @@ class CATWallet:
 
     async def generate_unsigned_spendbundle(
         self,
-        payments: List[Payment],
+        payments: list[Payment],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        cat_discrepancy: Optional[Tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
-        coins: Optional[Set[Coin]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        cat_discrepancy: Optional[tuple[int, Program, Program]] = None,  # (extra_delta, tail_reveal, tail_solution)
+        coins: Optional[set[Coin]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
     ) -> WalletSpendBundle:
         if cat_discrepancy is not None:
             extra_delta, tail_reveal, tail_solution = cat_discrepancy
@@ -756,17 +756,17 @@ class CATWallet:
 
     async def generate_signed_transaction(
         self,
-        amounts: List[uint64],
-        puzzle_hashes: List[bytes32],
+        amounts: list[uint64],
+        puzzle_hashes: list[bytes32],
         action_scope: WalletActionScope,
         fee: uint64 = uint64(0),
-        coins: Optional[Set[Coin]] = None,
-        memos: Optional[List[List[bytes]]] = None,
-        extra_conditions: Tuple[Condition, ...] = tuple(),
+        coins: Optional[set[Coin]] = None,
+        memos: Optional[list[list[bytes]]] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
         **kwargs: Unpack[GSTOptionalArgs],
     ) -> None:
         # (extra_delta, tail_reveal, tail_solution)
-        cat_discrepancy: Optional[Tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
+        cat_discrepancy: Optional[tuple[int, Program, Program]] = kwargs.get("cat_discrepancy", None)
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
 
@@ -775,7 +775,7 @@ class CATWallet:
 
         payments = []
         for amount, puzhash, memo_list in zip(amounts, puzzle_hashes, memos):
-            memos_with_hint: List[bytes] = [puzhash]
+            memos_with_hint: list[bytes] = [puzhash]
             memos_with_hint.extend(memo_list)
             payments.append(Payment(puzhash, amount, memos_with_hint))
 
@@ -790,10 +790,10 @@ class CATWallet:
         )
 
         async with action_scope.use() as interface:
-            other_tx_removals: Set[Coin] = {
+            other_tx_removals: set[Coin] = {
                 removal for tx in interface.side_effects.transactions for removal in tx.removals
             }
-            other_tx_additions: Set[Coin] = {
+            other_tx_additions: set[Coin] = {
                 removal for tx in interface.side_effects.transactions for removal in tx.additions
             }
             interface.side_effects.transactions.append(
@@ -854,7 +854,7 @@ class CATWallet:
         asset_id: Optional[bytes32],
         amount: uint64,
         action_scope: WalletActionScope,
-    ) -> Set[Coin]:
+    ) -> set[Coin]:
         balance = await self.get_confirmed_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")

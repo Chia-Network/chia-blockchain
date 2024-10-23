@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, List, Tuple
+from collections.abc import Iterable
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
@@ -51,7 +51,7 @@ def throwaway_puzzle_hash(index: int, key_lookup: KeyTool) -> bytes32:
 def do_test_spend(
     puzzle_reveal: Program,
     solution: Program,
-    payments: Iterable[Tuple[bytes32, int]],
+    payments: Iterable[tuple[bytes32, int]],
     key_lookup: KeyTool,
     farm_time: CoinTimestamp = T1,
     spend_time: CoinTimestamp = T2,
@@ -86,7 +86,7 @@ def do_test_spend(
             assert 0
 
     # make sure we can actually sign the solution
-    signatures: List[G2Element] = []
+    signatures: list[G2Element] = []
     for coin_spend in spend_bundle.coin_spends:
         signature = key_lookup.signature_for_solution(coin_spend, bytes([2] * 32))
         signatures.append(signature)
@@ -95,7 +95,7 @@ def do_test_spend(
 
 def default_payments_and_conditions(
     initial_index: int, key_lookup: KeyTool
-) -> Tuple[List[Tuple[bytes32, int]], Program]:
+) -> tuple[list[tuple[bytes32, int]], Program]:
     # the coin we get from coin_db.farm_coin only has amount 1024, so we can
     # only make small payments to avoid failing with MINTING_COIN
     payments = [

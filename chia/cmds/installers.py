@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import tempfile
-from typing import Dict, List, Optional
+from typing import Optional
 
 import click
 import packaging.version
@@ -12,7 +12,7 @@ from chia.daemon.server import executable_for_service
 from chia.util.timing import adjusted_timeout
 
 
-def check_plotter(plotter: List[str], expected_output: bytes, specify_tmp: bool = True) -> None:
+def check_plotter(plotter: list[str], expected_output: bytes, specify_tmp: bool = True) -> None:
     with tempfile.TemporaryDirectory() as path:
         tmp_dir = []
         if specify_tmp:
@@ -88,7 +88,7 @@ def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
     assert plotter_version_process.stderr == ""
 
     found_start = False
-    plotter_versions: Dict[str, packaging.version.Version] = {}
+    plotter_versions: dict[str, packaging.version.Version] = {}
     for line in plotter_version_process.stdout.splitlines():
         if line.startswith("chiapos:"):
             found_start = True
