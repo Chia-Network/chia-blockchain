@@ -7,7 +7,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from chia.cmds.passphrase_funcs import get_current_passphrase
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
@@ -42,7 +42,7 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
 
 
 async def create_start_daemon_connection(
-    root_path: Path, config: Dict[str, Any], *, skip_keyring: bool
+    root_path: Path, config: dict[str, Any], *, skip_keyring: bool
 ) -> Optional[DaemonProxy]:
     connection = await connect_to_daemon_and_validate(root_path, config)
     if connection is None:
@@ -75,7 +75,7 @@ async def create_start_daemon_connection(
 
 
 async def async_start(
-    root_path: Path, config: Dict[str, Any], group: tuple[str, ...], restart: bool, *, skip_keyring: bool
+    root_path: Path, config: dict[str, Any], group: tuple[str, ...], restart: bool, *, skip_keyring: bool
 ) -> None:
     try:
         daemon = await create_start_daemon_connection(root_path, config, skip_keyring=skip_keyring)

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Awaitable, Callable, Dict, List, Optional, Tuple
+from collections.abc import Awaitable
+from typing import Callable, Optional
 
 from chia_rs import fast_forward_singleton, get_conditions_from_spendbundle
 
@@ -21,7 +22,7 @@ from chia.util.ints import uint32, uint64
 @dataclasses.dataclass(frozen=True)
 class EligibilityAndAdditions:
     is_eligible_for_dedup: bool
-    spend_additions: List[Coin]
+    spend_additions: list[Coin]
     is_eligible_for_ff: bool
 
 
@@ -50,7 +51,7 @@ class UnspentLineageInfo:
 
 
 def set_next_singleton_version(
-    current_singleton: Coin, singleton_additions: List[Coin], fast_forward_spends: Dict[bytes32, UnspentLineageInfo]
+    current_singleton: Coin, singleton_additions: list[Coin], fast_forward_spends: dict[bytes32, UnspentLineageInfo]
 ) -> None:
     """
     Finds the next version of the singleton among its additions and updates the
@@ -83,8 +84,8 @@ def set_next_singleton_version(
 def perform_the_fast_forward(
     unspent_lineage_info: UnspentLineageInfo,
     spend_data: BundleCoinSpend,
-    fast_forward_spends: Dict[bytes32, UnspentLineageInfo],
-) -> Tuple[CoinSpend, List[Coin]]:
+    fast_forward_spends: dict[bytes32, UnspentLineageInfo],
+) -> tuple[CoinSpend, list[Coin]]:
     """
     Performs a singleton fast forward, including the updating of all previous
     additions to point to the most recent version, and updates the fast forward
@@ -141,12 +142,12 @@ def perform_the_fast_forward(
 
 @dataclasses.dataclass(frozen=True)
 class EligibleCoinSpends:
-    deduplication_spends: Dict[bytes32, DedupCoinSpend] = dataclasses.field(default_factory=dict)
-    fast_forward_spends: Dict[bytes32, UnspentLineageInfo] = dataclasses.field(default_factory=dict)
+    deduplication_spends: dict[bytes32, DedupCoinSpend] = dataclasses.field(default_factory=dict)
+    fast_forward_spends: dict[bytes32, UnspentLineageInfo] = dataclasses.field(default_factory=dict)
 
     def get_deduplication_info(
-        self, *, bundle_coin_spends: Dict[bytes32, BundleCoinSpend], max_cost: int
-    ) -> Tuple[List[CoinSpend], uint64, List[Coin]]:
+        self, *, bundle_coin_spends: dict[bytes32, BundleCoinSpend], max_cost: int
+    ) -> tuple[list[CoinSpend], uint64, list[Coin]]:
         """
         Checks all coin spends of a mempool item for deduplication eligibility and
         provides the caller with the necessary information that allows it to perform
@@ -167,10 +168,10 @@ class EligibleCoinSpends:
             one we're already deduplicating on.
         """
         cost_saving = 0
-        unique_coin_spends: List[CoinSpend] = []
-        unique_additions: List[Coin] = []
+        unique_coin_spends: list[CoinSpend] = []
+        unique_additions: list[Coin] = []
         # Map of coin ID to deduplication information
-        new_dedup_spends: Dict[bytes32, DedupCoinSpend] = {}
+        new_dedup_spends: dict[bytes32, DedupCoinSpend] = {}
         # See if this item has coin spends that are eligible for deduplication
         for coin_id, spend_data in bundle_coin_spends.items():
             if not spend_data.eligible_for_dedup:

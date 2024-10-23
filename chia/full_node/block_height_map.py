@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import aiofiles
 
@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 @streamable
 @dataclass(frozen=True)
 class SesCache(Streamable):
-    content: List[Tuple[uint32, bytes]]
+    content: list[tuple[uint32, bytes]]
 
 
 class BlockHeightMap:
@@ -38,7 +38,7 @@ class BlockHeightMap:
     # All sub-epoch summaries that have been included in the blockchain from the beginning until and including the peak
     # (height_included, SubEpochSummary). Note: ONLY for the blocks in the path to the peak
     # The value is a serialized SubEpochSummary object
-    __sub_epoch_summaries: Dict[uint32, bytes]
+    __sub_epoch_summaries: dict[uint32, bytes]
 
     # count how many blocks have been added since the cache was last written to
     # disk
@@ -194,7 +194,7 @@ class BlockHeightMap:
             async with self.db.reader_no_transaction() as conn:
                 async with conn.execute(query, (window_end, height)) as cursor:
                     # maps block-hash -> (height, prev-hash, sub-epoch-summary)
-                    ordered: Dict[bytes32, Tuple[uint32, bytes32, Optional[bytes]]] = {}
+                    ordered: dict[bytes32, tuple[uint32, bytes32, Optional[bytes]]] = {}
 
                     for r in await cursor.fetchall():
                         ordered[r[0]] = (r[2], r[1], r[3])
@@ -267,5 +267,5 @@ class BlockHeightMap:
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return SubEpochSummary.from_bytes(self.__sub_epoch_summaries[height])
 
-    def get_ses_heights(self) -> List[uint32]:
+    def get_ses_heights(self) -> list[uint32]:
         return sorted(self.__sub_epoch_summaries.keys())

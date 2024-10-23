@@ -7,7 +7,7 @@ import sys
 from functools import partial
 from pathlib import Path
 from time import time
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 import click
 import zstd
@@ -34,8 +34,8 @@ from chia.util.full_block_utils import block_info_from_block, generator_from_blo
 # exactly one of those will hold a value and the number of seconds it took to
 # run
 def run_gen(
-    generator_program: SerializedProgram, block_program_args: List[bytes], flags: int
-) -> Tuple[Optional[int], Optional[SpendBundleConditions], float]:
+    generator_program: SerializedProgram, block_program_args: list[bytes], flags: int
+) -> tuple[Optional[int], Optional[SpendBundleConditions], float]:
     try:
         start_time = time()
         err, result = run_block_generator(
@@ -71,7 +71,7 @@ def callable_for_module_function_path(call: str) -> Callable:
 @click.option("--end", default=None, help="last block to examine")
 @click.option("--call", default=None, help="function to pass block iterator to in form `module:function`")
 def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str], verify_signatures: bool):
-    call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, List[bytes], float, int], None]
+    call_f: Callable[[Union[BlockInfo, FullBlock], bytes32, int, list[bytes], float, int], None]
     if call is None:
         call_f = partial(default_call, verify_signatures)
     else:
@@ -124,7 +124,7 @@ def default_call(
     block: Union[BlockInfo, FullBlock],
     hh: bytes32,
     height: int,
-    generator_blobs: List[bytes],
+    generator_blobs: list[bytes],
     ref_lookup_time: float,
     flags: int,
 ) -> None:
@@ -148,8 +148,8 @@ def default_call(
     if verify_signatures:
         assert isinstance(block, FullBlock)
         # create hash_key list for aggsig check
-        pairs_pks: List[G1Element] = []
-        pairs_msgs: List[bytes] = []
+        pairs_pks: list[G1Element] = []
+        pairs_msgs: list[bytes] = []
         pairs_pks, pairs_msgs = pkm_pairs(result, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
         assert block.transactions_info is not None
         assert block.transactions_info.aggregated_signature is not None

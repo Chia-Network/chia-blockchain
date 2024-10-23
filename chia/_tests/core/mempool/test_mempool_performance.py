@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 
-from chia._tests.util.misc import BenchmarkRunner, add_blocks_in_batches, wallet_height_at_least
+from chia._tests.util.misc import BenchmarkRunner, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
@@ -24,7 +23,7 @@ async def wallet_balance_at_least(wallet_node: WalletNode, balance: uint128) -> 
 @pytest.mark.anyio
 async def test_mempool_update_performance(
     wallet_nodes_mempool_perf: OldSimulatorsAndWallets,
-    default_400_blocks: List[FullBlock],
+    default_400_blocks: list[FullBlock],
     self_hostname: str,
     benchmark_runner: BenchmarkRunner,
 ) -> None:

@@ -4,7 +4,7 @@ import hashlib
 import struct
 from dataclasses import astuple, dataclass
 from random import Random
-from typing import Dict, Generic, List, Tuple, Type, TypeVar, final
+from typing import Generic, TypeVar, final
 
 import pytest
 
@@ -46,7 +46,7 @@ def raw_node_class_fixture(request: SubRequest) -> RawMerkleNodeProtocol:
     return request.param  # type: ignore[no-any-return]
 
 
-class_to_structs: Dict[Type[object], struct.Struct] = {
+class_to_structs: dict[type[object], struct.Struct] = {
     NodeMetadata: NodeMetadata.struct,
     **{cls: cls.struct for cls in raw_node_classes},
 }
@@ -106,7 +106,7 @@ class RawNodeFromBlobCase(Generic[RawMerkleNodeT]):
         return self.raw.type.name
 
 
-reference_raw_nodes: List[DataCase] = [
+reference_raw_nodes: list[DataCase] = [
     RawNodeFromBlobCase(
         raw=RawInternalMerkleNode(
             hash=bytes(range(32)),
@@ -206,8 +206,8 @@ def test_merkle_blob_two_leafs_loads() -> None:
     assert merkle_blob.get_lineage_by_key_id(KVId(0x1415161718191A1B)) == [expected_node]
 
 
-def generate_kvid(seed: int) -> Tuple[KVId, KVId]:
-    kv_ids: List[KVId] = []
+def generate_kvid(seed: int) -> tuple[KVId, KVId]:
+    kv_ids: list[KVId] = []
 
     for offset in range(2):
         seed_bytes = (2 * seed + offset).to_bytes(8, byteorder="big", signed=True)
@@ -229,7 +229,7 @@ def test_insert_delete_loads_all_keys() -> None:
     num_keys = 200000
     extra_keys = 100000
     max_height = 25
-    keys_values: Dict[KVId, KVId] = {}
+    keys_values: dict[KVId, KVId] = {}
 
     random = Random()
     random.seed(100, version=2)
@@ -288,7 +288,7 @@ def test_small_insert_deletes() -> None:
 
     for repeats in range(num_repeats):
         for num_inserts in range(1, max_inserts):
-            keys_values: Dict[KVId, KVId] = {}
+            keys_values: dict[KVId, KVId] = {}
             for inserts in range(num_inserts):
                 seed += 1
                 key, value = generate_kvid(seed)
@@ -314,14 +314,14 @@ def test_proof_of_inclusion_merkle_blob() -> None:
     random.seed(100, version=2)
 
     merkle_blob = MerkleBlob(blob=bytearray())
-    keys_values: Dict[KVId, KVId] = {}
+    keys_values: dict[KVId, KVId] = {}
 
     for repeats in range(num_repeats):
         num_inserts = 1 + repeats * 100
         num_deletes = 1 + repeats * 10
 
-        kv_ids: List[Tuple[KVId, KVId]] = []
-        hashes: List[bytes] = []
+        kv_ids: list[tuple[KVId, KVId]] = []
+        hashes: list[bytes] = []
         for _ in range(num_inserts):
             seed += 1
             key, value = generate_kvid(seed)
@@ -347,7 +347,7 @@ def test_proof_of_inclusion_merkle_blob() -> None:
             with pytest.raises(Exception, match=f"Key {kv_id} not present in the store"):
                 merkle_blob.get_proof_of_inclusion(kv_id)
 
-        new_keys_values: Dict[KVId, KVId] = {}
+        new_keys_values: dict[KVId, KVId] = {}
         for old_kv in keys_values.keys():
             seed += 1
             _, value = generate_kvid(seed)
@@ -375,7 +375,7 @@ def test_get_raw_node_raises_for_invalid_indexes(index: TreeIndex) -> None:
 
 
 @pytest.mark.parametrize(argnames="cls", argvalues=raw_node_classes)
-def test_as_tuple_matches_dataclasses_astuple(cls: Type[RawMerkleNodeProtocol], seeded_random: Random) -> None:
+def test_as_tuple_matches_dataclasses_astuple(cls: type[RawMerkleNodeProtocol], seeded_random: Random) -> None:
     raw_bytes = bytes(seeded_random.getrandbits(8) for _ in range(cls.struct.size))
     raw_node = cls(*cls.struct.unpack(raw_bytes))
     # TODO: try again to indicate that the RawMerkleNodeProtocol requires the dataclass interface

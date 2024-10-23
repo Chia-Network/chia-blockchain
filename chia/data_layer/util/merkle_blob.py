@@ -3,21 +3,7 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import (
-    TYPE_CHECKING,
-    ClassVar,
-    Dict,
-    List,
-    NewType,
-    Optional,
-    Protocol,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-    final,
-)
+from typing import TYPE_CHECKING, ClassVar, NewType, Optional, Protocol, TypeVar, cast, final
 
 from chia.data_layer.data_layer_util import InternalNode, ProofOfInclusion, ProofOfInclusionLayer, Side, internal_hash
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -54,8 +40,8 @@ class NodeType(IntEnum):
 @dataclass(frozen=False)
 class MerkleBlob:
     blob: bytearray
-    key_to_index: Dict[KVId, TreeIndex] = field(default_factory=dict)
-    free_indexes: List[TreeIndex] = field(default_factory=list)
+    key_to_index: dict[KVId, TreeIndex] = field(default_factory=dict)
+    free_indexes: list[TreeIndex] = field(default_factory=list)
     last_allocated_index: TreeIndex = TreeIndex(0)
 
     def __post_init__(self) -> None:
@@ -153,7 +139,7 @@ class MerkleBlob:
         assert isinstance(node, RawLeafMerkleNode)
 
         parents = self.get_lineage_with_indexes(index)
-        layers: List[ProofOfInclusionLayer] = []
+        layers: list[ProofOfInclusionLayer] = []
         for next_index, parent in parents[1:]:
             assert isinstance(parent, RawInternalMerkleNode)
             sibling_index = parent.get_sibling_index(index)
@@ -168,7 +154,7 @@ class MerkleBlob:
 
         return ProofOfInclusion(node_hash=bytes32(node.hash), layers=layers)
 
-    def get_lineage_with_indexes(self, index: TreeIndex) -> List[Tuple[TreeIndex, RawMerkleNodeProtocol]]:
+    def get_lineage_with_indexes(self, index: TreeIndex) -> list[tuple[TreeIndex, RawMerkleNodeProtocol]]:
         node = self.get_raw_node(index=index)
         lineage = [(index, node)]
         while node.parent != null_parent:
@@ -177,10 +163,10 @@ class MerkleBlob:
             lineage.append((index, node))
         return lineage
 
-    def get_lineage_by_key_id(self, kid: KVId) -> List[InternalNode]:
+    def get_lineage_by_key_id(self, kid: KVId) -> list[InternalNode]:
         index = self.key_to_index[kid]
         lineage = self.get_lineage_with_indexes(index)
-        internal_nodes: List[InternalNode] = []
+        internal_nodes: list[InternalNode] = []
         for _, node in lineage[1:]:
             assert isinstance(node, RawInternalMerkleNode)
             left_node = self.get_raw_node(node.left)
@@ -235,12 +221,12 @@ class MerkleBlob:
 
         raise Exception("Cannot find leaf from seed")
 
-    def get_keys_indexes(self) -> Dict[KVId, TreeIndex]:
+    def get_keys_indexes(self) -> dict[KVId, TreeIndex]:
         if len(self.blob) == 0:
             return {}
 
-        key_to_index: Dict[KVId, TreeIndex] = {}
-        queue: List[TreeIndex] = [TreeIndex(0)]
+        key_to_index: dict[KVId, TreeIndex] = {}
+        queue: list[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
             node_index = queue.pop()
             node = self.get_raw_node(node_index)
@@ -253,12 +239,12 @@ class MerkleBlob:
 
         return key_to_index
 
-    def get_keys_values(self) -> Dict[KVId, KVId]:
+    def get_keys_values(self) -> dict[KVId, KVId]:
         if len(self.blob) == 0:
             return {}
 
-        keys_values: Dict[KVId, KVId] = {}
-        queue: List[TreeIndex] = [TreeIndex(0)]
+        keys_values: dict[KVId, KVId] = {}
+        queue: list[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
             node_index = queue.pop()
             node = self.get_raw_node(node_index)
@@ -271,12 +257,12 @@ class MerkleBlob:
 
         return keys_values
 
-    def get_free_indexes(self) -> List[TreeIndex]:
+    def get_free_indexes(self) -> list[TreeIndex]:
         if len(self.blob) == 0:
             return []
 
-        free_indexes: Set[TreeIndex] = {TreeIndex(i) for i in range(int(self.last_allocated_index))}
-        queue: List[TreeIndex] = [TreeIndex(0)]
+        free_indexes: set[TreeIndex] = {TreeIndex(i) for i in range(int(self.last_allocated_index))}
+        queue: list[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
             node_index = queue.pop()
             node = self.get_raw_node(node_index)
@@ -466,7 +452,7 @@ class MerkleBlob:
             self.mark_lineage_as_dirty(node.parent)
 
     def get_min_height_leaf(self) -> RawLeafMerkleNode:
-        queue: List[TreeIndex] = [TreeIndex(0)]
+        queue: list[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
             node_index = queue.pop()
             node = self.get_raw_node(node_index)
@@ -483,7 +469,7 @@ class MerkleBlob:
         node = self.get_raw_node(index)
         return bytes32(node.hash)
 
-    def get_nodes_with_indexes(self, index: TreeIndex = TreeIndex(0)) -> List[Tuple[TreeIndex, RawMerkleNodeProtocol]]:
+    def get_nodes_with_indexes(self, index: TreeIndex = TreeIndex(0)) -> list[tuple[TreeIndex, RawMerkleNodeProtocol]]:
         node = self.get_raw_node(index)
         this = [(index, node)]
         if isinstance(node, RawLeafMerkleNode):
@@ -495,8 +481,8 @@ class MerkleBlob:
 
         return this + left_nodes + right_nodes
 
-    def batch_insert(self, keys_values: List[Tuple[KVId, KVId]], hashes: List[bytes]) -> None:
-        indexes: List[TreeIndex] = []
+    def batch_insert(self, keys_values: list[tuple[KVId, KVId]], hashes: list[bytes]) -> None:
+        indexes: list[TreeIndex] = []
 
         if len(self.key_to_index) <= 1:
             for _ in range(2):
@@ -517,7 +503,7 @@ class MerkleBlob:
             self.key_to_index[key] = new_leaf_index
 
         while len(indexes) > 1:
-            new_indexes: List[TreeIndex] = []
+            new_indexes: list[TreeIndex] = []
             for i in range(0, len(indexes) - 1, 2):
                 index_1 = indexes[i]
                 index_2 = indexes[i + 1]
@@ -562,7 +548,7 @@ class RawMerkleNodeProtocol(Protocol):
     @property
     def hash(self) -> bytes: ...
 
-    def as_tuple(self) -> Tuple[object, ...]: ...
+    def as_tuple(self) -> tuple[object, ...]: ...
 
 
 @final
@@ -615,7 +601,7 @@ class RawInternalMerkleNode:
     # TODO: maybe bytes32?  maybe that's not 'raw'
     # TODO: how much slower to just not store the hashes at all?
 
-    def as_tuple(self) -> Tuple[bytes, TreeIndex, TreeIndex, TreeIndex]:
+    def as_tuple(self) -> tuple[bytes, TreeIndex, TreeIndex, TreeIndex]:
         return (self.hash, self.parent, self.left, self.right)
 
     def get_sibling_index(self, index: TreeIndex) -> TreeIndex:
@@ -652,7 +638,7 @@ class RawLeafMerkleNode:
     value: KVId
     # TODO: maybe bytes32?  maybe that's not 'raw'
 
-    def as_tuple(self) -> Tuple[bytes, TreeIndex, KVId, KVId]:
+    def as_tuple(self) -> tuple[bytes, TreeIndex, KVId, KVId]:
         return (self.hash, self.parent, self.key, self.value)
 
 
@@ -661,11 +647,11 @@ data_size = RawInternalMerkleNode.struct.size
 spacing = metadata_size + data_size
 
 
-raw_node_classes: List[Type[RawMerkleNodeProtocol]] = [
+raw_node_classes: list[type[RawMerkleNodeProtocol]] = [
     RawInternalMerkleNode,
     RawLeafMerkleNode,
 ]
-raw_node_type_to_class: Dict[NodeType, Type[RawMerkleNodeProtocol]] = {cls.type: cls for cls in raw_node_classes}
+raw_node_type_to_class: dict[NodeType, type[RawMerkleNodeProtocol]] = {cls.type: cls for cls in raw_node_classes}
 
 
 # MerkleNode = Union["InternalMerkleNode", "LeafMerkleNode"]

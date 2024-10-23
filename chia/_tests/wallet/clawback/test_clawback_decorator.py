@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import pytest
 
 from chia.server.server import ChiaServer
@@ -19,7 +17,7 @@ from chia.wallet.wallet_node import WalletNode
 )
 @pytest.mark.anyio
 async def test_missing_decorator(
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,
     self_hostname: str,
 ) -> None:
@@ -39,7 +37,7 @@ async def test_missing_decorator(
 )
 @pytest.mark.anyio
 async def test_unknown_decorator(
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,
     self_hostname: str,
 ) -> None:
@@ -59,7 +57,7 @@ async def test_unknown_decorator(
 )
 @pytest.mark.anyio
 async def test_decorator(
-    simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+    simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
     trusted: bool,
     self_hostname: str,
 ) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import sqlite3
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import typing_extensions
 import zstd
@@ -40,7 +40,7 @@ def decompress_blob(block_bytes: bytes) -> bytes:
 class BlockStore:
     block_cache: LRUCache[bytes32, FullBlock]
     db_wrapper: DBWrapper2
-    ses_challenge_cache: LRUCache[bytes32, List[SubEpochChallengeSegment]]
+    ses_challenge_cache: LRUCache[bytes32, list[SubEpochChallengeSegment]]
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2, *, use_cache: bool = True) -> BlockStore:
@@ -105,7 +105,7 @@ class BlockStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("UPDATE full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,))
 
-    async def set_in_chain(self, header_hashes: List[Tuple[bytes32]]) -> None:
+    async def set_in_chain(self, header_hashes: list[tuple[bytes32]]) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             async with await conn.executemany(
                 "UPDATE full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
@@ -162,7 +162,7 @@ class BlockStore:
             )
 
     async def persist_sub_epoch_challenge_segments(
-        self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
+        self, ses_block_hash: bytes32, segments: list[SubEpochChallengeSegment]
     ) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
@@ -173,8 +173,8 @@ class BlockStore:
     async def get_sub_epoch_challenge_segments(
         self,
         ses_block_hash: bytes32,
-    ) -> Optional[List[SubEpochChallengeSegment]]:
-        cached: Optional[List[SubEpochChallengeSegment]] = self.ses_challenge_cache.get(ses_block_hash)
+    ) -> Optional[list[SubEpochChallengeSegment]]:
+        cached: Optional[list[SubEpochChallengeSegment]] = self.ses_challenge_cache.get(ses_block_hash)
         if cached is not None:
             return cached
 
@@ -186,7 +186,7 @@ class BlockStore:
                 row = await cursor.fetchone()
 
         if row is not None:
-            challenge_segments: List[SubEpochChallengeSegment] = SubEpochSegments.from_bytes(row[0]).challenge_segments
+            challenge_segments: list[SubEpochChallengeSegment] = SubEpochSegments.from_bytes(row[0]).challenge_segments
             self.ses_challenge_cache.put(ses_block_hash, challenge_segments)
             return challenge_segments
         return None
@@ -225,14 +225,14 @@ class BlockStore:
 
         return None
 
-    async def get_full_blocks_at(self, heights: List[uint32]) -> List[FullBlock]:
+    async def get_full_blocks_at(self, heights: list[uint32]) -> list[FullBlock]:
         if len(heights) == 0:
             return []
 
         formatted_str = f'SELECT block from full_blocks WHERE height in ({"?," * (len(heights) - 1)}?)'
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, heights) as cursor:
-                ret: List[FullBlock] = []
+                ret: list[FullBlock] = []
                 for row in await cursor.fetchall():
                     ret.append(decompress(row[0]))
                 return ret
@@ -285,11 +285,11 @@ class BlockStore:
                 b = FullBlock.from_bytes(block_bytes)
                 return None if b.transactions_generator is None else bytes(b.transactions_generator)
 
-    async def get_generators_at(self, heights: Set[uint32]) -> Dict[uint32, bytes]:
+    async def get_generators_at(self, heights: set[uint32]) -> dict[uint32, bytes]:
         if len(heights) == 0:
             return {}
 
-        generators: Dict[uint32, bytes] = {}
+        generators: dict[uint32, bytes] = {}
         formatted_str = (
             f"SELECT block, height from full_blocks "
             f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights) - 1)}?)'
@@ -317,7 +317,7 @@ class BlockStore:
 
         return generators
 
-    async def get_block_records_by_hash(self, header_hashes: List[bytes32]) -> List[BlockRecord]:
+    async def get_block_records_by_hash(self, header_hashes: list[bytes32]) -> list[BlockRecord]:
         """
         Returns a list of Block Records, ordered by the same order in which header_hashes are passed in.
         Throws an exception if the blocks are not present
@@ -325,7 +325,7 @@ class BlockStore:
         if len(header_hashes) == 0:
             return []
 
-        all_blocks: Dict[bytes32, BlockRecord] = {}
+        all_blocks: dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT header_hash,block_record "
@@ -337,7 +337,7 @@ class BlockStore:
                     block_rec = BlockRecord.from_bytes(row[1])
                     all_blocks[block_rec.header_hash] = block_rec
 
-        ret: List[BlockRecord] = []
+        ret: list[BlockRecord] = []
         for hh in header_hashes:
             if hh not in all_blocks:
                 raise ValueError(f"Header hash {hh} not in the blockchain")
@@ -363,7 +363,7 @@ class BlockStore:
                     raise KeyError("missing block in chain")
                 return bytes32(row[0])
 
-    async def get_block_bytes_by_hash(self, header_hashes: List[bytes32]) -> List[bytes]:
+    async def get_block_bytes_by_hash(self, header_hashes: list[bytes32]) -> list[bytes]:
         """
         Returns a list of Full Blocks block blobs, ordered by the same order in which header_hashes are passed in.
         Throws an exception if the blocks are not present
@@ -376,14 +376,14 @@ class BlockStore:
         formatted_str = (
             f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
         )
-        all_blocks: Dict[bytes32, bytes] = {}
+        all_blocks: dict[bytes32, bytes] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(row[0])
                     all_blocks[header_hash] = decompress_blob(row[1])
 
-        ret: List[bytes] = []
+        ret: list[bytes] = []
         for hh in header_hashes:
             block = all_blocks.get(hh)
             if block is not None:
@@ -392,7 +392,7 @@ class BlockStore:
                 raise ValueError(f"Header hash {hh} not in the blockchain")
         return ret
 
-    async def get_blocks_by_hash(self, header_hashes: List[bytes32]) -> List[FullBlock]:
+    async def get_blocks_by_hash(self, header_hashes: list[bytes32]) -> list[FullBlock]:
         """
         Returns a list of Full Blocks blocks, ordered by the same order in which header_hashes are passed in.
         Throws an exception if the blocks are not present
@@ -404,7 +404,7 @@ class BlockStore:
         formatted_str = (
             f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
         )
-        all_blocks: Dict[bytes32, FullBlock] = {}
+        all_blocks: dict[bytes32, FullBlock] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes) as cursor:
                 for row in await cursor.fetchall():
@@ -412,7 +412,7 @@ class BlockStore:
                     full_block: FullBlock = decompress(row[1])
                     all_blocks[header_hash] = full_block
                     self.block_cache.put(header_hash, full_block)
-        ret: List[FullBlock] = []
+        ret: list[FullBlock] = []
         for hh in header_hashes:
             if hh not in all_blocks:
                 raise ValueError(f"Header hash {hh} not in the blockchain")
@@ -436,13 +436,13 @@ class BlockStore:
         self,
         start: int,
         stop: int,
-    ) -> Dict[bytes32, BlockRecord]:
+    ) -> dict[bytes32, BlockRecord]:
         """
         Returns a dictionary with all blocks in range between start and stop
         if present.
         """
 
-        ret: Dict[bytes32, BlockRecord] = {}
+        ret: dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT header_hash,block_record " "FROM full_blocks " "WHERE height >= ? AND height <= ?",
@@ -459,7 +459,7 @@ class BlockStore:
         self,
         start: int,
         stop: int,
-    ) -> List[bytes]:
+    ) -> list[bytes]:
         """
         Returns a list with all full blocks in range between start and stop
         if present.
@@ -471,12 +471,12 @@ class BlockStore:
                 "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? and in_main_chain=1",
                 (start, stop),
             ) as cursor:
-                rows: List[sqlite3.Row] = list(await cursor.fetchall())
+                rows: list[sqlite3.Row] = list(await cursor.fetchall())
                 if len(rows) != (stop - start) + 1:
                     raise ValueError(f"Some blocks in range {start}-{stop} were not found.")
                 return [decompress_blob(row[0]) for row in rows]
 
-    async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
+    async def get_peak(self) -> Optional[tuple[bytes32, uint32]]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
                 peak_row = await cursor.fetchone()
@@ -491,7 +491,7 @@ class BlockStore:
 
     async def get_block_records_close_to_peak(
         self, blocks_n: int
-    ) -> Tuple[Dict[bytes32, BlockRecord], Optional[bytes32]]:
+    ) -> tuple[dict[bytes32, BlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all blocks that have height >= peak height - blocks_n, as well as the
         peak header hash.
@@ -501,7 +501,7 @@ class BlockStore:
         if peak is None:
             return {}, None
 
-        ret: Dict[bytes32, BlockRecord] = {}
+        ret: dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT header_hash, block_record " "FROM full_blocks " "WHERE height >= ?",
@@ -531,7 +531,7 @@ class BlockStore:
             return None
         return bool(row[0])
 
-    async def get_random_not_compactified(self, number: int) -> List[int]:
+    async def get_random_not_compactified(self, number: int) -> list[int]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 f"SELECT height FROM full_blocks WHERE in_main_chain=1 AND is_fully_compactified=0 "

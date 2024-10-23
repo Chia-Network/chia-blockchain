@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, List
-
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -19,7 +17,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         assert isinstance(self.service.server.api, FullNodeSimulator)
         return self.service.server.api
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def get_routes(self) -> dict[str, Endpoint]:
         routes = super().get_routes()
         routes["/get_all_blocks"] = self.get_all_blocks
         routes["/farm_block"] = self.farm_block
@@ -32,11 +30,11 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         routes["/reorg_blocks"] = self.reorg_blocks
         return routes
 
-    async def get_all_blocks(self, _request: Dict[str, object]) -> EndpointResult:
-        all_blocks: List[FullBlock] = await self.simulator_api.get_all_full_blocks()
+    async def get_all_blocks(self, _request: dict[str, object]) -> EndpointResult:
+        all_blocks: list[FullBlock] = await self.simulator_api.get_all_full_blocks()
         return {"blocks": [block.to_json_dict() for block in all_blocks]}
 
-    async def farm_block(self, _request: Dict[str, object]) -> EndpointResult:
+    async def farm_block(self, _request: dict[str, object]) -> EndpointResult:
         request_address = str(_request["address"])
         guarantee_tx_block = bool(_request.get("guarantee_tx_block", False))
         blocks = int(str(_request.get("blocks", 1)))  # mypy made me do this
@@ -51,29 +49,29 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
                 await self.simulator_api.farm_new_block(req)
         return {"new_peak_height": (cur_height if cur_height is not None else 0) + blocks}
 
-    async def set_auto_farming(self, _request: Dict[str, object]) -> EndpointResult:
+    async def set_auto_farming(self, _request: dict[str, object]) -> EndpointResult:
         auto_farm = bool(_request["auto_farm"])
         result = await self.simulator_api.update_autofarm_config(auto_farm)
         return {"auto_farm_enabled": result}
 
-    async def get_auto_farming(self, _request: Dict[str, object]) -> EndpointResult:
+    async def get_auto_farming(self, _request: dict[str, object]) -> EndpointResult:
         return {"auto_farm_enabled": self.simulator_api.auto_farm}
 
-    async def get_farming_ph(self, _request: Dict[str, object]) -> EndpointResult:
+    async def get_farming_ph(self, _request: dict[str, object]) -> EndpointResult:
         return {"puzzle_hash": self.simulator_api.bt.farmer_ph.hex()}
 
-    async def get_all_coins(self, _request: Dict[str, object]) -> EndpointResult:
+    async def get_all_coins(self, _request: dict[str, object]) -> EndpointResult:
         p_request = GetAllCoinsProtocol(bool(_request.get("include_spent_coins", False)))
-        result: List[CoinRecord] = await self.simulator_api.get_all_coins(p_request)
+        result: list[CoinRecord] = await self.simulator_api.get_all_coins(p_request)
         return {"coin_records": [coin_record.to_json_dict() for coin_record in result]}
 
-    async def get_all_puzzle_hashes(self, _request: Dict[str, object]) -> EndpointResult:
+    async def get_all_puzzle_hashes(self, _request: dict[str, object]) -> EndpointResult:
         result = await self.simulator_api.get_all_puzzle_hashes()
         return {
             "puzzle_hashes": {puzzle_hash.hex(): (amount, num_tx) for (puzzle_hash, (amount, num_tx)) in result.items()}
         }
 
-    async def revert_blocks(self, _request: Dict[str, object]) -> EndpointResult:
+    async def revert_blocks(self, _request: dict[str, object]) -> EndpointResult:
         blocks = int(str(_request.get("num_of_blocks", 1)))  # number of blocks to revert
         all_blocks = bool(_request.get("delete_all_blocks", False))  # revert all blocks
         height = self.service.blockchain.get_peak_height()
@@ -84,7 +82,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         await self.simulator_api.revert_block_height(uint32(new_height))
         return {"new_peak_height": new_height}
 
-    async def reorg_blocks(self, _request: Dict[str, object]) -> EndpointResult:
+    async def reorg_blocks(self, _request: dict[str, object]) -> EndpointResult:
         fork_blocks = int(str(_request.get("num_of_blocks_to_rev", 1)))  # number of blocks to go back
         new_blocks = int(str(_request.get("num_of_new_blocks", 1)))  # how many extra blocks should we add
         all_blocks = bool(_request.get("revert_all_blocks", False))  # fork all blocks

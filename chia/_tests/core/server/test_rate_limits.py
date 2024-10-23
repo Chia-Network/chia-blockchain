@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List
 
 import pytest
 
@@ -19,7 +18,7 @@ from chia.types.peer_info import PeerInfo
 rl_v2 = [Capability.BASE, Capability.BLOCK_HEADERS, Capability.RATE_LIMITS_V2]
 rl_v1 = [Capability.BASE]
 node_with_params_b = node_with_params
-test_different_versions_results: List[int] = []
+test_different_versions_results: list[int] = []
 
 
 class TestRateLimits:
