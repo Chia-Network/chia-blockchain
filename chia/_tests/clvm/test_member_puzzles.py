@@ -14,6 +14,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.wallet.conditions import CreateCoinAnnouncement
 from chia.wallet.puzzles.custody.custody_architecture import (
+    DelegatedPuzzleAndSolution,
     MemberOrDPuz,
     MofN,
     ProvenSpend,
@@ -71,7 +72,7 @@ async def test_bls_member(cost_logger: CostLogger) -> None:
                         [],
                         [],
                         Program.to(0),
-                        (
+                        DelegatedPuzzleAndSolution(
                             delegated_puzzle,
                             Program.to(
                                 [
@@ -174,7 +175,7 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
                             [],
                             [],
                             m_of_n.puzzle.solve(proven_spends),  # pylint: disable=no-member
-                            (
+                            DelegatedPuzzleAndSolution(
                                 delegated_puzzle,
                                 Program.to(
                                     [
