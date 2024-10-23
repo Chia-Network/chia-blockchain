@@ -17,6 +17,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     MemberOrDPuz,
     MofN,
     ProvenSpend,
+    PuzzleHint,
     PuzzleWithRestrictions,
     Restriction,
 )
@@ -32,6 +33,22 @@ async def test_bls_member(cost_logger: CostLogger) -> None:
         sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
 
         bls_puzzle = PuzzleWithRestrictions(0, [], BLSMember(sk.public_key()))
+        memo = PuzzleHint(
+            bls_puzzle.puzzle.puzzle_hash(0),
+            bls_puzzle.puzzle.memo(0),
+        )
+        memo = Program.to(
+            (
+                bls_puzzle.spec_namespace,
+                [
+                    bls_puzzle.nonce,
+                    [],
+                    0,
+                    memo.to_program(),
+                ],
+            )
+        )
+        assert bls_puzzle.memo() == memo
 
         # Farm and find coin
         await sim.farm_block(bls_puzzle.puzzle_hash())
