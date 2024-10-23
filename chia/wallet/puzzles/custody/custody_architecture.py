@@ -407,7 +407,7 @@ class PuzzleWithRestrictions:
 
     def solve(
         self,
-        member_validator_solutions: List[Program],
+        member_validator_solutions: List[Program],  # solution for the restriction puzzle
         dpuz_validator_solutions: List[Program],
         member_solution: Program,
         delegated_puzzle_and_solution: Optional[DelegatedPuzzleAndSolution] = None,
