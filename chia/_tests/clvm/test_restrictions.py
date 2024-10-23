@@ -68,3 +68,6 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
         )
         result = await client.push_tx(wrapped_spend)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        # memo format assertion for coverage sake
+        assert restriction.memo(0) == Program.to([None])
