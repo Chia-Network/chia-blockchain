@@ -1,11 +1,11 @@
 (mod
   (
-    DPUZ_VALIDATORS  ; programs that validate the delegated puzzle allowed IN
     MEMBER_VALIDATORS  ; programs that look at the conditions allowed OUT
+    DPUZ_VALIDATORS  ; programs that validate the delegated puzzle allowed IN
     INNER_PUZZLE  ; the program that generates the conditions
     delegated_puzzle_hash
-    dpuz_val_solutions
     member_val_solutions
+    dpuz_val_solutions
     inner_solution
   )
 
