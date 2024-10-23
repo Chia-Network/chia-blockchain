@@ -42,8 +42,13 @@ class PreValidationResult(Streamable):
     error: Optional[uint16]
     required_iters: Optional[uint64]  # Iff error is None
     conds: Optional[SpendBundleConditions]  # Iff error is None and block is a transaction block
-    validated_signature: bool
     timing: uint32  # the time (in milliseconds) it took to pre-validate the block
+
+    @property
+    def validated_signature(self) -> bool:
+        if self.conds is None:
+            return False
+        return self.conds.validated_signature
 
 
 # this layer of abstraction is here to let wallet tests monkeypatch it
@@ -102,7 +107,7 @@ def pre_validate_block(
             if block.transactions_info.cost > constants.MAX_BLOCK_COST_CLVM:
                 validation_time = time.monotonic() - validation_start
                 return PreValidationResult(
-                    uint16(Err.BLOCK_COST_EXCEEDS_MAX.value), None, None, False, uint32(validation_time * 1000)
+                    uint16(Err.BLOCK_COST_EXCEEDS_MAX.value), None, None, uint32(validation_time * 1000)
                 )
 
             err, conds = _run_block(block, prev_generators, constants)
@@ -110,7 +115,7 @@ def pre_validate_block(
             assert (err is None) != (conds is None)
             if err is not None:
                 validation_time = time.monotonic() - validation_start
-                return PreValidationResult(uint16(err), None, None, False, uint32(validation_time * 1000))
+                return PreValidationResult(uint16(err), None, None, uint32(validation_time * 1000))
             assert conds is not None
             assert conds.validated_signature is True
             removals, tx_additions = tx_removals_and_additions(conds)
@@ -133,14 +138,13 @@ def pre_validate_block(
             error_int,
             required_iters,
             conds,
-            False if conds is None else conds.validated_signature,
             uint32(validation_time * 1000),
         )
     except Exception:
         error_stack = traceback.format_exc()
         log.error(f"Exception: {error_stack}")
         validation_time = time.monotonic() - validation_start
-        return PreValidationResult(uint16(Err.UNKNOWN.value), None, None, False, uint32(validation_time * 1000))
+        return PreValidationResult(uint16(Err.UNKNOWN.value), None, None, uint32(validation_time * 1000))
 
 
 async def pre_validate_blocks_multiprocessing(
@@ -178,7 +182,7 @@ async def pre_validate_blocks_multiprocessing(
     prev_b: Optional[BlockRecord] = None
 
     async def return_error(error_code: Err) -> PreValidationResult:
-        return PreValidationResult(uint16(error_code.value), None, None, False, uint32(0))
+        return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
 
     if blocks[0].height > 0:
         curr = blockchain.try_block_record(blocks[0].prev_header_hash)

@@ -2332,9 +2332,6 @@ class FullNode:
                 raise ConsensusError(Err(validate_result.error))
             validation_time = time.monotonic() - validation_start
 
-        # respond_block will later use the cache (validated_signature=True)
-        validate_result = dataclasses.replace(validate_result, validated_signature=True)
-
         assert validate_result.required_iters is not None
 
         # Perform another check, in case we have already concurrently added the same unfinished block
