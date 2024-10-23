@@ -210,16 +210,16 @@ def generate_kvid(seed: int) -> Tuple[KVId, KVId]:
     kv_ids: List[KVId] = []
 
     for offset in range(2):
-        seed_bytes = (2 * seed + offset).to_bytes(8, byteorder="big")
+        seed_bytes = (2 * seed + offset).to_bytes(8, byteorder="big", signed=True)
         hash_obj = hashlib.sha256(seed_bytes)
-        hash_int = int.from_bytes(hash_obj.digest()[:8], byteorder="big")
+        hash_int = int.from_bytes(hash_obj.digest()[:8], byteorder="big", signed=True)
         kv_ids.append(KVId(hash_int))
 
     return kv_ids[0], kv_ids[1]
 
 
 def generate_hash(seed: int) -> bytes:
-    seed_bytes = seed.to_bytes(8, byteorder="big")
+    seed_bytes = seed.to_bytes(8, byteorder="big", signed=True)
     hash_obj = hashlib.sha256(seed_bytes)
     return hash_obj.digest()
 
