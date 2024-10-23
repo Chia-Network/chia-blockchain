@@ -11,6 +11,7 @@ from chia.data_layer.data_layer_util import PluginRemote
 from chia.data_layer.util.plugin import load_plugin_configurations
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.class_for_type import class_for_type
 from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
@@ -79,6 +80,7 @@ def create_data_layer_service(
         max_request_body_size=service_config.get("rpc_server_max_request_body_size", 26214400),
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
+        class_for_type=class_for_type,
     )
 
 

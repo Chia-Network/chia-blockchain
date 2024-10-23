@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from chia.full_node.full_node import FullNode
+from chia.server.class_for_type import class_for_type
 from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import Service, async_run
@@ -63,6 +64,7 @@ async def create_full_node_simulator_service(
         rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),
         connect_to_daemon=connect_to_daemon,
         override_capabilities=override_capabilities,
+        class_for_type=class_for_type,
     )
 
 

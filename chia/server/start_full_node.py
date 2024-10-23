@@ -12,6 +12,7 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_o
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
+from chia.server.class_for_type import class_for_type
 from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import RpcInfo, Service, async_run
@@ -67,6 +68,7 @@ async def create_full_node_service(
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
         override_capabilities=override_capabilities,
+        class_for_type=class_for_type,
     )
 
 

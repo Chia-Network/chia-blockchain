@@ -131,6 +131,7 @@ class ChiaServer:
     ssl_client_context: ssl.SSLContext
     node_id: bytes32
     exempt_peer_networks: list[Union[IPv4Network, IPv6Network]]
+    class_for_type: dict[NodeType, Any]
     all_connections: dict[bytes32, WSChiaConnection] = field(default_factory=dict)
     on_connect: Optional[ConnectionCallback] = None
     shut_down_event: asyncio.Event = field(default_factory=asyncio.Event)
@@ -158,6 +159,7 @@ class ChiaServer:
         config: dict[str, Any],
         private_ca_crt_key: tuple[Path, Path],
         chia_ca_crt_key: tuple[Path, Path],
+        class_for_type: dict[NodeType, Any],
         name: str = __name__,
     ) -> ChiaServer:
         log = logging.getLogger(name)
@@ -233,6 +235,7 @@ class ChiaServer:
             node_id=calculate_node_id(node_id_cert_path),
             exempt_peer_networks=[ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])],
             introducer_peers=IntroducerPeers() if local_type is NodeType.INTRODUCER else None,
+            class_for_type=class_for_type,
         )
 
     def set_received_message_callback(self, callback: ConnectionCallback) -> None:
@@ -333,6 +336,7 @@ class ChiaServer:
                 inbound_rate_limit_percent=self._inbound_rate_limit_percent,
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
+                class_for_type=self.class_for_type,
             )
             await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
@@ -483,6 +487,7 @@ class ChiaServer:
                 inbound_rate_limit_percent=self._inbound_rate_limit_percent,
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
+                class_for_type=self.class_for_type,
                 session=session,
             )
             await connection.perform_handshake(self._network_id, server_port, self._local_type)
