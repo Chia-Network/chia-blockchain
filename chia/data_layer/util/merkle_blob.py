@@ -360,7 +360,7 @@ class MerkleBlob:
             self.last_allocated_index = TreeIndex(1)
             return
 
-        seed = std_hash(key.to_bytes(8, byteorder="big"))
+        seed = std_hash(key.to_bytes(8, byteorder="big", signed=True))
         if reference_kid is None:
             old_leaf: RawMerkleNodeProtocol = self.get_random_leaf_node(bytes(seed))
         else:
@@ -643,7 +643,7 @@ class RawLeafMerkleNode:
     type: ClassVar[NodeType] = NodeType.leaf
     # TODO: make a check for this?
     # must match attribute type and order such that cls(*struct.unpack(cls.format, blob) works
-    struct: ClassVar[struct.Struct] = struct.Struct(">32sIQQ")
+    struct: ClassVar[struct.Struct] = struct.Struct(">32sIqq")
 
     hash: bytes
     parent: TreeIndex
