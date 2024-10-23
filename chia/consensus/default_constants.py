@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
@@ -84,7 +84,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
 )
 
 
-def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None:
+def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
     if network_id == "testnet11":
         if "SOFT_FORK5_HEIGHT" not in overrides:
             overrides["SOFT_FORK5_HEIGHT"] = 1340000

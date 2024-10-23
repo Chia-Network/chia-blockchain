@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import dataclass, replace
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 import importlib_resources
 import pytest
@@ -318,7 +318,7 @@ def test_key_data_without_secrets(key_info: KeyInfo) -> None:
         ((_24keyinfo.mnemonic.split(), _24keyinfo.entropy, KeyDataSecrets.generate().private_key), "private_key"),
     ],
 )
-def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateKey], data_type: str) -> None:
+def test_key_data_secrets_post_init(input_data: tuple[list[str], bytes, PrivateKey], data_type: str) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyDataSecrets(*input_data)
 
@@ -339,7 +339,7 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
     ],
 )
 def test_key_data_post_init(
-    input_data: Tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
+    input_data: tuple[uint32, G1Element, Optional[str], Optional[KeyDataSecrets]], data_type: str
 ) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)

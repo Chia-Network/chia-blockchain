@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -17,7 +17,7 @@ TRANSFER_PROGRAM_MOD = load_clvm_maybe_recompile(
 )
 
 
-def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, List[Program]]:
+def match_transfer_program_puzzle(puzzle: UncurriedPuzzle) -> tuple[bool, list[Program]]:
     if puzzle.mod == TRANSFER_PROGRAM_MOD:
         return True, list(puzzle.args.as_iter())
     return False, []

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import sys
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Optional, cast
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
@@ -31,9 +31,9 @@ log = logging.getLogger(__name__)
 # TODO: Review need for config and if retained then hint it properly.
 def create_data_layer_service(
     root_path: pathlib.Path,
-    config: Dict[str, Any],
-    downloaders: List[PluginRemote],
-    uploaders: List[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
+    config: dict[str, Any],
+    downloaders: list[PluginRemote],
+    uploaders: list[PluginRemote],  # dont add FilesystemUploader to this, it is the default uploader
     wallet_service: Optional[WalletService] = None,
     connect_to_daemon: bool = True,
 ) -> DataLayerService:
@@ -106,7 +106,7 @@ async def async_main() -> int:
     old_uploaders = config["data_layer"].get("uploaders", [])
     new_uploaders = plugins_config.get("uploaders", [])
     conf_file_uploaders = await load_plugin_configurations(service_dir, "uploaders", log)
-    uploaders: List[PluginRemote] = [
+    uploaders: list[PluginRemote] = [
         *(PluginRemote(url=url) for url in old_uploaders),
         *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_uploaders),
         *conf_file_uploaders,
@@ -115,7 +115,7 @@ async def async_main() -> int:
     old_downloaders = config["data_layer"].get("downloaders", [])
     new_downloaders = plugins_config.get("downloaders", [])
     conf_file_uploaders = await load_plugin_configurations(service_dir, "downloaders", log)
-    downloaders: List[PluginRemote] = [
+    downloaders: list[PluginRemote] = [
         *(PluginRemote(url=url) for url in old_downloaders),
         *(PluginRemote.unmarshal(marshalled=marshalled) for marshalled in new_downloaders),
         *conf_file_uploaders,

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import chia_rs
 
@@ -32,19 +31,19 @@ SubSlotData = chia_rs.SubSlotData
 @dataclass(frozen=True)
 # this is used only for serialization to database
 class RecentChainData(Streamable):
-    recent_chain_data: List[HeaderBlock]
+    recent_chain_data: list[HeaderBlock]
 
 
 @streamable
 @dataclass(frozen=True)
 class ProofBlockHeader(Streamable):
-    finished_sub_slots: List[EndOfSubSlotBundle]
+    finished_sub_slots: list[EndOfSubSlotBundle]
     reward_chain_block: RewardChainBlock
 
 
 @streamable
 @dataclass(frozen=True)
 class WeightProof(Streamable):
-    sub_epochs: List[SubEpochData]
-    sub_epoch_segments: List[SubEpochChallengeSegment]  # sampled sub epoch
-    recent_chain_data: List[HeaderBlock]
+    sub_epochs: list[SubEpochData]
+    sub_epoch_segments: list[SubEpochChallengeSegment]  # sampled sub epoch
+    recent_chain_data: list[HeaderBlock]

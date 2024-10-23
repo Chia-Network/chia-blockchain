@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, cast
+from typing import Any, cast
 
 from chia.rpc.rpc_client import RpcClient
 
@@ -14,7 +14,7 @@ class HarvesterRpcClient(RpcClient):
     to the full node.
     """
 
-    async def get_plots(self) -> Dict[str, Any]:
+    async def get_plots(self) -> dict[str, Any]:
         return await self.fetch("get_plots", {})
 
     async def refresh_plots(self) -> None:
@@ -32,10 +32,10 @@ class HarvesterRpcClient(RpcClient):
         result = cast(bool, response["success"])
         return result
 
-    async def get_plot_directories(self) -> List[str]:
+    async def get_plot_directories(self) -> list[str]:
         response = await self.fetch("get_plot_directories", {})
         # TODO: casting due to lack of type checked deserialization
-        result = cast(List[str], response["directories"])
+        result = cast(list[str], response["directories"])
         return result
 
     async def remove_plot_directory(self, dirname: str) -> bool:
@@ -44,10 +44,10 @@ class HarvesterRpcClient(RpcClient):
         result = cast(bool, response["success"])
         return result
 
-    async def get_harvester_config(self) -> Dict[str, Any]:
+    async def get_harvester_config(self) -> dict[str, Any]:
         return await self.fetch("get_harvester_config", {})
 
-    async def update_harvester_config(self, config: Dict[str, Any]) -> bool:
+    async def update_harvester_config(self, config: dict[str, Any]) -> bool:
         response = await self.fetch("update_harvester_config", config)
         # TODO: casting due to lack of type checked deserialization
         result = cast(bool, response["success"])

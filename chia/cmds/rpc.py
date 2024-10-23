@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from typing import Any, Dict, List, Optional, TextIO
+from typing import Any, Optional, TextIO
 
 import click
 from aiohttp import ClientResponseError
@@ -12,12 +12,12 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 
-services: List[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
+services: list[str] = ["crawler", "daemon", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
 
 
 async def call_endpoint(
-    service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any], quiet: bool = False
-) -> Dict[str, Any]:
+    service: str, endpoint: str, request: dict[str, Any], config: dict[str, Any], quiet: bool = False
+) -> dict[str, Any]:
     if service == "daemon":
         return await call_daemon_command(endpoint, request, config, quiet)
 
@@ -25,8 +25,8 @@ async def call_endpoint(
 
 
 async def call_rpc_service_endpoint(
-    service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]
-) -> Dict[str, Any]:
+    service: str, endpoint: str, request: dict[str, Any], config: dict[str, Any]
+) -> dict[str, Any]:
     from chia.rpc.rpc_client import RpcClient
 
     port: uint16
@@ -40,7 +40,7 @@ async def call_rpc_service_endpoint(
         client = await RpcClient.create(config["self_hostname"], port, DEFAULT_ROOT_PATH, config)
     except Exception as e:
         raise Exception(f"Failed to create RPC client {service}: {e}")
-    result: Dict[str, Any]
+    result: dict[str, Any]
     try:
         result = await client.fetch(endpoint, request)
     except ClientResponseError as e:
@@ -56,8 +56,8 @@ async def call_rpc_service_endpoint(
 
 
 async def call_daemon_command(
-    command: str, request: Dict[str, Any], config: Dict[str, Any], quiet: bool = False
-) -> Dict[str, Any]:
+    command: str, request: dict[str, Any], config: dict[str, Any], quiet: bool = False
+) -> dict[str, Any]:
     from chia.daemon.client import connect_to_daemon_and_validate
 
     daemon = await connect_to_daemon_and_validate(DEFAULT_ROOT_PATH, config, quiet=quiet)
@@ -65,7 +65,7 @@ async def call_daemon_command(
     if daemon is None:
         raise Exception("Failed to connect to chia daemon")
 
-    result: Dict[str, Any]
+    result: dict[str, Any]
     try:
         ws_request = daemon.format_request(command, request)
         ws_response = await daemon._get(ws_request)
@@ -77,11 +77,11 @@ async def call_daemon_command(
     return result
 
 
-def print_result(json_dict: Dict[str, Any]) -> None:
+def print_result(json_dict: dict[str, Any]) -> None:
     print(json.dumps(json_dict, indent=2, sort_keys=True))
 
 
-def get_routes(service: str, config: Dict[str, Any], quiet: bool = False) -> Dict[str, Any]:
+def get_routes(service: str, config: dict[str, Any], quiet: bool = False) -> dict[str, Any]:
     return asyncio.run(call_endpoint(service, "get_routes", {}, config, quiet))
 
 
@@ -165,7 +165,7 @@ def create_commands() -> None:
                     "Can only use one request source: REQUEST argument OR -j/--json-file option. See the help with -h"
                 )
 
-            request_json: Dict[str, Any] = {}
+            request_json: dict[str, Any] = {}
             if json_file is not None:
                 try:
                     request_json = json.load(json_file)

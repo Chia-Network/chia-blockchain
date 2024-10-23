@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import textwrap
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 import click
 import pytest
@@ -213,7 +213,7 @@ def test_print_dependency_graph(chia_package_structure: Path) -> None:
 
 
 # Mock the build_dependency_graph function to control its output
-def mock_build_dependency_graph(dir_params: DirectoryParameters) -> Dict[Path, List[Path]]:
+def mock_build_dependency_graph(dir_params: DirectoryParameters) -> dict[Path, list[Path]]:
     return {
         Path("/path/to/package1/module1.py"): [
             Path("/path/to/package2/module2.py"),
@@ -284,7 +284,7 @@ def prepare_mocks2(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_cycle_detection(prepare_mocks2: None) -> None:
     # Example graph with a simple cycle
-    graph: Dict[Path, List[Path]] = {
+    graph: dict[Path, list[Path]] = {
         Path("/path/to/package1/module1.py"): [Path("/path/to/package2/module2.py")],
         Path("/path/to/package2/module2.py"): [Path("/path/to/package3/module3.py")],  # Cycle here
         Path("/path/to/package3/module3.py"): [],
@@ -414,7 +414,7 @@ def test_excluded_paths_handling(prepare_mocks2: None) -> None:
 
 
 def test_ignore_cycles_in_specific_packages(prepare_mocks2: None) -> None:
-    graph: Dict[Path, List[Path]] = {
+    graph: dict[Path, list[Path]] = {
         Path("/path/to/package1/module1.py"): [Path("/path/to/package2/module2.py")],
         Path("/path/to/package2/module2.py"): [Path("/path/to/package3/module3.py")],
         Path("/path/to/package3/module3.py"): [],
@@ -489,8 +489,8 @@ def sample_function(config: Config) -> None:
 
 # Helper function to create a temporary YAML configuration file
 @pytest.fixture
-def create_yaml_config(tmp_path: Path) -> Callable[[Dict[str, Any]], Path]:
-    def _create_yaml_config(content: Dict[str, Any]) -> Path:
+def create_yaml_config(tmp_path: Path) -> Callable[[dict[str, Any]], Path]:
+    def _create_yaml_config(content: dict[str, Any]) -> Path:
         path = tmp_path / "config.yaml"
         with open(path, "w") as f:
             yaml.dump(content, f)
@@ -499,7 +499,7 @@ def create_yaml_config(tmp_path: Path) -> Callable[[Dict[str, Any]], Path]:
     return _create_yaml_config
 
 
-def test_config_with_yaml(create_yaml_config: Callable[[Dict[str, Any]], Path]) -> None:
+def test_config_with_yaml(create_yaml_config: Callable[[dict[str, Any]], Path]) -> None:
     # Create a temporary YAML configuration file
     yaml_config = {
         "exclude_paths": ["path/to/exclude"],
