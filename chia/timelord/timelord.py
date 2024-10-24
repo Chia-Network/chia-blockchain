@@ -21,7 +21,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.rpc.rpc_server import ServiceManagementMessage, StateChangedProtocol, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -148,7 +148,10 @@ class Timelord:
         self.bluebox_pool: Optional[ThreadPoolExecutor] = None
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(
+        self,
+        management_message: Optional[ServiceManagementMessage] = None,
+    ) -> AsyncIterator[None]:
         self.lock: asyncio.Lock = asyncio.Lock()
         self.vdf_server = await asyncio.start_server(
             self._handle_client,

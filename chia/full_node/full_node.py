@@ -54,7 +54,7 @@ from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, Respo
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate, RemovedMempoolItem
-from chia.rpc.rpc_server import StateChangedProtocol
+from chia.rpc.rpc_server import ServiceManagementMessage, StateChangedProtocol
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
@@ -195,7 +195,10 @@ class FullNode:
         )
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(
+        self,
+        management_message: Optional[ServiceManagementMessage] = None,
+    ) -> AsyncIterator[None]:
         self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 

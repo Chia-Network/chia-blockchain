@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Awaitable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union, cast
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
@@ -29,7 +30,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.rpc.data_layer_rpc_util import marshal
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, ServiceManagementMessage
 from chia.rpc.util import marshal as streamable_marshal
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -89,8 +90,11 @@ def get_fee(config: dict[str, Any], request: dict[str, Any]) -> uint64:
 
 
 class DataLayerRpcApi:
-    # TODO: other RPC APIs do not accept a wallet and the service start does not expect to provide one
-    def __init__(self, data_layer: DataLayer):  # , wallet: DataLayerWallet):
+    def __init__(
+        self,
+        data_layer: DataLayer,
+        management_request: Optional[Callable[[ServiceManagementMessage], Awaitable[None]]] = None,
+    ) -> None:
         self.service: DataLayer = data_layer
         self.service_name = "chia_data_layer"
 

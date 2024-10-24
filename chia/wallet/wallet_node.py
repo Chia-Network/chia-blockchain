@@ -35,7 +35,12 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     SendTransaction,
 )
-from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.rpc.rpc_server import (
+    ServiceManagementAction,
+    ServiceManagementMessage,
+    StateChangedProtocol,
+    default_get_connections,
+)
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ChiaServer
@@ -104,6 +109,20 @@ class Balance(Streamable):
     pending_coin_removal_count: uint32 = uint32(0)
 
 
+@dataclasses.dataclass(frozen=True)
+class WalletServiceManagementMessage:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import ServiceManagementMessage
+
+        _protocol_check: ClassVar[ServiceManagementMessage] = cast("WalletServiceManagementMessage", None)
+
+    action: ServiceManagementAction
+    done_event: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
+    fingerprint: Optional[int] = None
+
+    __match_args__: ClassVar[tuple[str, ...]] = ()
+
+
 @dataclasses.dataclass
 class WalletNode:
     if TYPE_CHECKING:
@@ -148,13 +167,49 @@ class WalletNode:
     _tx_messages_in_progress: dict[bytes32, list[bytes32]] = dataclasses.field(default_factory=dict)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
-        await self._start()
+    async def manage(
+        self,
+        management_message: Optional[ServiceManagementMessage] = None,
+    ) -> AsyncIterator[None]:
+        if isinstance(management_message, WalletServiceManagementMessage):
+            await self._start_with_fingerprint(fingerprint=management_message.fingerprint)
+        else:
+            await self._start_with_fingerprint()
+
         try:
             yield
         finally:
-            self._close()
-            await self._await_closed()
+            self.log.info("self._close")
+            self.log_out()
+            self._shut_down = True
+            if self._weight_proof_handler is not None:
+                self._weight_proof_handler.cancel_weight_proof_tasks()
+            if self._process_new_subscriptions_task is not None:
+                self._process_new_subscriptions_task.cancel()
+            if self._retry_failed_states_task is not None:
+                self._retry_failed_states_task.cancel()
+            if self._secondary_peer_sync_task is not None:
+                self._secondary_peer_sync_task.cancel()
+            if self._retry_failed_states_task is not None:
+                self._retry_failed_states_task.cancel()
+
+            self.log.info("self._await_closed")
+            if self._server is not None:
+                await self.server.close_all_connections()
+            if self.wallet_peers is not None:
+                await self.wallet_peers.ensure_is_closed()
+            if self._wallet_state_manager is not None:
+                await self.wallet_state_manager._await_closed()
+                self._wallet_state_manager = None
+            # TODO: how big a deal is this optimization?
+            # if shutting_down and self._keychain_proxy is not None:
+            if self._keychain_proxy is not None:
+                proxy = self._keychain_proxy
+                self._keychain_proxy = None
+                await proxy.close()
+                await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
+            self.wallet_peers = None
+            self._balance_cache = {}
 
     @property
     def keychain_proxy(self) -> KeychainProxy:
@@ -385,13 +440,16 @@ class WalletNode:
                 self.set_resync_on_startup(fingerprint, False)
             return commit
 
-    async def _start(self) -> None:
-        await self._start_with_fingerprint()
-
     async def _start_with_fingerprint(
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:
+        try:
+            await self.keychain_proxy.check_keys(self.root_path)
+        except Exception as e:
+            # TODO: error message not accurate after moving this here
+            self.log.error(f"Failed to check_keys after adding a new key: {e}")
+
         # Makes sure the coin_state_updates get higher priority than new_peak messages.
         # Delayed instantiation until here to avoid errors.
         #   got Future <Future pending> attached to a different loop
@@ -477,36 +535,6 @@ class WalletNode:
 
         return True
 
-    def _close(self) -> None:
-        self.log.info("self._close")
-        self.log_out()
-        self._shut_down = True
-        if self._weight_proof_handler is not None:
-            self._weight_proof_handler.cancel_weight_proof_tasks()
-        if self._process_new_subscriptions_task is not None:
-            self._process_new_subscriptions_task.cancel()
-        if self._retry_failed_states_task is not None:
-            self._retry_failed_states_task.cancel()
-        if self._secondary_peer_sync_task is not None:
-            self._secondary_peer_sync_task.cancel()
-
-    async def _await_closed(self, shutting_down: bool = True) -> None:
-        self.log.info("self._await_closed")
-        if self._server is not None:
-            await self.server.close_all_connections()
-        if self.wallet_peers is not None:
-            await self.wallet_peers.ensure_is_closed()
-        if self._wallet_state_manager is not None:
-            await self.wallet_state_manager._await_closed()
-            self._wallet_state_manager = None
-        if shutting_down and self._keychain_proxy is not None:
-            proxy = self._keychain_proxy
-            self._keychain_proxy = None
-            await proxy.close()
-            await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-        self.wallet_peers = None
-        self._balance_cache = {}
-
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.state_changed_callback = callback
 
@@ -571,7 +599,7 @@ class WalletNode:
         while not self._shut_down:
             try:
                 await asyncio.sleep(self.coin_state_retry_seconds)
-                if self.wallet_state_manager is None:
+                if self._wallet_state_manager is None:
                     continue
                 states_to_retry = await self.wallet_state_manager.retry_store.get_all_states_to_retry()
                 for state, peer_id, fork_height in states_to_retry:

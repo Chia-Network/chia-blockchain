@@ -235,6 +235,7 @@ async def setup_wallet_node(
     introducer_port: Optional[uint16] = None,
     key_seed: Optional[bytes] = None,
     initial_num_public_keys: int = 5,
+    start_service: bool = True,
 ) -> AsyncGenerator[WalletService, None]:
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
@@ -292,8 +293,20 @@ async def setup_wallet_node(
         )
 
         try:
-            async with service.manage():
+            started = asyncio.Event()
+            task = asyncio.create_task(service.run(started_event=started))
+            try:
+                await started.wait()
                 yield service
+            finally:
+                from chia.rpc.rpc_server import EmptyServiceManagementMessage, ServiceManagementAction
+
+                await service.request(EmptyServiceManagementMessage(action=ServiceManagementAction.stop))
+                task.cancel()
+                import contextlib
+
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
         finally:
             if db_path.exists():
                 # TODO: remove (maybe) when fixed https://github.com/python/cpython/issues/97641
