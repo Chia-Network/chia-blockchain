@@ -635,7 +635,7 @@ class WalletRpcApi:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(WalletSpendBundle.from_bytes(request.spend_bundle))
+        await self.service.push_tx(request.spend_bundle)
         return Empty()
 
     @tx_endpoint(push=True)

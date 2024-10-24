@@ -58,6 +58,7 @@ from chia.rpc.wallet_request_types import (
     GetTimestampForHeight,
     LogIn,
     PushTransactions,
+    PushTX,
     SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
@@ -431,6 +432,11 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     for tx in resp_client.transactions:
         assert (await client.get_transaction(transaction_id=tx.name)).confirmed
+
+    # Just testing NOT failure here really (parsing)
+    await client.push_tx(PushTX(spend_bundle))
+    resp = await client.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
+    assert resp["success"]
 
 
 @pytest.mark.anyio
