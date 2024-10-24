@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 from collections import deque
-from typing import TYPE_CHECKING, Any, Deque, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from typing_extensions import Literal
 
@@ -257,8 +257,8 @@ class TradeManager:
         announcement_nonce: bytes32 = std_hash(b"".join(trades))
         trade_records: list[TradeRecord] = []
         all_cancellation_coins: list[list[Coin]] = []
-        announcement_creations: Deque[CreateCoinAnnouncement] = deque()
-        announcement_assertions: Deque[AssertCoinAnnouncement] = deque()
+        announcement_creations: deque[CreateCoinAnnouncement] = deque()
+        announcement_assertions: deque[AssertCoinAnnouncement] = deque()
         for trade_id in trades:
             if trade_id in trade_cache:
                 trade = trade_cache[trade_id]
