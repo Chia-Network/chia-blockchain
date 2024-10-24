@@ -30,6 +30,11 @@ class WalletType(IntEnum):
     DAO_CAT = 15
     CRCAT = 57
 
+    def to_json_dict(self) -> str:
+        # yes, this isn't a `dict`, but it is json and
+        # unfortunately the magic method name is misleading
+        return self.name
+
 
 class CoinType(IntEnum):
     NORMAL = 0
