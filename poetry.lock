@@ -809,8 +809,8 @@ typing-extensions = "*"
 [package.source]
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
-reference = "4f1275ec7b8a25bdc8d1768d48a1205f3ddbc5a6"
-resolved_reference = "4f1275ec7b8a25bdc8d1768d48a1205f3ddbc5a6"
+reference = "merkle_blob"
+resolved_reference = "d1de37d58176ef25c3c9a7d4d0c2944b530b2d7c"
 subdirectory = "wheel/"
 
 [[package]]
@@ -3419,4 +3419,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.13"
-content-hash = "335e299cc1691bffb1abe2b18d036318b1cc6bfdbb1aa37fbae40f16ececdbf5"
+content-hash = "fccc8e224fd9ca1c12ac374e42b54628418e811730a15fc3f0d2111a9a869cbf"
