@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # PULL IN LICENSES USING NPM - LICENSE CHECKER
 npm install -g license-checker
