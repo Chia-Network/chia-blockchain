@@ -345,5 +345,4 @@ def output_time_out_assert(
 
 
 if __name__ == "__main__":
-    # pylint: disable = no-value-for-parameter
     main()

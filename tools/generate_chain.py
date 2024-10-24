@@ -222,5 +222,4 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
 
 
 if __name__ == "__main__":
-    # pylint: disable = no-value-for-parameter
     main()

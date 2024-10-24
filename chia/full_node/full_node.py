@@ -2501,7 +2501,7 @@ class FullNode:
                 await self.broadcast_added_tx(mempool_item, current_peer=peer)
 
                 if self.simulator_transaction_callback is not None:  # callback
-                    await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
+                    await self.simulator_transaction_callback(spend_name)
 
             else:
                 self.mempool_manager.remove_seen(spend_name)

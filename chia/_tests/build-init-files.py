@@ -89,4 +89,4 @@ def command(verbose, root_str):
         raise click.ClickException("At least one __init__.py created or not a regular file")
 
 
-command()  # pylint: disable=no-value-for-parameter
+command()

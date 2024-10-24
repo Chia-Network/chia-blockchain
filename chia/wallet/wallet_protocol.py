@@ -60,7 +60,7 @@ class WalletProtocol(Protocol[T]):
     wallet_info: WalletInfo
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
-    wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
+    wallet_state_manager: WalletStateManager
 
 
 class GSTOptionalArgs(TypedDict):
