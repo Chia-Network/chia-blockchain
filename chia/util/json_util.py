@@ -14,10 +14,10 @@ class EnhancedJSONEncoder(json.JSONEncoder):
     """
 
     def default(self, o: Any) -> Any:
+        if isinstance(o, WalletType):
+            raise RuntimeError("WalletType should not be serialized to JSON")
         if hasattr(type(o), "to_json_dict"):
             return o.to_json_dict()
-        elif isinstance(o, WalletType):
-            return o.name
         elif hasattr(type(o), "__bytes__"):
             return f"0x{bytes(o).hex()}"
         elif isinstance(o, bytes):
