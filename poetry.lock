@@ -810,7 +810,7 @@ typing-extensions = "*"
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
 reference = "merkle_blob"
-resolved_reference = "d1de37d58176ef25c3c9a7d4d0c2944b530b2d7c"
+resolved_reference = "7881538063cbd2c0fc4609f27c058714125ad026"
 subdirectory = "wheel/"
 
 [[package]]
