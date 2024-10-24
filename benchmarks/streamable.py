@@ -304,4 +304,4 @@ def run(data: Data, mode: Mode, runs: int, ms: int, live: bool, output: TextIO, 
 
 
 if __name__ == "__main__":
-    run()  # pylint: disable = no-value-for-parameter
+    run()

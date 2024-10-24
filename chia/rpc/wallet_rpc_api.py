@@ -3186,7 +3186,7 @@ class WalletRpcApi:
         return {
             "success": True,
             # Semantics guarantee proposal_id here
-            "proposal_id": proposal_id,  # pylint: disable=possibly-used-before-assignment
+            "proposal_id": proposal_id,
             "tx_id": None,  # tx_endpoint wrapper will take care of this
             "tx": None,  # tx_endpoint wrapper will take care of this
             "transactions": None,  # tx_endpoint wrapper will take care of this

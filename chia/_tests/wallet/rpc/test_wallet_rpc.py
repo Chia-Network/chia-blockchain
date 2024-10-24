@@ -281,7 +281,7 @@ async def assert_push_tx_error(node_rpc: FullNodeRpcClient, tx: TransactionRecor
     try:
         await node_rpc.push_tx(spend_bundle)
     except ValueError as error:
-        error_string = error.args[0]["error"]  # noqa:  # pylint: disable=E1126
+        error_string = error.args[0]["error"]
         if error_string.find("ASSERT_ANNOUNCE_CONSUMED_FAILED") == -1:
             raise ValueError from error
 
@@ -413,7 +413,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
     ).signed_tx
 
     resp_client = await client.push_transactions(
-        PushTransactions(transactions=[tx], fee=uint64(10)),  # pylint: disable=unexpected-keyword-arg
+        PushTransactions(transactions=[tx], fee=uint64(10)),
         DEFAULT_TX_CONFIG,
     )
     resp = await client.fetch(

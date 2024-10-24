@@ -211,4 +211,4 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
 
 
 if __name__ == "__main__":
-    memory_profiler()  # pylint: disable = no-value-for-parameter
+    memory_profiler()

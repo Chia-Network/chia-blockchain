@@ -115,5 +115,4 @@ set multiplot layout {len(cols)},1
 
 
 if __name__ == "__main__":
-    # pylint: disable = no-value-for-parameter
     main()
