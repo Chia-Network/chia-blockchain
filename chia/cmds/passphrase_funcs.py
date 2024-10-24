@@ -10,7 +10,6 @@ from typing import Any, Optional
 
 import colorama
 
-from chia.cmds.cmds_util import prompt_yes_no
 from chia.daemon.client import acquire_connection_to_daemon
 from chia.util.errors import KeychainMaxUnlockAttempts
 from chia.util.keychain import Keychain, supports_os_passphrase_storage
@@ -69,6 +68,16 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
         time.sleep(FAILED_ATTEMPT_DELAY)
         print("Incorrect passphrase\n")
     raise KeychainMaxUnlockAttempts()
+
+
+def prompt_yes_no(prompt: str) -> bool:
+    while True:
+        response = str(input(prompt + " (y/n): ")).lower().strip()
+        ch = response[:1]
+        if ch == "y":
+            return True
+        elif ch == "n":
+            return False
 
 
 def verify_passphrase_meets_requirements(
