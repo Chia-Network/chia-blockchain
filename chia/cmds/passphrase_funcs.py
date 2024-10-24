@@ -8,9 +8,9 @@ from io import TextIOWrapper
 from pathlib import Path
 from typing import Any, Optional
 
+import click
 import colorama
 
-from chia.cmds.cmds_util import prompt_yes_no
 from chia.daemon.client import acquire_connection_to_daemon
 from chia.util.errors import KeychainMaxUnlockAttempts
 from chia.util.keychain import Keychain, supports_os_passphrase_storage
@@ -122,7 +122,7 @@ def prompt_to_save_passphrase() -> bool:
                 colorama.init()
 
                 print(warning)
-            save = prompt_yes_no(f"Would you like to save your passphrase to the {location}?")
+            save = click.confirm(f"Would you like to save your passphrase to the {location}?", default=None)
 
     except Exception as e:
         print(f"Caught exception: {e}")
