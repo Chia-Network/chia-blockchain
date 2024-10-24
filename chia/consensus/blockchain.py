@@ -487,6 +487,10 @@ class Blockchain:
 
         if genesis:
             records_to_add = [block_record]
+        elif fork_info.block_hashes == [block_record.header_hash]:
+            # in the common case, we just add a block on top of the chain. Check
+            # for that here to avoid an unnecessary database lookup.
+            records_to_add = [block_record]
         else:
             records_to_add = await self.block_store.get_block_records_by_hash(fork_info.block_hashes)
 
