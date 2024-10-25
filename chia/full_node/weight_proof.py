@@ -679,7 +679,7 @@ def _sample_sub_epoch(
     weight_to_check: Optional[list[uint128]],
 ) -> bool:
     """
-    weight_to_check: List[uint128] is expected to be sorted
+    weight_to_check: list[uint128] is expected to be sorted
     """
     if weight_to_check is None:
         return True

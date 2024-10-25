@@ -1012,17 +1012,18 @@ dev = ["pytest"]
 
 [[package]]
 name = "clvm-tools-rs"
-version = "0.1.43"
+version = "0.1.45"
 description = "tools for working with chialisp language; compiler, repl, python and wasm bindings"
 optional = false
 python-versions = "*"
 files = [
-    {file = "clvm_tools_rs-0.1.43-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:0dc68bdc7704d502d0193a9634764fffd2d618207b4a0260dbb32938881dad6c"},
-    {file = "clvm_tools_rs-0.1.43-cp38-abi3-macosx_11_0_x86_64.whl", hash = "sha256:49f5065a64a560e9d5ffaf5d30f074cf65a1196a2d9c554724bfff646a8697cc"},
-    {file = "clvm_tools_rs-0.1.43-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cbc10526fc6abd606d337f93ca89ea52e95e390134d6d15620a3ad9d1a122ba5"},
-    {file = "clvm_tools_rs-0.1.43-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3548f9c870e20c1dcdf90820046803d3a9b487a12c0c5d0563031ae7677e64a8"},
-    {file = "clvm_tools_rs-0.1.43-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:0d905bb57c3fca1e9b227ed233974a630ac912929091287800c82fdd6a51150a"},
-    {file = "clvm_tools_rs-0.1.43-cp38-abi3-win_amd64.whl", hash = "sha256:423915b4098d38112ed8e7b8fcac1eafacb7fb2ac11cf5c371d7853a85577d4f"},
+    {file = "clvm_tools_rs-0.1.45-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:fc5a60fa6bbbfb8875258266b82251c4cc9279e3d6435eaaada0b2c033816b1a"},
+    {file = "clvm_tools_rs-0.1.45-cp38-abi3-macosx_13_0_x86_64.whl", hash = "sha256:d1cd3240fdb9560c5cc860ac15196a00b70935827018deacf01651fcd9bfa6e5"},
+    {file = "clvm_tools_rs-0.1.45-cp38-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:fe0dcb7cad0edd1c9b1f7b0e3e6864cea1e13c3f8a6667de83c4721ff5626b4f"},
+    {file = "clvm_tools_rs-0.1.45-cp38-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:792fb5be40d317e32b86e44f9a3bbbf4d96827b304877e678eaff0abca212b3e"},
+    {file = "clvm_tools_rs-0.1.45-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:079b849e0c289b6c8e7e93c027d9ee8083714ad07c5d19a1c0f7bd88efa9615f"},
+    {file = "clvm_tools_rs-0.1.45-cp38-abi3-win_amd64.whl", hash = "sha256:3153335cafd180a6a308fef0d3808777fb5f7e13edd43e9ee344afd212e05516"},
+    {file = "clvm_tools_rs-0.1.45.tar.gz", hash = "sha256:73848e0504e42bbd9627497c7307147cce9a04678936b5aec5c5a6be4b372c84"},
 ]
 
 [[package]]
@@ -3409,4 +3410,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.13"
-content-hash = "d69beed514c8da5575128abf43d650c514b73d5c2cd54c2727023ed9dd414c01"
+content-hash = "2afe75a2dfadd778f43fc2335337558c2e4e235acdbe5638ad0e73e79735ee76"
