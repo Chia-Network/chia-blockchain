@@ -41,6 +41,7 @@ from chia.types.blockchain_format.slots import ChallengeChainSubSlot, RewardChai
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import UnresolvedPeerInfo
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
@@ -437,15 +438,16 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
         prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
     ssi, diff = get_next_sub_slot_iters_and_difficulty(full_node.constants, new_slot, prev_b, full_node.blockchain)
-    pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+    futures = await pre_validate_blocks_multiprocessing(
         full_node.blockchain.constants,
-        full_node.blockchain,
+        AugmentedBlockchain(full_node.blockchain),
         blocks,
         full_node.blockchain.pool,
         {},
         ValidationState(ssi, diff, prev_ses_block),
         validate_signatures=True,
     )
+    pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
     for i in range(len(blocks)):
         block = blocks[i]
