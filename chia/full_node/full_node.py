@@ -13,7 +13,6 @@ import traceback
 from collections.abc import AsyncIterator, Awaitable
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import List  # noqa
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TextIO, Union, cast, final
 
 from chia_rs import (
@@ -143,7 +142,7 @@ class FullNode:
     subscriptions: PeerSubscriptions = dataclasses.field(default_factory=PeerSubscriptions)
     _transaction_queue_task: Optional[asyncio.Task[None]] = None
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
-    _sync_task_list: List[asyncio.Task[None]] = dataclasses.field(default_factory=list)
+    _sync_task_list: list[asyncio.Task[None]] = dataclasses.field(default_factory=list)
     _transaction_queue: Optional[TransactionQueue] = None
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
     _new_peak_sem: Optional[LimitedSemaphore] = None
