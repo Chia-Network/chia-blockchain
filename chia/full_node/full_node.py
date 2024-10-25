@@ -13,7 +13,8 @@ import traceback
 from collections.abc import AsyncIterator, Awaitable
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, TextIO, Union, cast, final
+from typing import List  # noqa
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TextIO, Union, cast, final
 
 from chia_rs import (
     AugSchemeMPL,
