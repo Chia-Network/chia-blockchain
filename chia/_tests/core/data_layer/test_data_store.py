@@ -32,14 +32,13 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     TerminalNode,
     _debug_dump,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     leaf_hash,
 )
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
-    get_delta_filename_path,
-    get_full_tree_filename_path,
     insert_from_delta_file,
-    insert_into_data_store_from_file,
     write_files_for_root,
 )
 from chia.data_layer.util.merkle_blob import RawLeafMerkleNode
@@ -1337,7 +1336,7 @@ async def test_data_server_files(
         else:
             filename = get_delta_filename_path(tmp_path, store_id, root.node_hash, generation, group_files_by_store)
             assert filename.exists()
-        await insert_into_data_store_from_file(data_store, store_id, root.node_hash, tmp_path.joinpath(filename))
+        await data_store.insert_into_data_store_from_file(store_id, root.node_hash, tmp_path.joinpath(filename))
         current_root = await data_store.get_tree_root(store_id=store_id)
         assert current_root.node_hash == root.node_hash
         generation += 1
@@ -1883,20 +1882,6 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert:
         num_keys += new_keys
 
 
-@pytest.mark.skip
-@pytest.mark.anyio
-async def test_migration_unknown_version(data_store: DataStore) -> None:
-    async with data_store.db_wrapper.writer() as writer:
-        await writer.execute(
-            "INSERT INTO schema(version_id) VALUES(:version_id)",
-            {
-                "version_id": "unknown version",
-            },
-        )
-    with pytest.raises(Exception, match="Unknown version"):
-        await data_store.migrate_db()
-
-
 async def _check_ancestors(
     data_store: DataStore, store_id: bytes32, root_hash: bytes32
 ) -> Dict[bytes32, Optional[bytes32]]:
@@ -1924,3 +1909,62 @@ async def _check_ancestors(
             assert ancestor_node.hash == ancestor_hash
 
     return ancestors
+
+
+@pytest.mark.anyio
+async def test_migration_unknown_version(data_store: DataStore, tmp_path: Path) -> None:
+    async with data_store.db_wrapper.writer() as writer:
+        await writer.execute(
+            "INSERT INTO schema(version_id) VALUES(:version_id)",
+            {
+                "version_id": "unknown version",
+            },
+        )
+    with pytest.raises(Exception, match="Unknown version"):
+        await data_store.migrate_db(tmp_path)
+
+
+@boolean_datacases(name="group_files_by_store", false="group by singleton", true="don't group by singleton")
+@pytest.mark.anyio
+async def test_migration(
+    data_store: DataStore,
+    store_id: bytes32,
+    group_files_by_store: bool,
+    tmp_path: Path,
+) -> None:
+    num_batches = 10
+    num_ops_per_batch = 100
+    keys: List[bytes] = []
+    counter = 0
+    random = Random()
+    random.seed(100, version=2)
+
+    for batch in range(num_batches):
+        changelist: List[Dict[str, Any]] = []
+        for operation in range(num_ops_per_batch):
+            if random.randint(0, 4) > 0 or len(keys) == 0:
+                key = counter.to_bytes(4, byteorder="big")
+                value = (2 * counter).to_bytes(4, byteorder="big")
+                keys.append(key)
+                changelist.append({"action": "insert", "key": key, "value": value})
+            else:
+                key = random.choice(keys)
+                keys.remove(key)
+                changelist.append({"action": "delete", "key": key})
+            counter += 1
+        await data_store.insert_batch(store_id, changelist, status=Status.COMMITTED)
+        root = await data_store.get_tree_root(store_id)
+        await data_store.add_node_hashes(store_id)
+        await write_files_for_root(
+            data_store, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
+        )
+
+    kv_before = await data_store.get_keys_values(store_id=store_id)
+    async with data_store.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
+        tables = [table for table in table_columns.keys() if table != "root"]
+        for table in tables:
+            await writer.execute(f"DELETE FROM {table}")
+
+    assert await data_store.get_keys_values(store_id=store_id) == []
+    await data_store.migrate_db(tmp_path)
+    assert await data_store.get_keys_values(store_id=store_id) == kv_before

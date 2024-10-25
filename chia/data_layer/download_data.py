@@ -17,50 +17,15 @@ from chia.data_layer.data_layer_util import (
     SerializedNode,
     ServerInfo,
     Status,
-    internal_hash,
+    get_delta_filename,
+    get_delta_filename_path,
+    get_full_tree_filename,
+    get_full_tree_filename_path,
     leaf_hash,
 )
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.util.merkle_blob import KVId, MerkleBlob
 from chia.types.blockchain_format.sized_bytes import bytes32
-
-
-def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
-    if group_by_store:
-        return f"{store_id}/{node_hash}-full-{generation}-v1.0.dat"
-    return f"{store_id}-{node_hash}-full-{generation}-v1.0.dat"
-
-
-def get_delta_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
-    if group_by_store:
-        return f"{store_id}/{node_hash}-delta-{generation}-v1.0.dat"
-    return f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat"
-
-
-def get_full_tree_filename_path(
-    foldername: Path,
-    store_id: bytes32,
-    node_hash: bytes32,
-    generation: int,
-    group_by_store: bool = False,
-) -> Path:
-    if group_by_store:
-        path = foldername.joinpath(f"{store_id}")
-        return path.joinpath(f"{node_hash}-full-{generation}-v1.0.dat")
-    return foldername.joinpath(f"{store_id}-{node_hash}-full-{generation}-v1.0.dat")
-
-
-def get_delta_filename_path(
-    foldername: Path,
-    store_id: bytes32,
-    node_hash: bytes32,
-    generation: int,
-    group_by_store: bool = False,
-) -> Path:
-    if group_by_store:
-        path = foldername.joinpath(f"{store_id}")
-        return path.joinpath(f"{node_hash}-delta-{generation}-v1.0.dat")
-    return foldername.joinpath(f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat")
 
 
 def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
@@ -95,56 +60,6 @@ def is_filename_valid(filename: str, group_by_store: bool = False) -> bool:
     )
 
     return reformatted == filename
-
-
-async def insert_into_data_store_from_file(
-    data_store: DataStore,
-    store_id: bytes32,
-    root_hash: Optional[bytes32],
-    filename: Path,
-) -> None:
-    internal_nodes: Dict[bytes32, Tuple[bytes32, bytes32]] = {}
-    terminal_nodes: Dict[bytes32, Tuple[KVId, KVId]] = {}
-
-    with open(filename, "rb") as reader:
-        while True:
-            chunk = b""
-            while len(chunk) < 4:
-                size_to_read = 4 - len(chunk)
-                cur_chunk = reader.read(size_to_read)
-                if cur_chunk is None or cur_chunk == b"":
-                    if size_to_read < 4:
-                        raise Exception("Incomplete read of length.")
-                    break
-                chunk += cur_chunk
-            if chunk == b"":
-                break
-
-            size = int.from_bytes(chunk, byteorder="big")
-            serialize_nodes_bytes = b""
-            while len(serialize_nodes_bytes) < size:
-                size_to_read = size - len(serialize_nodes_bytes)
-                cur_chunk = reader.read(size_to_read)
-                if cur_chunk is None or cur_chunk == b"":
-                    raise Exception("Incomplete read of blob.")
-                serialize_nodes_bytes += cur_chunk
-            serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
-
-            node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
-            if node_type == NodeType.INTERNAL:
-                node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
-                internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
-            else:
-                kid, vid = await data_store.add_key_value(serialized_node.value1, serialized_node.value2, store_id)
-                node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
-                terminal_nodes[node_hash] = (kid, vid)
-
-    merkle_blob = MerkleBlob(blob=bytearray())
-    if root_hash is not None:
-        await data_store.build_blob_from_nodes(internal_nodes, terminal_nodes, root_hash, merkle_blob)
-
-    await data_store.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED)
-    await data_store.add_node_hashes(store_id)
 
 
 @dataclass
@@ -309,8 +224,7 @@ async def insert_from_delta_file(
                 existing_generation,
                 group_files_by_store,
             )
-            await insert_into_data_store_from_file(
-                data_store,
+            await data_store.insert_into_data_store_from_file(
                 store_id,
                 None if root_hash == bytes32([0] * 32) else root_hash,
                 target_filename_path,

@@ -54,6 +54,8 @@ from chia.data_layer.data_layer_util import (
     TerminalNode,
     Unspecified,
     UnsubscribeData,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     leaf_hash,
     unspecified,
 )
@@ -61,8 +63,6 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, Singleton
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import (
     delete_full_file_if_exists,
-    get_delta_filename_path,
-    get_full_tree_filename_path,
     insert_from_delta_file,
     write_files_for_root,
 )
@@ -212,7 +212,7 @@ class DataLayer:
         async with DataStore.managed(database=self.db_path, sql_log_path=sql_log_path) as self._data_store:
             self._wallet_rpc = await self.wallet_rpc_init
 
-            await self._data_store.migrate_db()
+            await self._data_store.migrate_db(self.server_files_location)
             self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
             try:
                 yield

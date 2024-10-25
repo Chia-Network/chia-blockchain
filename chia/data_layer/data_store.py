@@ -31,7 +31,9 @@ from chia.data_layer.data_layer_util import (
     Subscription,
     TerminalNode,
     Unspecified,
+    get_delta_filename_path,
     get_hashes_for_page,
+    internal_hash,
     key_hash,
     leaf_hash,
     row_to_node,
@@ -184,8 +186,130 @@ class DataStore:
         async with self.db_wrapper.writer():
             yield
 
-    async def migrate_db(self) -> None:
-        pass
+    async def insert_into_data_store_from_file(
+        self,
+        store_id: bytes32,
+        root_hash: Optional[bytes32],
+        filename: Path,
+    ) -> None:
+        internal_nodes: Dict[bytes32, Tuple[bytes32, bytes32]] = {}
+        terminal_nodes: Dict[bytes32, Tuple[KVId, KVId]] = {}
+
+        with open(filename, "rb") as reader:
+            while True:
+                chunk = b""
+                while len(chunk) < 4:
+                    size_to_read = 4 - len(chunk)
+                    cur_chunk = reader.read(size_to_read)
+                    if cur_chunk is None or cur_chunk == b"":
+                        if size_to_read < 4:
+                            raise Exception("Incomplete read of length.")
+                        break
+                    chunk += cur_chunk
+                if chunk == b"":
+                    break
+
+                size = int.from_bytes(chunk, byteorder="big")
+                serialize_nodes_bytes = b""
+                while len(serialize_nodes_bytes) < size:
+                    size_to_read = size - len(serialize_nodes_bytes)
+                    cur_chunk = reader.read(size_to_read)
+                    if cur_chunk is None or cur_chunk == b"":
+                        raise Exception("Incomplete read of blob.")
+                    serialize_nodes_bytes += cur_chunk
+                serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
+
+                node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
+                if node_type == NodeType.INTERNAL:
+                    node_hash = internal_hash(bytes32(serialized_node.value1), bytes32(serialized_node.value2))
+                    internal_nodes[node_hash] = (bytes32(serialized_node.value1), bytes32(serialized_node.value2))
+                else:
+                    kid, vid = await self.add_key_value(serialized_node.value1, serialized_node.value2, store_id)
+                    node_hash = leaf_hash(serialized_node.value1, serialized_node.value2)
+                    terminal_nodes[node_hash] = (kid, vid)
+
+        merkle_blob = MerkleBlob(blob=bytearray())
+        if root_hash is not None:
+            await self.build_blob_from_nodes(internal_nodes, terminal_nodes, root_hash, merkle_blob)
+
+        await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED)
+        await self.add_node_hashes(store_id)
+
+    async def migrate_db(self, server_files_location: Path) -> None:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute("SELECT * FROM schema")
+            rows = await cursor.fetchall()
+            all_versions = {"v1.0", "v2.0"}
+
+            for row in rows:
+                version = row["version_id"]
+                if version not in all_versions:
+                    raise Exception("Unknown version")
+                if version == "v2.0":
+                    log.info(f"Found DB schema version {version}. No migration needed.")
+                    return
+
+        version = "v2.0"
+        old_tables = ["node", "root", "ancestors"]
+        all_stores = await self.get_store_ids()
+        all_roots: List[List[Root]] = []
+        for store_id in all_stores:
+            root = await self.get_tree_root(store_id=store_id)
+            roots = await self.get_roots_between(store_id, 1, root.generation)
+            all_roots.append(roots + [root])
+        log.info(f"Initiating migration to version {version}. Found {len(all_roots)} stores to migrate")
+
+        async with self.db_wrapper.writer() as writer:
+            await writer.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS new_root(
+                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                    generation INTEGER NOT NULL CHECK(generation >= 0),
+                    node_hash BLOB,
+                    status INTEGER NOT NULL CHECK(
+                        {" OR ".join(f"status == {status}" for status in Status)}
+                    ),
+                    PRIMARY KEY(tree_id, generation)
+                )
+                """
+            )
+            for old_table in old_tables:
+                await writer.execute(f"DROP TABLE IF EXISTS {old_table}")
+            await writer.execute("ALTER TABLE new_root RENAME TO root")
+            await writer.execute("INSERT INTO schema (version_id) VALUES (?)", (version,))
+            log.info(f"Initialized new DB schema {version}.")
+
+            for roots in all_roots:
+                assert len(roots) > 0
+                store_id = roots[0].store_id
+                await self.create_tree(store_id=store_id, status=Status.COMMITTED)
+
+                for root in roots:
+                    recovery_filename: Optional[str] = None
+
+                    for group_by_store in (True, False):
+                        filename = get_delta_filename_path(
+                            server_files_location,
+                            store_id,
+                            bytes32([0] * 32) if root.node_hash is None else root.node_hash,
+                            root.generation,
+                            group_by_store,
+                        )
+
+                        if filename.exists():
+                            log.info(f"Found filename {filename}. Recovering data from it")
+                            recovery_filename = filename
+                            break
+
+                    if recovery_filename is None:
+                        log.error(f"Cannot find any recovery file for root {root}")
+                        break
+
+                    try:
+                        await self.insert_into_data_store_from_file(store_id, root.node_hash, filename)
+                    except Exception as e:
+                        log.error(f"Cannot recover data from {filename}: {e}")
+                        break
 
     async def get_merkle_blob(self, root_hash: Optional[bytes32]) -> MerkleBlob:
         if root_hash is None:

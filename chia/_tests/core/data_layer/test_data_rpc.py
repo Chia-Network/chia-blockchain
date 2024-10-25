@@ -45,12 +45,13 @@ from chia.data_layer.data_layer_util import (
     ProofLayer,
     Status,
     StoreProofs,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     key_hash,
     leaf_hash,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, verify_offer
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import get_delta_filename_path, get_full_tree_filename_path
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.wallet_rpc_api import WalletRpcApi

@@ -48,6 +48,44 @@ def key_hash(key: bytes) -> bytes32:
     return bytes32(sha256(b"\1" + key).digest())
 
 
+def get_full_tree_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
+    if group_by_store:
+        return f"{store_id}/{node_hash}-full-{generation}-v1.0.dat"
+    return f"{store_id}-{node_hash}-full-{generation}-v1.0.dat"
+
+
+def get_delta_filename(store_id: bytes32, node_hash: bytes32, generation: int, group_by_store: bool = False) -> str:
+    if group_by_store:
+        return f"{store_id}/{node_hash}-delta-{generation}-v1.0.dat"
+    return f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat"
+
+
+def get_full_tree_filename_path(
+    foldername: Path,
+    store_id: bytes32,
+    node_hash: bytes32,
+    generation: int,
+    group_by_store: bool = False,
+) -> Path:
+    if group_by_store:
+        path = foldername.joinpath(f"{store_id}")
+        return path.joinpath(f"{node_hash}-full-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{store_id}-{node_hash}-full-{generation}-v1.0.dat")
+
+
+def get_delta_filename_path(
+    foldername: Path,
+    store_id: bytes32,
+    node_hash: bytes32,
+    generation: int,
+    group_by_store: bool = False,
+) -> Path:
+    if group_by_store:
+        path = foldername.joinpath(f"{store_id}")
+        return path.joinpath(f"{node_hash}-delta-{generation}-v1.0.dat")
+    return foldername.joinpath(f"{store_id}-{node_hash}-delta-{generation}-v1.0.dat")
+
+
 @dataclasses.dataclass(frozen=True)
 class PaginationData:
     total_pages: int
