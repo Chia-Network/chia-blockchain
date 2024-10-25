@@ -25,7 +25,7 @@ def test_coins_get_info(capsys: object, get_test_cli_clients: tuple[TestRpcClien
 
     # set RPC Client
 
-    inst_rpc_client = TestWalletRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = TestWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = ["wallet", "coins", "list", FINGERPRINT_ARG, "-i1", "-u"]
     # these are various things that should be in the output
@@ -68,7 +68,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: tuple[TestRpcClient
             self.add_to_log("combine_coins", (args, tx_config, timelock_info))
             return CombineCoinsResponse([STD_UTX], [STD_TX])
 
-    inst_rpc_client = CoinsCombineRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = CoinsCombineRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     assert sum(coin.amount for coin in STD_TX.removals) < 500_000_000_000
     command_args = [
@@ -173,7 +173,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
             else:
                 return []
 
-    inst_rpc_client = CoinsSplitRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = CoinsSplitRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     target_coin_id = test_coin.name()
     command_args = [

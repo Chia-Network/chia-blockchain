@@ -163,5 +163,4 @@ def default_call(
 
 
 if __name__ == "__main__":
-    # pylint: disable = no-value-for-parameter
     main()

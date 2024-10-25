@@ -501,7 +501,7 @@ class Wallet:
     # WSChiaConnection is only imported for type checking
     async def coin_added(
         self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[Streamable]
-    ) -> None:  # pylint: disable=used-before-assignment
+    ) -> None:
         pass
 
     def get_name(self) -> str:
