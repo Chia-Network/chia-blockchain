@@ -368,11 +368,11 @@ class FullNode:
                     await asyncio.wait([self._init_weight_proof])
                 for one_sync_task in self._sync_task_list:
                     if one_sync_task.done():
-                        self.log.info(f"Long sync task {one_sync_task.get_name()} already done")
+                        self.log.info(f"Long sync task {one_sync_task.get_name()} done")
                     else:
                         with contextlib.suppress(asyncio.CancelledError):
-                            self.log.info(f"Awaiting long sync task {one_sync_task.get_name()} to finish")
-                        await one_sync_task
+                            self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
+                            await one_sync_task
 
     @property
     def block_store(self) -> BlockStore:
