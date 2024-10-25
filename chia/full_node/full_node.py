@@ -783,6 +783,8 @@ class FullNode:
 
             # This is the either the case where we were not able to sync successfully (for example, due to the fork
             # point being in the past), or we are very far behind. Performs a long sync.
+            # Multiple tasks may be created here. If we don't save all handles, a task could enter a sync object
+            # and be cleaned up by the GC, corrupting the sync object and possibly not allowing anything else in.
             self._sync_task_list.append(asyncio.create_task(self._sync()))
 
     async def send_peak_to_timelords(
