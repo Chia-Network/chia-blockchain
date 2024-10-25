@@ -810,7 +810,7 @@ typing-extensions = "*"
 type = "git"
 url = "https://github.com/chia-network/chia_rs"
 reference = "hint_to_json_dict_better"
-resolved_reference = "aca98183aafd177d433e3e7ed34364cfaf9ce584"
+resolved_reference = "b0ef5df67496b16e9fc4b49b0b2e2d412a15c336"
 subdirectory = "wheel/"
 
 [[package]]
