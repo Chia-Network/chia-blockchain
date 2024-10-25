@@ -795,42 +795,23 @@ clvm_rs = "0.2.5"
 dev = ["black (>=23.1.0)", "pytest (>=7.2.1)", "ruff (>=0.0.252)"]
 
 [[package]]
-name = "chia-rs"
+name = "chia_rs"
 version = "0.15.0"
 description = "Code useful for implementing chia consensus."
 optional = false
 python-versions = "*"
-files = [
-    {file = "chia_rs-0.15.0-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:8e93bd5adc140ab202077c226081d92e6d1eedfa36fac1eaf4ee6436736dfc95"},
-    {file = "chia_rs-0.15.0-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:7ede0049c0703fbc11ff6ae7919fa29237941e3984bdb518f11c977b387560da"},
-    {file = "chia_rs-0.15.0-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:236caab6133f654a90f2d5374cadcf1c4f071fa52ff097fa0f16180557adf8eb"},
-    {file = "chia_rs-0.15.0-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:55988ddd58f9fcd10034679b29aaa7146b494be71590e7b940b06a1ea319297f"},
-    {file = "chia_rs-0.15.0-cp310-none-win_amd64.whl", hash = "sha256:971d3a1695880860f71249f5b2159546003b0b74b82499a28a2495720e8922bb"},
-    {file = "chia_rs-0.15.0-cp311-cp311-macosx_13_0_arm64.whl", hash = "sha256:98e773b6876243fd02e202c44162c4ab38d57a6e731f8de790f46f8646596d1d"},
-    {file = "chia_rs-0.15.0-cp311-cp311-macosx_13_0_x86_64.whl", hash = "sha256:457a82ef5e0f10236fbc86279b1dbfa64f84c4a7e40e2a28d105da653b9112a6"},
-    {file = "chia_rs-0.15.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:1d7b376f0884c2aef3bde9064b5cebfb86f0319108c06faea8c223ee18505ab2"},
-    {file = "chia_rs-0.15.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:7e8e1b3836b4c003587e49e6612d6bb5c84d6ef91cf269a955b809789df1b007"},
-    {file = "chia_rs-0.15.0-cp311-none-win_amd64.whl", hash = "sha256:4e51d4b6c42a5e36c6c3759a11cb3a002d528805ebbef298caf115a8236136df"},
-    {file = "chia_rs-0.15.0-cp312-cp312-macosx_13_0_arm64.whl", hash = "sha256:ea69015e2cf69e90b83055c7eec1964efd14c8a4f3a739e30e8d9225fae67666"},
-    {file = "chia_rs-0.15.0-cp312-cp312-macosx_13_0_x86_64.whl", hash = "sha256:e3683ff9c01b2f2e0ae4e78a050e03249773f78141f152d905b0586a37319b75"},
-    {file = "chia_rs-0.15.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:68b4a8547f4593917f960f7ca6b6a68a596b27dd35a309646f549830aae94692"},
-    {file = "chia_rs-0.15.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:a9450ebf4eec7ce232bcda2c2c3c42aa97e216317ab91a56bfc1f35460ae052f"},
-    {file = "chia_rs-0.15.0-cp312-none-win_amd64.whl", hash = "sha256:5cd8d45912073a7c12e2057e264dbd3bb3ea0c9cd47459ae31a669edb0f7e6dc"},
-    {file = "chia_rs-0.15.0-cp38-cp38-macosx_13_0_arm64.whl", hash = "sha256:0773a409f9258d93eb6ce25229515c147648304dd5afc35a43d502c7e7364cc4"},
-    {file = "chia_rs-0.15.0-cp38-cp38-macosx_13_0_x86_64.whl", hash = "sha256:db905d00ff0a9bbbd35211ee9969266af503d868535ec800384e4603bcb06269"},
-    {file = "chia_rs-0.15.0-cp38-cp38-manylinux_2_28_aarch64.whl", hash = "sha256:653db4b283fa81c35434391ea70bd36f01f09ede20b0b04101eea79ef30d7cfd"},
-    {file = "chia_rs-0.15.0-cp38-cp38-manylinux_2_28_x86_64.whl", hash = "sha256:7fdde0557a074cb66edfece843d965c383c097c7fdccd7bf09d6516b4f7db5d2"},
-    {file = "chia_rs-0.15.0-cp38-none-win_amd64.whl", hash = "sha256:8c71979d457d17b6dc082c1b85e760dc81a6dd1da35bebe9f17087b371b05286"},
-    {file = "chia_rs-0.15.0-cp39-cp39-macosx_13_0_arm64.whl", hash = "sha256:4c86a8902a72c224702225b75ca53b6bb1a5338589e875173c0bcb640dc75776"},
-    {file = "chia_rs-0.15.0-cp39-cp39-macosx_13_0_x86_64.whl", hash = "sha256:7044c5536d99dfa6785f14ea40a4cc97847188e256e3c887c22207592402891a"},
-    {file = "chia_rs-0.15.0-cp39-cp39-manylinux_2_28_aarch64.whl", hash = "sha256:7e97bd6b05c410ee6be4565bf529a55ecd8d1b2af25ac32adc7c70ceaf01607b"},
-    {file = "chia_rs-0.15.0-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:779e76222951a4fcfb889640c0780f52eac92ddc30ad9d2f1d9f0b6cd13bf3ab"},
-    {file = "chia_rs-0.15.0-cp39-none-win_amd64.whl", hash = "sha256:801a342d93df8fd571b1289b58f990a95b90676fd37924cfc631d9dd2ab65a07"},
-    {file = "chia_rs-0.15.0.tar.gz", hash = "sha256:582e107e53fc5eb1a4e6d851af8f00a1fd794699689e69a3fdf4ce20e6b73665"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 typing-extensions = "*"
+
+[package.source]
+type = "git"
+url = "https://github.com/chia-network/chia_rs"
+reference = "drop_3_8"
+resolved_reference = "e3b3fe6a0ae6970f2f176e283744fd45f9833b50"
+subdirectory = "wheel/"
 
 [[package]]
 name = "chiabip158"
@@ -3428,4 +3409,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.13"
-content-hash = "b3e7954f358d50320cf0aa1fe16dee1f17916c45e14377b838c671240e4962b8"
+content-hash = "d69beed514c8da5575128abf43d650c514b73d5c2cd54c2727023ed9dd414c01"
