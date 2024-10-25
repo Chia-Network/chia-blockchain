@@ -112,4 +112,4 @@ repos:
         name: Ruff
         entry: ./activated.py ruff check --fix
         language: system
-        pass_filenames: false
+        types: [python]
