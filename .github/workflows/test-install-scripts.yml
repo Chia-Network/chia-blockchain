@@ -30,20 +30,20 @@ jobs:
         python:
           - major-dot-minor: "3.10"
         os:
-          - name: macOS
-            emoji: 🍎
-            runs-on:
-              arm: macos-latest
-              intel: macos-13
-            matrix: macos
           - name: Linux
             emoji: 🐧
             runs-on:
               arm: [macOS, ARM64]
               intel: ubuntu-latest
             matrix: linux
+          - name: macOS
+            emoji: 🍎
+            runs-on:
+              arm: macos-latest
+              intel: macos-13
+            matrix: macos
           - name: Windows
-            emoji: 🐧
+            emoji: 🪟
             runs-on:
               intel: windows-latest
             matrix: windows
