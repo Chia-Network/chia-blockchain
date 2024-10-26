@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import pathlib
 import sys
 from typing import Any, Optional
@@ -17,6 +18,7 @@ from chia.types.peer_info import UnresolvedPeerInfo
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -33,19 +35,22 @@ def create_harvester_service(
 ) -> HarvesterService:
     service_config = config[SERVICE_NAME]
 
-    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
+    network_id = service_config["selected_network"]
+    overrides = service_config["network_overrides"]["constants"][network_id]
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
-    harvester = Harvester(root_path, service_config, updated_constants)
-    peer_api = HarvesterAPI(harvester)
+    node = Harvester(root_path, service_config, updated_constants)
+    peer_api = HarvesterAPI(node)
     network_id = service_config["selected_network"]
+
     rpc_info: Optional[RpcInfo[HarvesterRpcApi]] = None
-    if service_config["start_rpc_server"]:
+    if service_config.get("start_rpc_server", True):
         rpc_info = (HarvesterRpcApi, service_config["rpc_port"])
+
     return Service(
         root_path=root_path,
         config=config,
-        node=harvester,
+        node=node,
         peer_api=peer_api,
         node_type=NodeType.HARVESTER,
         advertised_port=None,
@@ -64,6 +69,7 @@ async def async_main() -> int:
     config[SERVICE_NAME] = service_config
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
     farmer_peers = get_unresolved_peer_infos(service_config, NodeType.FARMER)
+
     service = create_harvester_service(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS, farmer_peers)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
@@ -73,7 +79,10 @@ async def async_main() -> int:
 
 
 def main() -> int:
-    return async_run(async_main())
+    with maybe_manage_task_instrumentation(
+        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+    ):
+        return async_run(coro=async_main())
 
 
 if __name__ == "__main__":

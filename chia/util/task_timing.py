@@ -18,7 +18,12 @@ from typing import Any
 
 # to enable this instrumentation, set one of the environment variables:
 
-#   CHIA_INSTRUMENT_NODE=1
+#   CHIA_INSTRUMENT_DATA_LAYER=1
+#   CHIA_INSTRUMENT_FARMER=1
+#   CHIA_INSTRUMENT_FULL_NODE=1
+#   CHIA_INSTRUMENT_HARVESTER=1
+#   CHIA_INSTRUMENT_INTRODUCER=1
+#   CHIA_INSTRUMENT_TIMELORD=1
 #   CHIA_INSTRUMENT_WALLET=1
 
 # Before starting the daemon.
