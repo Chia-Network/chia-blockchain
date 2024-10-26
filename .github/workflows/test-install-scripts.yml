@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Native ${{ matrix.os.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.name }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
@@ -53,15 +53,15 @@ jobs:
           - name: Intel
             matrix: intel
         development:
-          - name: Non-development
+          - name: Non-dev
             value: false
-          - name: Development
+          - name: Dev
             value: true
         editable:
-          - name: Non-editable
+          - name: Non-edit
             value: false
             matrix: non-editable
-          - name: Editable
+          - name: Edit
             value: true
             matrix: editable
         exclude:
