@@ -22,8 +22,8 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts ${{ matrix.os.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
-    runs-on: ${{ matrix.os.runs-on[matrix.os.arch] }}
+    name: Native ${{ matrix.os.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
       matrix:
@@ -131,7 +131,7 @@ jobs:
           [ "$POST_VERSION" != "shooby-doowah" -a "$PRE_VERSION" = "$POST_VERSION" ]
 
   test_scripts_in_docker:
-    name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    name: Docker ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ matrix.distribution.url }}
     strategy:
