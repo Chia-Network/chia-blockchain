@@ -22,22 +22,36 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts - ${{ matrix.development.name }} - ${{ matrix.editable.name }}
-    runs-on: ${{ matrix.os.runs-on }}
+    name: Test Install Scripts ${{ matrix.os.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.os.arch] }}
     strategy:
       fail-fast: false
       matrix:
         python:
           - major-dot-minor: "3.10"
         os:
-          - runs-on: macos-latest
-            matrix: macos-arm
-          - runs-on: macos-13
-            matrix: macos-intel
-          - runs-on: ubuntu-latest
+          - name: macOS
+            emoji: 🍎
+            runs-on:
+              arm: macos-latest
+              intel: macos-13
+            matrix: macos
+          - name: Linux
+            emoji: 🐧
+            runs-on:
+              arm: [macOS, ARM64]
+              intel: ubuntu-latest
             matrix: linux
-          - runs-on: windows-latest
+          - name: Windows
+            emoji: 🐧
+            runs-on:
+              intel: windows-latest
             matrix: windows
+        arch:
+          - name: ARM
+            matrix: arm
+          - name: Intel
+            matrix: intel
         development:
           - name: Non-development
             value: false
@@ -50,6 +64,11 @@ jobs:
           - name: Editable
             value: true
             matrix: editable
+        exclude:
+          - os:
+              matrix: windows
+            arch:
+              matrix: arm
 
     steps:
       - name: Checkout Code
