@@ -194,6 +194,7 @@ fi
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
+  # shellcheck disable=SC1091
   . .venv/bin/activate
   ./install-plotter.sh bladebit
   ./install-plotter.sh madmax
