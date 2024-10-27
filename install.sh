@@ -194,7 +194,7 @@ fi
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
-  source .venv/bin/activate
+  . .venv/bin/activate
   ./install-plotter.sh bladebit
   ./install-plotter.sh madmax
   deactivate
