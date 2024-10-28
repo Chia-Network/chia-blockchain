@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncGenerator
 from dataclasses import replace
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import pytest
 

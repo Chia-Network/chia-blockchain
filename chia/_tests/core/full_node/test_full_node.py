@@ -6,7 +6,8 @@ import dataclasses
 import logging
 import random
 import time
-from typing import Coroutine, Dict, List, Optional, Tuple
+from collections.abc import Coroutine
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
@@ -19,11 +20,11 @@ from chia._tests.connection_utils import add_dummy_connection, connect_and_get_p
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.core.node_height import node_height_at_least
-from chia._tests.util.misc import add_blocks_in_batches, wallet_height_at_least
+from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
@@ -39,6 +40,7 @@ from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
@@ -60,6 +62,8 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -113,7 +117,7 @@ async def get_block_path(full_node: FullNodeAPI):
 @pytest.mark.anyio
 async def test_sync_no_farmer(
     setup_two_nodes_and_wallet,
-    default_1000_blocks: List[FullBlock],
+    default_1000_blocks: list[FullBlock],
     self_hostname: str,
     seeded_random: random.Random,
 ):
@@ -415,7 +419,7 @@ class TestFullNodeBlockCompression:
         height = full_node_1.full_node.blockchain.get_peak().height
 
         blockchain = empty_blockchain
-        all_blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
+        all_blocks: list[FullBlock] = await full_node_1.get_all_full_blocks()
         assert height == len(all_blocks) - 1
 
         if test_reorgs:
@@ -423,39 +427,39 @@ class TestFullNodeBlockCompression:
             diff = bt.constants.DIFFICULTY_STARTING
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
+                fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
                 for reorg_block in reog_blocks[:r]:
-                    await _validate_and_add_block_no_error(blockchain, reorg_block)
+                    await _validate_and_add_block_no_error(blockchain, reorg_block, fork_info=fork_info)
                 for i in range(1, height):
-                    results = await pre_validate_blocks_multiprocessing(
+                    futures = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
-                        blockchain,
+                        AugmentedBlockchain(blockchain),
                         all_blocks[:i],
                         blockchain.pool,
                         {},
-                        sub_slot_iters=ssi,
-                        difficulty=diff,
-                        prev_ses_block=None,
+                        ValidationState(ssi, diff, None),
                         validate_signatures=False,
                     )
+                    results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None
                     for result in results:
                         assert result.error is None
 
             for r in range(0, len(all_blocks), 3):
+                fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
                 for block in all_blocks[:r]:
-                    await _validate_and_add_block_no_error(blockchain, block)
+                    await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
                 for i in range(1, height):
-                    results = await pre_validate_blocks_multiprocessing(
+                    futures = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
-                        blockchain,
+                        AugmentedBlockchain(blockchain),
                         all_blocks[:i],
                         blockchain.pool,
                         {},
-                        sub_slot_iters=ssi,
-                        difficulty=diff,
-                        prev_ses_block=None,
+                        ValidationState(ssi, diff, None),
                         validate_signatures=False,
                     )
+                    results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None
                     for result in results:
                         assert result.error is None
@@ -741,9 +745,8 @@ class TestFullNodeProtocol:
         assert entry is not None
         result = entry.result
         assert result is not None
-        assert result.npc_result is not None
-        assert result.npc_result.conds is not None
-        assert result.npc_result.conds.cost > 0
+        assert result.conds is not None
+        assert result.conds.cost > 0
 
         assert not full_node_1.full_node.blockchain.contains_block(block.header_hash)
         assert block.transactions_generator is not None
@@ -837,7 +840,7 @@ class TestFullNodeProtocol:
         puzzle_hashes = []
 
         # Makes a bunch of coins
-        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
+        conditions_dict: dict = {ConditionOpcode.CREATE_COIN: []}
         # This should fit in one transaction
         for _ in range(100):
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
@@ -987,9 +990,7 @@ class TestFullNodeProtocol:
             block_list_input=blocks[:-1],
             guarantee_transaction_block=True,
         )
-        for block in blocks[-2:]:
-            await full_node_1.full_node.add_block(block, peer)
-
+        await add_blocks_in_batches(blocks[-2:], full_node_1.full_node, blocks[-2].prev_header_hash)
         # Can now resubmit a transaction after the reorg
         status, err = await full_node_1.full_node.add_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
@@ -1310,7 +1311,7 @@ class TestFullNodeProtocol:
         # best block we've already seen, so we may need to send more than 3
         # blocks to the node for it to forward 3
 
-        unf_blocks: List[UnfinishedBlock] = []
+        unf_blocks: list[UnfinishedBlock] = []
 
         last_reward_hash: Optional[bytes32] = None
         for idx in range(0, 6):
@@ -1479,7 +1480,7 @@ class TestFullNodeProtocol:
         else:
             reward_chain_block = block.reward_chain_block.get_unfinished()
 
-        generator_refs: List[uint32] = []
+        generator_refs: list[uint32] = []
         if committment > 6:
             generator_refs = [uint32(n) for n in range(600)]
 
@@ -1516,7 +1517,7 @@ class TestFullNodeProtocol:
 
         for i in range(2):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        blocks: List[FullBlock] = await full_node_1.get_all_full_blocks()
+        blocks: list[FullBlock] = await full_node_1.get_all_full_blocks()
 
         coin = blocks[-1].get_included_reward_coins()[0]
         tx = wallet_a.generate_signed_transaction(10000, wallet_receiver.get_new_puzzlehash(), coin)
@@ -2178,9 +2179,9 @@ class TestFullNodeProtocol:
     @pytest.mark.anyio
     async def test_invalid_capability_can_connect(
         self,
-        two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+        two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
         self_hostname: str,
-        custom_capabilities: List[Tuple[uint16, str]],
+        custom_capabilities: list[tuple[uint16, str]],
         expect_success: bool,
     ) -> None:
         # TODO: consider not testing this against both DB v1 and v2?
@@ -2260,9 +2261,9 @@ async def test_wallet_sync_task_failure(
 async def test_long_reorg(
     light_blocks: bool,
     one_node_one_block,
-    default_10000_blocks: List[FullBlock],
-    test_long_reorg_1500_blocks: List[FullBlock],
-    test_long_reorg_1500_blocks_light: List[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    test_long_reorg_1500_blocks: list[FullBlock],
+    test_long_reorg_1500_blocks_light: list[FullBlock],
     seeded_random: random.Random,
 ):
     node, server, bt = one_node_one_block
@@ -2290,16 +2291,7 @@ async def test_long_reorg(
     # not in the cache. We need to explicitly prune the cache to get that
     # effect.
     node.full_node.blockchain.clean_block_records()
-
-    fork_info: Optional[ForkInfo] = None
-    for b in reorg_blocks:
-        if (b.height % 128) == 0:
-            peak = node.full_node.blockchain.get_peak()
-            print(f"reorg chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
-        if b.height > fork_point and fork_info is None:
-            fork_info = ForkInfo(fork_point, fork_point, reorg_blocks[fork_point].header_hash)
-        await node.full_node.add_block(b, fork_info=fork_info)
-
+    await add_blocks_in_batches(reorg_blocks, node.full_node)
     # if these asserts fires, there was no reorg
     peak = node.full_node.blockchain.get_peak()
     assert peak.header_hash != chain_1_peak
@@ -2314,7 +2306,6 @@ async def test_long_reorg(
         assert peak.height > chain_1_height
     else:
         assert peak.height < chain_1_height
-
     # now reorg back to the original chain
     # this exercises the case where we have some of the blocks in the DB already
     node.full_node.blockchain.clean_block_records()
@@ -2324,15 +2315,7 @@ async def test_long_reorg(
         blocks = default_10000_blocks[fork_point - 100 : 3200]
     else:
         blocks = default_10000_blocks[fork_point - 100 : 5500]
-
-    fork_block = blocks[0]
-    fork_info = ForkInfo(fork_block.height - 1, fork_block.height - 1, fork_block.prev_header_hash)
-    for b in blocks:
-        if (b.height % 128) == 0:
-            peak = node.full_node.blockchain.get_peak()
-            print(f"original chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
-        await node.full_node.add_block(b, fork_info=fork_info)
-
+    await add_blocks_in_batches(blocks, node.full_node)
     # if these asserts fires, there was no reorg back to the original chain
     peak = node.full_node.blockchain.get_peak()
     assert peak.header_hash != chain_2_peak
@@ -2349,11 +2332,11 @@ async def test_long_reorg_nodes(
     chain_length: int,
     fork_point: int,
     three_nodes,
-    default_10000_blocks: List[FullBlock],
-    test_long_reorg_blocks: List[FullBlock],
-    test_long_reorg_blocks_light: List[FullBlock],
-    test_long_reorg_1500_blocks: List[FullBlock],
-    test_long_reorg_1500_blocks_light: List[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    test_long_reorg_blocks: list[FullBlock],
+    test_long_reorg_blocks_light: list[FullBlock],
+    test_long_reorg_1500_blocks: list[FullBlock],
+    test_long_reorg_1500_blocks_light: list[FullBlock],
     self_hostname: str,
     seeded_random: random.Random,
 ):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from time import perf_counter
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 import aiosqlite
 
@@ -23,7 +23,7 @@ async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection
     start_time = perf_counter()
     rows = await db.execute_fetchall("SELECT trade_record, trade_id from trade_records")
 
-    inserts: List[Tuple[bytes32, bytes32]] = []
+    inserts: list[tuple[bytes32, bytes32]] = []
     for row in rows:
         record: TradeRecordOld = TradeRecordOld.from_bytes(row[0])
         for coin in record.coins_of_interest:
@@ -57,7 +57,7 @@ async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Conn
     rows = await cursor.fetchall()
     await cursor.close()
 
-    updates: List[Tuple[int, str]] = []
+    updates: list[tuple[int, str]] = []
     for row in rows:
         record = TradeRecordOld.from_bytes(row[0])
         is_my_offer = 1 if record.is_my_offer else 0
@@ -142,7 +142,7 @@ class TradeStore:
             try:
                 await conn.execute("CREATE TABLE trade_record_times(trade_id blob PRIMARY KEY, valid_times blob)")
                 async with await conn.execute("SELECT trade_id from trade_records") as cursor:
-                    trade_ids: List[bytes32] = [bytes32.from_hexstr(row[0]) for row in await cursor.fetchall()]
+                    trade_ids: list[bytes32] = [bytes32.from_hexstr(row[0]) for row in await cursor.fetchall()]
                     await conn.executemany(
                         "INSERT INTO trade_record_times (trade_id, valid_times) VALUES(?, ?)",
                         [(id, bytes(ConditionValidTimes())) for id in trade_ids],
@@ -214,7 +214,7 @@ class TradeStore:
             # remove all current coin ids
             await conn.execute("DELETE FROM coin_of_interest_to_trade_record WHERE trade_id=?", (record.trade_id,))
             # now recreate them all
-            inserts: List[Tuple[bytes32, bytes32]] = []
+            inserts: list[tuple[bytes32, bytes32]] = []
             for coin in record.coins_of_interest:
                 inserts.append((coin.name(), record.trade_id))
             await conn.executemany(
@@ -294,7 +294,7 @@ class TradeStore:
         await self.add_trade_record(tx, offer.name())
         return True
 
-    async def get_trades_count(self) -> Tuple[int, int, int]:
+    async def get_trades_count(self) -> tuple[int, int, int]:
         """
         Returns the number of trades in the database broken down by is_my_offer status
         """
@@ -334,7 +334,7 @@ class TradeStore:
             return (await self._get_new_trade_records_from_old([TradeRecordOld.from_bytes(row[0])]))[0]
         return None
 
-    async def get_trade_record_with_status(self, status: TradeStatus) -> List[TradeRecord]:
+    async def get_trade_record_with_status(self, status: TradeStatus) -> list[TradeRecord]:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
@@ -345,7 +345,7 @@ class TradeStore:
 
         return await self._get_new_trade_records_from_old([TradeRecordOld.from_bytes(row[0]) for row in rows])
 
-    async def get_coin_ids_of_interest_with_trade_statuses(self, trade_statuses: List[TradeStatus]) -> Set[bytes32]:
+    async def get_coin_ids_of_interest_with_trade_statuses(self, trade_statuses: list[TradeStatus]) -> set[bytes32]:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
@@ -360,7 +360,7 @@ class TradeStore:
             )
         return {bytes32(row[0]) for row in rows}
 
-    async def get_all_trades(self) -> List[TradeRecord]:
+    async def get_all_trades(self) -> list[TradeRecord]:
         """
         Returns all stored trades.
         """
@@ -382,7 +382,7 @@ class TradeStore:
         exclude_my_offers: bool = False,
         exclude_taken_offers: bool = False,
         include_completed: bool = False,
-    ) -> List[TradeRecord]:
+    ) -> list[TradeRecord]:
         """
         Return a list of trades sorted by a key and between a start and end index.
         """
@@ -486,11 +486,11 @@ class TradeStore:
             await (await conn.execute("DELETE FROM trade_records WHERE trade_id=?", (trade_id.hex(),))).close()
             await (await conn.execute("DELETE FROM trade_record_times WHERE trade_id=?", (trade_id,))).close()
 
-    async def _get_new_trade_records_from_old(self, old_records: List[TradeRecordOld]) -> List[TradeRecord]:
-        trade_id_to_valid_times: Dict[bytes, ConditionValidTimes] = {}
+    async def _get_new_trade_records_from_old(self, old_records: list[TradeRecordOld]) -> list[TradeRecord]:
+        trade_id_to_valid_times: dict[bytes, ConditionValidTimes] = {}
         empty_valid_times = ConditionValidTimes()
         async with self.db_wrapper.reader_no_transaction() as conn:
-            chunked_records: List[List[TradeRecordOld]] = [
+            chunked_records: list[list[TradeRecordOld]] = [
                 old_records[i : min(len(old_records), i + self.db_wrapper.host_parameter_limit)]
                 for i in range(0, len(old_records), self.db_wrapper.host_parameter_limit)
             ]

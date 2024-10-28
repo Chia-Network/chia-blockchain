@@ -4,27 +4,12 @@ import asyncio
 import collections
 import inspect
 import sys
+from collections.abc import AsyncIterator, Coroutine, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import MISSING, dataclass, field, fields
 from functools import cached_property
 from pathlib import Path
-from typing import (
-    Any,
-    AsyncIterator,
-    Callable,
-    Coroutine,
-    Dict,
-    List,
-    Optional,
-    Protocol,
-    Sequence,
-    Type,
-    TypeVar,
-    Union,
-    get_args,
-    get_origin,
-    get_type_hints,
-)
+from typing import Any, Callable, Optional, Protocol, TypeVar, Union, get_args, get_origin, get_type_hints
 
 import click
 from typing_extensions import dataclass_transform
@@ -63,7 +48,7 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
     else:
         default_default = MISSING
 
-    return field(  # pylint: disable=invalid-field-call
+    return field(
         metadata=dict(
             option_args=dict(
                 param_decls=tuple(param_decls),
@@ -106,10 +91,10 @@ _CLASS_TYPES_TO_CLICK_TYPES = {
 
 @dataclass
 class _CommandParsingStage:
-    my_dataclass: Type[ChiaCommand]
-    my_option_decorators: List[Callable[[SyncCmd], SyncCmd]]
-    my_members: Dict[str, _CommandParsingStage]
-    my_kwarg_names: List[str]
+    my_dataclass: type[ChiaCommand]
+    my_option_decorators: list[Callable[[SyncCmd], SyncCmd]]
+    my_members: dict[str, _CommandParsingStage]
+    my_kwarg_names: list[str]
     _needs_context: bool
 
     def needs_context(self) -> bool:
@@ -118,14 +103,14 @@ class _CommandParsingStage:
         else:
             return any(member.needs_context() for member in self.my_members.values())
 
-    def get_all_option_decorators(self) -> List[Callable[[SyncCmd], SyncCmd]]:
-        all_option_decorators: List[Callable[[SyncCmd], SyncCmd]] = self.my_option_decorators
+    def get_all_option_decorators(self) -> list[Callable[[SyncCmd], SyncCmd]]:
+        all_option_decorators: list[Callable[[SyncCmd], SyncCmd]] = self.my_option_decorators
         for member in self.my_members.values():
             all_option_decorators.extend(member.get_all_option_decorators())
         return all_option_decorators
 
     def initialize_instance(self, **kwargs: Any) -> ChiaCommand:
-        kwargs_to_pass: Dict[str, Any] = {}
+        kwargs_to_pass: dict[str, Any] = {}
         for kwarg_name in self.my_kwarg_names:
             kwargs_to_pass[kwarg_name] = kwargs[kwarg_name]
 
@@ -140,7 +125,7 @@ class _CommandParsingStage:
 
             def strip_click_context(func: SyncCmd) -> SyncCmd:
                 def _inner(ctx: click.Context, **kwargs: Any) -> None:
-                    context: Dict[str, Any] = ctx.obj if ctx.obj is not None else {}
+                    context: dict[str, Any] = ctx.obj if ctx.obj is not None else {}
                     func(context=context, **kwargs)
 
                 return _inner
@@ -162,10 +147,10 @@ class _CommandParsingStage:
             instance.run()
 
 
-def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
-    option_decorators: List[Callable[[SyncCmd], SyncCmd]] = []
-    kwarg_names: List[str] = []
-    members: Dict[str, _CommandParsingStage] = {}
+def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
+    option_decorators: list[Callable[[SyncCmd], SyncCmd]] = []
+    kwarg_names: list[str] = []
+    members: dict[str, _CommandParsingStage] = {}
     needs_context: bool = False
 
     hints = get_type_hints(cls)
@@ -182,7 +167,7 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
                 needs_context = True
                 kwarg_names.append(field_name)
         elif "option_args" in _field.metadata:
-            option_args: Dict[str, Any] = {"multiple": False, "required": False}
+            option_args: dict[str, Any] = {"multiple": False, "required": False}
             option_args.update(_field.metadata["option_args"])
 
             if "type" not in option_args:
@@ -240,24 +225,24 @@ def _generate_command_parser(cls: Type[ChiaCommand]) -> _CommandParsingStage:
     )
 
 
-def _convert_class_to_function(cls: Type[ChiaCommand]) -> SyncCmd:
+def _convert_class_to_function(cls: type[ChiaCommand]) -> SyncCmd:
     command_parser = _generate_command_parser(cls)
 
     return command_parser.apply_decorators(command_parser)
 
 
 @dataclass_transform(frozen_default=True)
-def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[Type[ChiaCommand]], Type[ChiaCommand]]:
-    def _chia_command(cls: Type[ChiaCommand]) -> Type[ChiaCommand]:
+def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[type[ChiaCommand]], type[ChiaCommand]]:
+    def _chia_command(cls: type[ChiaCommand]) -> type[ChiaCommand]:
         # The type ignores here are largely due to the fact that the class information is not preserved after being
         # passed through the dataclass wrapper.  Not sure what to do about this right now.
         if sys.version_info < (3, 10):  # pragma: no cover
             # stuff below 3.10 doesn't know about kw_only
-            wrapped_cls: Type[ChiaCommand] = dataclass(  # type: ignore[assignment]
+            wrapped_cls: type[ChiaCommand] = dataclass(  # type: ignore[assignment]
                 frozen=True,
             )(cls)
         else:
-            wrapped_cls: Type[ChiaCommand] = dataclass(  # type: ignore[assignment]
+            wrapped_cls: type[ChiaCommand] = dataclass(  # type: ignore[assignment]
                 frozen=True,
                 kw_only=True,
             )(cls)
@@ -269,7 +254,7 @@ def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[Type[ChiaC
 
 
 @dataclass_transform(frozen_default=True)
-def command_helper(cls: Type[Any]) -> Type[Any]:
+def command_helper(cls: type[Any]) -> type[Any]:
     if sys.version_info < (3, 10):  # stuff below 3.10 doesn't support kw_only
         new_cls = dataclass(frozen=True)(cls)  # pragma: no cover
     else:
@@ -278,19 +263,19 @@ def command_helper(cls: Type[Any]) -> Type[Any]:
     return new_cls
 
 
-Context = Dict[str, Any]
+Context = dict[str, Any]
 
 
 @dataclass(frozen=True)
 class WalletClientInfo:
     client: WalletRpcClient
     fingerprint: int
-    config: Dict[str, Any]
+    config: dict[str, Any]
 
 
 @command_helper
 class NeedsWalletRPC:
-    context: Context = field(default_factory=dict)  # pylint: disable=invalid-field-call
+    context: Context = field(default_factory=dict)
     client_info: Optional[WalletClientInfo] = None
     wallet_rpc_port: Optional[int] = option(
         "-wp",
@@ -316,7 +301,7 @@ class NeedsWalletRPC:
             yield self.client_info
         else:
             if "root_path" not in kwargs:
-                kwargs["root_path"] = self.context["root_path"]  # pylint: disable=unsubscriptable-object
+                kwargs["root_path"] = self.context["root_path"]
             async with get_wallet_client(self.wallet_rpc_port, self.fingerprint, **kwargs) as (
                 wallet_client,
                 fp,
@@ -350,7 +335,7 @@ class TransactionsOut:
         required=False,
     )
 
-    def handle_transaction_output(self, output: List[TransactionRecord]) -> None:
+    def handle_transaction_output(self, output: list[TransactionRecord]) -> None:
         if self.transaction_file_out is None:
             return
         else:
@@ -412,7 +397,7 @@ class NeedsTXConfig(NeedsCoinSelectionConfig):
         default=None,
     )
 
-    def load_tx_config(self, mojo_per_unit: int, config: Dict[str, Any], fingerprint: int) -> TXConfig:
+    def load_tx_config(self, mojo_per_unit: int, config: dict[str, Any], fingerprint: int) -> TXConfig:
         return CMDTXConfigLoader(
             min_coin_amount=self.min_coin_amount,
             max_coin_amount=self.max_coin_amount,
@@ -492,7 +477,7 @@ _T_TransactionEndpoint = TypeVar("_T_TransactionEndpoint", bound=TransactionEndp
 
 
 def transaction_endpoint_runner(
-    func: Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, List[TransactionRecord]]]
+    func: Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, list[TransactionRecord]]]
 ) -> Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, None]]:
     async def wrapped_func(self: _T_TransactionEndpoint) -> None:
         txs = await func(self)

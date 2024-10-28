@@ -11,11 +11,12 @@ import random
 import sqlite3
 import sys
 import time
+from collections.abc import AsyncIterator
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Optional, cast
 
 import anyio
 import pytest
@@ -73,10 +74,10 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 
 pytestmark = pytest.mark.data_layer
-nodes = Tuple[WalletNode, FullNodeSimulator]
-nodes_with_port_bt_ph = Tuple[WalletRpcApi, FullNodeSimulator, uint16, bytes32, BlockTools]
-wallet_and_port_tuple = Tuple[WalletNode, uint16]
-two_wallets_with_port = Tuple[Tuple[wallet_and_port_tuple, wallet_and_port_tuple], FullNodeSimulator, BlockTools]
+nodes = tuple[WalletNode, FullNodeSimulator]
+nodes_with_port_bt_ph = tuple[WalletRpcApi, FullNodeSimulator, uint16, bytes32, BlockTools]
+wallet_and_port_tuple = tuple[WalletNode, uint16]
+two_wallets_with_port = tuple[tuple[wallet_and_port_tuple, wallet_and_port_tuple], FullNodeSimulator, BlockTools]
 
 
 class InterfaceLayer(enum.Enum):
@@ -261,7 +262,7 @@ async def test_create_insert_get(
         data_rpc_api = DataLayerRpcApi(data_layer)
         key = b"a"
         value = b"\x00\x01"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.create_data_store({})
         assert res is not None
         store_id = bytes32.from_hexstr(res["id"])
@@ -319,7 +320,7 @@ async def test_create_insert_get(
             await data_rpc_api.get_value({"id": store_id.hex(), "key": key.hex()})
         wallet_root = await data_rpc_api.get_root({"id": store_id.hex()})
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
-        assert wallet_root["hash"] == bytes32([0] * 32)
+        assert wallet_root["hash"] == bytes32.zeros
         assert local_root["hash"] is None
 
         # test empty changelist
@@ -340,7 +341,7 @@ async def test_upsert(
         data_rpc_api = DataLayerRpcApi(data_layer)
         key = b"a"
         value = b"\x00\x01"
-        changelist: List[Dict[str, str]] = [
+        changelist: list[dict[str, str]] = [
             {"action": "delete", "key": key.hex()},
             {"action": "insert", "key": key.hex(), "value": value.hex()},
         ]
@@ -373,7 +374,7 @@ async def test_create_double_insert(
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -411,7 +412,7 @@ async def test_keys_values_ancestors(
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
@@ -492,7 +493,7 @@ async def test_get_roots(
 
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
@@ -504,7 +505,7 @@ async def test_get_roots(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         roots = await data_rpc_api.get_roots({"ids": [store_id1.hex(), store_id2.hex()]})
         assert roots["root_hashes"][1]["id"] == store_id2
-        assert roots["root_hashes"][1]["hash"] == bytes32([0] * 32)
+        assert roots["root_hashes"][1]["hash"] == bytes32.zeros
         assert roots["root_hashes"][1]["confirmed"] is True
         assert roots["root_hashes"][1]["timestamp"] > 0
         key4 = b"d"
@@ -519,7 +520,7 @@ async def test_get_roots(
         roots = await data_rpc_api.get_roots({"ids": [store_id1.hex(), store_id2.hex()]})
         assert roots["root_hashes"][1]["id"] == store_id2
         assert roots["root_hashes"][1]["hash"] is not None
-        assert roots["root_hashes"][1]["hash"] != bytes32([0] * 32)
+        assert roots["root_hashes"][1]["hash"] != bytes32.zeros
         assert roots["root_hashes"][1]["confirmed"] is True
         assert roots["root_hashes"][1]["timestamp"] > 0
 
@@ -539,7 +540,7 @@ async def test_get_root_history(
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id1, wallet=wallet_rpc_api.service)
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
@@ -551,10 +552,10 @@ async def test_get_root_history(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         history1 = await data_rpc_api.get_root_history({"id": store_id1.hex()})
         assert len(history1["root_history"]) == 2
-        assert history1["root_history"][0]["root_hash"] == bytes32([0] * 32)
+        assert history1["root_history"][0]["root_hash"] == bytes32.zeros
         assert history1["root_history"][0]["confirmed"] is True
         assert history1["root_history"][0]["timestamp"] > 0
-        assert history1["root_history"][1]["root_hash"] != bytes32([0] * 32)
+        assert history1["root_history"][1]["root_hash"] != bytes32.zeros
         assert history1["root_history"][1]["confirmed"] is True
         assert history1["root_history"][1]["timestamp"] > 0
         key4 = b"d"
@@ -568,7 +569,7 @@ async def test_get_root_history(
         await farm_block_with_spend(full_node_api, ph, update_tx_rec1, wallet_rpc_api)
         history2 = await data_rpc_api.get_root_history({"id": store_id1.hex()})
         assert len(history2["root_history"]) == 3
-        assert history2["root_history"][0]["root_hash"] == bytes32([0] * 32)
+        assert history2["root_history"][0]["root_hash"] == bytes32.zeros
         assert history2["root_history"][0]["confirmed"] is True
         assert history2["root_history"][0]["timestamp"] > 0
         assert history2["root_history"][1]["root_hash"] == history1["root_history"][1]["root_hash"]
@@ -593,7 +594,7 @@ async def test_get_kv_diff(
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id1, wallet=wallet_rpc_api.service)
         key1 = b"a"
         value1 = b"\x01\x02"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"b"
         value2 = b"\x03\x02"
         changelist.append({"action": "insert", "key": key2.hex(), "value": value2.hex()})
@@ -607,7 +608,7 @@ async def test_get_kv_diff(
         diff_res = await data_rpc_api.get_kv_diff(
             {
                 "id": store_id1.hex(),
-                "hash_1": bytes32([0] * 32).hex(),
+                "hash_1": bytes32.zeros.hex(),
                 "hash_2": history["root_history"][1]["root_hash"].hex(),
             }
         )
@@ -661,7 +662,7 @@ async def test_batch_update_matches_single_operations(
 
         key = b"a"
         value = b"\x00\x01"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -687,7 +688,7 @@ async def test_batch_update_matches_single_operations(
 
         root_1 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         expected_res_hash = root_1["root_hashes"][0]["hash"]
-        assert expected_res_hash != bytes32([0] * 32)
+        assert expected_res_hash != bytes32.zeros
 
         changelist = [{"action": "delete", "key": key_2.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
@@ -701,7 +702,7 @@ async def test_batch_update_matches_single_operations(
 
         root_2 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         hash_2 = root_2["root_hashes"][0]["hash"]
-        assert hash_2 == bytes32([0] * 32)
+        assert hash_2 == bytes32.zeros
 
         changelist = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         changelist.append({"action": "insert", "key": key_2.hex(), "value": value_2.hex()})
@@ -824,7 +825,7 @@ async def offer_setup_fixture(
     [full_node_service], wallet_services, bt = two_wallet_nodes_services
     enable_batch_autoinsertion_settings = getattr(request, "param", (True, True))
     full_node_api = full_node_service._api
-    wallets: List[Wallet] = []
+    wallets: list[Wallet] = []
     for wallet_service in wallet_services:
         wallet_node = wallet_service._node
         assert wallet_node.server is not None
@@ -836,7 +837,7 @@ async def offer_setup_fixture(
         await full_node_api.farm_blocks_to_wallet(count=1, wallet=wallet, timeout=60)
 
     async with contextlib.AsyncExitStack() as exit_stack:
-        store_setups: List[StoreSetup] = []
+        store_setups: list[StoreSetup] = []
         for enable_batch_autoinsert, wallet_service in zip(enable_batch_autoinsertion_settings, wallet_services):
             assert wallet_service.rpc_server is not None
             port = wallet_service.rpc_server.listen_port
@@ -866,7 +867,7 @@ async def offer_setup_fixture(
                 StoreSetup(
                     api=data_rpc_api,
                     id=bytes32.from_hexstr(create_response["id"]),
-                    original_hash=bytes32([0] * 32),
+                    original_hash=bytes32.zeros,
                     data_layer=data_layer,
                     data_rpc_client=data_rpc_client,
                 )
@@ -928,7 +929,7 @@ async def offer_setup_fixture(
 
 async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetup:
     if count > 0:
-        setups: Tuple[Tuple[StoreSetup, bytes], Tuple[StoreSetup, bytes]] = (
+        setups: tuple[tuple[StoreSetup, bytes], tuple[StoreSetup, bytes]] = (
             (offer_setup.maker, b"\x01"),
             (offer_setup.taker, b"\x02"),
         )
@@ -1014,11 +1015,11 @@ async def process_for_data_layer_keys(
 @dataclass(frozen=True)
 class MakeAndTakeReference:
     entries_to_insert: int
-    make_offer_response: Dict[str, Any]
-    maker_inclusions: List[Dict[str, Any]]
-    maker_root_history: List[bytes32]
-    taker_inclusions: List[Dict[str, Any]]
-    taker_root_history: List[bytes32]
+    make_offer_response: dict[str, Any]
+    maker_inclusions: list[dict[str, Any]]
+    maker_root_history: list[bytes32]
+    taker_inclusions: list[dict[str, Any]]
+    taker_root_history: list[bytes32]
     trade_id: str
 
 
@@ -1649,13 +1650,13 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 
     assert [generation["confirmed"] for generation in maker_history] == [True] * len(maker_history)
     assert [generation["root_hash"] for generation in maker_history] == [
-        bytes32([0] * 32),
+        bytes32.zeros,
         *reference.maker_root_history,
     ]
 
     assert [generation["confirmed"] for generation in taker_history] == [True] * len(taker_history)
     assert [generation["root_hash"] for generation in taker_history] == [
-        bytes32([0] * 32),
+        bytes32.zeros,
         *reference.taker_root_history,
     ]
 
@@ -1752,7 +1753,7 @@ async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None
                 "inclusions": reference.maker_inclusions,
             },
             {
-                "store_id": bytes32([0] * 32).hex(),
+                "store_id": bytes32.zeros.hex(),
                 "inclusions": [],
             },
         ],
@@ -2004,7 +2005,7 @@ async def test_get_sync_status(
 
         key = b"a"
         value = b"\x00\x01"
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -2093,7 +2094,7 @@ async def test_clear_pending_roots(
                 root_path=bt.root_path,
             )
         elif layer == InterfaceLayer.cli:
-            args: List[str] = [
+            args: list[str] = [
                 sys.executable,
                 "-m",
                 "chia",
@@ -2223,7 +2224,7 @@ async def test_maximum_full_file_count(
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
-        root_hashes: List[bytes32] = []
+        root_hashes: list[bytes32] = []
         assert res is not None
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
@@ -2304,7 +2305,7 @@ async def test_unsubscribe_removes_files(
     ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
-        root_hashes: List[bytes32] = []
+        root_hashes: list[bytes32] = []
         assert res is not None
         store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
@@ -2462,8 +2463,8 @@ async def test_mirrors(
 @dataclass(frozen=True)
 class ProofReference:
     entries_to_insert: int
-    keys_to_prove: List[str]
-    verify_proof_response: Dict[str, Any]
+    keys_to_prove: list[str]
+    verify_proof_response: dict[str, Any]
 
 
 def populate_reference(count: int, keys_to_prove: int) -> ProofReference:
@@ -2530,7 +2531,7 @@ async def populate_proof_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
         taker=StoreSetup(
             api=offer_setup.taker.api,
             id=offer_setup.taker.id,
-            original_hash=bytes32([0] * 32),
+            original_hash=bytes32.zeros,
             data_layer=offer_setup.taker.data_layer,
             data_rpc_client=offer_setup.taker.data_rpc_client,
         ),
@@ -2612,7 +2613,7 @@ async def test_dl_proof(offer_setup: OfferSetup, reference: ProofReference) -> N
     assert verify == reference.verify_proof_response
 
     # test InterfaceLayer.cli
-    key_args: List[str] = []
+    key_args: list[str] = []
     for key in reference.keys_to_prove:
         key_args.append("--key")
         key_args.append(key)
@@ -2669,7 +2670,7 @@ async def test_dl_proof_errors(
         with pytest.raises(Exception, match="No generations found"):
             await data_rpc_api.get_proof(request={"store_id": store_id.hex(), "keys": [b"4".hex()]})
 
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": b"a".hex(), "value": b"\x00\x01".hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": b"a".hex(), "value": b"\x00\x01".hex()}]
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -2741,7 +2742,7 @@ async def test_dl_proof_changed_root(offer_setup: OfferSetup, seeded_random: ran
 
     key = b"a"
     value = b"\x00\x01"
-    changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+    changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
     await offer_setup.maker.api.batch_update({"id": offer_setup.maker.id.hex(), "changelist": changelist})
 
     await process_for_data_layer_keys(
@@ -2775,7 +2776,7 @@ async def test_pagination_rpcs(
         value1 = b"\x01\x02"
         key1_hash = key_hash(key1)
         leaf_hash1 = leaf_hash(key1, value1)
-        changelist: List[Dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
+        changelist: list[dict[str, str]] = [{"action": "insert", "key": key1.hex(), "value": value1.hex()}]
         key2 = b"ba"
         value2 = b"\x03\x02"
         key2_hash = key_hash(key2)
@@ -3052,7 +3053,7 @@ async def test_pagination_cmds(
         update_tx_rec0 = res["tx_id"]
         await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
         local_root = await data_rpc_api.get_local_root({"id": store_id.hex()})
-        hash_1 = bytes32([0] * 32)
+        hash_1 = bytes32.zeros
         hash_2 = local_root["hash"]
         # `InterfaceLayer.direct` is not tested here since test `test_pagination_rpcs` extensively use it.
         if layer == InterfaceLayer.funcs:
@@ -3087,7 +3088,7 @@ async def test_pagination_cmds(
         elif layer == InterfaceLayer.cli:
             for command in ("get_keys", "get_keys_values", "get_kv_diff"):
                 if command == "get_keys" or command == "get_keys_values":
-                    args: List[str] = [
+                    args: list[str] = [
                         sys.executable,
                         "-m",
                         "chia",
@@ -3276,7 +3277,7 @@ async def test_unsubmitted_batch_update(
 
         to_insert = [(b"a", b"\x00\x01"), (b"b", b"\x00\x02"), (b"c", b"\x00\x03")]
         for key, value in to_insert:
-            changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+            changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
 
             if layer == InterfaceLayer.direct:
                 res = await data_rpc_api.batch_update(
@@ -3295,7 +3296,7 @@ async def test_unsubmitted_batch_update(
                 )
                 assert res == {"success": True}
             elif layer == InterfaceLayer.cli:
-                args: List[str] = [
+                args: list[str] = [
                     sys.executable,
                     "-m",
                     "chia",
@@ -3535,7 +3536,7 @@ async def test_multistore_update(
         data_store = data_layer.data_store
         data_rpc_api = DataLayerRpcApi(data_layer)
 
-        store_ids: List[bytes32] = []
+        store_ids: list[bytes32] = []
         store_ids_count = 5
 
         for _ in range(store_ids_count):
@@ -3545,10 +3546,10 @@ async def test_multistore_update(
             await farm_block_check_singleton(data_layer, full_node_api, ph, store_id, wallet=wallet_rpc_api.service)
             store_ids.append(store_id)
 
-        store_updates: List[Dict[str, Any]] = []
+        store_updates: list[dict[str, Any]] = []
         key_offset = 1000
         for index, store_id in enumerate(store_ids):
-            changelist: List[Dict[str, str]] = []
+            changelist: list[dict[str, str]] = []
             key = index.to_bytes(2, "big")
             value = index.to_bytes(2, "big")
             changelist.append({"action": "insert", "key": key.hex(), "value": value.hex()})
@@ -3734,7 +3735,7 @@ async def test_unsubmitted_batch_db_migration(
 
             key = b"0000"
             value = b"0000"
-            changelist: List[Dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
+            changelist: list[dict[str, str]] = [{"action": "insert", "key": key.hex(), "value": value.hex()}]
             res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
             update_tx_rec0 = res["tx_id"]
             await farm_block_with_spend(full_node_api, ph, update_tx_rec0, wallet_rpc_api)
@@ -3794,10 +3795,10 @@ async def test_auto_subscribe_to_local_stores(
     manage_data_interval = 5
     fake_store = bytes32([1] * 32)
 
-    async def mock_get_store_ids(self: Any) -> Set[bytes32]:
+    async def mock_get_store_ids(self: Any) -> set[bytes32]:
         return {fake_store}
 
-    async def mock_dl_track_new(self: Any, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def mock_dl_track_new(self: Any, request: dict[str, Any]) -> dict[str, Any]:
         # ignore and just return empty response
         return {}
 
@@ -3843,7 +3844,7 @@ async def test_local_store_exception(
     manage_data_interval = 5
     fake_store = bytes32([1] * 32)
 
-    async def mock_get_store_ids(self: Any) -> Set[bytes32]:
+    async def mock_get_store_ids(self: Any) -> set[bytes32]:
         return {fake_store}
 
     with monkeypatch.context() as m, caplog.at_level(logging.INFO):

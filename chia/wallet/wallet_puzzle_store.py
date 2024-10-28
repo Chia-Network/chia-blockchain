@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from chia_rs import G1Element
 
@@ -27,7 +27,7 @@ class WalletPuzzleStore:
     db_wrapper: DBWrapper2
     wallet_identifier_cache: LRUCache
     # maps wallet_id -> last_derivation_index
-    last_wallet_derivation_index: Dict[uint32, uint32]
+    last_wallet_derivation_index: dict[uint32, uint32]
     last_derivation_index: Optional[uint32]
 
     @classmethod
@@ -68,7 +68,7 @@ class WalletPuzzleStore:
         self.last_wallet_derivation_index = {}
         return self
 
-    async def add_derivation_paths(self, records: List[DerivationRecord]) -> None:
+    async def add_derivation_paths(self, records: list[DerivationRecord]) -> None:
         """
         Insert many derivation paths into the database.
         """
@@ -267,7 +267,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_all_puzzle_hashes(self, wallet_id: Optional[int] = None) -> Set[bytes32]:
+    async def get_all_puzzle_hashes(self, wallet_id: Optional[int] = None) -> set[bytes32]:
         """
         Return a set containing all puzzle_hashes we generated.
         """

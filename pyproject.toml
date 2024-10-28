@@ -37,21 +37,21 @@ priority = "supplemental"
 "Changelog" = "https://github.com/Chia-Network/chia-blockchain/blob/main/CHANGELOG.md"
 
 [tool.poetry.dependencies]
-python = ">=3.8.10, <3.13"
+python = ">=3.9, <3.13"
 aiofiles = "24.1.0"  # Async IO for files
-aiohttp = "3.10.2"  # HTTP server for full node rpc
+aiohttp = "3.10.4"  # HTTP server for full node rpc
 aiosqlite = "0.20.0"  # asyncio wrapper for sqlite, to store blocks
-anyio = "4.3.0"
+anyio = "4.6.2.post1"
 bitstring = "4.1.4"  # Binary data management library
-boto3 = "1.34.143"  # AWS S3 for Data Layer S3 plugin
+boto3 = "1.35.43"  # AWS S3 for Data Layer S3 plugin
 chiabip158 = "1.5.1"  # bip158-style wallet filters
 chiapos = "2.0.4"  # proof of space
-chia_rs = "0.13.0"
-chiavdf = "1.1.4"  # timelord and vdf verification
+chia_rs = "0.15.0"
+chiavdf = "1.1.8"  # timelord and vdf verification
 click = "8.1.7"  # For the CLI
 clvm = "0.9.10"
 clvm_tools = "0.4.9"  # Currying Program.to other conveniences
-clvm_tools_rs = "0.1.43"  # Rust implementation of clvm_tools' compiler
+clvm_tools_rs = "0.1.45"  # Rust implementation of clvm_tools' compiler
 colorama = "0.4.6"  # Colorizes terminal output
 colorlog = "6.8.2"  # Adds color to logs
 concurrent_log_handler = "0.9.25"  # Concurrently log and rotate logs
@@ -81,8 +81,8 @@ hsms = "0.3.1"
 aiohttp_cors = { version = "0.7.0", optional = true }
 black = { version = "24.8.0", optional = true }
 build = { version = "1.2.1", optional = true }
-coverage = { version = "7.6.1", optional = true }
-diff-cover = { version = "9.0.0", optional = true }
+coverage = { version = "7.6.4", optional = true }
+diff-cover = { version = "9.2.0", optional = true }
 flake8 = { version = "7.1.1", optional = true }
 isort = { version = "5.13.2", optional = true }
 # TODO: but...  keyrings_cryptfile goes 15 minutes without locking while this does in 75 seconds
@@ -91,7 +91,6 @@ mypy = { version = "1.11.1", optional = true }
 pre-commit = [ { version = "3.5.0", python = "<3.9", optional = true }, { version = "3.7.1", python = ">=3.9", optional = true } ]
 py3createtorrent = { version = "1.2.1", optional = true }
 pyinstaller = { version = "6.9.0", optional = true }
-pylint = { version = "3.2.6", optional = true }
 pytest = { version = "8.3.3", optional = true }
 pytest-cov = { version = "5.0.0", optional = true }
 pytest-mock = { version = "3.14.0", optional = true }
@@ -108,10 +107,11 @@ pyupgrade = { version = "3.16.0", optional = true }
 # numpy = [
 # 	{version="1.24.4", python = "<3.9", optional = true},
 # 	{version="1.26.4", python = ">=3.9", optional = true}]
+ruff = "0.7.1"
 
 
 [tool.poetry.extras]
-dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "pyupgrade", "lxml"]
+dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pytest", "pytest-cov", "pytest-mock", "pytest-monitor", "pytest-xdist", "types-aiofiles", "types-cryptography", "types-pyyaml", "types-setuptools", "pyupgrade", "lxml"]
 upnp = ["miniupnpc"]
 legacy_keyring = ["keyrings.cryptfile"]
 
@@ -150,7 +150,7 @@ build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.black]
 line-length = 120
-target-version =  ['py38', 'py39', 'py310', 'py311', 'py312']
+target-version =  ['py39', 'py310', 'py311', 'py312']
 include = '''
 ^/(
     [^/]*.py
@@ -158,3 +158,63 @@ include = '''
 )$
 '''
 exclude = ''
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+preview = true
+select = ["PL"]
+explicit-preview-rules = false
+ignore = [
+    # Pylint convention
+    "PLC0105", # type-name-incorrect-variance
+    "PLC0415", # import-outside-top-level
+    "PLC2801", # unnecessary-dunder-call
+    "PLC0206", # dict-index-missing-items
+    "PLC1901", # compare-to-empty-string
+    "PLC2701", # import-private-name
+    "PLC0414", # useless-import-alias
+
+    # Pylint refactor
+    "PLR0915", # too-many-statements
+    "PLR0914", # too-many-locals
+    "PLR0913", # too-many-arguments
+    "PLR0912", # too-many-branches
+    "PLR1702", # too-many-nested-blocks
+    "PLR0904", # too-many-public-methods
+    "PLR6301", # no-self-use
+    "PLR0917", # too-many-positional-arguments
+    "PLR6201", # literal-membership
+    "PLR0911", # too-many-return-statements
+    "PLR2004", # magic-value-comparison
+    "PLR1714", # repeated-equality-comparison
+    "PLR6104", # non-augmented-assignment
+    "PLR1704", # redefined-argument-from-local
+    "PLR0916", # too-many-boolean-expressions
+    "PLR5501", # collapsible-else-if
+    "PLR1711", # useless-return
+    "PLR1730", # if-stmt-min-max
+    "PLR1736", # unnecessary-list-index-lookup
+    "PLR1733", # unnecessary-dict-index-lookup
+
+    # Pylint warning
+    "PLW2901", # redefined-loop-name
+    "PLW1641", # eq-without-hash
+    "PLW1514", # unspecified-encoding
+    "PLW0602", # global-variable-not-assigned
+    "PLW0603", # global-statement
+    "PLW0108", # unnecessary-lambda
+    "PLW1510", # subprocess-run-without-check
+    "PLW0120", # useless-else-on-loop
+]
+
+[tool.ruff.lint.pylint]
+max-args = 5
+max-locals = 15
+max-returns = 6
+max-branches = 12
+max-statements = 50
+max-nested-blocks = 5
+max-public-methods = 20
+max-bool-expr = 5

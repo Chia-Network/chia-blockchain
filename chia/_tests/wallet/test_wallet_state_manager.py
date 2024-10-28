@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, List
 
 import pytest
 from chia_rs import G2Element
@@ -9,6 +9,7 @@ from chia_rs import G2Element
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.wallet_request_types import PushTransactions
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -125,20 +126,20 @@ async def test_commit_transactions_to_db(wallet_environments: WalletTestFramewor
         coins = list(await wsm.main_wallet.select_coins(uint64(2_000_000_000_000), action_scope))
         await wsm.main_wallet.generate_signed_transaction(
             uint64(0),
-            bytes32([0] * 32),
+            bytes32.zeros,
             action_scope,
             coins={coins[0]},
         )
         await wsm.main_wallet.generate_signed_transaction(
             uint64(0),
-            bytes32([0] * 32),
+            bytes32.zeros,
             action_scope,
             coins={coins[1]},
         )
 
     created_txs = action_scope.side_effects.transactions
 
-    def flatten_spend_bundles(txs: List[TransactionRecord]) -> List[WalletSpendBundle]:
+    def flatten_spend_bundles(txs: list[TransactionRecord]) -> list[WalletSpendBundle]:
         return [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
 
     assert (
@@ -224,7 +225,13 @@ async def test_confirming_txs_not_ours(wallet_environments: WalletTestFramework)
             action_scope,
         )
 
-    await env_2.rpc_client.push_transactions(action_scope.side_effects.transactions)
+    await env_2.rpc_client.push_transactions(
+        PushTransactions(
+            transactions=action_scope.side_effects.transactions,
+            sign=False,
+        ),
+        wallet_environments.tx_config,
+    )
 
     await wallet_environments.process_pending_states(
         [

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import cProfile
+from collections.abc import Collection, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from subprocess import check_call
 from time import monotonic
-from typing import Collection, Dict, Iterator, List, Optional, Tuple
+from typing import Optional
 
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -77,10 +78,10 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 
 
 async def run_mempool_benchmark() -> None:
-    all_coins: Dict[bytes32, CoinRecord] = {}
+    all_coins: dict[bytes32, CoinRecord] = {}
 
-    async def get_coin_records(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
-        ret: List[CoinRecord] = []
+    async def get_coin_records(coin_ids: Collection[bytes32]) -> list[CoinRecord]:
+        ret: list[CoinRecord] = []
         for name in coin_ids:
             r = all_coins.get(name)
             if r is not None:
@@ -93,14 +94,14 @@ async def run_mempool_benchmark() -> None:
 
     wt = WalletTool(DEFAULT_CONSTANTS)
 
-    spend_bundles: List[List[SpendBundle]] = []
+    spend_bundles: list[list[SpendBundle]] = []
 
     # these spend the same coins as spend_bundles but with a higher fee
-    replacement_spend_bundles: List[List[SpendBundle]] = []
+    replacement_spend_bundles: list[list[SpendBundle]] = []
 
     # these spend the same coins as spend_bundles, but they are organized in
     # much larger bundles
-    large_spend_bundles: List[List[SpendBundle]] = []
+    large_spend_bundles: list[list[SpendBundle]] = []
 
     timestamp = uint64(1631794488)
 
@@ -110,7 +111,7 @@ async def run_mempool_benchmark() -> None:
     for peer in range(NUM_PEERS):
         print(f"  peer {peer}")
         print("     reward coins")
-        unspent: List[Coin] = []
+        unspent: list[Coin] = []
         for idx in range(NUM_ITERS):
             height = uint32(height + 1)
 
@@ -170,7 +171,7 @@ async def run_mempool_benchmark() -> None:
         rec = fake_block_record(height, timestamp)
         await mempool.new_peak(rec, None)
 
-        async def add_spend_bundles(spend_bundles: List[SpendBundle]) -> None:
+        async def add_spend_bundles(spend_bundles: list[SpendBundle]) -> None:
             for tx in spend_bundles:
                 spend_bundle_id = tx.name()
                 npc = await mempool.pre_validate_spendbundle(tx, spend_bundle_id)
@@ -239,7 +240,7 @@ async def run_mempool_benchmark() -> None:
         print(f"  per call: {(stop - start) / 500 * 1000:0.2f}ms")
 
         print("\nProfiling new_peak() (optimized)")
-        blocks: List[Tuple[BenchBlockRecord, List[bytes32]]] = []
+        blocks: list[tuple[BenchBlockRecord, list[bytes32]]] = []
         for coin_id in all_coins.keys():
             height = uint32(height + 1)
             timestamp = uint64(timestamp + 19)

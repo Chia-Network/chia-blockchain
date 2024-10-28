@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import textwrap
+from collections.abc import Sequence
 from dataclasses import asdict
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Optional
 
 import click
 import pytest
@@ -40,7 +41,7 @@ def check_click_parsing(cmd: ChiaCommand, *args: str) -> None:
 
     mock_type = type(cmd.__class__.__name__, (cmd.__class__,), {})
 
-    def dict_compare_with_ignore_context(one: Dict[str, Any], two: Dict[str, Any]) -> None:
+    def dict_compare_with_ignore_context(one: dict[str, Any], two: dict[str, Any]) -> None:
         for k, v in one.items():
             if k == "context":
                 continue
@@ -307,7 +308,7 @@ def test_typing() -> None:
 
         @chia_command(cmd, "temp_cmd_bad_type", "blah")
         class TempCMDBadType:
-            sequence: List[int] = option("--sequence")
+            sequence: list[int] = option("--sequence")
 
             def run(self) -> None: ...
 
@@ -520,7 +521,7 @@ async def test_transaction_endpoint_mixin() -> None:
     class TxCMD(TransactionEndpoint):
 
         @transaction_endpoint_runner
-        async def run(self) -> List[TransactionRecord]:
+        async def run(self) -> list[TransactionRecord]:
             assert self.load_condition_valid_times() == ConditionValidTimes(
                 min_time=uint64(10),
                 max_time=uint64(20),

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 import sys
-from typing import List, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Optional
 
 import click
 
@@ -34,7 +35,7 @@ def coins_cmd(ctx: click.Context) -> None:
 
 
 def print_coins(
-    target_string: str, coins: List[Tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
+    target_string: str, coins: list[tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
 ) -> None:
     if len(coins) == 0:
         print("\tNo Coins.")
@@ -94,7 +95,7 @@ class ListCMD:
             except LookupError:
                 print(f"Wallet id: {self.id} not found.")
                 return
-            if not await wallet_rpc.client.get_synced():
+            if not (await wallet_rpc.client.get_sync_status()).synced:
                 print("Wallet not synced. Please wait.")
                 return
             conf_coins, unconfirmed_removals, unconfirmed_additions = await wallet_rpc.client.get_spendable_coins(
@@ -172,7 +173,7 @@ class CombineCMD(TransactionEndpoint):
     )
 
     @transaction_endpoint_runner
-    async def run(self) -> List[TransactionRecord]:
+    async def run(self) -> list[TransactionRecord]:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
             try:
                 wallet_type = await get_wallet_type(wallet_id=self.id, wallet_client=wallet_rpc.client)
@@ -180,7 +181,7 @@ class CombineCMD(TransactionEndpoint):
             except LookupError:
                 print(f"Wallet id: {self.id} not found.")
                 return []
-            if not await wallet_rpc.client.get_synced():
+            if not (await wallet_rpc.client.get_sync_status()).synced:
                 print("Wallet not synced. Please wait.")
                 return []
 
@@ -255,7 +256,7 @@ class SplitCMD(TransactionEndpoint):
     )
 
     @transaction_endpoint_runner
-    async def run(self) -> List[TransactionRecord]:
+    async def run(self) -> list[TransactionRecord]:
         async with self.rpc_info.wallet_rpc() as wallet_rpc:
             try:
                 wallet_type = await get_wallet_type(wallet_id=self.id, wallet_client=wallet_rpc.client)
@@ -263,7 +264,7 @@ class SplitCMD(TransactionEndpoint):
             except LookupError:
                 print(f"Wallet id: {self.id} not found.")
                 return []
-            if not await wallet_rpc.client.get_synced():
+            if not (await wallet_rpc.client.get_sync_status()).synced:
                 print("Wallet not synced. Please wait.")
                 return []
 
@@ -271,7 +272,7 @@ class SplitCMD(TransactionEndpoint):
 
             tx_config = self.tx_config_loader.load_tx_config(mojo_per_unit, wallet_rpc.config, wallet_rpc.fingerprint)
 
-            transactions: List[TransactionRecord] = (
+            transactions: list[TransactionRecord] = (
                 await wallet_rpc.client.split_coins(
                     SplitCoins(
                         wallet_id=uint32(self.id),

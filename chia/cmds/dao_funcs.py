@@ -4,7 +4,7 @@ import asyncio
 import json
 import time
 from decimal import Decimal
-from typing import List, Optional
+from typing import Optional
 
 from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client, transaction_status_msg, transaction_submitted_msg
 from chia.cmds.param_types import CliAmount
@@ -62,7 +62,7 @@ async def create_dao_wallet(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     if proposal_minimum % 2 == 0:
         proposal_minimum = uint64(1 + proposal_minimum)
         print("Adding 1 mojo to proposal minimum amount")
@@ -131,7 +131,7 @@ async def add_funds_to_treasury(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             typ = await get_wallet_type(wallet_id=funding_wallet_id, wallet_client=wallet_client)
@@ -285,7 +285,7 @@ async def vote_on_proposal(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_vote_on_proposal(
             wallet_id=wallet_id,
@@ -322,7 +322,7 @@ async def close_proposal(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_close_proposal(
             wallet_id=wallet_id,
@@ -358,7 +358,7 @@ async def lockup_coins(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     final_amount: uint64 = amount.convert_amount(units["cat"])
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_send_to_lockup(
@@ -393,7 +393,7 @@ async def release_coins(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_free_coins_from_finished_proposals(
             wallet_id=wallet_id,
@@ -425,7 +425,7 @@ async def exit_lockup(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_exit_lockup(
             wallet_id=wallet_id,
@@ -464,7 +464,7 @@ async def create_spend_proposal(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     if additions_file is None and (address is None or amount is None):
         raise ValueError("Must include a json specification or an address / amount pair.")
     if additions_file:  # pragma: no cover
@@ -518,7 +518,7 @@ async def create_update_proposal(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     new_dao_rules = {
         "proposal_timelock": proposal_timelock,
         "soft_close_length": soft_close_length,
@@ -556,7 +556,7 @@ async def create_mint_proposal(
     cli_tx_config: CMDTXConfigLoader,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.dao_create_proposal(
             wallet_id=wallet_id,

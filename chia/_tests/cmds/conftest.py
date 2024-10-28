@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, Tuple
 
 import pytest
 
@@ -11,7 +11,7 @@ from chia.util.config import create_default_chia_config
 
 
 @pytest.fixture(scope="module")  # every file has its own config generated, just to be safe
-def get_test_cli_clients() -> Iterator[Tuple[TestRpcClients, Path]]:
+def get_test_cli_clients() -> Iterator[tuple[TestRpcClients, Path]]:
     # we cant use the normal config fixture because it only supports function scope.
     with tempfile.TemporaryDirectory() as tmp_path:
         root_path: Path = Path(tmp_path) / "chia_root"

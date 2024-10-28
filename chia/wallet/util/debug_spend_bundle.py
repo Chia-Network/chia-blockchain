@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from chia_rs import AugSchemeMPL
 from clvm.operators import KEYWORD_FROM_ATOM
 from clvm_tools.binutils import disassemble as bu_disassemble
@@ -14,7 +12,7 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 from chia.util.hash import std_hash
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-CONDITIONS = {k: bytes(v)[0] for k, v in ConditionOpcode.__members__.items()}  # pylint: disable=E1101
+CONDITIONS = {opcode.name: opcode.value[0] for opcode in ConditionOpcode}
 KFA = {v: k for k, v in CONDITIONS.items()}
 
 
@@ -76,9 +74,9 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     pks = []
     msgs = []
 
-    created_coin_announcements: List[List[bytes]] = []
+    created_coin_announcements: list[list[bytes]] = []
     asserted_coin_announcements = []
-    created_puzzle_announcements: List[List[bytes]] = []
+    created_puzzle_announcements: list[list[bytes]] = []
     asserted_puzzle_announcements = []
 
     print("=" * 80)

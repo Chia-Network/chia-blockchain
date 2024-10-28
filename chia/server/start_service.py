@@ -6,24 +6,10 @@ import logging
 import logging.config
 import os
 import signal
+from collections.abc import AsyncIterator, Awaitable, Coroutine
 from pathlib import Path
 from types import FrameType
-from typing import (
-    Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Coroutine,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-)
+from typing import Any, Callable, Generic, Optional, TypeVar, cast
 
 from chia.daemon.server import service_launch_lock_path
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
@@ -54,7 +40,7 @@ _T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtoco
 _T_ApiProtocol = TypeVar("_T_ApiProtocol", bound=ApiProtocol)
 _T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound=RpcApiProtocol)
 
-RpcInfo = Tuple[Type[_T_RpcApiProtocol], int]
+RpcInfo = tuple[type[_T_RpcApiProtocol], int]
 
 log = logging.getLogger(__name__)
 
@@ -74,14 +60,14 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         service_name: str,
         network_id: str,
         *,
-        config: Dict[str, Any],
-        upnp_ports: Optional[List[int]] = None,
-        connect_peers: Optional[Set[UnresolvedPeerInfo]] = None,
+        config: dict[str, Any],
+        upnp_ports: Optional[list[int]] = None,
+        connect_peers: Optional[set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
         rpc_info: Optional[RpcInfo[_T_RpcApiProtocol]] = None,
         connect_to_daemon: bool = True,
         max_request_body_size: Optional[int] = None,
-        override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+        override_capabilities: Optional[list[tuple[uint16, str]]] = None,
     ) -> None:
         if upnp_ports is None:
             upnp_ports = []
@@ -117,7 +103,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         if node_type == NodeType.WALLET:
             inbound_rlp = self.service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
-        capabilities_to_use: List[Tuple[uint16, str]] = default_capabilities[node_type]
+        capabilities_to_use: list[tuple[uint16, str]] = default_capabilities[node_type]
         if override_capabilities is not None:
             capabilities_to_use = override_capabilities
 
@@ -158,7 +144,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self.stop_requested = asyncio.Event()
 
     async def _connect_peers_task_handler(self) -> None:
-        resolved_peers: Dict[UnresolvedPeerInfo, PeerInfo] = {}
+        resolved_peers: dict[UnresolvedPeerInfo, PeerInfo] = {}
         prefer_ipv6 = self.config.get("prefer_ipv6", False)
         while True:
             for unresolved in self._connect_peers:

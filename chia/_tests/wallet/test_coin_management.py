@@ -4,7 +4,7 @@ import io
 import textwrap
 from dataclasses import dataclass, replace
 from decimal import Decimal
-from typing import Any, List
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -15,7 +15,7 @@ from chia.cmds.cmd_classes import NeedsCoinSelectionConfig, NeedsWalletRPC, Wall
 from chia.cmds.coins import CombineCMD, ListCMD, SplitCMD
 from chia.cmds.param_types import CliAmount, cli_amount_none
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.wallet_request_types import CombineCoins, SplitCoins
+from chia.rpc.wallet_request_types import CombineCoins, GetSyncStatusResponse, SplitCoins
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -26,7 +26,7 @@ ONE_TRILLION = 1_000_000_000_000
 @dataclass
 class ValueAndArgs:
     value: Any
-    args: List[Any]
+    args: list[Any]
 
 
 @pytest.mark.parametrize(
@@ -256,10 +256,10 @@ async def test_list(wallet_environments: WalletTestFramework, capsys: pytest.Cap
     # Test a not synced error
     assert base_command.rpc_info.client_info is not None
 
-    async def not_synced() -> bool:
-        return False
+    async def not_synced() -> GetSyncStatusResponse:
+        return GetSyncStatusResponse(False, False)
 
-    base_command.rpc_info.client_info.client.get_synced = not_synced  # type: ignore[method-assign]
+    base_command.rpc_info.client_info.client.get_sync_status = not_synced  # type: ignore[method-assign]
     await base_command.run()
     output = (capsys.readouterr()).out
     assert "Wallet not synced. Please wait." in output
@@ -529,13 +529,96 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
     # Test a not synced error
     assert xch_combine_request.rpc_info.client_info is not None
 
-    async def not_synced() -> bool:
-        return False
+    async def not_synced() -> GetSyncStatusResponse:
+        return GetSyncStatusResponse(False, False)
 
-    xch_combine_request.rpc_info.client_info.client.get_synced = not_synced  # type: ignore[method-assign]
+    xch_combine_request.rpc_info.client_info.client.get_sync_status = not_synced  # type: ignore[method-assign]
     await xch_combine_request.run()
     output = (capsys.readouterr()).out
     assert "Wallet not synced. Please wait." in output
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [2],
+            "trusted": True,  # irrelevant
+            "reuse_puzhash": True,  # irrelevant
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes(reason="irrelevant")
+@pytest.mark.anyio
+async def test_fee_bigger_than_selection_coin_combining(wallet_environments: WalletTestFramework) -> None:
+    """
+    This tests the case where the coins we would otherwise select are not enough to pay the fee.
+    """
+
+    env = wallet_environments.environments[0]
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
+    # Should have 4 coins, two 1.75 XCH, two 0.25 XCH
+
+    # Grab one of the 0.25 ones to specify
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
+        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        assert target_coin.amount == 250_000_000_000
+
+    fee = uint64(1_750_000_000_000)
+    # Under standard circumstances we would select the small coins, but this is not enough to pay the fee
+    # Instead, we will grab the big coin first and combine it with one of the smaller coins
+    xch_combine_request = CombineCMD(
+        **{
+            **wallet_environments.cmd_tx_endpoint_args(env),
+            **dict(
+                id=env.wallet_aliases["xch"],
+                number_of_coins=uint16(2),
+                input_coins=(),
+                fee=fee,
+                push=True,
+                largest_first=False,
+            ),
+        }
+    )
+
+    # First test an error where fee selection causes too many coins to be selected
+    with pytest.raises(ResponseFailureError, match="without selecting more coins than specified: 3"):
+        await replace(xch_combine_request, fee=uint64(2_250_000_000_000)).run()
+
+    with patch("sys.stdin", new=io.StringIO("y\n")):
+        await xch_combine_request.run()
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {
+                        "unconfirmed_wallet_balance": -fee,
+                        "spendable_balance": -2_000_000_000_000,
+                        "pending_change": 250_000_000_000,
+                        "max_send_amount": -2_000_000_000_000,
+                        "pending_coin_removal_count": 2,
+                    }
+                },
+                post_block_balance_updates={
+                    "xch": {
+                        "confirmed_wallet_balance": -fee,
+                        "spendable_balance": 250_000_000_000,
+                        "pending_change": -250_000_000_000,
+                        "max_send_amount": 250_000_000_000,
+                        "pending_coin_removal_count": -2,
+                        "unspent_coin_count": -1,  # combine 2 into 1
+                    }
+                },
+            )
+        ]
+    )
 
 
 @pytest.mark.parametrize(
@@ -752,10 +835,10 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
     # Test a not synced error
     assert xch_request.rpc_info.client_info is not None
 
-    async def not_synced() -> bool:
-        return False
+    async def not_synced() -> GetSyncStatusResponse:
+        return GetSyncStatusResponse(False, False)
 
-    xch_request.rpc_info.client_info.client.get_synced = not_synced  # type: ignore[method-assign]
+    xch_request.rpc_info.client_info.client.get_sync_status = not_synced  # type: ignore[method-assign]
     await xch_request.run()
     output = (capsys.readouterr()).out
     assert "Wallet not synced. Please wait." in output
