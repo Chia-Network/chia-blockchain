@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
-from chia.clvm.spend_sim import CostLogger, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
