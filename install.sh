@@ -173,6 +173,7 @@ fi
 .penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
 pwd
 ls -la
+cat poetry.toml || true
 # shellcheck disable=SC2086
 .penv/bin/poetry install -vvv ${EXTRAS}
 
