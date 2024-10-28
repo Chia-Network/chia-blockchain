@@ -171,6 +171,8 @@ fi
 
 ./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
 .penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
+pwd
+ls -la
 # shellcheck disable=SC2086
 .penv/bin/poetry install -vvv ${EXTRAS}
 
