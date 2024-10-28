@@ -493,29 +493,47 @@ class ChiaServer:
             connection_type_str = ""
             if connection.connection_type is not None:
                 connection_type_str = connection.connection_type.name.lower()
-            self.log.info(f"Connected with {connection_type_str} {target_node}")
-            if is_feeler:
+            if not is_feeler:
+                self.log.info(f"Connected with {connection_type_str} {target_node}")
+            else:
+                self.log.debug(f"Successful feeler connection with {connection_type_str} {target_node}")
                 asyncio.create_task(connection.close())
             return True
         except client_exceptions.ClientConnectorError as e:
-            self.log.info(f"{e}")
+            if not is_feeler:
+                self.log.info(f"{e}")
+            else:
+                self.log.debug(f"Feeler connection error. {e}")
         except ProtocolError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
             if e.code == Err.INVALID_HANDSHAKE:
-                self.log.warning(f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
+                if is_feeler:
+                    self.log.warning(f"Invalid handshake with peer {target_node} during feeler connection. Maybe the peer is running old software.")
+                else:
+                    self.log.warning(f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
             elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
-                self.log.warning("Incompatible network ID. Maybe the peer is on another network")
+                if is_feeler:
+                    self.log.warning("Incompatible network ID during feeler connection. Maybe the peer is on another network")
+                else:
+                    self.log.warning("Incompatible network ID. Maybe the peer is on another network")
             elif e.code == Err.SELF_CONNECTION:
                 pass
             else:
-                error_stack = traceback.format_exc()
-                self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+                if is_feeler:
+                    error_stack = traceback.format_exc()
+                    self.log.error(f"Feeler connection exception {e}, exception Stack: {error_stack}")
+                else:
+                    error_stack = traceback.format_exc()
+                    self.log.error(f"Exception {e}, exception Stack: {error_stack}")
         except Exception as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
             error_stack = traceback.format_exc()
-            self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+            if is_feeler:
+                self.log.error(f"Feeler connection exception {e}, exception Stack: {error_stack}")
+            else:
+                self.log.error(f"Exception {e}, exception Stack: {error_stack}")
         finally:
             if session is not None:
                 await session.close()
