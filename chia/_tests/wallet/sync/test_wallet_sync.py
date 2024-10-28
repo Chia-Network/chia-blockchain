@@ -15,10 +15,11 @@ from colorlog import getLogger
 
 from chia._tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from chia._tests.util.blockchain_mock import BlockchainMock
-from chia._tests.util.misc import add_blocks_in_batches, wallet_height_at_least
+from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.weight_proof.test_weight_proof import load_blocks_dont_validate
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.constants import ConsensusConstants
@@ -36,12 +37,14 @@ from chia.protocols.wallet_protocol import (
 )
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -360,10 +363,12 @@ async def test_long_sync_wallet(
     sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
         full_node.constants, True, block_record, full_node.blockchain
     )
+    fork_height = blocks_reorg[-num_blocks - 10].height - 1
     await full_node.add_block_batch(
+        AugmentedBlockchain(full_node.blockchain),
         blocks_reorg[-num_blocks - 10 : -1],
         PeerInfo("0.0.0.0", 0),
-        None,
+        ForkInfo(fork_height, fork_height, blocks_reorg[-num_blocks - 10].prev_header_hash),
         ValidationState(sub_slot_iters, difficulty, None),
     )
     await full_node.add_block(blocks_reorg[-1])
@@ -402,8 +407,7 @@ async def test_wallet_reorg_sync(
         await wallet_server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
 
     # Insert 400 blocks
-    await full_node.add_block(default_400_blocks[0])
-    await add_blocks_in_batches(default_400_blocks[1:], full_node)
+    await add_blocks_in_batches(default_400_blocks, full_node)
     # Farm few more with reward
     for _ in range(num_blocks - 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(phs[0]))
@@ -425,8 +429,7 @@ async def test_wallet_reorg_sync(
     num_blocks = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
 
-    for block in blocks_reorg[-30:]:
-        await full_node.add_block(block)
+    await add_blocks_in_batches(blocks_reorg[-30:], full_node, blocks_reorg[-30].prev_header_hash)
 
     for wallet_node, wallet_server in wallets:
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -480,9 +483,10 @@ async def test_wallet_reorg_get_coinbase(
         full_node.constants, True, block_record, full_node.blockchain
     )
     await full_node.add_block_batch(
+        AugmentedBlockchain(full_node.blockchain),
         blocks_reorg_2[-44:],
         PeerInfo("0.0.0.0", 0),
-        None,
+        ForkInfo(blocks_reorg_2[-45].height, blocks_reorg_2[-45].height, blocks_reorg_2[-45].header_hash),
         ValidationState(sub_slot_iters, difficulty, None),
     )
 
@@ -1244,7 +1248,7 @@ async def test_retry_store(
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.full_node.server
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
 
     # Trusted node sync
     wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -1285,7 +1289,7 @@ async def test_retry_store(
             if not request_puzzle_solution_failure_tested:
                 request_puzzle_solution_failure_tested = True
                 # This can just return None if we have `none_response` enabled.
-                reject = wallet_protocol.RejectPuzzleSolution(bytes32([0] * 32), uint32(0))
+                reject = wallet_protocol.RejectPuzzleSolution(bytes32.zeros, uint32(0))
                 return make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
             else:
                 return await func(request)
@@ -1362,7 +1366,7 @@ async def test_retry_store(
             wallet = wallet_node.wallet_state_manager.main_wallet
             ph = await wallet.get_new_puzzlehash()
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
 
             async def retry_store_empty() -> bool:
                 return len(await wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry()) == 0
@@ -1377,7 +1381,7 @@ async def test_retry_store(
 
             async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
-                    uint64(1_000_000_000_000), bytes32([0] * 32), action_scope, memos=[ph]
+                    uint64(1_000_000_000_000), bytes32.zeros, action_scope, memos=[ph]
                 )
             [tx] = action_scope.side_effects.transactions
             await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
@@ -1386,7 +1390,7 @@ async def test_retry_store(
                 return full_node_api.full_node.mempool_manager.get_spendbundle(tx.name) is not None
 
             await time_out_assert(15, tx_in_mempool)
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
 
             await assert_coin_state_retry()
 

@@ -6,7 +6,7 @@ from typing import Optional
 import pytest
 from chia_rs import G2Element
 
-from chia.clvm.spend_sim import CostLogger, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -47,7 +47,7 @@ ACS_PH: bytes32 = ACS.get_tree_hash()
 ACS_2_PH: bytes32 = ACS_2.get_tree_hash()
 MOCK_SINGLETON_MOD: Program = Program.to([2, 5, 11])
 MOCK_SINGLETON_MOD_HASH: bytes32 = MOCK_SINGLETON_MOD.get_tree_hash()
-MOCK_LAUNCHER_ID: bytes32 = bytes32([0] * 32)
+MOCK_LAUNCHER_ID: bytes32 = bytes32.zeros
 MOCK_LAUNCHER_HASH: bytes32 = bytes32([1] * 32)
 MOCK_SINGLETON: Program = MOCK_SINGLETON_MOD.curry(
     (MOCK_SINGLETON_MOD_HASH, (MOCK_LAUNCHER_ID, MOCK_LAUNCHER_HASH)),
@@ -210,7 +210,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         my_coin_id: bytes32 = eml_coin.name()
         new_metadata: Program = Program.to("SUCCESS")
         new_tp_hash = Program.to("NEW TP").get_tree_hash()
-        bad_data: bytes32 = bytes32([0] * 32)
+        bad_data: bytes32 = bytes32.zeros
 
         # Try to update metadata and tp without any announcement
         result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
@@ -354,7 +354,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
                         p2_either_puzzle,
                         solve_viral_backdoor(
                             hidden_puzzle,
-                            Program.to(bytes32([0] * 32)),
+                            Program.to(bytes32.zeros),
                             hidden=True,
                         ),
                     )
@@ -365,7 +365,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
         # Spend the inner puzzle
-        brick_hash: bytes32 = bytes32([0] * 32)
+        brick_hash: bytes32 = bytes32.zeros
         wrapped_brick_hash: bytes32 = create_viral_backdoor(
             hidden_puzzle_hash,
             brick_hash,
@@ -504,7 +504,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             [vc_fund_coin],
             launcher_id,
             ACS_PH,
-            [bytes32([0] * 32)],
+            [bytes32.zeros],
         )
         result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             cost_logger.add_cost(

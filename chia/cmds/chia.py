@@ -138,7 +138,7 @@ cli.add_command(vault_cmd)
 def main() -> None:
     import chia.cmds.signer  # noqa
 
-    cli()  # pylint: disable=no-value-for-parameter
+    cli()
 
 
 if __name__ == "__main__":

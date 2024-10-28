@@ -9,6 +9,7 @@ import pytest
 
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_validate_func import validate_v2
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -144,7 +145,10 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
                 if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
                     sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
             results = PreValidationResult(None, uint64(1), None, False, uint32(0))
-            result, err, _ = await bc.add_block(block, results, None, sub_slot_iters=sub_slot_iters)
+            fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
+            result, err, _ = await bc.add_block(
+                block, results, None, sub_slot_iters=sub_slot_iters, fork_info=fork_info
+            )
             assert err is None
 
 

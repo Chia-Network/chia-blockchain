@@ -29,6 +29,7 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof, validate_vdf
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.types.validation_state import ValidationState
 from chia.util.errors import Err, ValidationError
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -574,14 +575,14 @@ def validate_unfinished_header_block(
     sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (expected_sub_slot_iters if overflow else 0))
     if overflow and skip_overflow_last_ss_validation:
         dummy_vdf_info = VDFInfo(
-            bytes32([0] * 32),
+            bytes32.zeros,
             uint64(1),
             ClassgroupElement.get_default_element(),
         )
         dummy_sub_slot = EndOfSubSlotBundle(
             ChallengeChainSubSlot(dummy_vdf_info, None, None, None, None),
             None,
-            RewardChainSubSlot(dummy_vdf_info, bytes32([0] * 32), None, uint8(0)),
+            RewardChainSubSlot(dummy_vdf_info, bytes32.zeros, None, uint8(0)),
             SubSlotProofs(VDFProof(uint8(0), b"", False), None, VDFProof(uint8(0), b"", False)),
         )
         sub_slots_to_pass_in = header_block.finished_sub_slots + [dummy_sub_slot]
@@ -834,10 +835,8 @@ def validate_finished_header_block(
     blocks: BlockRecordsProtocol,
     header_block: HeaderBlock,
     check_filter: bool,
-    expected_difficulty: uint64,
-    expected_sub_slot_iters: uint64,
+    vs: ValidationState,
     check_sub_epoch_summary: bool = True,
-    prev_ses_block: Optional[BlockRecord] = None,
 ) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Fully validates the header of a block. A header block is the same  as a full block, but
@@ -858,11 +857,11 @@ def validate_finished_header_block(
         blocks,
         unfinished_header_block,
         check_filter,
-        expected_difficulty,
-        expected_sub_slot_iters,
+        vs.current_difficulty,
+        vs.current_ssi,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
-        prev_ses_block=prev_ses_block,
+        prev_ses_block=vs.prev_ses_block,
     )
 
     genesis_block = False
@@ -880,7 +879,7 @@ def validate_finished_header_block(
 
     ip_iters: uint64 = calculate_ip_iters(
         constants,
-        expected_sub_slot_iters,
+        vs.current_ssi,
         header_block.reward_chain_block.signage_point_index,
         required_iters,
     )
@@ -891,8 +890,8 @@ def validate_finished_header_block(
             return None, ValidationError(Err.INVALID_HEIGHT)
 
         # 28. Check weight
-        if header_block.weight != prev_b.weight + expected_difficulty:
-            log.error(f"INVALID WEIGHT: {header_block} {prev_b} {expected_difficulty}")
+        if header_block.weight != prev_b.weight + vs.current_difficulty:
+            log.error(f"INVALID WEIGHT: {header_block} {prev_b} {vs.current_difficulty}")
             return None, ValidationError(Err.INVALID_WEIGHT)
     else:
         # 27b. Check genesis block height, weight, and prev block hash

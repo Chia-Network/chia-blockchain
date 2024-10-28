@@ -128,7 +128,7 @@ g_cwd = os.getcwd() + "/"
 def get_stack(frame: FrameType) -> str:
     ret = ""
     code = frame.f_code
-    while code.co_flags & inspect.CO_COROUTINE:  # pylint: disable=no-member
+    while code.co_flags & inspect.CO_COROUTINE:
         ret = f"/{code.co_name}{ret}"
         if frame.f_back is None:
             break
@@ -162,7 +162,7 @@ def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
         return
 
     # we only care about instrumenting co-routines
-    if (frame.f_code.co_flags & inspect.CO_COROUTINE) == 0:  # pylint: disable=no-member
+    if (frame.f_code.co_flags & inspect.CO_COROUTINE) == 0:
         # with open("instrumentation.log", "a") as f:
         #    f.write(f"[1]    {event} {get_fun(frame)}\n")
         return

@@ -87,7 +87,7 @@ async def ignore_block_validation(
         "chia.consensus.multiprocess_validation.validate_finished_header_block", lambda *_, **__: (uint64(1), None)
     )
     monkeypatch.setattr(
-        "chia.consensus.multiprocess_validation.verify_and_get_quality_string", lambda *_, **__: bytes32([0] * 32)
+        "chia.consensus.multiprocess_validation.verify_and_get_quality_string", lambda *_, **__: bytes32.zeros
     )
     monkeypatch.setattr("chia.consensus.block_record.BlockRecord.sp_total_iters", lambda *_: uint128(0))
     monkeypatch.setattr("chia.consensus.block_record.BlockRecord.ip_sub_slot_total_iters", lambda *_: uint128(0))

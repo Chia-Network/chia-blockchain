@@ -8,6 +8,7 @@ from typing import Any, Optional, Union
 
 import anyio
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import BlockchainMutexPriority
@@ -16,6 +17,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
@@ -24,6 +26,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -172,21 +175,24 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                futures = await pre_validate_blocks_multiprocessing(
                     self.full_node.blockchain.constants,
-                    self.full_node.blockchain,
+                    AugmentedBlockchain(self.full_node.blockchain),
                     [genesis],
                     self.full_node.blockchain.pool,
                     {},
                     ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
+                pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 assert pre_validation_results is not None
+                fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(
                     genesis,
                     pre_validation_results[0],
                     self.full_node._bls_cache,
                     self.full_node.constants.SUB_SLOT_ITERS_STARTING,
+                    fork_info,
                 )
 
             peak = self.full_node.blockchain.get_peak()
@@ -233,21 +239,20 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                futures = await pre_validate_blocks_multiprocessing(
                     self.full_node.blockchain.constants,
-                    self.full_node.blockchain,
+                    AugmentedBlockchain(self.full_node.blockchain),
                     [genesis],
                     self.full_node.blockchain.pool,
                     {},
                     ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
+                pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 assert pre_validation_results is not None
+                fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(
-                    genesis,
-                    pre_validation_results[0],
-                    self.full_node._bls_cache,
-                    ssi,
+                    genesis, pre_validation_results[0], self.full_node._bls_cache, ssi, fork_info
                 )
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
@@ -302,14 +307,12 @@ class FullNodeSimulator(FullNodeAPI):
             guarantee_transaction_block=True,
             seed=seed,
         )
-
-        for block in more_blocks:
-            await self.full_node.add_block(block)
+        await add_blocks_in_batches(more_blocks, self.full_node, current_blocks[old_index].header_hash)
 
     async def farm_blocks_to_puzzlehash(
         self,
         count: int,
-        farm_to: bytes32 = bytes32([0] * 32),
+        farm_to: bytes32 = bytes32.zeros,
         guarantee_transaction_blocks: bool = False,
         timeout: Union[None, _Default, float] = default,
         _wait_for_synced: bool = True,

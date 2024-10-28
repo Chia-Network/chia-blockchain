@@ -20,11 +20,11 @@ from chia._tests.connection_utils import add_dummy_connection, connect_and_get_p
 from chia._tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from chia._tests.core.make_block_generator import make_spend_bundle
 from chia._tests.core.node_height import node_height_at_least
-from chia._tests.util.misc import add_blocks_in_batches, wallet_height_at_least
+from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.multiprocess_validation import pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
@@ -40,6 +40,7 @@ from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
@@ -62,6 +63,7 @@ from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
@@ -425,35 +427,39 @@ class TestFullNodeBlockCompression:
             diff = bt.constants.DIFFICULTY_STARTING
             reog_blocks = bt.get_consecutive_blocks(14)
             for r in range(0, len(reog_blocks), 3):
+                fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
                 for reorg_block in reog_blocks[:r]:
-                    await _validate_and_add_block_no_error(blockchain, reorg_block)
+                    await _validate_and_add_block_no_error(blockchain, reorg_block, fork_info=fork_info)
                 for i in range(1, height):
-                    results = await pre_validate_blocks_multiprocessing(
+                    futures = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
-                        blockchain,
+                        AugmentedBlockchain(blockchain),
                         all_blocks[:i],
                         blockchain.pool,
                         {},
                         ValidationState(ssi, diff, None),
                         validate_signatures=False,
                     )
+                    results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None
                     for result in results:
                         assert result.error is None
 
             for r in range(0, len(all_blocks), 3):
+                fork_info = ForkInfo(-1, -1, bt.constants.GENESIS_CHALLENGE)
                 for block in all_blocks[:r]:
-                    await _validate_and_add_block_no_error(blockchain, block)
+                    await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
                 for i in range(1, height):
-                    results = await pre_validate_blocks_multiprocessing(
+                    futures = await pre_validate_blocks_multiprocessing(
                         blockchain.constants,
-                        blockchain,
+                        AugmentedBlockchain(blockchain),
                         all_blocks[:i],
                         blockchain.pool,
                         {},
                         ValidationState(ssi, diff, None),
                         validate_signatures=False,
                     )
+                    results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None
                     for result in results:
                         assert result.error is None
@@ -984,9 +990,7 @@ class TestFullNodeProtocol:
             block_list_input=blocks[:-1],
             guarantee_transaction_block=True,
         )
-        for block in blocks[-2:]:
-            await full_node_1.full_node.add_block(block, peer)
-
+        await add_blocks_in_batches(blocks[-2:], full_node_1.full_node, blocks[-2].prev_header_hash)
         # Can now resubmit a transaction after the reorg
         status, err = await full_node_1.full_node.add_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
@@ -2287,16 +2291,7 @@ async def test_long_reorg(
     # not in the cache. We need to explicitly prune the cache to get that
     # effect.
     node.full_node.blockchain.clean_block_records()
-
-    fork_info: Optional[ForkInfo] = None
-    for b in reorg_blocks:
-        if (b.height % 128) == 0:
-            peak = node.full_node.blockchain.get_peak()
-            print(f"reorg chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
-        if b.height > fork_point and fork_info is None:
-            fork_info = ForkInfo(fork_point, fork_point, reorg_blocks[fork_point].header_hash)
-        await node.full_node.add_block(b, fork_info=fork_info)
-
+    await add_blocks_in_batches(reorg_blocks, node.full_node)
     # if these asserts fires, there was no reorg
     peak = node.full_node.blockchain.get_peak()
     assert peak.header_hash != chain_1_peak
@@ -2311,7 +2306,6 @@ async def test_long_reorg(
         assert peak.height > chain_1_height
     else:
         assert peak.height < chain_1_height
-
     # now reorg back to the original chain
     # this exercises the case where we have some of the blocks in the DB already
     node.full_node.blockchain.clean_block_records()
@@ -2321,15 +2315,7 @@ async def test_long_reorg(
         blocks = default_10000_blocks[fork_point - 100 : 3200]
     else:
         blocks = default_10000_blocks[fork_point - 100 : 5500]
-
-    fork_block = blocks[0]
-    fork_info = ForkInfo(fork_block.height - 1, fork_block.height - 1, fork_block.prev_header_hash)
-    for b in blocks:
-        if (b.height % 128) == 0:
-            peak = node.full_node.blockchain.get_peak()
-            print(f"original chain: {b.height:4} " f"weight: {b.weight:7} " f"peak: {str(peak.header_hash)[:6]}")
-        await node.full_node.add_block(b, fork_info=fork_info)
-
+    await add_blocks_in_batches(blocks, node.full_node)
     # if these asserts fires, there was no reorg back to the original chain
     peak = node.full_node.blockchain.get_peak()
     assert peak.header_hash != chain_2_peak

@@ -45,6 +45,7 @@ from chia.util.keychain import Keychain, KeyData, passphrase_requirements, suppo
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import WebServer
+from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -241,19 +242,12 @@ class WebSocketServer:
         self.log.info("Received signal %s (%s), shutting down.", signal_.name, signal_.value)
         await self.stop()
 
-    def cancel_task_safe(self, task: Optional[asyncio.Task]):
-        if task is not None:
-            try:
-                task.cancel()
-            except Exception as e:
-                self.log.error(f"Error while canceling task.{e} {task}")
-
     async def stop_command(self, websocket: WebSocketResponse, request: dict[str, Any] = {}) -> dict[str, Any]:
         return await self.stop()
 
     async def stop(self) -> dict[str, Any]:
-        self.cancel_task_safe(self.ping_job)
-        self.cancel_task_safe(self.state_changed_task)
+        cancel_task_safe(self.ping_job, self.log)
+        cancel_task_safe(self.state_changed_task, self.log)
         service_names = list(self.services.keys())
         stop_service_jobs = [
             asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import logging
 import time
 import traceback
@@ -10,7 +9,14 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, cast
 
 import anyio
-from chia_rs import AugSchemeMPL, G1Element, G2Element, MerkleSet
+from chia_rs import (
+    AugSchemeMPL,
+    G1Element,
+    G2Element,
+    MerkleSet,
+    additions_and_removals,
+    get_flags_for_height_and_constants,
+)
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_creation import create_unfinished_block
@@ -22,7 +28,7 @@ from chia.full_node.bundle_tools import simple_solution_generator, simple_soluti
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup, fee_rate_v2_to_v1
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.tx_processing_queue import TransactionQueueFull
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
@@ -62,7 +68,7 @@ from chia.util.api_decorators import api_request
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import header_block_from_block
-from chia.util.generator_tools import get_block_header, tx_removals_and_additions
+from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
@@ -1008,7 +1014,7 @@ class FullNodeAPI:
             if unfinished_block.is_transaction_block():
                 foliage_transaction_block_hash = unfinished_block.foliage.foliage_transaction_block_hash
             else:
-                foliage_transaction_block_hash = bytes32([0] * 32)
+                foliage_transaction_block_hash = bytes32.zeros
             assert foliage_transaction_block_hash is not None
 
             foliage_block_data: Optional[FoliageBlockData] = None
@@ -1195,19 +1201,20 @@ class FullNodeAPI:
             # transactions_generator, so the block_generator should always be set
             assert block_generator is not None, "failed to get block_generator for tx-block"
 
-            npc_result = await asyncio.get_running_loop().run_in_executor(
+            flags = get_flags_for_height_and_constants(request.height, self.full_node.constants)
+            additions, removals = await asyncio.get_running_loop().run_in_executor(
                 self.executor,
-                functools.partial(
-                    get_name_puzzle_conditions,
-                    block_generator,
-                    self.full_node.constants.MAX_BLOCK_COST_CLVM,
-                    mempool_mode=False,
-                    height=request.height,
-                    constants=self.full_node.constants,
-                ),
+                additions_and_removals,
+                bytes(block.transactions_generator),
+                block_generator.generator_refs,
+                flags,
+                self.full_node.constants,
             )
+            # strip the hint from additions, and compute the puzzle hash for
+            # removals
+            tx_additions = [add[0] for add in additions]
+            tx_removals = [rem.name() for rem in removals]
 
-            tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
         header_block = get_block_header(block, tx_additions, tx_removals)
         msg = make_msg(
             ProtocolMessageTypes.respond_block_header,

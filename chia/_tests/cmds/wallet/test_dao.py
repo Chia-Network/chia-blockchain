@@ -66,7 +66,7 @@ def test_dao_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 }
             )
 
-    inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DAOCreateRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [
         "dao",
@@ -175,7 +175,7 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 valid_times=parse_timelock_info(tuple()),
             )
 
-    inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DAOCreateRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
 
     get_id_args = ["dao", "get_id", FINGERPRINT_ARG, "-i 2"]
@@ -317,7 +317,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: tuple[TestRpcClient
             push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> DAOCreateProposalResponse:
-            return DAOCreateProposalResponse([STD_UTX], [STD_TX], bytes32([0] * 32), STD_TX.name, STD_TX)
+            return DAOCreateProposalResponse([STD_UTX], [STD_TX], bytes32.zeros, STD_TX.name, STD_TX)
 
         async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Union[str, int]]]:
             return [{"id": 1, "type": 0}, {"id": 2, "type": 14}]
@@ -345,7 +345,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: tuple[TestRpcClient
             )
 
     # List all proposals
-    inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DAOCreateRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     list_args = ["dao", "list_proposals", FINGERPRINT_ARG, "-i 2"]
     # these are various things that should be in the output
@@ -429,7 +429,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: tuple[TestRpcClient
         "-m 0.1",
         "--reuse",
     ]
-    proposal_asserts = ["Successfully created proposal", f"Proposal ID: {bytes32([0] * 32).hex()}"]
+    proposal_asserts = ["Successfully created proposal", f"Proposal ID: {bytes32.zeros.hex()}"]
     run_cli_command_and_assert(capsys, root_dir, spend_args, proposal_asserts)
 
     bad_spend_args = [
@@ -447,7 +447,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: tuple[TestRpcClient
         "-m 0.1",
         "--reuse",
     ]
-    proposal_asserts = ["Successfully created proposal", f"Proposal ID: {bytes32([0] * 32).hex()}"]
+    proposal_asserts = ["Successfully created proposal", f"Proposal ID: {bytes32.zeros.hex()}"]
     with pytest.raises(ValueError) as e_info:
         run_cli_command_and_assert(capsys, root_dir, bad_spend_args, proposal_asserts)
     assert e_info.value.args[0] == "Must include a json specification or an address / amount pair."
@@ -549,7 +549,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 valid_times=parse_timelock_info(tuple()),
             )
 
-    inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DAOCreateRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     lockup_args = ["dao", "lockup_coins", FINGERPRINT_ARG, "-i 2", "-a", "1000", "-m 0.1", "--reuse"]
     lockup_asserts = ["Transaction submitted to nodes"]

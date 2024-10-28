@@ -98,7 +98,7 @@ def perform_the_fast_forward(
 
     Returns:
         CoinSpend: the new coin spend after performing the fast forward
-        List[Coin]: the updated additions that point to the new coin to spend
+        list[Coin]: the updated additions that point to the new coin to spend
 
     Raises:
         ValueError if none of the additions are considered to be the singleton's
@@ -158,9 +158,9 @@ class EligibleCoinSpends:
             max_cost: the maximum limit when running for cost
 
         Returns:
-            List[CoinSpend]: list of unique coin spends in this mempool item
+            list[CoinSpend]: list of unique coin spends in this mempool item
             uint64: the cost we're saving by deduplicating eligible coins
-            List[Coin]: list of unique additions in this mempool item
+            list[Coin]: list of unique additions in this mempool item
 
         Raises:
             ValueError to skip the mempool item we're currently in, if it's

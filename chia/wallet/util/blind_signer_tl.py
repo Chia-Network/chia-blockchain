@@ -17,9 +17,6 @@ from chia.wallet.signer_protocol import (
 )
 from chia.wallet.util.clvm_streamable import TranslationLayer, TranslationLayerMapping, clvm_streamable
 
-# Pylint doesn't understand that these classes are in fact dataclasses
-# pylint: disable=invalid-field-call
-
 
 @clvm_streamable
 @dataclass(frozen=True)

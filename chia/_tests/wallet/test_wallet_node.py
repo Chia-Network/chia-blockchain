@@ -10,13 +10,14 @@ from typing import Any, Optional
 import pytest
 from chia_rs import G1Element, PrivateKey
 
-from chia._tests.util.misc import CoinGenerator, add_blocks_in_batches
+from chia._tests.util.misc import CoinGenerator
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import Message, make_msg
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -607,7 +608,7 @@ async def test_transaction_send_cache(
 
     # Generate the transaction
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), action_scope)
+        await wallet.generate_signed_transaction(uint64(0), bytes32.zeros, action_scope)
     [tx] = action_scope.side_effects.transactions
 
     # Make sure it is sent to the peer
@@ -690,7 +691,7 @@ async def test_wallet_node_bad_coin_state_ignore(
         return make_msg(
             ProtocolMessageTypes.respond_to_coin_update,
             wallet_protocol.RespondToCoinUpdates(
-                [], uint32(0), [CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0)), uint32(0), uint32(0))]
+                [], uint32(0), [CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), uint32(0), uint32(0))]
             ),
         )
 

@@ -45,7 +45,7 @@ msg2: bytes = b"msg2"
 
 additional_data: bytes32 = bytes32(DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
 
-coin: Coin = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+coin: Coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
 puzzle = SerializedProgram.from_bytes(b"\x01")
 solution_h = SerializedProgram.from_program(
     Program.to([[ConditionOpcode.AGG_SIG_UNSAFE, pk1_h, msg1], [ConditionOpcode.AGG_SIG_ME, pk2_h_synth, msg2]])
@@ -90,7 +90,7 @@ async def test_wsm_sign_transaction() -> None:
                 [
                     DerivationRecord(
                         uint32(1),
-                        bytes32([0] * 32),
+                        bytes32.zeros,
                         pk1_h,
                         WalletType.STANDARD_WALLET,
                         uint32(1),
@@ -129,7 +129,7 @@ async def test_wsm_sign_transaction() -> None:
                 [
                     DerivationRecord(
                         uint32(1),
-                        bytes32([0] * 32),
+                        bytes32.zeros,
                         pk1_u,
                         WalletType.STANDARD_WALLET,
                         uint32(1),

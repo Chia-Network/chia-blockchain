@@ -33,7 +33,7 @@ def test_curry_and_treehash() -> None:
 
 
 @pytest.mark.parametrize(
-    "value", [[], [bytes32([3] * 32)], [bytes32([0] * 32), bytes32([1] * 32)], [bytes([1]), bytes([1, 2, 3])]]
+    "value", [[], [bytes32([3] * 32)], [bytes32.zeros, bytes32([1] * 32)], [bytes([1]), bytes([1, 2, 3])]]
 )
 def test_shatree_atom_list(value: list[bytes]) -> None:
     h1 = shatree_atom_list(value)

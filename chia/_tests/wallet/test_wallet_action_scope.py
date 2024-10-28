@@ -17,9 +17,9 @@ from chia.wallet.wallet_action_scope import WalletSideEffects
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 from chia.wallet.wallet_state_manager import WalletStateManager
 
-MOCK_SR = SigningResponse(b"hey", bytes32([0] * 32))
+MOCK_SR = SigningResponse(b"hey", bytes32.zeros)
 MOCK_SB = WalletSpendBundle([], G2Element())
-MOCK_COIN = Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0))
+MOCK_COIN = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
 
 
 def test_back_and_forth_serialization() -> None:

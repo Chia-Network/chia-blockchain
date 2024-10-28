@@ -426,7 +426,7 @@ class TestDLWallet:
         assert current_record != record_1
         async with dl_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await dl_wallet_0.create_update_state_spend(
-                launcher_id, bytes32([0] * 32), action_scope, fee=uint64(2000000000000)
+                launcher_id, bytes32.zeros, action_scope, fee=uint64(2000000000000)
             )
         update_txs = action_scope.side_effects.transactions
         record_0 = await dl_wallet_0.get_latest_singleton(launcher_id)
@@ -569,23 +569,23 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
         dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(wsm_2)
 
     async with dl_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0] * 32), action_scope)
+        launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32.zeros, action_scope)
     assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32([0] * 32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32.zeros)
 
     async with dl_wallet_2.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0] * 32), action_scope)
+        launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32.zeros, action_scope)
     assert await dl_wallet_2.get_latest_singleton(launcher_id_2) is not None
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32([0] * 32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32.zeros)
 
     peer_1 = wallet_node_1.get_full_node_peer()
     await dl_wallet_1.track_new_launcher_id(launcher_id_2, peer_1)
     peer_2 = wallet_node_2.get_full_node_peer()
     await dl_wallet_2.track_new_launcher_id(launcher_id_1, peer_2)
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32([0] * 32))
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32([0] * 32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32.zeros)
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32.zeros)
 
     async with dl_wallet_1.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await dl_wallet_1.create_new_mirror(
@@ -648,7 +648,7 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
         dl_wallet = await DataLayerWallet.create_new_dl_wallet(env.wallet_state_manager)
 
     async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        launcher_id = await dl_wallet.generate_new_reporter(bytes32([0] * 32), action_scope)
+        launcher_id = await dl_wallet.generate_new_reporter(bytes32.zeros, action_scope)
 
     await wallet_environments.process_pending_states(
         [
@@ -676,16 +676,16 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
             )
         ]
     )
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([0] * 32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32.zeros)
 
     height = full_node_api.full_node.blockchain.get_peak_height()
     assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
-        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
     )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
 
-    await time_out_assert(15, is_singleton_confirmed_and_root, False, dl_wallet, launcher_id, bytes32([0] * 32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, False, dl_wallet, launcher_id, bytes32.zeros)
 
     await wallet_environments.process_pending_states(
         [
@@ -713,7 +713,7 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
             )
         ]
     )
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32([0] * 32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, bytes32.zeros)
 
     async with dl_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
         await dl_wallet.create_update_state_spend(launcher_id, bytes32([2] * 32), action_scope)
@@ -737,11 +737,11 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
     height = full_node_api.full_node.blockchain.get_peak_height()
     assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
-        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
     )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
 
-    await time_out_assert(15, is_singleton_confirmed_and_root, False, dl_wallet, launcher_id, bytes32([0] * 32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, False, dl_wallet, launcher_id, bytes32.zeros)
 
     await wallet_environments.process_pending_states(
         [
@@ -790,7 +790,7 @@ async def test_datalayer_reorgs(wallet_environments: WalletTestFramework) -> Non
     height = full_node_api.full_node.blockchain.get_peak_height()
     assert height is not None
     await full_node_api.reorg_from_index_to_new_index(
-        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32([0] * 32), None)
+        ReorgProtocol(uint32(height - 1), uint32(height + 1), bytes32.zeros, None)
     )
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
 

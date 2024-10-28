@@ -111,6 +111,36 @@ class ForkInfo:
             assert coin.name() not in self.additions_since_fork
             self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
 
+    def include_block(
+        self,
+        additions: list[tuple[Coin, Optional[bytes]]],
+        removals: list[Coin],
+        block: FullBlock,
+        header_hash: bytes32,
+    ) -> None:
+        height = block.height
+
+        assert self.peak_height == height - 1
+
+        assert len(self.block_hashes) == self.peak_height - self.fork_height
+        assert block.height == self.fork_height + 1 + len(self.block_hashes)
+        self.block_hashes.append(header_hash)
+
+        self.peak_height = int(block.height)
+        self.peak_hash = header_hash
+
+        if block.foliage_transaction_block is not None:
+            timestamp = block.foliage_transaction_block.timestamp
+            for spend in removals:
+                self.removals_since_fork[bytes32(spend.name())] = ForkRem(bytes32(spend.puzzle_hash), height)
+            for coin, hint in additions:
+                self.additions_since_fork[coin.name()] = ForkAdd(coin, height, timestamp, hint, False)
+        for coin in block.get_included_reward_coins():
+            assert block.foliage_transaction_block is not None
+            timestamp = block.foliage_transaction_block.timestamp
+            assert coin.name() not in self.additions_since_fork
+            self.additions_since_fork[coin.name()] = ForkAdd(coin, block.height, timestamp, None, True)
+
     def rollback(self, header_hash: bytes32, height: int) -> None:
         assert height <= self.peak_height
         self.peak_height = height
@@ -282,7 +312,7 @@ async def validate_block_body(
         if block.transactions_generator is None:
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
 
-        # The generator_refs_root must be the hash of the concatenation of the List[uint32]
+        # The generator_refs_root must be the hash of the concatenation of the list[uint32]
         generator_refs_hash = std_hash(b"".join([i.stream_to_bytes() for i in block.transactions_generator_ref_list]))
         if block.transactions_info.generator_refs_root != generator_refs_hash:
             return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
@@ -359,8 +389,8 @@ async def validate_block_body(
 
     # 13. Check for duplicate outputs in additions
     addition_counter = collections.Counter(coin_name for _, coin_name in additions + coinbase_additions)
-    for k, v in addition_counter.items():
-        if v > 1:
+    for count in addition_counter.values():
+        if count > 1:
             return Err.DUPLICATE_OUTPUT, None
 
     # 14. Check for duplicate spends inside block
