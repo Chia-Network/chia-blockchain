@@ -79,7 +79,7 @@ class ShowFullNodeRpcClient(TestFullNodeRpcClient):
         return full_block
 
 
-RPC_CLIENT_TO_USE = ShowFullNodeRpcClient()  # pylint: disable=no-value-for-parameter
+RPC_CLIENT_TO_USE = ShowFullNodeRpcClient()
 
 
 def test_chia_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path]) -> None:

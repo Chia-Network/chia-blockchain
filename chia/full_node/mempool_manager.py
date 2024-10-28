@@ -338,7 +338,7 @@ class MempoolManager:
         Returns:
             Optional[uint64]: cost of the entire transaction, None iff status is FAILED
             MempoolInclusionStatus:  SUCCESS (should add to pool), FAILED (cannot add), and PENDING (can add later)
-            List[MempoolRemoveInfo]: conflicting mempool items which were removed, if no Err
+            list[MempoolRemoveInfo]: conflicting mempool items which were removed, if no Err
             Optional[Err]: Err is set iff status is FAILED
         """
 
@@ -401,7 +401,7 @@ class MempoolManager:
         Returns:
             Optional[Err]: Err is set if we cannot add to the mempool, None if we will immediately add to mempool
             Optional[MempoolItem]: the item to add (to mempool or pending pool)
-            List[bytes32]: conflicting mempool items to remove, if no Err
+            list[bytes32]: conflicting mempool items to remove, if no Err
         """
         start_time = time.time()
         if self.peak is None:

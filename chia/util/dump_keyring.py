@@ -86,7 +86,7 @@ def dump(keyring_file: str, full_payload: bool, passphrase_file: Optional[TextIO
 
 def main() -> None:
     colorama.init()
-    dump()  # pylint: disable=no-value-for-parameter
+    dump()
 
 
 if __name__ == "__main__":

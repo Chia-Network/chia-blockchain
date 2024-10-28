@@ -66,7 +66,7 @@ def test_dao_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
                 }
             )
 
-    inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DAOCreateRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [
         "dao",
@@ -175,7 +175,7 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 valid_times=parse_timelock_info(tuple()),
             )
 
-    inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DAOCreateRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
 
     get_id_args = ["dao", "get_id", FINGERPRINT_ARG, "-i 2"]
@@ -345,7 +345,7 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: tuple[TestRpcClient
             )
 
     # List all proposals
-    inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DAOCreateRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     list_args = ["dao", "list_proposals", FINGERPRINT_ARG, "-i 2"]
     # these are various things that should be in the output
@@ -549,7 +549,7 @@ def test_dao_cats(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 valid_times=parse_timelock_info(tuple()),
             )
 
-    inst_rpc_client = DAOCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DAOCreateRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     lockup_args = ["dao", "lockup_coins", FINGERPRINT_ARG, "-i 2", "-a", "1000", "-m 0.1", "--reuse"]
     lockup_asserts = ["Transaction submitted to nodes"]

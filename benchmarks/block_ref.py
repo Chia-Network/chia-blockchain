@@ -98,5 +98,4 @@ def entry_point(db_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    # pylint: disable = no-value-for-parameter
     entry_point()

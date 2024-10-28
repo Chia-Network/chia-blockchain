@@ -1473,7 +1473,6 @@ class DAOWallet:
             spend_bundle = WalletSpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         else:
             # TODO: maybe we can refactor this to provide clarity around timer_cs having been defined
-            # pylint: disable-next=E0606
             spend_bundle = WalletSpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             await self.standard_wallet.create_tandem_xch_tx(fee, action_scope)

@@ -114,8 +114,7 @@ def get_host_parameter_limit() -> int:
     if sys.version_info >= (3, 11):
         connection = sqlite3.connect(":memory:")
 
-        # sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER exists in 3.11, pylint
-        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER  # pylint: disable=E1101
+        limit_number = sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER
         host_parameter_limit = connection.getlimit(limit_number)
     else:
         # guessing based on defaults, seems you can't query

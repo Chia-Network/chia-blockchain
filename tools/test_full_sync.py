@@ -21,6 +21,7 @@ from chia.full_node.full_node import FullNode
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.full_block import FullBlock
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import load_config
 
 
@@ -165,6 +166,7 @@ async def run_sync_checkpoint(
                 header_hash = block_batch[0].prev_header_hash
 
                 success, _, err = await full_node.add_block_batch(
+                    AugmentedBlockchain(full_node.blockchain),
                     block_batch,
                     peer_info,
                     ForkInfo(fork_height, fork_height, header_hash),
@@ -188,6 +190,7 @@ async def run_sync_checkpoint(
                 fork_height = block_batch[0].height - 1
                 fork_header_hash = block_batch[0].prev_header_hash
                 success, _, err = await full_node.add_block_batch(
+                    AugmentedBlockchain(full_node.blockchain),
                     block_batch,
                     peer_info,
                     ForkInfo(fork_height, fork_height, fork_header_hash),
@@ -201,5 +204,4 @@ main.add_command(run)
 main.add_command(analyze)
 
 if __name__ == "__main__":
-    # pylint: disable = no-value-for-parameter
     main()

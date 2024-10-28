@@ -1576,7 +1576,7 @@ class WalletRpcApi:
             excluded_coin_amounts = []
         excluded_coins_input: Optional[dict[str, dict[str, Any]]] = request.get("excluded_coins")
         if excluded_coins_input is not None:
-            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins_input]
+            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins_input.values()]
         else:
             excluded_coins = []
         excluded_coin_ids_input: Optional[list[str]] = request.get("excluded_coin_ids")
@@ -3186,7 +3186,7 @@ class WalletRpcApi:
         return {
             "success": True,
             # Semantics guarantee proposal_id here
-            "proposal_id": proposal_id,  # pylint: disable=possibly-used-before-assignment
+            "proposal_id": proposal_id,
             "tx_id": None,  # tx_endpoint wrapper will take care of this
             "tx": None,  # tx_endpoint wrapper will take care of this
             "transactions": None,  # tx_endpoint wrapper will take care of this
