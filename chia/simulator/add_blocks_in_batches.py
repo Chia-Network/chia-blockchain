@@ -55,4 +55,3 @@ async def add_blocks_in_batches(
                 peak_fb, state_change_summary, None
             )
             await full_node.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
-    await full_node._finish_sync()
