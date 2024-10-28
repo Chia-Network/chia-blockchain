@@ -170,7 +170,7 @@ if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
 fi
 
 ./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
-.penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
+.penv/bin/poetry env use -vvv "${INSTALL_PYTHON_PATH}"
 pwd
 ls -la
 cat poetry.toml || true
