@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -o errexit
+set -vx
 
 USAGE_TEXT="\
 Usage: $0 [-adilpsh]
