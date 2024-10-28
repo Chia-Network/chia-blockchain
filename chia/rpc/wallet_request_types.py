@@ -207,8 +207,8 @@ class GetWallets(Streamable):
 @streamable
 @dataclass(frozen=True)
 class WalletInfoResponse(WalletInfo):
-    authorized_providers: list[bytes32] = []
-    flags_needed: list[str] = []
+    authorized_providers: list[bytes32] = field(default_factory=list)
+    flags_needed: list[str] = field(default_factory=list)
 
 
 @streamable
