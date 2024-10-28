@@ -509,12 +509,18 @@ class ChiaServer:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
             if e.code == Err.INVALID_HANDSHAKE:
                 if is_feeler:
-                    self.log.warning(f"Invalid handshake with peer {target_node} during feeler connection. Maybe the peer is running old software.")
+                    self.log.warning(
+                        f"Invalid handshake with peer {target_node} during feeler connection. Maybe the peer is running old software."
+                    )
                 else:
-                    self.log.warning(f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
+                    self.log.warning(
+                        f"Invalid handshake with peer {target_node}. Maybe the peer is running old software."
+                    )
             elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
                 if is_feeler:
-                    self.log.warning("Incompatible network ID during feeler connection. Maybe the peer is on another network")
+                    self.log.warning(
+                        "Incompatible network ID during feeler connection. Maybe the peer is on another network"
+                    )
                 else:
                     self.log.warning("Incompatible network ID. Maybe the peer is on another network")
             elif e.code == Err.SELF_CONNECTION:
