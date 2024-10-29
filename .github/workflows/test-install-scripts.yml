@@ -33,7 +33,7 @@ jobs:
           - name: Linux
             emoji: 🐧
             runs-on:
-              arm: [macOS, ARM64]
+              arm: [Linux, ARM64]
               intel: ubuntu-latest
             matrix: linux
           - name: macOS
