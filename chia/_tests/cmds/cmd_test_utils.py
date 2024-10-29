@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Union, cast
+from typing import Any, Optional, cast
 
 from chia_rs import Coin, G2Element
 
@@ -20,7 +20,13 @@ from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.wallet_request_types import GetSyncStatusResponse, SendTransactionMultiResponse
+from chia.rpc.wallet_request_types import (
+    GetSyncStatusResponse,
+    GetWallets,
+    GetWalletsResponse,
+    SendTransactionMultiResponse,
+    WalletInfoResponse,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -87,11 +93,11 @@ class TestWalletRpcClient(TestRpcClient):
         self.add_to_log("get_sync_status", ())
         return GetSyncStatusResponse(synced=True, syncing=False)
 
-    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Union[str, int]]]:
-        self.add_to_log("get_wallets", (wallet_type,))
+    async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
+        self.add_to_log("get_wallets", (request,))
         # we cant start with zero because ints cant have a leading zero
-        if wallet_type is not None:
-            w_type = wallet_type
+        if request.type is not None:
+            w_type = WalletType(request.type)
         elif str(self.fingerprint).startswith(str(WalletType.STANDARD_WALLET.value + 1)):
             w_type = WalletType.STANDARD_WALLET
         elif str(self.fingerprint).startswith(str(WalletType.CAT.value + 1)):
@@ -104,7 +110,7 @@ class TestWalletRpcClient(TestRpcClient):
             w_type = WalletType.POOLING_WALLET
         else:
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
-        return [{"id": 1, "type": w_type}]
+        return GetWalletsResponse([WalletInfoResponse(id=uint32(1), name="", type=uint8(w_type.value), data="")])
 
     async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
         self.add_to_log("get_transaction", (transaction_id,))

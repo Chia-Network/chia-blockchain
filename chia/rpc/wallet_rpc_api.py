@@ -749,12 +749,12 @@ class WalletRpcApi:
                     wallet.data if request.include_data else "",
                     (
                         CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).authorized_providers
-                        if request.include_data
+                        if request.include_data and WalletType(wallet.type) is WalletType.CRCAT
                         else []
                     ),
                     (
                         CRCATInfo.from_bytes(bytes.fromhex(wallet.data)).proofs_checker.flags
-                        if request.include_data
+                        if request.include_data and WalletType(wallet.type) is WalletType.CRCAT
                         else []
                     ),
                 )

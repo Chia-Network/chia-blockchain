@@ -19,6 +19,9 @@ from chia.rpc.wallet_request_types import (
     DAOFreeCoinsFromFinishedProposalsResponse,
     DAOSendToLockupResponse,
     DAOVoteOnProposalResponse,
+    GetWallets,
+    GetWalletsResponse,
+    WalletInfoResponse,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
@@ -319,8 +322,13 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: tuple[TestRpcClient
         ) -> DAOCreateProposalResponse:
             return DAOCreateProposalResponse([STD_UTX], [STD_TX], bytes32.zeros, STD_TX.name, STD_TX)
 
-        async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Union[str, int]]]:
-            return [{"id": 1, "type": 0}, {"id": 2, "type": 14}]
+        async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
+            return GetWalletsResponse(
+                [
+                    WalletInfoResponse(id=uint32(1), type=uint8(0), name="", data=""),
+                    WalletInfoResponse(id=uint32(2), type=uint8(14), name="", data=""),
+                ]
+            )
 
         @override
         async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:

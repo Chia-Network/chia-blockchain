@@ -8,6 +8,7 @@ from typing import Any, Optional, Union
 import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
+from chia_rs.sized_ints import uint16
 from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -28,8 +29,11 @@ from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     CreateOfferForIDsResponse,
     GetHeightInfoResponse,
+    GetWallets,
+    GetWalletsResponse,
     SendTransactionResponse,
     TakeOfferResponse,
+    WalletInfoResponse,
 )
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.program import Program
@@ -86,7 +90,7 @@ def test_get_transaction(capsys: object, get_test_cli_clients: tuple[TestRpcClie
     run_cli_command_and_assert(capsys, root_dir, [*command_args, CAT_FINGERPRINT_ARG], cat_assert_list)
     # these are various things that should be in the output
     expected_calls: logType = {
-        "get_wallets": [(None,), (None,), (None,)],
+        "get_wallets": [(GetWallets(type=None, include_data=True),)] * 3,
         "get_cat_name": [(1,)],
         "get_transaction": [
             (bytes32.from_hexstr(bytes32_hexstr),),
@@ -187,7 +191,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
     # these are various things that should be in the output
     expected_coin_id = Coin(get_bytes32(4), get_bytes32(5), uint64(12345678)).name()
     expected_calls: logType = {
-        "get_wallets": [(None,), (None,)],
+        "get_wallets": [(GetWallets(type=None, include_data=True),)] * 2,
         "get_transactions": [
             (1, 2, 4, SortKey.RELEVANCE, True, None, None, None),
             (1, 2, 4, SortKey.RELEVANCE, True, None, None, None),
@@ -205,28 +209,30 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
 
     # set RPC Client
     class ShowRpcClient(TestWalletRpcClient):
-        async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Union[str, int]]]:
-            self.add_to_log("get_wallets", (wallet_type,))
-            wallet_list: list[dict[str, Union[str, int]]] = [
-                {"data": "", "id": 1, "name": "Chia Wallet", "type": WalletType.STANDARD_WALLET},
-                {
-                    "data": "dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a774686001ff02ffff01ff02ffff03ff2f"
+        async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
+            self.add_to_log("get_wallets", (request,))
+            wallet_list: list[WalletInfoResponse] = [
+                WalletInfoResponse(
+                    data="", id=uint32(1), name="Chia Wallet", type=uint8(WalletType.STANDARD_WALLET.value)
+                ),
+                WalletInfoResponse(
+                    data="dc59bcd60ce5fc9c93a5d3b11875486b03efb53a53da61e453f5cf61a774686001ff02ffff01ff02ffff03ff2f"
                     "ffff01ff0880ffff01ff02ffff03ffff09ff2dff0280ff80ffff01ff088080ff018080ff0180ffff04ffff01a09848f0ef"
                     "6587565c48ee225cc837abbe406b91946c938e1739da49fc26c04286ff018080",
-                    "id": 2,
-                    "name": "test2",
-                    "type": WalletType.CAT,
-                },
-                {
-                    "data": '{"did_id": "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652"}',
-                    "id": 3,
-                    "name": "NFT Wallet",
-                    "type": WalletType.NFT,
-                },
+                    id=uint32(2),
+                    name="test2",
+                    type=uint8(WalletType.CAT.value),
+                ),
+                WalletInfoResponse(
+                    data='{"did_id": "0xcee228b8638c67cb66a55085be99fa3b457ae5b56915896f581990f600b2c652"}',
+                    id=uint32(3),
+                    name="NFT Wallet",
+                    type=uint8(WalletType.NFT.value),
+                ),
             ]
-            if wallet_type is WalletType.CAT:
-                return [wallet_list[1]]
-            return wallet_list
+            if request.type is not None and WalletType(request.type) is WalletType.CAT:
+                return GetWalletsResponse([wallet_list[1]])
+            return GetWalletsResponse(wallet_list)
 
         async def get_height_info(self) -> GetHeightInfoResponse:
             self.add_to_log("get_height_info", ())
@@ -291,7 +297,10 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
     run_cli_command_and_assert(capsys, root_dir, [*command_args, "--wallet_type", "cat"], other_assert_list)
     # these are various things that should be in the output
     expected_calls: logType = {
-        "get_wallets": [(None,), (WalletType.CAT,)],
+        "get_wallets": [
+            (GetWallets(type=None, include_data=True),),
+            (GetWallets(type=uint16(WalletType.CAT.value), include_data=True),),
+        ],
         "get_sync_status": [(), ()],
         "get_height_info": [(), ()],
         "get_wallet_balance": [(1,), (2,), (3,), (2,)],
@@ -422,7 +431,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
 
     # these are various things that should be in the output
     expected_calls: logType = {
-        "get_wallets": [(None,), (None,)],
+        "get_wallets": [(GetWallets(type=None, include_data=True),)] * 2,
         "send_transaction": [
             (
                 1,
