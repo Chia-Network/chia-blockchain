@@ -7,10 +7,11 @@ import random
 import re
 import statistics
 import time
+from collections.abc import Awaitable
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Awaitable, Callable, Optional, Set, Dict, List, Tuple
 
 import aiohttp
 import pytest
@@ -53,7 +54,7 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.data_layer
 
 
-table_columns: Dict[str, List[str]] = {
+table_columns: dict[str, list[str]] = {
     "root": ["tree_id", "generation", "node_hash", "status"],
     "subscriptions": ["tree_id", "url", "ignore_till", "num_consecutive_failures", "from_wallet"],
     "schema": ["version_id", "applied_at"],
@@ -66,12 +67,10 @@ table_columns: Dict[str, List[str]] = {
 
 # TODO: Someday add tests for malformed DB data to make sure we handle it gracefully
 #       and with good error messages.
-
-
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.anyio
 async def test_create_creates_tables_and_columns(
-    database_uri: str, table_name: str, expected_columns: List[str]
+    database_uri: str, table_name: str, expected_columns: list[str]
 ) -> None:
     # Never string-interpolate sql queries...  Except maybe in tests when it does not
     # allow you to parametrize the query.
@@ -92,7 +91,7 @@ async def test_create_creates_tables_and_columns(
 
 @pytest.mark.anyio
 async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
-    store_id = bytes32(b"\0" * 32)
+    store_id = bytes32.zeros
 
     await raw_data_store.create_tree(store_id=store_id)
 
@@ -248,8 +247,8 @@ async def test_get_ancestors(data_store: DataStore, store_id: bytes32) -> None:
 
 
 @pytest.mark.anyio
-async def test_get_ancestors_2(data_store: DataStore, store_id: bytes32) -> None:
-    ancestors: List[Tuple[int, bytes32, List[InternalNode]]] = []
+async def test_get_ancestors_optimized(data_store: DataStore, store_id: bytes32) -> None:
+    ancestors: list[tuple[int, bytes32, list[InternalNode]]] = []
     random = Random()
     random.seed(100, version=2)
 
@@ -333,16 +332,16 @@ async def test_batch_update_against_single_operations(
 ) -> None:
     total_operations = 1000
     num_ops_per_batch = total_operations // num_batches
-    saved_batches: List[List[Dict[str, Any]]] = []
-    saved_kv: List[List[TerminalNode]] = []
+    saved_batches: list[list[dict[str, Any]]] = []
+    saved_kv: list[list[TerminalNode]] = []
     db_uri = generate_in_memory_db_uri()
     async with DataStore.managed(database=db_uri, uri=True) as single_op_data_store:
         await single_op_data_store.create_tree(store_id, status=Status.COMMITTED)
         random = Random()
         random.seed(100, version=2)
 
-        batch: List[Dict[str, Any]] = []
-        keys_values: Dict[bytes, bytes] = {}
+        batch: list[dict[str, Any]] = []
+        keys_values: dict[bytes, bytes] = {}
         for operation in range(num_batches * num_ops_per_batch):
             [op_type] = random.choices(
                 ["insert", "upsert-insert", "upsert-update", "delete"],
@@ -962,7 +961,7 @@ async def test_kv_diff(data_store: DataStore, store_id: bytes32) -> None:
     random = Random()
     random.seed(100, version=2)
     insertions = 0
-    expected_diff: Set[DiffData] = set()
+    expected_diff: set[DiffData] = set()
     root_start = None
     keys: List[bytes] = []
 
@@ -1012,7 +1011,7 @@ async def test_kv_diff_2(data_store: DataStore, store_id: bytes32) -> None:
         reference_node_hash=None,
         side=None,
     )
-    empty_hash = bytes32([0] * 32)
+    empty_hash = bytes32.zeros
     invalid_hash = bytes32([0] * 31 + [1])
     diff_1 = await data_store.get_kv_diff(store_id, empty_hash, insert_result.node_hash)
     assert diff_1 == {DiffData(OperationType.INSERT, b"000", b"000")}
@@ -1088,7 +1087,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
 
     await data_store.unsubscribe(store_id)
     assert await data_store.get_subscriptions() == []
-    store_id2 = bytes32([0] * 32)
+    store_id2 = bytes32.zeros
 
     await data_store.subscribe(
         Subscription(
@@ -1292,7 +1291,7 @@ async def test_data_server_files(
     group_files_by_store: bool,
     tmp_path: Path,
 ) -> None:
-    roots: List[Root] = []
+    roots: list[Root] = []
     num_batches = 10
     num_ops_per_batch = 100
 
@@ -1302,11 +1301,11 @@ async def test_data_server_files(
         random = Random()
         random.seed(100, version=2)
 
-        keys: List[bytes] = []
+        keys: list[bytes] = []
         counter = 0
 
         for batch in range(num_batches):
-            changelist: List[Dict[str, Any]] = []
+            changelist: list[dict[str, Any]] = []
             for operation in range(num_ops_per_batch):
                 if random.randint(0, 4) > 0 or len(keys) == 0:
                     key = counter.to_bytes(4, byteorder="big")
@@ -1553,7 +1552,7 @@ async def test_insert_from_delta_file(
     for generation in range(1, num_files + 2):
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
         await write_files_for_root(data_store, store_id, root, tmp_path_1, 0, False, group_files_by_store)
-        root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
+        root_hashes.append(bytes32.zeros if root.node_hash is None else root.node_hash)
     store_path = tmp_path_1.joinpath(f"{store_id}") if group_files_by_store else tmp_path_1
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
@@ -1712,7 +1711,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     for generation in range(1, num_files + 2):
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
         await write_files_for_root(data_store, store_id, root, tmp_path, 0, group_by_store=group_files_by_store)
-        root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
+        root_hashes.append(bytes32.zeros if root.node_hash is None else root.node_hash)
     store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
@@ -1852,7 +1851,7 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert:
     num_values = 10
     new_keys = 10
     for value in range(num_values):
-        changelist: List[Dict[str, Any]] = []
+        changelist: list[dict[str, Any]] = []
         bytes_value = value.to_bytes(4, byteorder="big")
         if use_upsert:
             for key in range(num_keys):
@@ -1884,10 +1883,10 @@ async def test_update_keys(data_store: DataStore, store_id: bytes32, use_upsert:
 
 async def _check_ancestors(
     data_store: DataStore, store_id: bytes32, root_hash: bytes32
-) -> Dict[bytes32, Optional[bytes32]]:
-    ancestors: Dict[bytes32, Optional[bytes32]] = {}
+) -> dict[bytes32, Optional[bytes32]]:
+    ancestors: dict[bytes32, Optional[bytes32]] = {}
     root_node: Node = await data_store.get_node(root_hash)
-    queue: List[Node] = [root_node]
+    queue: list[Node] = [root_node]
 
     while queue:
         node = queue.pop(0)

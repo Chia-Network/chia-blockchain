@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
@@ -9,7 +9,7 @@ from clvm.casts import int_to_bytes
 from chia._tests.clvm.benchmark_costs import cost_of_spend_bundle
 from chia._tests.clvm.test_puzzles import secret_exponent_for_index
 from chia._tests.conftest import ConsensusMode
-from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
@@ -35,15 +35,15 @@ async def do_spend(
     sim: SpendSim,
     sim_client: SimClient,
     tail: Program,
-    coins: List[Coin],
-    lineage_proofs: List[LineageProof],
-    inner_solutions: List[Program],
-    expected_result: Tuple[MempoolInclusionStatus, Optional[Err]],
+    coins: list[Coin],
+    lineage_proofs: list[LineageProof],
+    inner_solutions: list[Program],
+    expected_result: tuple[MempoolInclusionStatus, Optional[Err]],
     reveal_limitations_program: bool = True,
-    signatures: List[G2Element] = [],
-    extra_deltas: Optional[List[int]] = None,
-    additional_spends: List[WalletSpendBundle] = [],
-    limitations_solutions: Optional[List[Program]] = None,
+    signatures: list[G2Element] = [],
+    extra_deltas: Optional[list[int]] = None,
+    additional_spends: list[WalletSpendBundle] = [],
+    limitations_solutions: Optional[list[Program]] = None,
     cost_logger: Optional[CostLogger] = None,
     cost_log_msg: str = "",
 ) -> int:
@@ -52,7 +52,7 @@ async def do_spend(
     if extra_deltas is None:
         extra_deltas = [0] * len(coins)
 
-    spendable_cat_list: List[SpendableCAT] = []
+    spendable_cat_list: list[SpendableCAT] = []
     for coin, innersol, proof, limitations_solution, extra_delta in zip(
         coins, inner_solutions, lineage_proofs, limitations_solutions, extra_deltas
     ):

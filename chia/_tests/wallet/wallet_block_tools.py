@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from chia_rs import G1Element, G2Element, compute_merkle_set_root
 from chiabip158 import PyBIP158
@@ -30,14 +30,14 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 
 DEFAULT_PROOF_OF_SPACE = ProofOfSpace(
-    bytes32([0] * 32),
+    bytes32.zeros,
     G1Element(),
     None,
     G1Element(),
     uint8(20),
     bytes(32 * 5),
 )
-DEFAULT_VDF_INFO = VDFInfo(bytes32([0] * 32), uint64(1), ClassgroupElement(bytes100([0] * 100)))
+DEFAULT_VDF_INFO = VDFInfo(bytes32.zeros, uint64(1), ClassgroupElement(bytes100.zeros))
 DEFAULT_VDF_PROOF = VDFProof(uint8(0), bytes(100), False)
 
 
@@ -50,14 +50,14 @@ class WalletBlockTools(BlockTools):
     def get_consecutive_blocks(
         self,
         num_blocks: int,
-        block_list_input: Optional[List[FullBlock]] = None,
+        block_list_input: Optional[list[FullBlock]] = None,
         *,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
         transaction_data: Optional[SpendBundle] = None,
         genesis_timestamp: Optional[uint64] = None,
         **kwargs: Any,  # We're overriding so there's many arguments no longer used.
-    ) -> List[FullBlock]:
+    ) -> list[FullBlock]:
         assert num_blocks > 0
         constants = self.constants
 
@@ -67,7 +67,7 @@ class WalletBlockTools(BlockTools):
         if block_list_input is None:
             block_list_input = []
 
-        blocks: Dict[bytes32, BlockRecord]
+        blocks: dict[bytes32, BlockRecord]
         if len(block_list_input) == 0:
             height_to_hash = {}
             blocks = {}
@@ -130,10 +130,10 @@ class WalletBlockTools(BlockTools):
 
 
 def load_block_list(
-    block_list: List[FullBlock], constants: ConsensusConstants
-) -> Tuple[Dict[uint32, bytes32], uint64, Dict[bytes32, BlockRecord]]:
-    height_to_hash: Dict[uint32, bytes32] = {}
-    blocks: Dict[bytes32, BlockRecord] = {}
+    block_list: list[FullBlock], constants: ConsensusConstants
+) -> tuple[dict[uint32, bytes32], uint64, dict[bytes32, BlockRecord]]:
+    height_to_hash: dict[uint32, bytes32] = {}
+    blocks: dict[bytes32, BlockRecord] = {}
     sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
     for full_block in block_list:
         if full_block.height != 0 and len(full_block.finished_sub_slots) > 0:
@@ -154,8 +154,8 @@ def finish_block(
     constants: ConsensusConstants,
     unfinished_block: UnfinishedBlock,
     prev_block: Optional[BlockRecord],
-    blocks: Dict[bytes32, BlockRecord],
-) -> Tuple[FullBlock, BlockRecord]:
+    blocks: dict[bytes32, BlockRecord],
+) -> tuple[FullBlock, BlockRecord]:
     if prev_block is None:
         new_weight = uint128(1)
         new_height = uint32(0)
@@ -170,7 +170,7 @@ def finish_block(
             new_height,
             uint128(1),
             uint8(1),
-            bytes32([0] * 32),
+            bytes32.zeros,
             unfinished_block.reward_chain_block.proof_of_space,
             DEFAULT_VDF_INFO,
             G2Element(),
@@ -199,15 +199,15 @@ def finish_block(
 
 def get_full_block_and_block_record(
     constants: ConsensusConstants,
-    blocks: Dict[bytes32, BlockRecord],
+    blocks: dict[bytes32, BlockRecord],
     last_timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
     pool_target: PoolTarget,
     prev_block: Optional[BlockRecord],
     block_generator: Optional[BlockGenerator],
-    additions: List[Coin],
-    removals: List[Coin],
-) -> Tuple[FullBlock, BlockRecord, float]:
+    additions: list[Coin],
+    removals: list[Coin],
+) -> tuple[FullBlock, BlockRecord, float]:
     timestamp = last_timestamp + 20
     if prev_block is None:
         height: uint32 = uint32(0)
@@ -241,9 +241,9 @@ def get_full_block_and_block_record(
             )
         )
 
-    byte_array_tx: List[bytearray] = []
-    removal_ids: List[bytes32] = []
-    puzzlehash_coin_map: Dict[bytes32, List[bytes32]] = {}
+    byte_array_tx: list[bytearray] = []
+    removal_ids: list[bytes32] = []
+    puzzlehash_coin_map: dict[bytes32, list[bytes32]] = {}
     for coin in additions:
         puzzlehash_coin_map.setdefault(coin.puzzle_hash, [])
         puzzlehash_coin_map[coin.puzzle_hash].append(coin.name())
@@ -255,7 +255,7 @@ def get_full_block_and_block_record(
     bip158: PyBIP158 = PyBIP158(byte_array_tx)
     filter_hash = std_hash(bytes(bip158.GetEncoded()))
 
-    additions_merkle_items: List[bytes32] = []
+    additions_merkle_items: list[bytes32] = []
     for puzzle, coin_ids in puzzlehash_coin_map.items():
         additions_merkle_items.append(puzzle)
         additions_merkle_items.append(hash_coin_ids(coin_ids))
@@ -263,21 +263,21 @@ def get_full_block_and_block_record(
     additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
     removals_root = bytes32(compute_merkle_set_root(removal_ids))
 
-    generator_hash = bytes32([0] * 32)
+    generator_hash = bytes32.zeros
     if block_generator is not None:
         generator_hash = std_hash(block_generator.program)
 
     foliage_data = FoliageBlockData(
-        bytes32([0] * 32),
+        bytes32.zeros,
         pool_target,
         G2Element(),
         farmer_reward_puzzlehash,
-        bytes32([0] * 32),
+        bytes32.zeros,
     )
 
     transactions_info = TransactionsInfo(
         generator_hash,
-        bytes32([0] * 32),
+        bytes32.zeros,
         G2Element(),
         fees,
         uint64(constants.MAX_BLOCK_COST_CLVM),
@@ -295,7 +295,7 @@ def get_full_block_and_block_record(
 
     foliage = Foliage(
         prev_block_hash,
-        bytes32([0] * 32),
+        bytes32.zeros,
         foliage_data,
         G2Element(),
         foliage_transaction_block.get_hash(),
@@ -306,7 +306,7 @@ def get_full_block_and_block_record(
         RewardChainBlockUnfinished(
             uint128(1),
             uint8(1),
-            bytes32([0] * 32),
+            bytes32.zeros,
             DEFAULT_PROOF_OF_SPACE,
             None,
             G2Element(),

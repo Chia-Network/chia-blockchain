@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Iterator, List, Optional, Union
+from collections.abc import Iterator
+from typing import Optional, Union
 
 from chia_rs import G2Element
 
@@ -77,7 +78,7 @@ def construct_cat_puzzle(
     return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle_or_hash)
 
 
-def subtotals_for_deltas(deltas: List[int]) -> List[int]:
+def subtotals_for_deltas(deltas: list[int]) -> list[int]:
     """
     Given a list of deltas corresponding to input coins, create the "subtotals" list
     needed in solutions spending those coins.
@@ -104,7 +105,7 @@ def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
 
 # This should probably return UnsignedSpendBundle if that type ever exists
 def unsigned_spend_bundle_for_spendable_cats(
-    mod_code: Program, spendable_cat_list: List[SpendableCAT]
+    mod_code: Program, spendable_cat_list: list[SpendableCAT]
 ) -> WalletSpendBundle:
     """
     Given a list of `SpendableCAT` objects, create a `WalletSpendBundle` that spends all those coins.
@@ -114,7 +115,7 @@ def unsigned_spend_bundle_for_spendable_cats(
     N = len(spendable_cat_list)
 
     # figure out what the deltas are by running the inner puzzles & solutions
-    deltas: List[int] = []
+    deltas: list[int] = []
     for spend_info in spendable_cat_list:
         conditions = conditions_dict_for_solution(spend_info.inner_puzzle, spend_info.inner_solution, INFINITE_COST)
         total = spend_info.extra_delta * -1

@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import Any, Callable, Coroutine, Optional, Tuple
+from collections.abc import Coroutine
+from typing import Any, Callable, Optional
 
 import pytest
 
@@ -411,7 +412,7 @@ async def test_nft_offer_sell_did_to_did(
                 20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name()
             )
 
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
     await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_maker, wallet_node_taker], timeout=20)
 
     await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
@@ -1083,7 +1084,7 @@ async def test_nft_offer_sell_cancel_in_batch(
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
@@ -1104,7 +1105,7 @@ async def test_complex_nft_offer(
     self_hostname: str,
     two_wallet_nodes: Any,
     trusted: Any,
-    royalty_pts: Tuple[int, int, int],
+    royalty_pts: tuple[int, int, int],
     seeded_random: random.Random,
 ) -> None:
     """

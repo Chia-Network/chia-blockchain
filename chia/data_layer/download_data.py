@@ -81,7 +81,7 @@ async def write_files_for_root(
     if root.node_hash is not None:
         node_hash = root.node_hash
     else:
-        node_hash = bytes32([0] * 32)  # todo change
+        node_hash = bytes32.zeros  # todo change
 
     filename_full_tree = get_full_tree_filename_path(foldername, store_id, node_hash, root.generation, group_by_store)
     filename_diff_tree = get_delta_filename_path(foldername, store_id, node_hash, root.generation, group_by_store)
@@ -173,7 +173,7 @@ async def insert_from_delta_file(
     store_id: bytes32,
     existing_generation: int,
     target_generation: int,
-    root_hashes: List[bytes32],
+    root_hashes: list[bytes32],
     server_info: ServerInfo,
     client_foldername: Path,
     timeout: aiohttp.ClientTimeout,
@@ -226,7 +226,7 @@ async def insert_from_delta_file(
             )
             await data_store.insert_into_data_store_from_file(
                 store_id,
-                None if root_hash == bytes32([0] * 32) else root_hash,
+                None if root_hash == bytes32.zeros else root_hash,
                 target_filename_path,
             )
             log.info(
@@ -271,7 +271,7 @@ def delete_full_file_if_exists(foldername: Path, store_id: bytes32, root: Root) 
     if root.node_hash is not None:
         node_hash = root.node_hash
     else:
-        node_hash = bytes32([0] * 32)  # todo change
+        node_hash = bytes32.zeros  # todo change
 
     not_found = 0
     for group_by_store in (True, False):

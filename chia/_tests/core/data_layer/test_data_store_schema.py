@@ -58,7 +58,7 @@ async def test_root_generation_must_not_be_less_than_zero(
 ) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
     values = {
-        "tree_id": bytes32([0] * 32),
+        "tree_id": bytes32.zeros,
         "generation": generation,
         "node_hash": example.terminal_nodes[0],
         "status": Status.PENDING,
@@ -79,7 +79,7 @@ async def test_root_generation_must_not_be_less_than_zero(
 async def test_root_generation_must_not_be_null(data_store: DataStore, store_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
     values = {
-        "tree_id": bytes32([0] * 32),
+        "tree_id": bytes32.zeros,
         "generation": None,
         "node_hash": example.terminal_nodes[0],
         "status": Status.PENDING,
@@ -101,7 +101,7 @@ async def test_root_generation_must_not_be_null(data_store: DataStore, store_id:
 async def test_root_status_must_be_valid(data_store: DataStore, store_id: bytes32, bad_status: int) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
     values = {
-        "tree_id": bytes32([0] * 32),
+        "tree_id": bytes32.zeros,
         "generation": 0,
         "node_hash": example.terminal_nodes[0],
         "status": bad_status,
@@ -121,7 +121,7 @@ async def test_root_status_must_be_valid(data_store: DataStore, store_id: bytes3
 @pytest.mark.anyio
 async def test_root_status_must_not_be_null(data_store: DataStore, store_id: bytes32) -> None:
     example = await add_01234567_example(data_store=data_store, store_id=store_id)
-    values = {"tree_id": bytes32([0] * 32), "generation": 0, "node_hash": example.terminal_nodes[0], "status": None}
+    values = {"tree_id": bytes32.zeros, "generation": 0, "node_hash": example.terminal_nodes[0], "status": None}
 
     async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: root.status$"):

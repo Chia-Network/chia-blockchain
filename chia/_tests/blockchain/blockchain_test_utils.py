@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from chia_rs import BLSCache
 
@@ -76,7 +76,7 @@ async def _validate_and_add_block(
     else:
         # validate_signatures must be False in order to trigger add_block() to
         # validate the signature.
-        pre_validation_results: List[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
             blockchain.constants,
             blockchain,
             [block],
@@ -100,7 +100,8 @@ async def _validate_and_add_block(
             raise AssertionError(f"Expected {expected_error} but got {Err(results.error)}")
         await check_block_store_invariant(blockchain)
         return None
-
+    if fork_info is None:
+        fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
     if use_bls_cache:
         bls_cache = BLSCache(100)
     else:
@@ -138,7 +139,7 @@ async def _validate_and_add_block(
 async def _validate_and_add_block_multi_error(
     blockchain: Blockchain,
     block: FullBlock,
-    expected_errors: List[Err],
+    expected_errors: list[Err],
     skip_prevalidation: bool = False,
     fork_info: Optional[ForkInfo] = None,
 ) -> None:
@@ -156,7 +157,7 @@ async def _validate_and_add_block_multi_error(
 async def _validate_and_add_block_multi_result(
     blockchain: Blockchain,
     block: FullBlock,
-    expected_result: List[AddBlockResult],
+    expected_result: list[AddBlockResult],
     skip_prevalidation: bool = False,
     fork_info: Optional[ForkInfo] = None,
 ) -> None:
@@ -170,7 +171,7 @@ async def _validate_and_add_block_multi_result(
     except Exception as e:
         assert isinstance(e, AssertionError)
         assert "Block was not added" in e.args[0]
-        expected_list: List[str] = [f"Block was not added: {res}" for res in expected_result]
+        expected_list: list[str] = [f"Block was not added: {res}" for res in expected_result]
         if e.args[0] not in expected_list:
             raise AssertionError(f"{e.args[0].split('Block was not added: ')[1]} not in {expected_result}")
 

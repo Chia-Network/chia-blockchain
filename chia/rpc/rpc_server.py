@@ -5,10 +5,11 @@ import contextlib
 import json
 import logging
 import traceback
+from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar
+from typing import Any, Callable, Generic, Optional, TypeVar
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
@@ -30,13 +31,13 @@ log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
 
 
-EndpointResult = Dict[str, Any]
-Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
+EndpointResult = dict[str, Any]
+Endpoint = Callable[[dict[str, object]], Awaitable[EndpointResult]]
 _T_RpcApiProtocol = TypeVar("_T_RpcApiProtocol", bound="RpcApiProtocol")
 
 
 class StateChangedProtocol(Protocol):
-    def __call__(self, change: str, change_data: Optional[Dict[str, Any]]) -> None: ...
+    def __call__(self, change: str, change_data: Optional[dict[str, Any]]) -> None: ...
 
 
 class RpcServiceProtocol(Protocol):
@@ -54,7 +55,7 @@ class RpcServiceProtocol(Protocol):
         # Optional[ChiaServer]
         ...
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         """Report the active connections for the service.
 
         A default implementation is available and can be called as
@@ -90,16 +91,16 @@ class RpcApiProtocol(Protocol):
         # using a read-only property per https://github.com/python/mypy/issues/12990
         ...
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def get_routes(self) -> dict[str, Endpoint]:
         """Return the mapping of endpoints to handler callables."""
         ...
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]]) -> list[WsRpcMessage]:
         """Notify the state change system of a changed state."""
         ...
 
 
-def default_get_connections(server: ChiaServer, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+def default_get_connections(server: ChiaServer, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
     connections = server.get_connections(request_node_type)
     con_info = [
         {
@@ -131,7 +132,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     service_name: str
     ssl_context: SSLContext
     ssl_client_context: SSLContext
-    net_config: Dict[str, Any]
+    net_config: dict[str, Any]
     webserver: Optional[WebServer] = None
     daemon_heartbeat: int = 300
     daemon_connection_task: Optional[asyncio.Task[None]] = None
@@ -147,7 +148,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         service_name: str,
         stop_cb: Callable[[], None],
         root_path: Path,
-        net_config: Dict[str, Any],
+        net_config: dict[str, Any],
         prefer_ipv6: bool,
     ) -> RpcServer[_T_RpcApiProtocol]:
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
@@ -196,10 +197,10 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             await self.daemon_connection_task
             self.daemon_connection_task = None
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> None:
+    async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]]) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
-        payloads: List[WsRpcMessage] = await self.rpc_api._state_changed(change, change_data)
+        payloads: list[WsRpcMessage] = await self.rpc_api._state_changed(change, change_data)
 
         if change == "add_connection" or change == "close_connection" or change == "peer_changed_peak":
             data = await self.get_connections({})
@@ -222,7 +223,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                 tb = traceback.format_exc()
                 log.warning(f"Sending data failed. Exception {tb}.")
 
-    def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
+    def state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
         asyncio.create_task(self._state_changed(change, change_data))
@@ -233,7 +234,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             raise RuntimeError("RpcServer is not started")
         return self.webserver.listen_port
 
-    def _get_routes(self) -> Dict[str, Endpoint]:
+    def _get_routes(self) -> dict[str, Endpoint]:
         return {
             **self.rpc_api.get_routes(),
             "/get_network_info": self.get_network_info,
@@ -246,29 +247,29 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             "/healthz": self.healthz,
         }
 
-    async def get_routes(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_routes(self, request: dict[str, Any]) -> EndpointResult:
         return {
             "success": True,
             "routes": list(self._get_routes().keys()),
         }
 
-    async def get_network_info(self, _: Dict[str, Any]) -> EndpointResult:
+    async def get_network_info(self, _: dict[str, Any]) -> EndpointResult:
         network_name = self.net_config["selected_network"]
         address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
         genesis_challenge = self.net_config["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
         return {"network_name": network_name, "network_prefix": address_prefix, "genesis_challenge": genesis_challenge}
 
-    async def get_connections(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_connections(self, request: dict[str, Any]) -> EndpointResult:
         request_node_type: Optional[NodeType] = None
         if "node_type" in request:
             request_node_type = NodeType(request["node_type"])
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
-        con_info: List[Dict[str, Any]]
+        con_info: list[dict[str, Any]]
         con_info = self.rpc_api.service.get_connections(request_node_type=request_node_type)
         return {"connections": con_info}
 
-    async def open_connection(self, request: Dict[str, Any]) -> EndpointResult:
+    async def open_connection(self, request: dict[str, Any]) -> EndpointResult:
         host = request["host"]
         port = request["port"]
         target_node: PeerInfo = PeerInfo(await resolve(host, prefer_ipv6=self.prefer_ipv6), uint16(int(port)))
@@ -279,7 +280,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             return {"success": False, "error": f"could not connect to {target_node}"}
         return {"success": True}
 
-    async def close_connection(self, request: Dict[str, Any]) -> EndpointResult:
+    async def close_connection(self, request: dict[str, Any]) -> EndpointResult:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
             raise web.HTTPInternalServerError()
@@ -290,7 +291,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             await connection.close()
         return {}
 
-    async def stop_node(self, request: Dict[str, Any]) -> EndpointResult:
+    async def stop_node(self, request: dict[str, Any]) -> EndpointResult:
         """
         Shuts down the node.
         """
@@ -298,17 +299,17 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             self.stop_cb()
         return {}
 
-    async def healthz(self, request: Dict[str, Any]) -> EndpointResult:
+    async def healthz(self, request: dict[str, Any]) -> EndpointResult:
         return {
             "success": True,
         }
 
-    async def get_version(self, request: Dict[str, Any]) -> EndpointResult:
+    async def get_version(self, request: dict[str, Any]) -> EndpointResult:
         return {
             "version": __version__,
         }
 
-    async def ws_api(self, message: WsRpcMessage) -> Optional[Dict[str, object]]:
+    async def ws_api(self, message: WsRpcMessage) -> Optional[dict[str, object]]:
         """
         This function gets called when new message is received via websocket.
         """
@@ -317,7 +318,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         if message["ack"]:
             return None
 
-        data: Dict[str, object] = {}
+        data: dict[str, object] = {}
         if "data" in message:
             data = message["data"]
         if command == "ping":
@@ -417,7 +418,7 @@ async def start_rpc_server(
     rpc_port: uint16,
     stop_cb: Callable[[], None],
     root_path: Path,
-    net_config: Dict[str, object],
+    net_config: dict[str, object],
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
 ) -> RpcServer[_T_RpcApiProtocol]:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional
 
 from chia_rs import G1Element, G2Element, serialized_length
 from chiabip158 import PyBIP158
@@ -167,7 +167,7 @@ def skip_foliage(buf: memoryview) -> memoryview:
     return skip_optional(buf, skip_g2_element)  # foliage_transaction_block_signature
 
 
-def prev_hash_from_foliage(buf: memoryview) -> Tuple[memoryview, bytes32]:
+def prev_hash_from_foliage(buf: memoryview) -> tuple[memoryview, bytes32]:
     prev_hash = buf[:32]  # prev_block_hash
     buf = skip_bytes32(buf)  # prev_block_hash
     buf = skip_bytes32(buf)  # reward_block_hash
@@ -230,7 +230,7 @@ def generator_from_block(buf: memoryview) -> Optional[bytes]:
 class GeneratorBlockInfo:
     prev_header_hash: bytes32
     transactions_generator: Optional[SerializedProgram]
-    transactions_generator_ref_list: List[uint32]
+    transactions_generator_ref_list: list[uint32]
 
 
 def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
@@ -267,7 +267,7 @@ def block_info_from_block(buf: memoryview) -> GeneratorBlockInfo:
 
 
 def header_block_from_block(
-    buf: memoryview, request_filter: bool = True, tx_addition_coins: List[Coin] = [], removal_names: List[bytes32] = []
+    buf: memoryview, request_filter: bool = True, tx_addition_coins: list[Coin] = [], removal_names: list[bytes32] = []
 ) -> bytes:
     buf2 = buf[:]
     buf2 = skip_list(buf2, skip_end_of_sub_slot_bundle)  # finished_sub_slots
@@ -298,7 +298,7 @@ def header_block_from_block(
         else:
             transactions_info_optional = bytes([1])
             transactions_info, advance = TransactionsInfo.parse_rust(buf2[1:])
-        byte_array_tx: List[bytearray] = []
+        byte_array_tx: list[bytearray] = []
         if is_transaction_block and transactions_info:
             addition_coins = tx_addition_coins + list(transactions_info.reward_claims_incorporated)
             for coin in addition_coins:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
+from typing import Optional
 
 from chia_rs import DONT_VALIDATE_SIGNATURE, MEMPOOL_MODE, G2Element, get_flags_for_height_and_constants
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
@@ -76,7 +76,7 @@ def get_puzzle_and_solution_for_coin(
         raise ValueError(f"Failed to get puzzle and solution for coin {coin}, error: {e}") from e
 
 
-def get_spends_for_block(generator: BlockGenerator, height: int, constants: ConsensusConstants) -> List[CoinSpend]:
+def get_spends_for_block(generator: BlockGenerator, height: int, constants: ConsensusConstants) -> list[CoinSpend]:
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
@@ -90,7 +90,7 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
         get_flags_for_height_and_constants(height, constants),
     )
 
-    spends: List[CoinSpend] = []
+    spends: list[CoinSpend] = []
 
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
@@ -103,7 +103,7 @@ def get_spends_for_block(generator: BlockGenerator, height: int, constants: Cons
 
 def get_spends_for_block_with_conditions(
     generator: BlockGenerator, height: int, constants: ConsensusConstants
-) -> List[CoinSpendWithConditions]:
+) -> list[CoinSpendWithConditions]:
     args = bytearray(b"\xff")
     args += bytes(DESERIALIZE_MOD)
     args += b"\xff"
@@ -119,7 +119,7 @@ def get_spends_for_block_with_conditions(
         flags,
     )
 
-    spends: List[CoinSpendWithConditions] = []
+    spends: list[CoinSpendWithConditions] = []
 
     for spend in Program.to(ret).first().as_iter():
         parent, puzzle, amount, solution = spend.as_iter()
@@ -133,7 +133,7 @@ def get_spends_for_block_with_conditions(
 
 
 def mempool_check_time_locks(
-    removal_coin_records: Dict[bytes32, CoinRecord],
+    removal_coin_records: dict[bytes32, CoinRecord],
     bundle_conds: SpendBundleConditions,
     prev_transaction_block_height: uint32,
     timestamp: uint64,

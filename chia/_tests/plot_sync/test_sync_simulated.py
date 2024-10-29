@@ -6,10 +6,11 @@ import functools
 import logging
 import random
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 import pytest
 from chia_rs import G1Element
@@ -51,19 +52,19 @@ class TestData:
     plot_sync_sender: Sender
     plot_sync_receiver: Receiver
     event_loop: asyncio.AbstractEventLoop
-    plots: Dict[Path, PlotInfo] = field(default_factory=dict)
-    invalid: List[PlotInfo] = field(default_factory=list)
-    keys_missing: List[PlotInfo] = field(default_factory=list)
-    duplicates: List[PlotInfo] = field(default_factory=list)
+    plots: dict[Path, PlotInfo] = field(default_factory=dict)
+    invalid: list[PlotInfo] = field(default_factory=list)
+    keys_missing: list[PlotInfo] = field(default_factory=list)
+    duplicates: list[PlotInfo] = field(default_factory=list)
 
     async def run(
         self,
         *,
-        loaded: List[PlotInfo],
-        removed: List[PlotInfo],
-        invalid: List[PlotInfo],
-        keys_missing: List[PlotInfo],
-        duplicates: List[PlotInfo],
+        loaded: list[PlotInfo],
+        removed: list[PlotInfo],
+        invalid: list[PlotInfo],
+        keys_missing: list[PlotInfo],
+        duplicates: list[PlotInfo],
         initial: bool,
     ) -> None:
         for plot_info in loaded:
@@ -75,10 +76,10 @@ class TestData:
         self.keys_missing = keys_missing
         self.duplicates = duplicates
 
-        removed_paths: List[Path] = [p.prover.get_filename() for p in removed] if removed is not None else []
-        invalid_dict: Dict[Path, int] = {p.prover.get_filename(): 0 for p in self.invalid}
-        keys_missing_set: Set[Path] = {p.prover.get_filename() for p in self.keys_missing}
-        duplicates_set: Set[str] = {p.prover.get_filename() for p in self.duplicates}
+        removed_paths: list[Path] = [p.prover.get_filename() for p in removed] if removed is not None else []
+        invalid_dict: dict[Path, int] = {p.prover.get_filename(): 0 for p in self.invalid}
+        keys_missing_set: set[Path] = {p.prover.get_filename() for p in self.keys_missing}
+        duplicates_set: set[str] = {p.prover.get_filename() for p in self.duplicates}
 
         # Inject invalid plots into `PlotManager` of the harvester so that the callback calls below can use them
         # to sync them to the farmer.
@@ -158,10 +159,10 @@ class TestData:
 
 @dataclass
 class TestRunner:
-    test_data: List[TestData]
+    test_data: list[TestData]
 
     def __init__(
-        self, harvesters: List[Harvester], farmer: Farmer, event_loop: asyncio.events.AbstractEventLoop
+        self, harvesters: list[Harvester], farmer: Farmer, event_loop: asyncio.events.AbstractEventLoop
     ) -> None:
         self.test_data = []
         for harvester in harvesters:
@@ -179,11 +180,11 @@ class TestRunner:
         self,
         index: int,
         *,
-        loaded: List[PlotInfo],
-        removed: List[PlotInfo],
-        invalid: List[PlotInfo],
-        keys_missing: List[PlotInfo],
-        duplicates: List[PlotInfo],
+        loaded: list[PlotInfo],
+        removed: list[PlotInfo],
+        invalid: list[PlotInfo],
+        keys_missing: list[PlotInfo],
+        duplicates: list[PlotInfo],
         initial: bool,
     ) -> None:
         await self.test_data[index].run(
@@ -241,7 +242,7 @@ async def _testable_process(
 
 @contextlib.asynccontextmanager
 async def create_test_runner(
-    harvester_services: List[HarvesterService],
+    harvester_services: list[HarvesterService],
     farmer_service: FarmerService,
     event_loop: asyncio.events.AbstractEventLoop,
 ) -> AsyncIterator[TestRunner]:
@@ -262,7 +263,7 @@ async def create_test_runner(
             yield TestRunner(harvesters, farmer, event_loop)
 
 
-def create_example_plots(count: int, seeded_random: random.Random) -> List[PlotInfo]:
+def create_example_plots(count: int, seeded_random: random.Random) -> list[PlotInfo]:
     @dataclass
     class DiskProver:
         file_name: str
@@ -296,7 +297,7 @@ def create_example_plots(count: int, seeded_random: random.Random) -> List[PlotI
 
 @pytest.mark.anyio
 async def test_sync_simulated(
-    farmer_three_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    farmer_three_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     seeded_random: random.Random,
 ) -> None:
@@ -376,7 +377,7 @@ async def test_sync_simulated(
 )
 @pytest.mark.anyio
 async def test_farmer_error_simulation(
-    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
     seeded_random: random.Random,
@@ -402,7 +403,7 @@ async def test_farmer_error_simulation(
 @pytest.mark.parametrize("simulate_error", [ErrorSimulation.NonRecoverableError, ErrorSimulation.NotConnected])
 @pytest.mark.anyio
 async def test_sync_reset_cases(
-    farmer_one_harvester_not_started: Tuple[List[HarvesterService], FarmerService, BlockTools],
+    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
     seeded_random: random.Random,
