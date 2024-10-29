@@ -57,6 +57,7 @@ from chia.rpc.wallet_request_types import (
     GetPrivateKey,
     GetTimestampForHeight,
     GetWalletBalance,
+    GetWalletBalances,
     GetWallets,
     LogIn,
     PushTransactions,
@@ -2659,15 +2660,15 @@ async def test_get_balances(wallet_rpc_environment: WalletRpcTestEnvironment):
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 2)
     await farm_transaction_block(full_node_api, wallet_node)
     await time_out_assert(20, check_client_synced, True, client)
-    bal = await client.get_wallet_balances()
-    assert len(bal) == 3
-    assert bal["1"]["confirmed_wallet_balance"] == 1999999999880
-    assert bal["2"]["confirmed_wallet_balance"] == 100
-    assert bal["3"]["confirmed_wallet_balance"] == 20
-    bal_ids = await client.get_wallet_balances([3, 2])
-    assert len(bal_ids) == 2
-    assert bal["2"]["confirmed_wallet_balance"] == 100
-    assert bal["3"]["confirmed_wallet_balance"] == 20
+    bals_response = await client.get_wallet_balances(GetWalletBalances())
+    assert len(bals_response.wallet_balances) == 3
+    assert bals_response.wallet_balances_dict[uint32(1)].confirmed_wallet_balance == 1999999999880
+    assert bals_response.wallet_balances_dict[uint32(2)].confirmed_wallet_balance == 100
+    assert bals_response.wallet_balances_dict[uint32(3)].confirmed_wallet_balance == 20
+    bals_response = await client.get_wallet_balances(GetWalletBalances([uint32(3), uint32(2)]))
+    assert len(bals_response.wallet_balances) == 2
+    assert bals_response.wallet_balances_dict[uint32(2)].confirmed_wallet_balance == 100
+    assert bals_response.wallet_balances_dict[uint32(3)].confirmed_wallet_balance == 20
 
 
 @pytest.mark.parametrize(

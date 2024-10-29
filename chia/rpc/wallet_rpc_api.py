@@ -49,6 +49,8 @@ from chia.rpc.wallet_request_types import (
     GetTimestampForHeightResponse,
     GetWalletBalance,
     GetWalletBalanceResponse,
+    GetWalletBalances,
+    GetWalletBalancesResponse,
     GetWallets,
     GetWalletsResponse,
     LogIn,
@@ -1057,15 +1059,13 @@ class WalletRpcApi:
     async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
         return GetWalletBalanceResponse(await self._get_wallet_balance(request.wallet_id))
 
-    async def get_wallet_balances(self, request: dict[str, Any]) -> EndpointResult:
-        try:
-            wallet_ids: list[uint32] = [uint32(int(wallet_id)) for wallet_id in request["wallet_ids"]]
-        except (TypeError, KeyError):
+    @marshal
+    async def get_wallet_balances(self, request: GetWalletBalances) -> GetWalletBalancesResponse:
+        if request.wallet_ids is not None:
+            wallet_ids = request.wallet_ids
+        else:
             wallet_ids = list(self.service.wallet_state_manager.wallets.keys())
-        wallet_balances: dict[uint32, dict[str, Any]] = {}
-        for wallet_id in wallet_ids:
-            wallet_balances[wallet_id] = (await self._get_wallet_balance(wallet_id)).to_json_dict()
-        return {"wallet_balances": wallet_balances}
+        return GetWalletBalancesResponse([await self._get_wallet_balance(wallet_id) for wallet_id in wallet_ids])
 
     async def get_transaction(self, request: dict[str, Any]) -> EndpointResult:
         transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
