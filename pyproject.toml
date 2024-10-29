@@ -155,7 +155,8 @@ include = '''
 exclude = ''
 
 [project]
-requires-python = ">=3.9,<=3.12"
+# This has to match the poetry python entry above
+requires-python = ">=3.9, <3.13"
 
 [tool.ruff]
 line-length = 120
