@@ -40,7 +40,7 @@ def create_wallet_service(
     network_id = service_config["selected_network"]
     overrides = service_config["network_overrides"]["constants"][network_id]
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
-    service_config.set_default("short_sync_blocks_behind_threshold", 20)
+    service_config.setdefault("short_sync_blocks_behind_threshold", 20)
 
     node = WalletNode(
         service_config,
