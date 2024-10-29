@@ -12,7 +12,7 @@ from chia.util.network import resolve
 
 
 @pytest.mark.anyio
-async def test_resolve4():
+async def test_resolve4() -> None:
     # Run these tests forcing IPv4 resolution
     prefer_ipv6 = False
     assert await resolve("127.0.0.1", prefer_ipv6=prefer_ipv6) == IPAddress.create("127.0.0.1")
@@ -26,7 +26,7 @@ async def test_resolve4():
     condition=("GITHUB_ACTIONS" in os.environ) and (sys.platform in {"darwin", "win32"}),
     reason="macOS and Windows runners in GitHub Actions do not seem to support IPv6",
 )
-async def test_resolve6():
+async def test_resolve6() -> None:
     # Run these tests forcing IPv6 resolution
     prefer_ipv6 = True
     assert await resolve("::1", prefer_ipv6=prefer_ipv6) == IPAddress.create("::1")
