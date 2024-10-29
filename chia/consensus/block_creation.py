@@ -6,7 +6,16 @@ from collections.abc import Sequence
 from typing import Callable, Optional
 
 import chia_rs
-from chia_rs import G1Element, G2Element, compute_merkle_set_root
+from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    MEMPOOL_MODE,
+    G1Element,
+    G2Element,
+    compute_merkle_set_root,
+    get_flags_for_height_and_constants,
+    run_block_generator,
+    run_block_generator2,
+)
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -14,8 +23,6 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.signage_point import SignagePoint
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -28,6 +35,7 @@ from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
 from chia.types.unfinished_block import UnfinishedBlock
+from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.prev_transaction_block import get_prev_transaction_block
@@ -36,10 +44,27 @@ log = logging.getLogger(__name__)
 
 
 def compute_block_cost(generator: BlockGenerator, constants: ConsensusConstants, height: uint32) -> uint64:
-    result: NPCResult = get_name_puzzle_conditions(
-        generator, constants.MAX_BLOCK_COST_CLVM, mempool_mode=True, height=height, constants=constants
+    flags = get_flags_for_height_and_constants(height, constants) | MEMPOOL_MODE | DONT_VALIDATE_SIGNATURE
+
+    if height >= constants.HARD_FORK_HEIGHT:
+        run_block = run_block_generator2
+    else:
+        run_block = run_block_generator
+
+    err, conds = run_block(
+        bytes(generator.program),
+        generator.generator_refs,
+        constants.MAX_BLOCK_COST_CLVM,
+        flags,
+        G2Element(),
+        None,
+        constants,
     )
-    return uint64(0 if result.conds is None else result.conds.cost)
+
+    if err is not None:
+        raise ConsensusError(Err(err))
+    assert conds is not None
+    return uint64(conds.cost)
 
 
 def compute_block_fee(additions: Sequence[Coin], removals: Sequence[Coin]) -> uint64:
