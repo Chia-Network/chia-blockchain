@@ -9,7 +9,6 @@ from typing import Any, Optional, Union
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.cmds.passphrase_funcs import obtain_current_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import bech32_encode, convertbits, encode_puzzle_hash
@@ -25,7 +24,7 @@ from chia.util.keychain import (
     generate_mnemonic,
     mnemonic_to_seed,
 )
-from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.keyring_wrapper import KeyringWrapper, obtain_current_passphrase
 from chia.wallet.derive_keys import (
     master_pk_to_wallet_pk_unhardened,
     master_sk_to_farmer_sk,

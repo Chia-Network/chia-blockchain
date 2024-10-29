@@ -7,7 +7,11 @@ import pytest
 from chia.simulator.keyring import TempKeyring
 from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelError, KeychainLabelExists, KeychainLabelInvalid
 from chia.util.file_keyring import Key
-from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
+from chia.util.keyring_wrapper import (
+    DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE,
+    KeyringWrapper,
+    obtain_current_passphrase,
+)
 
 log = logging.getLogger(__name__)
 
@@ -259,8 +263,6 @@ class TestKeyringWrapper:
         assert KeyringWrapper.get_shared_instance().keyring.get_key("some service", "some user") is None
 
         # Check that metadata is properly deleted
-        from chia.cmds.passphrase_funcs import obtain_current_passphrase
-
         passphrase = obtain_current_passphrase(use_passphrase_cache=True)
         assert KeyringWrapper.get_shared_instance().keyring.cached_file_content.get_decrypted_data_dict(passphrase) == {
             "keys": {},
