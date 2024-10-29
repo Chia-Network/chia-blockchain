@@ -8,7 +8,7 @@ from typing import Any, Optional, Union
 import importlib_resources
 import pytest
 from chia_rs import Coin, G2Element
-from chia_rs.sized_ints import uint16
+from chia_rs.sized_ints import uint16, uint128
 from click.testing import CliRunner
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
@@ -25,10 +25,13 @@ from chia._tests.cmds.wallet.test_consts import (
 )
 from chia.cmds.cmds_util import TransactionBundle
 from chia.rpc.wallet_request_types import (
+    BalanceResponse,
     CancelOfferResponse,
     CATSpendResponse,
     CreateOfferForIDsResponse,
     GetHeightInfoResponse,
+    GetWalletBalance,
+    GetWalletBalanceResponse,
     GetWallets,
     GetWalletsResponse,
     SendTransactionResponse,
@@ -238,19 +241,23 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
             self.add_to_log("get_height_info", ())
             return GetHeightInfoResponse(uint32(10))
 
-        async def get_wallet_balance(self, wallet_id: int) -> dict[str, uint64]:
-            self.add_to_log("get_wallet_balance", (wallet_id,))
-            if wallet_id == 1:
-                amount = uint64(1000000000)
-            elif wallet_id == 2:
-                amount = uint64(2000000000)
+        async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
+            self.add_to_log("get_wallet_balance", (request,))
+            if request.wallet_id == 1:
+                amount = uint128(1000000000)
+            elif request.wallet_id == 2:
+                amount = uint128(2000000000)
             else:
-                amount = uint64(1)
-            return {
-                "confirmed_wallet_balance": amount,
-                "spendable_balance": amount,
-                "unconfirmed_wallet_balance": uint64(0),
-            }
+                amount = uint128(1)
+            return GetWalletBalanceResponse(
+                BalanceResponse(
+                    wallet_id=request.wallet_id,
+                    wallet_type=uint8(0),  # Doesn't matter
+                    confirmed_wallet_balance=amount,
+                    spendable_balance=amount,
+                    unconfirmed_wallet_balance=uint128(0),
+                )
+            )
 
         async def get_nft_wallet_did(self, wallet_id: uint8) -> dict[str, Optional[str]]:
             self.add_to_log("get_nft_wallet_did", (wallet_id,))
@@ -303,7 +310,12 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         ],
         "get_sync_status": [(), ()],
         "get_height_info": [(), ()],
-        "get_wallet_balance": [(1,), (2,), (3,), (2,)],
+        "get_wallet_balance": [
+            (GetWalletBalance(wallet_id=uint32(1)),),
+            (GetWalletBalance(wallet_id=uint32(2)),),
+            (GetWalletBalance(wallet_id=uint32(3)),),
+            (GetWalletBalance(wallet_id=uint32(2)),),
+        ],
         "get_nft_wallet_did": [(3,)],
         "get_connections": [(None,), (None,)],
     }
