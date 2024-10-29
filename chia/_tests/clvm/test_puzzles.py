@@ -28,7 +28,7 @@ from .coin_store import CoinStore, CoinTimestamp
 T1 = CoinTimestamp(1, uint32(10000000))
 T2 = CoinTimestamp(5, uint32(10003000))
 
-MAX_BLOCK_COST_CLVM = int(1e18)
+MAX_BLOCK_COST_CLVM = 10**18
 
 
 def secret_exponent_for_index(index: int) -> int:

@@ -15,7 +15,7 @@ from chia.types.spend_bundle_conditions import SpendConditions
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm, load_serialized_clvm_maybe_recompile
 
-MAX_COST = int(1e15)
+MAX_COST = 10**15
 COST_PER_BYTE = int(12000)
 
 
