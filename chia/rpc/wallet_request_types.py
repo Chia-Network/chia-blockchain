@@ -260,7 +260,11 @@ class GetWalletBalancesResponse(Streamable):
 
     # special dict format that streamable can't handle natively
     def to_json_dict(self) -> dict[str, Any]:
-        return {str(wallet_id): response.to_json_dict() for wallet_id, response in self.wallet_balances_dict.items()}
+        return {
+            "wallet_balances": {
+                str(wallet_id): response.to_json_dict() for wallet_id, response in self.wallet_balances_dict.items()
+            }
+        }
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> GetWalletBalancesResponse:
