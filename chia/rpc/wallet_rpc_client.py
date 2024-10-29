@@ -202,7 +202,7 @@ class WalletRpcClient(RpcClient):
 
     # Wallet APIs
     async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
-        return GetWalletBalanceResponse.from_json_dict(await self.fetch("get_wallets", request.to_json_dict()))
+        return GetWalletBalanceResponse.from_json_dict(await self.fetch("get_wallet_balance", request.to_json_dict()))
 
     async def get_wallet_balances(self, wallet_ids: Optional[list[int]] = None) -> dict[str, dict[str, Any]]:
         request = {"wallet_ids": wallet_ids}
