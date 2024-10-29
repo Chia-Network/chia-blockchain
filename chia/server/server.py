@@ -510,7 +510,8 @@ class ChiaServer:
             if e.code == Err.INVALID_HANDSHAKE:
                 if is_feeler:
                     self.log.warning(
-                        f"Invalid handshake with peer {target_node} during feeler connection. Maybe the peer is running old software."
+                        f"Invalid handshake with peer {target_node} during feeler connection. "
+                        f"Maybe the peer is running old software."
                     )
                 else:
                     self.log.warning(
