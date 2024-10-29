@@ -243,8 +243,8 @@ class MerkleBlob:
         if len(self.blob) == 0:
             return {}
 
-        hash_to_index: Dict[bytes32, TreeIndex] = {}
-        queue: List[TreeIndex] = [TreeIndex(0)]
+        hash_to_index: dict[bytes32, TreeIndex] = {}
+        queue: list[TreeIndex] = [TreeIndex(0)]
         while len(queue) > 0:
             node_index = queue.pop()
             node = self.get_raw_node(node_index)

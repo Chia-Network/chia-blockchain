@@ -5,26 +5,21 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import aiohttp
 from typing_extensions import Literal
 
 from chia.data_layer.data_layer_util import (
-    NodeType,
     PluginRemote,
     Root,
-    SerializedNode,
     ServerInfo,
-    Status,
     get_delta_filename,
     get_delta_filename_path,
     get_full_tree_filename,
     get_full_tree_filename_path,
-    leaf_hash,
 )
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.util.merkle_blob import KVId, MerkleBlob
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 

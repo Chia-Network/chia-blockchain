@@ -48,11 +48,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import (
-    delete_full_file_if_exists,
-    insert_from_delta_file,
-    write_files_for_root,
-)
+from chia.data_layer.download_data import delete_full_file_if_exists, insert_from_delta_file, write_files_for_root
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient

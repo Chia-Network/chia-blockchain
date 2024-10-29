@@ -193,8 +193,8 @@ class DataStore:
         root_hash: Optional[bytes32],
         filename: Path,
     ) -> None:
-        internal_nodes: Dict[bytes32, Tuple[bytes32, bytes32]] = {}
-        terminal_nodes: Dict[bytes32, Tuple[KVId, KVId]] = {}
+        internal_nodes: dict[bytes32, tuple[bytes32, bytes32]] = {}
+        terminal_nodes: dict[bytes32, tuple[KVId, KVId]] = {}
 
         with open(filename, "rb") as reader:
             while True:
@@ -253,7 +253,7 @@ class DataStore:
         version = "v2.0"
         old_tables = ["node", "root", "ancestors"]
         all_stores = await self.get_store_ids()
-        all_roots: List[List[Root]] = []
+        all_roots: list[list[Root]] = []
         for store_id in all_stores:
             root = await self.get_tree_root(store_id=store_id)
             roots = await self.get_roots_between(store_id, 1, root.generation)
@@ -405,7 +405,7 @@ class DataStore:
             raise Exception("Internal error")
         return kv_id
 
-    async def add_key_value(self, key: bytes, value: bytes, store_id: bytes32) -> Tuple[KVId, KVId]:
+    async def add_key_value(self, key: bytes, value: bytes, store_id: bytes32) -> tuple[KVId, KVId]:
         kid = await self.add_kvid(key, store_id)
         vid = await self.add_kvid(value, store_id)
         hash = leaf_hash(key, value)
@@ -421,7 +421,7 @@ class DataStore:
             )
         return (kid, vid)
 
-    async def get_node_by_hash(self, hash: bytes32) -> Tuple[KVId, KVId]:
+    async def get_node_by_hash(self, hash: bytes32) -> tuple[KVId, KVId]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute("SELECT * FROM hashes WHERE hash = ?", (hash,))
 
@@ -480,8 +480,8 @@ class DataStore:
 
     async def build_blob_from_nodes(
         self,
-        internal_nodes: Dict[bytes32, Tuple[bytes32, bytes32]],
-        terminal_nodes: Dict[bytes32, Tuple[KVId, KVId]],
+        internal_nodes: dict[bytes32, tuple[bytes32, bytes32]],
+        terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
         node_hash: bytes32,
         merkle_blob: MerkleBlob,
     ) -> TreeIndex:
@@ -658,7 +658,7 @@ class DataStore:
             if len(bad_trees) > 0:
                 raise TreeGenerationIncrementingError(store_ids=bad_trees)
 
-    _checks: Tuple[Callable[[DataStore], Awaitable[None]], ...] = (_check_roots_are_incrementing,)
+    _checks: tuple[Callable[[DataStore], Awaitable[None]], ...] = (_check_roots_are_incrementing,)
 
     async def create_tree(self, store_id: bytes32, status: Status = Status.PENDING) -> bool:
         await self._insert_root(store_id=store_id, node_hash=None, status=status)
@@ -840,7 +840,7 @@ class DataStore:
 
             kv_ids = merkle_blob.get_keys_values()
 
-            terminal_nodes: List[TerminalNode] = []
+            terminal_nodes: list[TerminalNode] = []
             for kid, vid in kv_ids.items():
                 terminal_node = await self.get_terminal_node(kid, vid)
                 terminal_nodes.append(terminal_node)
@@ -860,9 +860,9 @@ class DataStore:
             else:
                 resolved_root_hash = root_hash
 
-            keys_values_hashed: Dict[bytes32, bytes32] = {}
-            key_hash_to_length: Dict[bytes32, int] = {}
-            leaf_hash_to_length: Dict[bytes32, int] = {}
+            keys_values_hashed: dict[bytes32, bytes32] = {}
+            key_hash_to_length: dict[bytes32, int] = {}
+            leaf_hash_to_length: dict[bytes32, int] = {}
             if resolved_root_hash is not None:
                 try:
                     merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
@@ -1030,7 +1030,7 @@ class DataStore:
                 raise
 
             kv_ids = merkle_blob.get_keys_values()
-            keys: List[bytes] = []
+            keys: list[bytes] = []
             for kid in kv_ids.keys():
                 key = await self.get_blob_from_kvid(kid)
                 if key is None:
@@ -1108,7 +1108,6 @@ class DataStore:
 
             new_root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, status)
             return InsertResult(node_hash=hash, root=new_root)
-
 
     async def insert_batch(
         self,
@@ -1256,7 +1255,7 @@ class DataStore:
             merkle_blob = await self.get_merkle_blob(root_hash=root.node_hash)
 
             nodes = merkle_blob.get_nodes_with_indexes()
-            hash_to_node: Dict[bytes32, Node] = {}
+            hash_to_node: dict[bytes32, Node] = {}
             tree_node: Node
             for _, node in reversed(nodes):
                 if isinstance(node, RawInternalMerkleNode):
@@ -1307,7 +1306,7 @@ class DataStore:
         deltas_only: bool,
         writer: BinaryIO,
         merkle_blob: Optional[MerkleBlob] = None,
-        hash_to_index: Optional[Dict[bytes32, TreeIndex]] = None,
+        hash_to_index: Optional[dict[bytes32, TreeIndex]] = None,
     ) -> None:
         if node_hash == bytes32.zeros:
             return

@@ -7,7 +7,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import List
 
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -30,7 +29,7 @@ async def generate_datastore(num_nodes: int) -> None:
             insert_count = 0
             delete_time = 0.0
             delete_count = 0
-            keys: List[bytes] = []
+            keys: list[bytes] = []
 
             for i in range(num_nodes):
                 key = i.to_bytes(4, byteorder="big")

@@ -11,7 +11,7 @@ from collections.abc import Awaitable
 from dataclasses import dataclass
 from pathlib import Path
 from random import Random
-from typing import Any, Awaitable, Callable, Optional, Set, Dict, List, Tuple
+from typing import Any, Callable, Optional
 
 import aiohttp
 import pytest
@@ -38,10 +38,7 @@ from chia.data_layer.data_layer_util import (
     leaf_hash,
 )
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import (
-    insert_from_delta_file,
-    write_files_for_root,
-)
+from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.util.merkle_blob import RawLeafMerkleNode
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -255,8 +252,8 @@ async def test_get_ancestors_optimized(data_store: DataStore, store_id: bytes32)
     first_insertions = [True, False, True, False, True, True, False, True, False, True, True, False, False, True, False]
     deleted_all = False
     node_count = 0
-    node_hashes: List[bytes32] = []
-    hash_to_key: Dict[bytes32, bytes] = {}
+    node_hashes: list[bytes32] = []
+    hash_to_key: dict[bytes32, bytes] = {}
     node_hash: Optional[bytes32]
 
     for i in range(1000):
@@ -591,7 +588,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, store_id:
 async def test_autoinsert_balances_gaps(data_store: DataStore, store_id: bytes32) -> None:
     random = Random()
     random.seed(101, version=2)
-    hashes: List[bytes32] = []
+    hashes: list[bytes32] = []
 
     for i in range(2000):
         key = (i + 100).to_bytes(4, byteorder="big")
@@ -963,7 +960,7 @@ async def test_kv_diff(data_store: DataStore, store_id: bytes32) -> None:
     insertions = 0
     expected_diff: set[DiffData] = set()
     root_start = None
-    keys: List[bytes] = []
+    keys: list[bytes] = []
 
     for i in range(500):
         key = (i + 100).to_bytes(4, byteorder="big")
@@ -1933,13 +1930,13 @@ async def test_migration(
 ) -> None:
     num_batches = 10
     num_ops_per_batch = 100
-    keys: List[bytes] = []
+    keys: list[bytes] = []
     counter = 0
     random = Random()
     random.seed(100, version=2)
 
     for batch in range(num_batches):
-        changelist: List[Dict[str, Any]] = []
+        changelist: list[dict[str, Any]] = []
         for operation in range(num_ops_per_batch):
             if random.randint(0, 4) > 0 or len(keys) == 0:
                 key = counter.to_bytes(4, byteorder="big")
@@ -1954,9 +1951,7 @@ async def test_migration(
         await data_store.insert_batch(store_id, changelist, status=Status.COMMITTED)
         root = await data_store.get_tree_root(store_id)
         await data_store.add_node_hashes(store_id)
-        await write_files_for_root(
-            data_store, store_id, root, tmp_path, 0, group_by_store=group_files_by_store
-        )
+        await write_files_for_root(data_store, store_id, root, tmp_path, 0, group_by_store=group_files_by_store)
 
     kv_before = await data_store.get_keys_values(store_id=store_id)
     async with data_store.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
