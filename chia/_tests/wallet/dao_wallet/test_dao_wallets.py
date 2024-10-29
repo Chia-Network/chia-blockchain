@@ -40,10 +40,10 @@ async def get_proposal_state(wallet: DAOWallet, index: int) -> tuple[Optional[bo
 async def rpc_state(
     timeout: float,
     async_function: Callable[[Any], Any],
-    params: list[Union[int, dict[str, Any]]],
-    condition_func: Callable[[dict[str, Any]], Any],
+    params: list[Any],
+    condition_func: Callable[[Any], Any],
     result: Optional[Any] = None,
-) -> Union[bool, dict[str, Any]]:  # pragma: no cover
+) -> Union[bool, Any]:  # pragma: no cover
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)
@@ -52,7 +52,6 @@ async def rpc_state(
 
     while True:
         resp = await async_function(*params)
-        assert isinstance(resp, dict)
         try:
             if result:
                 if condition_func(resp) == result:
@@ -1915,11 +1914,19 @@ async def test_dao_rpc_client(
 
         # check wallet balances
         await rpc_state(
-            20, client_0.get_wallet_balance, [new_cat_wallet_id], lambda x: x["confirmed_wallet_balance"], 10000
+            20,
+            client_0.get_wallet_balance,
+            [GetWalletBalance(new_cat_wallet_id)],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
+            10000,
         )
         expected_xch = initial_funds - amount_of_cats - new_cat_amt - xch_funds - (2 * fee) - 2 - 9000
         await rpc_state(
-            20, client_0.get_wallet_balance, [wallet_0.id()], lambda x: x["confirmed_wallet_balance"], expected_xch
+            20,
+            client_0.get_wallet_balance,
+            [GetWalletBalance(wallet_0.id())],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
+            expected_xch,
         )
 
         # close the mint proposal
@@ -1941,8 +1948,8 @@ async def test_dao_rpc_client(
         await rpc_state(
             20,
             client_1.get_wallet_balance,
-            [dao_wallet_res_1.cat_wallet_id],
-            lambda x: x["confirmed_wallet_balance"],
+            [GetWalletBalance(dao_wallet_res_1.cat_wallet_id)],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
             100,
         )
 
@@ -1990,8 +1997,8 @@ async def test_dao_rpc_client(
         await rpc_state(
             20,
             client_0.get_wallet_balance,
-            [dao_wallet_res_0.cat_wallet_id],
-            lambda x: x["confirmed_wallet_balance"],
+            [GetWalletBalance(dao_wallet_res_0.cat_wallet_id)],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
             cat_amt,
         )
 
@@ -2215,8 +2222,8 @@ async def test_dao_complex_spends(
         await rpc_state(
             20,
             client_1.get_wallet_balance,
-            [wallet_1.id()],
-            lambda x: x["confirmed_wallet_balance"],
+            [GetWalletBalance(wallet_1.id())],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
             initial_funds + (xch_funds / 4),
         )
         await rpc_state(
@@ -2277,13 +2284,17 @@ async def test_dao_complex_spends(
         )
 
         await rpc_state(
-            20, client_0.get_wallet_balance, [new_cat_wallet_id], lambda x: x["confirmed_wallet_balance"], cat_spend_amt
+            20,
+            client_0.get_wallet_balance,
+            [GetWalletBalance(new_cat_wallet_id)],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
+            cat_spend_amt,
         )
         await rpc_state(
             20,
             client_0.get_wallet_balance,
-            [new_cat_wallet_id_2],
-            lambda x: x["confirmed_wallet_balance"],
+            [GetWalletBalance(new_cat_wallet_id_2)],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
             cat_spend_amt,
         )
 
@@ -2331,30 +2342,38 @@ async def test_dao_complex_spends(
         await rpc_state(
             20,
             client_0.get_wallet_balance,
-            [new_cat_wallet_id],
-            lambda x: x["confirmed_wallet_balance"],
+            [GetWalletBalance(new_cat_wallet_id)],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
             cat_spend_amt + 400000,
         )
         await rpc_state(
             20,
             client_0.get_wallet_balance,
-            [new_cat_wallet_id_2],
-            lambda x: x["confirmed_wallet_balance"],
+            [GetWalletBalance(new_cat_wallet_id_2)],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
             cat_spend_amt + 400000,
         )
         await rpc_state(
-            20, client_1.get_wallet_balance, [new_cat_wallet_id], lambda x: x["confirmed_wallet_balance"], 90000
+            20,
+            client_1.get_wallet_balance,
+            [GetWalletBalance(new_cat_wallet_id)],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
+            90000,
         )
         await rpc_state(
-            20, client_1.get_wallet_balance, [new_cat_wallet_id_2], lambda x: x["confirmed_wallet_balance"], 90000
+            20,
+            client_1.get_wallet_balance,
+            [GetWalletBalance(new_cat_wallet_id_2)],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
+            90000,
         )
 
         # check xch
         await rpc_state(
             20,
             client_1.get_wallet_balance,
-            [wallet_1.id()],
-            lambda x: x["confirmed_wallet_balance"],
+            [GetWalletBalance(wallet_1.id())],
+            lambda x: x.wallet_balance.confirmed_wallet_balance,
             initial_funds + (xch_funds / 2),
         )
 
