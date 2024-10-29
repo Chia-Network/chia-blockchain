@@ -24,7 +24,7 @@ from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_po
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.wallet_request_types import GetWallets, WalletInfoResponse
+from chia.rpc.wallet_request_types import GetWalletBalance, GetWallets, WalletInfoResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -144,8 +144,8 @@ async def pprint_pool_wallet_state(
         print(f"Target state: {PoolSingletonState(pool_wallet_info.target.state).name}")
         print(f"Target pool URL: {pool_wallet_info.target.pool_url}")
     if pool_wallet_info.current.state == PoolSingletonState.SELF_POOLING.value:
-        balances: dict[str, Any] = await wallet_client.get_wallet_balance(wallet_id)
-        balance = balances["confirmed_wallet_balance"]
+        balances = (await wallet_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))).wallet_balance
+        balance = balances.confirmed_wallet_balance
         typ = WalletType(int(WalletType.POOLING_WALLET))
         address_prefix, scale = wallet_coin_unit(typ, address_prefix)
         print(f"Claimable balance: {print_balance(balance, scale, address_prefix)}")

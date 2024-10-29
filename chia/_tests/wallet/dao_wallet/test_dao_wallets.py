@@ -10,6 +10,7 @@ from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.rpc.wallet_request_types import GetWalletBalance
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -1977,8 +1978,8 @@ async def test_dao_rpc_client(
         await full_node_api.process_all_wallet_transactions(wallet_0, timeout=60)
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
-        bal = await client_0.get_wallet_balance(dao_wallet_res_0.dao_cat_wallet_id)
-        assert bal["confirmed_wallet_balance"] == cat_amt
+        bal = (await client_0.get_wallet_balance(GetWalletBalance(dao_wallet_res_0.dao_cat_wallet_id))).wallet_balance
+        assert bal.confirmed_wallet_balance == uint128(cat_amt)
 
         exit = await client_0.dao_exit_lockup(dao_id_0, tx_config=DEFAULT_TX_CONFIG)
         exit_tx = exit.tx

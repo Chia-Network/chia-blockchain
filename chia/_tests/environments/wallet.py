@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Optional, Union, cast
 from chia._tests.environments.common import ServiceEnvironment
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import RpcServer
+from chia.rpc.wallet_request_types import GetWalletBalance
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -148,7 +149,9 @@ class WalletEnvironment:
                     else {}
                 ),
             }
-            balance_response: dict[str, int] = await self.rpc_client.get_wallet_balance(wallet_id)
+            balance_response: dict[str, int] = (
+                await self.rpc_client.get_wallet_balance(GetWalletBalance(wallet_id))
+            ).to_json_dict()
 
             if not expected_result.items() <= balance_response.items():
                 for key, value in expected_result.items():

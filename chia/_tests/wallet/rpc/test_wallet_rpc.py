@@ -56,6 +56,7 @@ from chia.rpc.wallet_request_types import (
     GetNotifications,
     GetPrivateKey,
     GetTimestampForHeight,
+    GetWalletBalance,
     GetWallets,
     LogIn,
     PushTransactions,
@@ -167,7 +168,9 @@ async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: Wallet
 
 async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1):
     wallet_id = 1
-    initial_balances = await wallet_bundle.rpc_client.get_wallet_balance(wallet_id)
+    initial_balances = (
+        await wallet_bundle.rpc_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))
+    ).wallet_balance
     ph: bytes32 = decode_puzzle_hash(await wallet_bundle.rpc_client.get_next_address(wallet_id, True))
     generated_funds = 0
     for i in range(0, num_blocks):
@@ -179,8 +182,8 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
     # Farm a dummy block to confirm the created funds
     await farm_transaction_block(full_node_api, wallet_bundle.node)
 
-    expected_confirmed = initial_balances["confirmed_wallet_balance"] + generated_funds
-    expected_unconfirmed = initial_balances["unconfirmed_wallet_balance"] + generated_funds
+    expected_confirmed = initial_balances.confirmed_wallet_balance + generated_funds
+    expected_unconfirmed = initial_balances.unconfirmed_wallet_balance + generated_funds
     await time_out_assert(20, get_confirmed_balance, expected_confirmed, wallet_bundle.rpc_client, wallet_id)
     await time_out_assert(20, get_unconfirmed_balance, expected_unconfirmed, wallet_bundle.rpc_client, wallet_id)
     await time_out_assert(20, check_client_synced, True, wallet_bundle.rpc_client)
@@ -297,7 +300,7 @@ async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNod
     if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
         assert isinstance(wallet, CATWallet)
         expected_balance_dict["asset_id"] = wallet.get_asset_id()
-    assert await rpc_client.get_wallet_balance(wallet.id()) == expected_balance_dict
+    assert await rpc_client.get_wallet_balance(GetWalletBalance(wallet.id())) == expected_balance_dict
 
 
 async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32):
@@ -306,11 +309,15 @@ async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32):
 
 
 async def get_confirmed_balance(client: WalletRpcClient, wallet_id: int):
-    return (await client.get_wallet_balance(wallet_id))["confirmed_wallet_balance"]
+    return (
+        await client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))
+    ).wallet_balance.confirmed_wallet_balance
 
 
 async def get_unconfirmed_balance(client: WalletRpcClient, wallet_id: int):
-    return (await client.get_wallet_balance(wallet_id))["unconfirmed_wallet_balance"]
+    return (
+        await client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))
+    ).wallet_balance.unconfirmed_wallet_balance
 
 
 @pytest.mark.anyio
@@ -1067,9 +1074,9 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await assert_wallet_types(client, {WalletType.STANDARD_WALLET: 1, WalletType.CAT: 2})
     await assert_wallet_types(client_2, {WalletType.STANDARD_WALLET: 1})
 
-    bal_0 = await client.get_wallet_balance(cat_0_id)
-    assert bal_0["confirmed_wallet_balance"] == 0
-    assert bal_0["pending_coin_removal_count"] == 1
+    bal_0 = (await client.get_wallet_balance(cat_0_id)).wallet_balance
+    assert bal_0.confirmed_wallet_balance == 0
+    assert bal_0.pending_coin_removal_count == 1
     col = await client.get_cat_asset_id(cat_0_id)
     assert col == asset_id
     assert (await client.get_cat_name(cat_0_id)) == CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex())
@@ -1101,9 +1108,9 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=5)
 
     await time_out_assert(5, get_confirmed_balance, 20, client, cat_0_id)
-    bal_0 = await client.get_wallet_balance(cat_0_id)
-    assert bal_0["pending_coin_removal_count"] == 0
-    assert bal_0["unspent_coin_count"] == 1
+    bal_0 = (await client.get_wallet_balance(cat_0_id)).wallet_balance
+    assert bal_0.pending_coin_removal_count == 0
+    assert bal_0.unspent_coin_count == 1
 
     # Creates a second wallet with the same CAT
     res = await client_2.create_wallet_for_existing_cat(asset_id)
@@ -1117,8 +1124,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     await farm_transaction_block(full_node_api, wallet_node)
 
-    bal_1 = await client_2.get_wallet_balance(cat_1_id)
-    assert bal_1["confirmed_wallet_balance"] == 0
+    bal_1 = (await client_2.get_wallet_balance(cat_1_id)).wallet_balance
+    assert bal_1.confirmed_wallet_balance == 0
 
     addr_0 = await client.get_next_address(cat_0_id, False)
     addr_1 = await client_2.get_next_address(cat_1_id, False)

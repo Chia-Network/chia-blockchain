@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, TypeVar
 
 from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint8
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -27,6 +28,7 @@ from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamab
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
@@ -216,6 +218,29 @@ class WalletInfoResponse(WalletInfo):
 class GetWalletsResponse(Streamable):
     wallets: list[WalletInfoResponse]
     fingerprint: Optional[uint32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalance(Streamable):
+    wallet_id: uint32
+
+
+# utility for GetWalletBalanceResponse
+@streamable
+@kw_only_dataclass
+class BalanceResponse(Balance):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_type: uint8 = field(default_factory=default_raise)
+    fingerprint: Optional[uint32] = None
+    asset_id: Optional[bytes32] = None
+    pending_approval_balance: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalanceResponse(Streamable):
+    wallet_balance: BalanceResponse
 
 
 @streamable

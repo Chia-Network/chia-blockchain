@@ -24,6 +24,7 @@ from chia.rpc.wallet_request_types import (
     AddKeyResponse,
     ApplySignatures,
     ApplySignaturesResponse,
+    BalanceResponse,
     CheckDeleteKey,
     CheckDeleteKeyResponse,
     CombineCoins,
@@ -46,6 +47,8 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
+    GetWalletBalance,
+    GetWalletBalanceResponse,
     GetWallets,
     GetWalletsResponse,
     LogIn,
@@ -1033,7 +1036,7 @@ class WalletRpcApi:
     # Wallet
     ##########################################################################################
 
-    async def _get_wallet_balance(self, wallet_id: uint32) -> dict[str, Any]:
+    async def _get_wallet_balance(self, wallet_id: uint32) -> BalanceResponse:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         balance = await self.service.get_balance(wallet_id)
         wallet_balance = balance.to_json_dict()
@@ -1048,12 +1051,11 @@ class WalletRpcApi:
                 assert isinstance(wallet, CRCATWallet)
                 wallet_balance["pending_approval_balance"] = await wallet.get_pending_approval_balance()
 
-        return wallet_balance
+        return BalanceResponse.from_json_dict(wallet_balance)
 
-    async def get_wallet_balance(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = uint32(int(request["wallet_id"]))
-        wallet_balance = await self._get_wallet_balance(wallet_id)
-        return {"wallet_balance": wallet_balance}
+    @marshal
+    async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
+        return GetWalletBalanceResponse(await self._get_wallet_balance(request.wallet_id))
 
     async def get_wallet_balances(self, request: dict[str, Any]) -> EndpointResult:
         try:
@@ -1062,7 +1064,7 @@ class WalletRpcApi:
             wallet_ids = list(self.service.wallet_state_manager.wallets.keys())
         wallet_balances: dict[uint32, dict[str, Any]] = {}
         for wallet_id in wallet_ids:
-            wallet_balances[wallet_id] = await self._get_wallet_balance(wallet_id)
+            wallet_balances[wallet_id] = (await self._get_wallet_balance(wallet_id)).to_json_dict()
         return {"wallet_balances": wallet_balances}
 
     async def get_transaction(self, request: dict[str, Any]) -> EndpointResult:
