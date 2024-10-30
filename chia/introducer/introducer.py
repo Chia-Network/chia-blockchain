@@ -7,7 +7,7 @@ import time
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
-from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.rpc.rpc_server import ServiceManagementMessage, StateChangedProtocol, default_get_connections
 from chia.server.introducer_peers import VettedPeer
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -38,7 +38,10 @@ class Introducer:
         self.log = logging.getLogger(__name__)
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(
+        self,
+        management_message: Optional[ServiceManagementMessage] = None,
+    ) -> AsyncIterator[None]:
         self._vetting_task = asyncio.create_task(self._vetting_loop())
         try:
             yield

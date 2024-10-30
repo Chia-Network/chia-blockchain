@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 import pytest
 from chia_rs import G1Element, PrivateKey
+from tests.util.setup_nodes import SimulatorsAndWallets
 
 from chia._tests.util.misc import CoinGenerator
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
@@ -16,6 +17,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.rpc_server import ServiceManagementAction
 from chia.server.outbound_message import Message, make_msg
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
@@ -31,7 +33,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_sync_utils import PeerRequestException
-from chia.wallet.wallet_node import Balance, WalletNode
+from chia.wallet.wallet_node import Balance, WalletNode, WalletServiceManagementMessage
 
 
 @pytest.mark.anyio
@@ -494,18 +496,22 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_get_balance(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
+    simulator_and_wallet_new: SimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
-    full_node_server = full_node_api.full_node.server
+    full_node_api = simulator_and_wallet_new.simulators[0].peer_api
+    wallet_node = simulator_and_wallet_new.wallets[0].node
+    wallet_server = simulator_and_wallet_new.wallets[0].peer_server
+    full_node_server = simulator_and_wallet_new.simulators[0].peer_server
 
     def wallet_synced() -> bool:
         return full_node_server.node_id in wallet_node.synced_peers
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
-        wallet_node._close()
-        await wallet_node._await_closed(shutting_down=False)
-        await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
+        # TODO: private...  cut it out
+        assert simulator_and_wallet_new.wallets[0].rpc_api._management_request is not None
+        await simulator_and_wallet_new.wallets[0].rpc_api._management_request(
+            WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint)
+        )
 
     wallet_id = uint32(1)
     initial_fingerprint = wallet_node.logged_in_fingerprint
@@ -595,7 +601,7 @@ async def test_add_states_from_peer_untrusted_shutdown(
     wallet = wallet_node.wallet_state_manager.main_wallet
     await full_node_api.farm_rewards_to_wallet(1, wallet)
     # Close to trigger the shutdown
-    wallet_node._close()
+    wallet_node._shut_down = True
     coin_generator = CoinGenerator()
     # Generate enough coin states to fill up the max number validation/add tasks.
     coin_states = [CoinState(coin_generator.get().coin, uint32(i), uint32(i)) for i in range(3000)]
@@ -727,58 +733,63 @@ async def test_start_with_multiple_key_types(
 ) -> None:
     [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
 
-    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
-        wallet_node._close()
-        await wallet_node._await_closed(shutting_down=False)
-        await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
+    # async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
+    #     wallet_node._close()
+    #     await wallet_node._await_closed(shutting_down=False)
+    #     await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
 
-    initial_sk = wallet_node.wallet_state_manager.private_key
+    async with wallet_node.manage():
+        initial_sk = wallet_node.wallet_state_manager.private_key
 
-    pk: G1Element = await wallet_node.keychain_proxy.add_key(
-        "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        None,
-        private=False,
-    )
-    fingerprint_pk: int = pk.get_fingerprint()
+        pk: G1Element = await wallet_node.keychain_proxy.add_key(
+            "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            None,
+            private=False,
+        )
+        fingerprint_pk: int = pk.get_fingerprint()
 
-    await restart_with_fingerprint(fingerprint_pk)
-    assert wallet_node.wallet_state_manager.private_key is None
-    assert wallet_node.wallet_state_manager.root_pubkey == G1Element()
+    async with wallet_node.manage(
+        WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint_pk)
+    ):
+        assert wallet_node.wallet_state_manager.private_key is None
+        assert wallet_node.wallet_state_manager.root_pubkey == G1Element()
 
-    await wallet_node.keychain_proxy.delete_key_by_fingerprint(fingerprint_pk)
+        await wallet_node.keychain_proxy.delete_key_by_fingerprint(fingerprint_pk)
 
-    await restart_with_fingerprint(fingerprint_pk)
-    assert wallet_node.wallet_state_manager.private_key == initial_sk
+    async with wallet_node.manage(
+        WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint_pk)
+    ):
+        assert wallet_node.wallet_state_manager.private_key == initial_sk
 
 
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_keys(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
+    simulator_and_wallet_not_started: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet_not_started
 
-    async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
-        wallet_node._close()
-        await wallet_node._await_closed(shutting_down=False)
-        await wallet_node._start_with_fingerprint(fingerprint=fingerprint)
+    async with wallet_node.manage():
+        initial_sk = wallet_node.wallet_state_manager.private_key
 
-    initial_sk = wallet_node.wallet_state_manager.private_key
+        sk_2: PrivateKey = await wallet_node.keychain_proxy.add_key(
+            (
+                "cup smoke miss park baby say island tomorrow segment lava bitter easily settle gift "
+                "renew arrive kangaroo dilemma organ skin design salt history awesome"
+            ),
+            None,
+            private=True,
+        )
+        fingerprint_2: int = sk_2.get_g1().get_fingerprint()
 
-    sk_2: PrivateKey = await wallet_node.keychain_proxy.add_key(
-        (
-            "cup smoke miss park baby say island tomorrow segment lava bitter easily settle gift "
-            "renew arrive kangaroo dilemma organ skin design salt history awesome"
-        ),
-        None,
-        private=True,
-    )
-    fingerprint_2: int = sk_2.get_g1().get_fingerprint()
+    async with wallet_node.manage(
+        WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint_2)
+    ):
+        assert wallet_node.wallet_state_manager.private_key == sk_2
 
-    await restart_with_fingerprint(fingerprint_2)
-    assert wallet_node.wallet_state_manager.private_key == sk_2
+        await wallet_node.keychain_proxy.delete_key_by_fingerprint(fingerprint_2)
 
-    await wallet_node.keychain_proxy.delete_key_by_fingerprint(fingerprint_2)
-
-    await restart_with_fingerprint(fingerprint_2)
-    assert wallet_node.wallet_state_manager.private_key == initial_sk
+    async with wallet_node.manage(
+        WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint_2)
+    ):
+        assert wallet_node.wallet_state_manager.private_key == initial_sk

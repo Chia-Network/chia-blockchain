@@ -4,8 +4,9 @@ import dataclasses
 import json
 import logging
 import zlib
+from collections.abc import Awaitable
 from pathlib import Path
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, Callable, ClassVar, Optional, Union
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
@@ -17,7 +18,13 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
+from chia.rpc.rpc_server import (
+    Endpoint,
+    EndpointResult,
+    ServiceManagementAction,
+    ServiceManagementMessage,
+    default_get_connections,
+)
 from chia.rpc.util import marshal, tx_endpoint
 from chia.rpc.wallet_request_types import (
     AddKey,
@@ -152,7 +159,7 @@ from chia.wallet.wallet_action_scope import WalletActionScope
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import CoinRecordOrder, GetCoinRecords, unspent_range
 from chia.wallet.wallet_info import WalletInfo
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import WalletNode, WalletServiceManagementMessage
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -168,10 +175,15 @@ class WalletRpcApi:
     max_get_coin_records_limit: ClassVar[uint32] = uint32(1000)
     max_get_coin_records_filter_items: ClassVar[uint32] = uint32(1000)
 
-    def __init__(self, wallet_node: WalletNode):
+    def __init__(
+        self,
+        wallet_node: WalletNode,
+        management_request: Optional[Callable[[ServiceManagementMessage], Awaitable[None]]] = None,
+    ):
         assert wallet_node is not None
         self.service = wallet_node
         self.service_name = "chia_wallet"
+        self._management_request = management_request
 
     def get_routes(self) -> dict[str, Endpoint]:
         return {
@@ -345,14 +357,16 @@ class WalletRpcApi:
 
         return payloads
 
+    # TODO: maybe drop this intermediary?
     async def _stop_wallet(self) -> None:
         """
         Stops a currently running wallet/key, which allows starting the wallet with a new key.
         Each key has it's own wallet database.
         """
-        if self.service is not None:
-            self.service._close()
-            await self.service._await_closed(shutting_down=False)
+        # TODO: do we want a failure...?  or...
+        if self._management_request is not None:
+            # TODO: do we want to wait?
+            await self._management_request(WalletServiceManagementMessage(ServiceManagementAction.stop))
 
     async def _convert_tx_puzzle_hash(self, tx: TransactionRecord) -> TransactionRecord:
         return dataclasses.replace(
@@ -405,14 +419,21 @@ class WalletRpcApi:
         """
         Logs in the wallet with a specific key.
         """
+        if self._management_request is None:
+            raise Exception("service management queue not set, unable to request restart")
 
         if self.service.logged_in_fingerprint == request.fingerprint:
             return LogInResponse(request.fingerprint)
 
-        await self._stop_wallet()
-        started = await self.service._start_with_fingerprint(request.fingerprint)
-        if started is True:
-            return LogInResponse(request.fingerprint)
+        await self._management_request(
+            WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=request.fingerprint)
+        )
+
+        if self.service.logged_in:
+            # TODO: maybe check the fingerprint is as requested?
+            logged_in_fingerprint = uint32.construct_optional(self.service.logged_in_fingerprint)
+            assert logged_in_fingerprint is not None
+            return LogInResponse(logged_in_fingerprint)
 
         raise ValueError(f"fingerprint {request.fingerprint} not found in keychain or keychain is empty")
 
@@ -477,23 +498,27 @@ class WalletRpcApi:
         except KeyError as e:
             raise ValueError(f"The word '{e.args[0]}' is incorrect.")
 
-        fingerprint = uint32(sk.get_g1().get_fingerprint())
-        await self._stop_wallet()
+        # TODO: should this be at the start and block the key creation?
+        if self._management_request is None:
+            raise Exception("service management queue not set, unable to request restart")
 
-        # Makes sure the new key is added to config properly
-        started = False
-        try:
-            await self.service.keychain_proxy.check_keys(self.service.root_path)
-        except Exception as e:
-            log.error(f"Failed to check_keys after adding a new key: {e}")
-        started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
-        if started is True:
-            return AddKeyResponse(fingerprint=fingerprint)
+        fingerprint = uint32(sk.get_g1().get_fingerprint())
+
+        await self._management_request(
+            WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=fingerprint)
+        )
+
+        if self.service.logged_in:
+            logged_in_fingerprint = uint32.construct_optional(self.service.logged_in_fingerprint)
+            assert logged_in_fingerprint is not None
+            # TODO: maybe check the fingerprint is as requested?
+            return AddKeyResponse(fingerprint=logged_in_fingerprint)
         raise ValueError("Failed to start")
 
     @marshal
     async def delete_key(self, request: DeleteKey) -> Empty:
         await self._stop_wallet()
+        await self.service.ensure_keychain_proxy()
         try:
             await self.service.keychain_proxy.delete_key_by_fingerprint(request.fingerprint)
         except Exception as e:
@@ -560,13 +585,17 @@ class WalletRpcApi:
 
         sk, _ = await self._get_private_key(request.fingerprint)
         if sk is not None:
+            if self._management_request is None:
+                raise Exception("service management queue not set, unable to request restart")
+
             used_for_farmer, used_for_pool = await self._check_key_used_for_rewards(
                 self.service.root_path, sk, request.max_ph_to_search
             )
 
             if self.service.logged_in_fingerprint != request.fingerprint:
-                await self._stop_wallet()
-                await self.service._start_with_fingerprint(fingerprint=request.fingerprint)
+                await self._management_request(
+                    WalletServiceManagementMessage(ServiceManagementAction.restart, fingerprint=request.fingerprint)
+                )
 
             wallets: list[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:

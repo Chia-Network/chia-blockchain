@@ -53,7 +53,7 @@ from chia.data_layer.download_data import (
     insert_from_delta_file,
     write_files_for_root,
 )
-from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
+from chia.rpc.rpc_server import ServiceManagementMessage, StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -190,7 +190,10 @@ class DataLayer:
         return self
 
     @contextlib.asynccontextmanager
-    async def manage(self) -> AsyncIterator[None]:
+    async def manage(
+        self,
+        management_message: Optional[ServiceManagementMessage] = None,
+    ) -> AsyncIterator[None]:
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/data_sql.log")

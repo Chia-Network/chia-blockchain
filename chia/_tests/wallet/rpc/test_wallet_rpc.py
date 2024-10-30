@@ -45,7 +45,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import ResponseFailureError
-from chia.rpc.rpc_server import RpcServer
+from chia.rpc.rpc_server import RpcServer, ServiceManagementAction
 from chia.rpc.wallet_request_types import (
     AddKey,
     CheckDeleteKey,
@@ -114,7 +114,7 @@ from chia.wallet.util.wallet_types import CoinType, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import WalletNode, WalletServiceManagementMessage
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -189,6 +189,52 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
 
 @pytest.fixture(scope="function", params=[True, False])
 async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostname):
+    full_node, wallets, bt = two_wallet_nodes_services
+    full_node_service = full_node[0]
+    full_node_api = full_node_service._api
+    full_node_server = full_node_api.full_node.server
+    wallet_service = wallets[0]
+    wallet_service_2 = wallets[1]
+    wallet_node = wallet_service._node
+    wallet_node_2 = wallet_service_2._node
+    wallet = wallet_node.wallet_state_manager.main_wallet
+    wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
+
+    config = bt.config
+    hostname = config["self_hostname"]
+
+    if request.param:
+        wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+        wallet_node_2.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+    else:
+        wallet_node.config["trusted_peers"] = {}
+        wallet_node_2.config["trusted_peers"] = {}
+
+    await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+    await wallet_node_2.server.start_client(PeerInfo(self_hostname, full_node_server.get_port()), None)
+
+    async with WalletRpcClient.create_as_context(
+        hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
+    ) as client:
+        async with WalletRpcClient.create_as_context(
+            hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
+        ) as client_2:
+            async with FullNodeRpcClient.create_as_context(
+                hostname,
+                full_node_service.rpc_server.listen_port,
+                full_node_service.root_path,
+                full_node_service.config,
+            ) as client_node:
+                wallet_bundle_1: WalletBundle = WalletBundle(wallet_service, wallet_node, client, wallet)
+                wallet_bundle_2: WalletBundle = WalletBundle(wallet_service_2, wallet_node_2, client_2, wallet_2)
+                node_bundle: FullNodeBundle = FullNodeBundle(full_node_server, full_node_api, client_node)
+
+                yield WalletRpcTestEnvironment(wallet_bundle_1, wallet_bundle_2, node_bundle)
+
+
+# TODO: ack! duplication
+@pytest.fixture(scope="function", params=[True, False])
+async def wallet_not_started_rpc_environment(two_wallet_nodes_services, request, self_hostname):
     full_node, wallets, bt = two_wallet_nodes_services
     full_node_service = full_node[0]
     full_node_api = full_node_service._api
@@ -1821,18 +1867,37 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     await client.log_in(LogIn(uint32(pks[1])))
     assert len((await client.get_public_keys()).pk_fingerprints) == 1
 
-    assert not (await client.get_sync_status()).synced
+    await client.delete_key(DeleteKey(pks[0]))
+    assert env.wallet_1.service.rpc_server is not None
+    # async with env.wallet_1.service.run
+    async with WalletRpcClient.create_as_context(
+        self_hostname=env.wallet_1.service.self_hostname,
+        port=env.wallet_1.service.rpc_server.listen_port,
+        root_path=env.wallet_1.service.root_path,
+        net_config=env.wallet_1.service.config,
+    ) as client:
+        await client.log_in(LogIn(pks[1]))
+        assert len((await client.get_public_keys()).pk_fingerprints) == 1
 
-    wallets = await client.get_wallets()
-    assert len(wallets) == 1
-    assert await get_unconfirmed_balance(client, int(wallets[0]["id"])) == 0
+        assert not (await client.get_sync_status()).synced
 
-    with pytest.raises(ValueError):
-        await client.send_transaction(wallets[0]["id"], uint64(100), addr, DEFAULT_TX_CONFIG)
+        wallets = await client.get_wallets()
+        assert len(wallets) == 1
+        assert await get_unconfirmed_balance(client, int(wallets[0]["id"])) == 0
 
-    # Delete all keys
-    await client.delete_all_keys()
-    assert len((await client.get_public_keys()).pk_fingerprints) == 0
+        with pytest.raises(ValueError):
+            await client.send_transaction(wallets[0]["id"], uint64(100), addr, DEFAULT_TX_CONFIG)
+
+        # Delete all keys
+        await client.delete_all_keys()
+
+    async with WalletRpcClient.create_as_context(
+        self_hostname=env.wallet_1.service.self_hostname,
+        port=env.wallet_1.service.rpc_server.listen_port,
+        root_path=env.wallet_1.service.root_path,
+        net_config=env.wallet_1.service.config,
+    ) as client:
+        assert len((await client.get_public_keys()).pk_fingerprints) == 0
 
 
 @pytest.mark.anyio
@@ -2388,72 +2453,74 @@ async def test_get_auto_claim(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 
 @pytest.mark.anyio
-async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTestEnvironment):
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_set_wallet_resync_on_startup(wallet_not_started_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_not_started_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
-    await generate_funds(full_node_api, env.wallet_1)
-    wc = env.wallet_1.rpc_client
-    await wc.create_new_did_wallet(1, DEFAULT_TX_CONFIG, 0)
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, env.wallet_1.node)
-    await time_out_assert(20, check_client_synced, True, wc)
-
-    nft_wallet = await wc.create_new_nft_wallet(None)
-    nft_wallet_id = nft_wallet["wallet_id"]
-    address = await wc.get_next_address(env.wallet_1.wallet.id(), True)
-    await wc.mint_nft(
-        nft_wallet_id,
-        tx_config=DEFAULT_TX_CONFIG,
-        royalty_address=address,
-        target_address=address,
-        hash="deadbeef",
-        uris=["http://test.nft"],
-    )
-    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
-    await farm_transaction_block(full_node_api, env.wallet_1.node)
-    await time_out_assert(20, check_client_synced, True, wc)
 
     wallet_node: WalletNode = env.wallet_1.node
     wallet_node_2: WalletNode = env.wallet_2.node
-    # Test Clawback resync
-    tx = (
-        await wc.send_transaction(
-            wallet_id=1,
-            amount=uint64(500),
-            address=address,
-            tx_config=DEFAULT_TX_CONFIG,
-            fee=uint64(0),
-            puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
-        )
-    ).transaction
-    clawback_coin_id = tx.additions[0].name()
-    assert tx.spend_bundle is not None
-    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
-    await time_out_assert(20, check_client_synced, True, wc)
-    await asyncio.sleep(10)
-    resp = await wc.spend_clawback_coins([clawback_coin_id], 0)
-    assert resp["success"]
-    assert len(resp["transaction_ids"]) == 1
-    await time_out_assert_not_none(
-        10, full_node_api.full_node.mempool_manager.get_spendbundle, bytes32.from_hexstr(resp["transaction_ids"][0])
-    )
-    await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(20, check_client_synced, True, wc)
-    wallet_node_2._close()
-    await wallet_node_2._await_closed()
-    # set flag to reset wallet sync data on start
-    await client.set_wallet_resync_on_startup(SetWalletResyncOnStartup())
-    fingerprint = wallet_node.logged_in_fingerprint
-    assert wallet_node._wallet_state_manager
-    # 2 reward coins, 1 DID, 1 NFT, 1 clawbacked coin
-    assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 5
-    assert await wallet_node._wallet_state_manager.nft_store.count() == 1
-    # standard wallet, did wallet, nft wallet, did nft wallet
-    assert len(await wallet_node.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 4
-    before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
-    wallet_node._close()
-    await wallet_node._await_closed()
+
+    async with wallet_node.manage():
+        async with wallet_node_2.manage():
+            await generate_funds(full_node_api, env.wallet_1)
+            wc = env.wallet_1.rpc_client
+            await wc.create_new_did_wallet(1, DEFAULT_TX_CONFIG, 0)
+            await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+            await farm_transaction_block(full_node_api, env.wallet_1.node)
+            await time_out_assert(20, check_client_synced, True, wc)
+
+            nft_wallet = await wc.create_new_nft_wallet(None)
+            nft_wallet_id = nft_wallet["wallet_id"]
+            address = await wc.get_next_address(env.wallet_1.wallet.id(), True)
+            await wc.mint_nft(
+                nft_wallet_id,
+                tx_config=DEFAULT_TX_CONFIG,
+                royalty_address=address,
+                target_address=address,
+                hash="deadbeef",
+                uris=["http://test.nft"],
+            )
+            await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+            await farm_transaction_block(full_node_api, env.wallet_1.node)
+            await time_out_assert(20, check_client_synced, True, wc)
+
+            # Test Clawback resync
+            tx = (
+                await wc.send_transaction(
+                    wallet_id=1,
+                    amount=uint64(500),
+                    address=address,
+                    tx_config=DEFAULT_TX_CONFIG,
+                    fee=uint64(0),
+                    puzzle_decorator_override=[{"decorator": "CLAWBACK", "clawback_timelock": 5}],
+                )
+            ).transaction
+            clawback_coin_id = tx.additions[0].name()
+            assert tx.spend_bundle is not None
+            await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
+            await time_out_assert(20, check_client_synced, True, wc)
+            await asyncio.sleep(10)
+            resp = await wc.spend_clawback_coins([clawback_coin_id], 0)
+            assert resp["success"]
+            assert len(resp["transaction_ids"]) == 1
+            await time_out_assert_not_none(
+                10,
+                full_node_api.full_node.mempool_manager.get_spendbundle,
+                bytes32.from_hexstr(resp["transaction_ids"][0]),
+            )
+            await farm_transaction_block(full_node_api, wallet_node)
+            await time_out_assert(20, check_client_synced, True, wc)
+        # set flag to reset wallet sync data on start
+        await client.set_wallet_resync_on_startup(SetWalletResyncOnStartup())
+        fingerprint = wallet_node.logged_in_fingerprint
+        assert wallet_node._wallet_state_manager
+        # 2 reward coins, 1 DID, 1 NFT, 1 clawbacked coin
+        assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 5
+        assert await wallet_node._wallet_state_manager.nft_store.count() == 1
+        # standard wallet, did wallet, nft wallet, did nft wallet
+        assert len(await wallet_node.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 4
+        before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
     config = load_config(wallet_node.root_path, "config.yaml")
     # check that flag was set in config file
     assert config["wallet"]["reset_sync_for_fingerprint"] == fingerprint
@@ -2463,46 +2530,45 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
     wallet_node_2.root_path = wallet_node.root_path
     wallet_node_2.local_keychain = wallet_node.local_keychain
     # use second node to start the same wallet, reusing config and db
-    await wallet_node_2._start_with_fingerprint(fingerprint)
-    assert wallet_node_2._wallet_state_manager
-    after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
-    # transactions should be the same
-    assert after_txs == before_txs
-    # Check clawback
-    clawback_tx = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_record(clawback_coin_id)
-    assert clawback_tx is not None
-    assert clawback_tx.confirmed
-    # only coin_store was populated in this case, but now should be empty
-    assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 0
-    assert await wallet_node_2._wallet_state_manager.nft_store.count() == 0
-    # we don't delete wallets
-    assert len(await wallet_node_2.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 4
-    updated_config = load_config(wallet_node.root_path, "config.yaml")
-    # check that it's disabled after reset
-    assert updated_config["wallet"].get("reset_sync_for_fingerprint") is None
-    wallet_node_2._close()
-    await wallet_node_2._await_closed()
+    # TODO: this is kinda awkward
+    async with wallet_node_2.manage(
+        WalletServiceManagementMessage(action=ServiceManagementAction.stop, fingerprint=fingerprint)
+    ):
+        assert wallet_node_2._wallet_state_manager
+        after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
+        # transactions should be the same
+        assert after_txs == before_txs
+        # Check clawback
+        clawback_tx = await wallet_node_2.wallet_state_manager.tx_store.get_transaction_record(clawback_coin_id)
+        assert clawback_tx is not None
+        assert clawback_tx.confirmed
+        # only coin_store was populated in this case, but now should be empty
+        assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 0
+        assert await wallet_node_2._wallet_state_manager.nft_store.count() == 0
+        # we don't delete wallets
+        assert len(await wallet_node_2.wallet_state_manager.user_store.get_all_wallet_info_entries()) == 4
+        updated_config = load_config(wallet_node.root_path, "config.yaml")
+        # check that it's disabled after reset
+        assert updated_config["wallet"].get("reset_sync_for_fingerprint") is None
 
 
 @pytest.mark.anyio
-async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: WalletRpcTestEnvironment):
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
+async def test_set_wallet_resync_on_startup_disable(wallet_not_started_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_not_started_rpc_environment
     full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-    await generate_funds(full_node_api, env.wallet_1)
-    wallet_node: WalletNode = env.wallet_1.node
-    wallet_node_2: WalletNode = env.wallet_2.node
-    wallet_node_2._close()
-    await wallet_node_2._await_closed()
-    # set flag to reset wallet sync data on start
-    await client.set_wallet_resync_on_startup(SetWalletResyncOnStartup())
-    fingerprint = wallet_node.logged_in_fingerprint
-    assert wallet_node._wallet_state_manager
-    assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
-    before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
-    await client.set_wallet_resync_on_startup(SetWalletResyncOnStartup(False))
-    wallet_node._close()
-    await wallet_node._await_closed()
+    async with env.wallet_1.node.manage():
+        async with env.wallet_2.node.manage():
+            client: WalletRpcClient = env.wallet_1.rpc_client
+            await generate_funds(full_node_api, env.wallet_1)
+            wallet_node: WalletNode = env.wallet_1.node
+            wallet_node_2: WalletNode = env.wallet_2.node
+        # set flag to reset wallet sync data on start
+        await client.set_wallet_resync_on_startup(SetWalletResyncOnStartup())
+        fingerprint = wallet_node.logged_in_fingerprint
+        assert wallet_node._wallet_state_manager
+        assert len(await wallet_node._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
+        before_txs = await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
+        await client.set_wallet_resync_on_startup(SetWalletResyncOnStartup(False))
     config = load_config(wallet_node.root_path, "config.yaml")
     # check that flag was set in config file
     assert config["wallet"].get("reset_sync_for_fingerprint") is None
@@ -2512,15 +2578,16 @@ async def test_set_wallet_resync_on_startup_disable(wallet_rpc_environment: Wall
     wallet_node_2.root_path = wallet_node.root_path
     wallet_node_2.local_keychain = wallet_node.local_keychain
     # use second node to start the same wallet, reusing config and db
-    await wallet_node_2._start_with_fingerprint(fingerprint)
-    assert wallet_node_2._wallet_state_manager
-    after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
-    # transactions should be the same
-    assert after_txs == before_txs
-    # only coin_store was populated in this case, but now should be empty
-    assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
-    wallet_node_2._close()
-    await wallet_node_2._await_closed()
+    # TODO: this is kinda awkward
+    async with wallet_node_2.manage(
+        WalletServiceManagementMessage(action=ServiceManagementAction.stop, fingerprint=fingerprint)
+    ):
+        assert wallet_node_2._wallet_state_manager
+        after_txs = await wallet_node_2.wallet_state_manager.tx_store.get_all_transactions()
+        # transactions should be the same
+        assert after_txs == before_txs
+        # only coin_store was populated in this case, but now should be empty
+        assert len(await wallet_node_2._wallet_state_manager.coin_store.get_all_unspent_coins()) == 2
 
 
 @pytest.mark.anyio

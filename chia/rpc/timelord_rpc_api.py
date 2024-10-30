@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from collections.abc import Awaitable
+from typing import Any, Callable, Optional
 
-from chia.rpc.rpc_server import Endpoint
+from chia.rpc.rpc_server import Endpoint, ServiceManagementMessage
 from chia.timelord.timelord import Timelord
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class TimelordRpcApi:
-    def __init__(self, timelord: Timelord):
+    def __init__(
+        self,
+        timelord: Timelord,
+        management_request: Optional[Callable[[ServiceManagementMessage], Awaitable[None]]] = None,
+    ):
         self.service = timelord
         self.service_name = "chia_timelord"
 

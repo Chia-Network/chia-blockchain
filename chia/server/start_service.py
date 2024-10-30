@@ -7,12 +7,21 @@ import logging.config
 import os
 import signal
 from collections.abc import AsyncIterator, Awaitable, Coroutine
+from functools import partial
 from pathlib import Path
 from types import FrameType
 from typing import Any, Callable, Generic, Optional, TypeVar, cast
 
 from chia.daemon.server import service_launch_lock_path
-from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
+from chia.rpc.rpc_server import (
+    EmptyServiceManagementMessage,
+    RpcApiProtocol,
+    RpcServer,
+    RpcServiceProtocol,
+    ServiceManagementAction,
+    ServiceManagementMessage,
+    start_rpc_server,
+)
 from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
 from chia.server.outbound_message import NodeType
@@ -141,7 +150,17 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         self._connect_peers = connect_peers
         self._connect_peers_task: Optional[asyncio.Task[None]] = None
         self.upnp: UPnP = UPnP()
-        self.stop_requested = asyncio.Event()
+
+        # TODO: make sure in async
+        self._service_management_queue: asyncio.Queue[ServiceManagementMessage] = asyncio.Queue(maxsize=1)
+
+    async def request(self, message: ServiceManagementMessage) -> None:
+        self.request_sync(message=message)
+        await message.done_event.wait()
+
+    def request_sync(self, message: ServiceManagementMessage) -> None:
+        # TODO: do we want to block multiple requests?  in most cases?
+        self._service_management_queue.put_nowait(message)
 
     async def _connect_peers_task_handler(self) -> None:
         resolved_peers: dict[UnresolvedPeerInfo, PeerInfo] = {}
@@ -182,27 +201,44 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                         resolved_peers[unresolved] = resolved_new
             await asyncio.sleep(self.reconnect_retry_seconds)
 
-    async def run(self) -> None:
+    async def run(self, started_event: Optional[asyncio.Event] = None) -> None:
         try:
             with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
-                async with self.manage():
-                    await self.stop_requested.wait()
+                async with self.manage(manage_node=False):
+                    message: Optional[ServiceManagementMessage] = None
+                    while True:
+                        async with self._node.manage(management_message=message):
+                            if started_event is not None:
+                                started_event.set()
+
+                            if message is not None:
+                                message.done_event.set()
+
+                            message = await self._service_management_queue.get()
+
+                            if message.action == ServiceManagementAction.stop:
+                                break
+                    # TODO: finally?
+                    # TODO: annoyingly duplicated
+                    if message is not None:
+                        message.done_event.set()
+
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
 
     @contextlib.asynccontextmanager
-    async def manage(self, *, start: bool = True) -> AsyncIterator[None]:
+    async def manage(self, *, start: bool = True, manage_node: bool = True) -> AsyncIterator[None]:
         # NOTE: avoid start=False, this is presently used for corner case setup type tests
         async with contextlib.AsyncExitStack() as async_exit_stack:
             try:
                 if start:
-                    self.stop_requested = asyncio.Event()
-
                     assert self.self_hostname is not None
                     assert self.daemon_port is not None
 
-                    await async_exit_stack.enter_async_context(self._node.manage())
+                    # TODO: need to think through how this changes order relative to .run()
+                    if manage_node:
+                        await async_exit_stack.enter_async_context(self._node.manage())
                     self._node._shut_down = False
 
                     if len(self._upnp_ports) > 0:
@@ -224,14 +260,22 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                         f"at port {self._advertised_port}"
                     )
 
+                    # if not self._rpc_info:
+                    #     # TODO: humm....
+                    #     self.rpc_server._management_request = self.request
+                    #     # TODO: maybe undo this after
+                    # else:
                     if self._rpc_info:
                         rpc_api, rpc_port = self._rpc_info
                         self.rpc_server = await start_rpc_server(
-                            rpc_api(self._node),
+                            rpc_api(self._node, management_request=self.request),
                             self.self_hostname,
                             self.daemon_port,
                             uint16(rpc_port),
-                            self.stop_requested.set,
+                            partial(
+                                self.request_sync,
+                                EmptyServiceManagementMessage(action=ServiceManagementAction.stop),
+                            ),
                             self.root_path,
                             self.config,
                             self._connect_to_daemon,
@@ -304,7 +348,9 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         if ignore:
             return
 
-        self.stop_requested.set()
+        # TODO: should we cancel?
+        # TODO: should we await a put?  or ...
+        self.request_sync(EmptyServiceManagementMessage(action=ServiceManagementAction.stop))
 
 
 def async_run(coro: Coroutine[object, object, T], connection_limit: Optional[int] = None) -> T:
