@@ -87,7 +87,7 @@ class ApiMetadata:
             )
             message_name_bytes = f"{message_name}_bytes"
 
-            request_type = ProtocolMessageTypes(f.__name__)
+            request_type = ProtocolMessageTypes[f.__name__]
 
             request = ApiRequest(
                 request_type=request_type,
