@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import functools
 import logging
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from logging import Logger
-from typing import Callable, ClassVar, Concatenate, Optional, TypeVar, Union, get_type_hints
+from typing import Callable, ClassVar, Concatenate, Optional, TypeVar, Union, final, get_type_hints
 
 from typing_extensions import ParamSpec, Protocol
 
@@ -31,24 +32,24 @@ metadata_attribute_name = "_chia_api_metadata"
 class ApiRequest:
     request_type: ProtocolMessageTypes
     message_class: type[Streamable]
-    method: Callable[..., object]
+    method: Callable[..., Awaitable[object]]
     peer_required: bool = False
     bytes_required: bool = False
     execute_task: bool = False
     reply_types: list[ProtocolMessageTypes] = field(default_factory=list)
 
 
-def get_metadata(function: Callable[..., object]) -> Optional[ApiRequest]:
-    return getattr(function, metadata_attribute_name, None)
-
-
-def _set_metadata(function: Callable[..., object], metadata: ApiRequest) -> None:
-    setattr(function, metadata_attribute_name, metadata)
-
-
+@final
 @dataclass
 class ApiMetadata:
-    name_to_request: dict[str, ApiRequest] = field(default_factory=dict)
+    message_type_to_request: dict[ProtocolMessageTypes, ApiRequest] = field(default_factory=dict)
+
+    @classmethod
+    def from_bound_method(cls, method: object) -> ApiRequest:
+        # TODO: figure out better hinting for method than object to avoid the ignores below
+        # https://docs.python.org/3.12/reference/datamodel.html#method.__self__
+        protocol: ApiProtocol = method.__self__  # type: ignore[attr-defined]
+        return protocol.api.message_type_to_request[method.__name__]  # type: ignore[attr-defined]
 
     # TODO: This hinting does not express that the returned callable *_bytes parameter
     #       corresponding to the first parameter name will be filled in by the wrapper.
@@ -85,8 +86,10 @@ class ApiMetadata:
             )
             message_name_bytes = f"{message_name}_bytes"
 
+            request_type = ProtocolMessageTypes(f.__name__)
+
             request = ApiRequest(
-                request_type=getattr(ProtocolMessageTypes, f.__name__),
+                request_type=request_type,
                 peer_required=peer_required,
                 bytes_required=bytes_required,
                 execute_task=execute_task,
@@ -95,10 +98,10 @@ class ApiMetadata:
                 method=wrapper,
             )
 
-            if f.__name__ in self.name_to_request:
-                raise Exception(f"name already registered: {f.__name__}")
+            if request_type in self.message_type_to_request:
+                raise Exception(f"name already registered: {request_type}")
 
-            self.name_to_request[f.__name__] = request
+            self.message_type_to_request[request_type] = request
 
             return wrapper
 

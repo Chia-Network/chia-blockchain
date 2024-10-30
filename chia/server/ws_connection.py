@@ -24,7 +24,7 @@ from chia.protocols.protocol_timing import (
     INTERNAL_PROTOCOL_ERROR_BAN_SECONDS,
 )
 from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
-from chia.server.api_protocol import ApiProtocol, get_metadata
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
@@ -398,20 +398,20 @@ class WSChiaConnection:
             self.log.debug(
                 f"<- {ProtocolMessageTypes(full_message.type).name} from peer {self.peer_node_id} {self.peer_info.host}"
             )
-            message_type = ProtocolMessageTypes(full_message.type).name
 
             if full_message.type == ProtocolMessageTypes.error.value:
                 error = Error.from_bytes(full_message.data)
                 self.api.log.warning(f"ApiError: {error} from {self.peer_node_id}, {self.peer_info}")
                 return None
 
-            f = getattr(self.api, message_type, None)
+            bare_message_type = ProtocolMessageTypes(full_message.type)
+            metadata = self.api.api.message_type_to_request.get(bare_message_type)
+            message_type = bare_message_type.name
 
-            if f is None:
+            if metadata is None:
                 self.log.error(f"Non existing function: {message_type}")
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
-            metadata = get_metadata(function=f)
             if metadata is None:
                 self.log.error(f"Peer trying to call non api function {message_type}")
                 raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
@@ -428,9 +428,9 @@ class WSChiaConnection:
                 timeout = None
 
             if metadata.peer_required:
-                coroutine = f(full_message.data, self)
+                coroutine = metadata.method(self.api, full_message.data, self)
             else:
-                coroutine = f(full_message.data)
+                coroutine = metadata.method(self.api, full_message.data)
 
             async def wrapped_coroutine() -> Optional[Message]:
                 try:
@@ -537,7 +537,7 @@ class WSChiaConnection:
     ) -> Any:
         if self.connection_type is None:
             raise ValueError("handshake not done yet")
-        request_metadata = get_metadata(request_method)
+        request_metadata = ApiMetadata.from_bound_method(request_method)
         assert request_metadata is not None, f"ApiMetadata unavailable for {request_method}"
         if request_metadata.request_type.name not in class_for_type(self.connection_type).api:
             raise AttributeError(
@@ -566,7 +566,7 @@ class WSChiaConnection:
             raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
         recv_method = class_for_type(self.local_type).api[recv_message_type.name]
-        receive_metadata = get_metadata(recv_method)
+        receive_metadata = ApiMetadata.from_bound_method(recv_method)
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)
 
