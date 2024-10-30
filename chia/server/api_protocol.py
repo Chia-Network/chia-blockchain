@@ -5,9 +5,9 @@ import logging
 from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from logging import Logger
-from typing import Callable, ClassVar, Concatenate, Optional, TypeVar, Union, final, get_type_hints
+from typing import Callable, ClassVar, Optional, TypeVar, Union, final, get_type_hints
 
-from typing_extensions import ParamSpec, Protocol
+from typing_extensions import Concatenate, ParamSpec, Protocol
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message
