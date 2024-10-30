@@ -8,6 +8,7 @@ from typing import Callable, Optional, TypeVar, Union, get_type_hints
 from typing_extensions import Concatenate, ParamSpec
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.api_protocol import ApiProtocol
 from chia.util.streamable import Streamable
 
 log = logging.getLogger(__name__)
@@ -87,3 +88,10 @@ def api_request(
         return wrapper
 
     return inner
+
+
+def collect_api_methods(cls: type[ApiProtocol]) -> type[ApiProtocol]:
+    cls.api_methods = {
+        name: attribute for name, attribute in vars(cls).items() if hasattr(attribute, metadata_attribute_name)
+    }
+    return cls

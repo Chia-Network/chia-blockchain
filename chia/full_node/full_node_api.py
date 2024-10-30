@@ -6,7 +6,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 import anyio
 from chia_rs import (
@@ -44,6 +44,7 @@ from chia.protocols.wallet_protocol import (
     RespondFeeEstimates,
     RespondSESInfo,
 )
+from chia.server.api_protocol import ApiMethods
 from chia.server.outbound_message import Message, make_msg
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -64,7 +65,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_request, collect_api_methods
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
 from chia.util.full_block_utils import header_block_from_block
@@ -79,10 +80,12 @@ else:
     FullNode = object
 
 
+@collect_api_methods
 class FullNodeAPI:
     log: logging.Logger
     full_node: FullNode
     executor: ThreadPoolExecutor
+    api_methods: ClassVar[ApiMethods] = {}
 
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)

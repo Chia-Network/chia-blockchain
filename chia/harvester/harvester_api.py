@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import Optional
+from typing import ClassVar, Optional
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
@@ -15,6 +15,7 @@ from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
 from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.api_protocol import ApiMethods
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
@@ -24,14 +25,16 @@ from chia.types.blockchain_format.proof_of_space import (
     passes_plot_filter,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_request, collect_api_methods
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
+@collect_api_methods
 class HarvesterAPI:
     log: logging.Logger
     harvester: Harvester
+    api_methods: ClassVar[ApiMethods] = {}
 
     def __init__(self, harvester: Harvester):
         self.log = logging.getLogger(__name__)

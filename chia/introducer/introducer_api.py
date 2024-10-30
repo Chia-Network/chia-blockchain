@@ -1,22 +1,25 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import ClassVar, Optional
 
 from chia.introducer.introducer import Introducer
 from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.rpc.rpc_server import StateChangedProtocol
+from chia.server.api_protocol import ApiMethods
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import TimestampedPeerInfo
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_request, collect_api_methods
 from chia.util.ints import uint64
 
 
+@collect_api_methods
 class IntroducerAPI:
     log: logging.Logger
     introducer: Introducer
+    api_methods: ClassVar[ApiMethods] = {}
 
     def __init__(self, introducer) -> None:
         self.log = logging.getLogger(__name__)

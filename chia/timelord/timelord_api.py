@@ -2,23 +2,26 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Optional
+from typing import ClassVar, Optional
 
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewPeakTimelord
 from chia.rpc.rpc_server import StateChangedProtocol
+from chia.server.api_protocol import ApiMethods
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
 from chia.timelord.types import Chain, IterationType
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_request, collect_api_methods
 from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 
 
+@collect_api_methods
 class TimelordAPI:
     log: logging.Logger
     timelord: Timelord
+    api_methods: ClassVar[ApiMethods] = {}
 
     def __init__(self, timelord) -> None:
         self.log = logging.getLogger(__name__)

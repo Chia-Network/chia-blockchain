@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import logging
+from typing import ClassVar
 
 from chia.data_layer.data_layer import DataLayer
+from chia.server.api_protocol import ApiMethods
 from chia.server.server import ChiaServer
 
 
 class DataLayerAPI:
     log: logging.Logger
     data_layer: DataLayer
+    api_methods: ClassVar[ApiMethods] = {}
 
     def __init__(self, data_layer: DataLayer) -> None:
         self.log = logging.getLogger(__name__)

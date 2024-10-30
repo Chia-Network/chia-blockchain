@@ -1,19 +1,22 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from typing import ClassVar, Optional
 
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.seeder.crawler import Crawler
+from chia.server.api_protocol import ApiMethods
 from chia.server.outbound_message import Message
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_request, collect_api_methods
 
 
+@collect_api_methods
 class CrawlerAPI:
     log: logging.Logger
     crawler: Crawler
+    api_methods: ClassVar[ApiMethods] = {}
 
     def __init__(self, crawler: Crawler) -> None:
         self.log = logging.getLogger(__name__)

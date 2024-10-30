@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Optional, Union
+from typing import Any, ClassVar, Optional, Union
 
 import aiohttp
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
@@ -30,6 +30,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.api_protocol import ApiMethods
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
@@ -43,13 +44,15 @@ from chia.types.blockchain_format.proof_of_space import (
     verify_and_get_quality_string,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request
+from chia.util.api_decorators import api_request, collect_api_methods
 from chia.util.ints import uint8, uint16, uint32, uint64
 
 
+@collect_api_methods
 class FarmerAPI:
     log: logging.Logger
     farmer: Farmer
+    api_methods: ClassVar[ApiMethods] = {}
 
     def __init__(self, farmer: Farmer) -> None:
         self.log = logging.getLogger(__name__)

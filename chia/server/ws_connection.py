@@ -540,8 +540,7 @@ class WSChiaConnection:
             raise ValueError("handshake not done yet")
         request_metadata = get_metadata(request_method)
         assert request_metadata is not None, f"ApiMetadata unavailable for {request_method}"
-        attribute = getattr(class_for_type(self.connection_type), request_metadata.request_type.name, None)
-        if attribute is None:
+        if request_metadata.request_type.name not in class_for_type(self.connection_type).api_methods:
             raise AttributeError(
                 f"Node type {self.connection_type} does not have method {request_metadata.request_type.name}"
             )
@@ -567,7 +566,7 @@ class WSChiaConnection:
             await self.ban_peer_bad_protocol(error_message)
             raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-        recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
+        recv_method = class_for_type(self.local_type).api_methods[recv_message_type.name]
         receive_metadata = get_metadata(recv_method)
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)
