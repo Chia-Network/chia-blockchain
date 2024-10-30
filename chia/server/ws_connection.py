@@ -434,8 +434,7 @@ class WSChiaConnection:
 
             async def wrapped_coroutine() -> Optional[Message]:
                 try:
-                    # hinting Message here is compensating for difficulty around hinting of the callbacks
-                    result: Message = await coroutine
+                    result = await coroutine
                     return result
                 except asyncio.CancelledError:
                     pass

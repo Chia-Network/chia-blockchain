@@ -10,6 +10,7 @@ from typing import Callable, ClassVar, Concatenate, Optional, TypeVar, Union, fi
 from typing_extensions import ParamSpec, Protocol
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import Message
 from chia.util.streamable import Streamable
 
 
@@ -22,7 +23,7 @@ class ApiProtocol(Protocol):
 
 log = logging.getLogger(__name__)
 P = ParamSpec("P")
-R = TypeVar("R")
+R = TypeVar("R", bound=Awaitable[Optional[Message]])
 S = TypeVar("S", bound=Streamable)
 Self = TypeVar("Self")
 metadata_attribute_name = "_chia_api_metadata"
@@ -32,7 +33,7 @@ metadata_attribute_name = "_chia_api_metadata"
 class ApiRequest:
     request_type: ProtocolMessageTypes
     message_class: type[Streamable]
-    method: Callable[..., Awaitable[object]]
+    method: Callable[..., Awaitable[Optional[Message]]]
     peer_required: bool = False
     bytes_required: bool = False
     execute_task: bool = False
