@@ -16,6 +16,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.api_protocol import ApiMetadata, Self
 from chia.server.outbound_message import Message, make_msg
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
@@ -24,7 +25,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.util.api_decorators import Self, api_request
 from chia.util.config import load_config
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -623,7 +623,9 @@ async def test_transaction_send_cache(
     # Replacing the normal logic a full node has for processing transactions with a function that just logs what it gets
     logged_spends = []
 
-    @api_request()
+    api = ApiMetadata()
+
+    @api.request()
     async def send_transaction(
         self: Self, request: wallet_protocol.SendTransaction, *, test: bool = False
     ) -> Optional[Message]:
@@ -689,7 +691,9 @@ async def test_wallet_node_bad_coin_state_ignore(
 
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
 
-    @api_request()
+    api = ApiMetadata()
+
+    @api.request()
     async def register_interest_in_coin(
         self: Self, request: wallet_protocol.RegisterForCoinUpdates, *, test: bool = False
     ) -> Optional[Message]:

@@ -24,13 +24,12 @@ from chia.protocols.protocol_timing import (
     INTERNAL_PROTOCOL_ERROR_BAN_SECONDS,
 )
 from chia.protocols.shared_protocol import Capability, Error, Handshake, protocol_version
-from chia.server.api_protocol import ApiProtocol
+from chia.server.api_protocol import ApiProtocol, get_metadata
 from chia.server.capabilities import known_active_capabilities
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.api_decorators import get_metadata
 from chia.util.errors import ApiError, ConsensusError, Err, ProtocolError, TimestampError
 from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
@@ -540,7 +539,7 @@ class WSChiaConnection:
             raise ValueError("handshake not done yet")
         request_metadata = get_metadata(request_method)
         assert request_metadata is not None, f"ApiMetadata unavailable for {request_method}"
-        if request_metadata.request_type.name not in class_for_type(self.connection_type).api_methods:
+        if request_metadata.request_type.name not in class_for_type(self.connection_type).api:
             raise AttributeError(
                 f"Node type {self.connection_type} does not have method {request_metadata.request_type.name}"
             )
@@ -566,7 +565,7 @@ class WSChiaConnection:
             await self.ban_peer_bad_protocol(error_message)
             raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-        recv_method = class_for_type(self.local_type).api_methods[recv_message_type.name]
+        recv_method = class_for_type(self.local_type).api[recv_message_type.name]
         receive_metadata = get_metadata(recv_method)
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)

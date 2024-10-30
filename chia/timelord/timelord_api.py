@@ -7,21 +7,19 @@ from typing import ClassVar, Optional
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewPeakTimelord
 from chia.rpc.rpc_server import StateChangedProtocol
-from chia.server.api_protocol import ApiMethods
+from chia.server.api_protocol import ApiMetadata
 from chia.timelord.iters_from_block import iters_from_block
 from chia.timelord.timelord import Timelord
 from chia.timelord.types import Chain, IterationType
-from chia.util.api_decorators import api_request, collect_api_methods
 from chia.util.ints import uint64
 
 log = logging.getLogger(__name__)
 
 
-@collect_api_methods
 class TimelordAPI:
     log: logging.Logger
     timelord: Timelord
-    api_methods: ClassVar[ApiMethods] = {}
+    api: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, timelord) -> None:
         self.log = logging.getLogger(__name__)
@@ -33,7 +31,7 @@ class TimelordAPI:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         self.timelord.state_changed_callback = callback
 
-    @api_request()
+    @api.request()
     async def new_peak_timelord(self, new_peak: timelord_protocol.NewPeakTimelord) -> None:
         if self.timelord.last_state is None:
             return None
@@ -90,7 +88,7 @@ class TimelordAPI:
                 return True
         return False
 
-    @api_request()
+    @api.request()
     async def new_unfinished_block_timelord(self, new_unfinished_block: timelord_protocol.NewUnfinishedBlockTimelord):
         if self.timelord.last_state is None:
             return None
@@ -123,7 +121,7 @@ class TimelordAPI:
                     self.timelord.total_unfinished += 1
                     log.debug(f"Non-overflow unfinished block, total {self.timelord.total_unfinished}")
 
-    @api_request()
+    @api.request()
     async def request_compact_proof_of_time(self, vdf_info: timelord_protocol.RequestCompactProofOfTime):
         async with self.timelord.lock:
             if not self.timelord.bluebox_mode:
