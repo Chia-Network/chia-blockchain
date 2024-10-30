@@ -161,8 +161,8 @@ def check_plots(
                 if plot_info.pool_contract_puzzle_hash is not None:
                     pca: str = encode_puzzle_hash(plot_info.pool_contract_puzzle_hash, address_prefix)
                     log.info(f"\t{'Pool contract address:':<23} {pca}")
-                log.info(f"\t{'Farmer public key:' :<23} {farmer_public_key}")
-                log.info(f"\t{'Local sk:' :<23} {local_sk}")
+                log.info(f"\t{'Farmer public key:':<23} {farmer_public_key}")
+                log.info(f"\t{'Local sk:':<23} {local_sk}")
 
             total_proofs = 0
             caught_exception: bool = False

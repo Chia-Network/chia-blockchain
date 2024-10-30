@@ -713,7 +713,7 @@ async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
 
         empty_coin_name = bytes32.zeros
         mempool_item = await client.get_mempool_items_by_coin_name(empty_coin_name)
-        assert mempool_item["success"] == True
+        assert mempool_item["success"]
         assert "mempool_items" in mempool_item
         assert len(mempool_item["mempool_items"]) == 0
     finally:
@@ -780,7 +780,7 @@ async def test_coin_name_found_in_mempool(one_node, self_hostname):
         mempool_item = await client.get_mempool_items_by_coin_name(coin_to_spend.name())
 
         # found coin in coin spends
-        assert mempool_item["success"] == True
+        assert mempool_item["success"]
         assert "mempool_items" in mempool_item
         assert len(mempool_item["mempool_items"]) > 0
         for item in mempool_item["mempool_items"]:

@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import click
 import pytest
-from click.testing import CliRunner, Result
+from click.testing import CliRunner
 
 from chia.cmds.plotnft import create_cmd, show_cmd
 
