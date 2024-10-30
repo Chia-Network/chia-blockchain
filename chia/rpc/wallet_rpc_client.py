@@ -57,8 +57,10 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
+    GetTransaction,
     GetTransactionMemo,
     GetTransactionMemoResponse,
+    GetTransactionResponse,
     GetWalletBalance,
     GetWalletBalanceResponse,
     GetWalletBalances,
@@ -209,10 +211,8 @@ class WalletRpcClient(RpcClient):
     async def get_wallet_balances(self, request: GetWalletBalances) -> GetWalletBalancesResponse:
         return GetWalletBalancesResponse.from_json_dict(await self.fetch("get_wallet_balances", request.to_json_dict()))
 
-    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
-        request = {"transaction_id": transaction_id.hex()}
-        response = await self.fetch("get_transaction", request)
-        return TransactionRecord.from_json_dict_convenience(response["transaction"])
+    async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+        return GetTransactionResponse.from_json_dict(await self.fetch("get_transaction", request.to_json_dict()))
 
     async def get_transactions(
         self,

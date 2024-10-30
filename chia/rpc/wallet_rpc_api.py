@@ -47,6 +47,8 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
+    GetTransaction,
+    GetTransactionResponse,
     GetWalletBalance,
     GetWalletBalanceResponse,
     GetWalletBalances,
@@ -63,6 +65,7 @@ from chia.rpc.wallet_request_types import (
     SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    UserFriendlyTransactionRecord,
     WalletInfoResponse,
 )
 from chia.server.outbound_message import NodeType
@@ -1067,16 +1070,20 @@ class WalletRpcApi:
             wallet_ids = list(self.service.wallet_state_manager.wallets.keys())
         return GetWalletBalancesResponse([await self._get_wallet_balance(wallet_id) for wallet_id in wallet_ids])
 
-    async def get_transaction(self, request: dict[str, Any]) -> EndpointResult:
-        transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])
-        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
+    @marshal
+    async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(
+            request.transaction_id
+        )
         if tr is None:
-            raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
+            raise ValueError(f"Transaction 0x{request.transaction_id.hex()} not found")
 
-        return {
-            "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
-            "transaction_id": tr.name,
-        }
+        return GetTransactionResponse(
+            UserFriendlyTransactionRecord.from_transaction_record(
+                await self._convert_tx_puzzle_hash(tr), self.service.config
+            ),
+            tr.name,
+        )
 
     async def get_transaction_memo(self, request: dict[str, Any]) -> EndpointResult:
         transaction_id: bytes32 = bytes32.from_hexstr(request["transaction_id"])

@@ -10,6 +10,7 @@ from chia.cmds.cmds_util import CMDTXConfigLoader, get_wallet_client, transactio
 from chia.cmds.param_types import CliAmount
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type
+from chia.rpc.wallet_request_types import GetTransaction
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import selected_network_address_prefix
@@ -154,7 +155,7 @@ async def add_funds_to_treasury(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(res.tx_id)
+                tx = (await wallet_client.get_transaction(GetTransaction(res.tx_id))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, res.tx_id))
@@ -301,7 +302,7 @@ async def vote_on_proposal(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(res.tx_id)
+                tx = (await wallet_client.get_transaction(GetTransaction(res.tx_id))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, res.tx_id))
@@ -338,7 +339,7 @@ async def close_proposal(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(res.tx_id)
+                tx = (await wallet_client.get_transaction(GetTransaction(res.tx_id))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, res.tx_id))
@@ -373,7 +374,7 @@ async def lockup_coins(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(res.tx_id)
+                tx = (await wallet_client.get_transaction(GetTransaction(res.tx_id))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, res.tx_id))
@@ -406,7 +407,7 @@ async def release_coins(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(res.tx_id)
+                tx = (await wallet_client.get_transaction(GetTransaction(res.tx_id))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, res.tx_id))
@@ -440,7 +441,7 @@ async def exit_lockup(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(res.tx_id)
+                tx = (await wallet_client.get_transaction(GetTransaction(res.tx_id))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, res.tx_id))

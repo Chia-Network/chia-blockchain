@@ -24,6 +24,7 @@ from chia.cmds.units import units
 from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     GetNotifications,
+    GetTransaction,
     GetWalletBalance,
     GetWallets,
     SendTransactionResponse,
@@ -157,7 +158,9 @@ async def get_transaction(
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         transaction_id = bytes32.from_hexstr(tx_id)
         address_prefix = selected_network_address_prefix(config)
-        tx: TransactionRecord = await wallet_client.get_transaction(transaction_id=transaction_id)
+        tx: TransactionRecord = (
+            await wallet_client.get_transaction(GetTransaction(transaction_id=transaction_id))
+        ).transaction
 
         try:
             wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
@@ -359,7 +362,7 @@ async def send(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(tx_id)
+                tx = (await wallet_client.get_transaction(GetTransaction(tx_id))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_id))

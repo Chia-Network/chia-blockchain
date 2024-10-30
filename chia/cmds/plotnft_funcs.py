@@ -24,7 +24,7 @@ from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_po
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.wallet_request_types import GetWalletBalance, GetWallets, WalletInfoResponse
+from chia.rpc.wallet_request_types import GetTransaction, GetWalletBalance, GetWallets, WalletInfoResponse
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
@@ -105,7 +105,7 @@ async def create(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(tx_record.name)
+                tx = (await wallet_client.get_transaction(GetTransaction(tx_record.name))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_record.name))
@@ -264,7 +264,7 @@ async def submit_tx_with_confirmation(
         start = time.time()
         while time.time() - start < 10:
             await asyncio.sleep(0.1)
-            tx = await wallet_client.get_transaction(tx_record.name)
+            tx = (await wallet_client.get_transaction(GetTransaction(tx_record.name))).transaction
             if len(tx.sent_to) > 0:
                 print(transaction_submitted_msg(tx))
                 print(transaction_status_msg(fingerprint, tx_record.name))

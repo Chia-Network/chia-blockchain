@@ -56,6 +56,7 @@ from chia.rpc.wallet_request_types import (
     GetNotifications,
     GetPrivateKey,
     GetTimestampForHeight,
+    GetTransaction,
     GetWalletBalance,
     GetWalletBalances,
     GetWallets,
@@ -310,7 +311,7 @@ async def assert_get_balance(rpc_client: WalletRpcClient, wallet_node: WalletNod
 
 
 async def tx_in_mempool(client: WalletRpcClient, transaction_id: bytes32):
-    tx = await client.get_transaction(transaction_id)
+    tx = (await client.get_transaction(GetTransaction(transaction_id))).transaction
     return tx.is_in_mempool()
 
 
@@ -397,7 +398,7 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Checks that the memo can be retrieved
-    tx_confirmed = await client.get_transaction(transaction_id)
+    tx_confirmed = (await client.get_transaction(GetTransaction(transaction_id))).transaction.to_transaction_record()
     assert tx_confirmed.confirmed
     assert len(tx_confirmed.get_memos()) == 1
     assert [b"this is a basic tx"] in tx_confirmed.get_memos().values()
@@ -445,7 +446,7 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     for tx in resp_client.transactions:
-        assert (await client.get_transaction(transaction_id=tx.name)).confirmed
+        assert (await client.get_transaction(GetTransaction(transaction_id=tx.name))).transaction.confirmed
 
     # Just testing NOT failure here really (parsing)
     await client.push_tx(PushTX(spend_bundle))
@@ -933,7 +934,7 @@ async def test_send_transaction_multi(wallet_rpc_environment: WalletRpcTestEnvir
     await time_out_assert(20, get_confirmed_balance, generated_funds - amount_outputs - amount_fee, client, 1)
 
     # Checks that the memo can be retrieved
-    tx_confirmed = await client.get_transaction(send_tx_res.name)
+    tx_confirmed = (await client.get_transaction(GetTransaction(send_tx_res.name))).transaction
     assert tx_confirmed.confirmed
     memos = tx_confirmed.get_memos()
     assert len(memos) == len(outputs)

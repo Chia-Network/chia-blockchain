@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Optional, TypeVar
+from typing import Any, BinaryIO, Optional, TypeVar
 
 from chia_rs import G1Element, G2Element, PrivateKey
 from chia_rs.sized_ints import uint8
@@ -44,6 +44,46 @@ def kw_only_dataclass(cls: type[Any]) -> type[Any]:
 
 def default_raise() -> Any:  # pragma: no cover
     raise RuntimeError("This should be impossible to hit and is just for < 3.10 compatibility")
+
+
+class UserFriendlyMemos:
+    unfriendly_memos: list[tuple[bytes32, list[bytes]]]
+
+    def __init__(self, unfriendly_memos: list[tuple[bytes32, list[bytes]]]) -> None:
+        self.unfriendly_memos = unfriendly_memos
+
+    def __bytes__(self) -> bytes:
+        raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
+
+    @classmethod
+    def parse(cls, f: BinaryIO) -> UserFriendlyMemos:
+        raise NotImplementedError("Should not be deserializing this object from a stream, it's only for RPC")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            coin_id.hex(): memo.hex() for coin_id, memos in self.unfriendly_memos for memo in memos if memo is not None
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> UserFriendlyMemos:
+        return UserFriendlyMemos(
+            [(bytes32.from_hexstr(coin_id), [hexstr_to_bytes(memo)]) for coin_id, memo in json_dict.items()]
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class UserFriendlyTransactionRecord(TransactionRecord):
+    to_address: str
+    memos: UserFriendlyMemos  # type: ignore[assignment]
+
+    def to_transaction_record(self) -> TransactionRecord:
+        return TransactionRecord.from_json_dict_convenience(self.to_json_dict())
+
+    @classmethod
+    def from_transaction_record(cls, tx: TransactionRecord, config: dict[str, Any]) -> UserFriendlyTransactionRecord:
+        dict_convenience = tx.to_json_dict_convenience(config)
+        return super().from_json_dict(dict_convenience)
 
 
 @streamable
@@ -271,6 +311,19 @@ class GetWalletBalancesResponse(Streamable):
         return super().from_json_dict(
             {"wallet_balances": [balance_response for balance_response in json_dict["wallet_balances"].values()]}
         )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransaction(Streamable):
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionResponse(Streamable):
+    transaction: UserFriendlyTransactionRecord
+    transaction_id: bytes32
 
 
 @streamable
