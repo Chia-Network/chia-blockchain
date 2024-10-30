@@ -4,9 +4,9 @@ import pathlib
 import sys
 from typing import Any, Optional
 
+from chia.apis import ApiProtocolRegistry
 from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
-from chia.server.class_for_type import class_for_type
 from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
 from chia.server.start_service import Service, async_run
@@ -45,7 +45,7 @@ def create_introducer_service(
         network_id=network_id,
         advertised_port=advertised_port,
         connect_to_daemon=connect_to_daemon,
-        class_for_type=class_for_type,
+        class_for_type=ApiProtocolRegistry,
     )
 
 

@@ -83,7 +83,7 @@ class WSChiaConnection:
     close_callback: Optional[ConnectionClosedCallbackProtocol] = field(repr=False)
     outbound_rate_limiter: RateLimiter
     inbound_rate_limiter: RateLimiter
-    class_for_type: dict[NodeType, Any] = field(repr=False)
+    class_for_type: dict[NodeType, ApiProtocol] = field(repr=False)
 
     # connection properties
     is_outbound: bool
@@ -139,7 +139,7 @@ class WSChiaConnection:
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
         local_capabilities_for_handshake: list[tuple[uint16, str]],
-        class_for_type: dict[NodeType, Any],
+        class_for_type: dict[NodeType, ApiProtocol],
         session: Optional[ClientSession] = None,
     ) -> WSChiaConnection:
         assert ws._writer is not None
