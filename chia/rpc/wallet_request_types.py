@@ -77,6 +77,9 @@ class UserFriendlyTransactionRecord(TransactionRecord):
     to_address: str
     memos: UserFriendlyMemos  # type: ignore[assignment]
 
+    def get_memos(self) -> dict[bytes32, list[bytes]]:
+        return {coin_id: ms for coin_id, ms in self.memos.unfriendly_memos}
+
     def to_transaction_record(self) -> TransactionRecord:
         return TransactionRecord.from_json_dict_convenience(self.to_json_dict())
 
