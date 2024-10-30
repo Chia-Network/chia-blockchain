@@ -95,7 +95,7 @@ class NFTWallet:
         self.standard_wallet = wallet
         if name is None:
             name = "NFT Wallet"
-        chia.server.api_protocol.log = logging.getLogger(name if name else __name__)
+        self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
         self.nft_wallet_info = NFTWalletInfo(did_id)
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
@@ -104,12 +104,10 @@ class NFTWallet:
         )
         self.wallet_id = self.wallet_info.id
         self.nft_store = wallet_state_manager.nft_store
-        chia.server.api_protocol.log.debug(
-            "NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id
-        )
+        self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
 
         await self.wallet_state_manager.add_new_wallet(self)
-        chia.server.api_protocol.log.debug("Generated a new NFT wallet: %s", self.__dict__)
+        self.log.debug("Generated a new NFT wallet: %s", self.__dict__)
         return self
 
     @classmethod
@@ -121,7 +119,7 @@ class NFTWallet:
         name: Optional[str] = None,
     ) -> _T_NFTWallet:
         self = cls()
-        chia.server.api_protocol.log = logging.getLogger(name if name else __name__)
+        self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
         self.wallet_id = wallet_info.id

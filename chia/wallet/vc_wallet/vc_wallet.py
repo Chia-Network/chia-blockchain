@@ -9,7 +9,6 @@ from chia_rs import G1Element, G2Element
 from clvm.casts import int_to_bytes
 from typing_extensions import Unpack
 
-import chia.server.api_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -90,7 +89,7 @@ class VCWallet:
         self = cls()
         self.wallet_state_manager = wallet_state_manager
         self.standard_wallet = wallet
-        chia.server.api_protocol.log = logging.getLogger(name if name else wallet_info.name)
+        self.log = logging.getLogger(name if name else wallet_info.name)
         self.wallet_info = wallet_info
         self.store = wallet_state_manager.vc_store
         return self
