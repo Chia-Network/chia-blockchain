@@ -181,7 +181,7 @@ class WalletNodeAPI:
 
     # TODO: Review this hinting issue around this rust type not being a Streamable
     #       subclass, as you might expect it wouldn't be.  Maybe we can get the
-    #       protocol working right back at the api_request definition.
+    #       protocol working right back at the api.request definition.
     @api.request()  # type: ignore[type-var]
     async def respond_to_ph_update(self, request: wallet_protocol.RespondToPhUpdates):
         pass
