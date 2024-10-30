@@ -255,9 +255,14 @@ class DataStore:
         all_stores = await self.get_store_ids()
         all_roots: list[list[Root]] = []
         for store_id in all_stores:
-            root = await self.get_tree_root(store_id=store_id)
-            roots = await self.get_roots_between(store_id, 1, root.generation)
-            all_roots.append(roots + [root])
+            try:
+                root = await self.get_tree_root(store_id=store_id)
+                roots = await self.get_roots_between(store_id, 1, root.generation)
+                all_roots.append(roots + [root])
+            except Exception as e:
+                if "unable to find root for id, generation" in str(e):
+                    log.error(f"Cannot find roots for {store_id}. Skipping it.")
+
         log.info(f"Initiating migration to version {version}. Found {len(all_roots)} stores to migrate")
 
         async with self.db_wrapper.writer() as writer:
@@ -286,7 +291,7 @@ class DataStore:
                 await self.create_tree(store_id=store_id, status=Status.COMMITTED)
 
                 for root in roots:
-                    recovery_filename: Optional[str] = None
+                    recovery_filename: Optional[Path] = None
 
                     for group_by_store in (True, False):
                         filename = get_delta_filename_path(
@@ -307,7 +312,7 @@ class DataStore:
                         break
 
                     try:
-                        await self.insert_into_data_store_from_file(store_id, root.node_hash, filename)
+                        await self.insert_into_data_store_from_file(store_id, root.node_hash, recovery_filename)
                     except Exception as e:
                         log.error(f"Cannot recover data from {filename}: {e}")
                         break
