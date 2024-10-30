@@ -48,7 +48,7 @@ class ApiMetadata:
     @classmethod
     def from_bound_method(cls, method: Callable[..., Awaitable[Optional[Message]]]) -> ApiRequest:
         self: ApiMetadata = getattr(method, api_attribute_name)
-        message_type = ProtocolMessageTypes(method.__name__)
+        message_type = ProtocolMessageTypes[method.__name__]
         return self.message_type_to_request[message_type]
 
     # TODO: This hinting does not express that the returned callable *_bytes parameter

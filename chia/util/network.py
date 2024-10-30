@@ -14,6 +14,7 @@ from aiohttp import web
 from aiohttp.log import web_logger
 from typing_extensions import final
 
+from chia.server.api_protocol import ApiProtocol
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
@@ -138,7 +139,7 @@ def is_trusted_peer(
     return not testing and is_localhost(host) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
 
 
-def class_for_type(type: NodeType) -> Any:
+def class_for_type(type: NodeType) -> type[ApiProtocol]:
     if type is NodeType.FULL_NODE:
         from chia.full_node.full_node_api import FullNodeAPI
 
