@@ -80,6 +80,11 @@ else:
 
 
 class FullNodeAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("FullNodeAPI", None)
+
     log: logging.Logger
     full_node: FullNode
     executor: ThreadPoolExecutor

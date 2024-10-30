@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.protocols import timelord_protocol
 from chia.protocols.timelord_protocol import NewPeakTimelord
@@ -17,6 +17,11 @@ log = logging.getLogger(__name__)
 
 
 class TimelordAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("TimelordAPI", None)
+
     log: logging.Logger
     timelord: Timelord
     api: ClassVar[ApiMetadata] = ApiMetadata()

@@ -882,36 +882,36 @@ chialisp_loader = ">=0.1.2"
 
 [[package]]
 name = "chiapos"
-version = "2.0.4"
+version = "2.0.7"
 description = "Chia proof of space plotting, proving, and verifying (wraps C++)"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "chiapos-2.0.4-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:fa7d13ad72c97d6081ab494f41ea5dbb1e8e7898ba644b45f4512443a4368f45"},
-    {file = "chiapos-2.0.4-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:a9e2cf709690efafa16fa1f66c5b5b8a0e00ed0fa4c66ce6939828035f4bb9f9"},
-    {file = "chiapos-2.0.4-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:86a6822b5aa7c5855cd5ff59c6644a441a01c2ce09c38a47a292f8bebb0a042c"},
-    {file = "chiapos-2.0.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9394d1c02c56829951379d6a2ef155f33760a3722e926f03e5e1e771e7161cd6"},
-    {file = "chiapos-2.0.4-cp310-cp310-win_amd64.whl", hash = "sha256:579c87cd8e028f008fe75fb37ad0aea8a80a81774ac269c4bbb6195a5a4f7937"},
-    {file = "chiapos-2.0.4-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:8d691cf50beae2f8f7e751a9a376701997b72c8e0c1d8fa56d2c441f4290c30a"},
-    {file = "chiapos-2.0.4-cp311-cp311-macosx_11_0_x86_64.whl", hash = "sha256:c8c6a0d4a302edb8cecddc253db876ca1727149ddc6911dd255ee058d39c1d78"},
-    {file = "chiapos-2.0.4-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2729ca64281b31d05bc1160860a8ed654f2a34a92775ef13292f25e5b64d34ad"},
-    {file = "chiapos-2.0.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ca1a2f4fe886b71af206966b5c8001df5703d0d3b5a47bf7c207325b25ab784d"},
-    {file = "chiapos-2.0.4-cp311-cp311-win_amd64.whl", hash = "sha256:2c11c6891217ab49e20ef4b9ae1e2e6aaed752fd41e360515b65ee36c0ec29f8"},
-    {file = "chiapos-2.0.4-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:cc946f0bb74313c85a5fd769ba2d36a9a3684a111cde38293c8ed7b54f9a4d12"},
-    {file = "chiapos-2.0.4-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:0c9f315b12ddb9b7a726b19711c841b7f199c568963dd6473495074fc23b8f63"},
-    {file = "chiapos-2.0.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fe238271df585a8277b46775124f4cef1dc28a2a475e9950ec292eadacac1c3f"},
-    {file = "chiapos-2.0.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0e120bbca94b511c7fb1c011efbfdd12d2a569a084fed26e53051650fdf28bf2"},
-    {file = "chiapos-2.0.4-cp312-cp312-win_amd64.whl", hash = "sha256:f662b5b58edc1aebee14e7e0085e9e19793efdf2dfb09956e0fb082bffcd48bd"},
-    {file = "chiapos-2.0.4-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:f1e2f828b340160813c573bd0c7b11011332203e1c36fa791a685db9c54f2c5b"},
-    {file = "chiapos-2.0.4-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b5a259f2557d38b4b775ea1943e553b47db599bbd2ba6784f1c26e9ac1cdead8"},
-    {file = "chiapos-2.0.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a286924cbba2770551bea1b315741d9980a67f242fe99629d84708a4e3b926df"},
-    {file = "chiapos-2.0.4-cp38-cp38-win_amd64.whl", hash = "sha256:f75920e0a6355b4882834b74d6a325f7bc9b4f20ca776ac79ecbc8dab91dd640"},
-    {file = "chiapos-2.0.4-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:86ec4db0980ed9a9e1d72a6a0874c2b51ba58af42f1765fa8b32e674ad46af75"},
-    {file = "chiapos-2.0.4-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:82f7c5b2ef0f514321b7edd2ef864e8927ba8b7c15c27a6621ea6fb7a7ad2d19"},
-    {file = "chiapos-2.0.4-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0ae108016b0cad03cd3fa25caf57924781e6e62c99151be581e976966bf48f7d"},
-    {file = "chiapos-2.0.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4060e71c468c654778458a47a05a68b6599aeb2f66e2794a820e11b89c6e3c33"},
-    {file = "chiapos-2.0.4-cp39-cp39-win_amd64.whl", hash = "sha256:1dbc6d7e3ce961ecd99c48e9df8d1448ea8623b228927ff91517b903fcf1486f"},
-    {file = "chiapos-2.0.4.tar.gz", hash = "sha256:6498d75a7ac01bb64055055b2937f7f964270582a2f82be9a332aa828fc3e3ce"},
+    {file = "chiapos-2.0.7-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:65f2aa723b8c8e37af2d529429ac277ffe818879203e4d5e55c7db193db99d2a"},
+    {file = "chiapos-2.0.7-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:d4629faeee3963c91e0d4b4880d28b47d371428ef3471412d74b8e3a5b84a9cd"},
+    {file = "chiapos-2.0.7-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:8eba7dfe2e36aa701085bd89a5e977dae162fdeba90c7b407e28ba1f306bda01"},
+    {file = "chiapos-2.0.7-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:a0d616c503bf1f6a0c4497f5ca77d05da05dc382888c377e53ad8586e67ea891"},
+    {file = "chiapos-2.0.7-cp310-cp310-win_amd64.whl", hash = "sha256:950643079c0523c5f0fad376ec7df27836d189944ce9303604e4f72f7a58d31f"},
+    {file = "chiapos-2.0.7-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:8ca1d50b09ed4f99cc0317b45fa9a5e892c60304f4436632d6e6a759a53f9dfc"},
+    {file = "chiapos-2.0.7-cp311-cp311-macosx_11_0_x86_64.whl", hash = "sha256:1e8e514a00ee86b300ec6f72632b4116b4e19791498a91d6183f5301f91310b2"},
+    {file = "chiapos-2.0.7-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:20bd73256db48b4bdc235f6e6485acfbcf25191b4d51d0df6f01f7430fc3cd10"},
+    {file = "chiapos-2.0.7-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:6cb076637d803b95eaff72afb78f65cfbc170875bcb066d90699196a930a251e"},
+    {file = "chiapos-2.0.7-cp311-cp311-win_amd64.whl", hash = "sha256:e4b876c598a0be96fa57568c00856400a8db13dec6675690b39866b5a8c4f616"},
+    {file = "chiapos-2.0.7-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:0c03caf22a6394a55fc2bcc125857c7de2cc8bf59d1fa48e0bd652857a436a01"},
+    {file = "chiapos-2.0.7-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:a70c9341f557e5fa2273fb89c0051832fecba39b65c172e6260c127ccb07a5e4"},
+    {file = "chiapos-2.0.7-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:34dff6233bfbc329251c63b324a0d2002614af9a34dcc19731ccb1652c8e929e"},
+    {file = "chiapos-2.0.7-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:de1f87746d77b8eeb9552dd1c73ff03585cf1b66e95db1fe6b645c202a93aac2"},
+    {file = "chiapos-2.0.7-cp312-cp312-win_amd64.whl", hash = "sha256:28608b841ec313a924c5c4f0bbdd1409267bab4f9b02a8b42dbb79a6250eae53"},
+    {file = "chiapos-2.0.7-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:97a66ef35e198436c15f5ca45910760db56e2708e425890dfaa4a991ffb08c57"},
+    {file = "chiapos-2.0.7-cp38-cp38-manylinux_2_28_aarch64.whl", hash = "sha256:c30d1f89399e631899e947cb5472d2cb9a39577edc7d1508646748b2f89e3cbd"},
+    {file = "chiapos-2.0.7-cp38-cp38-manylinux_2_28_x86_64.whl", hash = "sha256:a3f58cded9cf47c3b2eca3fc571daf19feb3f6ef085bfc33d99144c96c025bc7"},
+    {file = "chiapos-2.0.7-cp38-cp38-win_amd64.whl", hash = "sha256:e7ffe0df3f6d22063f9b59d0e5d393e3b7dada3d268edeee2c9058dd98f447e2"},
+    {file = "chiapos-2.0.7-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:ec4e2199f82822400c2e6c4afee3cd180b8523dd512e178d46a915a75cdf8ea2"},
+    {file = "chiapos-2.0.7-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:c103d7ef5697177820731551e7d223a431d3181d61c9adb6c3b8b4b8ccc2bee4"},
+    {file = "chiapos-2.0.7-cp39-cp39-manylinux_2_28_aarch64.whl", hash = "sha256:37acd69a89b7b5c6e5465d4c22125d0d1a818db420e00ca0d3f3f4412d7e9937"},
+    {file = "chiapos-2.0.7-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:fd9fd7cd4ec2b74886f88bc9f10a46b64ad8b778472859595f31db240291beb4"},
+    {file = "chiapos-2.0.7-cp39-cp39-win_amd64.whl", hash = "sha256:0fa42d07d317b16039ac9c511da90810b8e176c785c66c0ec010e4fd5cf7b170"},
+    {file = "chiapos-2.0.7.tar.gz", hash = "sha256:f0c8742b9e92e5d27ced06e80cdcae7f29d1752ffa38ea30930a4a61ee03072e"},
 ]
 
 [[package]]
@@ -3357,4 +3357,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.13"
-content-hash = "d403dbbafd58dde2819efa7890b10324cafdab0f72891b1d0634acdaea7bd19a"
+content-hash = "397a0952dcbe106bcfccbf0fb3f2ad6c4e3dbbd44685da7cd53abb5519eb1220"

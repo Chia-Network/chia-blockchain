@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.seeder.crawler import Crawler
@@ -12,6 +12,11 @@ from chia.server.ws_connection import WSChiaConnection
 
 
 class CrawlerAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("CrawlerAPI", None)
+
     log: logging.Logger
     crawler: Crawler
     api: ClassVar[ApiMetadata] = ApiMetadata()

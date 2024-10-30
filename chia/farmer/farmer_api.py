@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, ClassVar, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
 from chia_rs import AugSchemeMPL, G2Element, PrivateKey
@@ -48,6 +48,11 @@ from chia.util.ints import uint8, uint16, uint32, uint64
 
 
 class FarmerAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("FarmerAPI", None)
+
     log: logging.Logger
     farmer: Farmer
     api: ClassVar[ApiMetadata] = ApiMetadata()

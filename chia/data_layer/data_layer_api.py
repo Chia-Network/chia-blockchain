@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia.data_layer.data_layer import DataLayer
 from chia.server.api_protocol import ApiMetadata
@@ -9,6 +9,11 @@ from chia.server.server import ChiaServer
 
 
 class DataLayerAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("DataLayerAPI", None)
+
     log: logging.Logger
     data_layer: DataLayer
     api: ClassVar[ApiMetadata] = ApiMetadata()

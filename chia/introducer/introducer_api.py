@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import ClassVar, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia.introducer.introducer import Introducer
 from chia.protocols.introducer_protocol import RequestPeersIntroducer, RespondPeersIntroducer
@@ -15,6 +15,11 @@ from chia.util.ints import uint64
 
 
 class IntroducerAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("IntroducerAPI", None)
+
     log: logging.Logger
     introducer: Introducer
     api: ClassVar[ApiMetadata] = ApiMetadata()
