@@ -26,7 +26,7 @@ P = ParamSpec("P")
 R = TypeVar("R", bound=Awaitable[Optional[Message]])
 S = TypeVar("S", bound=Streamable)
 Self = TypeVar("Self")
-metadata_attribute_name = "_chia_api_metadata"
+api_attribute_name = "_chia_api"
 
 
 @dataclass
@@ -46,11 +46,10 @@ class ApiMetadata:
     message_type_to_request: dict[ProtocolMessageTypes, ApiRequest] = field(default_factory=dict)
 
     @classmethod
-    def from_bound_method(cls, method: object) -> ApiRequest:
-        # TODO: figure out better hinting for method than object to avoid the ignores below
-        # https://docs.python.org/3.12/reference/datamodel.html#method.__self__
-        protocol: ApiProtocol = method.__self__  # type: ignore[attr-defined]
-        return protocol.api.message_type_to_request[method.__name__]  # type: ignore[attr-defined]
+    def from_bound_method(cls, method: Callable[..., Awaitable[Optional[Message]]]) -> ApiRequest:
+        self: ApiMetadata = getattr(method, api_attribute_name)
+        message_type = ProtocolMessageTypes(method.__name__)
+        return self.message_type_to_request[message_type]
 
     # TODO: This hinting does not express that the returned callable *_bytes parameter
     #       corresponding to the first parameter name will be filled in by the wrapper.
@@ -82,6 +81,7 @@ class ApiMetadata:
 
                 return f(self, arg, *args, **kwargs)
 
+            setattr(wrapper, api_attribute_name, self)
             message_name, message_class = next(
                 (name, hint) for name, hint in get_type_hints(f).items() if name not in {"self", "peer", "return"}
             )
