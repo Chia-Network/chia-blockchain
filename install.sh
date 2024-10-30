@@ -185,7 +185,7 @@ else
 fi
 
 if [ ! -f "activate" ]; then
-  ln -s venv/bin/activate .
+  ln -s .venv/bin/activate .
 fi
 
 if [ -z "$EDITABLE" ]; then
@@ -194,11 +194,11 @@ fi
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
-  PREV_VENV="$VIRTUAL_ENV"
-  export VIRTUAL_ENV="venv"
+  # shellcheck disable=SC1091
+  . .venv/bin/activate
   ./install-plotter.sh bladebit
   ./install-plotter.sh madmax
-  export VIRTUAL_ENV="$PREV_VENV"
+  deactivate
   set -e
 fi
 
