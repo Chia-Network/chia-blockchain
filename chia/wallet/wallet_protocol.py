@@ -77,9 +77,7 @@ class WalletProtocol(Protocol[T]):
     def derivation_for_index(self, index: int) -> list[DerivationRecord]: ...
 
     wallet_info: WalletInfo
-    # WalletStateManager is only imported for type hinting thus leaving pylint
-    # unable to process this
-    wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
+    wallet_state_manager: WalletStateManager
 
 
 @runtime_checkable

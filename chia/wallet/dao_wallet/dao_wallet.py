@@ -153,7 +153,7 @@ class DAOWallet:
             raise ValueError(f"Your balance of {bal} mojos is not enough to create {amount_of_cats} CATs")
 
         self.dao_info = DAOInfo(
-            treasury_id=bytes32([0] * 32),
+            treasury_id=bytes32.zeros,
             cat_wallet_id=uint32(0),
             dao_cat_wallet_id=uint32(0),
             proposals_list=[],
@@ -1480,7 +1480,6 @@ class DAOWallet:
             spend_bundle = WalletSpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         else:
             # TODO: maybe we can refactor this to provide clarity around timer_cs having been defined
-            # pylint: disable-next=E0606
             spend_bundle = WalletSpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             await self.standard_wallet.create_tandem_xch_tx(fee, action_scope)

@@ -67,7 +67,7 @@ class ExpectedResult:
             return Plot(
                 info.prover.get_filename(),
                 uint8(0),
-                bytes32(b"\x00" * 32),
+                bytes32.zeros,
                 None,
                 None,
                 G1Element(),

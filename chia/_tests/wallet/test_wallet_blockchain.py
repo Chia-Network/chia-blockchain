@@ -3,10 +3,10 @@ from __future__ import annotations
 import pytest
 
 from chia._tests.util.db_connection import DBConnection
-from chia._tests.util.misc import add_blocks_in_batches
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia.consensus.blockchain import AddBlockResult
 from chia.protocols import full_node_protocol
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.types.blockchain_format.vdf import VDFProof
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock

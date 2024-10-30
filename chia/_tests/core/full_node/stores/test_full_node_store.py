@@ -10,6 +10,7 @@ import pytest
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block, _validate_and_add_block_no_error
 from chia._tests.util.blockchain import create_blockchain
 from chia._tests.util.blockchain_mock import BlockchainMock
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -477,11 +478,14 @@ async def test_basic_store(
         normalized_to_identity_cc_ip=normalized_to_identity,
         normalized_to_identity_cc_sp=normalized_to_identity,
     )
+
+    fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     for block in blocks_reorg:
+
         peak = blockchain.get_peak()
         assert peak is not None
 
-        await _validate_and_add_block_no_error(blockchain, block)
+        await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
 
         peak_here = blockchain.get_peak()
         assert peak_here is not None
@@ -559,7 +563,7 @@ async def test_basic_store(
             normalized_to_identity_cc_ip=normalized_to_identity,
             normalized_to_identity_cc_sp=normalized_to_identity,
         )
-        await _validate_and_add_block(blockchain, blocks[-1])
+        await _validate_and_add_block(blockchain, blocks[-1], fork_info=fork_info)
         peak_here = blockchain.get_peak()
         assert peak_here is not None
         if peak_here.header_hash == blocks[-1].header_hash:
@@ -911,8 +915,9 @@ async def test_basic_store(
         normalized_to_identity_icc_eos=normalized_to_identity,
     )
 
+    fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     for block in blocks[:5]:
-        await _validate_and_add_block_no_error(blockchain, block)
+        await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
         sb = blockchain.block_record(block.header_hash)
         result = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
         assert result is not None
@@ -941,7 +946,7 @@ async def test_basic_store(
         )
         store.add_to_future_ip(new_ip)
 
-        await _validate_and_add_block_no_error(blockchain, prev_block)
+        await _validate_and_add_block_no_error(blockchain, prev_block, fork_info=fork_info)
         result = await blockchain.get_sp_and_ip_sub_slots(prev_block.header_hash)
         assert result is not None
         sp_sub_slot, ip_sub_slot = result
@@ -983,13 +988,13 @@ async def test_basic_store(
     # Then do a reorg up to B2, removing all signage points after B2, but not before
     log.warning(f"Adding blocks up to {blocks[-1]}")
     for block in blocks:
-        await _validate_and_add_block_no_error(blockchain, block)
+        await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
 
     log.warning("Starting loop")
     while True:
         log.warning("Looping")
         blocks = custom_block_tools.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
-        await _validate_and_add_block_no_error(blockchain, blocks[-1])
+        await _validate_and_add_block_no_error(blockchain, blocks[-1], fork_info=fork_info)
         peak = blockchain.get_peak()
         assert peak is not None
         result = await blockchain.get_sp_and_ip_sub_slots(peak.header_hash)

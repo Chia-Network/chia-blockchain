@@ -205,7 +205,7 @@ class BlockTools:
         plot_dir: str = "test-plots",
         log: logging.Logger = logging.getLogger(__name__),
     ) -> None:
-        self._block_cache_header = bytes32([0] * 32)
+        self._block_cache_header = bytes32.zeros
 
         self._tempdir = None
         if root_path is None:

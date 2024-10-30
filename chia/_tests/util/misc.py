@@ -12,12 +12,10 @@ import pathlib
 import ssl
 import subprocess
 import sys
-from collections.abc import Awaitable, Collection, Iterable, Iterator
+from collections.abc import Awaitable, Collection, Iterator
 from concurrent.futures import Future
 from dataclasses import dataclass, field
 from enum import Enum
-from inspect import getframeinfo, stack
-from pathlib import Path
 from statistics import mean
 from textwrap import dedent
 from time import thread_time
@@ -36,15 +34,10 @@ import chia
 import chia._tests
 from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
-from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.full_node.full_node import FullNode
+from chia._tests.util.time_out_assert import DataTypeProtocol, caller_file_and_line
 from chia.full_node.mempool import Mempool
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
-from chia.types.full_block import FullBlock
-from chia.types.peer_info import PeerInfo
-from chia.types.validation_state import ValidationState
-from chia.util.batches import to_batches
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.network import WebServer
@@ -355,7 +348,7 @@ class _AssertRuntime:
                 label=self.label,
             )
 
-            ether.record_property(  # pylint: disable=E1102
+            ether.record_property(
                 data.tag,
                 json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
             )
@@ -598,27 +591,6 @@ class TestId:
         }
 
 
-T = TypeVar("T")
-
-
-@dataclasses.dataclass(frozen=True)
-class DataTypeProtocol(Protocol):
-    tag: ClassVar[str]
-
-    line: int
-    path: Path
-    label: str
-    duration: float
-    limit: float
-
-    __match_args__: ClassVar[tuple[str, ...]] = ()
-
-    @classmethod
-    def unmarshal(cls: type[T], marshalled: dict[str, Any]) -> T: ...
-
-    def marshal(self) -> dict[str, Any]: ...
-
-
 T_ComparableEnum = TypeVar("T_ComparableEnum", bound="ComparableEnum")
 
 
@@ -658,46 +630,3 @@ class ComparableEnum(Enum):
             return NotImplemented
 
         return self.value.__ge__(other.value)
-
-
-def caller_file_and_line(distance: int = 1, relative_to: Iterable[Path] = ()) -> tuple[str, int]:
-    caller = getframeinfo(stack()[distance + 1][0])
-
-    caller_path = Path(caller.filename)
-    options: list[str] = [caller_path.as_posix()]
-    for path in relative_to:
-        try:
-            options.append(caller_path.relative_to(path).as_posix())
-        except ValueError:
-            pass
-
-    return min(options, key=len), caller.lineno
-
-
-async def add_blocks_in_batches(
-    blocks: list[FullBlock],
-    full_node: FullNode,
-    header_hash: Optional[bytes32] = None,
-) -> None:
-    if header_hash is None:
-        diff = full_node.constants.DIFFICULTY_STARTING
-        ssi = full_node.constants.SUB_SLOT_ITERS_STARTING
-    else:
-        block_record = await full_node.blockchain.get_block_record_from_db(header_hash)
-        ssi, diff = get_next_sub_slot_iters_and_difficulty(
-            full_node.constants, True, block_record, full_node.blockchain
-        )
-    vs = ValidationState(ssi, diff, None)
-    for block_batch in to_batches(blocks, 64):
-        b = block_batch.entries[0]
-        if (b.height % 128) == 0:
-            print(f"main chain: {b.height:4} weight: {b.weight}")
-        # vs is updated by the call to add_block_batch()
-        success, _, err = await full_node.add_block_batch(
-            block_batch.entries,
-            PeerInfo("0.0.0.0", 0),
-            None,
-            vs,
-        )
-        assert err is None
-        assert success is True

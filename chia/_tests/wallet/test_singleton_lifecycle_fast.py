@@ -56,7 +56,7 @@ def satisfies_hint(obj: T, type_hint: type[T]) -> bool:
             if not isinstance(obj, origin):
                 return False
             if len(args) > 0:
-                # Tuple[T, ...] gets handled just like List[T]
+                # tuple[T, ...] gets handled just like list[T]
                 if origin is list or (origin is tuple and args[-1] is Ellipsis):
                     object_hint_pairs.extend((item, args[0]) for item in obj)
                 elif origin is tuple:
@@ -508,7 +508,7 @@ def test_lifecycle_with_coinstore_as_wallet() -> None:
     now = CoinTimestamp(10012300, uint32(1))
 
     DELAY_SECONDS = 86400
-    DELAY_PUZZLE_HASH = bytes32([0] * 32)
+    DELAY_PUZZLE_HASH = bytes32.zeros
 
     #######
     # spend coin to a singleton

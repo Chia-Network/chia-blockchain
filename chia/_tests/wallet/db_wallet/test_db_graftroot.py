@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from chia_rs import G2Element
 
-from chia.clvm.spend_sim import CostLogger, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -43,7 +43,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
         all_values: list[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
         root, proofs = build_merkle_tree(all_values)
         p2_conditions = Program.to((1, [[51, ACS_PH, 0]]))  # An coin to create to make sure this hits the blockchain
-        desired_key_values = ((bytes32([0] * 32), bytes32([1] * 32)), (bytes32([7] * 32), bytes32([8] * 32)))
+        desired_key_values = ((bytes32.zeros, bytes32([1] * 32)), (bytes32([7] * 32), bytes32([8] * 32)))
         desired_row_hashes: list[bytes32] = [build_merkle_tree_from_binary_tree(kv)[0] for kv in desired_key_values]
         fake_struct: Program = Program.to((ACS_PH, NIL_PH))
         graftroot_puzzle: Program = GRAFTROOT_MOD.curry(
@@ -129,7 +129,7 @@ async def test_graftroot(cost_logger: CostLogger) -> None:
                 # try with a bad merkle root announcement
                 new_fake_spend = make_spend(
                     fake_coin,
-                    ACS.curry(fake_struct, ACS.curry(ACS_PH, (bytes32([0] * 32), None), None, None)),
+                    ACS.curry(fake_struct, ACS.curry(ACS_PH, (bytes32.zeros, None), None, None)),
                     Program.to([[[62, "$"]]]),
                 )
                 new_final_bundle = WalletSpendBundle([new_fake_spend, graftroot_spend], G2Element())

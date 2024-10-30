@@ -102,7 +102,7 @@ async def test_create_creates_tables_and_columns(
 
 @pytest.mark.anyio
 async def test_create_tree_accepts_bytes32(raw_data_store: DataStore) -> None:
-    store_id = bytes32(b"\0" * 32)
+    store_id = bytes32.zeros
 
     await raw_data_store.create_tree(store_id=store_id)
 
@@ -723,7 +723,7 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, store_id: bytes32
         if i == 0 or i > 10:
             insert_result = await data_store.autoinsert(key, value, store_id, status=Status.COMMITTED)
         else:
-            reference_node_hash = await data_store.get_terminal_node_for_seed(store_id, bytes32([0] * 32))
+            reference_node_hash = await data_store.get_terminal_node_for_seed(store_id, bytes32.zeros)
             insert_result = await data_store.insert(
                 key=key,
                 value=value,
@@ -1176,7 +1176,7 @@ async def test_kv_diff_2(data_store: DataStore, store_id: bytes32) -> None:
         reference_node_hash=None,
         side=None,
     )
-    empty_hash = bytes32([0] * 32)
+    empty_hash = bytes32.zeros
     invalid_hash = bytes32([0] * 31 + [1])
     diff_1 = await data_store.get_kv_diff(store_id, empty_hash, insert_result.node_hash)
     assert diff_1 == {DiffData(OperationType.INSERT, b"000", b"000")}
@@ -1252,7 +1252,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, store_id: bytes32) -
 
     await data_store.unsubscribe(store_id)
     assert await data_store.get_subscriptions() == []
-    store_id2 = bytes32([0] * 32)
+    store_id2 = bytes32.zeros
 
     await data_store.subscribe(
         Subscription(
@@ -1650,7 +1650,7 @@ async def test_benchmark_batch_insert_speed_multiple_batches(
 
 @pytest.mark.anyio
 async def test_delete_store_data(raw_data_store: DataStore) -> None:
-    store_id = bytes32(b"\0" * 32)
+    store_id = bytes32.zeros
     store_id_2 = bytes32(b"\0" * 31 + b"\1")
     await raw_data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     await raw_data_store.create_tree(store_id=store_id_2, status=Status.COMMITTED)
@@ -1865,7 +1865,7 @@ async def test_insert_from_delta_file(
     for generation in range(1, num_files + 2):
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
         await write_files_for_root(data_store, store_id, root, tmp_path_1, 0, False, group_files_by_store)
-        root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
+        root_hashes.append(bytes32.zeros if root.node_hash is None else root.node_hash)
     store_path = tmp_path_1.joinpath(f"{store_id}") if group_files_by_store else tmp_path_1
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
@@ -2020,7 +2020,7 @@ async def test_insert_from_delta_file_correct_file_exists(
     for generation in range(1, num_files + 2):
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
         await write_files_for_root(data_store, store_id, root, tmp_path, 0, group_by_store=group_files_by_store)
-        root_hashes.append(bytes32([0] * 32) if root.node_hash is None else root.node_hash)
+        root_hashes.append(bytes32.zeros if root.node_hash is None else root.node_hash)
     store_path = tmp_path.joinpath(f"{store_id}") if group_files_by_store else tmp_path
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
@@ -2333,7 +2333,7 @@ async def test_get_nodes(data_store: DataStore, store_id: bytes32) -> None:
     nodes = await data_store.get_nodes([node.hash for node in expected_nodes])
     assert nodes == expected_nodes
 
-    node_hash = bytes32([0] * 32)
+    node_hash = bytes32.zeros
     node_hash_2 = bytes32([0] * 31 + [1])
     with pytest.raises(Exception, match=f"^Nodes not found for hashes: {node_hash.hex()}, {node_hash_2.hex()}"):
         await data_store.get_nodes([node_hash, node_hash_2] + [node.hash for node in expected_nodes])

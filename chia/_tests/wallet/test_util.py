@@ -36,22 +36,18 @@ def test_compute_spend_hints_and_additions() -> None:
     expected_dict = {hinted_coin.coin.name(): hinted_coin for hinted_coin in hinted_coins}
     assert compute_spend_hints_and_additions(coin_spend)[0] == expected_dict
 
-    not_hinted_coin = HintedCoin(Coin(parent_coin.coin.name(), bytes32([0] * 32), uint64(0)), None)
+    not_hinted_coin = HintedCoin(Coin(parent_coin.coin.name(), bytes32.zeros, uint64(0)), None)
     assert compute_spend_hints_and_additions(
-        make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32([0] * 32), 0, [["not", "a"], "hint"]]]))
+        make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0, [["not", "a"], "hint"]]]))
     )[0] == {not_hinted_coin.coin.name(): not_hinted_coin}
 
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            make_spend(
-                parent_coin.coin, Program.to(1), Program.to([[51, bytes32([0] * 32), 0] for _ in range(0, 10000)])
-            )
+            make_spend(parent_coin.coin, Program.to(1), Program.to([[51, bytes32.zeros, 0] for _ in range(0, 10000)]))
         )
     with pytest.raises(ValidationError):
         compute_spend_hints_and_additions(
-            make_spend(
-                parent_coin.coin, Program.to(1), Program.to([[50, bytes48([0] * 48), b""] for _ in range(0, 10000)])
-            )
+            make_spend(parent_coin.coin, Program.to(1), Program.to([[50, bytes48.zeros, b""] for _ in range(0, 10000)]))
         )
 
 
@@ -66,7 +62,7 @@ def test_cs_config() -> None:
         "min_coin_amount": 50,
     }
     coin_to_exclude = CoinGenerator().get().coin
-    coin_id_to_exclude = bytes32([0] * 32)
+    coin_id_to_exclude = bytes32.zeros
     assert CoinSelectionConfigLoader.from_json_dict(
         {
             "excluded_coins": [coin_to_exclude.to_json_dict()],
@@ -112,15 +108,15 @@ def test_list_to_binary_tree() -> None:
     "serializations",
     [
         (tuple(), Program.to(None), []),
-        ((bytes32([0] * 32),), Program.to([bytes32([0] * 32)]), [LineageProofField.PARENT_NAME]),
+        ((bytes32.zeros,), Program.to([bytes32.zeros]), [LineageProofField.PARENT_NAME]),
         (
-            (bytes32([0] * 32), bytes32([0] * 32)),
-            Program.to([bytes32([0] * 32), bytes32([0] * 32)]),
+            (bytes32.zeros, bytes32.zeros),
+            Program.to([bytes32.zeros, bytes32.zeros]),
             [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH],
         ),
         (
-            (bytes32([0] * 32), bytes32([0] * 32), uint64(0)),
-            Program.to([bytes32([0] * 32), bytes32([0] * 32), uint64(0)]),
+            (bytes32.zeros, bytes32.zeros, uint64(0)),
+            Program.to([bytes32.zeros, bytes32.zeros, uint64(0)]),
             [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
         ),
     ],
@@ -135,31 +131,31 @@ def test_lineage_proof_varargs(serializations: tuple[tuple[Any, ...], Program, l
     "serializations",
     [
         ({}, Program.to(None), []),
-        ({"parent_name": bytes32([0] * 32)}, Program.to([bytes32([0] * 32)]), [LineageProofField.PARENT_NAME]),
+        ({"parent_name": bytes32.zeros}, Program.to([bytes32.zeros]), [LineageProofField.PARENT_NAME]),
         (
-            {"parent_name": bytes32([0] * 32), "inner_puzzle_hash": bytes32([0] * 32)},
-            Program.to([bytes32([0] * 32), bytes32([0] * 32)]),
+            {"parent_name": bytes32.zeros, "inner_puzzle_hash": bytes32.zeros},
+            Program.to([bytes32.zeros, bytes32.zeros]),
             [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH],
         ),
         (
-            {"parent_name": bytes32([0] * 32), "inner_puzzle_hash": bytes32([0] * 32), "amount": uint64(0)},
-            Program.to([bytes32([0] * 32), bytes32([0] * 32), uint64(0)]),
+            {"parent_name": bytes32.zeros, "inner_puzzle_hash": bytes32.zeros, "amount": uint64(0)},
+            Program.to([bytes32.zeros, bytes32.zeros, uint64(0)]),
             [LineageProofField.PARENT_NAME, LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
         ),
         (
-            {"parent_name": bytes32([0] * 32), "amount": uint64(0)},
-            Program.to([bytes32([0] * 32), uint64(0)]),
+            {"parent_name": bytes32.zeros, "amount": uint64(0)},
+            Program.to([bytes32.zeros, uint64(0)]),
             [LineageProofField.PARENT_NAME, LineageProofField.AMOUNT],
         ),
         (
-            {"inner_puzzle_hash": bytes32([0] * 32), "amount": uint64(0)},
-            Program.to([bytes32([0] * 32), uint64(0)]),
+            {"inner_puzzle_hash": bytes32.zeros, "amount": uint64(0)},
+            Program.to([bytes32.zeros, uint64(0)]),
             [LineageProofField.INNER_PUZZLE_HASH, LineageProofField.AMOUNT],
         ),
         ({"amount": uint64(0)}, Program.to([uint64(0)]), [LineageProofField.AMOUNT]),
         (
-            {"inner_puzzle_hash": bytes32([0] * 32)},
-            Program.to([bytes32([0] * 32)]),
+            {"inner_puzzle_hash": bytes32.zeros},
+            Program.to([bytes32.zeros]),
             [LineageProofField.INNER_PUZZLE_HASH],
         ),
     ],
@@ -174,7 +170,7 @@ def test_lineage_proof_errors() -> None:
     with pytest.raises(ValueError, match="Mismatch"):
         LineageProof.from_program(Program.to([]), [LineageProofField.PARENT_NAME])
     with pytest.raises(StopIteration):
-        LineageProof.from_program(Program.to([bytes32([0] * 32)]), [])
+        LineageProof.from_program(Program.to([bytes32.zeros]), [])
     with pytest.raises(ValueError):
         LineageProof.from_program(Program.to([bytes32([1] * 32)]), [LineageProofField.AMOUNT])
     with pytest.raises(ValueError):

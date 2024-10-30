@@ -12,14 +12,9 @@ from chia.util.errors import Err
 def validate_block_merkle_roots(
     block_additions_root: bytes32,
     block_removals_root: bytes32,
-    tx_additions: Optional[list[tuple[Coin, bytes32]]] = None,
-    tx_removals: Optional[list[bytes32]] = None,
+    tx_additions: list[tuple[Coin, bytes32]],
+    tx_removals: list[bytes32],
 ) -> Optional[Err]:
-    if tx_removals is None:
-        tx_removals = []
-    if tx_additions is None:
-        tx_additions = []
-
     # Create addition Merkle set
     puzzlehash_coins_map: dict[bytes32, list[bytes32]] = {}
 

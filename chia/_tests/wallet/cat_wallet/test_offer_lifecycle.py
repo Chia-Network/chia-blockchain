@@ -5,7 +5,7 @@ from typing import Any, Optional
 import pytest
 from chia_rs import G2Element
 
-from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
@@ -252,7 +252,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
 
         # Test preventing TAIL from running during exchange
         blue_cat_puz = construct_cat_puzzle(CAT_MOD, str_to_tail_hash("blue"), OFFER_MOD)
-        random_hash = bytes32([0] * 32)
+        random_hash = bytes32.zeros
         blue_spend = make_spend(
             Coin(random_hash, blue_cat_puz.get_tree_hash(), uint64(0)),
             blue_cat_puz,

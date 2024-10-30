@@ -104,7 +104,7 @@ class DataLayer:
     server_files_location: Path
     unsubscribe_data_queue: list[UnsubscribeData]
     _server: Optional[ChiaServer] = None
-    none_bytes: bytes32 = bytes32([0] * 32)
+    none_bytes: bytes32 = bytes32.zeros
     initialized: bool = False
     _data_store: Optional[DataStore] = None
     state_changed_callback: Optional[StateChangedProtocol] = None
@@ -237,9 +237,7 @@ class DataLayer:
 
         return result.fingerprint
 
-    async def create_store(
-        self, fee: uint64, root: bytes32 = bytes32([0] * 32)
-    ) -> tuple[list[TransactionRecord], bytes32]:
+    async def create_store(self, fee: uint64, root: bytes32 = bytes32.zeros) -> tuple[list[TransactionRecord], bytes32]:
         txs, store_id = await self.wallet_rpc.create_new_dl(root, fee)
         res = await self.data_store.create_tree(store_id=store_id)
         if res is None:
