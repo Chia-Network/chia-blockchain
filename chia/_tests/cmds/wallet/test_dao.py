@@ -19,15 +19,18 @@ from chia.rpc.wallet_request_types import (
     DAOFreeCoinsFromFinishedProposalsResponse,
     DAOSendToLockupResponse,
     DAOVoteOnProposalResponse,
+    GetTransaction,
+    GetTransactionResponse,
     GetWallets,
     GetWalletsResponse,
+    UserFriendlyMemos,
+    UserFriendlyTransactionRecord,
     WalletInfoResponse,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes, parse_timelock_info
-from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.util.wallet_types import WalletType
@@ -157,25 +160,29 @@ def test_dao_treasury(capsys: object, get_test_cli_clients: tuple[TestRpcClients
             return {"rules": {"proposal_minimum": 100}}
 
         @override
-        async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
-            return TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=bytes32(b"2" * 32),
-                amount=uint64(10),
-                fee_amount=uint64(1),
-                confirmed=True,
-                sent=uint32(10),
-                spend_bundle=None,
-                additions=[],
-                removals=[],
-                wallet_id=uint32(1),
-                sent_to=[("peer1", uint8(1), None)],
-                trade_id=None,
-                type=uint32(TransactionType.INCOMING_TX.value),
-                name=bytes32(token_bytes()),
-                memos=[],
-                valid_times=parse_timelock_info(tuple()),
+        async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+            return GetTransactionResponse(
+                UserFriendlyTransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=bytes32(b"2" * 32),
+                    amount=uint64(10),
+                    fee_amount=uint64(1),
+                    confirmed=True,
+                    sent=uint32(10),
+                    spend_bundle=None,
+                    additions=[],
+                    removals=[],
+                    wallet_id=uint32(1),
+                    sent_to=[("peer1", uint8(1), None)],
+                    trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
+                    name=bytes32(token_bytes()),
+                    memos=UserFriendlyMemos([]),
+                    valid_times=parse_timelock_info(tuple()),
+                    to_address="",
+                ),
+                bytes32(token_bytes()),
             )
 
     inst_rpc_client = DAOCreateRpcClient()
@@ -331,25 +338,29 @@ def test_dao_proposals(capsys: object, get_test_cli_clients: tuple[TestRpcClient
             )
 
         @override
-        async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
-            return TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=bytes32(b"2" * 32),
-                amount=uint64(10),
-                fee_amount=uint64(1),
-                confirmed=True,
-                sent=uint32(10),
-                spend_bundle=None,
-                additions=[],
-                removals=[],
-                wallet_id=uint32(1),
-                sent_to=[("peer1", uint8(1), None)],
-                trade_id=None,
-                type=uint32(TransactionType.INCOMING_TX.value),
-                name=bytes32(b"x" * 32),
-                memos=[],
-                valid_times=parse_timelock_info(tuple()),
+        async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+            return GetTransactionResponse(
+                UserFriendlyTransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=bytes32(b"2" * 32),
+                    amount=uint64(10),
+                    fee_amount=uint64(1),
+                    confirmed=True,
+                    sent=uint32(10),
+                    spend_bundle=None,
+                    additions=[],
+                    removals=[],
+                    wallet_id=uint32(1),
+                    sent_to=[("peer1", uint8(1), None)],
+                    trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
+                    name=bytes32(token_bytes()),
+                    memos=UserFriendlyMemos([]),
+                    valid_times=parse_timelock_info(tuple()),
+                    to_address="",
+                ),
+                bytes32(token_bytes()),
             )
 
     # List all proposals
@@ -536,25 +547,29 @@ def test_dao_cats(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
             return DAOExitLockupResponse([STD_UTX], [STD_TX], STD_TX.name, STD_TX)
 
         @override
-        async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
-            return TransactionRecord(
-                confirmed_at_height=uint32(0),
-                created_at_time=uint64(int(time.time())),
-                to_puzzle_hash=bytes32(b"2" * 32),
-                amount=uint64(10),
-                fee_amount=uint64(1),
-                confirmed=True,
-                sent=uint32(10),
-                spend_bundle=None,
-                additions=[],
-                removals=[],
-                wallet_id=uint32(1),
-                sent_to=[("peer1", uint8(1), None)],
-                trade_id=None,
-                type=uint32(TransactionType.INCOMING_TX.value),
-                name=bytes32(b"x" * 32),
-                memos=[],
-                valid_times=parse_timelock_info(tuple()),
+        async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+            return GetTransactionResponse(
+                UserFriendlyTransactionRecord(
+                    confirmed_at_height=uint32(0),
+                    created_at_time=uint64(int(time.time())),
+                    to_puzzle_hash=bytes32(b"2" * 32),
+                    amount=uint64(10),
+                    fee_amount=uint64(1),
+                    confirmed=True,
+                    sent=uint32(10),
+                    spend_bundle=None,
+                    additions=[],
+                    removals=[],
+                    wallet_id=uint32(1),
+                    sent_to=[("peer1", uint8(1), None)],
+                    trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
+                    name=bytes32(token_bytes()),
+                    memos=UserFriendlyMemos([]),
+                    valid_times=parse_timelock_info(tuple()),
+                    to_address="",
+                ),
+                bytes32(token_bytes()),
             )
 
     inst_rpc_client = DAOCreateRpcClient()

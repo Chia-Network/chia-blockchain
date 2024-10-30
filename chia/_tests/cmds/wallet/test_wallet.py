@@ -30,6 +30,7 @@ from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     CreateOfferForIDsResponse,
     GetHeightInfoResponse,
+    GetTransaction,
     GetWalletBalance,
     GetWalletBalanceResponse,
     GetWallets,
@@ -484,7 +485,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                 test_condition_valid_times,
             )
         ],
-        "get_transaction": [(get_bytes32(2),), (get_bytes32(2),)],
+        "get_transaction": [(GetTransaction(get_bytes32(2)),), (GetTransaction(get_bytes32(2)),)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
