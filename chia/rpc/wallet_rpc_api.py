@@ -49,6 +49,8 @@ from chia.rpc.wallet_request_types import (
     GetTimestampForHeightResponse,
     GetTransaction,
     GetTransactionResponse,
+    GetTransactions,
+    GetTransactionsResponse,
     GetWalletBalance,
     GetWalletBalanceResponse,
     GetWalletBalances,
@@ -66,6 +68,7 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactions,
     SubmitTransactionsResponse,
     UserFriendlyTransactionRecord,
+    UserFriendlyTransactionRecordWithMetadata,
     WalletInfoResponse,
 )
 from chia.server.outbound_message import NodeType
@@ -1283,31 +1286,21 @@ class WalletRpcApi:
 
         return CombineCoinsResponse([], [])  # tx_endpoint will take care to fill this out
 
-    async def get_transactions(self, request: dict[str, Any]) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
-
-        start = request.get("start", 0)
-        end = request.get("end", 50)
-        sort_key = request.get("sort_key", None)
-        reverse = request.get("reverse", False)
-
-        to_address = request.get("to_address", None)
+    @marshal
+    async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
         to_puzzle_hash: Optional[bytes32] = None
-        if to_address is not None:
-            to_puzzle_hash = decode_puzzle_hash(to_address)
-        type_filter = None
-        if "type_filter" in request:
-            type_filter = TransactionTypeFilter.from_json_dict(request["type_filter"])
+        if request.to_address is not None:
+            to_puzzle_hash = decode_puzzle_hash(request.to_address)
 
         transactions = await self.service.wallet_state_manager.tx_store.get_transactions_between(
-            wallet_id,
-            start,
-            end,
-            sort_key=sort_key,
-            reverse=reverse,
+            wallet_id=request.wallet_id,
+            start=uint16(0) if request.start is None else request.start,
+            end=uint16(50) if request.end is None else request.end,
+            sort_key=request.sort_key,
+            reverse=request.reverse,
             to_puzzle_hash=to_puzzle_hash,
-            type_filter=type_filter,
-            confirmed=request.get("confirmed", None),
+            type_filter=request.type_filter,
+            confirmed=request.confirmed,
         )
         tx_list = []
         # Format for clawback transactions
@@ -1330,10 +1323,15 @@ class WalletRpcApi:
                 continue
             tx["metadata"]["coin_id"] = coin.name().hex()
             tx["metadata"]["spent"] = record.spent
-        return {
-            "transactions": tx_list,
-            "wallet_id": wallet_id,
-        }
+        return GetTransactionsResponse(
+            transactions=[
+                UserFriendlyTransactionRecordWithMetadata.from_transaction_record(
+                    TransactionRecord.from_json_dict_convenience(tx), self.service.config
+                )
+                for tx in tx_list
+            ],
+            wallet_id=request.wallet_id,
+        )
 
     async def get_transaction_count(self, request: dict[str, Any]) -> EndpointResult:
         wallet_id = int(request["wallet_id"])

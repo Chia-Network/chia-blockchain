@@ -31,12 +31,16 @@ from chia.rpc.wallet_request_types import (
     CreateOfferForIDsResponse,
     GetHeightInfoResponse,
     GetTransaction,
+    GetTransactions,
+    GetTransactionsResponse,
     GetWalletBalance,
     GetWalletBalanceResponse,
     GetWallets,
     GetWalletsResponse,
     SendTransactionResponse,
     TakeOfferResponse,
+    UserFriendlyMemos,
+    UserFriendlyTransactionRecordWithMetadata,
     WalletInfoResponse,
 )
 from chia.server.outbound_message import NodeType
@@ -51,7 +55,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
-from chia.wallet.util.query_filter import HashFilter, TransactionTypeFilter
+from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
 from chia.wallet.util.wallet_types import WalletType
@@ -110,24 +114,13 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
 
     # set RPC Client
     class GetTransactionsWalletRpcClient(TestWalletRpcClient):
-        async def get_transactions(
-            self,
-            wallet_id: int,
-            start: int,
-            end: int,
-            sort_key: Optional[SortKey] = None,
-            reverse: bool = False,
-            to_address: Optional[str] = None,
-            type_filter: Optional[TransactionTypeFilter] = None,
-            confirmed: Optional[bool] = None,
-        ) -> list[TransactionRecord]:
-            self.add_to_log(
-                "get_transactions", (wallet_id, start, end, sort_key, reverse, to_address, type_filter, confirmed)
-            )
+        async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
+            self.add_to_log("get_transactions", (request,))
             l_tx_rec = []
-            for i in range(start, end):
-                t_type = TransactionType.INCOMING_CLAWBACK_SEND if i == end - 1 else TransactionType.INCOMING_TX
-                tx_rec = TransactionRecord(
+            assert request.start is not None and request.end is not None
+            for i in range(request.start, request.end):
+                t_type = TransactionType.INCOMING_CLAWBACK_SEND if i == request.end - 1 else TransactionType.INCOMING_TX
+                tx_rec = UserFriendlyTransactionRecordWithMetadata(
                     confirmed_at_height=uint32(1 + i),
                     created_at_time=uint64(1234 + i),
                     to_puzzle_hash=bytes32([1 + i] * 32),
@@ -143,12 +136,13 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
                     trade_id=None,
                     type=uint32(t_type.value),
                     name=bytes32([2 + i] * 32),
-                    memos=[(bytes32([3 + i] * 32), [bytes([4 + i] * 32)])],
+                    memos=UserFriendlyMemos([(bytes32([3 + i] * 32), [bytes([4 + i] * 32)])]),
                     valid_times=ConditionValidTimes(),
+                    to_address="",
                 )
                 l_tx_rec.append(tx_rec)
 
-            return l_tx_rec
+            return GetTransactionsResponse(l_tx_rec, request.wallet_id)
 
         async def get_coin_records(self, request: GetCoinRecords) -> dict[str, Any]:
             self.add_to_log("get_coin_records", (request,))
@@ -197,8 +191,8 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
     expected_calls: logType = {
         "get_wallets": [(GetWallets(type=None, include_data=True),)] * 2,
         "get_transactions": [
-            (1, 2, 4, SortKey.RELEVANCE, True, None, None, None),
-            (1, 2, 4, SortKey.RELEVANCE, True, None, None, None),
+            (GetTransactions(uint32(1), uint16(2), uint16(4), SortKey.RELEVANCE.name, True, None, None, None),),
+            (GetTransactions(uint32(1), uint16(2), uint16(4), SortKey.RELEVANCE.name, True, None, None, None),),
         ],
         "get_coin_records": [
             (GetCoinRecords(coin_id_filter=HashFilter.include([expected_coin_id])),),

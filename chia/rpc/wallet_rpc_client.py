@@ -61,6 +61,8 @@ from chia.rpc.wallet_request_types import (
     GetTransactionMemo,
     GetTransactionMemoResponse,
     GetTransactionResponse,
+    GetTransactions,
+    GetTransactionsResponse,
     GetWalletBalance,
     GetWalletBalanceResponse,
     GetWalletBalances,
@@ -110,7 +112,6 @@ from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
@@ -214,38 +215,8 @@ class WalletRpcClient(RpcClient):
     async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
         return GetTransactionResponse.from_json_dict(await self.fetch("get_transaction", request.to_json_dict()))
 
-    async def get_transactions(
-        self,
-        wallet_id: int,
-        start: Optional[int] = None,
-        end: Optional[int] = None,
-        sort_key: Optional[SortKey] = None,
-        reverse: bool = False,
-        to_address: Optional[str] = None,
-        type_filter: Optional[TransactionTypeFilter] = None,
-        confirmed: Optional[bool] = None,
-    ) -> list[TransactionRecord]:
-        request: dict[str, Any] = {"wallet_id": wallet_id}
-
-        if start is not None:
-            request["start"] = start
-        if end is not None:
-            request["end"] = end
-        if sort_key is not None:
-            request["sort_key"] = sort_key.name
-        request["reverse"] = reverse
-
-        if to_address is not None:
-            request["to_address"] = to_address
-
-        if type_filter is not None:
-            request["type_filter"] = type_filter.to_json_dict()
-
-        if confirmed is not None:
-            request["confirmed"] = confirmed
-
-        res = await self.fetch("get_transactions", request)
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in res["transactions"]]
+    async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
+        return GetTransactionsResponse.from_json_dict(await self.fetch("get_transactions", request.to_json_dict()))
 
     async def get_transaction_count(
         self, wallet_id: int, confirmed: Optional[bool] = None, type_filter: Optional[TransactionTypeFilter] = None

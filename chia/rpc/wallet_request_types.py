@@ -24,7 +24,9 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_info import WalletInfo
@@ -52,6 +54,12 @@ class UserFriendlyMemos:
     def __init__(self, unfriendly_memos: list[tuple[bytes32, list[bytes]]]) -> None:
         self.unfriendly_memos = unfriendly_memos
 
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, UserFriendlyMemos) and other.unfriendly_memos == self.unfriendly_memos:
+            return True
+        else:
+            return False
+
     def __bytes__(self) -> bytes:
         raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
 
@@ -74,6 +82,9 @@ class UserFriendlyMemos:
         )
 
 
+_T_UserFriendlyTransactionRecord = TypeVar("_T_UserFriendlyTransactionRecord", bound="UserFriendlyTransactionRecord")
+
+
 @streamable
 @dataclass(frozen=True)
 class UserFriendlyTransactionRecord(TransactionRecord):
@@ -87,9 +98,11 @@ class UserFriendlyTransactionRecord(TransactionRecord):
         return TransactionRecord.from_json_dict_convenience(self.to_json_dict())
 
     @classmethod
-    def from_transaction_record(cls, tx: TransactionRecord, config: dict[str, Any]) -> UserFriendlyTransactionRecord:
+    def from_transaction_record(
+        cls: type[_T_UserFriendlyTransactionRecord], tx: TransactionRecord, config: dict[str, Any]
+    ) -> _T_UserFriendlyTransactionRecord:
         dict_convenience = tx.to_json_dict_convenience(config)
-        return super().from_json_dict(dict_convenience)
+        return cls.from_json_dict(dict_convenience)
 
 
 @streamable
@@ -330,6 +343,44 @@ class GetTransaction(Streamable):
 class GetTransactionResponse(Streamable):
     transaction: UserFriendlyTransactionRecord
     transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactions(Streamable):
+    wallet_id: uint32
+    start: Optional[uint16] = None
+    end: Optional[uint16] = None
+    sort_key: Optional[str] = None
+    reverse: bool = False
+    to_address: Optional[str] = None
+    type_filter: Optional[TransactionTypeFilter] = None
+    confirmed: Optional[bool] = None
+
+    def __post_init__(self) -> None:
+        if self.sort_key is not None and self.sort_key not in SortKey.__members__:
+            raise ValueError(f"There is no known sort {self.sort_key}")
+
+
+# utilities for GetTransactionsResponse
+@streamable
+@dataclass(frozen=True)
+class TransactionRecordMetadata(Streamable):
+    coin_id: bytes32
+    spent: bool
+
+
+@streamable
+@dataclass(frozen=True)
+class UserFriendlyTransactionRecordWithMetadata(UserFriendlyTransactionRecord):
+    metadata: Optional[TransactionRecordMetadata] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionsResponse(Streamable):
+    transactions: list[UserFriendlyTransactionRecordWithMetadata]
+    wallet_id: uint32
 
 
 @streamable

@@ -25,6 +25,7 @@ from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     GetNotifications,
     GetTransaction,
+    GetTransactions,
     GetWalletBalance,
     GetWallets,
     SendTransactionResponse,
@@ -207,9 +208,18 @@ async def get_transactions(
                 [TransactionType.INCOMING_CLAWBACK_RECEIVE, TransactionType.INCOMING_CLAWBACK_SEND]
             )
         )
-        txs: list[TransactionRecord] = await wallet_client.get_transactions(
-            wallet_id, start=offset, end=(offset + limit), sort_key=sort_key, reverse=reverse, type_filter=type_filter
-        )
+        txs = (
+            await wallet_client.get_transactions(
+                GetTransactions(
+                    uint32(wallet_id),
+                    start=uint16(offset),
+                    end=uint16(offset + limit),
+                    sort_key=sort_key.name,
+                    reverse=reverse,
+                    type_filter=type_filter,
+                )
+            )
+        ).transactions
 
         address_prefix = selected_network_address_prefix(config)
         if len(txs) == 0:

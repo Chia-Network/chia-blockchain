@@ -57,6 +57,7 @@ from chia.rpc.wallet_request_types import (
     GetPrivateKey,
     GetTimestampForHeight,
     GetTransaction,
+    GetTransactions,
     GetWalletBalance,
     GetWalletBalances,
     GetWallets,
@@ -957,18 +958,20 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
 
     await generate_funds(full_node_api, env.wallet_1, 5)
 
-    all_transactions = await client.get_transactions(1)
+    all_transactions = (await client.get_transactions(GetTransactions(uint32(1)))).transactions
     assert len(all_transactions) >= 10
     # Test transaction pagination
-    some_transactions = await client.get_transactions(1, 0, 5)
-    some_transactions_2 = await client.get_transactions(1, 5, 10)
+    some_transactions = (await client.get_transactions(GetTransactions(uint32(1), uint16(0), uint16(5)))).transactions
+    some_transactions_2 = (
+        await client.get_transactions(GetTransactions(uint32(1), uint16(5), uint16(10)))
+    ).transactions
     assert some_transactions == all_transactions[0:5]
     assert some_transactions_2 == all_transactions[5:10]
 
     # Testing sorts
     # Test the default sort (CONFIRMED_AT_HEIGHT)
     assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"))
-    all_transactions = await client.get_transactions(1, reverse=True)
+    all_transactions = (await client.get_transactions(GetTransactions(uint32(1), reverse=True))).transactions
     assert all_transactions == sorted(all_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
 
     # Test RELEVANCE
@@ -978,13 +981,17 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
         1, uint64(1), encode_puzzle_hash(puzhash, "txch"), DEFAULT_TX_CONFIG
     )  # Create a pending tx
 
-    all_transactions = await client.get_transactions(1, sort_key=SortKey.RELEVANCE)
+    all_transactions = (
+        await client.get_transactions(GetTransactions(uint32(1), sort_key=SortKey.RELEVANCE.name))
+    ).transactions
     sorted_transactions = sorted(all_transactions, key=attrgetter("created_at_time"), reverse=True)
     sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed_at_height"), reverse=True)
     sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed"))
     assert all_transactions == sorted_transactions
 
-    all_transactions = await client.get_transactions(1, sort_key=SortKey.RELEVANCE, reverse=True)
+    all_transactions = (
+        await client.get_transactions(GetTransactions(uint32(1), sort_key=SortKey.RELEVANCE.name, reverse=True))
+    ).transactions
     sorted_transactions = sorted(all_transactions, key=attrgetter("created_at_time"))
     sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed_at_height"))
     sorted_transactions = sorted(sorted_transactions, key=attrgetter("confirmed"), reverse=True)
@@ -995,31 +1002,43 @@ async def test_get_transactions(wallet_rpc_environment: WalletRpcTestEnvironment
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
     await client.send_transaction(1, uint64(1), encode_puzzle_hash(ph_by_addr, "txch"), DEFAULT_TX_CONFIG)
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
-    tx_for_address = await client.get_transactions(1, to_address=encode_puzzle_hash(ph_by_addr, "txch"))
+    tx_for_address = (
+        await client.get_transactions(GetTransactions(uint32(1), to_address=encode_puzzle_hash(ph_by_addr, "txch")))
+    ).transactions
     assert len(tx_for_address) == 1
     assert tx_for_address[0].to_puzzle_hash == ph_by_addr
 
     # Test type filter
-    all_transactions = await client.get_transactions(
-        1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
-    )
+    all_transactions = (
+        await client.get_transactions(
+            GetTransactions(uint32(1), type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD]))
+        )
+    ).transactions
     assert len(all_transactions) == 5
     assert all(transaction.type == TransactionType.COINBASE_REWARD for transaction in all_transactions)
     # Test confirmed filter
-    all_transactions = await client.get_transactions(1, confirmed=True)
+    all_transactions = (await client.get_transactions(GetTransactions(uint32(1), confirmed=True))).transactions
     assert len(all_transactions) == 10
     assert all(transaction.confirmed for transaction in all_transactions)
-    all_transactions = await client.get_transactions(1, confirmed=False)
+    all_transactions = (await client.get_transactions(GetTransactions(uint32(1), confirmed=False))).transactions
     assert len(all_transactions) == 2
     assert all(not transaction.confirmed for transaction in all_transactions)
 
     # Test bypass broken txs
     await wallet.wallet_state_manager.tx_store.add_transaction_record(
-        dataclasses.replace(all_transactions[0], type=uint32(TransactionType.INCOMING_CLAWBACK_SEND))
+        dataclasses.replace(
+            all_transactions[0].to_transaction_record(), type=uint32(TransactionType.INCOMING_CLAWBACK_SEND)
+        )
     )
-    all_transactions = await client.get_transactions(
-        1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND]), confirmed=False
-    )
+    all_transactions = (
+        await client.get_transactions(
+            GetTransactions(
+                uint32(1),
+                type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND]),
+                confirmed=False,
+            )
+        )
+    ).transactions
     assert len(all_transactions) == 1
 
 
@@ -1032,7 +1051,7 @@ async def test_get_transaction_count(wallet_rpc_environment: WalletRpcTestEnviro
 
     await generate_funds(full_node_api, env.wallet_1)
 
-    all_transactions = await client.get_transactions(1)
+    all_transactions = (await client.get_transactions(GetTransactions(uint32(1)))).transactions
     assert len(all_transactions) > 0
     transaction_count = await client.get_transaction_count(1)
     assert transaction_count == len(all_transactions)

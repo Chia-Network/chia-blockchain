@@ -21,7 +21,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
-from chia.rpc.wallet_request_types import GetWalletBalance, GetWallets
+from chia.rpc.wallet_request_types import GetTransactions, GetWalletBalance, GetWallets
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -483,7 +483,7 @@ class TestPoolWalletRpc:
             with pytest.raises(ValueError):
                 await client.pw_absorb_rewards(2, uint64(fee))
 
-            tx1 = await client.get_transactions(1)
+            tx1 = (await client.get_transactions(GetTransactions(uint32(1)))).transactions
             assert (250_000_000_000 + fee) in [tx.amount for tx in tx1]
 
     @pytest.mark.anyio
