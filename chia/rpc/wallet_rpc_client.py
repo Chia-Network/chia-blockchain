@@ -58,6 +58,8 @@ from chia.rpc.wallet_request_types import (
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
     GetTransaction,
+    GetTransactionCount,
+    GetTransactionCountResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
     GetTransactionResponse,
@@ -113,7 +115,6 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
-from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
@@ -218,17 +219,10 @@ class WalletRpcClient(RpcClient):
     async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
         return GetTransactionsResponse.from_json_dict(await self.fetch("get_transactions", request.to_json_dict()))
 
-    async def get_transaction_count(
-        self, wallet_id: int, confirmed: Optional[bool] = None, type_filter: Optional[TransactionTypeFilter] = None
-    ) -> int:
-        request: dict[str, Any] = {"wallet_id": wallet_id}
-        if type_filter is not None:
-            request["type_filter"] = type_filter.to_json_dict()
-        if confirmed is not None:
-            request["confirmed"] = confirmed
-        res = await self.fetch("get_transaction_count", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(int, res["count"])
+    async def get_transaction_count(self, request: GetTransactionCount) -> GetTransactionCountResponse:
+        return GetTransactionCountResponse.from_json_dict(
+            await self.fetch("get_transaction_count", request.to_json_dict())
+        )
 
     async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
         request = {"wallet_id": wallet_id, "new_address": new_address}

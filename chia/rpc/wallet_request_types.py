@@ -423,6 +423,21 @@ class GetTransactionsResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetTransactionCount(Streamable):
+    wallet_id: uint32
+    type_filter: Optional[TransactionTypeFilter] = None
+    confirmed: Optional[bool] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionCountResponse(Streamable):
+    count: uint16
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[list[bytes32]] = None
     start: Optional[uint32] = None
