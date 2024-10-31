@@ -757,6 +757,8 @@ async def test_recursive_plot_scan_symlinks(environment: Environment, follow_lin
     symlink_path = Path(root_plot_dir / "other")
 
     if use_hardlink:
+        if sys.version_info < (3, 10):
+            pytest.skip("hardlink_to is only available in Python 3.10+")
         try:
             symlink_path.hardlink_to(env.root_path / "other")
         except (NotImplementedError, PermissionError):
