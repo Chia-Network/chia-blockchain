@@ -50,7 +50,7 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
         DISCRIMINANT_SIZE_BITS=uint16(32),
         SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
-    async with create_blockchain(patched_constants, db_version) as (bc1, db_wrapper):
+    async with create_blockchain(patched_constants, db_version) as (bc1, _):
         yield bc1
 
 
@@ -58,7 +58,7 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
 async def empty_blockchain_with_original_constants(
     db_version: int, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[Blockchain]:
-    async with create_blockchain(blockchain_constants, db_version) as (bc1, db_wrapper):
+    async with create_blockchain(blockchain_constants, db_version) as (bc1, _):
         yield bc1
 
 

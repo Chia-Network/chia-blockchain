@@ -247,7 +247,7 @@ async def empty_blockchain(latest_db_version, blockchain_constants):
     """
     from chia._tests.util.blockchain import create_blockchain
 
-    async with create_blockchain(blockchain_constants, latest_db_version) as (bc1, db_wrapper):
+    async with create_blockchain(blockchain_constants, latest_db_version) as (bc1, _):
         yield bc1
 
 

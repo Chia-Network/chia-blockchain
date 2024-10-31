@@ -77,7 +77,7 @@ async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncIterator[
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
 
-    async with create_blockchain(constants, 2) as (bc, db_wrapper):
+    async with create_blockchain(constants, 2) as (bc, _):
         yield bc
 
 
@@ -606,7 +606,7 @@ class TestBlockHeaderValidation:
             ),
             keychain=keychain,
         )
-        async with create_blockchain(bt_high_iters.constants, db_version) as (bc1, db_wrapper):
+        async with create_blockchain(bt_high_iters.constants, db_version) as (bc1, _):
             blocks = bt_high_iters.get_consecutive_blocks(10)
             for block in blocks:
                 if (

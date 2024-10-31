@@ -70,7 +70,7 @@ async def check_spend_bundle_validity(
     or fails with the correct error code.
     """
 
-    async with create_ram_blockchain(bt.constants) as (db_wrapper, blockchain):
+    async with create_ram_blockchain(bt.constants) as (_, blockchain):
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
 
