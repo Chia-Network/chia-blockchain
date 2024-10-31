@@ -61,7 +61,10 @@ class UserFriendlyMemos:
 
     def to_json_dict(self) -> dict[str, Any]:
         return {
-            coin_id.hex(): memo.hex() for coin_id, memos in self.unfriendly_memos for memo in memos if memo is not None
+            "0x" + coin_id.hex(): "0x" + memo.hex()
+            for coin_id, memos in self.unfriendly_memos
+            for memo in memos
+            if memo is not None
         }
 
     @classmethod
