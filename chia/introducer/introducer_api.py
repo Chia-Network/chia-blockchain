@@ -22,7 +22,7 @@ class IntroducerAPI:
 
     log: logging.Logger
     introducer: Introducer
-    api: ClassVar[ApiMetadata] = ApiMetadata()
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, introducer) -> None:
         self.log = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class IntroducerAPI:
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
         pass
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def request_peers_introducer(
         self,
         request: RequestPeersIntroducer,

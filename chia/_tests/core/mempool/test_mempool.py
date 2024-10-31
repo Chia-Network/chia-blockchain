@@ -326,12 +326,12 @@ class TestMempool:
         assert spend_bundle is not None
 
 
-api = ApiMetadata()
+metadata = ApiMetadata()
 
 
 # this (method'ish) function is not designed per normal uses so allowing the ignore
 # for the different return type.  normal is Optional[Message]
-@api.request(peer_required=True, bytes_required=True)  # type: ignore[type-var]
+@metadata.request(peer_required=True, bytes_required=True)  # type: ignore[type-var]
 async def respond_transaction(
     self: FullNodeAPI,
     tx: full_node_protocol.RespondTransaction,

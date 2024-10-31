@@ -37,7 +37,7 @@ class HarvesterAPI:
 
     log: logging.Logger
     harvester: Harvester
-    api: ClassVar[ApiMetadata] = ApiMetadata()
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, harvester: Harvester):
         self.log = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class HarvesterAPI:
     def ready(self) -> bool:
         return True
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
     ) -> None:
@@ -62,7 +62,7 @@ class HarvesterAPI:
         await self.harvester.plot_sync_sender.start()
         self.harvester.plot_manager.start_refreshing()
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_signage_point_harvester(
         self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
     ) -> None:
@@ -302,7 +302,7 @@ class HarvesterAPI:
             },
         )
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_signatures])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_signatures])
     async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
@@ -353,7 +353,7 @@ class HarvesterAPI:
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    @api.request()
+    @metadata.request()
     async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
@@ -375,6 +375,6 @@ class HarvesterAPI:
         response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
         return make_msg(ProtocolMessageTypes.respond_plots, response)
 
-    @api.request()
+    @metadata.request()
     async def plot_sync_response(self, response: PlotSyncResponse) -> None:
         self.harvester.plot_sync_sender.set_response(response)

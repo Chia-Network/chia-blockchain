@@ -88,7 +88,7 @@ class FullNodeAPI:
     log: logging.Logger
     full_node: FullNode
     executor: ThreadPoolExecutor
-    api: ClassVar[ApiMetadata] = ApiMetadata()
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, full_node: FullNode) -> None:
         self.log = logging.getLogger(__name__)
@@ -103,7 +103,7 @@ class FullNodeAPI:
     def ready(self) -> bool:
         return self.full_node.initialized
 
-    @api.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_peers])
+    @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_peers])
     async def request_peers(
         self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -115,7 +115,7 @@ class FullNodeAPI:
             return msg
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def respond_peers(
         self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -124,7 +124,7 @@ class FullNodeAPI:
             await self.full_node.full_node_peers.add_peers(request.peer_list, peer.get_peer_info(), True)
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def respond_peers_introducer(
         self, request: introducer_protocol.RespondPeersIntroducer, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -135,7 +135,7 @@ class FullNodeAPI:
         await peer.close()
         return None
 
-    @api.request(peer_required=True, execute_task=True)
+    @metadata.request(peer_required=True, execute_task=True)
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection) -> None:
         """
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
@@ -152,7 +152,7 @@ class FullNodeAPI:
 
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_transaction(
         self, transaction: full_node_protocol.NewTransaction, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -235,7 +235,7 @@ class FullNodeAPI:
             return None
         return None
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_transaction])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_transaction])
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
         """Peer has requested a full transaction from us."""
         # Ignore if syncing
@@ -250,7 +250,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_transaction, transaction)
         return msg
 
-    @api.request(peer_required=True, bytes_required=True)
+    @metadata.request(peer_required=True, bytes_required=True)
     async def respond_transaction(
         self,
         tx: full_node_protocol.RespondTransaction,
@@ -278,7 +278,7 @@ class FullNodeAPI:
             pass  # we can't do anything here, the tx will be dropped. We might do something in the future.
         return None
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_proof_of_weight])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_proof_of_weight])
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         if self.full_node.weight_proof_handler is None:
             return None
@@ -318,12 +318,12 @@ class FullNodeAPI:
         self.full_node.full_node_store.serialized_wp_message = message
         return message
 
-    @api.request()
+    @metadata.request()
     async def respond_proof_of_weight(self, request: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
         self.log.warning("Received proof of weight too late.")
         return None
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_block, ProtocolMessageTypes.reject_block])
     async def request_block(self, request: full_node_protocol.RequestBlock) -> Optional[Message]:
         if not self.full_node.blockchain.contains_height(request.height):
             reject = RejectBlock(request.height)
@@ -340,7 +340,7 @@ class FullNodeAPI:
             return make_msg(ProtocolMessageTypes.respond_block, full_node_protocol.RespondBlock(block))
         return make_msg(ProtocolMessageTypes.reject_block, RejectBlock(request.height))
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
     async def request_blocks(self, request: full_node_protocol.RequestBlocks) -> Optional[Message]:
         # note that we treat the request range as *inclusive*, but we check the
         # size before we bump end_height. So MAX_BLOCK_COUNT_PER_REQUESTS is off
@@ -402,20 +402,20 @@ class FullNodeAPI:
 
         return msg
 
-    @api.request()
+    @metadata.request()
     async def reject_block(self, request: full_node_protocol.RejectBlock) -> None:
         self.log.debug(f"reject_block {request.height}")
 
-    @api.request()
+    @metadata.request()
     async def reject_blocks(self, request: full_node_protocol.RejectBlocks) -> None:
         self.log.debug(f"reject_blocks {request.start_height} {request.end_height}")
 
-    @api.request()
+    @metadata.request()
     async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
         self.log.warning("Received unsolicited/late blocks")
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def respond_block(
         self,
         respond_block: full_node_protocol.RespondBlock,
@@ -428,7 +428,7 @@ class FullNodeAPI:
         self.log.warning(f"Received unsolicited/late block from peer {peer.get_peer_logging()}")
         return None
 
-    @api.request()
+    @metadata.request()
     async def new_unfinished_block(
         self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock
     ) -> Optional[Message]:
@@ -464,7 +464,7 @@ class FullNodeAPI:
 
         return msg
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
     async def request_unfinished_block(
         self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
     ) -> Optional[Message]:
@@ -479,7 +479,7 @@ class FullNodeAPI:
             return msg
         return None
 
-    @api.request()
+    @metadata.request()
     async def new_unfinished_block2(
         self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock2
     ) -> Optional[Message]:
@@ -532,7 +532,7 @@ class FullNodeAPI:
 
         return msg
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_unfinished_block])
     async def request_unfinished_block2(
         self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock2
     ) -> Optional[Message]:
@@ -549,7 +549,7 @@ class FullNodeAPI:
             return msg
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def respond_unfinished_block(
         self,
         respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
@@ -560,7 +560,7 @@ class FullNodeAPI:
         await self.full_node.add_unfinished_block(respond_unfinished_block.unfinished_block, peer)
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_signage_point_or_end_of_sub_slot(
         self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -644,7 +644,9 @@ class FullNodeAPI:
 
         return make_msg(ProtocolMessageTypes.request_signage_point_or_end_of_sub_slot, full_node_request)
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_signage_point, ProtocolMessageTypes.respond_end_of_sub_slot])
+    @metadata.request(
+        reply_types=[ProtocolMessageTypes.respond_signage_point, ProtocolMessageTypes.respond_end_of_sub_slot]
+    )
     async def request_signage_point_or_end_of_sub_slot(
         self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
     ) -> Optional[Message]:
@@ -686,7 +688,7 @@ class FullNodeAPI:
                 self.log.info(f"Don't have signage point {request}")
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def respond_signage_point(
         self, request: full_node_protocol.RespondSignagePoint, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -741,7 +743,7 @@ class FullNodeAPI:
 
             return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def respond_end_of_sub_slot(
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -750,7 +752,7 @@ class FullNodeAPI:
         msg, _ = await self.full_node.add_end_of_sub_slot(request.end_of_slot_bundle, peer)
         return msg
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def request_mempool_transactions(
         self,
         request: full_node_protocol.RequestMempoolTransactions,
@@ -767,7 +769,7 @@ class FullNodeAPI:
         return None
 
     # FARMER PROTOCOL
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def declare_proof_of_space(
         self, request: farmer_protocol.DeclareProofOfSpace, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -1074,7 +1076,7 @@ class FullNodeAPI:
                 )
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def signed_values(
         self, farmer_request: farmer_protocol.SignedValues, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -1134,7 +1136,7 @@ class FullNodeAPI:
         return None
 
     # TIMELORD PROTOCOL
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_infusion_point_vdf(
         self, request: timelord_protocol.NewInfusionPointVDF, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -1144,7 +1146,7 @@ class FullNodeAPI:
         async with self.full_node.timelord_lock:
             return await self.full_node.new_infusion_point_vdf(request, peer)
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_signage_point_vdf(
         self, request: timelord_protocol.NewSignagePointVDF, peer: WSChiaConnection
     ) -> None:
@@ -1160,7 +1162,7 @@ class FullNodeAPI:
         )
         await self.respond_signage_point(full_node_message, peer)
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_end_of_sub_slot_vdf(
         self, request: timelord_protocol.NewEndOfSubSlotVDF, peer: WSChiaConnection
     ) -> Optional[Message]:
@@ -1184,7 +1186,7 @@ class FullNodeAPI:
         else:
             return msg
 
-    @api.request()
+    @metadata.request()
     async def request_block_header(self, request: wallet_protocol.RequestBlockHeader) -> Optional[Message]:
         header_hash = self.full_node.blockchain.height_to_hash(request.height)
         if header_hash is None:
@@ -1228,7 +1230,7 @@ class FullNodeAPI:
         )
         return msg
 
-    @api.request()
+    @metadata.request()
     async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
         if request.header_hash is None:
             header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(request.height)
@@ -1285,7 +1287,7 @@ class FullNodeAPI:
             response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, proofs_map)
         return make_msg(ProtocolMessageTypes.respond_additions, response)
 
-    @api.request()
+    @metadata.request()
     async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
 
@@ -1351,7 +1353,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_removals, response)
         return msg
 
-    @api.request()
+    @metadata.request()
     async def send_transaction(
         self, request: wallet_protocol.SendTransaction, *, test: bool = False
     ) -> Optional[Message]:
@@ -1382,7 +1384,7 @@ class FullNodeAPI:
                     response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
         return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
-    @api.request()
+    @metadata.request()
     async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
         coin_name = request.coin_name
         height = request.height
@@ -1421,7 +1423,7 @@ class FullNodeAPI:
         response_msg = make_msg(ProtocolMessageTypes.respond_puzzle_solution, response)
         return response_msg
 
-    @api.request()
+    @metadata.request()
     async def request_block_headers(self, request: wallet_protocol.RequestBlockHeaders) -> Optional[Message]:
         """Returns header blocks by directly streaming bytes into Message
 
@@ -1468,7 +1470,7 @@ class FullNodeAPI:
         respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)
         return make_msg(ProtocolMessageTypes.respond_block_headers, respond_header_blocks_manually_streamed)
 
-    @api.request()
+    @metadata.request()
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
         """DEPRECATED: please use RequestBlockHeaders"""
         if (
@@ -1505,7 +1507,7 @@ class FullNodeAPI:
         )
         return msg
 
-    @api.request(bytes_required=True, execute_task=True)
+    @metadata.request(bytes_required=True, execute_task=True)
     async def respond_compact_proof_of_time(
         self, request: timelord_protocol.RespondCompactProofOfTime, request_bytes: bytes = b""
     ) -> None:
@@ -1531,7 +1533,7 @@ class FullNodeAPI:
 
         return None
 
-    @api.request(peer_required=True, bytes_required=True, execute_task=True)
+    @metadata.request(peer_required=True, bytes_required=True, execute_task=True)
     async def new_compact_vdf(
         self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection, request_bytes: bytes = b""
     ) -> None:
@@ -1558,21 +1560,21 @@ class FullNodeAPI:
 
         return None
 
-    @api.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_compact_vdf])
+    @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_compact_vdf])
     async def request_compact_vdf(self, request: full_node_protocol.RequestCompactVDF, peer: WSChiaConnection) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.request_compact_vdf(request, peer)
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def respond_compact_vdf(self, request: full_node_protocol.RespondCompactVDF, peer: WSChiaConnection) -> None:
         if self.full_node.sync_store.get_sync_mode():
             return None
         await self.full_node.add_compact_vdf(request, peer)
         return None
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def register_interest_in_puzzle_hash(
         self, request: wallet_protocol.RegisterForPhUpdates, peer: WSChiaConnection
     ) -> Message:
@@ -1635,7 +1637,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_to_ph_update, response)
         return msg
 
-    @api.request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def register_interest_in_coin(
         self, request: wallet_protocol.RegisterForCoinUpdates, peer: WSChiaConnection
     ) -> Message:
@@ -1655,7 +1657,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_to_coin_update, response)
         return msg
 
-    @api.request()
+    @metadata.request()
     async def request_children(self, request: wallet_protocol.RequestChildren) -> Optional[Message]:
         coin_records: list[CoinRecord] = await self.full_node.coin_store.get_coin_records_by_parent_ids(
             True, [request.coin_name]
@@ -1665,7 +1667,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_children, response)
         return msg
 
-    @api.request()
+    @metadata.request()
     async def request_ses_hashes(self, request: wallet_protocol.RequestSESInfo) -> Message:
         """Returns the start and end height of a sub-epoch for the height specified in request"""
 
@@ -1701,7 +1703,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_ses_hashes, response)
         return msg
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_fee_estimates])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_fee_estimates])
     async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates) -> Message:
         def get_fee_estimates(est: FeeEstimatorInterface, req_times: list[uint64]) -> list[FeeEstimate]:
             now = datetime.now(timezone.utc)
@@ -1719,7 +1721,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, response)
         return msg
 
-    @api.request(
+    @metadata.request(
         peer_required=True,
         reply_types=[ProtocolMessageTypes.respond_remove_puzzle_subscriptions],
     )
@@ -1739,7 +1741,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_remove_puzzle_subscriptions, response)
         return msg
 
-    @api.request(
+    @metadata.request(
         peer_required=True,
         reply_types=[ProtocolMessageTypes.respond_remove_coin_subscriptions],
     )
@@ -1759,7 +1761,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_remove_coin_subscriptions, response)
         return msg
 
-    @api.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_puzzle_state])
+    @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_puzzle_state])
     async def request_puzzle_state(
         self, request: wallet_protocol.RequestPuzzleState, peer: WSChiaConnection
     ) -> Message:
@@ -1838,7 +1840,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_puzzle_state, response)
         return msg
 
-    @api.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_coin_state])
+    @metadata.request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_coin_state])
     async def request_coin_state(self, request: wallet_protocol.RequestCoinState, peer: WSChiaConnection) -> Message:
         max_items = self.max_subscribe_response_items(peer)
         max_subscriptions = self.max_subscriptions(peer)
@@ -1896,7 +1898,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_coin_state, response)
         return msg
 
-    @api.request(reply_types=[ProtocolMessageTypes.respond_cost_info])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_cost_info])
     async def request_cost_info(self, _request: wallet_protocol.RequestCostInfo) -> Optional[Message]:
         mempool_manager = self.full_node.mempool_manager
         response = wallet_protocol.RespondCostInfo(

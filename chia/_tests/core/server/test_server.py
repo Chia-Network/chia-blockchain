@@ -32,13 +32,13 @@ from chia.util.ints import int16, uint32
 @dataclass
 class TestAPI:
     log: logging.Logger = logging.getLogger(__name__)
-    api: ClassVar[ApiMetadata] = ApiMetadata()
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def ready(self) -> bool:
         return True
 
     # API call from FullNodeAPI
-    @api.request()
+    @metadata.request()
     async def request_transaction(self, request: RequestTransaction) -> None:
         raise ApiError(Err.NO_TRANSACTIONS_WHILE_SYNCING, f"Some error message: {request.transaction_id}", b"ab")
 

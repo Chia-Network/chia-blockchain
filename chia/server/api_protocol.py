@@ -16,7 +16,7 @@ from chia.util.streamable import Streamable
 
 class ApiProtocol(Protocol):
     log: Logger
-    api: ClassVar[ApiMetadata]
+    metadata: ClassVar[ApiMetadata]
 
     def ready(self) -> bool: ...
 

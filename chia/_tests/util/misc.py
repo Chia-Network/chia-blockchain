@@ -645,11 +645,11 @@ def patch_request_handler(
     if request_type is None:
         request_type = ProtocolMessageTypes[handler.__name__]
 
-    api_metadata = ApiMetadata(message_type_to_request=dict(api.api.message_type_to_request))
+    api_metadata = ApiMetadata(message_type_to_request=dict(api.metadata.message_type_to_request))
     del api_metadata.message_type_to_request[request_type]
     api_metadata.request(peer_required=peer_required, request_type=request_type)(handler)
 
     with pytest.MonkeyPatch().context() as m:
-        m.setattr(api, "api", api_metadata)
+        m.setattr(api, "metadata", api_metadata)
 
         yield

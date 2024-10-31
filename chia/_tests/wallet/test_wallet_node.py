@@ -13,7 +13,6 @@ from chia_rs import G1Element, PrivateKey
 from chia._tests.util.misc import CoinGenerator, patch_request_handler
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
-from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
@@ -630,7 +629,8 @@ async def test_transaction_send_cache(
         logged_spends.append(request.transaction.name())
         return None
 
-    with patch_request_handler(api=FullNodeAPI, handler=send_transaction):
+    assert full_node_api.full_node._server is not None
+    with patch_request_handler(api=full_node_api.full_node._server.get_connections()[0].api, handler=send_transaction):
         # Generate the transaction
         async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(uint64(0), bytes32.zeros, action_scope)
@@ -700,7 +700,10 @@ async def test_wallet_node_bad_coin_state_ignore(
         # It's an interesting case here where we don't hit this unless something is broken
         return True  # pragma: no cover
 
-    with patch_request_handler(api=FullNodeAPI, handler=register_interest_in_coin):
+    assert full_node_api.full_node._server is not None
+    with patch_request_handler(
+        api=full_node_api.full_node._server.get_connections()[0].api, handler=register_interest_in_coin
+    ):
         monkeypatch.setattr(
             wallet_node,
             "validate_received_state_from_peer",

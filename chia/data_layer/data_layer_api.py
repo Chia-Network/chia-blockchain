@@ -16,7 +16,7 @@ class DataLayerAPI:
 
     log: logging.Logger
     data_layer: DataLayer
-    api: ClassVar[ApiMetadata] = ApiMetadata()
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, data_layer: DataLayer) -> None:
         self.log = logging.getLogger(__name__)
