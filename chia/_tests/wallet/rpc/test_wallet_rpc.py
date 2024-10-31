@@ -53,6 +53,7 @@ from chia.rpc.wallet_request_types import (
     DefaultCAT,
     DeleteKey,
     DIDGetPubkey,
+    GetNextAddress,
     GetNotifications,
     GetPrivateKey,
     GetTimestampForHeight,
@@ -175,7 +176,9 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
     initial_balances = (
         await wallet_bundle.rpc_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))
     ).wallet_balance
-    ph: bytes32 = decode_puzzle_hash(await wallet_bundle.rpc_client.get_next_address(wallet_id, True))
+    ph: bytes32 = decode_puzzle_hash(
+        (await wallet_bundle.rpc_client.get_next_address(GetNextAddress(uint32(wallet_id), True))).address
+    )
     generated_funds = 0
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -1158,8 +1161,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     bal_1 = (await client_2.get_wallet_balance(GetWalletBalance(cat_1_id))).wallet_balance
     assert bal_1.confirmed_wallet_balance == 0
 
-    addr_0 = await client.get_next_address(cat_0_id, False)
-    addr_1 = await client_2.get_next_address(cat_1_id, False)
+    addr_0 = (await client.get_next_address(GetNextAddress(cat_0_id, False))).address
+    addr_1 = (await client_2.get_next_address(GetNextAddress(cat_1_id, False))).address
 
     assert addr_0 != addr_1
 
@@ -1256,7 +1259,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await wallet_2_rpc.create_wallet_for_existing_cat(cat_asset_id)
-    wallet_2_address = await wallet_2_rpc.get_next_address(cat_wallet_id, False)
+    wallet_2_address = (await wallet_2_rpc.get_next_address(GetNextAddress(cat_wallet_id, False))).address
     adds = [{"puzzle_hash": decode_puzzle_hash(wallet_2_address), "amount": uint64(4), "memos": ["the cat memo"]}]
     tx_res = (
         await wallet_1_rpc.send_transaction_multi(
@@ -1790,7 +1793,7 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     wallet_node: WalletNode = env.wallet_1.node
     client: WalletRpcClient = env.wallet_1.rpc_client
 
-    address = await client.get_next_address(1, True)
+    address = (await client.get_next_address(GetNextAddress(uint32(1), True))).address
     assert len(address) > 10
 
     pks = (await client.get_public_keys()).pk_fingerprints
@@ -2440,7 +2443,7 @@ async def test_set_wallet_resync_on_startup(wallet_rpc_environment: WalletRpcTes
 
     nft_wallet = await wc.create_new_nft_wallet(None)
     nft_wallet_id = nft_wallet["wallet_id"]
-    address = await wc.get_next_address(env.wallet_1.wallet.id(), True)
+    address = (await wc.get_next_address(GetNextAddress(env.wallet_1.wallet.id(), True))).address
     await wc.mint_nft(
         nft_wallet_id,
         tx_config=DEFAULT_TX_CONFIG,

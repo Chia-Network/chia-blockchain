@@ -30,6 +30,8 @@ from chia.rpc.wallet_request_types import (
     CATSpendResponse,
     CreateOfferForIDsResponse,
     GetHeightInfoResponse,
+    GetNextAddress,
+    GetNextAddressResponse,
     GetTransaction,
     GetTransactions,
     GetTransactionsResponse,
@@ -489,11 +491,11 @@ def test_get_address(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
 
     # set RPC Client
     class GetAddressWalletRpcClient(TestWalletRpcClient):
-        async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-            self.add_to_log("get_next_address", (wallet_id, new_address))
-            if new_address:
-                return encode_puzzle_hash(get_bytes32(3), "xch")
-            return encode_puzzle_hash(get_bytes32(4), "xch")
+        async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
+            self.add_to_log("get_next_address", (request,))
+            if request.new_address:
+                return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(3), "xch"))
+            return GetNextAddressResponse(request.wallet_id, encode_puzzle_hash(get_bytes32(4), "xch"))
 
     inst_rpc_client = GetAddressWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -510,7 +512,7 @@ def test_get_address(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
     run_cli_command_and_assert(capsys, root_dir, [*command_args, "-l"], [addr2])
     # these are various things that should be in the output
     expected_calls: logType = {
-        "get_next_address": [(1, True), (1, False)],
+        "get_next_address": [(GetNextAddress(uint32(1), True),), (GetNextAddress(uint32(1), False),)],
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 

@@ -23,6 +23,7 @@ from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_request_types import (
     CATSpendResponse,
+    GetNextAddress,
     GetNotifications,
     GetTransaction,
     GetTransactions,
@@ -387,7 +388,7 @@ async def send(
 
 async def get_address(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, new_address: bool) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        res = await wallet_client.get_next_address(wallet_id, new_address)
+        res = (await wallet_client.get_next_address(GetNextAddress(uint32(wallet_id), new_address))).address
         print(res)
 
 

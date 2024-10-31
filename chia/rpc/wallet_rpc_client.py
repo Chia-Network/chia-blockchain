@@ -48,6 +48,8 @@ from chia.rpc.wallet_request_types import (
     GetCATListResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
+    GetNextAddress,
+    GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
@@ -224,11 +226,8 @@ class WalletRpcClient(RpcClient):
             await self.fetch("get_transaction_count", request.to_json_dict())
         )
 
-    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-        request = {"wallet_id": wallet_id, "new_address": new_address}
-        response = await self.fetch("get_next_address", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(str, response["address"])
+    async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
+        return GetNextAddressResponse.from_json_dict(await self.fetch("get_next_address", request.to_json_dict()))
 
     async def send_transaction(
         self,

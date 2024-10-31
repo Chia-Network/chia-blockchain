@@ -438,6 +438,20 @@ class GetTransactionCountResponse(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class GetNextAddress(Streamable):
+    wallet_id: uint32
+    new_address: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNextAddressResponse(Streamable):
+    wallet_id: uint32
+    address: str
+
+
+@streamable
+@dataclass(frozen=True)
 class GetNotifications(Streamable):
     ids: Optional[list[bytes32]] = None
     start: Optional[uint32] = None

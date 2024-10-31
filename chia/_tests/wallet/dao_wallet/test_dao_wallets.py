@@ -10,7 +10,7 @@ from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets, SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.rpc.wallet_request_types import GetWalletBalance
+from chia.rpc.wallet_request_types import GetNextAddress, GetWalletBalance
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -1825,7 +1825,9 @@ async def test_dao_rpc_client(
         await full_node_api.wait_for_wallets_synced(wallet_nodes=[wallet_node_0, wallet_node_1], timeout=30)
 
         # create a mint proposal
-        mint_addr = await client_1.get_next_address(wallet_id=wallet_1.id(), new_address=False)
+        mint_addr = (
+            await client_1.get_next_address(GetNextAddress(wallet_id=wallet_1.id(), new_address=False))
+        ).address
         await client_1.dao_create_proposal(
             wallet_id=dao_id_1,
             proposal_type="mint",
