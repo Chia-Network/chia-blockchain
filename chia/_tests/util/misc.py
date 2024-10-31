@@ -37,7 +37,7 @@ from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.util.time_out_assert import DataTypeProtocol, caller_file_and_line
 from chia.full_node.mempool import Mempool
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.server.api_protocol import ApiMetadata, ApiProtocol, api_attribute_name
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
 from chia.server.outbound_message import Message
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -637,15 +637,19 @@ class ComparableEnum(Enum):
 
 @contextlib.contextmanager
 def patch_request_handler(
-    api: type[ApiProtocol], handler: Callable[..., Awaitable[Optional[Message]]]
+    api: Union[ApiProtocol, type[ApiProtocol]],
+    handler: Callable[..., Awaitable[Optional[Message]]],
+    request_type: Optional[ProtocolMessageTypes] = None,
+    peer_required: bool = False,
 ) -> Iterator[None]:
-    message_type = ProtocolMessageTypes[handler.__name__]
+    if request_type is None:
+        request_type = ProtocolMessageTypes[handler.__name__]
 
-    api_metadata = ApiMetadata()
-    wrapped = api_metadata.request()(handler)
+    api_metadata = ApiMetadata(message_type_to_request=dict(api.api.message_type_to_request))
+    del api_metadata.message_type_to_request[request_type]
+    api_metadata.request(peer_required=peer_required, request_type=request_type)(handler)
 
     with pytest.MonkeyPatch().context() as m:
-        m.setattr(wrapped, api_attribute_name, api.api)
-        m.setitem(api.api.message_type_to_request, message_type, api_metadata.message_type_to_request[message_type])
+        m.setattr(api, "api", api_metadata)
 
         yield

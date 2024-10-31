@@ -12,6 +12,7 @@ import pytest
 from chia_rs import G1Element
 from pytest_mock import MockerFixture
 
+from chia._tests.util.misc import patch_request_handler
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult
@@ -242,18 +243,29 @@ async def test_harvester_receive_source_signing_data(
 
         return await FarmerAPI.request_signed_values(farmer.server.api, request)
 
-    mocker.patch.object(farmer.server.api, "request_signed_values", side_effect=intercept_farmer_request_signed_values)
-    mocker.patch.object(farmer.server.api, "new_proof_of_space", side_effect=intercept_farmer_new_proof_of_space)
-    mocker.patch.object(harvester.server.api, "request_signatures", side_effect=intercept_harvester_request_signatures)
+    with patch_request_handler(
+        api=FarmerAPI,
+        handler=intercept_farmer_request_signed_values,
+        request_type=ProtocolMessageTypes.request_signed_values,
+    ):
+        with patch_request_handler(
+            api=FarmerAPI,
+            handler=intercept_farmer_new_proof_of_space,
+            request_type=ProtocolMessageTypes.new_proof_of_space,
+        ):
+            with patch_request_handler(
+                api=HarvesterAPI,
+                handler=intercept_harvester_request_signatures,
+                request_type=ProtocolMessageTypes.request_signatures,
+            ):
+                # Start injecting signage points
+                await inject_signage_points(signage_points, full_node_1, full_node_2)
 
-    # Start injecting signage points
-    await inject_signage_points(signage_points, full_node_1, full_node_2)
+                # Wait until test finishes
+                def did_finished_validating_data() -> bool:
+                    return finished_validating_data
 
-    # Wait until test finishes
-    def did_finished_validating_data() -> bool:
-        return finished_validating_data
-
-    await time_out_assert(60 * 60, did_finished_validating_data, True)
+                await time_out_assert(60 * 60, did_finished_validating_data, True)
 
 
 @pytest.mark.anyio

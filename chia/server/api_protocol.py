@@ -59,6 +59,7 @@ class ApiMetadata:
         bytes_required: bool = False,
         execute_task: bool = False,
         reply_types: Optional[list[ProtocolMessageTypes]] = None,
+        request_type: Optional[ProtocolMessageTypes] = None,
     ) -> Callable[[Callable[Concatenate[Self, S, P], R]], Callable[Concatenate[Self, Union[bytes, S], P], R]]:
         non_optional_reply_types: list[ProtocolMessageTypes]
         if reply_types is None:
@@ -87,7 +88,9 @@ class ApiMetadata:
             )
             message_name_bytes = f"{message_name}_bytes"
 
-            request_type = ProtocolMessageTypes[f.__name__]
+            nonlocal request_type
+            if request_type is None:
+                request_type = ProtocolMessageTypes[f.__name__]
 
             request = ApiRequest(
                 request_type=request_type,
