@@ -630,7 +630,6 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
 
 @pytest.fixture(scope="function")
 async def wallet_nodes(blockchain_constants, consensus_mode):
-    constants = blockchain_constants
     async with setup_simulators_and_wallets(
         2,
         1,
