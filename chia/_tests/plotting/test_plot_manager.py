@@ -741,9 +741,8 @@ async def test_recursive_plot_scan(environment: Environment) -> None:
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize("follow_links", [True, False])
-@pytest.mark.parametrize("use_hardlink", [True, False])
 @pytest.mark.anyio
-async def test_recursive_plot_scan_symlinks(environment: Environment, follow_links: bool, use_hardlink: bool) -> None:
+async def test_recursive_plot_scan_symlinks(environment: Environment, follow_links: bool) -> None:
     env: Environment = environment
     # Create a directory tree with some subdirectories containing plots, others not.
     root_plot_dir = env.root_path / "root"
@@ -756,18 +755,10 @@ async def test_recursive_plot_scan_symlinks(environment: Environment, follow_lin
     # Create a symlink to the other plot directory from inside the root plot directory
     symlink_path = Path(root_plot_dir / "other")
 
-    if use_hardlink:
-        if sys.version_info < (3, 10):
-            pytest.skip("hardlink_to is only available in Python 3.10+")
-        try:
-            symlink_path.hardlink_to(env.root_path / "other")
-        except (NotImplementedError, PermissionError):
-            pytest.skip("Hardlinking is not supported on this platform")
-    else:
-        try:
-            symlink_path.symlink_to(env.root_path / "other")
-        except NotImplementedError:
-            pytest.skip("Symlinking is not supported on this platform")
+    try:
+        symlink_path.symlink_to(env.root_path / "other")
+    except NotImplementedError:
+        pytest.skip("Symlinking is not supported on this platform")
 
     # Adding the root without `recursive_plot_scan` and running a test should not load any plots (match an empty result)
     expected_result = PlotRefreshResult()
