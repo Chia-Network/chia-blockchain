@@ -61,7 +61,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         network_id: str,
         *,
         config: dict[str, Any],
-        class_for_type: dict[NodeType, ApiProtocol],
+        class_for_type: dict[NodeType, type[ApiProtocol]],
         upnp_ports: Optional[list[int]] = None,
         connect_peers: Optional[set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
