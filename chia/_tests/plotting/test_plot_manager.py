@@ -737,3 +737,52 @@ async def test_recursive_plot_scan(environment: Environment) -> None:
     add_plot_directory(env.root_path, str(sub_dir_1_0_1.path))
     expected_result.loaded = []
     await env.refresh_tester.run(expected_result)
+
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
+@pytest.mark.parametrize("follow_links", [True, False])
+@pytest.mark.parametrize("use_hardlink", [True, False])
+@pytest.mark.anyio
+async def test_recursive_plot_scan_symlinks(environment: Environment, follow_links: bool, use_hardlink: bool) -> None:
+    env: Environment = environment
+    # Create a directory tree with some subdirectories containing plots, others not.
+    root_plot_dir = env.root_path / "root"
+    sub_dir_0: Directory = Directory(root_plot_dir / "0", env.dir_1.plots[0:2])
+    sub_dir_0_1: Directory = Directory(sub_dir_0.path / "1", env.dir_1.plots[2:3])
+
+    # Create a plot directory outside of the root plot directory
+    other_plot_dir: Directory = Directory(env.root_path / "other", env.dir_1.plots[3:7])
+
+    # Create a symlink to the other plot directory from inside the root plot directory
+    symlink_path = Path(root_plot_dir / "other")
+
+    if use_hardlink:
+        try:
+            symlink_path.hardlink_to(env.root_path / "other")
+        except (NotImplementedError, PermissionError):
+            pytest.skip("Hardlinking is not supported on this platform")
+    else:
+        try:
+            symlink_path.symlink_to(env.root_path / "other")
+        except NotImplementedError:
+            pytest.skip("Symlinking is not supported on this platform")
+
+    # Adding the root without `recursive_plot_scan` and running a test should not load any plots (match an empty result)
+    expected_result = PlotRefreshResult()
+    add_plot_directory(env.root_path, str(root_plot_dir))
+    await env.refresh_tester.run(expected_result)
+
+    if follow_links:
+        expected_plot_list = sub_dir_0.plot_info_list() + sub_dir_0_1.plot_info_list() + other_plot_dir.plot_info_list()
+    else:
+        expected_plot_list = sub_dir_0.plot_info_list() + sub_dir_0_1.plot_info_list()
+
+    # Set the recursive scan flag in the config and symlink flag
+    with lock_and_load_config(env.root_path, "config.yaml") as config:
+        config["harvester"]["recursive_plot_scan"] = True
+        config["harvester"]["recursive_follow_links"] = follow_links
+        save_config(env.root_path, "config.yaml", config)
+
+    # With the flag enabled it should load all expected plots
+    expected_result.loaded = expected_plot_list  # type: ignore[assignment]
+    expected_result.processed = len(expected_plot_list)
+    await env.refresh_tester.run(expected_result)
