@@ -1,4 +1,3 @@
-# flake8: noqa: E501
 from __future__ import annotations
 
 from chia_rs import AugSchemeMPL, PrivateKey
@@ -20,7 +19,9 @@ def test_pool_config(tmp_path):
 
     auth_sk: PrivateKey = AugSchemeMPL.key_gen(b"1" * 32)
     d = {
-        "owner_public_key": "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5",
+        "owner_public_key": (
+            "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5"
+        ),
         "p2_singleton_puzzle_hash": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
         "payout_instructions": "c2b08e41d766da4116e388357ed957d04ad754623a915f3fd65188a8746cf3e8",
         "pool_url": "localhost",

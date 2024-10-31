@@ -1,4 +1,3 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
 import pytest
@@ -7,7 +6,6 @@ from clvm.casts import int_to_bytes
 
 from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert
