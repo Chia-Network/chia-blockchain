@@ -14,7 +14,6 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
-from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
@@ -364,11 +363,48 @@ class GetTransactions(Streamable):
 
 
 # utility for GetTransactionsResponse
-@streamable
-@dataclass(frozen=True)
-class TransactionRecordMetadata(ClawbackMetadata):
+class TransactionRecordMetadata:
+    content: dict[str, Any]
     coin_id: bytes32
     spent: bool
+
+    def __init__(self, content: dict[str, Any], coin_id: bytes32, spent: bool) -> None:
+        self.content = content
+        self.coin_id = coin_id
+        self.spent = spent
+
+    def __eq__(self, other: Any) -> bool:
+        if (
+            isinstance(other, TransactionRecordMetadata)
+            and other.content == self.content
+            and other.coin_id == self.coin_id
+            and other.spent == self.spent
+        ):
+            return True
+        else:
+            return False
+
+    def __bytes__(self) -> bytes:
+        raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
+
+    @classmethod
+    def parse(cls, f: BinaryIO) -> TransactionRecordMetadata:
+        raise NotImplementedError("Should not be deserializing this object from a stream, it's only for RPC")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            **self.content,
+            "coin_id": "0x" + self.coin_id.hex(),
+            "spent": self.spent,
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> TransactionRecordMetadata:
+        return TransactionRecordMetadata(
+            coin_id=bytes32.from_hexstr(json_dict["coin_id"]),
+            spent=json_dict["spent"],
+            content={k: v for k, v in json_dict.items() if k not in ("coin_id", "spent")},
+        )
 
 
 # utility for GetTransactionsResponse
