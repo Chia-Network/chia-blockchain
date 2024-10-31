@@ -754,11 +754,3 @@ class WSChiaConnection:
 
     def has_capability(self, capability: Capability) -> bool:
         return capability in self.peer_capabilities
-
-    def __hash__(self) -> int:
-        return hash(id(self))
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(object, WSChiaConnection):
-            return False
-        return id(self) == id(other)

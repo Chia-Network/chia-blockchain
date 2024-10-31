@@ -1168,18 +1168,20 @@ class FullNode:
                             start = time.monotonic()
 
                         # update the timestamp, now that we're sending a request
+                        # it's OK for the timestamp to fall behind wall-clock
+                        # time. It just means we're allowed to send more
+                        # requests to catch up
                         if is_localhost(peer.peer_info.host):
                             # we don't apply rate limits to localhost, and our
                             # tests depend on it
-                            new_peers_with_peak[idx] = (
-                                new_peers_with_peak[idx][0],
-                                new_peers_with_peak[idx][1] + 0.1,
-                            )
+                            bump = 0.1
                         else:
-                            new_peers_with_peak[idx] = (
-                                new_peers_with_peak[idx][0],
-                                new_peers_with_peak[idx][1] + seconds_per_request,
-                            )
+                            bump = seconds_per_request
+
+                        new_peers_with_peak[idx] = (
+                            new_peers_with_peak[idx][0],
+                            new_peers_with_peak[idx][1] + bump,
+                        )
                         response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)
                         end = time.monotonic()
                         if end - start > 5:
@@ -1191,7 +1193,12 @@ class FullNode:
                             if end - start > 5:
                                 self.log.info(f"peer took {end - start:.1f} s to respond to request_blocks")
                                 # this isn't a great peer, reduce its priority
-                                # to prefer any peers that had to wait for it
+                                # to prefer any peers that had to wait for it.
+                                # By setting the next allowed timestamp to now,
+                                # means that any other peer that has waited for
+                                # this will have its next allowed timestamp in
+                                # the passed, and be prefered multiple times
+                                # over this peer.
                                 new_peers_with_peak[idx] = (
                                     new_peers_with_peak[idx][0],
                                     end,
@@ -1210,9 +1217,9 @@ class FullNode:
                         self.log.error(f"failed fetching {start_height} to {end_height} from peers")
                         return
                     if self.sync_store.peers_changed.is_set():
-                        existing_peers = {c: timestamp for c, timestamp in new_peers_with_peak}
+                        existing_peers = {id(c): timestamp for c, timestamp in new_peers_with_peak}
                         peers = self.get_peers_with_peak(peak_hash)
-                        new_peers_with_peak = [(c, existing_peers.get(c, end)) for c in peers]
+                        new_peers_with_peak = [(c, existing_peers.get(id(c), end)) for c in peers]
                         random.shuffle(new_peers_with_peak)
                         self.sync_store.peers_changed.clear()
                         self.log.info(f"peers with peak: {len(new_peers_with_peak)}")
