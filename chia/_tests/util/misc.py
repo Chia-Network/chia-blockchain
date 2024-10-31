@@ -36,6 +36,9 @@ from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.util.time_out_assert import DataTypeProtocol, caller_file_and_line
 from chia.full_node.mempool import Mempool
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.api_protocol import ApiMetadata, ApiProtocol, api_attribute_name
+from chia.server.outbound_message import Message
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
@@ -630,3 +633,19 @@ class ComparableEnum(Enum):
             return NotImplemented
 
         return self.value.__ge__(other.value)
+
+
+@contextlib.contextmanager
+def patch_request_handler(
+    api: type[ApiProtocol], handler: Callable[..., Awaitable[Optional[Message]]]
+) -> Iterator[None]:
+    message_type = ProtocolMessageTypes[handler.__name__]
+
+    api_metadata = ApiMetadata()
+    wrapped = api_metadata.request()(handler)
+
+    with pytest.MonkeyPatch().context() as m:
+        m.setattr(wrapped, api_attribute_name, api.api)
+        m.setitem(api.api.message_type_to_request, message_type, api_metadata.message_type_to_request[message_type])
+
+        yield
