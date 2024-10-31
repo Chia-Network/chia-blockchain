@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from chia_rs import AugSchemeMPL, PrivateKey
-
 from chia.pools.pool_config import PoolWalletConfig
 from chia.util.config import create_default_chia_config, load_config, lock_config, save_config
 
@@ -17,7 +15,6 @@ def test_pool_config(tmp_path):
     eg_config.rename(to_config)
     config = load_config(test_root, "test_pool_config.yaml")
 
-    auth_sk: PrivateKey = AugSchemeMPL.key_gen(b"1" * 32)
     d = {
         "owner_public_key": (
             "84c3fcf9d5581c1ddc702cb0f3b4a06043303b334dd993ab42b2c320ebfa98e5ce558448615b3f69638ba92cf7f43da5"
