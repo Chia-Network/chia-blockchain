@@ -14,6 +14,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.notification_store import Notification
+from chia.wallet.puzzles.clawback.metadata import ClawbackMetadata
 from chia.wallet.signer_protocol import (
     SignedTransaction,
     SigningInstructions,
@@ -362,14 +363,15 @@ class GetTransactions(Streamable):
             raise ValueError(f"There is no known sort {self.sort_key}")
 
 
-# utilities for GetTransactionsResponse
+# utility for GetTransactionsResponse
 @streamable
 @dataclass(frozen=True)
-class TransactionRecordMetadata(Streamable):
+class TransactionRecordMetadata(ClawbackMetadata):
     coin_id: bytes32
     spent: bool
 
 
+# utility for GetTransactionsResponse
 @streamable
 @dataclass(frozen=True)
 class UserFriendlyTransactionRecordWithMetadata(UserFriendlyTransactionRecord):

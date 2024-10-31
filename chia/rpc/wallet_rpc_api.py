@@ -1324,12 +1324,7 @@ class WalletRpcApi:
             tx["metadata"]["coin_id"] = coin.name().hex()
             tx["metadata"]["spent"] = record.spent
         return GetTransactionsResponse(
-            transactions=[
-                UserFriendlyTransactionRecordWithMetadata.from_transaction_record(
-                    TransactionRecord.from_json_dict_convenience(tx), self.service.config
-                )
-                for tx in tx_list
-            ],
+            transactions=[UserFriendlyTransactionRecordWithMetadata.from_json_dict(tx) for tx in tx_list],
             wallet_id=request.wallet_id,
         )
 
