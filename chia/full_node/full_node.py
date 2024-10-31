@@ -609,7 +609,7 @@ class FullNode:
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
-                    success, state_change_summary, err = await self.add_block_batch(
+                    success, state_change_summary, _err = await self.add_block_batch(
                         AugmentedBlockchain(self.blockchain), response.blocks, peer_info, fork_info, vs
                     )
                     if not success:

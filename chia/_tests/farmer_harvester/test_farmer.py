@@ -561,7 +561,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
     case: NewProofOfSpaceCase,
 ) -> None:
-    farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
+    farmer_service, _farmer_rpc_client, _, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     sp = farmer_protocol.NewSignagePoint(

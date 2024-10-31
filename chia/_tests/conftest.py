@@ -635,7 +635,7 @@ async def wallet_nodes(blockchain_constants, consensus_mode):
         1,
         blockchain_constants.replace(MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
     ) as new:
-        (nodes, wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
+        (nodes, _wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
         server_1 = full_node_1.full_node.server
@@ -755,7 +755,7 @@ async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}
     ) as new:
-        (nodes, wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
+        (nodes, _wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
         server_1 = full_node_1.full_node.server
         wallet_a = bt.get_pool_wallet_tool()

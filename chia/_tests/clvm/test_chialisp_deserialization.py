@@ -86,16 +86,16 @@ def test_deserialization_large_numbers():
 def test_overflow_atoms():
     b = hexstr_to_bytes(serialized_atom_overflow(0xFFFFFFFF))
     with pytest.raises(Exception):
-        cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
+        _cost, _output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
 
     b = hexstr_to_bytes(serialized_atom_overflow(0x3FFFFFFFF))
     with pytest.raises(Exception):
-        cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
+        _cost, _output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
 
     b = hexstr_to_bytes(serialized_atom_overflow(0xFFFFFFFFFF))
     with pytest.raises(Exception):
-        cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
+        _cost, _output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
 
     b = hexstr_to_bytes(serialized_atom_overflow(0x1FFFFFFFFFF))
     with pytest.raises(Exception):
-        cost, output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])
+        _cost, _output = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [b])

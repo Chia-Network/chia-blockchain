@@ -170,7 +170,7 @@ async def test_farmer_respond_signatures(
 
 @pytest.mark.anyio
 async def test_harvester_config(farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools]) -> None:
-    harvester_services, farmer_service, bt = farmer_one_harvester
+    harvester_services, _farmer_service, bt = farmer_one_harvester
     harvester_service = harvester_services[0]
 
     assert harvester_service.rpc_server and harvester_service.rpc_server.webserver
@@ -214,7 +214,7 @@ async def test_harvester_config(farmer_one_harvester: tuple[list[HarvesterServic
 async def test_missing_signage_point(
     farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools]
 ) -> None:
-    _, farmer_service, bt = farmer_one_harvester
+    _, farmer_service, _bt = farmer_one_harvester
     farmer_api = farmer_service._api
     farmer = farmer_api.farmer
 
@@ -286,7 +286,7 @@ async def test_missing_signage_point(
 async def test_harvester_has_no_server(
     farmer_one_harvester: tuple[list[FarmerService], HarvesterService, BlockTools],
 ) -> None:
-    harvesters, _, bt = farmer_one_harvester
+    harvesters, _, _bt = farmer_one_harvester
     harvester_server = harvesters[0]._server
 
     assert harvester_server.webserver is None

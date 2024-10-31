@@ -40,7 +40,7 @@ async def test_wallet_tx_retry(
     self_hostname: str,
 ) -> None:
     wait_secs = 20
-    nodes, wallets, bt = setup_two_nodes_and_wallet_fast_retry
+    nodes, wallets, _bt = setup_two_nodes_and_wallet_fast_retry
     server_1 = nodes[0].full_node.server
     full_node_1: FullNodeSimulator = nodes[0]
     wallet_node_1: WalletNode = wallets[0][0]

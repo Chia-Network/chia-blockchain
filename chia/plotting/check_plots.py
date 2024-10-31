@@ -148,7 +148,7 @@ def check_plots(
 
             # Look up local_sk from plot to save locked memory
             (
-                pool_public_key_or_puzzle_hash,
+                _pool_public_key_or_puzzle_hash,
                 farmer_public_key,
                 local_master_sk,
             ) = parse_plot_info(pr.get_memo())

@@ -2104,7 +2104,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
         if result[0]:
-            success, trade_record, error = result
+            _success, trade_record, _error = result
             return {
                 "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
                 "trade_record": trade_record.to_json_dict_convenience(),
@@ -2121,7 +2121,7 @@ class WalletRpcApi:
         from chia.util.bech32m import bech32_decode, convertbits
         from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
-        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
             raise ValueError("Invalid Offer")
         decoded = convertbits(list(data), 5, 8, False)
@@ -2200,7 +2200,7 @@ class WalletRpcApi:
         from chia.util.bech32m import bech32_decode, convertbits
         from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
-        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
             raise ValueError("Invalid Offer")  # pragma: no cover
         decoded = convertbits(list(data), 5, 8, False)
@@ -2235,7 +2235,7 @@ class WalletRpcApi:
         from chia.util.bech32m import bech32_decode, convertbits
         from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
-        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
             raise ValueError("Invalid Offer")  # pragma: no cover
         decoded = convertbits(list(data), 5, 8, False)

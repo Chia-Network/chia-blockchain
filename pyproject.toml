@@ -217,7 +217,7 @@ ignore = [
     "PLW0120", # useless-else-on-loop
 
     # Flake8 core
-    "F841",  # unused-variable (540)
+    # "F841",  # unused-variable (540)
 ]
 
 

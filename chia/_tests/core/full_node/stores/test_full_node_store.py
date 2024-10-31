@@ -151,7 +151,7 @@ async def test_find_best_block(
         else:
             result[bytes32(b.to_bytes(1, "big") * 32)] = UnfinishedBlockEntry(unf, None, uint32(123))
 
-    foliage_hash, block = find_best_block(result)
+    foliage_hash, _block = find_best_block(result)
     if expected is None:
         assert foliage_hash is None
     else:

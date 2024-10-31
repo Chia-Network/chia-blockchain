@@ -2775,7 +2775,7 @@ class TestBodyValidation:
             block_generator, max_cost, mempool_mode=False, height=softfork_height, constants=bt.constants
         )
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
-        result, err, _ = await b.add_block(
+        _result, err, _ = await b.add_block(
             block_2,
             PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)),
             None,
