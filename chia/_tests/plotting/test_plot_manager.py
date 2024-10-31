@@ -738,6 +738,7 @@ async def test_recursive_plot_scan(environment: Environment) -> None:
     expected_result.loaded = []
     await env.refresh_tester.run(expected_result)
 
+
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize("follow_links", [True, False])
 @pytest.mark.parametrize("use_hardlink", [True, False])
