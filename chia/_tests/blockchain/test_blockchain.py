@@ -1850,8 +1850,8 @@ class TestPreValidation:
                 )
         end = time.time()
         log.info(f"Total time: {end - start} seconds")
-        log.info(f"Average pv: {sum(times_pv)/(len(blocks)/n_at_a_time)}")
-        log.info(f"Average rb: {sum(times_rb)/(len(blocks))}")
+        log.info(f"Average pv: {sum(times_pv) / (len(blocks) / n_at_a_time)}")
+        log.info(f"Average rb: {sum(times_rb) / (len(blocks))}")
 
 
 class TestBodyValidation:

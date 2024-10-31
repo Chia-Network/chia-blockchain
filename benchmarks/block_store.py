@@ -490,7 +490,7 @@ async def run_add_block_benchmark(version: int) -> None:
         print(f"all tests completed in {all_test_time:0.4f}s")
 
         db_size = os.path.getsize(Path("block-store-benchmark.db"))
-        print(f"database size: {db_size/1000000:.3f} MB")
+        print(f"database size: {db_size / 1000000:.3f} MB")
 
 
 if __name__ == "__main__":

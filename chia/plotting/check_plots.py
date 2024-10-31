@@ -229,14 +229,14 @@ def check_plots(
 
             if total_proofs > 0 and caught_exception is False:
                 log.info(
-                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)}. "
+                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)}. "
                     f"Filepath: {plot_path}"
                 )
                 total_good_plots[pr.get_size()] += 1
                 total_size += plot_path.stat().st_size
             else:
                 log.error(
-                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs/float(challenges), 4)} "
+                    f"\tProofs {total_proofs} / {challenges}, {round(total_proofs / float(challenges), 4)} "
                     f"Filepath: {plot_path}"
                 )
                 bad_plots_list.append(plot_path)
