@@ -1340,7 +1340,7 @@ async def test_retry_store(
     with contextlib.ExitStack() as exit_stack:
         exit_stack.enter_context(
             patch_request_handler(
-                api=FullNodeAPI,
+                api=full_node_api,
                 handler=flaky_request_puzzle_solution(FullNodeAPI.request_puzzle_solution),
                 request_type=ProtocolMessageTypes.request_puzzle_solution,
             )
