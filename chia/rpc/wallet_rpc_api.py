@@ -66,6 +66,8 @@ from chia.rpc.wallet_request_types import (
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
+    SendTransaction,
+    SendTransactionResponse,
     SetWalletResyncOnStartup,
     SplitCoins,
     SplitCoinsResponse,
@@ -1367,51 +1369,48 @@ class WalletRpcApi:
         )
 
     @tx_endpoint(push=True)
+    @marshal
     async def send_transaction(
         self,
-        request: dict[str, Any],
+        request: SendTransaction,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> SendTransactionResponse:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
-        wallet_id = uint32(request["wallet_id"])
-        wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=Wallet)
+        wallet = self.service.wallet_state_manager.get_wallet(id=request.wallet_id, required_type=Wallet)
 
-        if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        amount: uint64 = uint64(request["amount"])
-        address = request["address"]
         selected_network = self.service.config["selected_network"]
         expected_prefix = self.service.config["network_overrides"]["config"][selected_network]["address_prefix"]
-        if address[0 : len(expected_prefix)] != expected_prefix:
+        if request.address[0 : len(expected_prefix)] != expected_prefix:
             raise ValueError("Unexpected Address Prefix")
-        puzzle_hash: bytes32 = decode_puzzle_hash(address)
+        puzzle_hash: bytes32 = decode_puzzle_hash(request.address)
 
         memos: list[bytes] = []
-        if "memos" in request:
-            memos = [mem.encode("utf-8") for mem in request["memos"]]
-
-        fee: uint64 = uint64(request.get("fee", 0))
+        if request.memos is not None:
+            memos = [mem.encode("utf-8") for mem in request.memos]
 
         async with self.service.wallet_state_manager.lock:
             await wallet.generate_signed_transaction(
-                amount,
+                request.amount,
                 puzzle_hash,
                 action_scope,
-                fee,
+                request.fee,
                 memos=memos,
-                puzzle_decorator_override=request.get("puzzle_decorator", None),
+                puzzle_decorator_override=(
+                    [pdd.to_json_dict() for pdd in request.puzzle_decorator]
+                    if request.puzzle_decorator is not None
+                    else None
+                ),
                 extra_conditions=extra_conditions,
             )
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
-        return {
-            "transaction": None,  # tx_endpoint wrapper will take care of this
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-            "transaction_id": None,  # tx_endpoint wrapper will take care of this
-        }
+        # tx_endpoint takes care of filling out all relevant fields here
+        async with action_scope.use() as interface:
+            whatever_tx = interface.side_effects.transactions[0]
+        return SendTransactionResponse([], [], whatever_tx, bytes32.zeros)
 
     async def send_transaction_multi(self, request: dict[str, Any]) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:

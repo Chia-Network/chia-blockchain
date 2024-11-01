@@ -29,6 +29,8 @@ from chia.rpc.wallet_request_types import (
     GetTransactions,
     GetWalletBalance,
     GetWallets,
+    PuzzleDecoratorData,
+    SendTransaction,
     SendTransactionResponse,
 )
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -328,23 +330,25 @@ async def send(
         if typ == WalletType.STANDARD_WALLET:
             print("Submitting transaction...")
             res: Union[CATSpendResponse, SendTransactionResponse] = await wallet_client.send_transaction(
-                wallet_id,
-                final_amount,
-                address.original_address,
-                CMDTXConfigLoader(
+                SendTransaction(
+                    wallet_id=uint32(wallet_id),
+                    amount=final_amount,
+                    address=address.original_address,
+                    fee=fee,
+                    memos=memos,
+                    puzzle_decorator=(
+                        [PuzzleDecoratorData(PuzzleDecoratorType.CLAWBACK, {"clawback_timelock": clawback_time_lock})]
+                        if clawback_time_lock > 0
+                        else None
+                    ),
+                    push=push,
+                ),
+                tx_config=CMDTXConfigLoader(
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
                     excluded_coin_ids=list(excluded_coin_ids),
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(mojo_per_unit, config, fingerprint),
-                fee,
-                memos,
-                puzzle_decorator_override=(
-                    [{"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}]
-                    if clawback_time_lock > 0
-                    else None
-                ),
-                push=push,
                 timelock_info=condition_valid_times,
             )
         elif typ in {WalletType.CAT, WalletType.CRCAT}:

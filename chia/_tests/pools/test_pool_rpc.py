@@ -21,7 +21,7 @@ from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
-from chia.rpc.wallet_request_types import GetTransactions, GetWalletBalance, GetWallets
+from chia.rpc.wallet_request_types import GetTransactions, GetWalletBalance, GetWallets, SendTransaction
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -469,7 +469,12 @@ class TestPoolWalletRpc:
 
             tr: TransactionRecord = (
                 await client.send_transaction(
-                    1, uint64(100), encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"), DEFAULT_TX_CONFIG
+                    SendTransaction(
+                        wallet_id=uint32(1),
+                        amount=uint64(100),
+                        address=encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"),
+                    ),
+                    DEFAULT_TX_CONFIG,
                 )
             ).transaction
 

@@ -91,6 +91,7 @@ from chia.rpc.wallet_request_types import (
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
+    SendTransaction,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -231,32 +232,16 @@ class WalletRpcClient(RpcClient):
 
     async def send_transaction(
         self,
-        wallet_id: int,
-        amount: uint64,
-        address: str,
+        request: SendTransaction,
         tx_config: TXConfig,
-        fee: uint64 = uint64(0),
-        memos: Optional[list[str]] = None,
-        puzzle_decorator_override: Optional[list[dict[str, Union[str, int, bool]]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> SendTransactionResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "amount": amount,
-            "address": address,
-            "fee": fee,
-            "puzzle_decorator": puzzle_decorator_override,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if memos is not None:
-            request["memos"] = memos
-        response = await self.fetch("send_transaction", request)
-        return json_deserialize_with_clvm_streamable(response, SendTransactionResponse)
+        return SendTransactionResponse.from_json_dict(
+            await self.fetch(
+                "send_transaction", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def send_transaction_multi(
         self,

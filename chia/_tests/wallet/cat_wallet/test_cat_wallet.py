@@ -9,7 +9,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.wallet_request_types import GetTransactionMemo, PushTX
+from chia.rpc.wallet_request_types import GetTransactionMemo, PushTX, SendTransaction
 from chia.simulator.simulator_protocol import ReorgProtocol
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -1478,7 +1478,11 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework) ->
     cat_amount_0 = uint64(100)
     cat_amount_1 = uint64(5)
 
-    tx = (await env.rpc_client.send_transaction(1, cat_amount_0, addr, wallet_environments.tx_config)).transaction
+    tx = (
+        await env.rpc_client.send_transaction(
+            SendTransaction(wallet_id=uint32(1), amount=cat_amount_0, address=addr), wallet_environments.tx_config
+        )
+    ).transaction
     spend_bundle = tx.spend_bundle
     assert spend_bundle is not None
 

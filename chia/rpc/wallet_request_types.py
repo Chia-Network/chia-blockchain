@@ -12,7 +12,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
@@ -26,6 +26,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
@@ -704,7 +705,7 @@ class TransactionEndpointRequest(Streamable):
         return {
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
-            "extra_conditions": [condition.to_json_dict() for condition in extra_conditions],
+            "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **self.to_json_dict(_avoid_ban=True),
         }
 
@@ -808,13 +809,65 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
 
 
-# TODO: The section below needs corresponding request types
-# TODO: The section below should be added to the API (currently only for client)
+# utility for SendTransaction
+class PuzzleDecoratorData:
+    decorator_name: PuzzleDecoratorType
+    decorator_information: dict[str, Any]
+
+    def __init__(self, decorator_name: PuzzleDecoratorType, decorator_information: dict[str, Any]) -> None:
+        self.decorator_name = decorator_name
+        self.decorator_information = decorator_information
+
+    def __eq__(self, other: Any) -> bool:
+        if (
+            isinstance(other, PuzzleDecoratorData)
+            and other.decorator_name == self.decorator_name
+            and other.decorator_information == self.decorator_information
+        ):
+            return True
+        else:
+            return False
+
+    def __bytes__(self) -> bytes:
+        raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
+
+    @classmethod
+    def parse(cls, f: BinaryIO) -> TransactionRecordMetadata:
+        raise NotImplementedError("Should not be deserializing this object from a stream, it's only for RPC")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            **self.decorator_information,
+            "decorator_name": self.decorator_name.name,
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> PuzzleDecoratorData:
+        return PuzzleDecoratorData(
+            decorator_name=PuzzleDecoratorType.__members__[json_dict["decorator_name"]],
+            decorator_information={k: v for k, v in json_dict.items() if k != "decorator_name"},
+        )
+
+
+@streamable
+@kw_only_dataclass
+class SendTransaction(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    address: str = field(default_factory=default_raise)
+    memos: Optional[list[str]] = None
+    puzzle_decorator: Optional[list[PuzzleDecoratorData]] = None
+
+
 @streamable
 @dataclass(frozen=True)
 class SendTransactionResponse(TransactionEndpointResponse):
     transaction: TransactionRecord
     transaction_id: bytes32
+
+
+# TODO: The section below needs corresponding request types
+# TODO: The section below should be added to the API (currently only for client)
 
 
 @streamable
