@@ -635,6 +635,10 @@ class ComparableEnum(Enum):
         return self.value.__ge__(other.value)
 
 
+def is_attribute_local(o: object, name: str) -> bool:
+    return name in getattr(o, "__dict__", ()) or name in getattr(o, "__slots__", ())
+
+
 @contextlib.contextmanager
 def patch_request_handler(
     api: Union[ApiProtocol, type[ApiProtocol]],
@@ -645,11 +649,21 @@ def patch_request_handler(
     if request_type is None:
         request_type = ProtocolMessageTypes[handler.__name__]
 
-    api_metadata = ApiMetadata(message_type_to_request=dict(api.metadata.message_type_to_request))
-    del api_metadata.message_type_to_request[request_type]
-    api_metadata.request(peer_required=peer_required, request_type=request_type)(handler)
+    metadata = ApiMetadata.copy(api.metadata)
+    del metadata.message_type_to_request[request_type]
+    metadata.request(peer_required=peer_required, request_type=request_type)(handler)
 
-    with pytest.MonkeyPatch().context() as m:
-        m.setattr(api, "metadata", api_metadata)
-
+    was_local = is_attribute_local(api, "metadata")
+    original = api.metadata
+    # when an instance is passed, this is intentionally assigning to an instance
+    # counter to the class variable hint
+    api.metadata = metadata  # type: ignore[misc]
+    try:
         yield
+    finally:
+        if was_local:
+            # when an instance is passed, this is intentionally assigning to an instance
+            # counter to the class variable hint
+            api.metadata = original  # type: ignore[misc]
+        else:
+            del api.metadata

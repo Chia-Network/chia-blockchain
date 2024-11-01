@@ -46,6 +46,10 @@ class ApiMetadata:
     message_type_to_request: dict[ProtocolMessageTypes, ApiRequest] = field(default_factory=dict)
 
     @classmethod
+    def copy(cls, original: ApiMetadata) -> ApiMetadata:
+        return cls(message_type_to_request=dict(original.message_type_to_request))
+
+    @classmethod
     def from_bound_method(cls, method: Callable[..., Awaitable[Optional[Message]]]) -> ApiRequest:
         self: ApiMetadata = getattr(method, api_attribute_name)
         message_type = ProtocolMessageTypes[method.__name__]
