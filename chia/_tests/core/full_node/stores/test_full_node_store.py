@@ -481,7 +481,6 @@ async def test_basic_store(
 
     fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     for block in blocks_reorg:
-
         peak = blockchain.get_peak()
         assert peak is not None
 

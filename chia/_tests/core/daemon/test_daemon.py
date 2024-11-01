@@ -1404,7 +1404,7 @@ async def test_misc_daemon_ws(
 
 @pytest.mark.anyio
 async def test_unexpected_json(
-    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain]
+    daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain],
 ) -> None:
     ws, _ = daemon_connection_and_temp_keychain
 

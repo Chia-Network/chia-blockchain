@@ -1505,12 +1505,12 @@ class WalletStateManager:
             old_p2_puzhash,
             new_p2_puzhash,
         )
-        new_derivation_record: Optional[DerivationRecord] = (
-            await self.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
-        )
-        old_derivation_record: Optional[DerivationRecord] = (
-            await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
-        )
+        new_derivation_record: Optional[
+            DerivationRecord
+        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
+        old_derivation_record: Optional[
+            DerivationRecord
+        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
         if new_derivation_record is None and old_derivation_record is None:
             self.log.debug(
                 "Cannot find a P2 puzzle hash for NFT:%s, this NFT belongs to others.",
@@ -1583,9 +1583,9 @@ class WalletStateManager:
         assert coin_state.created_height is not None
         is_recipient: Optional[bool] = None
         # Check if the wallet is the sender
-        sender_derivation_record: Optional[DerivationRecord] = (
-            await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
-        )
+        sender_derivation_record: Optional[
+            DerivationRecord
+        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(metadata.sender_puzzle_hash)
         # Check if the wallet is the recipient
         recipient_derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
             metadata.recipient_puzzle_hash

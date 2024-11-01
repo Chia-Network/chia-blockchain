@@ -57,7 +57,6 @@ def pre_validate_block(
     vs: ValidationState,
     validate_signatures: bool,
 ) -> PreValidationResult:
-
     try:
         validation_start = time.monotonic()
         tx_additions: list[Coin] = []

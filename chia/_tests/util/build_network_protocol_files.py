@@ -293,9 +293,8 @@ def main() -> None:
     for name, function in name_to_function.items():
         path = tests_dir.joinpath(name)
         path.write_text(function())
-        # black seems to have trouble when run as a module so not using `python -m black`
         subprocess.run(
-            [scripts_path.joinpath("black"), os.fspath(path.relative_to(tests_dir))],
+            [scripts_path.joinpath("ruff"), "format", os.fspath(path.relative_to(tests_dir))],
             check=True,
             cwd=tests_dir,
         )
