@@ -39,6 +39,8 @@ from chia.rpc.wallet_request_types import (
     GetWalletBalanceResponse,
     GetWallets,
     GetWalletsResponse,
+    PuzzleDecoratorData,
+    SendTransaction,
     SendTransactionResponse,
     TakeOfferResponse,
     UserFriendlyMemos,
@@ -51,12 +53,13 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
 from chia.wallet.util.query_filter import HashFilter
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
@@ -326,19 +329,14 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
     class SendWalletRpcClient(TestWalletRpcClient):
         async def send_transaction(
             self,
-            wallet_id: int,
-            amount: uint64,
-            address: str,
+            request: SendTransaction,
             tx_config: TXConfig,
-            fee: uint64 = uint64(0),
-            memos: Optional[list[str]] = None,
-            puzzle_decorator_override: Optional[list[dict[str, Union[str, int, bool]]]] = None,
-            push: bool = True,
+            extra_conditions: tuple[Condition, ...] = tuple(),
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> SendTransactionResponse:
             self.add_to_log(
                 "send_transaction",
-                (wallet_id, amount, address, tx_config, fee, memos, puzzle_decorator_override, push, timelock_info),
+                (request, tx_config, extra_conditions, timelock_info),
             )
             name = get_bytes32(2)
             tx_rec = TransactionRecord(
@@ -443,9 +441,15 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         "get_wallets": [(GetWallets(type=None, include_data=True),)] * 2,
         "send_transaction": [
             (
-                1,
-                1000000000000,
-                "xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
+                SendTransaction(
+                    wallet_id=uint32(1),
+                    amount=uint64(1000000000000),
+                    address="xch1qvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvpsxqcrqvps82kgr2",
+                    fee=uint64(500000000000),
+                    memos=["0x6262626262626262626262626262626262626262626262626262626262626262"],
+                    puzzle_decorator=[PuzzleDecoratorData(PuzzleDecoratorType.CLAWBACK, {"clawback_timelock": 60})],
+                    push=True,
+                ),
                 TXConfig(
                     min_coin_amount=uint64(0),
                     max_coin_amount=uint64(10000000000000),
@@ -453,10 +457,7 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
                     excluded_coin_ids=[bytes32([98] * 32)],
                     reuse_puzhash=True,
                 ),
-                500000000000,
-                ["0x6262626262626262626262626262626262626262626262626262626262626262"],
-                [{"decorator": "CLAWBACK", "clawback_timelock": 60}],
-                True,
+                tuple(),
                 test_condition_valid_times,
             )
         ],
