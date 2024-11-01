@@ -138,8 +138,9 @@ async def test_services_terminate(
                 )
             )
 
-            client: Optional[RpcClient] = None
-            if create_service is not None:
+            if create_service is None:
+                await asyncio.sleep(5)
+            else:
                 client = await exit_stack.enter_async_context(
                     create_service(
                         self_hostname=config["self_hostname"],
@@ -149,9 +150,6 @@ async def test_services_terminate(
                     )
                 )
 
-            if client is None:
-                await asyncio.sleep(5)
-            else:
                 start = time.monotonic()
                 while time.monotonic() - start < 50:
                     return_code = process.poll()
