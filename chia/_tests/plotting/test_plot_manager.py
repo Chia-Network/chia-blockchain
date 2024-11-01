@@ -14,6 +14,7 @@ import pytest
 from chia_rs import G1Element
 
 from chia._tests.plotting.util import get_test_plots
+from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.plotting.cache import CURRENT_VERSION, CacheDataV1
 from chia.plotting.manager import Cache, PlotManager
@@ -742,7 +743,7 @@ async def test_recursive_plot_scan(environment: Environment) -> None:
     await env.refresh_tester.run(expected_result)
 
 
-@pytest.mark.parametrize("follow_links", [True, False], ids=["follow_links", "no_follow"])
+@boolean_datacases(name="follow_links", false="no_follow", true="follow")
 @pytest.mark.anyio
 async def test_recursive_plot_scan_symlinks(environment: Environment, follow_links: bool) -> None:
     env: Environment = environment
