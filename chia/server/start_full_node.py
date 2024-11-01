@@ -7,6 +7,7 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
+from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.full_node.full_node import FullNode
@@ -67,6 +68,7 @@ async def create_full_node_service(
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
         override_capabilities=override_capabilities,
+        class_for_type=ApiProtocolRegistry,
     )
 
 
