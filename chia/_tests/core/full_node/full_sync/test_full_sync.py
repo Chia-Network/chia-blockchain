@@ -1,14 +1,11 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import logging
 import time
 
 import pytest
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_between, node_height_exactly
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node import FullNode
@@ -116,7 +113,6 @@ class TestFullSync:
     async def test_sync_from_fork_point_and_weight_proof(
         self, three_nodes, default_1000_blocks, default_400_blocks, self_hostname
     ):
-        start = time.time()
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks_initial = len(default_1000_blocks) - 50
         blocks_950 = default_1000_blocks[:num_blocks_initial]

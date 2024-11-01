@@ -1,24 +1,15 @@
-# flake8: noqa: F501
+# ruff: noqa: E501
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass
 from typing import Any
 
-import pytest
-from chia_rs import ALLOW_BACKREFS
+from chia_rs import serialized_length
 from clvm.serialize import sexp_from_stream
 from clvm.SExp import SExp
 from clvm_tools import binutils
 
-from chia._tests.core.make_block_generator import make_spend_bundle
-from chia._tests.generator.test_rom import run_generator
-from chia.full_node.bundle_tools import simple_solution_generator, simple_solution_generator_backrefs
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.program import INFINITE_COST, Program
-from chia.types.blockchain_format.serialized_program import SerializedProgram
-from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
@@ -50,8 +41,6 @@ gen1 = b"\xff\x01" + original_generator
 gen2 = b"\xff\x01\xff\x01" + original_generator
 FAKE_BLOCK_HEIGHT1 = uint32(100)
 FAKE_BLOCK_HEIGHT2 = uint32(200)
-
-from chia_rs import serialized_length
 
 assert serialized_length(original_generator) == len(original_generator)
 assert serialized_length(gen1) == len(gen1)
@@ -135,9 +124,6 @@ class TestDecompression:
 
     def test_block_program_zero(self) -> None:
         "Decompress a list of CSEs"
-        cse1 = binutils.assemble(
-            "(((0x0000000000000000000000000000000000000000000000000000000000000000 0x0186a0) (0xb081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3 (() (q (51 0x6b7a83babea1eec790c947db4464ab657dbe9b887fe9acc247062847b8c2a8a9 0x0186a0)) ()))))"
-        )
         cse2 = binutils.assemble(
             """
 (
@@ -176,9 +162,6 @@ class TestDecompression:
         print(out)
 
     def test_block_program_zero_with_curry(self) -> None:
-        cse1 = binutils.assemble(
-            "(((0x0000000000000000000000000000000000000000000000000000000000000000 0x0186a0) (0xb081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3 (() (q (51 0x6b7a83babea1eec790c947db4464ab657dbe9b887fe9acc247062847b8c2a8a9 0x0186a0)) ()))))"
-        )
         cse2 = binutils.assemble(
             """
 (

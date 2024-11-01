@@ -167,4 +167,4 @@ if __name__ == "__main__":
     constant = clvm_should_cost / clvm_cost
     format = float_to_str(constant)
     print(f"Constant factor: {format}")
-    print(f"CLVM RATIO MULTIPLIER: {1/constant}")
+    print(f"CLVM RATIO MULTIPLIER: {1 / constant}")

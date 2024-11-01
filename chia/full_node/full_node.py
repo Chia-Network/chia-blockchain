@@ -950,7 +950,7 @@ class FullNode:
             # Wait until we have 3 peaks or up to a max of 30 seconds
             max_iterations = int(self.config.get("max_sync_wait", 30)) * 10
 
-            self.log.info(f"Waiting to receive peaks from peers. (timeout: {max_iterations/10}s)")
+            self.log.info(f"Waiting to receive peaks from peers. (timeout: {max_iterations / 10}s)")
             peaks = []
             for i in range(max_iterations):
                 peaks = [peak.header_hash for peak in self.sync_store.get_peak_of_each_peer().values()]
@@ -1141,7 +1141,7 @@ class FullNode:
                         response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)
                         end = time.monotonic()
                         if end - start > 5:
-                            self.log.info(f"sync pipeline, peer took {end-start:0.2f} to respond to request_blocks")
+                            self.log.info(f"sync pipeline, peer took {end - start:0.2f} to respond to request_blocks")
                         if response is None:
                             await peer.close()
                         elif isinstance(response, RespondBlocks):
@@ -1150,7 +1150,7 @@ class FullNode:
                             end = time.monotonic()
                             if end - start > 1:
                                 self.log.info(
-                                    f"sync pipeline back-pressure. stalled {end-start:0.2f} "
+                                    f"sync pipeline back-pressure. stalled {end - start:0.2f} "
                                     "seconds on prevalidate block"
                                 )
                             fetched = True
@@ -1217,7 +1217,7 @@ class FullNode:
                     await output_queue.put((peer, next_validation_state, list(futures), blocks_to_validate))
                     end = time.monotonic()
                     if end - start > 1:
-                        self.log.info(f"sync pipeline back-pressure. stalled {end-start:0.2f} seconds on add_block()")
+                        self.log.info(f"sync pipeline back-pressure. stalled {end - start:0.2f} seconds on add_block()")
             except Exception:
                 self.log.exception("Exception validating")
             finally:
@@ -2080,7 +2080,7 @@ class FullNode:
             logging.WARNING if validation_time > 2 else logging.DEBUG,
             f"Block validation: {validation_time:0.2f}s, "
             f"pre_validation: {pre_validation_time:0.2f}s, "
-            f"CLVM: {pre_validation_results[0].timing/1000.0:0.2f}s, "
+            f"CLVM: {pre_validation_results[0].timing / 1000.0:0.2f}s, "
             f"post-process: {post_process_time:0.2f}s, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str} header_hash: {header_hash.hex()} height: {block.height}",

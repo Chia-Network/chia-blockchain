@@ -168,6 +168,10 @@ select = [
 	"I",  # Isort
 	"FA",  # Flake8: future-annotations
 	"UP",  # Pyupgrade
+	# Flake8 core
+	"F",
+	"E",
+	"W",
 ]
 explicit-preview-rules = false
 ignore = [
@@ -211,7 +215,11 @@ ignore = [
     "PLW0108", # unnecessary-lambda
     "PLW1510", # subprocess-run-without-check
     "PLW0120", # useless-else-on-loop
+
+    # Flake8 core
+    "F841",  # unused-variable (540)
 ]
+
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
