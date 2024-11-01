@@ -245,21 +245,21 @@ async def test_harvester_receive_source_signing_data(
     with contextlib.ExitStack() as exit_stack:
         exit_stack.enter_context(
             patch_request_handler(
-                api=FarmerAPI,
+                api=farmer.server.api,
                 handler=intercept_farmer_request_signed_values,
                 request_type=ProtocolMessageTypes.request_signed_values,
             )
         )
         exit_stack.enter_context(
             patch_request_handler(
-                api=FarmerAPI,
+                api=farmer.server.api,
                 handler=intercept_farmer_new_proof_of_space,
                 request_type=ProtocolMessageTypes.new_proof_of_space,
             )
         )
         exit_stack.enter_context(
             patch_request_handler(
-                api=HarvesterAPI,
+                api=harvester.server.api,
                 handler=intercept_harvester_request_signatures,
                 request_type=ProtocolMessageTypes.request_signatures,
             )
