@@ -1517,9 +1517,7 @@ async def test_long_sync_untrusted_break(
 
     await add_blocks_in_batches(default_1000_blocks[:400], untrusted_full_node_api.full_node)
 
-    with patch_request_handler(
-        api=untrusted_full_node_api, handler=register_interest_in_puzzle_hash, peer_required=True
-    ):
+    with patch_request_handler(api=untrusted_full_node_api, handler=register_interest_in_puzzle_hash):
         # Connect to the untrusted peer and wait until the long sync started
         await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
         await time_out_assert(30, wallet_syncing)

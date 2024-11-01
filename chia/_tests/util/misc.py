@@ -644,14 +644,20 @@ def patch_request_handler(
     api: Union[ApiProtocol, type[ApiProtocol]],
     handler: Callable[..., Awaitable[Optional[Message]]],
     request_type: Optional[ProtocolMessageTypes] = None,
-    peer_required: bool = False,
 ) -> Iterator[None]:
     if request_type is None:
         request_type = ProtocolMessageTypes[handler.__name__]
 
     metadata = ApiMetadata.copy(api.metadata)
-    del metadata.message_type_to_request[request_type]
-    metadata.request(peer_required=peer_required, request_type=request_type)(handler)
+    original_request = metadata.message_type_to_request.pop(request_type)
+    decorator = metadata.request(
+        peer_required=original_request.peer_required,
+        bytes_required=original_request.bytes_required,
+        execute_task=original_request.execute_task,
+        reply_types=original_request.reply_types,
+        request_type=original_request.request_type,
+    )
+    decorator(handler)
 
     was_local = is_attribute_local(api, "metadata")
     original = api.metadata

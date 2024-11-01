@@ -254,7 +254,6 @@ async def test_harvester_receive_source_signing_data(
                 api=farmer.server.api,
                 handler=intercept_farmer_new_proof_of_space,
                 request_type=ProtocolMessageTypes.new_proof_of_space,
-                peer_required=True,
             )
         )
         exit_stack.enter_context(
