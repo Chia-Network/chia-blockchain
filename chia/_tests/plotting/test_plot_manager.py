@@ -33,6 +33,9 @@ from chia.util.streamable import VersionedBlob
 
 log = logging.getLogger(__name__)
 
+# These tests are not dependent on consensus rules
+pytestmark = [pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")]
+
 
 @dataclass
 class MockDiskProver:
@@ -739,8 +742,7 @@ async def test_recursive_plot_scan(environment: Environment) -> None:
     await env.refresh_tester.run(expected_result)
 
 
-@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
-@pytest.mark.parametrize("follow_links", [True, False])
+@pytest.mark.parametrize("follow_links", [True, False], ids=["follow_links", "no_follow"])
 @pytest.mark.anyio
 async def test_recursive_plot_scan_symlinks(environment: Environment, follow_links: bool) -> None:
     env: Environment = environment
@@ -754,11 +756,7 @@ async def test_recursive_plot_scan_symlinks(environment: Environment, follow_lin
 
     # Create a symlink to the other plot directory from inside the root plot directory
     symlink_path = Path(root_plot_dir / "other")
-
-    try:
-        symlink_path.symlink_to(env.root_path / "other")
-    except NotImplementedError:
-        pytest.skip("Symlinking is not supported on this platform")
+    symlink_path.symlink_to(env.root_path / "other")
 
     # Adding the root without `recursive_plot_scan` and running a test should not load any plots (match an empty result)
     expected_result = PlotRefreshResult()
