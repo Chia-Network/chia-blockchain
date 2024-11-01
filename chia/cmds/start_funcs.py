@@ -35,6 +35,8 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
         [cmd_to_execute, "run_daemon", "--wait-for-unlock"],
         encoding="utf-8",
         stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
         creationflags=creationflags,
     )
 
