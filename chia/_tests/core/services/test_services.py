@@ -41,8 +41,8 @@ class CreateServiceProtocol(Protocol):
         self,
         self_hostname: str,
         port: uint16,
-        root_path: Optional[Path] = None,
-        net_config: Optional[dict[str, Any]] = None,
+        root_path: Path,
+        net_config: dict[str, Any],
     ) -> AsyncIterator[RpcClient]:
         yield cast(RpcClient, None)
 
