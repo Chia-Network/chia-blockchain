@@ -69,6 +69,7 @@ def initialize_logging(
             colorlog.ColoredFormatter(
                 (
                     f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: "
+                    f"%(log_color)s%(levelname)-8s%(reset)s %(message)s"
                     if log_backcompat
                     else f"%(asctime)s.%(msecs)03d {__version__} {service_name} %(name)-{file_name_length}s: "
                     f"%(log_color)s%(levelname)-8s%(reset)s %(message)s"
