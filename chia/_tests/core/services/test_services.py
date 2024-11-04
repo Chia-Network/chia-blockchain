@@ -124,8 +124,7 @@ async def test_services_terminate(
         if service_config_name == "timelord":
             api_port_group = api_port_group["vdf_server"]
         if "port" in api_port_group:
-            port = find_available_listen_port(name="service")
-            api_port_group["port"] = port
+            api_port_group["port"] = 0
         rpc_port = find_available_listen_port(name="rpc")
         service_config["rpc_port"] = rpc_port
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
