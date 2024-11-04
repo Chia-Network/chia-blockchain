@@ -1480,7 +1480,8 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework) ->
 
     tx = (
         await env.rpc_client.send_transaction(
-            SendTransaction(wallet_id=uint32(1), amount=cat_amount_0, address=addr), wallet_environments.tx_config
+            SendTransaction(wallet_id=uint32(1), amount=cat_amount_0, address=addr, push=True),
+            wallet_environments.tx_config,
         )
     ).transaction
     spend_bundle = tx.spend_bundle

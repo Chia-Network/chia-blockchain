@@ -473,6 +473,7 @@ class TestPoolWalletRpc:
                         wallet_id=uint32(1),
                         amount=uint64(100),
                         address=encode_puzzle_hash(status.p2_singleton_puzzle_hash, "txch"),
+                        push=True,
                     ),
                     DEFAULT_TX_CONFIG,
                 )
