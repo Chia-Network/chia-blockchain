@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import subprocess
-import sysconfig
+import sys
 from pathlib import Path
 from typing import Any, Callable
 
@@ -288,13 +288,11 @@ def main() -> None:
         "test_network_protocol_json.py": build_json_test,
     }
 
-    scripts_path = Path(sysconfig.get_path("scripts"))
-
     for name, function in name_to_function.items():
         path = tests_dir.joinpath(name)
         path.write_text(function())
         subprocess.run(
-            [scripts_path.joinpath("ruff"), "format", os.fspath(path.relative_to(tests_dir))],
+            [sys.executable, "-m", "ruff", "format", os.fspath(path.relative_to(tests_dir))],
             check=True,
             cwd=tests_dir,
         )
