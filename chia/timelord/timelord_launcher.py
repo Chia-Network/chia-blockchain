@@ -175,7 +175,7 @@ async def async_main(config: dict[str, Any], net_config: dict[str, Any]) -> None
 def main():
     if os.name == "nt":
         log.info("Timelord launcher not supported on Windows.")
-        return
+        return 1
     root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
     net_config = load_config(root_path, "config.yaml")
