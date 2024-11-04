@@ -37,7 +37,6 @@ class DaemonProxy:
         return request
 
     async def start(self, wait_for_start: bool = False) -> None:
-
         self.client_session = aiohttp.ClientSession()
 
         connect_backoff = 2
@@ -172,7 +171,12 @@ class DaemonProxy:
 
 
 async def connect_to_daemon(
-    self_hostname: str, daemon_port: int, max_message_size: int, ssl_context: ssl.SSLContext, heartbeat: int, wait_for_start: bool = False
+    self_hostname: str,
+    daemon_port: int,
+    max_message_size: int,
+    ssl_context: ssl.SSLContext,
+    heartbeat: int,
+    wait_for_start: bool = False,
 ) -> DaemonProxy:
     """
     Connect to the local daemon.
