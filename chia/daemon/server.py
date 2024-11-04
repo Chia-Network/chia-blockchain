@@ -1576,7 +1576,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 await beta_metrics.stop_logging()
 
             log.info("Daemon WebSocketServer closed")
-            sys.stderr.close()
+            sys.stdout.close()
             return 0
     except LockfileError:
         print("daemon: already launching")
