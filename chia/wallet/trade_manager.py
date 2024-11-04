@@ -878,7 +878,7 @@ class TradeManager:
             if not result[0] or result[1] is None:
                 raise ValueError(result[2])
 
-            success, take_offer, error = result
+            _success, take_offer, _error = result
 
             complete_offer, valid_spend_solver = await self.check_for_final_modifications(
                 Offer.aggregate([offer, take_offer]), solver, inner_action_scope

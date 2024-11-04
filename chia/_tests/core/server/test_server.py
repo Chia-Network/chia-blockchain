@@ -193,7 +193,7 @@ async def test_call_api_of_specific(
 
 @pytest.mark.anyio
 async def test_call_api_of_specific_for_missing_peer(
-    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools]
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
 ) -> None:
     _, _, server_1, server_2, _ = two_nodes
 

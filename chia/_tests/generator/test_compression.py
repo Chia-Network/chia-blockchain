@@ -67,11 +67,11 @@ class TestCompression:
 
 class TestDecompression:
     def test_deserialization(self) -> None:
-        cost, out = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [bytes(Program.to("hello"))])
+        _cost, out = DESERIALIZE_MOD.run_with_cost(INFINITE_COST, [bytes(Program.to("hello"))])
         assert out == Program.to("hello")
 
     def test_deserialization_as_argument(self) -> None:
-        cost, out = TEST_GEN_DESERIALIZE.run_with_cost(
+        _cost, out = TEST_GEN_DESERIALIZE.run_with_cost(
             INFINITE_COST, [DESERIALIZE_MOD, Nil, bytes(Program.to("hello"))]
         )
         print(bytes(Program.to("hello")))
@@ -80,7 +80,7 @@ class TestDecompression:
         assert out == Program.to("hello")
 
     def test_decompress_puzzle(self) -> None:
-        cost, out = DECOMPRESS_PUZZLE.run_with_cost(
+        _cost, out = DECOMPRESS_PUZZLE.run_with_cost(
             INFINITE_COST, [DESERIALIZE_MOD, b"\xff", bytes(Program.to("pubkey")), b"\x80"]
         )
 
@@ -99,7 +99,7 @@ class TestDecompression:
         cse0 = binutils.assemble(
             "((0x0000000000000000000000000000000000000000000000000000000000000000 0x0186a0) (0xb081963921826355dcb6c355ccf9c2637c18adf7d38ee44d803ea9ca41587e48c913d8d46896eb830aeadfc13144a8eac3 (() (q (51 0x6b7a83babea1eec790c947db4464ab657dbe9b887fe9acc247062847b8c2a8a9 0x0186a0)) ())))"
         )
-        cost, out = DECOMPRESS_CSE.run_with_cost(
+        _cost, out = DECOMPRESS_CSE.run_with_cost(
             INFINITE_COST, [DESERIALIZE_MOD, DECOMPRESS_PUZZLE, b"\xff", b"\x80", cse0]
         )
 
@@ -115,7 +115,7 @@ class TestDecompression:
         end = start + 238
         prefix = original_generator[start:end]
         # (deserialize decompress_puzzle puzzle_prefix cse)
-        cost, out = DECOMPRESS_CSE_WITH_PREFIX.run_with_cost(
+        _cost, out = DECOMPRESS_CSE_WITH_PREFIX.run_with_cost(
             INFINITE_COST, [DESERIALIZE_MOD, DECOMPRESS_PUZZLE, prefix, cse0]
         )
 
@@ -145,7 +145,7 @@ class TestDecompression:
 
         # (mod (decompress_puzzle decompress_coin_spend_entry start end compressed_cses deserialize generator_list reserved_arg)
         # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
-        cost, out = DECOMPRESS_BLOCK.run_with_cost(
+        _cost, out = DECOMPRESS_BLOCK.run_with_cost(
             INFINITE_COST,
             [
                 DECOMPRESS_PUZZLE,
@@ -184,7 +184,7 @@ class TestDecompression:
         # (mod (decompress_puzzle decompress_coin_spend_entry start end compressed_cses deserialize generator_list reserved_arg)
         # cost, out = DECOMPRESS_BLOCK.run_with_cost(INFINITE_COST, [DECOMPRESS_PUZZLE, DECOMPRESS_CSE, start, Program.to(end), cse0, DESERIALIZE_MOD, bytes(original_generator)])
         p = DECOMPRESS_BLOCK.curry(DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end))
-        cost, out = p.run_with_cost(INFINITE_COST, [cse2, DESERIALIZE_MOD, [bytes(original_generator)]])
+        _cost, out = p.run_with_cost(INFINITE_COST, [cse2, DESERIALIZE_MOD, [bytes(original_generator)]])
 
         print()
         print(p)
@@ -194,7 +194,7 @@ class TestDecompression:
             DECOMPRESS_PUZZLE, DECOMPRESS_CSE_WITH_PREFIX, start, Program.to(end), cse2, DESERIALIZE_MOD
         )
         generator_args = Program.to([[original_generator]])
-        cost, out = p_with_cses.run_with_cost(INFINITE_COST, generator_args)
+        _cost, out = p_with_cses.run_with_cost(INFINITE_COST, generator_args)
 
         print()
         print(p_with_cses)

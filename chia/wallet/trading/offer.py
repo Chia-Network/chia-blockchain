@@ -674,7 +674,7 @@ class Offer:
 
     @classmethod
     def from_bech32(cls, offer_bech32: str) -> Offer:
-        hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
+        _hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
         if data is None:
             raise ValueError("Invalid Offer")
         decoded = convertbits(list(data), 5, 8, False)

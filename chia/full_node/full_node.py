@@ -610,7 +610,7 @@ class FullNode:
                         self.constants, new_slot, prev_b, self.blockchain
                     )
                     vs = ValidationState(ssi, diff, None)
-                    success, state_change_summary, err = await self.add_block_batch(
+                    success, state_change_summary, _err = await self.add_block_batch(
                         AugmentedBlockchain(self.blockchain), response.blocks, peer_info, fork_info, vs
                     )
                     if not success:
@@ -1482,7 +1482,6 @@ class FullNode:
         fork_info: ForkInfo,
         vs: ValidationState,  # in-out parameter
     ) -> list[FullBlock]:
-
         blocks_to_validate: list[FullBlock] = []
         for i, block in enumerate(all_blocks):
             header_hash = block.header_hash

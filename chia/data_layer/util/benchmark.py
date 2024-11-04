@@ -23,7 +23,6 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
             os.remove(db_path)
 
         async with DataStore.managed(database=db_path) as data_store:
-
             store_id = bytes32(b"0" * 32)
             await data_store.create_tree(store_id)
 

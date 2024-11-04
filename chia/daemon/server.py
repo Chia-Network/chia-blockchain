@@ -1099,7 +1099,7 @@ class WebSocketServer:
 
             self.log.debug(f"command_args before launch_plotter are {command_args}")
             self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
-            process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
+            process, _pid_path = launch_plotter(self.root_path, service_name, command_args, id)
 
             current_process = process
 
@@ -1280,7 +1280,7 @@ class WebSocketServer:
                 exe_command = service_command
                 if testing is True:
                     exe_command = f"{service_command} --testing=true"
-                process, pid_path = launch_service(self.root_path, exe_command)
+                process, _pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = [process]
                 success = True
             except (subprocess.SubprocessError, OSError):

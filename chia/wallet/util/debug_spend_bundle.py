@@ -108,7 +108,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             pks.append(pk)
             msgs.append(m)
         print()
-        cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
+        _cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
         print(disassemble(r))
         create_coin_conditions = [con for con in r.as_iter() if con.first().as_int() == 51]
         print()

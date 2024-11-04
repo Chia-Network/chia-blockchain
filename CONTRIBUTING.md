@@ -57,14 +57,12 @@ to configure how the tests are run. For example, for more logging: change the lo
 ```bash
 sh install.sh -d
 . ./activate
-black . && ruff check --fix && mypy && flake8 benchmarks build_scripts chia tests tools *.py && pylint benchmarks build_scripts chia tests tools *.py
+ruff format && ruff check --fix && mypy && pylint benchmarks build_scripts chia tests tools *.py
 py.test tests -v --durations 0
 ```
 
-The [black library](https://black.readthedocs.io/en/stable/) is used as an automatic style formatter to make things easier.
-The [flake8 library](https://readthedocs.org/projects/flake8/) helps ensure consistent style.
 The [Mypy library](https://mypy.readthedocs.io/en/stable/) is very useful for ensuring objects are of the correct type, so try to always add the type of the return value, and the type of local variables.
-The [Ruff library](https://docs.astral.sh) is used to sort, group, validate imports, and further lint all of the python files
+The [Ruff library](https://docs.astral.sh) is used to format, sort, group, validate imports, ensure consistent style, and further lint all of the python files
 
 If you want verbose logging for tests, edit the `tests/pytest.ini` file.
 
@@ -83,10 +81,8 @@ provided configuration with `pre-commit install`.
 1. Install python extension
 2. Set the environment to `./venv/bin/python`
 3. Install mypy plugin
-4. Preferences > Settings > Python > Linting > flake8 enabled
-5. Preferences > Settings > Python > Linting > mypy enabled
-6. Preferences > Settings > Formatting > Python > Provider > black
-7. Preferences > Settings > mypy > Targets: set to `./chia`
+4. Preferences > Settings > Python > Linting > mypy enabled
+5. Preferences > Settings > mypy > Targets: set to `./chia`
 
 ## Configure Pycharm
 

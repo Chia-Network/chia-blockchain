@@ -165,7 +165,7 @@ class TestROM:
         # the ROM supports extra data after a coin. This test checks that it actually gets passed through
 
         gen = block_generator()
-        cost, r = run_generator(gen)
+        _cost, r = run_generator(gen)
         coin_spends = r.first()
         for coin_spend in coin_spends.as_iter():
             extra_data = coin_spend.rest().rest().rest().rest()
@@ -175,6 +175,6 @@ class TestROM:
         # the ROM supports extra data after the coin spend list. This test checks that it actually gets passed through
 
         gen = block_generator()
-        cost, r = run_generator(gen)
+        _cost, r = run_generator(gen)
         extra_block_data = r.rest()
         assert as_atom_list(extra_block_data) == b"extra data for block".split()

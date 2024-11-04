@@ -310,7 +310,7 @@ class PlotManager:
 
             entry: Optional[tuple[str, set[str]]] = self.plot_filename_paths.get(file_path.name)
             if entry is not None:
-                loaded_parent, duplicates = entry
+                _loaded_parent, duplicates = entry
                 if str(file_path.parent) in duplicates:
                     log.debug(f"Skip duplicated plot {str(file_path)}")
                     return None
