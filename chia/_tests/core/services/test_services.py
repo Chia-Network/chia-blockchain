@@ -44,7 +44,7 @@ class CreateServiceProtocol(Protocol):
         root_path: Path,
         net_config: dict[str, Any],
     ) -> AsyncIterator[RpcClient]:
-        yield cast(RpcClient, None)
+        yield cast(RpcClient, None)  # pragma: no cover
 
 
 async def wait_for_daemon_connection(root_path: Path, config: dict[str, Any], timeout: float = 15) -> DaemonProxy:
