@@ -879,7 +879,7 @@ class WalletStateManager:
             return await self.handle_clawback(clawback_coin_data, coin_state, coin_spend, peer), clawback_coin_data
 
         # Check if the coin is a VC
-        is_vc, err_msg = VerifiedCredential.is_vc(uncurried)
+        is_vc, _err_msg = VerifiedCredential.is_vc(uncurried)
         if is_vc:
             vc: VerifiedCredential = VerifiedCredential.get_next_from_coin_spend(coin_spend)
             return await self.handle_vc(vc), vc
@@ -1101,7 +1101,7 @@ class WalletStateManager:
         """
         Handle the new coin when it is a DAO CAT
         """
-        mod_hash, tail_hash, inner_puzzle = curried_args
+        _mod_hash, tail_hash, _inner_puzzle = curried_args
         asset_id: bytes32 = bytes32(bytes(tail_hash)[1:])
         for wallet in self.wallets.values():
             if wallet.type() == WalletType.DAO_CAT:
@@ -1376,7 +1376,7 @@ class WalletStateManager:
             uncurried = uncurry_puzzle(did_spend.puzzle_reveal)
             did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
             if did_curried_args is not None:
-                p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
+                _p2_puzzle, _recovery_list_hash, _num_verification, singleton_struct, _metadata = did_curried_args
                 minter_did = bytes32(bytes(singleton_struct.rest().first())[1:])
         return minter_did
 
@@ -1408,20 +1408,20 @@ class WalletStateManager:
     ) -> Optional[WalletIdentifier]:
         (
             # ; second hash
-            SELF_HASH,
-            PROPOSAL_ID,
-            PROPOSED_PUZ_HASH,
-            YES_VOTES,
-            TOTAL_VOTES,
+            _SELF_HASH,
+            _PROPOSAL_ID,
+            _PROPOSED_PUZ_HASH,
+            _YES_VOTES,
+            _TOTAL_VOTES,
             # ; first hash
-            PROPOSAL_TIMER_MOD_HASH,
-            SINGLETON_MOD_HASH,
-            SINGLETON_LAUNCHER_PUZHASH,
-            CAT_MOD_HASH,
-            DAO_FINISHED_STATE_MOD_HASH,
-            TREASURY_MOD_HASH,
-            LOCKUP_SELF_HASH,
-            CAT_TAIL_HASH,
+            _PROPOSAL_TIMER_MOD_HASH,
+            _SINGLETON_MOD_HASH,
+            _SINGLETON_LAUNCHER_PUZHASH,
+            _CAT_MOD_HASH,
+            _DAO_FINISHED_STATE_MOD_HASH,
+            _TREASURY_MOD_HASH,
+            _LOCKUP_SELF_HASH,
+            _CAT_TAIL_HASH,
             TREASURY_ID,
         ) = uncurried_args
         for wallet in self.wallets.values():
@@ -1444,7 +1444,7 @@ class WalletStateManager:
             raise ValueError("coin_state argument to handle_dao_finished_proposals cannot have created_height of None")
         (
             SINGLETON_STRUCT,  # (SINGLETON_MOD_HASH, (SINGLETON_ID, LAUNCHER_PUZZLE_HASH))
-            FINISHED_STATE_MOD_HASH,
+            _FINISHED_STATE_MOD_HASH,
         ) = uncurried_args
         proposal_id = SINGLETON_STRUCT.rest().first().as_atom()
         for wallet in self.wallets.values():
@@ -1484,7 +1484,7 @@ class WalletStateManager:
         # P2 puzzle hash determines if we should ignore the NFT
         uncurried_nft: UncurriedNFT = nft_data.uncurried_nft
         old_p2_puzhash = uncurried_nft.p2_puzzle.get_tree_hash()
-        metadata, new_p2_puzhash = get_metadata_and_phs(
+        _metadata, new_p2_puzhash = get_metadata_and_phs(
             uncurried_nft,
             nft_data.parent_coin_spend.solution,
         )

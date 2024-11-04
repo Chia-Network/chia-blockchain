@@ -419,7 +419,7 @@ class PoolWallet:
         # Verify Parameters - raise if invalid
         PoolWallet._verify_initial_target_state(initial_target_state)
 
-        singleton_puzzle_hash, launcher_coin_id = await PoolWallet.generate_launcher_spend(
+        _singleton_puzzle_hash, launcher_coin_id = await PoolWallet.generate_launcher_spend(
             standard_wallet,
             uint64(1),
             fee,
@@ -514,19 +514,19 @@ class PoolWallet:
         assert new_inner_puzzle != inner_puzzle
         if is_pool_member_inner_puzzle(inner_puzzle):
             (
-                inner_f,
-                target_puzzle_hash,
-                p2_singleton_hash,
-                pubkey_as_program,
-                pool_reward_prefix,
-                escape_puzzle_hash,
+                _inner_f,
+                _target_puzzle_hash,
+                _p2_singleton_hash,
+                _pubkey_as_program,
+                _pool_reward_prefix,
+                _escape_puzzle_hash,
             ) = uncurry_pool_member_inner_puzzle(inner_puzzle)
         elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
             (
-                target_puzzle_hash,  # payout_puzzle_hash
-                relative_lock_height,
-                pubkey_as_program,
-                p2_singleton_hash,
+                _target_puzzle_hash,  # payout_puzzle_hash
+                _relative_lock_height,
+                _pubkey_as_program,
+                _p2_singleton_hash,
             ) = uncurry_pool_waitingroom_inner_puzzle(inner_puzzle)
         else:
             raise RuntimeError("Invalid state")

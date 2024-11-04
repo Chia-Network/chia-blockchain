@@ -447,7 +447,7 @@ async def run_add_block_benchmark(version: int) -> None:
             print("profiling get_block_records_close_to_peak")
 
         start = monotonic()
-        block_dict, peak_h = await block_store.get_block_records_close_to_peak(99)
+        block_dict, _peak_h = await block_store.get_block_records_close_to_peak(99)
         assert len(block_dict) == 100
 
         stop = monotonic()

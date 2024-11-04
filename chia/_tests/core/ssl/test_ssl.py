@@ -86,7 +86,7 @@ class TestSSL:
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
+        _wallet_node, server_2 = wallets[0]
 
         success = await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         assert success is True
@@ -167,7 +167,7 @@ class TestSSL:
 
     @pytest.mark.anyio
     async def test_full_node(self, simulator_and_wallet, self_hostname):
-        full_nodes, wallets, bt = simulator_and_wallet
+        full_nodes, _wallets, bt = simulator_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
         chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(bt.root_path, bt.config)

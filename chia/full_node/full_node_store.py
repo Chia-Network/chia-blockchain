@@ -268,7 +268,7 @@ class FullNodeStore:
         # deterministic property.
         # this sorts the UnfinishedBlocks by the foliage hash, and picks the
         # smallest hash
-        foliage_hash, block = find_best_block(result)
+        _foliage_hash, block = find_best_block(result)
         return block
 
     def get_unfinished_block2(

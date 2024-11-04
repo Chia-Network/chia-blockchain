@@ -28,7 +28,7 @@ class TestWalletRpc:
         self, two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
     ) -> None:
         num_blocks = 5
-        [full_node_service], wallet_services, bt = two_wallet_nodes_services
+        [full_node_service], wallet_services, _bt = two_wallet_nodes_services
         full_node_api = full_node_service._api
         full_node_server = full_node_api.full_node.server
         wallet_node = wallet_services[0]._node
@@ -238,7 +238,7 @@ class TestWalletRpc:
     async def test_wallet_dl_verify_proof(
         self, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
     ) -> None:
-        [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator_services
+        [full_node_service], [wallet_service], _bt = one_wallet_and_one_simulator_services
         full_node_api = full_node_service._api
         full_node_server = full_node_api.full_node.server
         wallet_node = wallet_service._node

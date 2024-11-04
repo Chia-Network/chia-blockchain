@@ -557,7 +557,7 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 
 @pytest.mark.anyio
 async def test_get_network_info(one_wallet_and_one_simulator_services, self_hostname):
-    nodes, _, bt = one_wallet_and_one_simulator_services
+    nodes, _, _bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
 
     async with FullNodeRpcClient.create_as_context(
@@ -578,7 +578,7 @@ async def test_get_network_info(one_wallet_and_one_simulator_services, self_host
 
 @pytest.mark.anyio
 async def test_get_version(one_wallet_and_one_simulator_services, self_hostname):
-    nodes, _, bt = one_wallet_and_one_simulator_services
+    nodes, _, _bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
     async with FullNodeRpcClient.create_as_context(
         self_hostname,

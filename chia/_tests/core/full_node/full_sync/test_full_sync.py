@@ -415,7 +415,7 @@ class TestFullSync:
     async def test_bad_peak_cache_invalidation(
         self, two_nodes, default_1000_blocks, blockchain_constants, consensus_mode
     ):
-        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
+        full_node_1, _full_node_2, _server_1, _server_2, bt = two_nodes
 
         for block in default_1000_blocks[:-500]:
             await full_node_1.full_node.add_block(block)

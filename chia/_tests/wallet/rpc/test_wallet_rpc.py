@@ -1272,7 +1272,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     }
     assert advanced_summary == summary
 
-    id, valid = await wallet_1_rpc.check_offer_validity(offer)
+    id, _valid = await wallet_1_rpc.check_offer_validity(offer)
     assert id == offer.name()
 
     all_offers = await wallet_1_rpc.get_all_offers(file_contents=True)
