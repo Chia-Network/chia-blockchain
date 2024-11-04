@@ -91,7 +91,6 @@ async def async_main(service_config: dict[str, Any]) -> int:
 def main() -> int:
     freeze_support()
 
-    # TODO: was CHIA_INSTRUMENT_NODE, can we please be more consistent though?
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
