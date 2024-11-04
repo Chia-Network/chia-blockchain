@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -o errexit
+set -vx
 
 USAGE_TEXT="\
 Usage: $0 [-adilpsh]
@@ -169,9 +170,12 @@ if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
 fi
 
 ./setup-poetry.sh -c "${INSTALL_PYTHON_PATH}"
-.penv/bin/poetry env use "${INSTALL_PYTHON_PATH}"
+.penv/bin/poetry env use -vvv "${INSTALL_PYTHON_PATH}"
+pwd
+ls -la
+cat poetry.toml || true
 # shellcheck disable=SC2086
-.penv/bin/poetry install ${EXTRAS}
+.penv/bin/poetry install -vvv ${EXTRAS}
 
 if [ -e venv ]; then
   if [ -d venv ] && [ ! -L venv ]; then
