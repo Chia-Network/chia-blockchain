@@ -851,7 +851,7 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
 
 
 def resolve_derivation_master_key(
-    fingerprint_or_filename: Optional[Union[int, str, Path]]
+    fingerprint_or_filename: Optional[Union[int, str, Path]],
 ) -> tuple[Optional[int], Optional[PrivateKey]]:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.

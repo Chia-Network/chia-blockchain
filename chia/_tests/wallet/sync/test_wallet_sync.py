@@ -1281,7 +1281,7 @@ async def test_retry_store(
     request_puzzle_solution_failure_tested = False
 
     def flaky_request_puzzle_solution(
-        func: Callable[[wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]]
+        func: Callable[[wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]],
     ) -> Callable[[wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]]:
         @functools.wraps(func)
         async def new_func(request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:

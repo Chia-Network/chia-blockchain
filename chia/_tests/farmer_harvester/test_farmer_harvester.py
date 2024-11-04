@@ -44,7 +44,7 @@ async def update_harvester_config(harvester_rpc_port: Optional[int], root_path: 
 
 @pytest.mark.anyio
 async def test_start_with_empty_keychain(
-    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> None:
     _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
@@ -67,7 +67,7 @@ async def test_start_with_empty_keychain(
 
 @pytest.mark.anyio
 async def test_harvester_handshake(
-    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> None:
     harvesters, farmer_service, bt = farmer_one_harvester_not_started
     harvester_service = harvesters[0]
@@ -212,7 +212,7 @@ async def test_harvester_config(farmer_one_harvester: tuple[list[HarvesterServic
 
 @pytest.mark.anyio
 async def test_missing_signage_point(
-    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> None:
     _, farmer_service, _bt = farmer_one_harvester
     farmer_api = farmer_service._api

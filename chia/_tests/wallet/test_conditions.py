@@ -206,7 +206,7 @@ def test_announcement_inversions(
         tuple[type[CreateCoinAnnouncement], type[AssertCoinAnnouncement]],
         tuple[type[CreatePuzzleAnnouncement], type[AssertPuzzleAnnouncement]],
         tuple[type[CreateAnnouncement], type[AssertAnnouncement]],
-    ]
+    ],
 ) -> None:
     create_driver, assert_driver = drivers
     # mypy is not smart enough to understand that this `if` narrows down the potential types it could be

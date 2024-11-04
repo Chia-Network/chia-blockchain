@@ -1177,7 +1177,6 @@ class WalletRpcApi:
     async def combine_coins(
         self, request: CombineCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> CombineCoinsResponse:
-
         # Some "number of coins" validation
         if request.number_of_coins > request.coin_num_limit:
             raise ValueError(
@@ -1725,10 +1724,10 @@ class WalletRpcApi:
     @marshal
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
         if request.ids is None:
-            notifications: list[Notification] = (
-                await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
-                    pagination=(request.start, request.end)
-                )
+            notifications: list[
+                Notification
+            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
+                pagination=(request.start, request.end)
             )
         else:
             notifications = (

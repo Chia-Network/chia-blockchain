@@ -1482,7 +1482,6 @@ class FullNode:
         fork_info: ForkInfo,
         vs: ValidationState,  # in-out parameter
     ) -> list[FullBlock]:
-
         blocks_to_validate: list[FullBlock] = []
         for i, block in enumerate(all_blocks):
             header_hash = block.header_hash

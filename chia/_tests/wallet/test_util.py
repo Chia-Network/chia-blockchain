@@ -77,9 +77,7 @@ def test_cs_config() -> None:
         {
             "excluded_coins": [coin_to_exclude.to_json_dict()],
         }
-    ).override(
-        max_coin_amount=100
-    ).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
+    ).override(max_coin_amount=100).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
         **default_cs_config,
         "excluded_coin_ids": ["0x" + coin_to_exclude.name().hex()],
         "max_coin_amount": 100,

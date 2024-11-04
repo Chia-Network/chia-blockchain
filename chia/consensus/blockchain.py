@@ -962,7 +962,6 @@ class Blockchain:
         return False
 
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
-
         generators: dict[uint32, bytes] = {}
 
         # if this is empty, we shouldn't have called this function to begin with

@@ -503,7 +503,6 @@ class TestConditions:
         bt: BlockTools,
         consensus_mode: ConsensusMode,
     ) -> None:
-
         c = bt.constants
 
         additional_data = agg_sig_additional_data(c.AGG_SIG_ME_ADDITIONAL_DATA)
