@@ -95,7 +95,15 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
         # TODO: fails...  make it not do that
         # [None, "chia.seeder.start_crawler", "crawler"],
         [None, "chia.server.start_timelord", "timelord"],
-        [None, "chia.timelord.timelord_launcher", "timelord_launcher"],
+        pytest.param(
+            None,
+            "chia.timelord.timelord_launcher",
+            "timelord_launcher",
+            marks=pytest.mark.skipif(
+                sys.platform in ("win", "cygwin"),
+                reason="windows is not supported by the timelord launcher",
+            ),
+        ),
         [None, "chia.simulator.start_simulator", "simulator"],
         # TODO: fails...  make it not do that
         # [None, "chia.data_layer.data_layer_server", "data_layer"],
