@@ -30,9 +30,8 @@ from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import Peak
-from chia.protocols import full_node_protocol
+from chia.protocols import full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols import full_node_protocol as fnp
-from chia.protocols import timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability, default_capabilities
@@ -121,7 +120,7 @@ async def test_sync_no_farmer(
     self_hostname: str,
     seeded_random: random.Random,
 ):
-    nodes, wallets, bt = setup_two_nodes_and_wallet
+    nodes, _wallets, _bt = setup_two_nodes_and_wallet
     server_1 = nodes[0].full_node.server
     server_2 = nodes[1].full_node.server
     full_node_1 = nodes[0]
@@ -486,7 +485,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_request_peers(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, _ = wallet_nodes
+        full_node_1, full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, _ = wallet_nodes
         full_node_2.full_node.full_node_peers.address_manager.make_private_subnets_valid()
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()))
 
@@ -507,7 +506,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_basic_chain(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
 
         incoming_queue, _ = await add_dummy_connection(server_1, self_hostname, 12312)
         expected_requests = 0
@@ -530,9 +529,9 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_respond_end_of_sub_slot(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
 
-        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+        incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         expected_requests = 0
         if await full_node_1.full_node.synced():
             expected_requests = 1
@@ -588,9 +587,9 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_respond_end_of_sub_slot_no_reorg(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
 
-        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+        incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         expected_requests = 0
         if await full_node_1.full_node.synced():
             expected_requests = 1
@@ -625,9 +624,9 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_respond_end_of_sub_slot_race(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
 
-        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+        incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         expected_requests = 0
         if await full_node_1.full_node.synced():
             expected_requests = 1
@@ -655,9 +654,9 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_respond_unfinished(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
 
-        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+        incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         expected_requests = 0
         if await full_node_1.full_node.synced():
             expected_requests = 1
@@ -758,7 +757,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_new_peak(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         dummy_peer = server_1.all_connections[dummy_node_id]
@@ -1012,7 +1011,7 @@ class TestFullNodeProtocol:
             pool_reward_puzzle_hash=wallet_ph,
         )
 
-        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+        incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
@@ -1048,11 +1047,11 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_respond_transaction_fail(self, wallet_nodes, self_hostname, seeded_random: random.Random):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         cb_ph = wallet_a.get_new_puzzlehash()
 
-        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+        incoming_queue, _dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
         tx_id = bytes32.random(seeded_random)
@@ -1095,7 +1094,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_request_block(self, wallet_nodes):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, _server_1, _server_2, wallet_a, wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
         blocks = bt.get_consecutive_blocks(
@@ -1137,7 +1136,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_request_blocks(self, wallet_nodes):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, _server_1, _server_2, wallet_a, wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
         # create more blocks than constants.MAX_BLOCK_COUNT_PER_REQUEST (32)
@@ -1200,7 +1199,7 @@ class TestFullNodeProtocol:
     @pytest.mark.parametrize("peer_version", ["0.0.35", "0.0.36"])
     @pytest.mark.parametrize("requesting", [0, 1, 2])
     async def test_new_unfinished_block(self, wallet_nodes, peer_version: str, requesting: int, self_hostname: str):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -1256,7 +1255,7 @@ class TestFullNodeProtocol:
     @pytest.mark.anyio
     @pytest.mark.parametrize("requesting", [0, 1, 2])
     async def test_new_unfinished_block2(self, wallet_nodes, requesting: int, self_hostname: str):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -1295,7 +1294,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_new_unfinished_block2_forward_limit(self, wallet_nodes, self_hostname: str):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
         blocks = bt.get_consecutive_blocks(3, guarantee_transaction_block=True)
         for block in blocks:
             await full_node_1.full_node.add_block(block)
@@ -1368,7 +1367,7 @@ class TestFullNodeProtocol:
         ],
     )
     async def test_unfinished_block_with_replaced_generator(self, wallet_nodes, self_hostname, committment, expected):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -1546,7 +1545,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_request_unfinished_block(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         blocks = bt.get_consecutive_blocks(10, block_list_input=blocks, seed=b"12345")
@@ -1565,7 +1564,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_request_unfinished_block2(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
         blocks = bt.get_consecutive_blocks(3, guarantee_transaction_block=True)
         for block in blocks:
@@ -1620,7 +1619,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_new_signage_point_or_end_of_sub_slot(self, wallet_nodes, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
         blocks = bt.get_consecutive_blocks(3, block_list_input=blocks, skip_slots=2)
@@ -1662,7 +1661,7 @@ class TestFullNodeProtocol:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
         assert len(full_node_1.full_node.full_node_store.finished_sub_slots) >= num_slots - 1
 
-        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12315)
+        _incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12315)
         dummy_peer = server_1.all_connections[dummy_node_id]
         await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slots[-1]), dummy_peer)
 
@@ -1675,7 +1674,7 @@ class TestFullNodeProtocol:
 
     @pytest.mark.anyio
     async def test_new_signage_point_caching(self, wallet_nodes, empty_blockchain, self_hostname):
-        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        full_node_1, _full_node_2, server_1, server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
         blocks = await full_node_1.get_all_full_blocks()
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
@@ -1750,7 +1749,7 @@ class TestFullNodeProtocol:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
         assert len(full_node_1.full_node.full_node_store.finished_sub_slots) >= num_slots - 1
 
-        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12315)
+        _incoming_queue, dummy_node_id = await add_dummy_connection(server_1, self_hostname, 12315)
         dummy_peer = server_1.all_connections[dummy_node_id]
         await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slots[-1]), dummy_peer)
 
@@ -2187,11 +2186,11 @@ class TestFullNodeProtocol:
         # TODO: consider not testing this against both DB v1 and v2?
 
         [
-            initiating_full_node_api,
-            listening_full_node_api,
+            _initiating_full_node_api,
+            _listening_full_node_api,
             initiating_server,
             listening_server,
-            bt,
+            _bt,
         ] = two_nodes
 
         initiating_server._local_capabilities_for_handshake = custom_capabilities
@@ -2266,7 +2265,7 @@ async def test_long_reorg(
     test_long_reorg_1500_blocks_light: list[FullBlock],
     seeded_random: random.Random,
 ):
-    node, server, bt = one_node_one_block
+    node, _server, _bt = one_node_one_block
 
     fork_point = 1499
     blocks = default_10000_blocks[:3000]

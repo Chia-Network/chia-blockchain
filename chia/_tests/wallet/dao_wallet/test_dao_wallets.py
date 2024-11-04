@@ -1626,7 +1626,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
 async def test_dao_rpc_client(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    [full_node_service], wallet_services, _bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
     wallet_node_0 = wallet_services[0]._node
@@ -2016,7 +2016,7 @@ async def test_dao_rpc_client(
 async def test_dao_complex_spends(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    [full_node_service], wallet_services, _bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
     wallet_node_0 = wallet_services[0]._node
@@ -2617,7 +2617,7 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: OldSimula
 async def test_dao_cat_exits(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    [full_node_service], wallet_services, _bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
     wallet_node_0 = wallet_services[0]._node

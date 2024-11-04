@@ -15,13 +15,6 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
-      - id: pyupgrade
-        name: pyupgrade
-        entry: ./activated.py pyupgrade --py39-plus --keep-runtime-typing
-        language: system
-        types: [python]
-  - repo: local
-    hooks:
       - id: black
         name: black
         entry: ./activated.py black
@@ -92,20 +85,6 @@ repos:
         entry: ./activated.py mypy
         language: system
         pass_filenames: false
-  - repo: local
-    hooks:
-      - id: isort
-        name: isort
-        entry: ./activated.py isort
-        language: system
-        types: [python]
-  - repo: local
-    hooks:
-      - id: flake8
-        name: Flake8
-        entry: ./activated.py flake8
-        language: system
-        types: [python]
   - repo: local
     hooks:
       - id: ruff

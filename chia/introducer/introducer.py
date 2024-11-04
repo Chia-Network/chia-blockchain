@@ -100,7 +100,7 @@ class Introducer:
                         peer.last_attempt = uint64(time.time())
 
                         self.log.info(f"Vetting peer {peer.host} {peer.port}")
-                        r, w = await asyncio.wait_for(
+                        _r, w = await asyncio.wait_for(
                             asyncio.open_connection(peer.host, int(peer.port)),
                             timeout=3,
                         )

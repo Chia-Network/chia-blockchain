@@ -8,6 +8,7 @@ import ssl
 import aiohttp
 import pytest
 
+from chia.apis import ApiProtocolRegistry
 from chia.protocols.shared_protocol import default_capabilities
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
@@ -37,6 +38,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             100,
             30,
             local_capabilities_for_handshake=default_capabilities[NodeType.FULL_NODE],
+            class_for_type=ApiProtocolRegistry,
         )
         await wsc.perform_handshake(server._network_id, dummy_port, NodeType.FULL_NODE)
         await wsc.close()
@@ -84,7 +86,7 @@ class TestSSL:
         full_nodes, wallets, _ = simulator_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
-        wallet_node, server_2 = wallets[0]
+        _wallet_node, server_2 = wallets[0]
 
         success = await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), None)
         assert success is True
@@ -165,7 +167,7 @@ class TestSSL:
 
     @pytest.mark.anyio
     async def test_full_node(self, simulator_and_wallet, self_hostname):
-        full_nodes, wallets, bt = simulator_and_wallet
+        full_nodes, _wallets, bt = simulator_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
         chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(bt.root_path, bt.config)

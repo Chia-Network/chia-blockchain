@@ -28,7 +28,7 @@ async def tcp_echo_client(task_counter: str, logger: logging.Logger) -> None:
             writer = None
             try:
                 logger.info(f"Opening connection: {label}")
-                reader, writer = await asyncio.open_connection(IP, PORT)
+                _reader, writer = await asyncio.open_connection(IP, PORT)
                 total_open_connections += 1
                 logger.info(f"Opened connection: {label} (total: {total_open_connections})")
                 assert writer is not None

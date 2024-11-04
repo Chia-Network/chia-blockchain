@@ -6,7 +6,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 import anyio
 from chia_rs import (
@@ -80,6 +80,11 @@ else:
 
 
 class FullNodeAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("FullNodeAPI", None)
+
     log: logging.Logger
     full_node: FullNode
     executor: ThreadPoolExecutor

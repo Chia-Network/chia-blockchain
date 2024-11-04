@@ -1,4 +1,3 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
 import pytest
@@ -7,7 +6,6 @@ from clvm.casts import int_to_bytes
 
 from chia import __version__
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from chia._tests.conftest import ConsensusMode
 from chia._tests.connection_utils import connect_and_get_peer
 from chia._tests.util.rpc import validate_get_routes
 from chia._tests.util.time_out_assert import time_out_assert
@@ -559,7 +557,7 @@ async def test_signage_points(two_nodes_sim_and_wallets_services, empty_blockcha
 
 @pytest.mark.anyio
 async def test_get_network_info(one_wallet_and_one_simulator_services, self_hostname):
-    nodes, _, bt = one_wallet_and_one_simulator_services
+    nodes, _, _bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
 
     async with FullNodeRpcClient.create_as_context(
@@ -580,7 +578,7 @@ async def test_get_network_info(one_wallet_and_one_simulator_services, self_host
 
 @pytest.mark.anyio
 async def test_get_version(one_wallet_and_one_simulator_services, self_hostname):
-    nodes, _, bt = one_wallet_and_one_simulator_services
+    nodes, _, _bt = one_wallet_and_one_simulator_services
     (full_node_service_1,) = nodes
     async with FullNodeRpcClient.create_as_context(
         self_hostname,
@@ -713,7 +711,7 @@ async def test_coin_name_not_found_in_mempool(one_node, self_hostname):
 
         empty_coin_name = bytes32.zeros
         mempool_item = await client.get_mempool_items_by_coin_name(empty_coin_name)
-        assert mempool_item["success"] == True
+        assert mempool_item["success"]
         assert "mempool_items" in mempool_item
         assert len(mempool_item["mempool_items"]) == 0
     finally:
@@ -780,7 +778,7 @@ async def test_coin_name_found_in_mempool(one_node, self_hostname):
         mempool_item = await client.get_mempool_items_by_coin_name(coin_to_spend.name())
 
         # found coin in coin spends
-        assert mempool_item["success"] == True
+        assert mempool_item["success"]
         assert "mempool_items" in mempool_item
         assert len(mempool_item["mempool_items"]) > 0
         for item in mempool_item["mempool_items"]:

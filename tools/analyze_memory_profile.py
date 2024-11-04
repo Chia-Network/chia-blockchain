@@ -35,7 +35,7 @@ class Frame:
 
 
 def color(pct: float) -> str:
-    return f"{int((100.-pct)//10)+1}"
+    return f"{int((100. - pct) // 10) + 1}"
 
 
 def fontcolor(pct: float) -> str:
@@ -126,7 +126,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
         total_size += trace.size
         calls += 1
         if ((calls - 1) & 255) == 0:
-            stdout.write(f"\rtotal size: {total_size/1000000:0.3f} MB ({calls} allocs) ")
+            stdout.write(f"\rtotal size: {total_size / 1000000:0.3f} MB ({calls} allocs) ")
         # to support recursive functions, make sure we only visit each frame
         # once during traversal
         visited: set[str] = set()
@@ -171,7 +171,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
             f.write(
                 f'frame_{fr.fun_id} [shape=box, label="{name}()\\l'
                 f"{percent:0.2f}%\\n"
-                f"{fr.size/1000000:0.3f}MB\\n"
+                f"{fr.size / 1000000:0.3f}MB\\n"
                 f'{fr.count}x\\n",'
                 f"fillcolor={color(percent)}, "
                 f"color={color(percent)}, "
@@ -201,7 +201,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
                 f.write(
                     f"frame_{caller_id} -> frame_{fr.fun_id} "
                     f'[label="{percent:0.2f}%\\n{ci.calls}x",'
-                    f"penwidth={0.3+(ci.size*6/total_size):0.2f},"
+                    f"penwidth={0.3 + (ci.size * 6 / total_size):0.2f},"
                     f"color={color(percent)}]\n"
                 )
         f.write("}\n")

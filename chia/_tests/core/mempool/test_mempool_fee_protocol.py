@@ -24,7 +24,7 @@ async def test_protocol_messages(
         list[Union[FullNodeAPI, FullNodeSimulator]], list[tuple[Wallet, ChiaServer]], BlockTools
     ]
 ) -> None:
-    full_nodes, wallets, bt = simulator_and_wallet
+    full_nodes, _wallets, bt = simulator_and_wallet
     a_wallet = bt.get_pool_wallet_tool()
     reward_ph = a_wallet.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(

@@ -852,7 +852,7 @@ def prompt_for_fingerprint() -> Optional[int]:
     while True:
         print("Choose key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            print(f"{i + 1}) {fp}")
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")

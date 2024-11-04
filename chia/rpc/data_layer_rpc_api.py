@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
@@ -89,6 +89,11 @@ def get_fee(config: dict[str, Any], request: dict[str, Any]) -> uint64:
 
 
 class DataLayerRpcApi:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcApiProtocol
+
+        _protocol_check: ClassVar[RpcApiProtocol] = cast("DataLayerRpcApi", None)
+
     # TODO: other RPC APIs do not accept a wallet and the service start does not expect to provide one
     def __init__(self, data_layer: DataLayer):  # , wallet: DataLayerWallet):
         self.service: DataLayer = data_layer
