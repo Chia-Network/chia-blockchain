@@ -1413,6 +1413,7 @@ class WalletRpcApi:
         return SendTransactionResponse([], [], whatever_tx, bytes32.zeros)
 
     async def send_transaction_multi(self, request: dict[str, Any]) -> EndpointResult:
+        # TODO: Deprecate this. It's a hack for ergonomics over two other endpoints and causes endless headaches.
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
