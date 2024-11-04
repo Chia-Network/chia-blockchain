@@ -838,14 +838,14 @@ class PuzzleDecoratorData:
     def to_json_dict(self) -> dict[str, Any]:
         return {
             **self.decorator_information,
-            "decorator_name": self.decorator_name.name,
+            "decorator": self.decorator_name.name,
         }
 
     @classmethod
     def from_json_dict(cls, json_dict: dict[str, Any]) -> PuzzleDecoratorData:
         return PuzzleDecoratorData(
-            decorator_name=PuzzleDecoratorType.__members__[json_dict["decorator_name"]],
-            decorator_information={k: v for k, v in json_dict.items() if k != "decorator_name"},
+            decorator_name=PuzzleDecoratorType.__members__[json_dict["decorator"]],
+            decorator_information={k: v for k, v in json_dict.items() if k != "decorator"},
         )
 
 
