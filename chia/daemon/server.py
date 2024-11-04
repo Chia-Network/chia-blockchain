@@ -1547,6 +1547,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
+    sys.stdout.flush()
     try:
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
             log.info(f"chia-blockchain version: {chia_short_version()}")
@@ -1575,6 +1576,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 await beta_metrics.stop_logging()
 
             log.info("Daemon WebSocketServer closed")
+            sys.stderr.close()
             return 0
     except LockfileError:
         print("daemon: already launching")
