@@ -659,6 +659,7 @@ async def get_offers(
     include_completed: bool = False,
     summaries: bool = False,
     reverse: bool = False,
+    sort_by_relevance: bool = True,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         file_contents: bool = (filepath is not None) or summaries
@@ -673,6 +674,7 @@ async def get_offers(
                 new_records: list[TradeRecord] = await wallet_client.get_all_offers(
                     start,
                     end,
+                    sort_key="RELEVANCE" if sort_by_relevance else "CONFIRMED_AT_HEIGHT",
                     reverse=reverse,
                     file_contents=file_contents,
                     exclude_my_offers=exclude_my_offers,
