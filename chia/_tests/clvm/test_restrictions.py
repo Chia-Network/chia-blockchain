@@ -5,7 +5,7 @@ from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
 
 from chia._tests.clvm.test_custody_architecture import ACSMember
-from chia.clvm.spend_sim import CostLogger, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
