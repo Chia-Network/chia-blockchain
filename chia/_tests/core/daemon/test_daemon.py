@@ -1035,7 +1035,7 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
 
 @pytest.mark.anyio
 async def test_add_private_key_label(daemon_connection_and_temp_keychain):
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     async def assert_add_private_key_with_label(
         key_data: KeyData, request: dict[str, object], add_private_key_response: dict[str, object]
@@ -1763,7 +1763,7 @@ async def test_keyring_file_deleted(
 async def test_plotter_errors(
     daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], case: RouteCase
 ) -> None:
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     payload = create_payload(
         case.route,
@@ -1878,7 +1878,7 @@ async def test_plotter_options(
     get_b_tools: BlockTools,
     case: RouteCase,
 ) -> None:
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     # register for chia_plotter events
     service_name = "chia_plotter"
@@ -1942,7 +1942,7 @@ def check_plot_queue_log(
 async def test_plotter_roundtrip(
     daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
 ) -> None:
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     # register for chia_plotter events
     service_name = "chia_plotter"
@@ -2014,7 +2014,7 @@ async def test_plotter_roundtrip(
 async def test_plotter_stop_plotting(
     daemon_connection_and_temp_keychain: tuple[aiohttp.ClientWebSocketResponse, Keychain], get_b_tools: BlockTools
 ) -> None:
-    ws, keychain = daemon_connection_and_temp_keychain
+    ws, _keychain = daemon_connection_and_temp_keychain
 
     # register for chia_plotter events
     service_name = "chia_plotter"

@@ -77,7 +77,7 @@ async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncIterator[
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
 
-    async with create_blockchain(constants, 2) as (bc, db_wrapper):
+    async with create_blockchain(constants, 2) as (bc, _):
         yield bc
 
 
@@ -606,7 +606,7 @@ class TestBlockHeaderValidation:
             ),
             keychain=keychain,
         )
-        async with create_blockchain(bt_high_iters.constants, db_version) as (bc1, db_wrapper):
+        async with create_blockchain(bt_high_iters.constants, db_version) as (bc1, _):
             blocks = bt_high_iters.get_consecutive_blocks(10)
             for block in blocks:
                 if (
@@ -1850,8 +1850,8 @@ class TestPreValidation:
                 )
         end = time.time()
         log.info(f"Total time: {end - start} seconds")
-        log.info(f"Average pv: {sum(times_pv)/(len(blocks)/n_at_a_time)}")
-        log.info(f"Average rb: {sum(times_rb)/(len(blocks))}")
+        log.info(f"Average pv: {sum(times_pv) / (len(blocks) / n_at_a_time)}")
+        log.info(f"Average rb: {sum(times_rb) / (len(blocks))}")
 
 
 class TestBodyValidation:
@@ -2775,7 +2775,7 @@ class TestBodyValidation:
             block_generator, max_cost, mempool_mode=False, height=softfork_height, constants=bt.constants
         )
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
-        result, err, _ = await b.add_block(
+        _result, err, _ = await b.add_block(
             block_2,
             PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)),
             None,

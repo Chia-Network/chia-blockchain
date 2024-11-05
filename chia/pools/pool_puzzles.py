@@ -143,7 +143,7 @@ def get_template_singleton_inner_puzzle(inner_puzzle: Program) -> Program:
     r = inner_puzzle.uncurry()
     if r is None:
         return False
-    uncurried_inner_puzzle, args = r
+    uncurried_inner_puzzle, _args = r
     return uncurried_inner_puzzle
 
 
@@ -362,9 +362,9 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> tuple[Progra
     r = inner_puzzle.uncurry()
     if r is None:
         raise ValueError("Failed to unpack inner puzzle")
-    inner_f, args = r
+    _inner_f, args = r
     v = args.as_iter()
-    target_puzzle_hash, p2_singleton_hash, owner_pubkey, genesis_challenge, relative_lock_height = tuple(v)
+    target_puzzle_hash, p2_singleton_hash, owner_pubkey, _genesis_challenge, relative_lock_height = tuple(v)
     return target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
 
 

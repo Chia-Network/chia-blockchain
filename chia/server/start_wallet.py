@@ -6,6 +6,7 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
+from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -69,6 +70,7 @@ def create_wallet_service(
         rpc_info=rpc_info,
         advertised_port=None,
         connect_to_daemon=connect_to_daemon,
+        class_for_type=ApiProtocolRegistry,
     )
 
 

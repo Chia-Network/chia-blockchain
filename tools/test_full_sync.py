@@ -165,7 +165,7 @@ async def run_sync_checkpoint(
                 fork_height = block_batch[0].height - 1
                 header_hash = block_batch[0].prev_header_hash
 
-                success, _, err = await full_node.add_block_batch(
+                success, _, _err = await full_node.add_block_batch(
                     AugmentedBlockchain(full_node.blockchain),
                     block_batch,
                     peer_info,
@@ -189,7 +189,7 @@ async def run_sync_checkpoint(
                 )
                 fork_height = block_batch[0].height - 1
                 fork_header_hash = block_batch[0].prev_header_hash
-                success, _, err = await full_node.add_block_batch(
+                success, _, _err = await full_node.add_block_batch(
                     AugmentedBlockchain(full_node.blockchain),
                     block_batch,
                     peer_info,

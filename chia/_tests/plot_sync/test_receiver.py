@@ -223,7 +223,7 @@ def test_default_values(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_reset(seeded_random: random.Random) -> None:
-    receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
+    receiver, _sync_steps = plot_sync_setup(seeded_random=seeded_random)
     connection_before = receiver.connection()
     # Assign some dummy values
     receiver._current_sync.state = State.done

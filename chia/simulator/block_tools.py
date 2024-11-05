@@ -970,7 +970,7 @@ class BlockTools:
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
-                self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height+1}")
+                self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height + 1}")
             else:  # the previous block is not the last block of the sub-epoch or epoch
                 pending_ses = False
                 ses_hash = None
@@ -1053,7 +1053,7 @@ class BlockTools:
             sub_slots_finished += 1
             self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
-                f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
+                f"{(len(block_list) - initial_block_list_len) / sub_slots_finished}"
                 f"Sub Epoch Summary Included: {sub_epoch_summary is not None} "
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot

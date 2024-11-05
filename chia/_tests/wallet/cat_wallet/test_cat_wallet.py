@@ -390,7 +390,6 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                     "cat": {
                         "confirmed_wallet_balance": 60,
                         "unconfirmed_wallet_balance": 60,
-                        "pending_coin_removal_count": 0,
                         "spendable_balance": 60,
                         "max_send_amount": 60,
                         "pending_change": 0,
@@ -675,7 +674,6 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                     "cat": {
                         "confirmed_wallet_balance": 60,
                         "unconfirmed_wallet_balance": 60,
-                        "pending_coin_removal_count": 0,
                         "spendable_balance": 60,
                         "max_send_amount": 60,
                         "pending_change": 0,
@@ -867,7 +865,6 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                     "cat": {
                         "confirmed_wallet_balance": 60,
                         "unconfirmed_wallet_balance": 60,
-                        "pending_coin_removal_count": 0,
                         "spendable_balance": 60,
                         "max_send_amount": 60,
                         "pending_change": 0,
@@ -893,7 +890,6 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                     "cat": {
                         "confirmed_wallet_balance": 20,
                         "unconfirmed_wallet_balance": 20,
-                        "pending_coin_removal_count": 0,
                         "spendable_balance": 20,
                         "max_send_amount": 20,
                         "pending_change": 0,
@@ -1557,7 +1553,7 @@ async def test_cat_change_detection(wallet_environments: WalletTestFramework) ->
             ),
         ],
     )
-    await env.rpc_client.push_tx(PushTX(bytes(eve_spend)))
+    await env.rpc_client.push_tx(PushTX(eve_spend))
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, eve_spend.name())
     await wallet_environments.process_pending_states(
         [
@@ -1669,7 +1665,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
             )
         ],
     )
-    await env.rpc_client.push_tx(PushTX(bytes(spend_to_wallet)))
+    await env.rpc_client.push_tx(PushTX(spend_to_wallet))
     await time_out_assert(10, simulator.tx_id_in_mempool, True, spend_to_wallet.name())
 
     await wallet_environments.process_pending_states(
@@ -1721,7 +1717,7 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                 ],
             )
             signed_spend, _ = await env.wallet_state_manager.sign_bundle(new_spend.coin_spends)
-            await env.rpc_client.push_tx(PushTX(bytes(signed_spend)))
+            await env.rpc_client.push_tx(PushTX(signed_spend))
             await time_out_assert(10, simulator.tx_id_in_mempool, True, signed_spend.name())
 
             await wallet_environments.process_pending_states(

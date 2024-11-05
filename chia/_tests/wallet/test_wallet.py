@@ -2135,7 +2135,7 @@ def test_get_wallet_db_path_testnet() -> None:
 async def test_wallet_has_no_server(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
-    full_nodes, wallets, bt = simulator_and_wallet
-    wallet_node, wallet_server = wallets[0]
+    _full_nodes, wallets, _bt = simulator_and_wallet
+    _wallet_node, wallet_server = wallets[0]
 
     assert wallet_server.webserver is None
