@@ -1526,7 +1526,6 @@ async def test_insert_from_delta_file(
     group_files_by_store: bool,
     max_full_files: int,
 ) -> None:
-    await data_store.create_tree(store_id=store_id, status=Status.COMMITTED)
     num_files = 5
     for generation in range(num_files):
         key = generation.to_bytes(4, byteorder="big")
@@ -1540,28 +1539,31 @@ async def test_insert_from_delta_file(
         await data_store.add_node_hashes(store_id)
 
     root = await data_store.get_tree_root(store_id=store_id)
-    assert root.generation == num_files + 1
+    assert root.generation == num_files
     root_hashes = []
 
     tmp_path_1 = tmp_path.joinpath("1")
     tmp_path_2 = tmp_path.joinpath("2")
 
-    for generation in range(1, num_files + 2):
+    for generation in range(1, num_files + 1):
         root = await data_store.get_tree_root(store_id=store_id, generation=generation)
         await write_files_for_root(data_store, store_id, root, tmp_path_1, 0, False, group_files_by_store)
         root_hashes.append(bytes32.zeros if root.node_hash is None else root.node_hash)
     store_path = tmp_path_1.joinpath(f"{store_id}") if group_files_by_store else tmp_path_1
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
-        assert len(filenames) == 2 * (num_files + 1)
+        assert len(filenames) == 2 * num_files
     for filename in filenames:
         if "full" in filename:
             store_path.joinpath(filename).unlink()
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
-        assert len(filenames) == num_files + 1
+        assert len(filenames) == num_files
     kv_before = await data_store.get_keys_values(store_id=store_id)
     await data_store.rollback_to_generation(store_id, 0)
+    async with data_store.db_wrapper.writer() as writer:
+        await writer.execute("DELETE FROM merkleblob")
+
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
     os.rename(store_path, tmp_path_2)
@@ -1613,9 +1615,6 @@ async def test_insert_from_delta_file(
     root = await data_store.get_tree_root(store_id=store_id)
     assert root.generation == 0
 
-    async with data_store.db_wrapper.writer() as writer:
-        await writer.execute("DELETE FROM merkleblob")
-
     sinfo = ServerInfo("http://127.0.0.1/8003", 0, 0)
     with monkeypatch.context() as m:
         m.setattr("chia.data_layer.download_data.http_download", mock_http_download_2)
@@ -1637,10 +1636,10 @@ async def test_insert_from_delta_file(
         assert success
 
     root = await data_store.get_tree_root(store_id=store_id)
-    assert root.generation == num_files + 1
+    assert root.generation == num_files
     with os.scandir(store_path) as entries:
         filenames = {entry.name for entry in entries}
-        assert len(filenames) == num_files + 1 + max_full_files  # 6 deltas and max_full_files full files
+        assert len(filenames) == num_files + max_full_files - 1
     kv = await data_store.get_keys_values(store_id=store_id)
     assert kv == kv_before
 

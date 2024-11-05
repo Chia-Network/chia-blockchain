@@ -130,6 +130,7 @@ async def init_data_layer(
     manage_data_interval: int = 5,
     maximum_full_file_count: Optional[int] = None,
     group_files_by_store: bool = False,
+    enable_batch_autoinsert: bool = True,
 ) -> AsyncIterator[DataLayer]:
     async with init_data_layer_service(
         wallet_rpc_port,
@@ -138,7 +139,7 @@ async def init_data_layer(
         wallet_service,
         manage_data_interval,
         maximum_full_file_count,
-        True,
+        enable_batch_autoinsert,
         group_files_by_store,
     ) as data_layer_service:
         yield data_layer_service._api.data_layer
@@ -448,7 +449,7 @@ async def test_keys_values_ancestors(
             assert key in dic
         val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": val["keys_values"][4]["hash"]})
         # todo better assertions for get_ancestors result
-        assert len(val["ancestors"]) == 3
+        assert len(val["ancestors"]) == 1
         res_before = await data_rpc_api.get_root({"id": store_id.hex()})
         assert res_before["confirmed"] is True
         assert res_before["timestamp"] > 0
@@ -662,7 +663,12 @@ async def test_batch_update_matches_single_operations(
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
+    async with init_data_layer(
+        wallet_rpc_port=wallet_rpc_port,
+        bt=bt,
+        db_path=tmp_path,
+        enable_batch_autoinsert=False,
+    ) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
@@ -1602,6 +1608,7 @@ make_one_take_one_unpopulated_reference = MakeAndTakeReference(
     indirect=["offer_setup"],
 )
 @pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
@@ -3046,7 +3053,12 @@ async def test_pagination_cmds(
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
-    async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
+    async with init_data_layer_service(
+        wallet_rpc_port=wallet_rpc_port,
+        bt=bt,
+        db_path=tmp_path,
+        enable_batch_autoinsert=False,
+    ) as data_layer_service:
         assert data_layer_service.rpc_server is not None
         rpc_port = data_layer_service.rpc_server.listen_port
         data_layer = data_layer_service._api.data_layer

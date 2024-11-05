@@ -208,16 +208,16 @@ class MerkleBlob:
         self.blob[data_start:end] = pack_raw_node(new_node)
 
     def get_random_leaf_node(self, seed: bytes) -> RawLeafMerkleNode:
+        path = "".join(reversed("".join(f"{b:08b}" for b in seed)))
         node = self.get_raw_node(TreeIndex(0))
-        for byte in seed:
-            for bit in range(8):
-                if isinstance(node, RawLeafMerkleNode):
-                    return node
-                assert isinstance(node, RawInternalMerkleNode)
-                if byte & (1 << bit):
-                    node = self.get_raw_node(node.left)
-                else:
-                    node = self.get_raw_node(node.right)
+        for bit in path:
+            if isinstance(node, RawLeafMerkleNode):
+                return node
+            assert isinstance(node, RawInternalMerkleNode)
+            if bit == "0":
+                node = self.get_raw_node(node.left)
+            else:
+                node = self.get_raw_node(node.right)
 
         raise Exception("Cannot find leaf from seed")
 
@@ -342,6 +342,9 @@ class MerkleBlob:
         if isinstance(new_node, RawLeafMerkleNode):
             self.key_to_index[new_node.key] = new_index
 
+    def key_exists(self, key: KVId) -> bool:
+        return key in self.key_to_index
+
     def insert(
         self,
         key: KVId,
@@ -375,7 +378,10 @@ class MerkleBlob:
 
         if len(self.key_to_index) == 1:
             self.blob.clear()
-            internal_node_hash = internal_hash(bytes32(old_leaf.hash), bytes32(hash))
+            if side == Side.LEFT:
+                internal_node_hash = internal_hash(bytes32(hash), bytes32(old_leaf.hash))
+            else:
+                internal_node_hash = internal_hash(bytes32(old_leaf.hash), bytes32(hash))
             self.blob.extend(
                 NodeMetadata(type=NodeType.internal, dirty=False).pack()
                 + pack_raw_node(

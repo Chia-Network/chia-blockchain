@@ -1044,6 +1044,14 @@ class DataStore:
 
         return keys
 
+    def get_reference_kid_side(self, merkle_blob: MerkleBlob, key: bytes, value: bytes) -> tuple[KVId, Side]:
+        seed = leaf_hash(key=key, value=value)
+        side_seed = bytes(seed)[0]
+        side = Side.LEFT if side_seed < 128 else Side.RIGHT
+        reference_node = merkle_blob.get_random_leaf_node(seed)
+        kid = reference_node.key
+        return (kid, side)
+
     async def insert(
         self,
         key: bytes,
@@ -1061,9 +1069,16 @@ class DataStore:
 
             kid, vid = await self.add_key_value(key, value, store_id)
             hash = leaf_hash(key, value)
-            reference_kid: Optional[KVId] = None
+            reference_kid = None
             if reference_node_hash is not None:
                 reference_kid, _ = await self.get_node_by_hash(reference_node_hash)
+
+            was_empty = root.node_hash is None
+            if not was_empty and reference_kid is None:
+                if side is not None:
+                    raise Exception("Side specified without reference node hash")
+                reference_kid, side = self.get_reference_kid_side(merkle_blob, key, value)
+
             try:
                 merkle_blob.insert(kid, vid, hash, reference_kid, side)
             except Exception as e:
@@ -1136,8 +1151,22 @@ class DataStore:
 
             merkle_blob = await self.get_merkle_blob(root_hash=old_root.node_hash)
 
+            key_hash_frequency: dict[bytes32, int] = {}
+            first_action: dict[bytes32, str] = {}
+            last_action: dict[bytes32, str] = {}
+
             for change in changelist:
-                # todo consider using `enable_batch_autoinsert` to speed up inserts
+                key = change["key"]
+                hash = key_hash(key)
+                key_hash_frequency[hash] = key_hash_frequency.get(hash, 0) + 1
+                if hash not in first_action:
+                    first_action[hash] = change["action"]
+                last_action[hash] = change["action"]
+
+            batch_keys_values: list[tuple[KVId, KVId]] = []
+            batch_hashes: list[bytes] = []
+
+            for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
                     value = change["value"]
@@ -1148,14 +1177,24 @@ class DataStore:
                     if reference_node_hash is not None:
                         reference_kid, _ = await self.get_node_by_hash(reference_node_hash)
 
+                    key_hashed = key_hash(key)
                     kid, vid = await self.add_key_value(key, value, store_id)
+                    if merkle_blob.key_exists(kid):
+                        raise Exception(f"Key already present: {key.hex()}")
                     hash = leaf_hash(key, value)
-                    try:
-                        merkle_blob.insert(kid, vid, hash, reference_kid, side)
-                    except Exception as e:
-                        if str(e) == "Key already present":
-                            raise Exception(f"Key already present: {key.hex()}")
-                        raise
+
+                    if reference_node_hash is None and side is None:
+                        if enable_batch_autoinsert and reference_kid is None:
+                            if key_hash_frequency[key_hashed] == 1 or (
+                                key_hash_frequency[key_hashed] == 2 and first_action[key_hashed] == "delete"
+                            ):
+                                batch_keys_values.append((kid, vid))
+                                batch_hashes.append(hash)
+                                continue
+                        if not merkle_blob.empty():
+                            reference_kid, side = self.get_reference_kid_side(merkle_blob, key, value)
+
+                    merkle_blob.insert(kid, vid, hash, reference_kid, side)
                 elif change["action"] == "delete":
                     key = change["key"]
                     deletion_kid = await self.get_kvid(key)
@@ -1169,6 +1208,9 @@ class DataStore:
                     merkle_blob.upsert(kid, vid, hash)
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
+
+            if len(batch_keys_values) > 0:
+                merkle_blob.batch_insert(batch_keys_values, batch_hashes)
 
             new_root = await self.insert_root_from_merkle_blob(merkle_blob, store_id, status, old_root)
             return new_root.node_hash
