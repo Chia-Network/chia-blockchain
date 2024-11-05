@@ -4163,6 +4163,12 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.get_wallet(id=wallet_id, required_type=PoolWallet)
 
         pool_wallet_info: PoolWalletInfo = await wallet.get_current_state()
+        if (
+            pool_wallet_info.current.state == FARMING_TO_POOL.value
+            and pool_wallet_info.current.pool_url == request["pool_url"]
+        ):
+            raise ValueError(f"Already farming to pool {pool_wallet_info.current.pool_url}")
+
         owner_pubkey = pool_wallet_info.current.owner_pubkey
         target_puzzlehash = None
 

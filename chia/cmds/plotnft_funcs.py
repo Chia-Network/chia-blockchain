@@ -280,6 +280,24 @@ async def join_pool(
     prompt: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+        try:
+            pool_wallets = await wallet_client.get_wallets(wallet_type=WalletType.POOLING_WALLET)
+            if not any(
+                wallet["id"] == wallet_id and int(wallet["type"]) == WalletType.POOLING_WALLET.value
+                for wallet in pool_wallets
+            ):
+                print(f"Wallet with id: {wallet_id} is not a pooling wallet. Please provide a different id.")
+                return
+            pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
+            if (
+                pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL.value
+                and pool_wallet_info.current.pool_url == pool_url
+            ):
+                print(f"Wallet id: {wallet_id} is already farming to pool {pool_url}")
+                return
+        except ValueError:
+            pass
+
         enforce_https = config["full_node"]["selected_network"] == "mainnet"
 
         if enforce_https and not pool_url.startswith("https://"):

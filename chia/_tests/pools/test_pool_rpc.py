@@ -900,6 +900,18 @@ class TestPoolWalletRpc:
         assert pw_info.current.relative_lock_height == 5
 
         await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+        # Sneak in test for joining the same pool again
+        with pytest.raises(ValueError, match="Already farming to pool"):
+            await client.pw_join_pool(
+                wallet_id,
+                pool_b_ph,
+                "https://pool-a.org",
+                uint32(10),
+                uint64(fee),
+            )
+
+        # Now test changing pools
         join_pool_tx: TransactionRecord = (
             await client.pw_join_pool(
                 wallet_id,
