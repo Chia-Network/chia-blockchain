@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Tuple
+from typing import Any
 
 import pytest
 
@@ -31,9 +31,9 @@ async def get_trade_and_status(trade_manager: Any, trade: TradeRecord) -> TradeS
     return TradeStatus(trade_rec.status)
 
 
-def get_parent_branch(value: bytes32, proof: Tuple[int, List[bytes32]]) -> Tuple[bytes32, Tuple[int, List[bytes32]]]:
+def get_parent_branch(value: bytes32, proof: tuple[int, list[bytes32]]) -> tuple[bytes32, tuple[int, list[bytes32]]]:
     branch: bytes32 = simplify_merkle_proof(value, (proof[0], [proof[1][0]]))
-    new_proof: Tuple[int, List[bytes32]] = (proof[0] >> 1, proof[1][1:])
+    new_proof: tuple[int, list[bytes32]] = (proof[0] >> 1, proof[1][1:])
     return branch, new_proof
 
 
@@ -136,7 +136,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ]
     }
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(offer_maker.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -263,7 +263,7 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
 
     addition = bytes32([101] * 32)
     ROWS.append(addition)
-    root, proofs = build_merkle_tree(ROWS)
+    root, _proofs = build_merkle_tree(ROWS)
 
     async with trade_manager.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
         success, offer, error = await trade_manager.create_offer_for_ids(
@@ -414,7 +414,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(offer_maker.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(

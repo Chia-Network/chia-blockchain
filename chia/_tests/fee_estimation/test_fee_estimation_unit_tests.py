@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List
 
 import pytest
 
@@ -47,7 +46,7 @@ def test_single_estimate() -> None:
 
 def make_block(
     height: uint32, num_tx: int, cost: uint64, fee: uint64, num_blocks_wait_in_mempool: int
-) -> List[MempoolItemInfo]:
+) -> list[MempoolItemInfo]:
     block_included = uint32(height - num_blocks_wait_in_mempool)
     return [MempoolItemInfo(cost, fee, block_included)] * num_tx
 
@@ -95,7 +94,7 @@ def test_init_buckets() -> None:
 
 
 def test_get_bucket_index_empty_buckets() -> None:
-    buckets: List[float] = []
+    buckets: list[float] = []
     for rate in [0.5, 1.0, 2.0]:
         with pytest.raises(RuntimeError):
             a = get_bucket_index(buckets, rate)
@@ -134,12 +133,12 @@ def test_get_bucket_index() -> None:
 
 
 def test_monotonically_decrease() -> None:
-    inputs: List[List[float]]
-    output: List[List[float]]
+    inputs: list[list[float]]
+    output: list[list[float]]
     inputs = [[], [-1], [0], [1], [0, 0], [0, 1], [1, 0], [1, 2, 3], [1, 1, 1], [3, 2, 1], [3, 3, 1], [1, 3, 3]]
     output = [[], [-1], [0], [1], [0, 0], [0, 0], [1, 0], [1, 1, 1], [1, 1, 1], [3, 2, 1], [3, 3, 1], [1, 1, 1]]
-    i: List[float]
-    o: List[float]
+    i: list[float]
+    o: list[float]
     for i, o in zip(inputs, output):
         print(o, i)
         assert o == make_monotonically_decreasing(i)

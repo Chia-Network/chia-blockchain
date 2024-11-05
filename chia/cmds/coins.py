@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import click
 
@@ -108,6 +109,7 @@ def list_cmd(
     default=False,
     help="Sort coins from largest to smallest or smallest to largest.",
 )
+@click.option("--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False)
 @tx_out_cmd()
 def combine_cmd(
     wallet_rpc_port: Optional[int],
@@ -125,7 +127,8 @@ def combine_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+    override: bool,
+) -> list[TransactionRecord]:
     from .coin_funcs import async_combine
 
     return asyncio.run(
@@ -145,6 +148,7 @@ def combine_cmd(
             largest_first=largest_first,
             push=push,
             condition_valid_times=condition_valid_times,
+            override=override,
         )
     )
 
@@ -164,7 +168,7 @@ def combine_cmd(
     "--number-of-coins",
     type=int,
     help="The number of coins we are creating.",
-    required=True,
+    default=None,
 )
 @options.create_fee()
 @click.option(
@@ -172,7 +176,7 @@ def combine_cmd(
     "--amount-per-coin",
     help="The amount of each newly created coin, in XCH or CAT units",
     type=AmountParamType(),
-    required=True,
+    default=None,
 )
 @click.option(
     "-t", "--target-coin-id", type=Bytes32ParamType(), required=True, help="The coin id of the coin we are splitting."
@@ -194,7 +198,7 @@ def split_cmd(
     reuse: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .coin_funcs import async_split
 
     return asyncio.run(

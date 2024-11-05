@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Tuple
 
 import pytest
 from clvm.casts import int_to_bytes
@@ -141,11 +140,11 @@ async def test_coin_ids_multi(db_version: int) -> None:
 
 @pytest.mark.anyio
 async def test_hints_in_blockchain(
-    wallet_nodes: Tuple[
+    wallet_nodes: tuple[
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
     ],
 ) -> None:
-    full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+    full_node_1, _full_node_2, _server_1, _server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
 
     blocks = bt.get_consecutive_blocks(
         5,

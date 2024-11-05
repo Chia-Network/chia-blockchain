@@ -86,6 +86,7 @@ daemon_ssl:
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overridden.
 logging: &logging
   log_stdout: False # If True, outputs to stdout instead of a file
+  log_backcompat: False
   log_filename: "log/debug.log"
   log_level: "WARNING" # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
@@ -480,6 +481,8 @@ introducer:
     public_key: "config/ssl/full_node/public_full_node.key"
 
 wallet:
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
   rpc_port: 9256
 
   # when enabled, the wallet will print a pstats profile to the
@@ -563,6 +566,9 @@ wallet:
   # if an unknown CAT belonging to us is seen, a wallet will be automatically created
   # the user accepts the risk/responsibility of verifying the authenticity and origin of unknown CATs
   automatically_add_unknown_cats: False
+
+  # if an unknown DID is sent to us, a wallet will be automatically created
+  did_auto_add_limit: 10
 
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800

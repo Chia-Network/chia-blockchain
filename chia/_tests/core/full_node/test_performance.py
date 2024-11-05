@@ -1,10 +1,7 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
-import dataclasses
 import logging
 import random
-from typing import Dict
 
 import pytest
 from clvm.casts import int_to_bytes
@@ -61,14 +58,14 @@ class TestPerformance:
             if full_node_1.full_node.blockchain.get_peak() is not None
             else -1
         )
-        incoming_queue, node_id = await add_dummy_connection(server_1, self_hostname, 12312)
+        _incoming_queue, node_id = await add_dummy_connection(server_1, self_hostname, 12312)
         fake_peer = server_1.all_connections[node_id]
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
 
         # Makes a bunch of coins
         for i in range(20):
-            conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
+            conditions_dict: dict = {ConditionOpcode.CREATE_COIN: []}
             # This should fit in one transaction
             for _ in range(100):
                 receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()

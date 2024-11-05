@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import json
-from typing import AsyncIterator, List, Tuple
+from collections.abc import AsyncIterator
 
 import aiohttp
 import pytest
@@ -186,7 +186,7 @@ class TestSimulation:
     @pytest.mark.anyio
     async def test_simulator_auto_farm_and_get_coins(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
     ) -> None:
         num_blocks = 2
@@ -194,7 +194,7 @@ class TestSimulation:
         full_node_api = full_nodes[0]
         server_1 = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
+        wallet_node_2, _server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         wallet_node.config["trusted_peers"] = {}
@@ -313,7 +313,7 @@ class TestSimulation:
             peak = full_node_api.full_node.blockchain.get_peak()
             assert isinstance(peak, BlockRecord)
             start_time = peak.timestamp
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
             peak = full_node_api.full_node.blockchain.get_peak()
             assert isinstance(peak, BlockRecord)
             end_time = peak.timestamp
@@ -485,7 +485,7 @@ class TestSimulation:
     async def test_create_coins_with_invalid_amounts_raises(
         self,
         self_hostname: str,
-        amounts: List[uint64],
+        amounts: list[uint64],
         simulator_and_wallet: OldSimulatorsAndWallets,
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet

@@ -5,17 +5,17 @@ from __future__ import annotations
 import os
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Any, Dict, Optional, cast
+from typing import Any, Optional, cast
 
 import click
 import colorama
 import yaml
 from cryptography.exceptions import InvalidTag
 
-from chia.cmds.passphrase_funcs import prompt_for_passphrase, read_passphrase_from_file
+from chia.cmds.passphrase_funcs import read_passphrase_from_file
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.file_keyring import FileKeyringContent
-from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper, prompt_for_passphrase
 
 DEFAULT_KEYRING_YAML = DEFAULT_KEYS_ROOT_PATH / "keyring.yaml"
 
@@ -66,7 +66,7 @@ def dump(keyring_file: str, full_payload: bool, passphrase_file: Optional[TextIO
         try:
             data_dict = file_content.get_decrypted_data_dict(passphrase)
             if full_payload:
-                dump_content: Dict[str, Any] = file_content_dict
+                dump_content: dict[str, Any] = file_content_dict
                 dump_content["data"] = data_dict
             else:
                 dump_content = data_dict
@@ -86,7 +86,7 @@ def dump(keyring_file: str, full_payload: bool, passphrase_file: Optional[TextIO
 
 def main() -> None:
     colorama.init()
-    dump()  # pylint: disable=no-value-for-parameter
+    dump()
 
 
 if __name__ == "__main__":

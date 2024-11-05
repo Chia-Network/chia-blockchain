@@ -5,18 +5,19 @@ import sys
 import time
 import types
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pytest
 from chia_rs import G1Element, PrivateKey
 
-from chia._tests.util.misc import CoinGenerator, add_blocks_in_batches
+from chia._tests.util.misc import CoinGenerator
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.protocols import wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import Message, make_msg
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -112,7 +113,7 @@ async def test_get_private_key_missing_key_use_default(
 async def test_get_public_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -132,7 +133,7 @@ async def test_get_public_key(root_path_populated_with_config: Path, get_temp_ke
 async def test_get_public_key_default_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -168,7 +169,7 @@ async def test_get_public_key_missing_key(
 ) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring  # empty keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
 
     # Keyring is empty, so requesting a key by fingerprint or None should return None
@@ -183,7 +184,7 @@ async def test_get_public_key_missing_key_use_default(
 ) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    config: dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
     pk: G1Element = keychain.add_key(
         "c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -493,9 +494,9 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_get_balance(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [full_node_api], [(wallet_node, wallet_server)], _bt = simulator_and_wallet
     full_node_server = full_node_api.full_node.server
 
     def wallet_synced() -> bool:
@@ -638,7 +639,7 @@ async def test_transaction_send_cache(
 
     # Generate the transaction
     async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(0), bytes32([0] * 32), action_scope)
+        await wallet.generate_signed_transaction(uint64(0), bytes32.zeros, action_scope)
     [tx] = action_scope.side_effects.transactions
 
     # Make sure it is sent to the peer
@@ -695,7 +696,7 @@ async def test_wallet_node_bad_coin_state_ignore(
         return make_msg(
             ProtocolMessageTypes.respond_to_coin_update,
             wallet_protocol.RespondToCoinUpdates(
-                [], uint32(0), [CoinState(Coin(bytes32([0] * 32), bytes32([0] * 32), uint64(0)), uint32(0), uint32(0))]
+                [], uint32(0), [CoinState(Coin(bytes32.zeros, bytes32.zeros, uint64(0)), uint32(0), uint32(0))]
             ),
         )
 
@@ -722,9 +723,9 @@ async def test_wallet_node_bad_coin_state_ignore(
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_key_types(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
         wallet_node._close()
@@ -753,9 +754,9 @@ async def test_start_with_multiple_key_types(
 @pytest.mark.anyio
 @pytest.mark.standard_block_tools
 async def test_start_with_multiple_keys(
-    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: List[FullBlock]
+    simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
         wallet_node._close()

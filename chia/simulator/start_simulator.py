@@ -5,8 +5,9 @@ import sys
 from dataclasses import dataclass
 from multiprocessing import freeze_support
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
+from chia.apis import ApiProtocolRegistry
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
 from chia.server.signal_handlers import SignalHandlers
@@ -34,10 +35,10 @@ PLOT_SIZE = 19  # anything under k19 is a bit buggy
 
 async def create_full_node_simulator_service(
     root_path: Path,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     bt: BlockTools,
     connect_to_daemon: bool = True,
-    override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
+    override_capabilities: Optional[list[tuple[uint16, str]]] = None,
 ) -> SimulatorFullNodeService:
     service_config = config[SERVICE_NAME]
     constants = bt.constants
@@ -63,6 +64,7 @@ async def create_full_node_simulator_service(
         rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),
         connect_to_daemon=connect_to_daemon,
         override_capabilities=override_capabilities,
+        class_for_type=ApiProtocolRegistry,
     )
 
 

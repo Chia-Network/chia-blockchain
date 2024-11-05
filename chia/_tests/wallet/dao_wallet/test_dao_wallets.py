@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 import pytest
 
@@ -32,17 +32,17 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 
 
-async def get_proposal_state(wallet: DAOWallet, index: int) -> Tuple[Optional[bool], Optional[bool]]:
+async def get_proposal_state(wallet: DAOWallet, index: int) -> tuple[Optional[bool], Optional[bool]]:
     return wallet.dao_info.proposals_list[index].passed, wallet.dao_info.proposals_list[index].closed
 
 
 async def rpc_state(
     timeout: float,
     async_function: Callable[[Any], Any],
-    params: List[Union[int, Dict[str, Any]]],
-    condition_func: Callable[[Dict[str, Any]], Any],
+    params: list[Union[int, dict[str, Any]]],
+    condition_func: Callable[[dict[str, Any]], Any],
     result: Optional[Any] = None,
-) -> Union[bool, Dict[str, Any]]:  # pragma: no cover
+) -> Union[bool, dict[str, Any]]:  # pragma: no cover
     __tracebackhide__ = True
 
     timeout = adjusted_timeout(timeout=timeout)
@@ -1626,7 +1626,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
 async def test_dao_rpc_client(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    [full_node_service], wallet_services, _bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
     wallet_node_0 = wallet_services[0]._node
@@ -2016,7 +2016,7 @@ async def test_dao_rpc_client(
 async def test_dao_complex_spends(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    [full_node_service], wallet_services, _bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
     wallet_node_0 = wallet_services[0]._node
@@ -2617,7 +2617,7 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: OldSimula
 async def test_dao_cat_exits(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    [full_node_service], wallet_services, _bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
     wallet_node_0 = wallet_services[0]._node

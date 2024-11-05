@@ -7,10 +7,11 @@ import logging
 import sys
 import time
 import traceback
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from math import floor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator, ClassVar, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -69,11 +70,11 @@ UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
 
 @dataclass(frozen=True)
 class GetPoolInfoResult:
-    pool_info: Dict[str, Any]
+    pool_info: dict[str, Any]
     new_pool_url: Optional[str]
 
 
-def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tuple[float, Any]]:
+def strip_old_entries(pairs: list[tuple[float, Any]], before: float) -> list[tuple[float, Any]]:
     for index, [timestamp, points] in enumerate(pairs):
         if timestamp >= before:
             if index == 0:
@@ -84,12 +85,12 @@ def strip_old_entries(pairs: List[Tuple[float, Any]], before: float) -> List[Tup
 
 
 def increment_pool_stats(
-    pool_states: Dict[bytes32, Any],
+    pool_states: dict[bytes32, Any],
     p2_singleton_puzzlehash: bytes32,
     name: str,
     current_time: float,
     count: int = 1,
-    value: Optional[Union[int, Dict[str, Any]]] = None,
+    value: Optional[Union[int, dict[str, Any]]] = None,
 ) -> None:
     if p2_singleton_puzzlehash not in pool_states:
         return
@@ -124,8 +125,8 @@ class Farmer:
     def __init__(
         self,
         root_path: Path,
-        farmer_config: Dict[str, Any],
-        pool_config: Dict[str, Any],
+        farmer_config: dict[str, Any],
+        pool_config: dict[str, Any],
         consensus_constants: ConsensusConstants,
         local_keychain: Optional[Keychain] = None,
     ):
@@ -135,22 +136,22 @@ class Farmer:
         self.config = farmer_config
         self.pool_config = pool_config
         # Keep track of all sps, keyed on challenge chain signage point hash
-        self.sps: Dict[bytes32, List[farmer_protocol.NewSignagePoint]] = {}
+        self.sps: dict[bytes32, list[farmer_protocol.NewSignagePoint]] = {}
 
         # Keep track of harvester plot identifier (str), target sp index, and PoSpace for each challenge
-        self.proofs_of_space: Dict[bytes32, List[Tuple[str, ProofOfSpace]]] = {}
+        self.proofs_of_space: dict[bytes32, list[tuple[str, ProofOfSpace]]] = {}
 
         # Quality string to plot identifier and challenge_hash, for use with harvester.RequestSignatures
-        self.quality_str_to_identifiers: Dict[bytes32, Tuple[str, bytes32, bytes32, bytes32]] = {}
+        self.quality_str_to_identifiers: dict[bytes32, tuple[str, bytes32, bytes32, bytes32]] = {}
 
         # number of responses to each signage point
-        self.number_of_responses: Dict[bytes32, int] = {}
+        self.number_of_responses: dict[bytes32, int] = {}
 
         # A dictionary of keys to time added. These keys refer to keys in the above 4 dictionaries. This is used
         # to periodically clear the memory
-        self.cache_add_time: Dict[bytes32, uint64] = {}
+        self.cache_add_time: dict[bytes32, uint64] = {}
 
-        self.plot_sync_receivers: Dict[bytes32, Receiver] = {}
+        self.plot_sync_receivers: dict[bytes32, Receiver] = {}
 
         self.cache_clear_task: Optional[asyncio.Task[None]] = None
         self.update_pool_state_task: Optional[asyncio.Task[None]] = None
@@ -166,18 +167,18 @@ class Farmer:
         self.harvester_handshake_task: Optional[asyncio.Task[None]] = None
 
         # From p2_singleton_puzzle_hash to pool state dict
-        self.pool_state: Dict[bytes32, Dict[str, Any]] = {}
+        self.pool_state: dict[bytes32, dict[str, Any]] = {}
 
         # From p2_singleton to auth PrivateKey
-        self.authentication_keys: Dict[bytes32, PrivateKey] = {}
+        self.authentication_keys: dict[bytes32, PrivateKey] = {}
 
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: float = 0
 
-        self.all_root_sks: List[PrivateKey] = []
+        self.all_root_sks: list[PrivateKey] = []
 
         # Use to find missing signage points. (new_signage_point, time)
-        self.prev_signage_point: Optional[Tuple[uint64, farmer_protocol.NewSignagePoint]] = None
+        self.prev_signage_point: Optional[tuple[uint64, farmer_protocol.NewSignagePoint]] = None
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
@@ -216,7 +217,7 @@ class Farmer:
                 await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
             self.started = False
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
@@ -229,7 +230,7 @@ class Farmer:
                     raise KeychainProxyConnectionFailure()
         return self.keychain_proxy
 
-    async def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
+    async def get_all_private_keys(self) -> list[tuple[PrivateKey, bytes]]:
         keychain_proxy = await self.ensure_keychain_proxy()
         return await keychain_proxy.get_all_private_keys()
 
@@ -314,7 +315,7 @@ class Farmer:
     def set_server(self, server: ChiaServer) -> None:
         self.server = server
 
-    def state_changed(self, change: str, data: Dict[str, Any]) -> None:
+    def state_changed(self, change: str, data: dict[str, Any]) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, data)
 
@@ -348,7 +349,7 @@ class Farmer:
                 url = f"{pool_config.pool_url}/pool_info"
                 async with session.get(url, ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log)) as resp:
                     if resp.ok:
-                        response: Dict[str, Any] = json.loads(await resp.text())
+                        response: dict[str, Any] = json.loads(await resp.text())
                         self.log.info(f"GET /pool_info response: {response}")
                         new_pool_url: Optional[str] = None
                         response_url_str = f"{resp.url}"
@@ -375,7 +376,7 @@ class Farmer:
 
     async def _pool_get_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, authentication_sk: PrivateKey
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         authentication_token = get_current_authentication_token(authentication_token_timeout)
         message: bytes32 = std_hash(
             AuthenticationPayload(
@@ -396,7 +397,7 @@ class Farmer:
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
                     if resp.ok:
-                        response: Dict[str, Any] = json.loads(await resp.text())
+                        response: dict[str, Any] = json.loads(await resp.text())
                         log_level = logging.INFO
                         if "error_code" in response:
                             log_level = logging.WARNING
@@ -422,7 +423,7 @@ class Farmer:
 
     async def _pool_post_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         auth_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
         post_farmer_payload: PostFarmerPayload = PostFarmerPayload(
@@ -444,7 +445,7 @@ class Farmer:
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
                     if resp.ok:
-                        response: Dict[str, Any] = json.loads(await resp.text())
+                        response: dict[str, Any] = json.loads(await resp.text())
                         log_level = logging.INFO
                         if "error_code" in response:
                             log_level = logging.WARNING
@@ -492,7 +493,7 @@ class Farmer:
                     ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.log),
                 ) as resp:
                     if resp.ok:
-                        response: Dict[str, Any] = json.loads(await resp.text())
+                        response: dict[str, Any] = json.loads(await resp.text())
                         log_level = logging.INFO
                         if "error_code" in response:
                             log_level = logging.WARNING
@@ -525,7 +526,7 @@ class Farmer:
     async def update_pool_state(self) -> None:
         config = load_config(self._root_path, "config.yaml")
 
-        pool_config_list: List[PoolWalletConfig] = load_pool_config(self._root_path)
+        pool_config_list: list[PoolWalletConfig] = load_pool_config(self._root_path)
         for pool_config in pool_config_list:
             p2_singleton_puzzle_hash = pool_config.p2_singleton_puzzle_hash
 
@@ -598,7 +599,7 @@ class Farmer:
                     pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
                     authentication_token_timeout = pool_state["authentication_token_timeout"]
 
-                    async def update_pool_farmer_info() -> Tuple[Optional[GetFarmerResponse], Optional[PoolErrorCode]]:
+                    async def update_pool_farmer_info() -> tuple[Optional[GetFarmerResponse], Optional[PoolErrorCode]]:
                         # Run a GET /farmer to see if the farmer is already known by the pool
                         response = await self._pool_get_farmer(
                             pool_config, authentication_token_timeout, authentication_sk
@@ -662,19 +663,19 @@ class Farmer:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception in update_pool_state for {pool_config.pool_url}, {e} {tb}")
 
-    def get_public_keys(self) -> List[G1Element]:
+    def get_public_keys(self) -> list[G1Element]:
         return [child_sk.get_g1() for child_sk in self._private_keys]
 
-    def get_private_keys(self) -> List[PrivateKey]:
+    def get_private_keys(self) -> list[PrivateKey]:
         return self._private_keys
 
-    async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> Dict[str, Any]:
+    async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> dict[str, Any]:
         if search_for_private_key:
             all_sks = await self.get_all_private_keys()
             have_farmer_sk, have_pool_sk = False, False
-            search_addresses: List[bytes32] = [self.farmer_target, self.pool_target]
+            search_addresses: list[bytes32] = [self.farmer_target, self.pool_target]
             for sk, _ in all_sks:
-                found_addresses: Set[bytes32] = match_address_to_sk(sk, search_addresses, max_ph_to_search)
+                found_addresses: set[bytes32] = match_address_to_sk(sk, search_addresses, max_ph_to_search)
 
                 if not have_farmer_sk and self.farmer_target in found_addresses:
                     search_addresses.remove(self.farmer_target)
@@ -763,8 +764,8 @@ class Farmer:
 
         return None
 
-    async def get_harvesters(self, counts_only: bool = False) -> Dict[str, Any]:
-        harvesters: List[Dict[str, Any]] = []
+    async def get_harvesters(self, counts_only: bool = False) -> dict[str, Any]:
+        harvesters: list[dict[str, Any]] = []
         for connection in self.server.get_connections(NodeType.HARVESTER):
             self.log.debug(f"get_harvesters host: {connection.peer_info.host}, node_id: {connection.peer_node_id}")
             receiver = self.plot_sync_receivers.get(connection.peer_node_id)
@@ -785,7 +786,7 @@ class Farmer:
 
     def check_missing_signage_points(
         self, timestamp: uint64, new_signage_point: farmer_protocol.NewSignagePoint
-    ) -> Optional[Tuple[uint64, uint32]]:
+    ) -> Optional[tuple[uint64, uint32]]:
         if self.prev_signage_point is None:
             self.prev_signage_point = (timestamp, new_signage_point)
             return None
@@ -836,7 +837,7 @@ class Farmer:
             try:
                 if time_slept > self.constants.SUB_SLOT_TIME_TARGET:
                     now = time.time()
-                    removed_keys: List[bytes32] = []
+                    removed_keys: list[bytes32] = []
                     for key, add_time in self.cache_add_time.items():
                         if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 3:
                             self.sps.pop(key, None)

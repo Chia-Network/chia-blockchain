@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from asyncio import Task, create_task, gather, sleep
-from typing import Any, Coroutine, Optional, TypeVar
+from collections.abc import Coroutine
+from typing import Any, Optional, TypeVar
 
 import pytest
 
@@ -38,7 +39,7 @@ async def test_farmer_ignores_concurrent_duplicate_signage_points(
     _, farmer_service, _ = farmer_one_harvester
     farmer_api: FarmerAPI = farmer_service._api
     farmer_server = farmer_service._server
-    incoming_queue, peer_id = await add_dummy_connection(farmer_server, self_hostname, 12312, NodeType.HARVESTER)
+    incoming_queue, _peer_id = await add_dummy_connection(farmer_server, self_hostname, 12312, NodeType.HARVESTER)
     # Consume the handshake
     response = (await incoming_queue.get()).type
     assert ProtocolMessageTypes(response).name == "harvester_handshake"

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia._tests.clvm.test_puzzles import public_key_for_index, secret_exponent_for_index
 from chia._tests.util.key_tool import KeyTool
-from chia.clvm.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, SimClient, SpendSim, sim_and_client
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -54,7 +54,7 @@ async def make_and_spend_bundle(
     sim_client: SimClient,
     coin: Coin,
     delegated_puzzle: Program,
-    coinsols: List[CoinSpend],
+    coinsols: list[CoinSpend],
     ex_error: Optional[Err] = None,
     fail_msg: str = "",
     cost_logger: Optional[CostLogger] = None,
@@ -69,7 +69,7 @@ async def make_and_spend_bundle(
         spend_bundle = cost_logger.add_cost(cost_log_msg, spend_bundle)
 
     try:
-        result, error = await sim_client.push_tx(spend_bundle)
+        _result, error = await sim_client.push_tx(spend_bundle)
         if error is None:
             await sim.farm_block()
         elif ex_error is not None:
@@ -105,7 +105,7 @@ async def test_singleton_top_layer(version, cost_logger):
         await sim.farm_block(starting_puzzle.get_tree_hash())
         starting_coin: Coin = await sim_client.get_coin_records_by_puzzle_hash(starting_puzzle.get_tree_hash())
         starting_coin = starting_coin[0].coin
-        comment: List[Tuple[str, str]] = [("hello", "world")]
+        comment: list[tuple[str, str]] = [("hello", "world")]
 
         # LAUNCHING
         # Try to create an even singleton (driver test)
@@ -334,7 +334,7 @@ async def test_singleton_top_layer(version, cost_logger):
             DELAY_TIME,
             DELAY_PH,
         )
-        result, error = await sim_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
+        _result, error = await sim_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
         assert error == Err.ASSERT_SECONDS_RELATIVE_FAILED
 
         # SPEND TO DELAYED PUZZLE HASH

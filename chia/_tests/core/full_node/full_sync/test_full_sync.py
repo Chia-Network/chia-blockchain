@@ -1,15 +1,11 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import logging
 import time
-from typing import List
 
 import pytest
 
-from chia._tests.conftest import ConsensusMode
 from chia._tests.core.node_height import node_height_between, node_height_exactly
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.full_node.full_node import FullNode
@@ -31,7 +27,7 @@ class TestFullSync:
     async def test_long_sync_from_zero(self, five_nodes, default_400_blocks, bt, self_hostname):
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks = len(default_400_blocks)
-        blocks: List[FullBlock] = default_400_blocks
+        blocks: list[FullBlock] = default_400_blocks
         full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server
@@ -117,7 +113,6 @@ class TestFullSync:
     async def test_sync_from_fork_point_and_weight_proof(
         self, three_nodes, default_1000_blocks, default_400_blocks, self_hostname
     ):
-        start = time.time()
         # Must be larger than "sync_block_behind_threshold" in the config
         num_blocks_initial = len(default_1000_blocks) - 50
         blocks_950 = default_1000_blocks[:num_blocks_initial]
@@ -345,7 +340,7 @@ class TestFullSync:
             assert peak1 is not None
 
             summary_heights = full_node_1.full_node.blockchain.get_ses_heights()
-            summaries: List[SubEpochSummary] = []
+            summaries: list[SubEpochSummary] = []
 
             # get ses list
             for sub_epoch_n, ses_height in enumerate(summary_heights):
@@ -395,7 +390,7 @@ class TestFullSync:
         await server_2.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_2.full_node.on_connect)
         await server_3.start_client(PeerInfo(self_hostname, server_1.get_port()), full_node_3.full_node.on_connect)
 
-        peers: List = [c for c in full_node_2.full_node.server.all_connections.values()]
+        peers: list = [c for c in full_node_2.full_node.server.all_connections.values()]
         request = full_node_protocol.RequestProofOfWeight(
             blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
         )
@@ -406,7 +401,7 @@ class TestFullSync:
         log.info(f"result was {res}")
         assert duration < 1
 
-        peers: List = [c for c in full_node_3.full_node.server.all_connections.values()]
+        peers: list = [c for c in full_node_3.full_node.server.all_connections.values()]
         request = full_node_protocol.RequestProofOfWeight(
             blocks_950[-1].height + 1, default_1000_blocks[-1].header_hash
         )
@@ -420,7 +415,7 @@ class TestFullSync:
     async def test_bad_peak_cache_invalidation(
         self, two_nodes, default_1000_blocks, blockchain_constants, consensus_mode
     ):
-        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
+        full_node_1, _full_node_2, _server_1, _server_2, bt = two_nodes
 
         for block in default_1000_blocks[:-500]:
             await full_node_1.full_node.add_block(block)

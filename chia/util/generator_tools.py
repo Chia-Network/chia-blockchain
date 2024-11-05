@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Collection, List, Optional, Tuple
+from collections.abc import Collection
+from typing import Optional
 
 from chiabip158 import PyBIP158
 
@@ -16,7 +17,7 @@ def get_block_header(
     block: FullBlock, tx_addition_coins: Collection[Coin], removals_names: Collection[bytes32]
 ) -> HeaderBlock:
     # Create filter
-    byte_array_tx: List[bytearray] = []
+    byte_array_tx: list[bytearray] = []
     if block.is_transaction_block():
         for coin in tx_addition_coins:
             byte_array_tx.append(bytearray(coin.puzzle_hash))
@@ -43,13 +44,13 @@ def get_block_header(
     )
 
 
-def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> Tuple[List[bytes32], List[Coin]]:
+def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> tuple[list[bytes32], list[Coin]]:
     """
     Doesn't return farmer and pool reward.
     """
 
-    removals: List[bytes32] = []
-    additions: List[Coin] = []
+    removals: list[bytes32] = []
+    additions: list[Coin] = []
 
     # build removals list
     if results is None:

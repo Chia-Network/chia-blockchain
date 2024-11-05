@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List
 
 import pytest
 from chia_rs import G1Element
@@ -79,13 +78,13 @@ def test_list_delta(delta: DeltaType) -> None:
         [["-2", "2", "3", "-1"], ["2", "3"], PathListDelta([], ["-2", "-1"])],
     ],
 )
-def test_path_list_delta_from_lists(old: List[str], new: List[str], result: PathListDelta) -> None:
+def test_path_list_delta_from_lists(old: list[str], new: list[str], result: PathListDelta) -> None:
     assert PathListDelta.from_lists(old, new) == result
 
 
 def test_delta_empty() -> None:
     delta: Delta = Delta()
-    all_deltas: List[DeltaType] = [delta.valid, delta.invalid, delta.keys_missing, delta.duplicates]
+    all_deltas: list[DeltaType] = [delta.valid, delta.invalid, delta.keys_missing, delta.duplicates]
     assert delta.empty()
     for d1 in all_deltas:
         delta.valid.additions["0"] = dummy_plot("0")

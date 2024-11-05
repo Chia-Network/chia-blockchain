@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, List
+from collections.abc import Iterable
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
@@ -14,7 +14,7 @@ def build_message_with_hashes(message: str, bytes_objects: Iterable[bytes]) -> s
 
 
 class TreeGenerationIncrementingError(IntegrityError):
-    def __init__(self, store_ids: List[bytes32]) -> None:
+    def __init__(self, store_ids: list[bytes32]) -> None:
         super().__init__(
             build_message_with_hashes(
                 message="Found trees with generations not properly incrementing:",
@@ -24,7 +24,7 @@ class TreeGenerationIncrementingError(IntegrityError):
 
 
 class NodeHashError(IntegrityError):
-    def __init__(self, node_hashes: List[bytes32]) -> None:
+    def __init__(self, node_hashes: list[bytes32]) -> None:
         super().__init__(
             build_message_with_hashes(
                 message="Found nodes with incorrect hashes:",

@@ -1,3 +1,5 @@
+# Package: utils
+
 from __future__ import annotations
 
 import asyncio
@@ -5,9 +7,10 @@ import cProfile
 import logging
 import pathlib
 import tracemalloc
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncIterator, Optional
+from typing import Optional
 
 from chia.util.path import path_from_root
 
@@ -174,7 +177,7 @@ async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.L
             await asyncio.sleep(60)
             snapshot = tracemalloc.take_snapshot()
             snapshot.dump(str(profile_dir / f"heap-{counter:05d}.profile"))
-            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0]/1000000:0.3f} MB profile {counter:05d}")
+            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0] / 1000000:0.3f} MB profile {counter:05d}")
             counter += 1
     finally:
         tracemalloc.stop()

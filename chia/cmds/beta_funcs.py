@@ -3,9 +3,11 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
-from chia.cmds.cmds_util import format_bytes, prompt_yes_no, validate_directory_writable
+import click
+
+from chia.cmds.cmds_util import format_bytes, validate_directory_writable
 from chia.util.beta_metrics import metrics_log_interval_max, metrics_log_interval_min
 from chia.util.chia_logging import get_beta_logging_config
 from chia.util.errors import InvalidPathError
@@ -15,7 +17,7 @@ def default_beta_root_path() -> Path:
     return Path(os.path.expanduser(os.getenv("CHIA_BETA_ROOT", "~/chia-beta-test"))).resolve()
 
 
-def warn_if_beta_enabled(config: Dict[str, Any]) -> None:
+def warn_if_beta_enabled(config: dict[str, Any]) -> None:
     if config.get("beta", {}).get("enabled", False):
         print("\nWARNING: beta test mode is enabled. Run `chia beta disable` if this is unintentional.\n")
 
@@ -25,11 +27,12 @@ def prompt_beta_warning() -> bool:
     # The `/ 5` is just a rough estimation for `gzip` being used by the log rotation in beta mode. It was like
     # 7-10x compressed in example tests with 2MB files.
     min_space = format_bytes(int(logging_config["log_maxfilesrotation"] * logging_config["log_maxbytesrotation"] / 5))
-    return prompt_yes_no(
+    message = (
         f"\nWARNING: Enabling the beta test mode increases disk writes and may lead to {min_space} of "
         "extra logfiles getting stored on your disk. This should only be done if you are part of the beta test "
         "program.\n\nDo you really want to enable the beta test mode?"
     )
+    return click.confirm(message, default=None)
 
 
 def prompt_for_beta_path(default_path: Path) -> Path:
@@ -40,8 +43,9 @@ def prompt_for_beta_path(default_path: Path) -> Path:
             f"[{str(default_path)}]:"
         )
         test_path = Path(user_input) if user_input else default_path
-        if not test_path.is_dir() and prompt_yes_no(
-            f"\nDirectory {str(test_path)!r} doesn't exist.\n\nDo you want to create it?"
+        if not test_path.is_dir() and click.confirm(
+            f"\nDirectory {str(test_path)!r} doesn't exist.\n\nDo you want to create it?",
+            default=None,
         ):
             test_path.mkdir(parents=True)
 
@@ -84,7 +88,7 @@ def prompt_for_metrics_log_interval(default_interval: int) -> int:
         return interval
 
 
-def update_beta_config(enabled: bool, path: Path, metrics_log_interval: int, config: Dict[str, Any]) -> None:
+def update_beta_config(enabled: bool, path: Path, metrics_log_interval: int, config: dict[str, Any]) -> None:
     if "beta" not in config:
         config["beta"] = {}
 
@@ -121,7 +125,7 @@ def prepare_chia_blockchain_log(path: Path) -> None:
     print(f"  - {path.name}")
 
 
-def prepare_logs(prepare_path: Path, prepare_callback: Callable[[Path], None]) -> List[Path]:
+def prepare_logs(prepare_path: Path, prepare_callback: Callable[[Path], None]) -> list[Path]:
     result = [path for path in prepare_path.iterdir()] if prepare_path.exists() else []
     if len(result):
         print(f"\nPreparing {prepare_path.name!r} logs:")

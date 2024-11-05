@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import click
 
@@ -169,7 +170,7 @@ def dao_create_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import create_dao_wallet
 
     if self_destruct == proposal_timelock:
@@ -271,7 +272,7 @@ def dao_add_funds_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import add_funds_to_treasury
 
     return asyncio.run(
@@ -449,7 +450,7 @@ def dao_vote_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import vote_on_proposal
 
     is_yes_vote = False if vote_no else True
@@ -521,7 +522,7 @@ def dao_close_proposal_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import close_proposal
 
     return asyncio.run(
@@ -582,7 +583,7 @@ def dao_lockup_coins_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import lockup_coins
 
     return asyncio.run(
@@ -630,7 +631,7 @@ def dao_release_coins_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import release_coins
 
     return asyncio.run(
@@ -677,7 +678,7 @@ def dao_exit_lockup_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import exit_lockup
 
     return asyncio.run(
@@ -778,7 +779,7 @@ def dao_create_spend_proposal_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import create_spend_proposal
 
     return asyncio.run(
@@ -887,7 +888,7 @@ def dao_create_update_proposal_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import create_update_proposal
 
     return asyncio.run(
@@ -967,7 +968,7 @@ def dao_create_mint_proposal_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     from .dao_funcs import create_mint_proposal
 
     return asyncio.run(

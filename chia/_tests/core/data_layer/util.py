@@ -6,8 +6,9 @@ import os
 import pathlib
 import shutil
 import subprocess
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import IO, TYPE_CHECKING, Any, Dict, Iterator, List, Literal, Optional, Union, overload
+from typing import IO, TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
 from chia.data_layer.data_layer_util import InternalNode, Node, NodeType, Side, Status, TerminalNode
 from chia.data_layer.data_store import DataStore
@@ -49,7 +50,7 @@ async def general_insert(
 @dataclass(frozen=True)
 class Example:
     expected: Node
-    terminal_nodes: List[bytes32]
+    terminal_nodes: list[bytes32]
 
 
 async def add_0123_example(data_store: DataStore, store_id: bytes32) -> Example:
@@ -121,7 +122,7 @@ class ChiaRoot:
 
     def run(
         self,
-        args: List[Union[str, os_PathLike_str]],
+        args: list[Union[str, os_PathLike_str]],
         *other_args: Any,
         check: bool = True,
         encoding: str = "utf-8",
@@ -141,13 +142,13 @@ class ChiaRoot:
         chia_executable = shutil.which("chia")
         if chia_executable is None:
             chia_executable = "chia"
-        modified_args: List[Union[str, os_PathLike_str]] = [
+        modified_args: list[Union[str, os_PathLike_str]] = [
             self.scripts_path.joinpath(chia_executable),
             "--root-path",
             self.path,
             *args,
         ]
-        processed_args: List[str] = [os.fspath(element) for element in modified_args]
+        processed_args: list[str] = [os.fspath(element) for element in modified_args]
         final_args = [processed_args, *other_args]
 
         kwargs["check"] = check
@@ -191,20 +192,20 @@ def create_valid_node_values(
     node_type: Literal[NodeType.INTERNAL],
     left_hash: bytes32,
     right_hash: bytes32,
-) -> Dict[str, Any]: ...
+) -> dict[str, Any]: ...
 
 
 @overload
 def create_valid_node_values(
     node_type: Literal[NodeType.TERMINAL],
-) -> Dict[str, Any]: ...
+) -> dict[str, Any]: ...
 
 
 def create_valid_node_values(
     node_type: NodeType,
     left_hash: Optional[bytes32] = None,
     right_hash: Optional[bytes32] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     if node_type == NodeType.INTERNAL:
         assert left_hash is not None
         assert right_hash is not None

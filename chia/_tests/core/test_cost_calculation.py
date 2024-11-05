@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from typing import List
 
 import pytest
 from chia_rs import G1Element
@@ -277,7 +276,7 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
     with benchmark_runner.assert_runtime(seconds=0.1):
         total_cost = 0
         for i in range(0, 1000):
-            cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
+            cost, _result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
             total_cost += cost
 
 
@@ -293,7 +292,7 @@ async def test_get_puzzle_and_solution_for_coin_performance(benchmark_runner: Be
     )
 
     coin_spends = result.first()
-    spent_coins: List[Coin] = []
+    spent_coins: list[Coin] = []
     for spend in coin_spends.as_iter():
         parent, puzzle, amount_program, _ = spend.as_iter()
         parent_coin_info = parent.as_atom()
