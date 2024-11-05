@@ -481,6 +481,8 @@ introducer:
     public_key: "config/ssl/full_node/public_full_node.key"
 
 wallet:
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
   rpc_port: 9256
 
   # when enabled, the wallet will print a pstats profile to the
