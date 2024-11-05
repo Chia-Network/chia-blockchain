@@ -33,7 +33,6 @@ INDEX_WRAPPER = Program.to([2, 5, 7])
 
 # General (inner) puzzle driver spec
 class Puzzle(Protocol):
-
     def memo(self, nonce: int) -> Program: ...
 
     def puzzle(self, nonce: int) -> Program: ...
@@ -60,7 +59,6 @@ class PuzzleHint:
 
 @dataclass(frozen=True)
 class UnknownPuzzle:
-
     puzzle_hint: PuzzleHint
 
     def memo(self, nonce: int) -> Program:
@@ -248,7 +246,8 @@ class PuzzleWithRestrictions:
         puzzle_hint: Union[MofNHint, PuzzleHint]
         if isinstance(self.puzzle, MofN):
             puzzle_hint = MofNHint(
-                self.puzzle.m, [member.memo() for member in self.puzzle.members]  # pylint: disable=no-member
+                self.puzzle.m,
+                [member.memo() for member in self.puzzle.members],  # pylint: disable=no-member
             )
         else:
             puzzle_hint = PuzzleHint(
@@ -325,15 +324,15 @@ class PuzzleWithRestrictions:
 
         new_puzzle: Puzzle
         if (
-            isinstance(self.puzzle, UnknownPuzzle)
-            and self.puzzle.puzzle_hint.puzhash in puzzle_dict  # pylint: disable=no-member
+            isinstance(self.puzzle, UnknownPuzzle) and self.puzzle.puzzle_hint.puzhash in puzzle_dict  # pylint: disable=no-member
         ):
             new_puzzle = puzzle_dict[self.puzzle.puzzle_hint.puzhash]  # pylint: disable=no-member
         elif isinstance(self.puzzle, MofN):
             new_puzzle = replace(
                 self.puzzle,
                 members=[
-                    puz.fill_in_unknown_puzzles(puzzle_dict) for puz in self.puzzle.members  # pylint: disable=no-member
+                    puz.fill_in_unknown_puzzles(puzzle_dict)
+                    for puz in self.puzzle.members  # pylint: disable=no-member
                 ],
             )
         else:
@@ -412,7 +411,6 @@ class PuzzleWithRestrictions:
         member_solution: Program,
         delegated_puzzle_and_solution: Optional[DelegatedPuzzleAndSolution] = None,
     ) -> Program:
-
         if len(self.restrictions) > 0:  # We optimize away the restriction layer when no restrictions are present
             solution = Program.to([member_validator_solutions, dpuz_validator_solutions, member_solution])
         else:
