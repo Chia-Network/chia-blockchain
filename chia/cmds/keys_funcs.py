@@ -806,7 +806,7 @@ def prompt_for_fingerprint() -> Optional[int]:
     while True:
         print("Choose key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            print(f"{i + 1}) {fp}")
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")
@@ -851,7 +851,7 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
 
 
 def resolve_derivation_master_key(
-    fingerprint_or_filename: Optional[Union[int, str, Path]]
+    fingerprint_or_filename: Optional[Union[int, str, Path]],
 ) -> tuple[Optional[int], Optional[PrivateKey]]:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.

@@ -348,7 +348,7 @@ class _AssertRuntime:
                 label=self.label,
             )
 
-            ether.record_property(  # pylint: disable=E1102
+            ether.record_property(
                 data.tag,
                 json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
             )
@@ -562,7 +562,7 @@ class TestId:
             temp_node = temp_node.parent
 
         # TODO: can we avoid parsing the id's etc from the node name?
-        test_name, delimiter, rest = node.name.partition("[")
+        _test_name, delimiter, rest = node.name.partition("[")
         ids: tuple[str, ...]
         if delimiter == "":
             ids = ()

@@ -26,9 +26,7 @@ class UnboundRoute(Protocol):
 class UnboundMarshalledRoute(Protocol):
     # Ignoring pylint complaint about the name of the first argument since this is a
     # special case.
-    async def __call__(  # pylint: disable=E0213
-        protocol_self, self: Any, request: MarshallableProtocol
-    ) -> MarshallableProtocol:
+    async def __call__(protocol_self, self: Any, request: MarshallableProtocol) -> MarshallableProtocol:
         pass
 
 

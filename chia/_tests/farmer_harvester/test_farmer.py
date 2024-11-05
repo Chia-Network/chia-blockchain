@@ -348,7 +348,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -380,7 +380,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -411,7 +411,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -442,7 +442,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -473,7 +473,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -504,7 +504,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 0,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -535,7 +535,7 @@ def test_increment_pool_stats(case: IncrementPoolStatsCase) -> None:
                 expected_pool_stats={
                     "points_found_since_start": 1,
                     # Original item format here is (timestamp, value) but we'll ignore timestamp part
-                    # so every `xxx_24h` item in this dict will be List[Any].
+                    # so every `xxx_24h` item in this dict will be list[Any].
                     "points_found_24h": [1],
                     "points_acknowledged_since_start": 0,
                     "points_acknowledged_24h": [],
@@ -561,7 +561,7 @@ async def test_farmer_new_proof_of_space_for_pool_stats(
     harvester_farmer_environment: HarvesterFarmerEnvironment,
     case: NewProofOfSpaceCase,
 ) -> None:
-    farmer_service, farmer_rpc_client, _, _, _ = harvester_farmer_environment
+    farmer_service, _farmer_rpc_client, _, _, _ = harvester_farmer_environment
     farmer_api = farmer_service._api
 
     sp = farmer_protocol.NewSignagePoint(
@@ -768,7 +768,7 @@ def override_pool_state(overrides: dict[str, Any]) -> dict[str, Any]:
     pool_state = {
         "points_found_since_start": 0,
         # Original item format here is (timestamp, value) but we'll ignore timestamp part
-        # so every `xxx_24h` item in this dict will be List[Any].
+        # so every `xxx_24h` item in this dict will be list[Any].
         "points_found_24h": [],
         "points_acknowledged_since_start": 0,
         "points_acknowledged_24h": [],

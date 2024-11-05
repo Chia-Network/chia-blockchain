@@ -12,7 +12,7 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 from chia.util.hash import std_hash
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-CONDITIONS = {k: bytes(v)[0] for k, v in ConditionOpcode.__members__.items()}  # pylint: disable=E1101
+CONDITIONS = {opcode.name: opcode.value[0] for opcode in ConditionOpcode}
 KFA = {v: k for k, v in CONDITIONS.items()}
 
 
@@ -108,7 +108,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             pks.append(pk)
             msgs.append(m)
         print()
-        cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
+        _cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
         print(disassemble(r))
         create_coin_conditions = [con for con in r.as_iter() if con.first().as_int() == 51]
         print()

@@ -58,9 +58,7 @@ class WalletProtocol(Protocol[T]):
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool: ...
 
     wallet_info: WalletInfo
-    # WalletStateManager is only imported for type hinting thus leaving pylint
-    # unable to process this
-    wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
+    wallet_state_manager: WalletStateManager
 
 
 class GSTOptionalArgs(TypedDict):

@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 from collections import deque
-from typing import TYPE_CHECKING, Any, Deque, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from typing_extensions import Literal
 
@@ -72,20 +72,20 @@ class TradeManager:
                 {
                     "coin": bytes
                     "parent_spend": bytes
-                    "siblings": List[bytes]  # other coins of the same type being offered
-                    "sibling_spends": List[bytes]  # The parent spends for the siblings
-                    "sibling_puzzles": List[Program]  # The inner puzzles of the siblings (always OFFER_MOD)
-                    "sibling_solutions": List[Program]  # The inner solution of the siblings
+                    "siblings": list[bytes]  # other coins of the same type being offered
+                    "sibling_spends": list[bytes]  # The parent spends for the siblings
+                    "sibling_puzzles": list[Program]  # The inner puzzles of the siblings (always OFFER_MOD)
+                    "sibling_solutions": list[Program]  # The inner solution of the siblings
             }
             )
 
     Wallet:
       - Segments in this code that call general wallet methods are highlighted by comments: # ATTENTION: new wallets
       - To be able to be traded, a wallet must implement these methods on itself:
-        - generate_signed_transaction(...) -> List[TransactionRecord]  (See cat_wallet.py for full API)
+        - generate_signed_transaction(...) -> list[TransactionRecord]  (See cat_wallet.py for full API)
         - convert_puzzle_hash(puzzle_hash: bytes32) -> bytes32  # Converts a puzzlehash from outer to inner puzzle
         - get_puzzle_info(asset_id: bytes32) -> PuzzleInfo
-        - get_coins_to_offer(asset_id: bytes32, amount: uint64) -> Set[Coin]
+        - get_coins_to_offer(asset_id: bytes32, amount: uint64) -> set[Coin]
       - If you would like assets from your wallet to be referenced with just a wallet ID, you must also implement:
         - get_asset_id() -> bytes32
       - Finally, you must make sure that your wallet will respond appropriately when these WSM methods are called:
@@ -257,8 +257,8 @@ class TradeManager:
         announcement_nonce: bytes32 = std_hash(b"".join(trades))
         trade_records: list[TradeRecord] = []
         all_cancellation_coins: list[list[Coin]] = []
-        announcement_creations: Deque[CreateCoinAnnouncement] = deque()
-        announcement_assertions: Deque[AssertCoinAnnouncement] = deque()
+        announcement_creations: deque[CreateCoinAnnouncement] = deque()
+        announcement_assertions: deque[AssertCoinAnnouncement] = deque()
         for trade_id in trades:
             if trade_id in trade_cache:
                 trade = trade_cache[trade_id]
@@ -878,7 +878,7 @@ class TradeManager:
             if not result[0] or result[1] is None:
                 raise ValueError(result[2])
 
-            success, take_offer, error = result
+            _success, take_offer, _error = result
 
             complete_offer, valid_spend_solver = await self.check_for_final_modifications(
                 Offer.aggregate([offer, take_offer]), solver, inner_action_scope

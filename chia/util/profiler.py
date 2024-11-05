@@ -177,7 +177,7 @@ async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.L
             await asyncio.sleep(60)
             snapshot = tracemalloc.take_snapshot()
             snapshot.dump(str(profile_dir / f"heap-{counter:05d}.profile"))
-            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0]/1000000:0.3f} MB profile {counter:05d}")
+            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0] / 1000000:0.3f} MB profile {counter:05d}")
             counter += 1
     finally:
         tracemalloc.stop()

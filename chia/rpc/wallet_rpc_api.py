@@ -5,7 +5,7 @@ import json
 import logging
 import zlib
 from pathlib import Path
-from typing import Any, ClassVar, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm_tools.binutils import assemble
@@ -165,6 +165,11 @@ log = logging.getLogger(__name__)
 
 
 class WalletRpcApi:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcApiProtocol
+
+        _protocol_check: ClassVar[RpcApiProtocol] = cast("WalletRpcApi", None)
+
     max_get_coin_records_limit: ClassVar[uint32] = uint32(1000)
     max_get_coin_records_filter_items: ClassVar[uint32] = uint32(1000)
 
@@ -635,7 +640,7 @@ class WalletRpcApi:
         nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
-        await self.service.push_tx(WalletSpendBundle.from_bytes(request.spend_bundle))
+        await self.service.push_tx(request.spend_bundle)
         return Empty()
 
     @tx_endpoint(push=True)
@@ -1172,7 +1177,6 @@ class WalletRpcApi:
     async def combine_coins(
         self, request: CombineCoins, action_scope: WalletActionScope, extra_conditions: tuple[Condition, ...] = tuple()
     ) -> CombineCoinsResponse:
-
         # Some "number of coins" validation
         if request.number_of_coins > request.coin_num_limit:
             raise ValueError(
@@ -1576,7 +1580,7 @@ class WalletRpcApi:
             excluded_coin_amounts = []
         excluded_coins_input: Optional[dict[str, dict[str, Any]]] = request.get("excluded_coins")
         if excluded_coins_input is not None:
-            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins_input]
+            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins_input.values()]
         else:
             excluded_coins = []
         excluded_coin_ids_input: Optional[list[str]] = request.get("excluded_coin_ids")
@@ -1720,10 +1724,10 @@ class WalletRpcApi:
     @marshal
     async def get_notifications(self, request: GetNotifications) -> GetNotificationsResponse:
         if request.ids is None:
-            notifications: list[Notification] = (
-                await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
-                    pagination=(request.start, request.end)
-                )
+            notifications: list[
+                Notification
+            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
+                pagination=(request.start, request.end)
             )
         else:
             notifications = (
@@ -2099,7 +2103,7 @@ class WalletRpcApi:
                 extra_conditions=extra_conditions,
             )
         if result[0]:
-            success, trade_record, error = result
+            _success, trade_record, _error = result
             return {
                 "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
                 "trade_record": trade_record.to_json_dict_convenience(),
@@ -2116,7 +2120,7 @@ class WalletRpcApi:
         from chia.util.bech32m import bech32_decode, convertbits
         from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
-        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
             raise ValueError("Invalid Offer")
         decoded = convertbits(list(data), 5, 8, False)
@@ -2195,7 +2199,7 @@ class WalletRpcApi:
         from chia.util.bech32m import bech32_decode, convertbits
         from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
-        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
             raise ValueError("Invalid Offer")  # pragma: no cover
         decoded = convertbits(list(data), 5, 8, False)
@@ -2230,7 +2234,7 @@ class WalletRpcApi:
         from chia.util.bech32m import bech32_decode, convertbits
         from chia.wallet.util.puzzle_compression import OFFER_MOD_OLD, decompress_object_with_puzzles
 
-        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        _hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
         if data is None:
             raise ValueError("Invalid Offer")  # pragma: no cover
         decoded = convertbits(list(data), 5, 8, False)
@@ -3186,7 +3190,7 @@ class WalletRpcApi:
         return {
             "success": True,
             # Semantics guarantee proposal_id here
-            "proposal_id": proposal_id,  # pylint: disable=possibly-used-before-assignment
+            "proposal_id": proposal_id,
             "tx_id": None,  # tx_endpoint wrapper will take care of this
             "tx": None,  # tx_endpoint wrapper will take care of this
             "transactions": None,  # tx_endpoint wrapper will take care of this

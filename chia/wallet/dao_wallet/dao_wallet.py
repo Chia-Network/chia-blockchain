@@ -21,9 +21,13 @@ from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, SpendableCAT, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import (
+    CAT_MOD,
+    SpendableCAT,
+    construct_cat_puzzle,
+    unsigned_spend_bundle_for_spendable_cats,
+)
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
-from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
@@ -1215,8 +1219,8 @@ class DAOWallet:
             )
             c_a, curried_args_prg = uncurry_proposal(proposal_info.current_innerpuz)
             (
-                SELF_HASH,
-                PROPOSAL_ID,
+                _SELF_HASH,
+                _PROPOSAL_ID,
                 PROPOSED_PUZ_HASH,
                 YES_VOTES,
                 TOTAL_VOTES,
@@ -1257,11 +1261,11 @@ class DAOWallet:
             proposal_type, curried_args_prg = get_proposal_args(puzzle_reveal)
             if proposal_type == ProposalType.SPEND:
                 (
-                    TREASURY_SINGLETON_STRUCT,
-                    CAT_MOD_HASH,
+                    _TREASURY_SINGLETON_STRUCT,
+                    _CAT_MOD_HASH,
                     CONDITIONS,
                     LIST_OF_TAILHASH_CONDITIONS,
-                    P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
+                    _P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
                 ) = curried_args_prg.as_iter()
 
                 sum = 0
@@ -1421,18 +1425,18 @@ class DAOWallet:
 
             elif proposal_type == ProposalType.UPDATE:
                 (
-                    TREASURY_MOD_HASH,
-                    VALIDATOR_MOD_HASH,
-                    SINGLETON_STRUCT,
-                    PROPOSAL_SELF_HASH,
-                    PROPOSAL_MINIMUM_AMOUNT,
-                    PROPOSAL_EXCESS_PAYOUT_PUZHASH,
-                    PROPOSAL_LENGTH,
-                    PROPOSAL_SOFTCLOSE_LENGTH,
-                    ATTENDANCE_REQUIRED,
-                    PASS_MARGIN,
-                    PROPOSAL_SELF_DESTRUCT_TIME,
-                    ORACLE_SPEND_DELAY,
+                    _TREASURY_MOD_HASH,
+                    _VALIDATOR_MOD_HASH,
+                    _SINGLETON_STRUCT,
+                    _PROPOSAL_SELF_HASH,
+                    _PROPOSAL_MINIMUM_AMOUNT,
+                    _PROPOSAL_EXCESS_PAYOUT_PUZHASH,
+                    _PROPOSAL_LENGTH,
+                    _PROPOSAL_SOFTCLOSE_LENGTH,
+                    _ATTENDANCE_REQUIRED,
+                    _PASS_MARGIN,
+                    _PROPOSAL_SELF_DESTRUCT_TIME,
+                    _ORACLE_SPEND_DELAY,
                 ) = curried_args_prg.as_iter()
                 coin_spends = []
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
@@ -1473,7 +1477,6 @@ class DAOWallet:
             spend_bundle = WalletSpendBundle([proposal_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         else:
             # TODO: maybe we can refactor this to provide clarity around timer_cs having been defined
-            # pylint: disable-next=E0606
             spend_bundle = WalletSpendBundle([proposal_cs, timer_cs, treasury_cs], AugSchemeMPL.aggregate([]))
         if fee > 0:
             await self.standard_wallet.create_tandem_xch_tx(fee, action_scope)
@@ -1657,11 +1660,11 @@ class DAOWallet:
                 if proposal_type == ProposalType.SPEND:
                     cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
                     (
-                        TREASURY_SINGLETON_STRUCT,
-                        CAT_MOD_HASH,
+                        _TREASURY_SINGLETON_STRUCT,
+                        _CAT_MOD_HASH,
                         CONDITIONS,
                         LIST_OF_TAILHASH_CONDITIONS,
-                        P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
+                        _P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
                     ) = curried_args.as_iter()
                     mint_amount = None
                     new_cat_puzhash = None
@@ -1831,20 +1834,20 @@ class DAOWallet:
 
         c_a, curried_args = uncurry_proposal(puzzle)
         (
-            DAO_PROPOSAL_TIMER_MOD_HASH,
-            SINGLETON_MOD_HASH,
-            SINGLETON_LAUNCHER_PUZHASH,
-            CAT_MOD_HASH,
-            DAO_FINISHED_STATE_HASH,
+            _DAO_PROPOSAL_TIMER_MOD_HASH,
+            _SINGLETON_MOD_HASH,
+            _SINGLETON_LAUNCHER_PUZHASH,
+            _CAT_MOD_HASH,
+            _DAO_FINISHED_STATE_HASH,
             _DAO_TREASURY_MOD_HASH,
-            lockup_self_hash,
+            _lockup_self_hash,
             cat_tail_hash,
-            treasury_id,
+            _treasury_id,
         ) = curried_args.as_iter()
         (
-            curry_one,
-            proposal_id,
-            proposed_puzzle_hash,
+            _curry_one,
+            _proposal_id,
+            _proposed_puzzle_hash,
             yes_votes,
             total_votes,
         ) = c_a.as_iter()
@@ -2105,7 +2108,7 @@ class DAOWallet:
         puzzle = get_inner_puzzle_from_singleton(new_state.puzzle_reveal)
         assert puzzle
         try:
-            mod, curried_args = puzzle.uncurry()
+            mod, _curried_args = puzzle.uncurry()
         except ValueError as e:  # pragma: no cover
             self.log.warning("Cannot uncurry puzzle in DAO Wallet: error: %s", e)
             raise e
