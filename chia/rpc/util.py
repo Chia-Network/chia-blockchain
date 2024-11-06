@@ -87,7 +87,7 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
 
 
 def wrap_http_handler(
-    f: Callable[[dict[str, Any]], Awaitable[EndpointResult]]
+    f: Callable[[dict[str, Any]], Awaitable[EndpointResult]],
 ) -> Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.StreamResponse]]:
     async def inner(request: aiohttp.web.Request) -> aiohttp.web.StreamResponse:
         request_data = await request.json()
