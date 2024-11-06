@@ -11,11 +11,9 @@ def test_api_protocol_raises_for_repeat_request_registration() -> None:
     metadata = ApiMetadata()
 
     @metadata.request(request_type=ProtocolMessageTypes.handshake)
-    async def f(self: object, request: RequestTransaction) -> None:
-        pass
+    async def f(self: object, request: RequestTransaction) -> None: ...
 
-    async def g(self: object, request: RequestTransaction) -> None:
-        pass
+    async def g(self: object, request: RequestTransaction) -> None: ...
 
     decorator = metadata.request(request_type=ProtocolMessageTypes.handshake)
 
