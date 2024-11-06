@@ -293,8 +293,6 @@ async def setup_simulators_and_wallets_inner(
                     )
                 )
 
-        _ = await async_exit_stack.enter_async_context(setup_daemon(btools=bt_tools[0]))
-
         simulators: list[SimulatorFullNodeService] = [
             await async_exit_stack.enter_async_context(
                 # Passing simulator=True gets us this type guaranteed
