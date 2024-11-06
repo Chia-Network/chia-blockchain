@@ -936,6 +936,7 @@ class FullNode:
             - Disconnect peers that provide invalid blocks or don't have the blocks
         """
         # Ensure we are only syncing once and not double calling this method
+        fork_point = None
         if self.sync_store.get_sync_mode():
             return None
 
@@ -1666,7 +1667,7 @@ class FullNode:
         assert diff is not None
         return ssi, diff, prev_ses_block
 
-    async def _finish_sync(self, fork_point: int) -> None:
+    async def _finish_sync(self, fork_point: Optional[int]) -> None:
         """
         Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
         blocks that we have finalized recently.
@@ -1682,6 +1683,8 @@ class FullNode:
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
             if peak_fb is not None:
+                if fork_point is None:
+                    fork_point = peak_fb.height - 1
                 assert peak is not None
                 state_change_summary = StateChangeSummary(peak, uint32(max(fork_point, 0)), [], [], [], [])
                 ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
