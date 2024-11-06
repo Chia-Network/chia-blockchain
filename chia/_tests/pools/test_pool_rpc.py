@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
+import sys
 import tempfile
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -16,15 +18,16 @@ import pytest
 from _pytest.fixtures import SubRequest
 from chia_rs import G1Element
 
-from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
+from chia._tests.util.setup_nodes import setup_cli_wallet_node_daemon, setup_simulators_and_wallets_service
 from chia._tests.util.time_out_assert import time_out_assert
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import ReorgProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.types.aliases import WalletService
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -1021,3 +1024,88 @@ class TestPoolWalletRpc:
 
         # Eventually, leaves pool
         assert await status_is_farming_to_pool()
+
+    @pytest.mark.anyio
+    async def test_join_pool_cli(
+        self,
+        blockchain_constants: ConsensusConstants,
+        self_hostname: str,
+    ) -> None:
+        async with setup_cli_wallet_node_daemon(consensus_constants=blockchain_constants) as (bt, node, wallet_service):
+            wallet_node = wallet_service._node
+            full_node_api = node._api
+            await wallet_node.server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
+            ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+            balance = await wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance()
+            assert balance == funds
+            assert wallet_service.rpc_server is not None
+
+            client = await WalletRpcClient.create(
+                self_hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
+            )
+
+            creation_tx: TransactionRecord = await client.create_new_pool_wallet(
+                target_puzzlehash=ph,
+                pool_url="https://pool.example.com",
+                relative_lock_height=uint32(10),
+                backup_host="",
+                mode="new",
+                state="FARMING_TO_POOL",
+                fee=uint64(0),
+            )
+            await full_node_api.process_transaction_records(records=[creation_tx])
+            await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
+
+            summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
+            assert len(summaries_response) == 1
+            wallet_id: int = summaries_response[0]["id"]
+
+            async def status_is_farming_to_pool(w_id: int) -> bool:
+                pw_status: PoolWalletInfo = (await client.pw_status(w_id))[0]
+                return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
+
+            await time_out_assert(45, status_is_farming_to_pool, True, wallet_id)
+            primary_fingerprint = await client.get_logged_in_fingerprint()
+
+            client.close()
+            await client.await_closed()
+
+            # want to run "chia plotnft join -f <fingerprint> -wp <rpc_port> -u <pool_url> -m <fee> -i <wallet_id>"
+            args: list[str] = [
+                sys.executable,
+                "-m",
+                "chia",
+                "plotnft",
+                "join",
+                "-f",
+                str(primary_fingerprint.fingerprint),
+                "--wallet-rpc-port",
+                str(wallet_service.rpc_server.listen_port),
+                "-u",
+                "https://pool.example.com",
+                "-i",
+                str(wallet_id),
+            ]
+
+            process = await asyncio.create_subprocess_exec(
+                *args,
+                env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await process.wait()
+            assert process.stdout is not None
+            stdout = await process.stdout.read()
+            assert "is already farming to pool" in stdout.decode()
+            assert process.stderr is not None
+            stderr = await process.stderr.read()
+            if sys.version_info >= (3, 10, 6):
+                assert stderr == b""
+            else:  # pragma: no cover
+                # https://github.com/python/cpython/issues/92841
+                assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
+            assert process.returncode == 0
