@@ -161,6 +161,7 @@ harvester:
   # Plots are searched for in the following directories
   plot_directories: []
   recursive_plot_scan: False # If True the harvester scans plots recursively in the provided directories.
+  recursive_follow_links: False # If True the harvester follows symlinks when scanning for plots recursively
 
   ssl:
     private_crt: "config/ssl/harvester/private_harvester.crt"
