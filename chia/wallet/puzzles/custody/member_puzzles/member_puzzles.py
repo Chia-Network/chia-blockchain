@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 from dataclasses import dataclass
 from typing import Any
@@ -8,6 +9,7 @@ from chia_rs import G1Element
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.hash import std_hash
 from chia.wallet.puzzles.custody.custody_architecture import Puzzle
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
@@ -47,8 +49,16 @@ class PasskeyMember(Puzzle):
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
 
+    def create_message(self, delegated_puzzle_hash: bytes32, coin_id: bytes32) -> str:
+        message = base64.urlsafe_b64encode(std_hash(delegated_puzzle_hash + coin_id + self.genesis_challenge))
+        return message.decode("utf-8").rstrip("=")
+
+    @staticmethod
+    def format_client_data_as_str(client_data: dict[str, Any]) -> str:
+        return json.dumps(client_data, separators=(",", ":"))
+
     def solve(
         self, authenticator_data: bytes, client_data: dict[str, Any], signature: bytes, coin_id: bytes32
     ) -> Program:
-        json_str = json.dumps(client_data, separators=(",", ":"))
+        json_str = PasskeyMember.format_client_data_as_str(client_data)
         return Program.to([authenticator_data, json_str, json_str.find('"challenge":'), signature, coin_id])

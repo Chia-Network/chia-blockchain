@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import base64
 import itertools
-import json
 from typing import List
 
 import pytest
@@ -236,9 +234,9 @@ async def test_passkey_member(cost_logger: CostLogger) -> None:
         # Get signature for AGG_SIG_ME
         coin_id = coin.name()
         authenticator_data = b"foo"
-        message = base64.urlsafe_b64encode(std_hash(delegated_puzzle_hash + coin_id + passkey_member.genesis_challenge))
-        client_data = {"challenge": message.decode("utf-8").rstrip("=")}
-        signature_message = authenticator_data + std_hash(json.dumps(client_data, separators=(",", ":")).encode("utf8"))
+        client_data = {"challenge": passkey_member.create_message(delegated_puzzle_hash, coin_id)}
+        client_data_hash = std_hash(PasskeyMember.format_client_data_as_str(client_data).encode("utf8"))
+        signature_message = authenticator_data + client_data_hash
         der_sig = secp_sk.sign(
             signature_message,
             # The type stubs are weird here, `deterministic_signing` is assuredly an argument
