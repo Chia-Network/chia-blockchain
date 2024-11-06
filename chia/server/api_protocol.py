@@ -107,7 +107,7 @@ class ApiMetadata:
             )
 
             if request_type in self.message_type_to_request:
-                raise Exception(f"name already registered: {request_type}")
+                raise Exception(f"request type already registered: {request_type}")
 
             self.message_type_to_request[request_type] = request
 
