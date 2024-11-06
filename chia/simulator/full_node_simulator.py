@@ -747,7 +747,7 @@ class FullNodeSimulator(FullNodeAPI):
         return await self.full_node.synced()
 
     async def wallet_is_synced(self, wallet_node: WalletNode, peak_height: Optional[uint32] = None) -> bool:
-        if not self.self_is_synced():
+        if not await self.self_is_synced():
             # Depending on races, may not be covered every time
             return False  # pragma: no cover
         if not await wallet_node.wallet_state_manager.synced():
