@@ -1,0 +1,91 @@
+; member puzzle with SECP256-R1 signature provided by a passkey (ie Yubikey)
+
+(mod (GENESIS_CHALLENGE SECP_PK
+    Delegated_puzzle_hash
+    ; The WebAuthn authenticator data.
+    ; See https://www.w3.org/TR/webauthn-2/#dom-authenticatorassertionresponse-authenticatordata.
+    authenticator_data
+    ; The WebAuthn client data JSON.
+    ; See https://www.w3.org/TR/webauthn-2/#dom-authenticatorresponse-clientdatajson.
+    client_data_json
+    ; The index at which "challenge":"..." occurs in `clientDataJSON`.
+    challenge_index
+    ; the signature returned by the authenticator
+    signature
+    ; my coin id
+    coin_id
+  )
+
+  (include *standard-cl-23*)
+  (include condition_codes.clib)
+  (include sha256tree.clib)
+
+  (defconstant b64-charset "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+
+  (defun map-triples (fun n blob)
+    (if (any (= n (strlen blob)) (> n (strlen blob)))
+        ()
+        (c (a fun (list (substr blob n (+ n 3)))) (map-triples fun (+ n 3) blob))
+    )
+  )
+
+  (defun flat-map (fun lst)
+    (if lst
+        (if (f lst)
+            (c (a fun (list (f (f lst)))) (flat-map fun (c (r (f lst)) (r lst))))
+            (flat-map fun (r lst))
+        )
+        ()
+    )
+  )
+
+  (defun lookup-b64 (byte)
+    (substr b64-charset byte (+ byte 1))
+  )
+
+  (defun-inline trim-padding (plen output)
+    (substr output 0 (- (strlen output) plen))
+  )
+
+  (defun-inline convert (int)
+    (if (> int -1) int (+ int 256))
+  )
+
+  (defun b64-encode-blob (blob)
+    (assign
+      pad_mod (r (divmod (strlen blob) 3))
+      padding (if pad_mod (- 3 pad_mod) 0)
+      bytes (concat blob (substr 0x000000 0 padding))
+      sextets
+      (map-triples (lambda ((& padding) bytes)
+          (assign
+            (fb_upper . fb_lower) (divmod (convert (substr bytes 0 1)) 4)
+            (sb_upper . sb_lower) (divmod (convert (substr bytes 1 2)) 16)
+            (tb_upper . tb_lower) (divmod (convert (substr bytes 2 3)) 64)
+            (list
+              fb_upper
+              (logior (ash fb_lower 4) sb_upper)
+              (logior (ash sb_lower 2) tb_upper)
+              tb_lower
+            )
+          )
+        )
+        0
+        bytes
+      )
+      (trim-padding padding (a (c (list 14) (flat-map lookup-b64 sextets)) ()))
+    )
+  )
+
+  (assign
+    message (b64-encode-blob (sha256 Delegated_puzzle_hash coin_id GENESIS_CHALLENGE))
+    challenge (concat '"challenge":"' message '"')
+    (if (= (substr client_data_json challenge_index (+ challenge_index (strlen challenge))) challenge)
+        (c
+          (list ASSERT_MY_COIN_ID coin_id)
+          (secp256r1_verify SECP_PK (sha256 authenticator_data (sha256 client_data_json)) signature)
+        )
+        (x)
+    )
+  )
+)
