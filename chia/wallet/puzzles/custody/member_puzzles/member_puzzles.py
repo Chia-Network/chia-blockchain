@@ -42,7 +42,7 @@ class SingletonMember(Puzzle):
 
     def puzzle(self, nonce: int) -> Program:
         singleton_struct = (SINGLETON_TOP_LAYER_MOD_HASH, (self.singleton_id, SINGLETON_LAUNCHER_PUZZLE_HASH))
-        return BLS_MEMBER_MOD.curry(singleton_struct)
+        return SINGLETON_MEMBER_MOD.curry(singleton_struct)
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
