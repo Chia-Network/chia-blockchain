@@ -10,7 +10,7 @@ from collections.abc import Coroutine
 from typing import Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PrivateKey, SpendBundleConditions
 from clvm.casts import int_to_bytes
 from packaging.version import Version
 
@@ -71,6 +71,16 @@ from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+
+def test_pre_validation_result() -> None:
+    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True)
+    results = PreValidationResult(None, uint64(1), conds, uint32(0))
+    assert results.validated_signature is True
+
+    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False)
+    results = PreValidationResult(None, uint64(1), conds, uint32(0))
+    assert results.validated_signature is False
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -437,7 +447,6 @@ class TestFullNodeBlockCompression:
                         blockchain.pool,
                         {},
                         ValidationState(ssi, diff, None),
-                        validate_signatures=False,
                     )
                     results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None
@@ -456,7 +465,6 @@ class TestFullNodeBlockCompression:
                         blockchain.pool,
                         {},
                         ValidationState(ssi, diff, None),
-                        validate_signatures=False,
                     )
                     results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                     assert results is not None

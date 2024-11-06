@@ -182,7 +182,6 @@ class FullNodeSimulator(FullNodeAPI):
                     self.full_node.blockchain.pool,
                     {},
                     ValidationState(ssi, diff, None),
-                    validate_signatures=True,
                 )
                 pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 assert pre_validation_results is not None
@@ -190,7 +189,6 @@ class FullNodeSimulator(FullNodeAPI):
                 await self.full_node.blockchain.add_block(
                     genesis,
                     pre_validation_results[0],
-                    self.full_node._bls_cache,
                     self.full_node.constants.SUB_SLOT_ITERS_STARTING,
                     fork_info,
                 )
@@ -246,14 +244,11 @@ class FullNodeSimulator(FullNodeAPI):
                     self.full_node.blockchain.pool,
                     {},
                     ValidationState(ssi, diff, None),
-                    validate_signatures=True,
                 )
                 pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 assert pre_validation_results is not None
                 fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
-                await self.full_node.blockchain.add_block(
-                    genesis, pre_validation_results[0], self.full_node._bls_cache, ssi, fork_info
-                )
+                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0], ssi, fork_info)
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
             curr: BlockRecord = peak

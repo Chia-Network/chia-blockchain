@@ -10,7 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
-from chia_rs import BLSCache, additions_and_removals, get_flags_for_height_and_constants
+from chia_rs import additions_and_removals, get_flags_for_height_and_constants
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
@@ -279,7 +279,6 @@ class Blockchain:
         self,
         block: FullBlock,
         pre_validation_result: PreValidationResult,
-        bls_cache: Optional[BLSCache],
         sub_slot_iters: uint64,
         fork_info: ForkInfo,
         prev_ses_block: Optional[BlockRecord] = None,
@@ -294,9 +293,6 @@ class Blockchain:
         Args:
             block: The FullBlock to be validated.
             pre_validation_result: A result of successful pre validation
-            bls_cache: An optional cache of pairings that are likely to be part
-               of the aggregate signature. If this is set, the cache will always
-               be used (which may be slower if there are no cache hits).
             fork_info: Information about the fork chain this block is part of,
                to make validation more efficient. This is an in-out parameter.
 
@@ -358,6 +354,7 @@ class Blockchain:
         assert fork_info.peak_height == block.height - 1
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
+        assert block.transactions_generator is None or pre_validation_result.validated_signature
         error_code, _ = await validate_block_body(
             self.constants,
             self,
@@ -366,9 +363,6 @@ class Blockchain:
             block.height,
             pre_validation_result.conds,
             fork_info,
-            bls_cache,
-            # If we did not already validate the signature, validate it now
-            validate_signature=not pre_validation_result.validated_signature,
         )
         if error_code is not None:
             return AddBlockResult.INVALID_BLOCK, error_code, None
@@ -702,7 +696,7 @@ class Blockchain:
         required_iters, error = await self.validate_unfinished_block_header(block, skip_overflow_ss_validation)
 
         if error is not None:
-            return PreValidationResult(uint16(error.value), None, None, False, uint32(0))
+            return PreValidationResult(uint16(error.value), None, None, uint32(0))
 
         prev_height = (
             -1
@@ -720,14 +714,12 @@ class Blockchain:
             uint32(prev_height + 1),
             None if npc_result is None else npc_result.conds,
             fork_info,
-            None,
-            validate_signature=False,  # Signature was already validated before calling this method, no need to validate
         )
 
         if error_code is not None:
-            return PreValidationResult(uint16(error_code.value), None, None, False, uint32(0))
+            return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
 
-        return PreValidationResult(None, required_iters, cost_result, False, uint32(0))
+        return PreValidationResult(None, required_iters, cost_result, uint32(0))
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
