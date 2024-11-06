@@ -6,6 +6,7 @@ import sys
 from multiprocessing import freeze_support
 from typing import Any, Optional
 
+from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -37,10 +38,10 @@ def create_wallet_service(
 ) -> WalletService:
     service_config = config[SERVICE_NAME]
 
-    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
+    network_id = service_config["selected_network"]
+    overrides = service_config["network_overrides"]["constants"][network_id]
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
-    if "short_sync_blocks_behind_threshold" not in service_config:
-        service_config["short_sync_blocks_behind_threshold"] = 20
+    service_config.setdefault("short_sync_blocks_behind_threshold", 20)
 
     node = WalletNode(
         service_config,
@@ -50,10 +51,8 @@ def create_wallet_service(
     )
     peer_api = WalletNodeAPI(node)
 
-    network_id = service_config["selected_network"]
-    rpc_port = service_config.get("rpc_port")
     rpc_info: Optional[RpcInfo[WalletRpcApi]] = None
-    if rpc_port is not None:
+    if service_config.get("start_rpc_server", True):
         rpc_info = (WalletRpcApi, service_config["rpc_port"])
 
     return Service(
@@ -62,13 +61,14 @@ def create_wallet_service(
         node=node,
         peer_api=peer_api,
         node_type=NodeType.WALLET,
+        advertised_port=None,
         service_name=SERVICE_NAME,
-        on_connect_callback=node.on_connect,
         connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
+        on_connect_callback=node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
-        advertised_port=None,
         connect_to_daemon=connect_to_daemon,
+        class_for_type=ApiProtocolRegistry,
     )
 
 
@@ -90,6 +90,7 @@ async def async_main() -> int:
     else:
         constants = DEFAULT_CONSTANTS
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
+
     service = create_wallet_service(DEFAULT_ROOT_PATH, config, constants)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
@@ -101,8 +102,10 @@ async def async_main() -> int:
 def main() -> int:
     freeze_support()
 
-    with maybe_manage_task_instrumentation(enable=os.environ.get("CHIA_INSTRUMENT_WALLET") is not None):
-        return async_run(async_main())
+    with maybe_manage_task_instrumentation(
+        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+    ):
+        return async_run(coro=async_main())
 
 
 if __name__ == "__main__":

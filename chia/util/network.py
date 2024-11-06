@@ -14,8 +14,6 @@ from aiohttp import web
 from aiohttp.log import web_logger
 from typing_extensions import final
 
-from chia.server.api_protocol import ApiProtocol
-from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
 from chia.util.ip_address import IPAddress
@@ -137,34 +135,6 @@ def is_trusted_peer(
     host: str, node_id: bytes32, trusted_peers: dict[str, Any], trusted_cidrs: list[str], testing: bool = False
 ) -> bool:
     return not testing and is_localhost(host) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
-
-
-def class_for_type(type: NodeType) -> type[ApiProtocol]:
-    if type is NodeType.FULL_NODE:
-        from chia.full_node.full_node_api import FullNodeAPI
-
-        return FullNodeAPI
-    elif type is NodeType.WALLET:
-        from chia.wallet.wallet_node_api import WalletNodeAPI
-
-        return WalletNodeAPI
-    elif type is NodeType.INTRODUCER:
-        from chia.introducer.introducer_api import IntroducerAPI
-
-        return IntroducerAPI
-    elif type is NodeType.TIMELORD:
-        from chia.timelord.timelord_api import TimelordAPI
-
-        return TimelordAPI
-    elif type is NodeType.FARMER:
-        from chia.farmer.farmer_api import FarmerAPI
-
-        return FarmerAPI
-    elif type is NodeType.HARVESTER:
-        from chia.harvester.harvester_api import HarvesterAPI
-
-        return HarvesterAPI
-    raise ValueError("No class for type")
 
 
 async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:

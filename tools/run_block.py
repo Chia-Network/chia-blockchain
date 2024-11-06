@@ -35,6 +35,7 @@ associated with the coin being spent. Condition Opcodes are verified by every cl
 and in this way they control whether a spend is valid or not.
 
 """
+
 from __future__ import annotations
 
 import json

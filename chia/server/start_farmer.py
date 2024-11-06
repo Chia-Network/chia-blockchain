@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 import pathlib
 import sys
 from typing import Any, Optional
 
+from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS, update_testnet_overrides
 from chia.farmer.farmer import Farmer
@@ -17,6 +19,7 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
+from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -39,26 +42,29 @@ def create_farmer_service(
     update_testnet_overrides(network_id, overrides)
     updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
-    farmer = Farmer(
+    node = Farmer(
         root_path, service_config, config_pool, consensus_constants=updated_constants, local_keychain=keychain
     )
-    peer_api = FarmerAPI(farmer)
+    peer_api = FarmerAPI(node)
+
     rpc_info: Optional[RpcInfo[FarmerRpcApi]] = None
-    if service_config["start_rpc_server"]:
+    if service_config.get("start_rpc_server", True):
         rpc_info = (FarmerRpcApi, service_config["rpc_port"])
+
     return Service(
         root_path=root_path,
         config=config,
-        node=farmer,
+        node=node,
         peer_api=peer_api,
         node_type=NodeType.FARMER,
         advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
         connect_peers=get_unresolved_peer_infos(service_config, NodeType.FULL_NODE),
-        on_connect_callback=farmer.on_connect,
+        on_connect_callback=node.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
+        class_for_type=ApiProtocolRegistry,
     )
 
 
@@ -70,6 +76,7 @@ async def async_main() -> int:
     config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
     config["pool"] = config_pool
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
+
     service = create_farmer_service(DEFAULT_ROOT_PATH, config, config_pool, DEFAULT_CONSTANTS)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
@@ -79,7 +86,10 @@ async def async_main() -> int:
 
 
 def main() -> int:
-    return async_run(async_main())
+    with maybe_manage_task_instrumentation(
+        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+    ):
+        return async_run(coro=async_main())
 
 
 if __name__ == "__main__":

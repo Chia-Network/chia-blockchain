@@ -565,7 +565,7 @@ class TestId:
             temp_node = temp_node.parent
 
         # TODO: can we avoid parsing the id's etc from the node name?
-        test_name, delimiter, rest = node.name.partition("[")
+        _test_name, delimiter, rest = node.name.partition("[")
         ids: tuple[str, ...]
         if delimiter == "":
             ids = ()

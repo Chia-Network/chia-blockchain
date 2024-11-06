@@ -35,7 +35,7 @@ from chia.util.ints import int16, uint8, uint16
 from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
-from chia.util.network import class_for_type, is_localhost
+from chia.util.network import is_localhost
 from chia.util.streamable import Streamable
 
 # Max size 2^(8*4) which is around 4GiB
@@ -82,6 +82,7 @@ class WSChiaConnection:
     close_callback: Optional[ConnectionClosedCallbackProtocol] = field(repr=False)
     outbound_rate_limiter: RateLimiter
     inbound_rate_limiter: RateLimiter
+    class_for_type: dict[NodeType, type[ApiProtocol]] = field(repr=False)
 
     # connection properties
     is_outbound: bool
@@ -137,6 +138,7 @@ class WSChiaConnection:
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
         local_capabilities_for_handshake: list[tuple[uint16, str]],
+        class_for_type: dict[NodeType, type[ApiProtocol]],
         session: Optional[ClientSession] = None,
     ) -> WSChiaConnection:
         assert ws._writer is not None
@@ -168,6 +170,7 @@ class WSChiaConnection:
             inbound_rate_limiter=RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent),
             is_outbound=is_outbound,
             received_message_callback=received_message_callback,
+            class_for_type=class_for_type,
             session=session,
         )
 
@@ -538,7 +541,10 @@ class WSChiaConnection:
             raise ValueError("handshake not done yet")
         request_metadata = ApiMetadata.from_bound_method(request_method)
         assert request_metadata is not None, f"ApiMetadata unavailable for {request_method}"
-        if request_metadata.request_type not in class_for_type(self.connection_type).metadata.message_type_to_request:
+        if (
+            request_metadata.request_type
+            not in self.class_for_type[self.connection_type].metadata.message_type_to_request
+        ):
             raise AttributeError(
                 f"Node type {self.connection_type} does not have method {request_metadata.request_type.name}"
             )
@@ -564,7 +570,7 @@ class WSChiaConnection:
             await self.ban_peer_bad_protocol(error_message)
             raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-        recv_method = class_for_type(self.local_type).metadata.message_type_to_request[recv_message_type].method
+        recv_method = self.class_for_type[self.local_type].metadata.message_type_to_request[recv_message_type].method
         receive_metadata = ApiMetadata.from_bound_method(recv_method)
         assert receive_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
         return receive_metadata.message_class.from_bytes(response.data)

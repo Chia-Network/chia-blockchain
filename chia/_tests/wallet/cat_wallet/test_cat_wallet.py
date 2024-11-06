@@ -389,7 +389,6 @@ async def test_cat_spend(wallet_environments: WalletTestFramework) -> None:
                     "cat": {
                         "confirmed_wallet_balance": 60,
                         "unconfirmed_wallet_balance": 60,
-                        "pending_coin_removal_count": 0,
                         "spendable_balance": 60,
                         "max_send_amount": 60,
                         "pending_change": 0,
@@ -674,7 +673,6 @@ async def test_cat_doesnt_see_eve(wallet_environments: WalletTestFramework) -> N
                     "cat": {
                         "confirmed_wallet_balance": 60,
                         "unconfirmed_wallet_balance": 60,
-                        "pending_coin_removal_count": 0,
                         "spendable_balance": 60,
                         "max_send_amount": 60,
                         "pending_change": 0,
@@ -866,7 +864,6 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                     "cat": {
                         "confirmed_wallet_balance": 60,
                         "unconfirmed_wallet_balance": 60,
-                        "pending_coin_removal_count": 0,
                         "spendable_balance": 60,
                         "max_send_amount": 60,
                         "pending_change": 0,
@@ -892,7 +889,6 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
                     "cat": {
                         "confirmed_wallet_balance": 20,
                         "unconfirmed_wallet_balance": 20,
-                        "pending_coin_removal_count": 0,
                         "spendable_balance": 20,
                         "max_send_amount": 20,
                         "pending_change": 0,

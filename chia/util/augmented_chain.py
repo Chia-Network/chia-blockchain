@@ -52,7 +52,6 @@ class AugmentedBlockchain:
 
     # BlocksProtocol
     async def lookup_block_generators(self, header_hash: bytes32, generator_refs: set[uint32]) -> dict[uint32, bytes]:
-
         generators: dict[uint32, bytes] = {}
 
         # traverse the additional blocks (if any) and resolve heights into

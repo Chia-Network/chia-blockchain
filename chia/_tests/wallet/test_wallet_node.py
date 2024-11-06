@@ -496,7 +496,7 @@ async def test_unique_puzzle_hash_subscriptions(simulator_and_wallet: OldSimulat
 async def test_get_balance(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [full_node_api], [(wallet_node, wallet_server)], _bt = simulator_and_wallet
     full_node_server = full_node_api.full_node.server
 
     def wallet_synced() -> bool:
@@ -719,7 +719,7 @@ async def test_wallet_node_bad_coin_state_ignore(
 async def test_start_with_multiple_key_types(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
         wallet_node._close()
@@ -750,7 +750,7 @@ async def test_start_with_multiple_key_types(
 async def test_start_with_multiple_keys(
     simulator_and_wallet: OldSimulatorsAndWallets, self_hostname: str, default_400_blocks: list[FullBlock]
 ) -> None:
-    [full_node_api], [(wallet_node, wallet_server)], bt = simulator_and_wallet
+    [_full_node_api], [(wallet_node, _wallet_server)], _bt = simulator_and_wallet
 
     async def restart_with_fingerprint(fingerprint: Optional[int]) -> None:
         wallet_node._close()

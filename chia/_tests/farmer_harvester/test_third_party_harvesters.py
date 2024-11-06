@@ -271,7 +271,7 @@ async def test_harvester_receive_source_signing_data(
         def did_finished_validating_data() -> bool:
             return finished_validating_data
 
-        await time_out_assert(60 * 60, did_finished_validating_data, True)
+        await time_out_assert(60, did_finished_validating_data, True)
 
 
 @pytest.mark.anyio

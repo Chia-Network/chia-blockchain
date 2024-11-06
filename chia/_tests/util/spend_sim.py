@@ -68,7 +68,7 @@ class CostLogger:
     def add_cost(self, descriptor: str, spend_bundle: T_SpendBundle) -> T_SpendBundle:
         program: BlockGenerator = simple_solution_generator(spend_bundle)
         flags = get_flags_for_height_and_constants(DEFAULT_CONSTANTS.HARD_FORK_HEIGHT, DEFAULT_CONSTANTS)
-        err, conds = run_block_generator2(
+        _err, conds = run_block_generator2(
             bytes(program.program),
             [],
             INFINITE_COST,
