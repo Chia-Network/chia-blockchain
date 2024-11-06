@@ -843,6 +843,10 @@ class Blockchain:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
             if tx_filter is False:
                 header = get_block_header(block, [], [])
+            elif block.transactions_generator is None:
+                # There is no point in getting additions and removals for
+                # blocks that do not have transactions.
+                header = get_block_header(block, [], [])
             else:
                 tx_additions: list[CoinRecord] = [
                     c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
