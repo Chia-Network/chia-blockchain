@@ -13,7 +13,7 @@ from aiosqlite import Error as AIOSqliteError
 from chia_rs import confirm_not_included_already_hashed
 from colorlog import getLogger
 
-from chia._tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
+from chia._tests.connection_utils import connect_and_get_peer, disconnect_all, disconnect_all_and_reconnect
 from chia._tests.util.blockchain_mock import BlockchainMock
 from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
@@ -24,6 +24,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -1531,3 +1532,73 @@ async def test_long_sync_untrusted_break(
         assert time_out_assert(30, check_sync_canceled)
         # And that we only have a trusted peer left
         assert time_out_assert(30, only_trusted_peer)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("chain_length", [0, 100])
+@pytest.mark.parametrize("fork_point", [500, 1500])
+async def test_long_reorg_nodes_and_wallet(
+    chain_length: int,
+    fork_point: int,
+    three_nodes: list[FullNodeAPI],
+    simulator_and_wallet: OldSimulatorsAndWallets,
+    default_10000_blocks: list[FullBlock],
+    test_long_reorg_blocks: list[FullBlock],
+    test_long_reorg_1500_blocks: list[FullBlock],
+    self_hostname: str,
+) -> None:
+    full_node_1, full_node_2, _ = three_nodes
+    _, [wallet], _ = simulator_and_wallet
+    wallet_node = wallet[0]
+    wallet_server = wallet[1]
+    # Trusted node sync
+    wallet_node.config["trusted_peers"] = {full_node_1.server.node_id.hex(): full_node_1.server.node_id.hex()}
+
+    if fork_point == 1500:
+        blocks = default_10000_blocks[: 3600 - chain_length]
+    else:
+        blocks = default_10000_blocks[: 1600 - chain_length]
+    if fork_point == 1500:
+        reorg_blocks = test_long_reorg_1500_blocks[: 3100 - chain_length]
+    else:
+        reorg_blocks = test_long_reorg_blocks[: 1200 - chain_length]
+        pytest.skip("We rely on the light-blocks test for a 0 forkpoint")
+
+    last_blk = blocks[-1]
+    last_reorg_blk = reorg_blocks[-1]
+    assert last_blk.header_hash != last_reorg_blk.header_hash
+    assert last_blk.weight < last_reorg_blk.weight
+
+    await wallet_server.start_client(PeerInfo(self_hostname, full_node_1.server.get_port()), None)
+    assert len(wallet_server.all_connections) == 1
+    assert len(full_node_1.server.all_connections) == 1
+
+    await add_blocks_in_batches(blocks, full_node_1.full_node)
+    node_1_peak = full_node_1.full_node.blockchain.get_peak()
+    assert node_1_peak is not None
+    await time_out_assert(600, wallet_height_at_least, True, wallet_node, node_1_peak.height)
+    log.info(f"wallet node height is {node_1_peak.height}")
+    # full node 2 has the reorg-chain
+    await add_blocks_in_batches(reorg_blocks[:-1], full_node_2.full_node)
+    node_2_peak = full_node_1.full_node.blockchain.get_peak()
+    assert node_2_peak is not None
+    await connect_and_get_peer(full_node_1.full_node.server, full_node_2.full_node.server, self_hostname)
+
+    # # TODO: There appears to be an issue where the node with the lighter chain
+    # # fails to initiate the reorg until there's a new block farmed onto the
+    # # heavier chain.
+    await full_node_2.full_node.add_block(reorg_blocks[-1])
+
+    def check_nodes_in_sync() -> bool:
+        p1 = full_node_1.full_node.blockchain.get_peak()
+        p2 = full_node_2.full_node.blockchain.get_peak()
+        return p1 is not None and p1 == p2
+
+    await time_out_assert(600, check_nodes_in_sync)
+    print(f"peak: {str(node_2_peak.header_hash)[:6]}")
+    await time_out_assert(600, wallet_height_at_least, True, wallet_node, node_2_peak.height)
+    # reorg1_timing = time.monotonic() - start
+    # we already checked p1==p2
+    p1 = full_node_2.full_node.blockchain.get_peak()
+    assert p1 is not None
+    assert p1.header_hash == last_reorg_blk.header_hash

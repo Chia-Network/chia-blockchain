@@ -998,6 +998,12 @@ class FullNode:
             # Ensures that the fork point does not change
             async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 await self.blockchain.warmup(fork_point)
+                fork_point = await check_fork_next_block(
+                    self.blockchain,
+                    fork_point,
+                    self.get_peers_with_peak(target_peak.header_hash),
+                    node_next_block_check,
+                )
                 await self.sync_from_fork_point(fork_point, target_peak.height, target_peak.header_hash, summaries)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
@@ -1007,7 +1013,7 @@ class FullNode:
         finally:
             if self._shut_down:
                 return None
-            await self._finish_sync()
+            await self._finish_sync(fork_point)
 
     async def request_validate_wp(
         self, peak_header_hash: bytes32, peak_height: uint32, peak_weight: uint128
@@ -1071,10 +1077,6 @@ class FullNode:
         summaries: list[SubEpochSummary],
     ) -> None:
         self.log.info(f"Start syncing from fork point at {fork_point_height} up to {target_peak_sb_height}")
-        peers_with_peak: list[WSChiaConnection] = self.get_peers_with_peak(peak_hash)
-        fork_point_height = await check_fork_next_block(
-            self.blockchain, fork_point_height, peers_with_peak, node_next_block_check
-        )
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
         counter = 0
         if fork_point_height != 0:
@@ -1123,6 +1125,7 @@ class FullNode:
         # validating the next batch while still adding the first batch to the
         # chain.
         blockchain = AugmentedBlockchain(self.blockchain)
+        peers_with_peak: list[WSChiaConnection] = self.get_peers_with_peak(peak_hash)
 
         async def fetch_blocks(output_queue: asyncio.Queue[Optional[tuple[WSChiaConnection, list[FullBlock]]]]) -> None:
             # the rate limit for respond_blocks is 100 messages / 60 seconds.
@@ -1663,7 +1666,7 @@ class FullNode:
         assert diff is not None
         return ssi, diff, prev_ses_block
 
-    async def _finish_sync(self) -> None:
+    async def _finish_sync(self, fork_point: int) -> None:
         """
         Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
         blocks that we have finalized recently.
@@ -1680,7 +1683,7 @@ class FullNode:
             peak_fb: Optional[FullBlock] = await self.blockchain.get_full_peak()
             if peak_fb is not None:
                 assert peak is not None
-                state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [], [])
+                state_change_summary = StateChangeSummary(peak, uint32(max(fork_point, 0)), [], [], [], [])
                 ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
                     peak_fb, state_change_summary, None
                 )
