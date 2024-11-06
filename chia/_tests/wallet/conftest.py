@@ -63,8 +63,8 @@ async def ignore_block_validation(
     if "standard_block_tools" in request.keywords:
         return None
 
-    async def validate_block_body(*args: Any) -> tuple[Literal[None], Optional[SpendBundleConditions]]:
-        return None, None if args[5] is None else args[5].replace(validated_signature=True)
+    async def validate_block_body(*args: Any) -> Literal[None]:
+        return None
 
     def create_wrapper(original_create: Any) -> Any:
         async def new_create(*args: Any, **kwargs: Any) -> Any:
