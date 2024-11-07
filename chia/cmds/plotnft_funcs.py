@@ -10,7 +10,6 @@ from pprint import pprint
 from typing import Any, Callable, Optional
 
 import aiohttp
-import click
 
 from chia.cmds.cmds_util import (
     cli_confirm,
@@ -278,21 +277,21 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
 
         if wallet_id is None:
             if len(pool_wallets) == 0:
-                raise click.ClickException(
+                raise CliRpcConnectionError(
                     "No pool wallet found. Use 'chia plotnft create' to create a new pooling wallet."
                 )
             if len(pool_wallets) > 1:
-                raise click.ClickException("More than one pool wallet found. Use -i to specify pool wallet id.")
+                raise CliRpcConnectionError("More than one pool wallet found. Use -i to specify pool wallet id.")
             selected_wallet_id = pool_wallets[0]["id"]
         else:
             selected_wallet_id = wallet_id
 
         if not any(wallet["id"] == selected_wallet_id for wallet in pool_wallets):
-            raise click.ClickException(f"Wallet with id: {selected_wallet_id} is not a pooling wallet.")
+            raise CliRpcConnectionError(f"Wallet with id: {selected_wallet_id} is not a pooling wallet.")
 
         return selected_wallet_id
     except ValueError as e:
-        raise click.ClickException(f"Error: {type(e).__name__}: {e}")
+        raise CliRpcConnectionError(f"Error: {type(e).__name__}: {e}")
 
 
 async def join_pool(
@@ -304,13 +303,17 @@ async def join_pool(
     wallet_id: Optional[int],
     prompt: bool,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fingerprint) as (
+        wallet_client,
+        fingerprint,
+        config,
+    ):
         selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
 
         enforce_https = config["full_node"]["selected_network"] == "mainnet"
 
         if enforce_https and not pool_url.startswith("https://"):
-            raise click.ClickException(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
+            raise CliRpcConnectionError(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -319,15 +322,15 @@ async def join_pool(
                     if response.ok:
                         json_dict = json.loads(await response.text())
                     else:
-                        raise click.ClickException(f"Response not OK: {response.status}")
+                        raise CliRpcConnectionError(f"Response not OK: {response.status}")
         except Exception as e:
-            raise click.ClickException(f"Error connecting to pool {pool_url}: {e}")
+            raise CliRpcConnectionError(f"Error connecting to pool {pool_url}: {e}")
 
         if json_dict["relative_lock_height"] > 1000:
-            raise click.ClickException("Relative lock height too high for this pool, cannot join")
+            raise CliRpcConnectionError("Relative lock height too high for this pool, cannot join")
 
         if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
-            raise click.ClickException(
+            raise CliRpcConnectionError(
                 f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}"
             )
 
