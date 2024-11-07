@@ -29,7 +29,6 @@ from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
@@ -63,7 +62,13 @@ async def create_pool_args(pool_url: str) -> dict[str, Any]:
 
 
 async def create(
-    wallet_rpc_port: Optional[int], fingerprint: int, pool_url: Optional[str], state: str, fee: uint64, *, prompt: bool
+    wallet_rpc_port: Optional[int],
+    fingerprint: Optional[int],
+    pool_url: Optional[str],
+    state: str,
+    fee: uint64,
+    *,
+    prompt: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
         target_puzzle_hash: Optional[bytes32]
@@ -298,7 +303,7 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
 async def join_pool(
     *,
     wallet_rpc_port: Optional[int],
-    fingerprint: int,
+    fingerprint: Optional[int],
     pool_url: str,
     fee: uint64,
     wallet_id: Optional[int],
@@ -350,7 +355,7 @@ async def join_pool(
 
 
 async def self_pool(
-    *, wallet_rpc_port: Optional[int], fingerprint: int, fee: uint64, wallet_id: Optional[int], prompt: bool
+    *, wallet_rpc_port: Optional[int], fingerprint: Optional[int], fee: uint64, wallet_id: Optional[int], prompt: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
         selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
@@ -359,7 +364,7 @@ async def self_pool(
         await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, selected_wallet_id)
 
 
-async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_id: Optional[int]) -> None:
+async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: Optional[int], wallet_id: Optional[int]) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
         selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
         pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(selected_wallet_id)
@@ -375,7 +380,9 @@ async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_i
         )
 
 
-async def claim_cmd(*, wallet_rpc_port: Optional[int], fingerprint: int, fee: uint64, wallet_id: Optional[int]) -> None:
+async def claim_cmd(
+    *, wallet_rpc_port: Optional[int], fingerprint: Optional[int], fee: uint64, wallet_id: Optional[int]
+) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
         selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
         msg = f"\nWill claim rewards for wallet ID: {selected_wallet_id}."
@@ -387,21 +394,21 @@ async def claim_cmd(*, wallet_rpc_port: Optional[int], fingerprint: int, fee: ui
         await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, selected_wallet_id)
 
 
-async def change_payout_instructions(launcher_id: str, address: CliAddress) -> None:
+async def change_payout_instructions(launcher_id: bytes32, address: CliAddress) -> None:
     new_pool_configs: list[PoolWalletConfig] = []
     id_found = False
     puzzle_hash = address.validate_address_type_get_ph(AddressType.XCH)
 
     old_configs: list[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
     for pool_config in old_configs:
-        if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
+        if pool_config.launcher_id == launcher_id:
             id_found = True
             pool_config = replace(pool_config, payout_instructions=puzzle_hash.hex())
         new_pool_configs.append(pool_config)
     if id_found:
-        print(f"Launcher Id: {launcher_id} Found, Updating Config.")
+        print(f"Launcher Id: {launcher_id.hex()} Found, Updating Config.")
         await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
-        print(f"Payout Instructions for launcher id: {launcher_id} successfully updated to: {address}.")
+        print(f"Payout Instructions for launcher id: {launcher_id.hex()} successfully updated to: {address}.")
         print(f"You will need to change the payout instructions on every device you use to: {address}.")
     else:
-        print(f"Launcher Id: {launcher_id} Not found.")
+        print(f"Launcher Id: {launcher_id.hex()} Not found.")
