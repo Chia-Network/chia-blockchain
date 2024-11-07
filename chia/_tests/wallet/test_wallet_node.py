@@ -300,7 +300,7 @@ def test_get_last_used_fingerprint_file_doesnt_exist(root_path_populated_with_co
 
 
 def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_config: Path) -> None:
-    if sys.platform in ["win32", "cygwin"]:
+    if sys.platform in {"win32", "cygwin"}:
         pytest.skip("Setting UNIX file permissions doesn't apply to Windows")
 
     root_path = root_path_populated_with_config
@@ -332,7 +332,7 @@ def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_
 def test_get_last_used_fingerprint_file_cant_read_win32(
     root_path_populated_with_config: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    if sys.platform not in ["win32", "cygwin"]:
+    if sys.platform not in {"win32", "cygwin"}:
         pytest.skip("Windows-specific test")
 
     called_read_text = False

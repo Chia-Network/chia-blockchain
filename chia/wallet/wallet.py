@@ -312,7 +312,7 @@ class Wallet:
             raise ValueError("Cannot create two identical coins")
         for coin in coins:
             # Only one coin creates outputs
-            if origin_id in (None, coin.name()):
+            if origin_id in {None, coin.name()}:
                 origin_id = coin.name()
                 inner_puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 decorated_target_puzzle_hash = decorator_manager.decorate_target_puzzle_hash(

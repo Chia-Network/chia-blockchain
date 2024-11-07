@@ -254,7 +254,7 @@ class ChiaServer:
                 if connection.closed:
                     to_remove.append(connection)
                 elif (
-                    self._local_type in (NodeType.FULL_NODE, NodeType.WALLET)
+                    self._local_type in {NodeType.FULL_NODE, NodeType.WALLET}
                 ) and connection.connection_type == NodeType.FULL_NODE:
                     if is_crawler is not None:
                         if time.time() - connection.creation_time > 5:

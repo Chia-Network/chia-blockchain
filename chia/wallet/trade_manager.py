@@ -852,7 +852,7 @@ class TradeManager:
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
                     raise ValueError(f"Do not have a wallet for asset ID: {asset_id} to fulfill offer")
-                elif wallet is None or wallet.type() in [WalletType.NFT, WalletType.DATA_LAYER]:
+                elif wallet is None or wallet.type() in {WalletType.NFT, WalletType.DATA_LAYER}:
                     key = asset_id
                 else:
                     key = int(wallet.id())
@@ -999,12 +999,12 @@ class TradeManager:
                 k: v
                 for k, v in valid_times.to_json_dict().items()
                 if k
-                not in (
+                not in {
                     "max_secs_after_created",
                     "min_secs_since_created",
                     "max_blocks_after_created",
                     "min_blocks_since_created",
-                )
+                }
             },
         }
 

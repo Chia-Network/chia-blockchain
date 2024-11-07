@@ -1609,7 +1609,7 @@ class FullNode:
                         agg_state_change_summary.additions + state_change_summary.additions,
                         agg_state_change_summary.new_rewards + state_change_summary.new_rewards,
                     )
-            elif result in (AddBlockResult.INVALID_BLOCK, AddBlockResult.DISCONNECTED_BLOCK):
+            elif result in {AddBlockResult.INVALID_BLOCK, AddBlockResult.DISCONNECTED_BLOCK}:
                 if error is not None:
                     self.log.error(f"Error: {error}, Invalid block from peer: {peer_info} ")
                 return agg_state_change_summary, error

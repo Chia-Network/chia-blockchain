@@ -30,7 +30,7 @@ class CrawlerRpcApi:
         if change_data is None:
             change_data = await self.get_peer_counts({})
 
-        if change in ("crawl_batch_completed", "loaded_initial_peers"):
+        if change in {"crawl_batch_completed", "loaded_initial_peers"}:
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
         return payloads

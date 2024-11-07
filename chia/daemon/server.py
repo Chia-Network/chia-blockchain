@@ -819,7 +819,7 @@ class WebSocketServer:
             if config["state"] is not PlotState.RUNNING:
                 return None
 
-            if new_data not in (None, ""):
+            if new_data not in {None, ""}:
                 config["log"] = new_data if config["log"] is None else config["log"] + new_data
                 config["log_new"] = new_data
                 self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.LOG_CHANGED, id))
@@ -888,7 +888,7 @@ class WebSocketServer:
 
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> list[str]:
         plot_type = request["plot_type"]
-        if plot_type not in ["ramplot", "diskplot", "cudaplot"]:
+        if plot_type not in {"ramplot", "diskplot", "cudaplot"}:
             raise ValueError(f"Unknown plot_type: {plot_type}")
 
         command_args: list[str] = []
@@ -1020,7 +1020,7 @@ class WebSocketServer:
             # plotter command must be either
             # 'chia plotters bladebit ramplot' or 'chia plotters bladebit diskplot'
             plot_type = request["plot_type"]
-            assert plot_type in ("diskplot", "ramplot", "cudaplot")
+            assert plot_type in {"diskplot", "ramplot", "cudaplot"}
             command_args.append(plot_type)
 
         command_args.extend(self._common_plotting_command_args(request, ignoreCount))

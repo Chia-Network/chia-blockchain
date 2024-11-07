@@ -163,7 +163,7 @@ def get_file(frame: FrameType) -> str:
 
 
 def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
-    if event in ["c_call", "c_return", "c_exception"]:
+    if event in {"c_call", "c_return", "c_exception"}:
         return
 
     # we only care about instrumenting co-routines

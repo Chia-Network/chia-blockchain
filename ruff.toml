@@ -16,9 +16,9 @@ explicit-preview-rules = false
 ignore = [
     # Pylint convention
     "PLC0415", # import-outside-top-level (286) (x)
-    "PLC2801", # unnecessary-dunder-call (11) (x)
+    "PLC2801", # unnecessary-dunder-call (11) (*)
     "PLC1901", # compare-to-empty-string (51) (x)
-    "PLC2701", # import-private-name (24) (x)
+    "PLC2701", # import-private-name (24) (*)
 
     # Pylint refactor
     "PLR0915", # too-many-statements (222) (x)
@@ -31,7 +31,6 @@ ignore = [
     "PLR0916", # too-many-boolean-expressions (3) (x)
     "PLR0911", # too-many-return-statements (52) (x)
     "PLR6301", # no-self-use (699) (-)
-    "PLR6201", # literal-membership (86) (?)
     "PLR2004", # magic-value-comparison (901) (-)
     "PLR6104", # non-augmented-assignment (27) (?)
     "PLR1704", # redefined-argument-from-local (13) (-)

@@ -20,7 +20,7 @@ def replace_str_to_bytes(constants: ConsensusConstants, **changes: Any) -> Conse
     for k, v in changes.items():
         if not hasattr(constants, k):
             # NETWORK_TYPE used to be present in default config, but has been removed
-            if k not in ["NETWORK_TYPE"]:
+            if k not in {"NETWORK_TYPE"}:
                 log.warning(f'invalid key in network configuration (config.yaml) "{k}". Ignoring')
             continue
         if isinstance(v, str):

@@ -1188,9 +1188,9 @@ async def test_assert_before_expiration(
         assert expect_limit is not None
         item = mempool_manager.get_mempool_item(bundle_name)
         assert item is not None
-        if opcode in [co.ASSERT_BEFORE_SECONDS_ABSOLUTE, co.ASSERT_BEFORE_SECONDS_RELATIVE]:
+        if opcode in {co.ASSERT_BEFORE_SECONDS_ABSOLUTE, co.ASSERT_BEFORE_SECONDS_RELATIVE}:
             assert item.assert_before_seconds == expect_limit
-        elif opcode in [co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, co.ASSERT_BEFORE_HEIGHT_RELATIVE]:
+        elif opcode in {co.ASSERT_BEFORE_HEIGHT_ABSOLUTE, co.ASSERT_BEFORE_HEIGHT_RELATIVE}:
             assert item.assert_before_height == expect_limit
         else:
             assert False

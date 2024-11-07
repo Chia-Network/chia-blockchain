@@ -209,7 +209,7 @@ def tx_endpoint(
                 if (
                     func.__name__ == "create_new_wallet"
                     and request["wallet_type"] == "pool_wallet"
-                    or func.__name__ in ("pw_join_pool", "pw_self_pool", "pw_absorb_rewards")
+                    or func.__name__ in {"pw_join_pool", "pw_self_pool", "pw_absorb_rewards"}
                 ):
                     # Theses RPCs return not "convenience" for some reason
                     response["transaction"] = new_txs[-1].to_json_dict()

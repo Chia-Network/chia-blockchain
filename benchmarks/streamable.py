@@ -236,7 +236,7 @@ def run(data: Data, mode: Mode, runs: int, ms: int, live: bool, output: TextIO, 
     results: dict[Data, dict[Mode, list[list[int]]]] = {}
     bench_results: dict[str, Any] = {"version": _version, "commit_hash": get_commit_hash()}
     for current_data, parameter in benchmark_parameter.items():
-        if data in (Data.all, current_data):
+        if data in {Data.all, current_data}:
             results[current_data] = {}
             bench_results[current_data] = {}
             print(
@@ -252,7 +252,7 @@ def run(data: Data, mode: Mode, runs: int, ms: int, live: bool, output: TextIO, 
             )
             for current_mode, current_mode_parameter in parameter.mode_parameter.items():
                 results[current_data][current_mode] = []
-                if mode in (Mode.all, current_mode):
+                if mode in {Mode.all, current_mode}:
                     us_iteration_results: list[int]
                     all_results: list[list[int]] = results[current_data][current_mode]
                     obj = parameter.object_creation_cb()

@@ -504,7 +504,7 @@ class DNSServer:
                 valid_domain = True
                 for response in domain_responses:
                     rqt: int = getattr(QTYPE, response.__class__.__name__)
-                    if question_type in (rqt, QTYPE.ANY):
+                    if question_type in {rqt, QTYPE.ANY}:
                         reply.add_answer(RR(rname=qname, rtype=rqt, rclass=1, ttl=ttl, rdata=response))
         if not valid_domain and len(reply.rr) == 0:  # if we didn't find any records to return
             reply.header.rcode = RCODE.NXDOMAIN
