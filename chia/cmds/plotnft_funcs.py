@@ -201,7 +201,7 @@ async def pprint_all_pool_wallet_state(
 
 async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_passed_in: Optional[int]) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        await wallet_id_lookup_and_check(WalletRpcClient, wallet_id_passed_in)
+        await wallet_id_lookup_and_check(wallet_client, wallet_id_passed_in)
         try:
             async with get_any_service_client(FarmerRpcClient) as (farmer_client, config):
                 address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
