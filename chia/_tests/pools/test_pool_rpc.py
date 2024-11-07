@@ -1107,42 +1107,5 @@ class TestPoolWalletRpc:
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
             assert process.returncode == 0
 
-            # Run a test with the cli with the wrong wallet id
-            # want to run "chia plotnft join -f <fingerprint> -wp <rpc_port> -u <pool_url> -i <wallet_id>"
-            args: list[str] = [
-                sys.executable,
-                "-m",
-                "chia",
-                "plotnft",
-                "join",
-                "-f",
-                str(primary_fingerprint.fingerprint),
-                "--wallet-rpc-port",
-                str(wallet_service.rpc_server.listen_port),
-                "-u",
-                "https://pool.example.com",
-                "-i",
-                "1"
-            ]
-
-            process = await asyncio.create_subprocess_exec(
-                *args,
-                env={**os.environ, "CHIA_ROOT": str(bt.root_path)},
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            await process.wait()
-            assert process.stdout is not None
-            stdout = await process.stdout.read()
-            assert "is not a pooling wallet" in stdout.decode()
-            assert process.stderr is not None
-            stderr = await process.stderr.read()
-            if sys.version_info >= (3, 10, 6):
-                assert stderr == b""
-            else:  # pragma: no cover
-                # https://github.com/python/cpython/issues/92841
-                assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
-            assert process.returncode == 0
-
             client.close()
             await client.await_closed()
