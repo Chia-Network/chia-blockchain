@@ -157,7 +157,7 @@ class ChiaRoot:
         kwargs["stderr"] = stderr
 
         try:
-            return subprocess.run(*final_args, **kwargs)
+            return subprocess.run(*final_args, **kwargs, check=False)
         except OSError as e:
             raise Exception(f"failed to run:\n    {final_args}\n    {kwargs}") from e
 

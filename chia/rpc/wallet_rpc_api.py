@@ -1785,7 +1785,7 @@ class WalletRpcApi:
             except ValueError:
                 raise ValueError(f"Invalid signing mode: {signing_mode_str!r}")
 
-        if signing_mode == SigningMode.CHIP_0002 or signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
+        if signing_mode in (SigningMode.CHIP_0002, SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS):
             # CHIP-0002 message signatures are made over the tree hash of:
             #   ("Chia Signed Message", message)
             message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, input_message)).get_tree_hash()
@@ -2086,11 +2086,11 @@ class WalletRpcApi:
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer: dict[Union[int, bytes32], int] = {}
-        for key in offer:
+        for key, val in offer.items():
             try:
-                modified_offer[bytes32.from_hexstr(key)] = offer[key]
+                modified_offer[bytes32.from_hexstr(key)] = val
             except ValueError:
-                modified_offer[int(key)] = offer[key]
+                modified_offer[int(key)] = val
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(

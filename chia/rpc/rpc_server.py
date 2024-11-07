@@ -202,7 +202,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             return None
         payloads: list[WsRpcMessage] = await self.rpc_api._state_changed(change, change_data)
 
-        if change == "add_connection" or change == "close_connection" or change == "peer_changed_peak":
+        if change in ("add_connection", "close_connection", "peer_changed_peak"):
             data = await self.get_connections({})
             if data is not None:
                 payload = create_payload_dict(

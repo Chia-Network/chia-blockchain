@@ -254,7 +254,7 @@ class ChiaServer:
                 if connection.closed:
                     to_remove.append(connection)
                 elif (
-                    self._local_type == NodeType.FULL_NODE or self._local_type == NodeType.WALLET
+                    self._local_type in (NodeType.FULL_NODE, NodeType.WALLET)
                 ) and connection.connection_type == NodeType.FULL_NODE:
                     if is_crawler is not None:
                         if time.time() - connection.creation_time > 5:
@@ -541,8 +541,9 @@ class ChiaServer:
             ban_until: float = time.time() + ban_time
             self.log.warning(f"Banning {connection.peer_info.host} for {ban_time} seconds")
             if connection.peer_info.host in self.banned_peers:
-                if ban_until > self.banned_peers[connection.peer_info.host]:
-                    self.banned_peers[connection.peer_info.host] = ban_until
+                self.banned_peers[connection.peer_info.host] = max(
+                    ban_until, self.banned_peers[connection.peer_info.host]
+                )
             else:
                 self.banned_peers[connection.peer_info.host] = ban_until
 

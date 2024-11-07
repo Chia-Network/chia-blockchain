@@ -151,7 +151,7 @@ class Formatter:
 
             if semis == 0:
                 # We've entered a string, stop processing
-                if ch == b"'" or ch == b'"':
+                if ch in (b"'", b'"'):
                     in_string = ch
                     continue
                 elif ch == b"(":

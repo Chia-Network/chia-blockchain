@@ -132,7 +132,7 @@ class FullNodeRpcApi:
             change_data = {}
 
         payloads = []
-        if change == "new_peak" or change == "sync_mode":
+        if change in ("new_peak", "sync_mode"):
             data = await self.get_blockchain_state({})
             assert data is not None
             payloads.append(

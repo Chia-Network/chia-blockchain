@@ -177,10 +177,7 @@ class PoolWallet:
 
         if state.state == PoolSingletonState.SELF_POOLING.value:
             return cls._verify_self_pooled(state)
-        elif (
-            state.state == PoolSingletonState.FARMING_TO_POOL.value
-            or state.state == PoolSingletonState.LEAVING_POOL.value
-        ):
+        elif state.state in (PoolSingletonState.FARMING_TO_POOL.value, PoolSingletonState.LEAVING_POOL.value):
             return cls._verify_pooling_state(state)
         else:
             return "Internal Error"

@@ -326,11 +326,11 @@ class Offer:
 
         def keys_to_strings(dic: dict[Optional[bytes32], Any]) -> dict[str, Any]:
             new_dic: dict[str, Any] = {}
-            for key in dic:
+            for key, val in dic.items():
                 if key is None:
-                    new_dic["xch"] = dic[key]
+                    new_dic["xch"] = val
                 else:
-                    new_dic[key.hex()] = dic[key]
+                    new_dic[key.hex()] = val
             return new_dic
 
         driver_dict: dict[str, Any] = {}

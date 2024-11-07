@@ -381,7 +381,7 @@ def test_invalid_condition(
     ],
     prg: bytes,
 ) -> None:
-    if (cond == Remark or cond == UnknownCondition) and prg != b"\x80":
+    if (cond in (Remark, UnknownCondition)) and prg != b"\x80":
         pytest.skip("condition takes arbitrary arguments")
 
     with pytest.raises((ValueError, EvalError, KeyError)):

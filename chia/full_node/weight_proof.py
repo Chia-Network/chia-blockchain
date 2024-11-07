@@ -880,7 +880,7 @@ def _map_sub_epoch_summaries(
         if idx < len(sub_epoch_data) - 1:
             delta = 0
             if idx > 0:
-                delta = sub_epoch_data[idx].num_blocks_overflow
+                delta = data.num_blocks_overflow
             log.debug(f"sub epoch {idx} start weight is {total_weight + curr_difficulty} ")
             sub_epoch_weight_list.append(uint128(total_weight + curr_difficulty))
             total_weight = uint128(

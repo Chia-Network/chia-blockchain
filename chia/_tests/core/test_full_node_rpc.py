@@ -228,7 +228,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         block_spends = await client.get_block_spends(block.header_hash)
 
         assert len(block_spends) == 3
-        assert sorted(block_spends, key=lambda x: str(x)) == sorted(coin_spends, key=lambda x: str(x))
+        assert sorted(block_spends, key=str) == sorted(coin_spends, key=str)
 
         block_spends_with_conditions = await client.get_block_spends_with_conditions(block.header_hash)
 

@@ -67,7 +67,7 @@ class TransactionRecordOld(Streamable):
     def height_farmed(self, genesis_challenge: bytes32) -> Optional[uint32]:
         if not self.confirmed:
             return None
-        if self.type == TransactionType.FEE_REWARD or self.type == TransactionType.COINBASE_REWARD:
+        if self.type in (TransactionType.FEE_REWARD, TransactionType.COINBASE_REWARD):
             for block_index in range(self.confirmed_at_height, self.confirmed_at_height - 100, -1):
                 if block_index < 0:
                     return None

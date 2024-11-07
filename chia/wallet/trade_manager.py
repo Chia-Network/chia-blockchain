@@ -1033,8 +1033,7 @@ class TradeManager:
                     if WalletType(wallet.type()) == WalletType.VC:
                         assert isinstance(wallet, VCWallet)
                         return await wallet.add_vc_authorization(offer, solver, action_scope)
-                else:
-                    raise ValueError("No VCs to approve CR-CATs with")  # pragma: no cover
+                raise ValueError("No VCs to approve CR-CATs with")  # pragma: no cover
 
         return offer, Solver({})
 

@@ -15,48 +15,36 @@ select = [
 explicit-preview-rules = false
 ignore = [
     # Pylint convention
-    "PLC0105", # type-name-incorrect-variance
-    "PLC0415", # import-outside-top-level
-    "PLC2801", # unnecessary-dunder-call
-    "PLC0206", # dict-index-missing-items
-    "PLC1901", # compare-to-empty-string
-    "PLC2701", # import-private-name
-    "PLC0414", # useless-import-alias
+    "PLC0105", # type-name-incorrect-variance (2) (?)
+    "PLC0415", # import-outside-top-level (286) (x)
+    "PLC2801", # unnecessary-dunder-call (11) (x)
+    "PLC1901", # compare-to-empty-string (51) (x)
+    "PLC2701", # import-private-name (24) (x)
 
     # Pylint refactor
-    "PLR0915", # too-many-statements
-    "PLR0914", # too-many-locals
-    "PLR0913", # too-many-arguments
-    "PLR0912", # too-many-branches
-    "PLR1702", # too-many-nested-blocks
-    "PLR0904", # too-many-public-methods
-    "PLR6301", # no-self-use
-    "PLR0917", # too-many-positional-arguments
-    "PLR6201", # literal-membership
-    "PLR0911", # too-many-return-statements
-    "PLR2004", # magic-value-comparison
-    "PLR1714", # repeated-equality-comparison
-    "PLR6104", # non-augmented-assignment
-    "PLR1704", # redefined-argument-from-local
-    "PLR0916", # too-many-boolean-expressions
-    "PLR5501", # collapsible-else-if
-    "PLR1711", # useless-return
-    "PLR1730", # if-stmt-min-max
-    "PLR1736", # unnecessary-list-index-lookup
-    "PLR1733", # unnecessary-dict-index-lookup
+    "PLR0915", # too-many-statements (222) (x)
+    "PLR0914", # too-many-locals (328) (x)
+    "PLR0913", # too-many-arguments (397) (x)
+    "PLR0912", # too-many-branches (193) (x)
+    "PLR1702", # too-many-nested-blocks (124) (x)
+    "PLR0904", # too-many-public-methods (47) (x)
+    "PLR0917", # too-many-positional-arguments (345) (x)
+    "PLR0916", # too-many-boolean-expressions (3) (x)
+    "PLR0911", # too-many-return-statements (52) (x)
+    "PLR6301", # no-self-use (699) (-)
+    "PLR6201", # literal-membership (86) (?)
+    "PLR2004", # magic-value-comparison (901) (-)
+    "PLR6104", # non-augmented-assignment (27) (?)
+    "PLR1704", # redefined-argument-from-local (13) (-)
+    "PLR5501", # collapsible-else-if (49) (?)
+    "PLR1711", # useless-return (14) (?)
 
     # Pylint warning
-    "PLW2901", # redefined-loop-name
-    "PLW1641", # eq-without-hash
-    "PLW1514", # unspecified-encoding
-    "PLW0602", # global-variable-not-assigned
-    "PLW0603", # global-statement
-    "PLW0108", # unnecessary-lambda
-    "PLW1510", # subprocess-run-without-check
-    "PLW0120", # useless-else-on-loop
-
-    # Flake8 core
-    # "F841",  # unused-variable (540)
+    "PLW2901", # redefined-loop-name (19) (-)
+    "PLW1641", # eq-without-hash (5) (?)
+    "PLW1514", # unspecified-encoding (69) (?)
+    "PLW0602", # global-variable-not-assigned (5) (?)
+    "PLW0603", # global-statement (9) (?)
 ]
 
 
