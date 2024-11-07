@@ -351,8 +351,6 @@ async def test_long_sync_wallet(
         log.info(f"wallet node height is {await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()}")
         await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
 
-        await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
-
     # Tests a short reorg
     num_blocks = 30
     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
