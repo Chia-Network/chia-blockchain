@@ -221,7 +221,7 @@ class ClaimPlotNFTCMD:
 @chia_command(
     plotnft_cmd,
     "change_payout_instructions",
-    "Set the name of a plotnft",
+    "Change the payout instructions for a pool. To get the launcher id, use plotnft show",
 )
 class ChangePayoutInstructionsPlotNFTCMD:
     launcher_id: bytes32 = option(
