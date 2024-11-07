@@ -39,6 +39,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
+from chia.data_layer.util.benchmark import generate_datastore
 from chia.data_layer.util.merkle_blob import RawLeafMerkleNode
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -1478,6 +1479,22 @@ async def test_benchmark_batch_insert_speed(
             store_id=store_id,
             changelist=batch,
         )
+
+
+@datacases(
+    BatchInsertBenchmarkCase(
+        pre=0,
+        count=50,
+        limit=2,
+    ),
+)
+@pytest.mark.anyio
+async def test_benchmark_tool(
+    benchmark_runner: BenchmarkRunner,
+    case: BatchInsertBenchmarkCase,
+) -> None:
+    with benchmark_runner.assert_runtime(seconds=case.limit):
+        await generate_datastore(case.count)
 
 
 @datacases(

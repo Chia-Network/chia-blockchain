@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import asyncio
 import os
-import random
+from random import Random
 import sys
 import tempfile
 import time
 from pathlib import Path
 
+from chia.data_layer.data_layer_util import Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-async def generate_datastore(num_nodes: int) -> None:
+async def generate_datastore(num_nodes: int, seed: int = 101) -> None:
+    random = Random()
+    random.seed(seed, version=2)
+
     with tempfile.TemporaryDirectory() as temp_directory:
         temp_directory_path = Path(temp_directory)
         db_path = temp_directory_path.joinpath("dl_benchmark.sqlite")
@@ -23,7 +27,7 @@ async def generate_datastore(num_nodes: int) -> None:
 
         async with DataStore.managed(database=db_path) as data_store:
             store_id = bytes32(b"0" * 32)
-            await data_store.create_tree(store_id)
+            await data_store.create_tree(store_id, status=Status.COMMITTED)
 
             insert_time = 0.0
             insert_count = 0
@@ -32,16 +36,16 @@ async def generate_datastore(num_nodes: int) -> None:
             keys: list[bytes] = []
 
             for i in range(num_nodes):
-                key = i.to_bytes(4, byteorder="big")
-                value = (2 * i).to_bytes(4, byteorder="big")
-                keys.append(key)
-
                 if i % 3 == 0 or i % 3 == 1:
+                    key = i.to_bytes(4, byteorder="big")
+                    value = (2 * i).to_bytes(4, byteorder="big")
+                    keys.append(key)
                     t1 = time.time()
                     await data_store.insert(
                         key=key,
                         value=value,
                         store_id=store_id,
+                        status=Status.COMMITTED,
                     )
                     t2 = time.time()
                     insert_time += t2 - t1
@@ -50,7 +54,7 @@ async def generate_datastore(num_nodes: int) -> None:
                     key = random.choice(keys)
                     keys.remove(key)
                     t1 = time.time()
-                    await data_store.delete(key=key, store_id=store_id)
+                    await data_store.delete(key=key, store_id=store_id, status=Status.COMMITTED)
                     t2 = time.time()
                     delete_time += t2 - t1
                     delete_count += 1
@@ -63,4 +67,4 @@ async def generate_datastore(num_nodes: int) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(generate_datastore(int(sys.argv[1])))
+    asyncio.run(generate_datastore(int(sys.argv[1]), int(sys.argv[2])))
