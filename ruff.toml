@@ -16,7 +16,7 @@ explicit-preview-rules = false
 ignore = [
     # Pylint convention
     "PLC0415", # import-outside-top-level (286) (x)
-    "PLC2801", # unnecessary-dunder-call (11) (*)
+    "PLC2801", # unnecessary-dunder-call (11) (-)
     "PLC1901", # compare-to-empty-string (51) (x)
     "PLC2701", # import-private-name (24) (*)
 
@@ -39,7 +39,7 @@ ignore = [
     "PLW2901", # redefined-loop-name (19) (-)
     "PLW1641", # eq-without-hash (5) (x)
     "PLW1514", # unspecified-encoding (69) (-)
-    "PLW0603", # global-statement (9) (?)
+    "PLW0603", # global-statement (9) (-)
 ]
 
 
