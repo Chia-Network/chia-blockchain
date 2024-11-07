@@ -2086,11 +2086,11 @@ class WalletRpcApi:
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer: dict[Union[int, bytes32], int] = {}
-        for key, val in offer.items():
+        for wallet_identifier, change in offer.items():
             try:
-                modified_offer[bytes32.from_hexstr(key)] = val
+                modified_offer[bytes32.from_hexstr(wallet_identifier)] = change
             except ValueError:
-                modified_offer[int(key)] = val
+                modified_offer[int(wallet_identifier)] = change
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
