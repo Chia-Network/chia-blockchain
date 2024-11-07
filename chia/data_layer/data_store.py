@@ -365,7 +365,13 @@ class DataStore:
 
     async def get_kvid(self, blob: bytes, store_id: bytes32) -> Optional[KVId]:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT kv_id FROM ids WHERE blob = ? AND store_id = ?", (blob,store_id,))
+            cursor = await reader.execute(
+                "SELECT kv_id FROM ids WHERE blob = ? AND store_id = ?",
+                (
+                    blob,
+                    store_id,
+                ),
+            )
             row = await cursor.fetchone()
 
             if row is None:
@@ -375,7 +381,13 @@ class DataStore:
 
     async def get_blob_from_kvid(self, kv_id: KVId, store_id: bytes32) -> Optional[bytes]:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT blob FROM ids WHERE kv_id = ? AND store_id = ?", (kv_id,store_id,))
+            cursor = await reader.execute(
+                "SELECT blob FROM ids WHERE kv_id = ? AND store_id = ?",
+                (
+                    kv_id,
+                    store_id,
+                ),
+            )
             row = await cursor.fetchone()
 
             if row is None:
@@ -428,7 +440,13 @@ class DataStore:
 
     async def get_node_by_hash(self, hash: bytes32, store_id: bytes32) -> tuple[KVId, KVId]:
         async with self.db_wrapper.reader() as reader:
-            cursor = await reader.execute("SELECT * FROM hashes WHERE hash = ? AND store_id = ?", (hash,store_id,))
+            cursor = await reader.execute(
+                "SELECT * FROM hashes WHERE hash = ? AND store_id = ?",
+                (
+                    hash,
+                    store_id,
+                ),
+            )
 
             row = await cursor.fetchone()
 
