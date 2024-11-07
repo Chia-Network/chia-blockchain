@@ -1,4 +1,4 @@
-(mod (SINGLETON_STRUCT Delegated_Puzzle singleton_innerpuzhash)
+(mod (SINGLETON_STRUCT Delegated_Puzzle (singleton_parent singleton_innerpuzhash singleton_amount))
   ; SINGLETON_STRUCT is ((SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH)))
 
   (include condition_codes.clib)
@@ -15,7 +15,7 @@
 
   (list (list
       RECEIVE_MESSAGE
-      0x02  ; mode = puzzle
+      0x7  ; mode = coin
       (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_innerpuzhash)
       Delegated_Puzzle
   ))

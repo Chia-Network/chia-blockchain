@@ -226,7 +226,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
                 [66, 0x07, delegated_puzzle.get_tree_hash(), coin.name()]
             ],  # create approval message to singleton member puzzle
         ))
-        singleton_puzzle = SINGLETON_TOP_LAYER_MOD.curry([singleton_struct, singleton_innerpuz])
+        singleton_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, singleton_innerpuz)
         launcher_solution = Program.to([singleton_puzzle.get_tree_hash(), 1, 0])
 
         conditions_list = [
