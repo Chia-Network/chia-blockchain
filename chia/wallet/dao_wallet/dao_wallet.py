@@ -450,7 +450,6 @@ class DAOWallet:
                 self.log.info(f"DAO funding coin added: {coin.name().hex()}:{coin}. Asset ID: {asset_id}")
         except Exception as e:  # pragma: no cover
             self.log.exception(f"Error occurred during dao wallet coin addition: {e}")
-        return
 
     def get_cat_tail_hash(self) -> bytes32:
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
@@ -471,7 +470,6 @@ class DAOWallet:
         ]
         dao_info = dataclasses.replace(self.dao_info, proposals_list=new_list)
         await self.save_info(dao_info)
-        return
 
     async def resync_treasury_state(self) -> None:
         """
@@ -607,8 +605,6 @@ class DAOWallet:
             request = RequestBlockHeader(children_state.created_height)
             response: Optional[RespondBlockHeader] = await peer.call_api(FullNodeAPI.request_block_header, request)
             await wallet_node.sync_from_untrusted_close_to_peak(response.header_block, peer)
-
-        return
 
     async def generate_new_dao(
         self,
@@ -2087,7 +2083,6 @@ class DAOWallet:
             uint64(new_state.coin.amount),
         )
         await self.add_parent(new_state.coin.name(), future_parent)
-        return
 
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """

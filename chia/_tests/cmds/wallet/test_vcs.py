@@ -194,7 +194,6 @@ def test_vcs_add_proof_reveal(capsys: object, get_test_cli_clients: tuple[TestRp
     class VcsAddProofRevealRpcClient(TestWalletRpcClient):
         async def vc_add_proofs(self, proofs: dict[str, Any]) -> None:
             self.add_to_log("vc_add_proofs", (proofs,))
-            return None
 
     inst_rpc_client = VcsAddProofRevealRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
