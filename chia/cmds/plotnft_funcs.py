@@ -10,6 +10,7 @@ from pprint import pprint
 from typing import Any, Callable, Optional
 
 import aiohttp
+import click
 
 from chia.cmds.cmds_util import (
     cli_confirm,
@@ -270,21 +271,46 @@ async def submit_tx_with_confirmation(
         print(f"Error performing operation on Plot NFT -f {fingerprint} wallet id: {wallet_id}: {e}")
 
 
+async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: Optional[int]) -> int:
+    selected_wallet_id: int
+    try:
+        pool_wallets = await wallet_client.get_wallets(wallet_type=WalletType.POOLING_WALLET)
+
+        if wallet_id is None:
+            if len(pool_wallets) == 0:
+                raise click.ClickException(
+                    "No pool wallet found. Use 'chia plotnft create' to create a new pooling wallet."
+                )
+            if len(pool_wallets) > 1:
+                raise click.ClickException("More than one pool wallet found. Use -i to specify pool wallet id.")
+            selected_wallet_id = pool_wallets[0]["id"]
+        else:
+            selected_wallet_id = wallet_id
+
+        if not any(wallet["id"] == selected_wallet_id for wallet in pool_wallets):
+            raise click.ClickException(f"Wallet with id: {selected_wallet_id} is not a pooling wallet.")
+
+        return selected_wallet_id
+    except ValueError as e:
+        raise click.ClickException(f"Error: {type(e).__name__}: {e}")
+
+
 async def join_pool(
     *,
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     pool_url: str,
     fee: uint64,
-    wallet_id: int,
+    wallet_id: Optional[int],
     prompt: bool,
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
+        selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
+
         enforce_https = config["full_node"]["selected_network"] == "mainnet"
 
         if enforce_https and not pool_url.startswith("https://"):
-            print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
-            return
+            raise click.ClickException(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -293,45 +319,46 @@ async def join_pool(
                     if response.ok:
                         json_dict = json.loads(await response.text())
                     else:
-                        print(f"Response not OK: {response.status}")
-                        return
+                        raise click.ClickException(f"Response not OK: {response.status}")
         except Exception as e:
-            print(f"Error connecting to pool {pool_url}: {e}")
-            return
+            raise click.ClickException(f"Error connecting to pool {pool_url}: {e}")
 
         if json_dict["relative_lock_height"] > 1000:
-            print("Relative lock height too high for this pool, cannot join")
-            return
+            raise click.ClickException("Relative lock height too high for this pool, cannot join")
+
         if json_dict["protocol_version"] != POOL_PROTOCOL_VERSION:
-            print(f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}")
-            return
+            raise click.ClickException(
+                f"Incorrect version: {json_dict['protocol_version']}, should be {POOL_PROTOCOL_VERSION}"
+            )
 
         pprint(json_dict)
         msg = f"\nWill join pool: {pool_url} with Plot NFT {fingerprint}."
         func = functools.partial(
             wallet_client.pw_join_pool,
-            wallet_id,
+            selected_wallet_id,
             bytes32.from_hexstr(json_dict["target_puzzle_hash"]),
             pool_url,
             json_dict["relative_lock_height"],
             fee,
         )
 
-        await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
+        await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, selected_wallet_id)
 
 
 async def self_pool(
-    *, wallet_rpc_port: Optional[int], fingerprint: int, fee: uint64, wallet_id: int, prompt: bool
+    *, wallet_rpc_port: Optional[int], fingerprint: int, fee: uint64, wallet_id: Optional[int], prompt: bool
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
-        msg = f"Will start self-farming with Plot NFT on wallet id {wallet_id} fingerprint {fingerprint}."
-        func = functools.partial(wallet_client.pw_self_pool, wallet_id, fee)
-        await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, wallet_id)
+        selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
+        msg = f"Will start self-farming with Plot NFT on wallet id {selected_wallet_id} fingerprint {fingerprint}."
+        func = functools.partial(wallet_client.pw_self_pool, selected_wallet_id, fee)
+        await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, selected_wallet_id)
 
 
-async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_id: int) -> None:
+async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_id: Optional[int]) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
-        pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(wallet_id)
+        selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
+        pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(selected_wallet_id)
         print(
             json.dumps(
                 {
@@ -344,15 +371,16 @@ async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_i
         )
 
 
-async def claim_cmd(*, wallet_rpc_port: Optional[int], fingerprint: int, fee: uint64, wallet_id: int) -> None:
+async def claim_cmd(*, wallet_rpc_port: Optional[int], fingerprint: int, fee: uint64, wallet_id: Optional[int]) -> None:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
-        msg = f"\nWill claim rewards for wallet ID: {wallet_id}."
+        selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
+        msg = f"\nWill claim rewards for wallet ID: {selected_wallet_id}."
         func = functools.partial(
             wallet_client.pw_absorb_rewards,
-            wallet_id,
+            selected_wallet_id,
             fee,
         )
-        await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, wallet_id)
+        await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, selected_wallet_id)
 
 
 async def change_payout_instructions(launcher_id: str, address: CliAddress) -> None:
