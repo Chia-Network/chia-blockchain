@@ -2627,7 +2627,7 @@ class TestBodyValidation:
                 fork_info=fork_info,
             )
         )[1]
-        assert err in {Err.BLOCK_COST_EXCEEDS_MAX}
+        assert err == Err.BLOCK_COST_EXCEEDS_MAX
         futures = await pre_validate_blocks_multiprocessing(
             b.constants,
             AugmentedBlockchain(b),
