@@ -53,7 +53,6 @@ class StateUrlCase:
 async def test_plotnft_cli_create(
     wallet_environments: WalletTestFramework,
     case: StateUrlCase,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -76,49 +75,45 @@ async def test_plotnft_cli_create(
             pool_url=case.pool_url,
         ).run()
 
-    if case.expected_error is not None:
-        out, _err = capsys.readouterr()
-        assert case.expected_error in out
-    else:
-        await wallet_environments.process_pending_states(
-            [
-                WalletStateTransition(
-                    pre_block_balance_updates={
-                        1: {
-                            "confirmed_wallet_balance": 0,
-                            "unconfirmed_wallet_balance": -1,
-                            "spendable_balance": -250000000000,
-                            "max_send_amount": -250000000000,
-                            "pending_change": 249999999999,
-                            "pending_coin_removal_count": 1,
-                        },
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": 0,
+                        "unconfirmed_wallet_balance": -1,
+                        "spendable_balance": -250000000000,
+                        "max_send_amount": -250000000000,
+                        "pending_change": 249999999999,
+                        "pending_coin_removal_count": 1,
                     },
-                    post_block_balance_updates={
-                        1: {
-                            "confirmed_wallet_balance": -1,
-                            "unconfirmed_wallet_balance": 0,
-                            "spendable_balance": 249999999999,
-                            "max_send_amount": 249999999999,
-                            "unspent_coin_count": 0,
-                            "pending_change": -249999999999,
-                            "pending_coin_removal_count": -1,
-                        },
-                        2: {"init": True, "unspent_coin_count": 1},
+                },
+                post_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": -1,
+                        "unconfirmed_wallet_balance": 0,
+                        "spendable_balance": 249999999999,
+                        "max_send_amount": 249999999999,
+                        "unspent_coin_count": 0,
+                        "pending_change": -249999999999,
+                        "pending_coin_removal_count": -1,
                     },
-                )
-            ]
-        )
+                    2: {"init": True, "unspent_coin_count": 1},
+                },
+            )
+        ]
+    )
 
-        summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-        assert len(summaries_response) == 1
-        summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-        wallet_id: int = summaries_response[0]["id"]
+    summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
+    assert len(summaries_response) == 1
+    summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
+    wallet_id: int = summaries_response[0]["id"]
 
-        async def verify_pool_state(w_id: int, expected_state: PoolSingletonState) -> bool:
-            pw_status: PoolWalletInfo = (await wallet_rpc.pw_status(w_id))[0]
-            return pw_status.current.state == expected_state.value
+    async def verify_pool_state(w_id: int, expected_state: PoolSingletonState) -> bool:
+        pw_status: PoolWalletInfo = (await wallet_rpc.pw_status(w_id))[0]
+        return pw_status.current.state == expected_state.value
 
-        await time_out_assert(45, verify_pool_state, True, wallet_id, PoolSingletonState.SELF_POOLING)
+    await time_out_assert(45, verify_pool_state, True, wallet_id, PoolSingletonState.SELF_POOLING)
 
 
 @datacases(
