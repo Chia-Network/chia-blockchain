@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from chia_rs import ConsensusConstants
+from chia_rs import ConsensusConstants as ConsensusConstants  # noqa: PLC0414
 
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
@@ -47,6 +47,3 @@ def replace_str_to_bytes(constants: ConsensusConstants, **changes: Any) -> Conse
 
     # TODO: this is too magical here and is really only used for configuration unmarshalling
     return constants.replace(**filtered_changes)  # type: ignore[arg-type]
-
-
-__all__ = ["ConsensusConstants", "replace_str_to_bytes"]
