@@ -12,6 +12,7 @@ from chia.cmds.param_types import (
     TransactionFeeParamType,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.errors import CliRpcConnectionError
 from chia.util.ints import uint64
 
 
@@ -81,18 +82,21 @@ class CreatePlotNFTCMD:
         from .plotnft_funcs import create
 
         if self.pool_url is not None and self.state.lower() == "local":
-            print(f"  pool_url argument [{self.pool_url}] is not allowed when creating in 'local' state")
-            return
+            raise CliRpcConnectionError(f"A pool url [{self.pool_url}] is not allowed with 'local' state")
+
         if self.pool_url in [None, ""] and self.state.lower() == "pool":
-            print("  pool_url argument (-u) is required for pool starting state")
-            return
+            raise CliRpcConnectionError("A pool url argument (-u/--pool-url) is required with 'pool' state")
+
         valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
+
+        if self.state not in valid_initial_states.keys():
+            raise CliRpcConnectionError(f"Given state '{self.state}' is not valid - must be one of 'local' or 'pool'")
+
         await create(
-            self.rpc_info.wallet_rpc_port,
-            self.rpc_info.fingerprint,
-            self.pool_url,
-            valid_initial_states[self.state],
-            self.fee,
+            rpc_info=self.rpc_info,
+            pool_url=self.pool_url,
+            state=valid_initial_states[self.state],
+            fee=self.fee,
             prompt=not self.dont_prompt,
         )
 

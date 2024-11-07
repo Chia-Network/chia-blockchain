@@ -11,6 +11,7 @@ from typing import Any, Callable, Optional
 
 import aiohttp
 
+from chia.cmds.cmd_classes import NeedsWalletRPC
 from chia.cmds.cmds_util import (
     cli_confirm,
     get_any_service_client,
@@ -62,15 +63,14 @@ async def create_pool_args(pool_url: str) -> dict[str, Any]:
 
 
 async def create(
-    wallet_rpc_port: Optional[int],
-    fingerprint: Optional[int],
+    rpc_info: NeedsWalletRPC,
     pool_url: Optional[str],
     state: str,
     fee: uint64,
     *,
     prompt: bool,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
+    async with rpc_info.wallet_rpc() as wallet_info:
         target_puzzle_hash: Optional[bytes32]
         # Could use initial_pool_state_from_dict to simplify
         if state == "SELF_POOLING":
@@ -97,7 +97,7 @@ async def create(
             cli_confirm("Confirm (y/n): ", "Aborting.")
 
         try:
-            tx_record: TransactionRecord = await wallet_client.create_new_pool_wallet(
+            tx_record: TransactionRecord = await wallet_info.client.create_new_pool_wallet(
                 target_puzzle_hash,
                 pool_url,
                 relative_lock_height,
@@ -109,10 +109,10 @@ async def create(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(tx_record.name)
+                tx = await wallet_info.client.get_transaction(tx_record.name)
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
-                    print(transaction_status_msg(fingerprint, tx_record.name))
+                    print(transaction_status_msg(wallet_info.fingerprint, tx_record.name))
                     return None
         except Exception as e:
             print(f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer")
