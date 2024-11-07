@@ -176,9 +176,6 @@ def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
     if task is None:
         return
 
-    global g_tasks
-    global g_function_infos
-
     ti = g_tasks.get(task)
     if ti is None:
         ti = TaskInfo()
@@ -265,7 +262,6 @@ def fontcolor(pct: float) -> str:
 
 def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -> None:
     sys.setprofile(None)
-    global g_function_infos
 
     try:
         os.mkdir(target_dir)

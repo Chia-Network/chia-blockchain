@@ -37,9 +37,8 @@ ignore = [
 
     # Pylint warning
     "PLW2901", # redefined-loop-name (19) (-)
-    "PLW1641", # eq-without-hash (5) (?)
-    "PLW1514", # unspecified-encoding (69) (?)
-    "PLW0602", # global-variable-not-assigned (5) (?)
+    "PLW1641", # eq-without-hash (5) (x)
+    "PLW1514", # unspecified-encoding (69) (-)
     "PLW0603", # global-statement (9) (?)
 ]
 
