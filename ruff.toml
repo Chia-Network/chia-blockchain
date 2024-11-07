@@ -15,7 +15,6 @@ select = [
 explicit-preview-rules = false
 ignore = [
     # Pylint convention
-    "PLC0105", # type-name-incorrect-variance (2) (?)
     "PLC0415", # import-outside-top-level (286) (x)
     "PLC2801", # unnecessary-dunder-call (11) (x)
     "PLC1901", # compare-to-empty-string (51) (x)
