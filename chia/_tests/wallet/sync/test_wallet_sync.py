@@ -191,9 +191,6 @@ async def test_basic_sync_wallet(
     await add_blocks_in_batches(blocks_reorg[1:], full_node, blocks_reorg[0].header_hash)
 
     for wallet_node, wallet_server in wallets:
-        await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
-
-    for wallet_node, wallet_server in wallets:
         await time_out_assert(
             100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
         )
