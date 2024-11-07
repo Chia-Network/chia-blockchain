@@ -877,7 +877,7 @@ class DataStore:
                     raise
                 kv_ids = merkle_blob.get_keys_values()
                 for kid, vid in kv_ids.items():
-                    node = await self.get_terminal_node(kid, vid)
+                    node = await self.get_terminal_node(kid, vid, store_id)
 
                     keys_values_hashed[key_hash(node.key)] = leaf_hash(node.key, node.value)
                     key_hash_to_length[key_hash(node.key)] = len(node.key)
@@ -1037,7 +1037,7 @@ class DataStore:
             kv_ids = merkle_blob.get_keys_values()
             keys: list[bytes] = []
             for kid in kv_ids.keys():
-                key = await self.get_blob_from_kvid(kid)
+                key = await self.get_blob_from_kvid(kid, store_id)
                 if key is None:
                     raise Exception(f"Unknown key corresponding to KVId: {kid}")
                 keys.append(key)
@@ -1313,7 +1313,7 @@ class DataStore:
                     )
                 else:
                     assert isinstance(node, RawLeafMerkleNode)
-                    tree_node = await self.get_terminal_node(node.key, node.value)
+                    tree_node = await self.get_terminal_node(node.key, node.value, store_id)
                 hash_to_node[bytes32(node.hash)] = tree_node
 
             root_node = hash_to_node[root.node_hash]
@@ -1380,7 +1380,7 @@ class DataStore:
             await self.write_tree_to_file(root, right_hash, store_id, deltas_only, writer, merkle_blob, hash_to_index)
             to_write = bytes(SerializedNode(False, bytes(left_hash), bytes(right_hash)))
         elif isinstance(raw_node, RawLeafMerkleNode):
-            node = await self.get_terminal_node(raw_node.key, raw_node.value)
+            node = await self.get_terminal_node(raw_node.key, raw_node.value, store_id)
             to_write = bytes(SerializedNode(True, node.key, node.value))
         else:
             raise Exception(f"Node is neither InternalNode nor TerminalNode: {raw_node}")

@@ -492,8 +492,8 @@ async def test_insert_batch_reference_and_side(
     assert len(nodes) == 3
     assert isinstance(nodes[1], RawLeafMerkleNode)
     assert isinstance(nodes[2], RawLeafMerkleNode)
-    left_terminal_node = await data_store.get_terminal_node(nodes[1].key, nodes[1].value)
-    right_terminal_node = await data_store.get_terminal_node(nodes[2].key, nodes[2].value)
+    left_terminal_node = await data_store.get_terminal_node(nodes[1].key, nodes[1].value, store_id)
+    right_terminal_node = await data_store.get_terminal_node(nodes[2].key, nodes[2].value, store_id)
     if side == Side.LEFT:
         assert left_terminal_node.key == b"key2"
         assert right_terminal_node.key == b"key1"
