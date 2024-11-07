@@ -343,7 +343,7 @@ class WalletNode:
             self.log.info("Resetting wallet sync data...")
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
             names = {x[0] for x in rows}
-            names = names - set(known_tables)
+            names -= set(known_tables)
             tables_to_drop = []
             for name in names:
                 for ignore_name in ignore_tables:

@@ -1826,7 +1826,7 @@ class DAOWallet:
                     )
                     await self.add_parent(new_state.coin.name(), future_parent)
                     return
-                index = index + 1
+                index += 1
 
         # check if we are the finished state
         if current_innerpuz == get_finished_state_inner_puzzle(singleton_id):
@@ -1910,7 +1910,7 @@ class DAOWallet:
                 )
                 await self.add_parent(new_state.coin.name(), future_parent)
                 return
-            index = index + 1
+            index += 1
 
         # Search for the timer coin
         if not ended:
@@ -2005,7 +2005,7 @@ class DAOWallet:
                 )
                 await self.add_parent(new_state.coin.name(), future_parent)
                 return
-            index = index + 1
+            index += 1
 
     async def get_proposal_state(self, proposal_id: bytes32) -> dict[str, Union[int, bool]]:
         """

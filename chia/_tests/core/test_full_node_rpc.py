@@ -213,7 +213,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
                 coin_records[i].coin.amount, ph_receiver, coin_records[i].coin
             )
             await client.push_tx(spend_bundle)
-            coin_spends = coin_spends + spend_bundle.coin_spends
+            coin_spends += spend_bundle.coin_spends
             await time_out_assert(
                 5, full_node_api_1.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
             )

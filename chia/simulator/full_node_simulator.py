@@ -651,9 +651,7 @@ class FullNodeSimulator(FullNodeAPI):
         transactions_left: set[bytes32] = {tx.name for tx in transactions}
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff in backoff_times():
-                transactions_left = transactions_left & {
-                    tx.name for tx in await wallet_state_manager.tx_store.get_all_unconfirmed()
-                }
+                transactions_left &= {tx.name for tx in await wallet_state_manager.tx_store.get_all_unconfirmed()}
                 if len(transactions_left) == 0:
                     break
 

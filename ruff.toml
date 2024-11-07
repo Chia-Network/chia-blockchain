@@ -32,7 +32,6 @@ ignore = [
     "PLR0911", # too-many-return-statements (52) (x)
     "PLR6301", # no-self-use (699) (-)
     "PLR2004", # magic-value-comparison (901) (-)
-    "PLR6104", # non-augmented-assignment (27) (?)
     "PLR1704", # redefined-argument-from-local (13) (-)
     "PLR5501", # collapsible-else-if (49) (?)
     "PLR1711", # useless-return (14) (?)
