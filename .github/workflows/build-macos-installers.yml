@@ -355,6 +355,10 @@ jobs:
         run: |
           "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
 
+      - name: Test generation of a k25 plot
+        run:  |
+          /Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" plots create -k 25 -t ./tmp -d ./plot --override-k
+
       - name: Detach .dmg
         if: always()
         run: |
