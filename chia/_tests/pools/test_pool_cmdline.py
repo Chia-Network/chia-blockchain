@@ -129,12 +129,6 @@ async def test_plotnft_cli_create(
         pool_url=None,
         expected_error="is required with 'pool' state",
     ),
-    StateUrlCase(
-        id="bad state",
-        state="funky",
-        pool_url=None,
-        expected_error="is not valid - must be one of 'local' or 'pool'",
-    ),
 )
 @pytest.mark.anyio
 async def test_plotnft_cli_create_errors(

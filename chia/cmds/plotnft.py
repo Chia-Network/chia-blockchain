@@ -66,7 +66,13 @@ class GetLoginLinkCMD:
 class CreatePlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
     pool_url: Optional[str] = option("-u", "--pool-url", help="HTTPS host:port of the pool to join", required=False)
-    state: str = option("-s", "--state", help="Initial state of Plot NFT: local or pool", required=True)
+    state: str = option(
+        "-s",
+        "--state",
+        help="Initial state of Plot NFT: local or pool",
+        required=True,
+        type=click.Choice(["local", "pool"]),
+    )
     fee: uint64 = option(
         "-m",
         "--fee",
@@ -87,15 +93,10 @@ class CreatePlotNFTCMD:
         if self.pool_url in [None, ""] and self.state.lower() == "pool":
             raise CliRpcConnectionError("A pool url argument (-u/--pool-url) is required with 'pool' state")
 
-        valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}
-
-        if self.state not in valid_initial_states.keys():
-            raise CliRpcConnectionError(f"Given state '{self.state}' is not valid - must be one of 'local' or 'pool'")
-
         await create(
             rpc_info=self.rpc_info,
             pool_url=self.pool_url,
-            state=valid_initial_states[self.state],
+            state="FARMING_TO_POOL" if self.state == "pool" else "SELF_POOLING",
             fee=self.fee,
             prompt=not self.dont_prompt,
         )
