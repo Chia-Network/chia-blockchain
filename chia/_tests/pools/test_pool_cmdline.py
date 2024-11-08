@@ -412,7 +412,6 @@ async def test_plotnft_cli_join(
 
     runner = CliRunner()
     with runner.isolated_filesystem():
-
         # Test error cases
         # No pool wallet found
         with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
@@ -500,8 +499,8 @@ async def test_plotnft_cli_join(
 
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=3, guarantee_transaction_blocks=True)
 
-        verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
+        await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
 
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
 
-        verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
+        await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
