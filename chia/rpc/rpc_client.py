@@ -137,6 +137,12 @@ class RpcClient:
     async def healthz(self) -> dict:
         return await self.fetch("healthz", {})
 
+    async def get_log_level(self) -> dict:
+        return await self.fetch("get_log_level", {})
+
+    async def set_log_level(self, level_number: int) -> dict:
+        return await self.fetch("set_log_level", {"level_number": level_number})
+
     def close(self) -> None:
         self.closing_task = asyncio.create_task(self.session.close())
 

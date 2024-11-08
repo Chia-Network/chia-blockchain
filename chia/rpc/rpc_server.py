@@ -21,6 +21,7 @@ from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_f
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.chia_logging import set_log_level
 from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
@@ -245,6 +246,8 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             "/get_routes": self.get_routes,
             "/get_version": self.get_version,
             "/healthz": self.healthz,
+            "/get_log_level": self.get_log_level,
+            "/set_log_level": self.set_log_level,
         }
 
     async def get_routes(self, request: dict[str, Any]) -> EndpointResult:
@@ -308,6 +311,21 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         return {
             "version": __version__,
         }
+
+    async def get_log_level(self, request: dict[str, Any]) -> EndpointResult:
+        logger = logging.getLogger()
+        level_number = logger.getEffectiveLevel()
+        level_name = logging.getLevelName(level_number)
+        return {
+            "level_number": level_number,
+            "level_name": level_name,
+        }
+
+    async def set_log_level(self, request: dict[str, Any]) -> EndpointResult:
+        requested_level_number = request["level_number"]
+        set_log_level(log_level=requested_level_number, service_name=self.service_name)
+
+        return {}
 
     async def ws_api(self, message: WsRpcMessage) -> Optional[dict[str, object]]:
         """
