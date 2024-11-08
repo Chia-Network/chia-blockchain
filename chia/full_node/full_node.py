@@ -1016,7 +1016,11 @@ class FullNode:
             raise RuntimeError("Weight proof handler is None")
         peers_with_peak = self.get_peers_with_peak(peak_header_hash)
         # Request weight proof from a random peer
-        self.log.info(f"Total of {len(peers_with_peak)} peers with peak {peak_height}")
+        peers_with_peak_len = len(peers_with_peak)
+        self.log.info(f"Total of {peers_with_peak_len} peers with peak {peak_height}")
+        # We can't choose from an empty sequence
+        if peers_with_peak_len == 0:
+            raise RuntimeError(f"Not performing sync, no peers with peak {peak_height}")
         weight_proof_peer: WSChiaConnection = random.choice(peers_with_peak)
         self.log.info(
             f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} up to height {peak_height}"
