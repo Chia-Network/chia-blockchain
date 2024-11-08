@@ -99,7 +99,7 @@ def initialize_logging(
     set_log_level(log_level=log_level, service_name=service_name)
 
 
-def set_log_level(log_level: str, service_name: str) -> None:
+def set_log_level(log_level: str, service_name: str) -> list[str]:
     root_logger = logging.getLogger()
     log_level_exceptions = {}
 
@@ -110,11 +110,13 @@ def set_log_level(log_level: str, service_name: str) -> None:
             handler.setLevel(default_log_level)
             log_level_exceptions[handler] = e
 
-    for handler, exception in log_level_exceptions.items():
-        root_logger.error(
-            f"Handler {handler}: Invalid log level '{log_level}' found in {service_name} config. "
-            f"Defaulting to: {default_log_level}. Error: {exception}"
-        )
+    error_strings = [
+        f"Handler {handler}: Invalid log level '{log_level}' for {service_name}. "
+        f"Defaulting to: {default_log_level}. Error: {exception}"
+        for handler, exception in log_level_exceptions.items()
+    ]
+    for error_string in error_strings:
+        root_logger.error(error_string)
 
     # Adjust the root logger to the smallest used log level since its default level is WARNING which would overwrite
     # the potentially smaller log levels of specific handlers.
@@ -122,6 +124,8 @@ def set_log_level(log_level: str, service_name: str) -> None:
 
     if root_logger.level <= logging.DEBUG:
         logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
+
+    return error_strings
 
 
 def initialize_service_logging(service_name: str, config: dict[str, Any]) -> None:

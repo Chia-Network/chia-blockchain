@@ -236,7 +236,8 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                             self.stop_requested.set,
                             self.root_path,
                             self.config,
-                            self._connect_to_daemon,
+                            service_config=self.service_config,
+                            connect_to_daemon=self._connect_to_daemon,
                             max_request_body_size=self.max_request_body_size,
                         )
                 yield
