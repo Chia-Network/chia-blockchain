@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import sys
 import traceback
 from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass
@@ -341,10 +342,15 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         level_number = logger.getEffectiveLevel()
         level_name = logging.getLevelName(level_number)
 
+        if sys.version_info >= (3, 11):
+            map = logging.getLevelNamesMapping()
+        else:
+            map = logging._nameToLevel
+
         return {
             "success": True,
             "level_name": level_name,
-            "available_levels": list(logging.getLevelNamesMapping()),
+            "available_levels": list(map),
         }
 
     async def reset_log_level(self, request: dict[str, Any]) -> EndpointResult:
