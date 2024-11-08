@@ -2404,8 +2404,9 @@ class TestBodyValidation:
 
         # Too many
         h = std_hash(b"")
-        too_many_reward_claims = block.transactions_info.reward_claims_incorporated + [
-            Coin(h, h, too_few_reward_claims[0].amount)
+        too_many_reward_claims = [
+            *block.transactions_info.reward_claims_incorporated,
+            Coin(h, h, too_few_reward_claims[0].amount),
         ]
         block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", too_many_reward_claims)
         assert block_2.transactions_info is not None
@@ -2424,8 +2425,9 @@ class TestBodyValidation:
         await _validate_and_add_block(b, block_2, expected_error=Err.INVALID_REWARD_COINS, skip_prevalidation=True)
 
         # Duplicates
-        duplicate_reward_claims = block.transactions_info.reward_claims_incorporated + [
-            block.transactions_info.reward_claims_incorporated[-1]
+        duplicate_reward_claims = [
+            *block.transactions_info.reward_claims_incorporated,
+            block.transactions_info.reward_claims_incorporated[-1],
         ]
         block_2 = recursive_replace(block, "transactions_info.reward_claims_incorporated", duplicate_reward_claims)
         assert block_2.transactions_info is not None

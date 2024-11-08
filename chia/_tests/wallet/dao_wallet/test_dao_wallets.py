@@ -221,7 +221,7 @@ async def test_dao_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsA
     coins = await dao_cat_wallet_0.advanced_select_coins(1, fake_proposal_id)
     assert len(coins) > 0
     # check that we have selected the coin from dao_cat_wallet
-    assert list(coins)[0].coin.amount == dao_cat_amt
+    assert next(iter(coins)).coin.amount == dao_cat_amt
 
     # send some cats from wallet_0 to wallet_1 so we can test voting
     async with cat_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:

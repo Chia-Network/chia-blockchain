@@ -96,18 +96,18 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert (await client.get_block_record_by_height(100)) is None
 
         # TODO: Understand why the list(set()) is required to make this work and address it.  This shouldn't be needed.
-        ph = list(set(blocks[-1].get_included_reward_coins()))[0].puzzle_hash
+        ph = next(iter(set(blocks[-1].get_included_reward_coins()))).puzzle_hash
         coins = await client.get_coin_records_by_puzzle_hash(ph)
         print(coins)
         assert len(coins) >= 1
 
-        pid = list(set(blocks[-1].get_included_reward_coins()))[0].parent_coin_info
+        pid = next(iter(set(blocks[-1].get_included_reward_coins()))).parent_coin_info
         pid_2 = list(set(blocks[-1].get_included_reward_coins()))[1].parent_coin_info
         coins = await client.get_coin_records_by_parent_ids([pid, pid_2])
         print(coins)
         assert len(coins) == 2
 
-        name = list(set(blocks[-1].get_included_reward_coins()))[0].name()
+        name = next(iter(set(blocks[-1].get_included_reward_coins()))).name()
         name_2 = list(set(blocks[-1].get_included_reward_coins()))[1].name()
         coins = await client.get_coin_records_by_names([name, name_2])
         print(coins)
@@ -136,7 +136,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 2
         assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
 
-        coin_to_spend = list(set(blocks[-1].get_included_reward_coins()))[0]
+        coin_to_spend = next(iter(set(blocks[-1].get_included_reward_coins())))
 
         spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
 
@@ -151,7 +151,9 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert len(await client.get_all_mempool_items()) == 1
         assert len(await client.get_all_mempool_tx_ids()) == 1
         assert (
-            WalletSpendBundle.from_json_dict(list((await client.get_all_mempool_items()).values())[0]["spend_bundle"])
+            WalletSpendBundle.from_json_dict(
+                next(iter((await client.get_all_mempool_items()).values()))["spend_bundle"]
+            )
             == spend_bundle
         )
         assert (await client.get_all_mempool_tx_ids())[0] == spend_bundle.name()
@@ -358,7 +360,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             state = await client.get_blockchain_state()
             block = await client.get_block(state["peak"].header_hash)
 
-            coin_to_spend = list(set(block.get_included_reward_coins()))[0]
+            coin_to_spend = next(iter(set(block.get_included_reward_coins())))
 
             spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_2, coin_to_spend, memo=memo)
             await client.push_tx(spend_bundle)
@@ -768,7 +770,7 @@ async def test_coin_name_found_in_mempool(one_node, self_hostname):
         # empty mempool
         assert len(await client.get_all_mempool_items()) == 0
 
-        coin_to_spend = list(set(blocks[-1].get_included_reward_coins()))[0]
+        coin_to_spend = next(iter(set(blocks[-1].get_included_reward_coins())))
         spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
         await client.push_tx(spend_bundle)
 

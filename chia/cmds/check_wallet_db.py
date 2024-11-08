@@ -206,7 +206,8 @@ def print_min_max_derivation_for_wallets(derivation_paths: list[DerivationPath])
 
 class WalletDBReader:
     db_wrapper: DBWrapper2  # TODO: Remove db_wrapper member
-    config = {"db_readers": 1}
+    # TODO: make this a dataclass and make this an instance attribute instead of a mutable classvar
+    config = {"db_readers": 1}  # noqa: RUF012
     sql_log_path: Optional[Path] = None
     verbose = False
 
@@ -341,7 +342,7 @@ class WalletDBReader:
             if d.wallet_id not in wallet_id_to_type:
                 missing_wallet_ids.append(d.wallet_id)
             elif d.wallet_type != wallet_id_to_type[d.wallet_id]:
-                wrong_type[(d.hardened, d.wallet_id, d.wallet_type, wallet_id_to_type[d.wallet_id])].append(
+                wrong_type[d.hardened, d.wallet_id, d.wallet_type, wallet_id_to_type[d.wallet_id]].append(
                     d.derivation_index
                 )
 

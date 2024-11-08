@@ -585,7 +585,7 @@ def validate_unfinished_header_block(
             RewardChainSubSlot(dummy_vdf_info, bytes32.zeros, None, uint8(0)),
             SubSlotProofs(VDFProof(uint8(0), b"", False), None, VDFProof(uint8(0), b"", False)),
         )
-        sub_slots_to_pass_in = header_block.finished_sub_slots + [dummy_sub_slot]
+        sub_slots_to_pass_in = [*header_block.finished_sub_slots, dummy_sub_slot]
     else:
         sub_slots_to_pass_in = header_block.finished_sub_slots
     (

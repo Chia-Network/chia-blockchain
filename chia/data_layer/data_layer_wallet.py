@@ -312,7 +312,7 @@ class DataLayerWallet:
         if coins is None:
             raise ValueError("Not enough coins to create new data layer singleton")
 
-        launcher_parent: Coin = list(coins)[0]
+        launcher_parent: Coin = next(iter(coins))
         launcher_coin: Coin = Coin(launcher_parent.name(), SINGLETON_LAUNCHER.get_tree_hash(), uint64(1))
 
         inner_puzzle: Program = await self.standard_wallet.get_puzzle(

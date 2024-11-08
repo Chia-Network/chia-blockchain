@@ -232,6 +232,7 @@ def make_test_conds(
     )
 
 
+@dataclasses.dataclass
 class TestCheckTimeLocks:
     COIN_CONFIRMED_HEIGHT = uint32(10)
     COIN_TIMESTAMP = uint64(10000)
@@ -245,7 +246,7 @@ class TestCheckTimeLocks:
         coinbase=False,
         timestamp=COIN_TIMESTAMP,
     )
-    REMOVALS: dict[bytes32, CoinRecord] = {TEST_COIN.name(): COIN_RECORD}
+    REMOVALS: dict[bytes32, CoinRecord] = dataclasses.field(default_factory=lambda: {TEST_COIN.name(): COIN_RECORD})  # type: ignore[name-defined]  # noqa: F821
 
     @pytest.mark.parametrize(
         "conds,expected",

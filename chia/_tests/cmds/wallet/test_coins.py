@@ -101,7 +101,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: tuple[TestRpcClient
         "Transactions would combine up to 500 coins",
         f"To get status, use command: chia wallet get_transaction -f {FINGERPRINT} -tx 0x{STD_TX.name.hex()}",
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args + ["--override"], assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, "--override"], assert_list)
     expected_tx_config = TXConfig(
         min_coin_amount=uint64(100_000_000_000),
         max_coin_amount=uint64(200_000_000_000),

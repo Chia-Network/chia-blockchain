@@ -474,7 +474,7 @@ class DNSServer:
 
         ttl: int = self.ttl
         # we add these to the list as it will allow us to respond to ns and soa requests
-        ips: list[RD] = [self.soa_record] + self.ns_records
+        ips: list[RD] = [self.soa_record, *self.ns_records]
         ipv4_count = 0
         ipv6_count = 0
         if question_type is QTYPE.A:

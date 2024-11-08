@@ -160,7 +160,7 @@ async def test_hints_in_blockchain(
     puzzle_hash = bytes32(32 * b"\0")
     amount = int_to_bytes(1)
     hint = bytes32(32 * b"\5")
-    coin_spent = list(blocks[-1].get_included_reward_coins())[0]
+    coin_spent = next(iter(blocks[-1].get_included_reward_coins()))
     condition_dict = {
         ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
     }

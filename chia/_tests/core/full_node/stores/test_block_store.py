@@ -59,7 +59,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
     )
     wt: WalletTool = bt.get_pool_wallet_tool()
     tx = wt.generate_signed_transaction(
-        uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
+        uint64(10), wt.get_new_puzzlehash(), next(iter(blocks[-1].get_included_reward_coins()))
     )
     blocks = bt.get_consecutive_blocks(
         10,
