@@ -10,9 +10,8 @@ from click.testing import CliRunner
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.util.misc import Marks, datacases
-from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
-from chia.cmds.plotnft import CreatePlotNFTCMD, LeavePlotNFTCMD, ShowPlotNFTCMD
+from chia.cmds.plotnft import CreatePlotNFTCMD, JoinPlotNFTCMD, LeavePlotNFTCMD, ShowPlotNFTCMD
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.errors import CliRpcConnectionError
@@ -44,7 +43,7 @@ async def create_new_plotnft(wallet_test_framework: WalletTestFramework, num_poo
     await wallet_rpc.create_new_pool_wallet(
         target_puzzlehash=our_ph,
         pool_url="http://pool.example.com",
-        relative_lock_height=uint32(10),
+        relative_lock_height=uint32(5),
         backup_host="",
         mode="new",
         state="FARMING_TO_POOL",
@@ -83,7 +82,7 @@ async def create_new_plotnft(wallet_test_framework: WalletTestFramework, num_poo
     assert len(summaries_response) == num_pool_wallets
     wallet_id: int = summaries_response[-1]["id"]
 
-    await time_out_assert(45, verify_pool_state, True, wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
+    await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
     return wallet_id
 
 
@@ -165,7 +164,7 @@ async def test_plotnft_cli_create(
     assert len(summaries_response) == 1
     wallet_id: int = summaries_response[0]["id"]
 
-    await time_out_assert(45, verify_pool_state, True, wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)
+    await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)
 
 
 @datacases(
@@ -289,7 +288,7 @@ async def test_plotnft_cli_show(
     [
         {
             "num_environments": 1,
-            "blocks_needed": [1],
+            "blocks_needed": [10],
             "trusted": True,
             "reuse_puzhash": False,
         }
@@ -365,4 +364,98 @@ async def test_plotnft_cli_leave(
             ]
         )
 
-        await time_out_assert(10, verify_pool_state, True, wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)
+        await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
+
+        await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
+
+        await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [10],
+            "trusted": True,
+            "reuse_puzhash": False,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_join(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+    wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+    client_info: WalletClientInfo = WalletClientInfo(
+        wallet_rpc,
+        wallet_state_manager.root_pubkey.get_fingerprint(),
+        wallet_state_manager.config,
+    )
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
+            await JoinPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    client_info=client_info,
+                    wallet_rpc_port=wallet_rpc.port,
+                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
+                ),
+                pool_url="http://pool.example.com",
+                id=None,
+                dont_prompt=True,
+            ).run()
+
+        with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
+            await JoinPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    client_info=client_info,
+                    wallet_rpc_port=wallet_rpc.port,
+                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
+                ),
+                pool_url="http://pool.example.com",
+                id=15,
+                dont_prompt=True,
+            ).run()
+
+        # wallet_id = await create_new_plotnft(wallet_environments, 1)
+
+        # await LeavePlotNFTCMD(
+        #     rpc_info=NeedsWalletRPC(
+        #         client_info=client_info,
+        #         wallet_rpc_port=wallet_rpc.port,
+        #         fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
+        #     ),
+        #     id=wallet_id,
+        #     dont_prompt=True,
+        # ).run()
+
+        # await wallet_environments.process_pending_states(
+        #     [
+        #         WalletStateTransition(
+        #             pre_block_balance_updates={
+        #                 1: {
+        #                     "<=#spendable_balance": 1,
+        #                     "<=#max_send_amount": 1,
+        #                     "pending_coin_removal_count": 0,
+        #                 },
+        #                 2: {"pending_coin_removal_count": 1},
+        #             },
+        #             post_block_balance_updates={
+        #                 1: {
+        #                     "<=#pending_coin_removal_count": 1,
+        #                 },
+        #                 2: {"pending_coin_removal_count": -1},
+        #             },
+        #         )
+        #     ]
+        # )
+
+        # verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
+
+        # await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
+
+        # verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)

@@ -129,8 +129,7 @@ class JoinPlotNFTCMD:
         from .plotnft_funcs import join_pool
 
         await join_pool(
-            wallet_rpc_port=self.rpc_info.wallet_rpc_port,
-            fingerprint=self.rpc_info.fingerprint,
+            rpc_info=self.rpc_info,
             pool_url=self.pool_url,
             fee=self.fee,
             wallet_id=self.id,

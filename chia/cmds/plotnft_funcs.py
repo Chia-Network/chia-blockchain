@@ -305,21 +305,16 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
 
 async def join_pool(
     *,
-    wallet_rpc_port: Optional[int],
-    fingerprint: Optional[int],
+    rpc_info: NeedsWalletRPC,
     pool_url: str,
     fee: uint64,
     wallet_id: Optional[int],
     prompt: bool,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (
-        wallet_client,
-        fingerprint,
-        config,
-    ):
-        selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
+    async with rpc_info.wallet_rpc() as wallet_info:
+        selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
 
-        enforce_https = config["full_node"]["selected_network"] == "mainnet"
+        enforce_https = wallet_info.config["selected_network"] == "mainnet"
 
         if enforce_https and not pool_url.startswith("https://"):
             raise CliRpcConnectionError(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
@@ -344,9 +339,9 @@ async def join_pool(
             )
 
         pprint(json_dict)
-        msg = f"\nWill join pool: {pool_url} with Plot NFT {fingerprint}."
+        msg = f"\nWill join pool: {pool_url} with Plot NFT {wallet_info.fingerprint}."
         func = functools.partial(
-            wallet_client.pw_join_pool,
+            wallet_info.client.pw_join_pool,
             selected_wallet_id,
             bytes32.from_hexstr(json_dict["target_puzzle_hash"]),
             pool_url,
@@ -354,7 +349,9 @@ async def join_pool(
             fee,
         )
 
-        await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, selected_wallet_id)
+        await submit_tx_with_confirmation(
+            msg, prompt, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id
+        )
 
 
 async def self_pool(*, rpc_info: NeedsWalletRPC, fee: uint64, wallet_id: Optional[int], prompt: bool) -> None:
