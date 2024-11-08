@@ -138,6 +138,7 @@ async def test_plotnft_cli_create(
         await CreatePlotNFTCMD(
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
+                context={"root_path": wallet_environments.environments[0].node.root_path},
                 wallet_rpc_port=wallet_rpc.port,
                 fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
             ),
@@ -245,6 +246,7 @@ async def test_plotnft_cli_show(
     with runner.isolated_filesystem():
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
+                context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
                 wallet_rpc_port=wallet_rpc.port,
                 fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -257,6 +259,7 @@ async def test_plotnft_cli_show(
         with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
             await ShowPlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
                     wallet_rpc_port=wallet_rpc.port,
                     fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -270,6 +273,7 @@ async def test_plotnft_cli_show(
         # need to capute the output and verify
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
+                context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
                 wallet_rpc_port=wallet_rpc.port,
                 fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -283,6 +287,7 @@ async def test_plotnft_cli_show(
 
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
+                context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
                 wallet_rpc_port=wallet_rpc.port,
                 fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -326,6 +331,7 @@ async def test_plotnft_cli_leave(
         with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
             await LeavePlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
                     wallet_rpc_port=wallet_rpc.port,
                     fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -337,6 +343,7 @@ async def test_plotnft_cli_leave(
         with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
             await LeavePlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
                     wallet_rpc_port=wallet_rpc.port,
                     fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -349,6 +356,7 @@ async def test_plotnft_cli_leave(
 
         await LeavePlotNFTCMD(
             rpc_info=NeedsWalletRPC(
+                context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
                 wallet_rpc_port=wallet_rpc.port,
                 fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -417,6 +425,7 @@ async def test_plotnft_cli_join(
         with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
             await JoinPlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
                     wallet_rpc_port=wallet_rpc.port,
                     fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -430,6 +439,7 @@ async def test_plotnft_cli_join(
         with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
             await JoinPlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
                     wallet_rpc_port=wallet_rpc.port,
                     fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -446,6 +456,7 @@ async def test_plotnft_cli_join(
         with pytest.raises(CliRpcConnectionError, match="Error connecting to pool"):
             await JoinPlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
                     wallet_rpc_port=wallet_rpc.port,
                     fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -457,6 +468,7 @@ async def test_plotnft_cli_join(
 
             await JoinPlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
                     wallet_rpc_port=wallet_rpc.port,
                     fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
@@ -488,6 +500,7 @@ async def test_plotnft_cli_join(
         # Join the new pool - this will leave the prior pool and join the new one
         await JoinPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
+                context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
                 wallet_rpc_port=wallet_rpc.port,
                 fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
