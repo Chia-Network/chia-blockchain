@@ -95,6 +95,6 @@ jobs:
               matrix: arm
 
     steps:
-      - uses: chia-network/actions/setup-python@main
+      - uses: actions/setup-python@v5.3.0
         with:
           python-version: ${{ matrix.python.major_dot_minor }}
