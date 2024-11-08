@@ -11,9 +11,10 @@ from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
+from chia._tests.pools.test_pool_rpc import manage_temporary_pool_plot
 from chia._tests.util.misc import Marks, datacases
 from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
-from chia.cmds.plotnft import CreatePlotNFTCMD, JoinPlotNFTCMD, LeavePlotNFTCMD, ShowPlotNFTCMD
+from chia.cmds.plotnft import ClaimPlotNFTCMD, CreatePlotNFTCMD, JoinPlotNFTCMD, LeavePlotNFTCMD, ShowPlotNFTCMD
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.errors import CliRpcConnectionError
@@ -77,27 +78,45 @@ async def process_plotnft_create(
     return wallet_id
 
 
-async def create_new_plotnft(wallet_test_framework: WalletTestFramework, num_pool_wallets: int) -> int:
+async def create_new_plotnft(
+    wallet_test_framework: WalletTestFramework, num_pool_wallets: int, self: bool = False
+) -> int:
     wallet_state_manager: WalletStateManager = wallet_test_framework.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
 
     our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
 
-    await wallet_rpc.create_new_pool_wallet(
-        target_puzzlehash=our_ph,
-        pool_url="http://pool.example.com",
-        relative_lock_height=uint32(5),
-        backup_host="",
-        mode="new",
-        state="FARMING_TO_POOL",
-        fee=uint64(0),
-    )
+    if self:
+        await wallet_rpc.create_new_pool_wallet(
+            target_puzzlehash=our_ph,
+            pool_url="",
+            relative_lock_height=uint32(0),
+            backup_host="",
+            mode="new",
+            state="SELF_POOLING",
+            fee=uint64(0),
+        )
+        return await process_plotnft_create(
+            wallet_test_framework=wallet_test_framework,
+            expected_state=PoolSingletonState.SELF_POOLING,
+            num_pool_wallets=num_pool_wallets,
+        )
+    else:
+        await wallet_rpc.create_new_pool_wallet(
+            target_puzzlehash=our_ph,
+            pool_url="http://pool.example.com",
+            relative_lock_height=uint32(5),
+            backup_host="",
+            mode="new",
+            state="FARMING_TO_POOL",
+            fee=uint64(0),
+        )
 
-    return await process_plotnft_create(
-        wallet_test_framework=wallet_test_framework,
-        expected_state=PoolSingletonState.FARMING_TO_POOL,
-        num_pool_wallets=num_pool_wallets,
-    )
+        return await process_plotnft_create(
+            wallet_test_framework=wallet_test_framework,
+            expected_state=PoolSingletonState.FARMING_TO_POOL,
+            num_pool_wallets=num_pool_wallets,
+        )
 
 
 @pytest.mark.parametrize(
@@ -474,6 +493,39 @@ async def test_plotnft_cli_join(
         mock_get.return_value.__aenter__.return_value.text.return_value = pool_response
 
         # Join the new pool - this will leave the prior pool and join the new one
+        # Here you can use None as the wallet_id and the code will pick the only pool wallet automatically
+        await JoinPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                context={"root_path": wallet_environments.environments[0].node.root_path},
+                client_info=client_info,
+            ),
+            id=None,
+            pool_url="http://127.0.0.1",
+            dont_prompt=True,
+        ).run()
+
+        await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=3, guarantee_transaction_blocks=True)
+        await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
+        await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
+        await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
+
+        # Create a second farming plotnft to url http://pool.example.com
+        wallet_id = await create_new_plotnft(wallet_environments, 2)
+
+        # Join the new pool - this will leave the prior pool and join the new one
+        # Will fail because we don't specify a wallet ID and there are multiple pool wallets
+        with pytest.raises(CliRpcConnectionError, match="More than one pool wallet"):
+            await JoinPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
+                    client_info=client_info,
+                ),
+                id=None,
+                pool_url="http://127.0.0.1",
+                dont_prompt=True,
+            ).run()
+
+        # Join the new pool - this will leave the prior pool and join the new one and specific wallet_id
         await JoinPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
                 context={"root_path": wallet_environments.environments[0].node.root_path},
@@ -485,9 +537,139 @@ async def test_plotnft_cli_join(
         ).run()
 
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=3, guarantee_transaction_blocks=True)
-
         await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
-
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
-
         await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
+
+        # Join the same pool test - code not ready yet for test
+        # with pytest.raises(CliRpcConnectionError, match="already joined"):
+        #     await JoinPlotNFTCMD(
+        #         rpc_info=NeedsWalletRPC(
+        #             context={"root_path": wallet_environments.environments[0].node.root_path},
+        #             client_info=client_info,
+        #         ),
+        #         id=wallet_id,
+        #         pool_url="http://127.0.0.1",
+        #         dont_prompt=True,
+        #     ).run()
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [10],
+            "trusted": True,
+            "reuse_puzhash": False,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_claim(
+    wallet_environments: WalletTestFramework,
+    mocker: MockerFixture,
+) -> None:
+    wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+    wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+    client_info: WalletClientInfo = WalletClientInfo(
+        wallet_rpc,
+        wallet_state_manager.root_pubkey.get_fingerprint(),
+        wallet_state_manager.config,
+    )
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        # Test error cases
+        # No pool wallet found
+        with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
+            await ClaimPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    client_info=client_info,
+                ),
+                id=None,
+            ).run()
+
+        # Wallet id not a pool wallet
+        with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
+            await ClaimPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    client_info=client_info,
+                ),
+                id=1,
+            ).run()
+
+        # Create a farming plotnft to url http://pool.example.com
+        wallet_id = await create_new_plotnft(wallet_environments, 1, self=True)
+
+        status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
+        our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+        bt = wallet_environments.full_node.bt
+
+        async with manage_temporary_pool_plot(bt, status.p2_singleton_puzzle_hash) as pool_plot:
+            all_blocks = await wallet_environments.full_node.get_all_full_blocks()
+            blocks = bt.get_consecutive_blocks(
+                3,
+                block_list_input=all_blocks,
+                force_plot_id=pool_plot.plot_id,
+                farmer_reward_puzzle_hash=our_ph,
+                guarantee_transaction_block=True,
+            )
+
+            for block in blocks[-3:]:
+                await wallet_environments.full_node.full_node.add_block(block)
+
+        await ClaimPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                client_info=client_info,
+            ),
+            id=None,
+        ).run()
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": 500_000_000_000,
+                            "unconfirmed_wallet_balance": 500_000_000_000,
+                            "spendable_balance": 500_000_000_000,
+                            "max_send_amount": 500_000_000_000,
+                            "pending_change": 0,
+                            "unspent_coin_count": 2,
+                            "pending_coin_removal_count": 0,
+                        },
+                        2: {
+                            "confirmed_wallet_balance": 2 * 1_750_000_000_000,
+                            "unconfirmed_wallet_balance": 2 * 1_750_000_000_000,
+                            "spendable_balance": 2 * 1_750_000_000_000,
+                            "max_send_amount": 0,
+                            "pending_change": 0,
+                            "unspent_coin_count": 2,
+                            "pending_coin_removal_count": 3,
+                        },
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "confirmed_wallet_balance": +3_750_000_000_000,  # two pool rewards and 1 farm reward
+                            "unconfirmed_wallet_balance": +3_750_000_000_000,
+                            "spendable_balance": +3_750_000_000_000,
+                            "max_send_amount": +3_750_000_000_000,
+                            "pending_change": 0,
+                            "unspent_coin_count": +3,
+                            "pending_coin_removal_count": 0,
+                        },
+                        2: {
+                            "confirmed_wallet_balance": -1_750_000_000_000,
+                            "unconfirmed_wallet_balance": -1_750_000_000_000,
+                            "spendable_balance": -1_750_000_000_000,
+                            "max_send_amount": 0,
+                            "pending_change": 0,
+                            "unspent_coin_count": -1,
+                            "pending_coin_removal_count": -3,
+                        },
+                    },
+                )
+            ]
+        )

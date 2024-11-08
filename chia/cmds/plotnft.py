@@ -214,8 +214,7 @@ class ClaimPlotNFTCMD:
         from .plotnft_funcs import claim_cmd
 
         await claim_cmd(
-            wallet_rpc_port=self.rpc_info.wallet_rpc_port,
-            fingerprint=self.rpc_info.fingerprint,
+            rpc_info=self.rpc_info,
             fee=self.fee,
             wallet_id=self.id,
         )

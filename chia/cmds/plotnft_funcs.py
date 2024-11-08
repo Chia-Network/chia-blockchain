@@ -385,18 +385,18 @@ async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: Optional[int]
         )
 
 
-async def claim_cmd(
-    *, wallet_rpc_port: Optional[int], fingerprint: Optional[int], fee: uint64, wallet_id: Optional[int]
-) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
-        selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
+async def claim_cmd(*, rpc_info: NeedsWalletRPC, fee: uint64, wallet_id: Optional[int]) -> None:
+    async with rpc_info.wallet_rpc() as wallet_info:
+        selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
         msg = f"\nWill claim rewards for wallet ID: {selected_wallet_id}."
         func = functools.partial(
-            wallet_client.pw_absorb_rewards,
+            wallet_info.client.pw_absorb_rewards,
             selected_wallet_id,
             fee,
         )
-        await submit_tx_with_confirmation(msg, False, func, wallet_client, fingerprint, selected_wallet_id)
+        await submit_tx_with_confirmation(
+            msg, False, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id
+        )
 
 
 async def change_payout_instructions(launcher_id: bytes32, address: CliAddress) -> None:
