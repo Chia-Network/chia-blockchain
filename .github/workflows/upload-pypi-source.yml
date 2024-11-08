@@ -33,23 +33,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - name: Linux
-            matrix: linux
-            emoji: 🐧
-            runs-on:
-              intel: ubuntu-latest
-              arm: [linux, arm64]
           - name: macOS
             matrix: macos
             emoji: 🍎
             runs-on:
               intel: macos-13
-              arm: macos-13-arm64
-          - name: Windows
-            matrix: windows
-            emoji: 🪟
-            runs-on:
-              intel: windows-latest
+              arm: macos-latest
         arch:
           - name: ARM64
             matrix: arm
