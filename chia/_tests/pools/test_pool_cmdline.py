@@ -35,7 +35,7 @@ async def verify_pool_state(wallet_rpc: WalletRpcClient, w_id: int, expected_sta
     return pw_status.current.state == expected_state.value
 
 
-async def create_new_plotnft(wallet_test_framework: WalletTestFramework) -> int:
+async def create_new_plotnft(wallet_test_framework: WalletTestFramework, num_pool_wallets: int) -> int:
     wallet_state_manager: WalletStateManager = wallet_test_framework.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
 
@@ -58,9 +58,9 @@ async def create_new_plotnft(wallet_test_framework: WalletTestFramework) -> int:
                     1: {
                         "confirmed_wallet_balance": 0,
                         "unconfirmed_wallet_balance": -1,
-                        "spendable_balance": -250000000000,
-                        "max_send_amount": -250000000000,
-                        "pending_change": 249999999999,
+                        "<=#spendable_balance": 1,
+                        "<=#max_send_amount": 1,
+                        ">=#pending_change": 1,  # any amount increase
                         "pending_coin_removal_count": 1,
                     },
                 },
@@ -68,21 +68,20 @@ async def create_new_plotnft(wallet_test_framework: WalletTestFramework) -> int:
                     1: {
                         "confirmed_wallet_balance": -1,
                         "unconfirmed_wallet_balance": 0,
-                        "spendable_balance": 249999999999,
-                        "max_send_amount": 249999999999,
-                        "unspent_coin_count": 0,
-                        "pending_change": -249999999999,
-                        "pending_coin_removal_count": -1,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": 1,  # any amount decrease
+                        "<=#pending_coin_removal_count": 1,
                     },
-                    2: {"init": True, "unspent_coin_count": 1},
+                    num_pool_wallets + 1: {"init": True, "unspent_coin_count": 1},
                 },
             )
         ]
     )
 
     summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-    assert len(summaries_response) == 1
-    wallet_id: int = summaries_response[0]["id"]
+    assert len(summaries_response) == num_pool_wallets
+    wallet_id: int = summaries_response[-1]["id"]
 
     await time_out_assert(45, verify_pool_state, True, wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
     return wallet_id
@@ -141,9 +140,9 @@ async def test_plotnft_cli_create(
                     1: {
                         "confirmed_wallet_balance": 0,
                         "unconfirmed_wallet_balance": -1,
-                        "spendable_balance": -250000000000,
-                        "max_send_amount": -250000000000,
-                        "pending_change": 249999999999,
+                        "<=#spendable_balance": 1,
+                        "<=#max_send_amount": 1,
+                        ">=#pending_change": 1,  # any amount increase
                         "pending_coin_removal_count": 1,
                     },
                 },
@@ -151,11 +150,10 @@ async def test_plotnft_cli_create(
                     1: {
                         "confirmed_wallet_balance": -1,
                         "unconfirmed_wallet_balance": 0,
-                        "spendable_balance": 249999999999,
-                        "max_send_amount": 249999999999,
-                        "unspent_coin_count": 0,
-                        "pending_change": -249999999999,
-                        "pending_coin_removal_count": -1,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": 1,  # any amount decrease
+                        "<=#pending_coin_removal_count": 1,
                     },
                     2: {"init": True, "unspent_coin_count": 1},
                 },
@@ -233,16 +231,16 @@ async def test_plotnft_cli_show(
 
     runner = CliRunner()
     with runner.isolated_filesystem():
-        with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
-            await ShowPlotNFTCMD(
-                rpc_info=NeedsWalletRPC(
-                    client_info=client_info,
-                    wallet_rpc_port=wallet_rpc.port,
-                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
-                ),
-                id=None,
-            ).run()
-            capsys.readouterr()
+        await ShowPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                client_info=client_info,
+                wallet_rpc_port=wallet_rpc.port,
+                fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
+            ),
+            id=None,
+        ).run()
+        out, _err = capsys.readouterr()
+        assert "Wallet height: 3\nSync status: Synced\n" == out
 
         with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
             await ShowPlotNFTCMD(
@@ -255,7 +253,7 @@ async def test_plotnft_cli_show(
             ).run()
             capsys.readouterr()
 
-        wallet_id = await create_new_plotnft(wallet_environments)
+        wallet_id = await create_new_plotnft(wallet_environments, 1)
 
         # need to capute the output and verify
         await ShowPlotNFTCMD(
@@ -269,7 +267,7 @@ async def test_plotnft_cli_show(
         out, _err = capsys.readouterr()
         assert "Current state: FARMING_TO_POOL" in out
 
-        # wallet_id = await create_new_plotnft(wallet_environments)
+        wallet_id = await create_new_plotnft(wallet_environments, 2)
 
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
@@ -281,5 +279,7 @@ async def test_plotnft_cli_show(
         ).run()
         out, _err = capsys.readouterr()
         assert "Current state: FARMING_TO_POOL" in out
+        assert "Wallet ID: 2" in out
+        assert "Wallet ID: 3" in out
 
         #  Need to run the farmer to make further tests
