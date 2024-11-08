@@ -10,7 +10,9 @@ from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
+from chia.util.ints import uint64
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution, PuzzleWithRestrictions
+from chia.wallet.puzzles.custody.restriction_puzzles.restrictions import Timelock
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -67,6 +69,69 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
             ),
         )
         result = await client.push_tx(wrapped_spend)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        # memo format assertion for coverage sake
+        assert restriction.memo(0) == Program.to([None])
+
+
+@pytest.mark.anyio
+async def test_timelock_wrapper(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        restriction = ValidatorStackRestriction([Timelock(uint64(100))])
+        pwr = PuzzleWithRestrictions(0, [restriction], ACSMember())
+
+        # Farm and find coin
+        await sim.farm_block(pwr.puzzle_hash())
+        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[0].coin
+
+        # Attempt to just use any old dpuz
+        any_old_dpuz = DelegatedPuzzleAndSolution(puzzle=Program.to((1, [[1, "foo"]])), solution=Program.to(None))
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(None)])
+        not_timelocked_attempt = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    pwr.puzzle_reveal(),
+                    pwr.solve(
+                        [], [Program.to([any_old_dpuz.puzzle.get_tree_hash()])], Program.to([[1, "bar"]]), any_old_dpuz
+                    ),
+                )
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(not_timelocked_attempt)
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+
+        # Now actually put a timelock in the dpuz
+        timelocked_dpuz = DelegatedPuzzleAndSolution(
+            puzzle=Program.to((1, [[80, 100], [1, "foo"]])), solution=Program.to(None)
+        )
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(timelocked_dpuz, [Program.to(None)])
+        sb = cost_logger.add_cost(
+            "Minimal puzzle with restrictions w/ timelock wrapper",
+            WalletSpendBundle(
+                [
+                    make_spend(
+                        coin,
+                        pwr.puzzle_reveal(),
+                        pwr.solve(
+                            [],
+                            [Program.to([timelocked_dpuz.puzzle.get_tree_hash()])],
+                            Program.to([[1, "bar"]]),
+                            wrapped_dpuz,
+                        ),
+                    )
+                ],
+                G2Element(),
+            ),
+        )
+        result = await client.push_tx(sb)
+        assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_SECONDS_RELATIVE_FAILED)
+
+        sim.pass_time(uint64(100))
+        await sim.farm_block()
+        result = await client.push_tx(sb)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # memo format assertion for coverage sake
