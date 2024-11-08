@@ -213,7 +213,9 @@ async def show(rpc_info: NeedsWalletRPC, wallet_id_passed_in: Optional[int]) -> 
         if wallet_id_passed_in is not None:
             await wallet_id_lookup_and_check(wallet_info.client, wallet_id_passed_in)
         try:
-            async with get_any_service_client(client_type=FarmerRpcClient, root_path=rpc_info.context.get("root_path")) as (farmer_client, _):
+            async with get_any_service_client(
+                client_type=FarmerRpcClient, root_path=rpc_info.context.get("root_path")
+            ) as (farmer_client, _):
                 pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
                 pool_state_dict = {
                     bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
