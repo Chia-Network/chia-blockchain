@@ -210,11 +210,11 @@ async def show(rpc_info: NeedsWalletRPC, wallet_id_passed_in: Optional[int]) -> 
         summaries_response = await wallet_info.client.get_wallets()
         config = wallet_info.config
         address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-        pool_state_dict = dict()
+        pool_state_dict: dict[bytes32, dict[str, Any]] = dict()
         try:
             async with get_any_service_client(FarmerRpcClient) as (farmer_client, _):
                 pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
-                pool_state_dict: dict[bytes32, dict[str, Any]] = {
+                pool_state_dict = {
                     bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
                     for pool_state_item in pool_state_list
                 }

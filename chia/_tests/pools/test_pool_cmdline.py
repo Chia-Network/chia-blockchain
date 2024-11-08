@@ -9,7 +9,7 @@ import pytest
 from click.testing import CliRunner
 
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
-from chia._tests.util.misc import Marks, boolean_datacases, datacases
+from chia._tests.util.misc import Marks, datacases
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
 from chia.cmds.plotnft import CreatePlotNFTCMD, ShowPlotNFTCMD
@@ -283,4 +283,3 @@ async def test_plotnft_cli_show(
         assert "Current state: FARMING_TO_POOL" in out
 
         #  Need to run the farmer to make further tests
-
