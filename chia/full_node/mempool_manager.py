@@ -34,7 +34,6 @@ from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint32, uint64
-from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
@@ -182,11 +181,7 @@ class MempoolManager:
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            self.pool = ThreadPoolExecutor(
-                max_workers=2,
-                initializer=setproctitle,
-                initargs=(f"{getproctitle()}_mempool_worker",),
-            )
+            self.pool = ThreadPoolExecutor(max_workers=2)
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecordProtocol] = None
