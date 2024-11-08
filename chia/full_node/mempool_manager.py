@@ -455,7 +455,7 @@ class MempoolManager:
             )
 
         if removal_names != removal_names_from_coin_spends:
-            # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
+            # If you reach here it's probably because your puzzle reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         removal_record_dict: dict[bytes32, CoinRecord] = {}
@@ -806,8 +806,13 @@ def can_replace(
         # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
         # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
         # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
-        for coin in item.removals:
-            if coin.name() not in removal_names:
+        conflicting_removals = {c.name(): c for c in item.removals}
+        for coin in conflicting_removals.values():
+            coin_name = coin.name()
+            # if the parent of this coin is one of the spends in this
+            # transaction, it means it's an ephemeral coin spend. Such spends
+            # are not considered by the superset rule
+            if coin_name not in removal_names and coin.parent_coin_info not in conflicting_removals:
                 log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
                 return False
 
