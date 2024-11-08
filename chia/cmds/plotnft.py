@@ -71,7 +71,7 @@ class CreatePlotNFTCMD:
         "--state",
         help="Initial state of Plot NFT: local or pool",
         required=True,
-        type=click.Choice(["local", "pool"]),
+        type=click.Choice(["local", "pool"], case_sensitive=False),
     )
     fee: uint64 = option(
         "-m",
@@ -87,10 +87,10 @@ class CreatePlotNFTCMD:
     async def run(self) -> None:
         from .plotnft_funcs import create
 
-        if self.pool_url is not None and self.state.lower() == "local":
+        if self.pool_url is not None and self.state == "local":
             raise CliRpcConnectionError(f"A pool url [{self.pool_url}] is not allowed with 'local' state")
 
-        if self.pool_url in [None, ""] and self.state.lower() == "pool":
+        if self.pool_url in [None, ""] and self.state == "pool":
             raise CliRpcConnectionError("A pool url argument (-u/--pool-url) is required with 'pool' state")
 
         await create(
