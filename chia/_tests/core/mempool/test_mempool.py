@@ -36,6 +36,7 @@ from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.wallet_protocol import TransactionAck
+from chia.server.api_protocol import ApiMetadata
 from chia.server.outbound_message import Message
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -59,7 +60,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.api_decorators import api_request
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -326,7 +326,12 @@ class TestMempool:
         assert spend_bundle is not None
 
 
-@api_request(peer_required=True, bytes_required=True)
+metadata = ApiMetadata()
+
+
+# this (method'ish) function is not designed per normal uses so allowing the ignore
+# for the different return type.  normal is Optional[Message]
+@metadata.request(peer_required=True, bytes_required=True)  # type: ignore[type-var]
 async def respond_transaction(
     self: FullNodeAPI,
     tx: full_node_protocol.RespondTransaction,
