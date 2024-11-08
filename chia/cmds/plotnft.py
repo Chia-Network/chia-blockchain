@@ -36,7 +36,7 @@ class ShowPlotNFTCMD:
     async def run(self) -> None:
         from .plotnft_funcs import show
 
-        await show(self.rpc_info.wallet_rpc_port, self.rpc_info.fingerprint, self.id)
+        await show(self.rpc_info, self.id)
 
 
 @chia_command(

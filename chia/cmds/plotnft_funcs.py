@@ -204,13 +204,15 @@ async def pprint_all_pool_wallet_state(
             print("")
 
 
-async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_passed_in: Optional[int]) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        await wallet_id_lookup_and_check(wallet_client, wallet_id_passed_in)
+async def show(rpc_info: NeedsWalletRPC, wallet_id_passed_in: Optional[int]) -> None:
+    async with rpc_info.wallet_rpc() as wallet_info:
+        await wallet_id_lookup_and_check(wallet_info.client, wallet_id_passed_in)
+        summaries_response = await wallet_info.client.get_wallets()
+        config = wallet_info.config
+        address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+        pool_state_dict = dict()
         try:
-            async with get_any_service_client(FarmerRpcClient) as (farmer_client, config):
-                address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-                summaries_response = await wallet_client.get_wallets()
+            async with get_any_service_client(FarmerRpcClient) as (farmer_client, _):
                 pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
                 pool_state_dict: dict[bytes32, dict[str, Any]] = {
                     bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
@@ -221,13 +223,13 @@ async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_pass
                         typ = WalletType(int(summary["type"]))
                         if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
                             print(
-                                f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet."
+                                f"Wallet with id: {wallet_id_passed_in} is not a pool wallet."
                                 " Please provide a different id."
                             )
                             return
-                    pool_wallet_info, _ = await wallet_client.pw_status(wallet_id_passed_in)
+                    pool_wallet_info, _ = await wallet_info.client.pw_status(wallet_id_passed_in)
                     await pprint_pool_wallet_state(
-                        wallet_client,
+                        wallet_info.client,
                         wallet_id_passed_in,
                         pool_wallet_info,
                         address_prefix,
@@ -235,10 +237,10 @@ async def show(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id_pass
                     )
                 else:
                     await pprint_all_pool_wallet_state(
-                        wallet_client, summaries_response, address_prefix, pool_state_dict
+                        wallet_info.client, summaries_response, address_prefix, pool_state_dict
                     )
         except CliRpcConnectionError:  # we want to output this if we can't connect to the farmer
-            await pprint_all_pool_wallet_state(wallet_client, summaries_response, address_prefix, pool_state_dict)
+            await pprint_all_pool_wallet_state(wallet_info.client, summaries_response, address_prefix, pool_state_dict)
 
 
 async def get_login_link(launcher_id: bytes32) -> None:
@@ -293,7 +295,7 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
             selected_wallet_id = wallet_id
 
         if not any(wallet["id"] == selected_wallet_id for wallet in pool_wallets):
-            raise CliRpcConnectionError(f"Wallet with id: {selected_wallet_id} is not a pooling wallet.")
+            raise CliRpcConnectionError(f"Wallet with id: {selected_wallet_id} is not a pool wallet.")
 
         return selected_wallet_id
     except ValueError as e:
