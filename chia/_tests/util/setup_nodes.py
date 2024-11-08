@@ -230,40 +230,6 @@ async def setup_simulators_and_wallets_service(
 
 
 @asynccontextmanager
-async def setup_cli_wallet_node_daemon(
-    consensus_constants: ConsensusConstants,
-) -> AsyncIterator[tuple[BlockTools, SimulatorFullNodeService, WalletService]]:
-    async with AsyncExitStack() as async_exit_stack:
-        with TempKeyring(populate=True, user="ci-user", service="chia-ci-testing") as keychain:
-            bt = await create_block_tools_async(constants=consensus_constants, keychain=keychain)
-
-            await async_exit_stack.enter_async_context(setup_daemon(btools=bt))
-
-            simulator: SimulatorFullNodeService = await async_exit_stack.enter_async_context(
-                # Passing simulator=True gets us this type guaranteed
-                setup_full_node(  # type: ignore[arg-type]
-                    consensus_constants=bt.constants,
-                    db_name="blockchain_test_0_sim_and_wallets.db",
-                    self_hostname=bt.config["self_hostname"],
-                    local_bt=bt,
-                    simulator=True,
-                    db_version=2,
-                )
-            )
-
-            wallet: WalletService = await async_exit_stack.enter_async_context(
-                setup_wallet_node(
-                    self_hostname=bt.config["self_hostname"],
-                    consensus_constants=bt.constants,
-                    local_bt=bt,
-                    key_seed=std_hash(uint32(0).stream_to_bytes()),
-                )
-            )
-
-            yield bt, simulator, wallet
-
-
-@asynccontextmanager
 async def setup_simulators_and_wallets_inner(
     db_version: int,
     consensus_constants: ConsensusConstants,
