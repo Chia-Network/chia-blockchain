@@ -164,8 +164,7 @@ class LeavePlotNFTCMD:
         from .plotnft_funcs import self_pool
 
         await self_pool(
-            wallet_rpc_port=self.rpc_info.wallet_rpc_port,
-            fingerprint=self.rpc_info.fingerprint,
+            rpc_info=self.rpc_info,
             fee=self.fee,
             wallet_id=self.id,
             prompt=not self.dont_prompt,

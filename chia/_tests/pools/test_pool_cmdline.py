@@ -12,7 +12,7 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.util.misc import Marks, datacases
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
-from chia.cmds.plotnft import CreatePlotNFTCMD, ShowPlotNFTCMD
+from chia.cmds.plotnft import CreatePlotNFTCMD, LeavePlotNFTCMD, ShowPlotNFTCMD
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.util.errors import CliRpcConnectionError
@@ -214,7 +214,6 @@ async def test_plotnft_cli_create_errors(
     ],
     indirect=True,
 )
-# @boolean_datacases(name="with_wallet_id", false="no_wallet_id", true="with_wallet_id")
 @pytest.mark.anyio
 async def test_plotnft_cli_show(
     wallet_environments: WalletTestFramework,
@@ -283,3 +282,87 @@ async def test_plotnft_cli_show(
         assert "Wallet ID: 3" in out
 
         #  Need to run the farmer to make further tests
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "trusted": True,
+            "reuse_puzhash": False,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_leave(
+    wallet_environments: WalletTestFramework,
+) -> None:
+    wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+    wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+    client_info: WalletClientInfo = WalletClientInfo(
+        wallet_rpc,
+        wallet_state_manager.root_pubkey.get_fingerprint(),
+        wallet_state_manager.config,
+    )
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
+            await LeavePlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    client_info=client_info,
+                    wallet_rpc_port=wallet_rpc.port,
+                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
+                ),
+                id=None,
+                dont_prompt=True,
+            ).run()
+
+        with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
+            await LeavePlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    client_info=client_info,
+                    wallet_rpc_port=wallet_rpc.port,
+                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
+                ),
+                id=15,
+                dont_prompt=True,
+            ).run()
+
+        wallet_id = await create_new_plotnft(wallet_environments, 1)
+
+        await LeavePlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                client_info=client_info,
+                wallet_rpc_port=wallet_rpc.port,
+                fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
+            ),
+            id=wallet_id,
+            dont_prompt=True,
+        ).run()
+
+        await wallet_environments.process_pending_states(
+            [
+                WalletStateTransition(
+                    pre_block_balance_updates={
+                        1: {
+                            "<=#spendable_balance": 1,
+                            "<=#max_send_amount": 1,
+                            "pending_coin_removal_count": 0,
+                        },
+                        2: {"pending_coin_removal_count": 1},
+                    },
+                    post_block_balance_updates={
+                        1: {
+                            "<=#pending_coin_removal_count": 1,
+                        },
+                        2: {"pending_coin_removal_count": -1},
+                    },
+                )
+            ]
+        )
+
+        await time_out_assert(10, verify_pool_state, True, wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)

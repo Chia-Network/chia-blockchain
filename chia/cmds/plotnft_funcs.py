@@ -357,14 +357,17 @@ async def join_pool(
         await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, selected_wallet_id)
 
 
-async def self_pool(
-    *, wallet_rpc_port: Optional[int], fingerprint: Optional[int], fee: uint64, wallet_id: Optional[int], prompt: bool
-) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
-        selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
-        msg = f"Will start self-farming with Plot NFT on wallet id {selected_wallet_id} fingerprint {fingerprint}."
-        func = functools.partial(wallet_client.pw_self_pool, selected_wallet_id, fee)
-        await submit_tx_with_confirmation(msg, prompt, func, wallet_client, fingerprint, selected_wallet_id)
+async def self_pool(*, rpc_info: NeedsWalletRPC, fee: uint64, wallet_id: Optional[int], prompt: bool) -> None:
+    async with rpc_info.wallet_rpc() as wallet_info:
+        selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
+        msg = (
+            "Will start self-farming with Plot NFT on wallet id "
+            f"{selected_wallet_id} fingerprint {wallet_info.fingerprint}."
+        )
+        func = functools.partial(wallet_info.client.pw_self_pool, selected_wallet_id, fee)
+        await submit_tx_with_confirmation(
+            msg, prompt, func, wallet_info.client, wallet_info.fingerprint, selected_wallet_id
+        )
 
 
 async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: Optional[int], wallet_id: Optional[int]) -> None:
