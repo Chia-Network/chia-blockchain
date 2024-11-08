@@ -95,16 +95,6 @@ jobs:
               matrix: arm
 
     steps:
-      - uses: chia-network/actions/clean-workspace@main
-
-      - name: Add safe git directory
-        uses: chia-network/actions/git-mark-workspace-safe@main
-
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
-
       - uses: chia-network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.major_dot_minor }}
