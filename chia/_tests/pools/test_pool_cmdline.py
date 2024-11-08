@@ -139,8 +139,6 @@ async def test_plotnft_cli_create(
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
                 context={"root_path": wallet_environments.environments[0].node.root_path},
-                wallet_rpc_port=wallet_rpc.port,
-                fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
             ),
             state=case.state,
             dont_prompt=True,
@@ -248,8 +246,6 @@ async def test_plotnft_cli_show(
             rpc_info=NeedsWalletRPC(
                 context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
-                wallet_rpc_port=wallet_rpc.port,
-                fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
             ),
             id=None,
         ).run()
@@ -261,8 +257,6 @@ async def test_plotnft_cli_show(
                 rpc_info=NeedsWalletRPC(
                     context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
-                    wallet_rpc_port=wallet_rpc.port,
-                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
                 ),
                 id=15,
             ).run()
@@ -275,8 +269,6 @@ async def test_plotnft_cli_show(
             rpc_info=NeedsWalletRPC(
                 context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
-                wallet_rpc_port=wallet_rpc.port,
-                fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
             ),
             id=wallet_id,
         ).run()
@@ -289,8 +281,6 @@ async def test_plotnft_cli_show(
             rpc_info=NeedsWalletRPC(
                 context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
-                wallet_rpc_port=wallet_rpc.port,
-                fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
             ),
             id=None,
         ).run()
@@ -333,8 +323,6 @@ async def test_plotnft_cli_leave(
                 rpc_info=NeedsWalletRPC(
                     context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
-                    wallet_rpc_port=wallet_rpc.port,
-                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
                 ),
                 id=None,
                 dont_prompt=True,
@@ -345,8 +333,6 @@ async def test_plotnft_cli_leave(
                 rpc_info=NeedsWalletRPC(
                     context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
-                    wallet_rpc_port=wallet_rpc.port,
-                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
                 ),
                 id=15,
                 dont_prompt=True,
@@ -358,8 +344,6 @@ async def test_plotnft_cli_leave(
             rpc_info=NeedsWalletRPC(
                 context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
-                wallet_rpc_port=wallet_rpc.port,
-                fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
             ),
             id=wallet_id,
             dont_prompt=True,
@@ -427,8 +411,6 @@ async def test_plotnft_cli_join(
                 rpc_info=NeedsWalletRPC(
                     context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
-                    wallet_rpc_port=wallet_rpc.port,
-                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
                 ),
                 pool_url="http://127.0.0.1",
                 id=None,
@@ -441,8 +423,6 @@ async def test_plotnft_cli_join(
                 rpc_info=NeedsWalletRPC(
                     context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
-                    wallet_rpc_port=wallet_rpc.port,
-                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
                 ),
                 pool_url="http://127.0.0.1",
                 id=1,
@@ -458,8 +438,6 @@ async def test_plotnft_cli_join(
                 rpc_info=NeedsWalletRPC(
                     context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
-                    wallet_rpc_port=wallet_rpc.port,
-                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
                 ),
                 id=wallet_id,
                 pool_url="http://127.0.0.1",
@@ -470,8 +448,6 @@ async def test_plotnft_cli_join(
                 rpc_info=NeedsWalletRPC(
                     context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
-                    wallet_rpc_port=wallet_rpc.port,
-                    fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
                 ),
                 id=wallet_id,
                 pool_url="",
@@ -502,8 +478,6 @@ async def test_plotnft_cli_join(
             rpc_info=NeedsWalletRPC(
                 context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
-                wallet_rpc_port=wallet_rpc.port,
-                fingerprint=wallet_state_manager.root_pubkey.get_fingerprint(),
             ),
             id=wallet_id,
             pool_url="http://127.0.0.1",
