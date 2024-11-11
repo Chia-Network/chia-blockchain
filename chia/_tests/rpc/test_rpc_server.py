@@ -20,7 +20,7 @@ from chia.util.ws_message import WsRpcMessage
 
 root_logger = logging.getLogger()
 
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11):  # pragma: no cover
     name_to_number_level_map = logging.getLevelNamesMapping()
 else:
     name_to_number_level_map = logging._nameToLevel
@@ -43,7 +43,8 @@ class TestRpcApi:
     service_name: str = service_name
 
     async def _state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> list[WsRpcMessage]:
-        return []
+        # just here to satisfy the complete protocol
+        return []  # pragma: no cover
 
     def get_routes(self) -> dict[str, Endpoint]:
         return {
