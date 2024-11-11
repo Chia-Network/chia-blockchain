@@ -339,7 +339,8 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
 
     async def get_log_level(self, request: dict[str, Any]) -> EndpointResult:
         logger = logging.getLogger()
-        level_number = logger.getEffectiveLevel()
+        level_number = logger.level
+        # level_number = logger.getEffectiveLevel()
         level_name = logging.getLevelName(level_number)
 
         if sys.version_info >= (3, 11):
@@ -349,17 +350,17 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
 
         return {
             "success": True,
-            "level_name": level_name,
+            "level": level_name,
             "available_levels": list(map),
         }
 
     async def reset_log_level(self, request: dict[str, Any]) -> EndpointResult:
         level_name = self.service_config.get("log_level", default_log_level)
 
-        return await self.set_log_level(request={"level_name": level_name})
+        return await self.set_log_level(request={"level": level_name})
 
     async def set_log_level(self, request: dict[str, Any]) -> EndpointResult:
-        error_strings = set_log_level(log_level=request["level_name"], service_name=self.service_name)
+        error_strings = set_log_level(log_level=request["level"], service_name=self.service_name)
         status = await self.get_log_level(request={})
 
         status["success"] &= len(error_strings) == 0
