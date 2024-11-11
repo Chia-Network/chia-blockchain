@@ -333,7 +333,6 @@ async def test_long_sync_wallet(
     # Untrusted node sync
     wallets[1][0].config["trusted_peers"] = {}
     wallets[1][0].config["use_delta_sync"] = use_delta_sync
-
     await add_blocks_in_batches(default_400_blocks, full_node)
 
     for wallet_node, wallet_server in wallets:
@@ -345,11 +344,11 @@ async def test_long_sync_wallet(
     # Tests a long reorg
     await add_blocks_in_batches(default_1000_blocks, full_node)
 
+    # ony the wallet with untrusted sync needs to reconnect
+    await disconnect_all_and_reconnect(wallets[1][1], full_node_server, self_hostname)
     for wallet_node, wallet_server in wallets:
-        await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
-
         log.info(f"wallet node height is {await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()}")
-        await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
+        await time_out_assert(200, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
 
     # Tests a short reorg
     num_blocks = 30
