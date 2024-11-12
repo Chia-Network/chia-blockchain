@@ -55,7 +55,7 @@ class DaemonProxy:
                 if not wait_for_start:
                     break
                 await asyncio.sleep(connect_backoff)
-                connect_backoff = connect_backoff * 2
+                connect_backoff *= 2
 
         if self.websocket is None or self.websocket.closed:
             await self.close()
