@@ -9,7 +9,8 @@ from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Callable, Generic, Optional, TypeVar
+from types import MethodType
+from typing import Any, Callable, ClassVar, Generic, Optional, TypeVar
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol, final
@@ -237,14 +238,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     def _get_routes(self) -> dict[str, Endpoint]:
         return {
             **self.rpc_api.get_routes(),
-            "/get_network_info": self.get_network_info,
-            "/get_connections": self.get_connections,
-            "/open_connection": self.open_connection,
-            "/close_connection": self.close_connection,
-            "/stop_node": self.stop_node,
-            "/get_routes": self.get_routes,
-            "/get_version": self.get_version,
-            "/healthz": self.healthz,
+            **{path: MethodType(handler, self) for path, handler in self._routes.items()},
         }
 
     async def get_routes(self, request: dict[str, Any]) -> EndpointResult:
@@ -409,6 +403,17 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                 await asyncio.sleep(2)
 
         self.daemon_connection_task = asyncio.create_task(inner())
+
+    _routes: ClassVar[dict[str, Callable[..., Awaitable[object]]]] = {
+        "/get_network_info": get_network_info,
+        "/get_connections": get_connections,
+        "/open_connection": open_connection,
+        "/close_connection": close_connection,
+        "/stop_node": stop_node,
+        "/get_routes": get_routes,
+        "/get_version": get_version,
+        "/healthz": healthz,
+    }
 
 
 async def start_rpc_server(

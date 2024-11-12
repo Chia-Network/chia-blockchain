@@ -137,6 +137,15 @@ class RpcClient:
     async def healthz(self) -> dict:
         return await self.fetch("healthz", {})
 
+    async def get_network_info(self) -> dict:
+        return await self.fetch("get_network_info", {})
+
+    async def get_routes(self) -> dict:
+        return await self.fetch("get_routes", {})
+
+    async def get_version(self) -> dict:
+        return await self.fetch("get_version", {})
+
     def close(self) -> None:
         self.closing_task = asyncio.create_task(self.session.close())
 
