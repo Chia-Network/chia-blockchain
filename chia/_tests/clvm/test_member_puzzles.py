@@ -232,7 +232,7 @@ async def test_secp256r1_member(cost_logger: CostLogger) -> None:
 
         # Get signature for AGG_SIG_ME
         coin_id = coin.name()
-        signature_message = delegated_puzzle_hash + coin_id
+        signature_message = Program.to((delegated_puzzle_hash, coin_id)).get_tree_hash()
         der_sig = secp_sk.sign(
             signature_message,
             # The type stubs are weird here, `deterministic_signing` is assuredly an argument

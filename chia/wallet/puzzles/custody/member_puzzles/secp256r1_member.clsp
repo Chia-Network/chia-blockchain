@@ -5,7 +5,7 @@
   (include condition_codes.clib)
   (include curry-and-treehash.clib)
 
-  (if (secp256k1_verify SECP_PK (sha256tree (list Delegated_Puzzle_Hash my_id)) signature)
+  (if (secp256k1_verify SECP_PK (sha256tree (c Delegated_Puzzle_Hash my_id)) signature)
     (list (list ASSERT_MY_COIN_ID my_id))
     (x)
   )

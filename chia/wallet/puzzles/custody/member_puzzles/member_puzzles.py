@@ -39,7 +39,7 @@ class SECPR1Member(Puzzle):
         return Program.to(0)
 
     def puzzle(self, nonce: int) -> Program:
-        return SECPR1_MEMBER_MOD.curry(bytes(self.secp_pk))
+        return SECPR1_MEMBER_MOD.curry(self.secp_pk)
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
