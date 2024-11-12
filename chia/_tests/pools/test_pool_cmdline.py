@@ -37,8 +37,8 @@ async def verify_pool_state(wallet_rpc: WalletRpcClient, w_id: int, expected_sta
     return pw_status.current.state == expected_state.value
 
 
-async def process_plotnft_create(
-    wallet_test_framework: WalletTestFramework, expected_state: PoolSingletonState, num_pool_wallets: int
+async def process_first_plotnft_create(
+    wallet_test_framework: WalletTestFramework, expected_state: PoolSingletonState
 ) -> int:
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
 
@@ -64,14 +64,62 @@ async def process_plotnft_create(
                         "<=#pending_change": 1,  # any amount decrease
                         "<=#pending_coin_removal_count": 1,
                     },
-                    num_pool_wallets + 1: {"init": True, "unspent_coin_count": 1},
+                    2: {"init": True, "unspent_coin_count": 1},
                 },
             )
         ]
     )
 
     summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-    assert len(summaries_response) == num_pool_wallets
+    assert len(summaries_response) == 1
+    wallet_id: int = summaries_response[-1]["id"]
+
+    await verify_pool_state(wallet_rpc, wallet_id, expected_state=expected_state)
+    return wallet_id
+
+
+async def process_second_plotnft_create(
+    wallet_test_framework: WalletTestFramework,
+    expected_state: PoolSingletonState,
+) -> int:
+    wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
+
+    await wallet_test_framework.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": 0,
+                        "unconfirmed_wallet_balance": -1,
+                        "<=#spendable_balance": 1,
+                        "<=#max_send_amount": 1,
+                        ">=#pending_change": 1,  # any amount increase
+                        "pending_coin_removal_count": 1,
+                    },
+                    2: {
+                        "set_remainder": True,
+                    },
+                },
+                post_block_balance_updates={
+                    1: {
+                        "confirmed_wallet_balance": -1,
+                        "unconfirmed_wallet_balance": 0,
+                        ">=#spendable_balance": 1,
+                        ">=#max_send_amount": 1,
+                        "<=#pending_change": 1,  # any amount decrease
+                        "<=#pending_coin_removal_count": 1,
+                    },
+                    2: {
+                        "set_remainder": True,
+                    },
+                    3: {"init": True, "unspent_coin_count": 1},
+                },
+            )
+        ]
+    )
+
+    summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
+    assert len(summaries_response) == 2
     wallet_id: int = summaries_response[-1]["id"]
 
     await verify_pool_state(wallet_rpc, wallet_id, expected_state=expected_state)
@@ -79,14 +127,14 @@ async def process_plotnft_create(
 
 
 async def create_new_plotnft(
-    wallet_test_framework: WalletTestFramework, num_pool_wallets: int, self: bool = False
+    wallet_test_framework: WalletTestFramework, self_pool: bool = False, second_nft: bool = False
 ) -> int:
     wallet_state_manager: WalletStateManager = wallet_test_framework.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
 
     our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
 
-    if self:
+    if self_pool:
         await wallet_rpc.create_new_pool_wallet(
             target_puzzlehash=our_ph,
             pool_url="",
@@ -95,11 +143,6 @@ async def create_new_plotnft(
             mode="new",
             state="SELF_POOLING",
             fee=uint64(0),
-        )
-        return await process_plotnft_create(
-            wallet_test_framework=wallet_test_framework,
-            expected_state=PoolSingletonState.SELF_POOLING,
-            num_pool_wallets=num_pool_wallets,
         )
     else:
         await wallet_rpc.create_new_pool_wallet(
@@ -112,10 +155,15 @@ async def create_new_plotnft(
             fee=uint64(0),
         )
 
-        return await process_plotnft_create(
+    if second_nft:
+        return await process_second_plotnft_create(
             wallet_test_framework=wallet_test_framework,
-            expected_state=PoolSingletonState.FARMING_TO_POOL,
-            num_pool_wallets=num_pool_wallets,
+            expected_state=PoolSingletonState.SELF_POOLING if self_pool else PoolSingletonState.FARMING_TO_POOL,
+        )
+    else:
+        return await process_first_plotnft_create(
+            wallet_test_framework=wallet_test_framework,
+            expected_state=PoolSingletonState.SELF_POOLING if self_pool else PoolSingletonState.FARMING_TO_POOL,
         )
 
 
@@ -281,7 +329,7 @@ async def test_plotnft_cli_show(
             ).run()
             capsys.readouterr()
 
-        wallet_id = await create_new_plotnft(wallet_environments, 1)
+        wallet_id = await create_new_plotnft(wallet_environments)
 
         # need to capute the output and verify
         await ShowPlotNFTCMD(
@@ -294,7 +342,7 @@ async def test_plotnft_cli_show(
         out, _err = capsys.readouterr()
         assert "Current state: FARMING_TO_POOL" in out
 
-        wallet_id = await create_new_plotnft(wallet_environments, 2)
+        wallet_id = await create_new_plotnft(wallet_environments, self_pool=False, second_nft=True)
 
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
@@ -357,7 +405,7 @@ async def test_plotnft_cli_leave(
                 dont_prompt=True,
             ).run()
 
-        wallet_id = await create_new_plotnft(wallet_environments, 1)
+        wallet_id = await create_new_plotnft(wallet_environments)
 
         await LeavePlotNFTCMD(
             rpc_info=NeedsWalletRPC(
@@ -449,7 +497,7 @@ async def test_plotnft_cli_join(
             ).run()
 
         # Create a farming plotnft to url http://pool.example.com
-        wallet_id = await create_new_plotnft(wallet_environments, 1)
+        wallet_id = await create_new_plotnft(wallet_environments)
 
         # Some more error cases
         with pytest.raises(CliRpcConnectionError, match="Error connecting to pool"):
@@ -513,7 +561,7 @@ async def test_plotnft_cli_join(
         )
 
         # Create a second farming plotnft to url http://pool.example.com
-        wallet_id = await create_new_plotnft(wallet_environments, 2)
+        wallet_id = await create_new_plotnft(wallet_environments, self_pool=False, second_nft=True)
 
         # Join the new pool - this will leave the prior pool and join the new one
         # Will fail because we don't specify a wallet ID and there are multiple pool wallets
@@ -603,8 +651,8 @@ async def test_plotnft_cli_claim(
                 id=1,
             ).run()
 
-        # Create a farming plotnft to url http://pool.example.com
-        wallet_id = await create_new_plotnft(wallet_environments, 1, self=True)
+        # Create a self-pooling plotnft
+        wallet_id = await create_new_plotnft(wallet_environments, self_pool=True)
 
         status: PoolWalletInfo = (await wallet_rpc.pw_status(wallet_id))[0]
         our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
