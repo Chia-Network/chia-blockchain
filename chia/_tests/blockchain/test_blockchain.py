@@ -173,9 +173,9 @@ class TestBlockHeaderValidation:
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-                vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+                expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, vs
+                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_NEW_SUB_SLOT_ITERS
@@ -196,9 +196,9 @@ class TestBlockHeaderValidation:
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-                vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+                expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad_2, False, vs
+                    empty_blockchain.constants, empty_blockchain, header_block_bad_2, False, expected_vs
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_NEW_DIFFICULTY
@@ -226,9 +226,9 @@ class TestBlockHeaderValidation:
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-                vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+                expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad_3, False, vs
+                    empty_blockchain.constants, empty_blockchain, header_block_bad_3, False, expected_vs
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
@@ -255,9 +255,9 @@ class TestBlockHeaderValidation:
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-                vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+                expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad_4, False, vs
+                    empty_blockchain.constants, empty_blockchain, header_block_bad_4, False, expected_vs
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY
@@ -508,11 +508,11 @@ class TestBlockHeaderValidation:
         )
 
         header_block_bad = get_block_header(block_0_bad, [], [])
-        vs = ValidationState(
+        expected_vs = ValidationState(
             empty_blockchain.constants.SUB_SLOT_ITERS_STARTING, empty_blockchain.constants.DIFFICULTY_STARTING, None
         )
         _, error = validate_finished_header_block(
-            empty_blockchain.constants, empty_blockchain, header_block_bad, False, vs
+            empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
         )
 
         assert error is not None
@@ -540,9 +540,9 @@ class TestBlockHeaderValidation:
         # TODO: Inspect these block values as they are currently None
         expected_difficulty = blocks[1].finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
         expected_sub_slot_iters = blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-        vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+        expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
         _, error = validate_finished_header_block(
-            empty_blockchain.constants, empty_blockchain, header_block_bad, False, vs
+            empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
         )
         assert error is not None
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
@@ -567,9 +567,9 @@ class TestBlockHeaderValidation:
         # TODO: Inspect these block values as they are currently None
         expected_difficulty = blocks[1].finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
         expected_sub_slot_iters = blocks[1].finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-        vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+        expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
         _, error = validate_finished_header_block(
-            empty_blockchain.constants, empty_blockchain, header_block_bad, False, vs
+            empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
         )
         assert error is not None
         assert error.code == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
@@ -722,9 +722,9 @@ class TestBlockHeaderValidation:
                 # TODO: Inspect these block values as they are currently None
                 expected_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty or uint64(0)
                 expected_sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters or uint64(0)
-                vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
+                expected_vs = ValidationState(expected_sub_slot_iters, expected_difficulty, None)
                 _, error = validate_finished_header_block(
-                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, vs
+                    empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
                 )
                 assert error is not None
                 assert error.code == Err.INVALID_ICC_HASH_CC
@@ -790,11 +790,11 @@ class TestBlockHeaderValidation:
         )
 
         header_block_bad = get_block_header(block_bad, [], [])
-        vs = ValidationState(
+        expected_vs = ValidationState(
             empty_blockchain.constants.SUB_SLOT_ITERS_STARTING, empty_blockchain.constants.DIFFICULTY_STARTING, None
         )
         _, error = validate_finished_header_block(
-            empty_blockchain.constants, empty_blockchain, header_block_bad, False, vs
+            empty_blockchain.constants, empty_blockchain, header_block_bad, False, expected_vs
         )
         assert error is not None
         assert error.code == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
