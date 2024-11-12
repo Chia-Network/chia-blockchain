@@ -413,7 +413,7 @@ async def validate_block_body(
                 return Err.DOUBLE_SPEND, None
             removal_coin_records[unspent.name] = unspent
         else:
-            log.error(f"look_in_fork {unspent.name} unspent.confirmed_block_index > fork_info.fork_height")
+            log.error(f"look_in_fork {unspent.name} {unspent.confirmed_block_index} > {fork_info.fork_height}")
             look_in_fork.append(unspent.name)
 
     if len(unspent_records) != len(removals_from_db):
@@ -424,7 +424,7 @@ async def validate_block_body(
             if rem in found:
                 continue
             log.error(
-                f"look_in_fork {rem} len(unspent_records) != len(removals_from_db) and rem not in removals_from_db"
+                f"look_in_fork {rem} {len(unspent_records)} != {len(removals_from_db)} and rem not in removals_from_db"
             )
             look_in_fork.append(rem)
 
