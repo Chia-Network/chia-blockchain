@@ -508,6 +508,9 @@ async def test_plotnft_cli_join(
         await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
         await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
         await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
+        await wallet_environments.full_node.wait_for_wallet_synced(
+            wallet_node=wallet_environments.environments[0].node, timeout=20
+        )
 
         # Create a second farming plotnft to url http://pool.example.com
         wallet_id = await create_new_plotnft(wallet_environments, 2)
@@ -620,6 +623,9 @@ async def test_plotnft_cli_claim(
             for block in blocks[-3:]:
                 await wallet_environments.full_node.full_node.add_block(block)
 
+        await wallet_environments.full_node.wait_for_wallet_synced(
+            wallet_node=wallet_environments.environments[0].node, timeout=20
+        )
         await ClaimPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
