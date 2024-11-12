@@ -49,7 +49,7 @@ class UnfinishedBlockEntry:
 
 
 def find_best_block(
-    result: dict[Optional[bytes32], UnfinishedBlockEntry]
+    result: dict[Optional[bytes32], UnfinishedBlockEntry],
 ) -> tuple[Optional[bytes32], Optional[UnfinishedBlock]]:
     """
     Given a collection of UnfinishedBlocks (all with the same reward block

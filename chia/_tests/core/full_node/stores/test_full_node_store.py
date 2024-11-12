@@ -95,9 +95,7 @@ async def test_unfinished_block_rank(
     # shuffle them to ensure the order we add them to the store isn't relevant
     seeded_random.shuffle(unfinished)
     for new_unf in unfinished:
-        store.add_unfinished_block(
-            uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, False, uint32(0))
-        )
+        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, uint32(0)))
 
     # now ask for "the" unfinished block given the proof-of-space.
     # the FullNodeStore should return the one with the lowest foliage tx block
@@ -221,7 +219,7 @@ async def test_basic_store(
         assert store.get_unfinished_block(unf_block.partial_hash) is None
         assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0, False)
         store.add_unfinished_block(
-            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, False, uint32(0))
+            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, uint32(0))
         )
         assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
         assert store.get_unfinished_block2(
@@ -277,9 +275,7 @@ async def test_basic_store(
     assert unf3.foliage.foliage_transaction_block_hash is None
     assert unf4.foliage.foliage_transaction_block_hash is None
     for val, unf_block in enumerate([unf1, unf2, unf3, unf4]):
-        store.add_unfinished_block(
-            uint32(height), unf_block, PreValidationResult(None, uint64(val), None, False, uint32(0))
-        )
+        store.add_unfinished_block(uint32(height), unf_block, PreValidationResult(None, uint64(val), None, uint32(0)))
 
     # when not specifying a foliage hash, you get the "best" one
     # best is defined as the lowest foliage hash
@@ -481,7 +477,6 @@ async def test_basic_store(
 
     fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     for block in blocks_reorg:
-
         peak = blockchain.get_peak()
         assert peak is not None
 

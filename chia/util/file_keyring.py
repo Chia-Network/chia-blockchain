@@ -406,7 +406,7 @@ class FileKeyring(FileSystemEventHandler):
             return False
 
     def load_keyring(self, passphrase: Optional[str] = None) -> None:
-        from chia.cmds.passphrase_funcs import obtain_current_passphrase
+        from chia.util.keyring_wrapper import obtain_current_passphrase
 
         with self.load_keyring_lock:
             self.needs_load_keyring = False
@@ -425,8 +425,7 @@ class FileKeyring(FileSystemEventHandler):
         )
 
     def write_keyring(self, fresh_salt: bool = False) -> None:
-        from chia.cmds.passphrase_funcs import obtain_current_passphrase
-        from chia.util.keyring_wrapper import KeyringWrapper
+        from chia.util.keyring_wrapper import KeyringWrapper, obtain_current_passphrase
 
         # Merge in other properties like "passphrase_hint"
         if "passphrase_hint" in self.file_content_properties_for_next_write:

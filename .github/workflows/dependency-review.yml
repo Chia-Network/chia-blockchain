@@ -21,5 +21,5 @@ jobs:
       - name: "Dependency Review"
         uses: actions/dependency-review-action@v4
         with:
-          allow-dependencies-licenses: pkg:pypi/pylint, pkg:pypi/pyinstaller
+          allow-dependencies-licenses: pkg:pypi/pyinstaller
           deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-1.0-or-later, AGPL-3.0-or-later, GPL-1.0-only, GPL-1.0-or-later, GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later

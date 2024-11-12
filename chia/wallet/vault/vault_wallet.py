@@ -328,9 +328,9 @@ class Vault(Wallet):
         if new:
             return self.get_p2_singleton_puzzle_hash()
         else:
-            record: Optional[DerivationRecord] = (
-                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            )
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
             if record is None:
                 return self.get_p2_singleton_puzzle_hash()
             return record.puzzle_hash
@@ -430,9 +430,9 @@ class Vault(Wallet):
         if new:
             return await self.get_new_puzzle()
         else:
-            record: Optional[DerivationRecord] = (
-                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            )
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
             if record is None:
                 return await self.get_new_puzzle()
             assert isinstance(record._pubkey, bytes)
@@ -450,9 +450,9 @@ class Vault(Wallet):
         return False
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
-        wallet_identifier: Optional[WalletIdentifier] = (
-            await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(hint)
-        )
+        wallet_identifier: Optional[
+            WalletIdentifier
+        ] = await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(hint)
         if wallet_identifier:
             return True
         return False

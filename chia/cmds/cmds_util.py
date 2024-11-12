@@ -364,7 +364,6 @@ def write_transactions_to_file(txs: list[TransactionRecord], transaction_file: s
 def tx_out_cmd(
     enable_timelock_args: Optional[bool] = None,
 ) -> Callable[[Callable[..., list[TransactionRecord]]], Callable[..., None]]:
-
     def _tx_out_cmd(func: Callable[..., list[TransactionRecord]]) -> Callable[..., None]:
         @timelock_args(enable=enable_timelock_args)
         def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:

@@ -1071,7 +1071,6 @@ async def transfer_did(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             target_address = target_cli_address.original_address

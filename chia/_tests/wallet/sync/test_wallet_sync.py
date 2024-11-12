@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import functools
 import logging
 from collections.abc import Awaitable
@@ -15,7 +16,7 @@ from colorlog import getLogger
 
 from chia._tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from chia._tests.util.blockchain_mock import BlockchainMock
-from chia._tests.util.misc import wallet_height_at_least
+from chia._tests.util.misc import patch_request_handler, wallet_height_at_least
 from chia._tests.util.setup_nodes import OldSimulatorsAndWallets
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia._tests.weight_proof.test_weight_proof import load_blocks_dont_validate
@@ -24,6 +25,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -1281,10 +1283,10 @@ async def test_retry_store(
     request_puzzle_solution_failure_tested = False
 
     def flaky_request_puzzle_solution(
-        func: Callable[[wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]]
-    ) -> Callable[[wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]]:
+        func: Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]],
+    ) -> Callable[[FullNodeAPI, wallet_protocol.RequestPuzzleSolution], Awaitable[Optional[Message]]]:
         @functools.wraps(func)
-        async def new_func(request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
+        async def new_func(self: FullNodeAPI, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
             nonlocal request_puzzle_solution_failure_tested
             if not request_puzzle_solution_failure_tested:
                 request_puzzle_solution_failure_tested = True
@@ -1292,7 +1294,7 @@ async def test_retry_store(
                 reject = wallet_protocol.RejectPuzzleSolution(bytes32.zeros, uint32(0))
                 return make_msg(ProtocolMessageTypes.reject_puzzle_solution, reject)
             else:
-                return await func(request)
+                return await func(self, request)
 
         return new_func
 
@@ -1335,12 +1337,15 @@ async def test_retry_store(
 
         return new_func
 
-    with monkeypatch.context() as m:
-        m.setattr(
-            full_node_api,
-            "request_puzzle_solution",
-            flaky_request_puzzle_solution(full_node_api.request_puzzle_solution),
+    with contextlib.ExitStack() as exit_stack:
+        exit_stack.enter_context(
+            patch_request_handler(
+                api=full_node_api,
+                handler=flaky_request_puzzle_solution(FullNodeAPI.request_puzzle_solution),
+                request_type=ProtocolMessageTypes.request_puzzle_solution,
+            )
         )
+        m = exit_stack.enter_context(monkeypatch.context())
 
         for wallet_node, wallet_server in wallets:
             wallet_node.coin_state_retry_seconds = 1
@@ -1471,7 +1476,6 @@ async def test_long_sync_untrusted_break(
     default_400_blocks: list[FullBlock],
     self_hostname: str,
     caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
     use_delta_sync: bool,
 ) -> None:
     [trusted_full_node_api, untrusted_full_node_api], [(wallet_node, wallet_server)], _ = setup_two_nodes_and_wallet
@@ -1482,7 +1486,11 @@ async def test_long_sync_untrusted_break(
 
     sync_canceled = False
 
-    async def register_interest_in_puzzle_hash() -> None:
+    async def register_interest_in_puzzle_hash(
+        self: object,
+        request: wallet_protocol.RegisterForPhUpdates,
+        peer: WSChiaConnection,
+    ) -> None:
         nonlocal sync_canceled
         # Just sleep a long time here to simulate a long-running untrusted sync
         try:
@@ -1509,13 +1517,7 @@ async def test_long_sync_untrusted_break(
 
     await add_blocks_in_batches(default_1000_blocks[:400], untrusted_full_node_api.full_node)
 
-    with monkeypatch.context() as m:
-        m.setattr(
-            untrusted_full_node_api,
-            "register_interest_in_puzzle_hash",
-            MagicMock(return_value=register_interest_in_puzzle_hash()),
-        )
-
+    with patch_request_handler(api=untrusted_full_node_api, handler=register_interest_in_puzzle_hash):
         # Connect to the untrusted peer and wait until the long sync started
         await wallet_server.start_client(PeerInfo(self_hostname, untrusted_full_node_server.get_port()), None)
         await time_out_assert(30, wallet_syncing)
