@@ -716,7 +716,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             62,
                             (
                                 cr_1.expected_announcement()
-                                if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
+                                if error not in {"use_malicious_cats", "attempt_honest_cat_piggyback"}
                                 else malicious_cr_1.expected_announcement()
                             ),
                         ],
@@ -724,7 +724,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             62,
                             (
                                 cr_2.expected_announcement()
-                                if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
+                                if error not in {"use_malicious_cats", "attempt_honest_cat_piggyback"}
                                 else malicious_cr_2.expected_announcement()
                             ),
                         ],
@@ -755,7 +755,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 else:
                     vc = new_vc
                 await sim.farm_block()
-            elif error in ["forget_vc", "use_malicious_cats", "attempt_honest_cat_piggyback"]:
+            elif error in {"forget_vc", "use_malicious_cats", "attempt_honest_cat_piggyback"}:
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
             elif error == "make_banned_announcement":
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)

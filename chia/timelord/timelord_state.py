@@ -121,7 +121,7 @@ class LastState:
         if overflow and self.new_epoch:
             # No overflows in new epoch
             return False
-        if self.state_type == StateType.FIRST_SUB_SLOT or self.state_type == StateType.END_OF_SUB_SLOT:
+        if self.state_type in {StateType.FIRST_SUB_SLOT, StateType.END_OF_SUB_SLOT}:
             return True
         ss_start_iters = self.get_total_iters() - self.get_last_ip()
         already_infused_count: int = 0
@@ -160,7 +160,7 @@ class LastState:
         return self.state_type == StateType.END_OF_SUB_SLOT and self.infused_ses
 
     def get_next_sub_epoch_summary(self) -> Optional[SubEpochSummary]:
-        if self.state_type == StateType.FIRST_SUB_SLOT or self.state_type == StateType.END_OF_SUB_SLOT:
+        if self.state_type in {StateType.FIRST_SUB_SLOT, StateType.END_OF_SUB_SLOT}:
             # Can only infuse SES after a peak (in an end of sub slot)
             return None
         assert self.peak is not None
@@ -233,7 +233,7 @@ class LastState:
                 else:
                     return None
         elif self.state_type == StateType.END_OF_SUB_SLOT:
-            if chain == Chain.CHALLENGE_CHAIN or chain == Chain.REWARD_CHAIN:
+            if chain in {Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN}:
                 return ClassgroupElement.get_default_element()
             if chain == Chain.INFUSED_CHALLENGE_CHAIN:
                 assert self.subslot_end is not None

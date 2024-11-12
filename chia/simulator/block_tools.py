@@ -1908,7 +1908,7 @@ def conditions_cost(conds: Program) -> uint64:
         elif condition == ConditionOpcode.SOFTFORK.value:
             arg = cond.rest().first().as_int()
             condition_cost += arg * 10000
-        elif condition in [
+        elif condition in {
             ConditionOpcode.AGG_SIG_UNSAFE,
             ConditionOpcode.AGG_SIG_ME,
             ConditionOpcode.AGG_SIG_PARENT,
@@ -1917,7 +1917,7 @@ def conditions_cost(conds: Program) -> uint64:
             ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
             ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
             ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-        ]:
+        }:
             condition_cost += ConditionCost.AGG_SIG.value
     return uint64(condition_cost)
 

@@ -344,7 +344,7 @@ class FeeStat:  # TxConfirmStats
             tx_sum += self.tx_ct_avg[i]
 
         if found_answer and tx_sum != 0:
-            tx_sum = tx_sum / 2
+            tx_sum /= 2
             for i in range(min_bucket, max_bucket):
                 if self.tx_ct_avg[i] < tx_sum:
                     tx_sum -= self.tx_ct_avg[i]
@@ -406,7 +406,7 @@ def init_buckets() -> list[float]:
     buckets: list[float] = []
     while fee_rate < MAX_FEE_RATE:
         buckets.append(fee_rate)
-        fee_rate = fee_rate * STEP_SIZE
+        fee_rate *= STEP_SIZE
 
     buckets.append(INFINITE_FEE_RATE)
     return buckets

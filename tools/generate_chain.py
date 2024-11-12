@@ -112,7 +112,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
 
             for b in blocks:
                 for coin in b.get_included_reward_coins():
-                    if coin.puzzle_hash in [farmer_puzzlehash, pool_puzzlehash]:
+                    if coin.puzzle_hash in {farmer_puzzlehash, pool_puzzlehash}:
                         unspent_coins.append(coin)
                 db.execute(
                     "INSERT INTO full_blocks VALUES(?, ?, ?, ?, ?)",

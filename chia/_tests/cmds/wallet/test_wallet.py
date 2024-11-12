@@ -558,7 +558,6 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: tuple[TestRpcC
     class UnconfirmedTxRpcClient(TestWalletRpcClient):
         async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
             self.add_to_log("delete_unconfirmed_transactions", (wallet_id,))
-            return None
 
     inst_rpc_client = UnconfirmedTxRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -655,7 +654,6 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
 
         async def set_cat_name(self, wallet_id: int, name: str) -> None:
             self.add_to_log("set_cat_name", (wallet_id, name))
-            return None  # we don't need to do anything here
 
     inst_rpc_client = AddTokenRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client

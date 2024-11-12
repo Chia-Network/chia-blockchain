@@ -49,7 +49,7 @@ chiapos = "2.0.7"  # proof of space
 chia_rs = "0.15.0"
 chiavdf = "1.1.8"  # timelord and vdf verification
 click = "8.1.7"  # For the CLI
-clvm = "0.9.10"
+clvm = "0.9.11"
 clvm_tools = "0.4.9"  # Currying Program.to other conveniences
 clvm_tools_rs = "0.1.45"  # Rust implementation of clvm_tools' compiler
 colorama = "0.4.6"  # Colorizes terminal output
@@ -59,11 +59,11 @@ cryptography = "43.0.1"  # Python cryptography library for TLS - keyring conflic
 dnslib = "0.9.25"  # dns lib
 dnspython = "2.6.1"  # Query DNS seeds
 filelock = "3.15.4"  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
-keyring = "25.2.1"  # Store keys in MacOS Keychain, Windows Credential Locker
+keyring = "25.5.0"  # Store keys in MacOS Keychain, Windows Credential Locker
 packaging = "24.0"
 pip = "24.2"
 psutil = "6.1.0"
-pyyaml = "6.0.1"  # Used for config file format
+pyyaml = "6.0.2"  # Used for config file format
 setproctitle = "1.3.3"  # Gives the chia processes readable names
 setuptools = "75.1.0"
 sortedcontainers = "2.4.0"  # For maintaining sorted mempools
@@ -144,82 +144,3 @@ build-backend = "poetry_dynamic_versioning.backend"
 [project]
 # This has to match the poetry python entry above
 requires-python = ">=3.9, <3.13"
-
-[tool.ruff]
-line-length = 120
-
-[tool.ruff.lint]
-preview = true
-select = [
-	"PL",  # Pylint
-	"I",  # Isort
-	"FA",  # Flake8: future-annotations
-	"UP",  # Pyupgrade
-	# Flake8 core
-	"F",
-	"E",
-	"W",
-]
-explicit-preview-rules = false
-ignore = [
-    # Pylint convention
-    "PLC0105", # type-name-incorrect-variance
-    "PLC0415", # import-outside-top-level
-    "PLC2801", # unnecessary-dunder-call
-    "PLC0206", # dict-index-missing-items
-    "PLC1901", # compare-to-empty-string
-    "PLC2701", # import-private-name
-    "PLC0414", # useless-import-alias
-
-    # Pylint refactor
-    "PLR0915", # too-many-statements
-    "PLR0914", # too-many-locals
-    "PLR0913", # too-many-arguments
-    "PLR0912", # too-many-branches
-    "PLR1702", # too-many-nested-blocks
-    "PLR0904", # too-many-public-methods
-    "PLR6301", # no-self-use
-    "PLR0917", # too-many-positional-arguments
-    "PLR6201", # literal-membership
-    "PLR0911", # too-many-return-statements
-    "PLR2004", # magic-value-comparison
-    "PLR1714", # repeated-equality-comparison
-    "PLR6104", # non-augmented-assignment
-    "PLR1704", # redefined-argument-from-local
-    "PLR0916", # too-many-boolean-expressions
-    "PLR5501", # collapsible-else-if
-    "PLR1711", # useless-return
-    "PLR1730", # if-stmt-min-max
-    "PLR1736", # unnecessary-list-index-lookup
-    "PLR1733", # unnecessary-dict-index-lookup
-
-    # Pylint warning
-    "PLW2901", # redefined-loop-name
-    "PLW1641", # eq-without-hash
-    "PLW1514", # unspecified-encoding
-    "PLW0602", # global-variable-not-assigned
-    "PLW0603", # global-statement
-    "PLW0108", # unnecessary-lambda
-    "PLW1510", # subprocess-run-without-check
-    "PLW0120", # useless-else-on-loop
-
-    # Flake8 core
-    # "F841",  # unused-variable (540)
-]
-
-
-[tool.ruff.lint.isort]
-required-imports = ["from __future__ import annotations"]
-
-[tool.ruff.lint.pylint]
-max-args = 5
-max-locals = 15
-max-returns = 6
-max-branches = 12
-max-statements = 50
-max-nested-blocks = 5
-max-public-methods = 20
-max-bool-expr = 5
-
-[tool.ruff.lint.pyupgrade]
-keep-runtime-typing = true
