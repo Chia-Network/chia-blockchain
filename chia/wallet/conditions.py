@@ -812,7 +812,7 @@ class AggSig(Condition):
             condition_driver.pubkey,  # type: ignore[attr-defined]
             condition_driver.msg,  # type: ignore[attr-defined]
             opcode,
-            **{key: value for key, value in condition_driver.__dict__.items() if key not in ["pubkey", "msg"]},
+            **{key: value for key, value in condition_driver.__dict__.items() if key not in {"pubkey", "msg"}},
         )
 
 

@@ -1785,7 +1785,7 @@ class WalletRpcApi:
             except ValueError:
                 raise ValueError(f"Invalid signing mode: {signing_mode_str!r}")
 
-        if signing_mode == SigningMode.CHIP_0002 or signing_mode == SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS:
+        if signing_mode in {SigningMode.CHIP_0002, SigningMode.CHIP_0002_P2_DELEGATED_CONDITIONS}:
             # CHIP-0002 message signatures are made over the tree hash of:
             #   ("Chia Signed Message", message)
             message_to_verify: bytes = Program.to((CHIP_0002_SIGN_MESSAGE_PREFIX, input_message)).get_tree_hash()
@@ -2086,11 +2086,11 @@ class WalletRpcApi:
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
         modified_offer: dict[Union[int, bytes32], int] = {}
-        for key in offer:
+        for wallet_identifier, change in offer.items():
             try:
-                modified_offer[bytes32.from_hexstr(key)] = offer[key]
+                modified_offer[bytes32.from_hexstr(wallet_identifier)] = change
             except ValueError:
-                modified_offer[int(key)] = offer[key]
+                modified_offer[int(wallet_identifier)] = change
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
@@ -2149,12 +2149,12 @@ class WalletRpcApi:
                         k: v
                         for k, v in valid_times.to_json_dict().items()
                         if k
-                        not in (
+                        not in {
                             "max_secs_after_created",
                             "min_secs_since_created",
                             "max_blocks_after_created",
                             "min_blocks_since_created",
-                        )
+                        }
                     },
                 },
                 "id": offer.name(),
@@ -2963,7 +2963,7 @@ class WalletRpcApi:
         wallet_type = self.service.wallet_state_manager.wallets[funding_wallet_id].type()
         amount = request.get("amount")
         assert amount
-        if wallet_type not in [WalletType.STANDARD_WALLET, WalletType.CAT]:  # pragma: no cover
+        if wallet_type not in {WalletType.STANDARD_WALLET, WalletType.CAT}:  # pragma: no cover
             raise ValueError(f"Cannot fund a treasury with assets from a {wallet_type.name} wallet")
         await dao_wallet.create_add_funds_to_treasury_spend(
             uint64(amount),
@@ -3815,7 +3815,7 @@ class WalletRpcApi:
         royalty_address = request.get("royalty_address", None)
         if isinstance(royalty_address, str) and royalty_address != "":
             royalty_puzhash = decode_puzzle_hash(royalty_address)
-        elif royalty_address in [None, ""]:
+        elif royalty_address in {None, ""}:
             royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
         else:
             royalty_puzhash = bytes32.from_hexstr(royalty_address)

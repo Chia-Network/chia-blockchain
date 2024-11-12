@@ -225,7 +225,7 @@ class WSChiaConnection:
                 raise ProtocolError(Err.INCOMPATIBLE_NETWORK_ID)
 
             if (
-                local_type in [NodeType.FARMER, NodeType.HARVESTER]
+                local_type in {NodeType.FARMER, NodeType.HARVESTER}
                 and inbound_handshake.protocol_version != protocol_version[local_type]
             ):
                 self.log.warning(
@@ -266,7 +266,7 @@ class WSChiaConnection:
             remote_node_type = NodeType(inbound_handshake.node_type)
 
             if (
-                remote_node_type in [NodeType.FARMER, NodeType.HARVESTER]
+                remote_node_type in {NodeType.FARMER, NodeType.HARVESTER}
                 and inbound_handshake.protocol_version != protocol_version[remote_node_type]
             ):
                 self.log.warning(

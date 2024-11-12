@@ -413,7 +413,6 @@ class FullNodeAPI:
     @metadata.request()
     async def respond_blocks(self, request: full_node_protocol.RespondBlocks) -> None:
         self.log.warning("Received unsolicited/late blocks")
-        return None
 
     @metadata.request(peer_required=True)
     async def respond_block(

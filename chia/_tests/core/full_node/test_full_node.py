@@ -510,7 +510,7 @@ class TestFullNodeProtocol:
             if msg is not None and not (len(msg.peer_list) == 1):
                 return False
             peer = msg.peer_list[0]
-            return (peer.host == self_hostname or peer.host == "127.0.0.1") and peer.port == 1000
+            return (peer.host in {self_hostname, "127.0.0.1"}) and peer.port == 1000
 
         await time_out_assert_custom_interval(10, 1, have_msgs, True)
         full_node_1.full_node.full_node_peers.address_manager = AddressManager()

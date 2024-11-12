@@ -158,7 +158,6 @@ class WalletNodeAPI:
     @metadata.request()
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
         self.log.error("Unexpected message `respond_puzzle_solution`. Peer might be slow to respond")
-        return None
 
     @metadata.request()
     async def reject_puzzle_solution(self, request: wallet_protocol.RejectPuzzleSolution):

@@ -125,7 +125,6 @@ class WalletSingletonStore:
         current_records = await self.get_records_by_coin_id(coin_state.coin.name())
         if len(current_records) > 0:
             await self.delete_singleton_by_coin_id(coin_state.coin.name(), block_height)
-        return
 
     def _to_singleton_record(self, row: Row) -> SingletonRecord:
         return SingletonRecord(

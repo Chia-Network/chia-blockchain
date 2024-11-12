@@ -418,7 +418,7 @@ class MempoolManager:
                 child_coin = Coin(coin_id, puzzle_hash, uint64(amount))
                 spend_additions.append(child_coin)
                 additions_dict[child_coin.name()] = child_coin
-                addition_amount = addition_amount + child_coin.amount
+                addition_amount += child_coin.amount
             is_eligible_for_dedup = bool(spend.flags & ELIGIBLE_FOR_DEDUP)
             is_eligible_for_ff = bool(spend.flags & ELIGIBLE_FOR_FF)
             eligibility_and_additions[coin_id] = EligibilityAndAdditions(
@@ -481,7 +481,7 @@ class MempoolManager:
                 removal_record_dict[name] = removal_record
             else:
                 removal_record = removal_record_dict[name]
-            removal_amount = removal_amount + removal_record.coin.amount
+            removal_amount += removal_record.coin.amount
 
         fees = uint64(removal_amount - addition_amount)
 

@@ -143,7 +143,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 2:
         # this analyzes the CPU usage at all slots saved to the profiler directory
         analyze_cpu_usage(profile_dir)
-    elif len(sys.argv) in [3, 4]:
+    elif len(sys.argv) in {3, 4}:
         # the additional arguments are interpreted as either one slot, or a
         # slot range (first and last) to analyze
         first = int(sys.argv[2])

@@ -51,7 +51,7 @@ class RemarkDataType(IntEnum):
     CLAWBACK = 2
 
 
-T = TypeVar("T", contravariant=True)
+T_contra = TypeVar("T_contra", contravariant=True)
 
 
 @dataclass(frozen=True)
@@ -60,7 +60,7 @@ class WalletIdentifier:
     type: WalletType
 
     @classmethod
-    def create(cls, wallet: WalletProtocol[T]) -> WalletIdentifier:
+    def create(cls, wallet: WalletProtocol[T_contra]) -> WalletIdentifier:
         return cls(wallet.id(), wallet.type())
 
 

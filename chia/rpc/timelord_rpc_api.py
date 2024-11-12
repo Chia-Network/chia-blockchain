@@ -26,7 +26,7 @@ class TimelordRpcApi:
         if change_data is None:
             change_data = {}
 
-        if change in ("finished_pot", "new_compact_proof", "skipping_peak", "new_peak"):
+        if change in {"finished_pot", "new_compact_proof", "skipping_peak", "new_peak"}:
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
         return payloads

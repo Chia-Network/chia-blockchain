@@ -2232,7 +2232,7 @@ class TestGeneratorConditions:
         # note how the list of conditions isn't correctly terminated with a
         # NIL atom. This is a failure
         npc_result = generator_condition_tester("(80 50) . 3", height=softfork_height)
-        assert npc_result.error in [Err.INVALID_CONDITION.value, Err.GENERATOR_RUNTIME_ERROR.value]
+        assert npc_result.error in {Err.INVALID_CONDITION.value, Err.GENERATOR_RUNTIME_ERROR.value}
 
     @pytest.mark.parametrize(
         "opcode",
@@ -2346,7 +2346,7 @@ class TestGeneratorConditions:
             max_cost=generator_base_cost + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value - 1,
             height=softfork_height,
         )
-        assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
+        assert npc_result.error in {Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value}
 
     @pytest.mark.parametrize(
         "condition",
@@ -2388,11 +2388,11 @@ class TestGeneratorConditions:
             max_cost=generator_base_cost + 117 * COST_PER_BYTE + expected_cost - 1,
             height=softfork_height,
         )
-        assert npc_result.error in [
+        assert npc_result.error in {
             Err.GENERATOR_RUNTIME_ERROR.value,
             Err.BLOCK_COST_EXCEEDS_MAX.value,
             Err.INVALID_BLOCK_COST.value,
-        ]
+        }
 
     @pytest.mark.parametrize(
         "condition",
