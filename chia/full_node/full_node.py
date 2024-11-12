@@ -33,7 +33,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
 from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
-from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
@@ -1016,7 +1016,11 @@ class FullNode:
             raise RuntimeError("Weight proof handler is None")
         peers_with_peak = self.get_peers_with_peak(peak_header_hash)
         # Request weight proof from a random peer
-        self.log.info(f"Total of {len(peers_with_peak)} peers with peak {peak_height}")
+        peers_with_peak_len = len(peers_with_peak)
+        self.log.info(f"Total of {peers_with_peak_len} peers with peak {peak_height}")
+        # We can't choose from an empty sequence
+        if peers_with_peak_len == 0:
+            raise RuntimeError(f"Not performing sync, no peers with peak {peak_height}")
         weight_proof_peer: WSChiaConnection = random.choice(peers_with_peak)
         self.log.info(
             f"Requesting weight proof from peer {weight_proof_peer.peer_info.host} up to height {peak_height}"
@@ -1526,7 +1530,7 @@ class FullNode:
         wp_summaries: Optional[list[SubEpochSummary]] = None,
     ) -> Sequence[Awaitable[PreValidationResult]]:
         """
-        This is a thin wrapper over pre_validate_blocks_multiprocessing().
+        This is a thin wrapper over pre_validate_block().
 
         Args:
             blockchain:
@@ -1540,17 +1544,22 @@ class FullNode:
         # Validates signatures in multiprocessing since they take a while, and we don't have cached transactions
         # for these blocks (unlike during normal operation where we validate one at a time)
         # We have to copy the ValidationState object to preserve it for the add_block()
-        # call below. pre_validate_blocks_multiprocessing() will update the
+        # call below. pre_validate_block() will update the
         # object we pass in.
-        return await pre_validate_blocks_multiprocessing(
-            self.constants,
-            blockchain,
-            blocks_to_validate,
-            self.blockchain.pool,
-            {},
-            vs,
-            wp_summaries=wp_summaries,
-        )
+        ret: list[Awaitable[PreValidationResult]] = []
+        for block in blocks_to_validate:
+            ret.append(
+                await pre_validate_block(
+                    self.constants,
+                    blockchain,
+                    block,
+                    self.blockchain.pool,
+                    None,
+                    vs,
+                    wp_summaries=wp_summaries,
+                )
+            )
+        return ret
 
     async def add_prevalidated_blocks(
         self,
@@ -2038,9 +2047,9 @@ class FullNode:
                 return None
             validation_start = time.monotonic()
             # Tries to add the block to the blockchain, if we already validated transactions, don't do it again
-            block_height_conds_map = {}
+            conds = None
             if pre_validation_result is not None and pre_validation_result.conds is not None:
-                block_height_conds_map[block.height] = pre_validation_result.conds
+                conds = pre_validation_result.conds
 
             # Don't validate signatures because we want to validate them in the main thread later, since we have a
             # cache available
@@ -2055,36 +2064,34 @@ class FullNode:
                 prev_ses_block = curr
             new_slot = len(block.finished_sub_slots) > 0
             ssi, diff = get_next_sub_slot_iters_and_difficulty(self.constants, new_slot, prev_b, self.blockchain)
-            futures = await pre_validate_blocks_multiprocessing(
+            future = await pre_validate_block(
                 self.blockchain.constants,
                 AugmentedBlockchain(self.blockchain),
-                [block],
+                block,
                 self.blockchain.pool,
-                block_height_conds_map,
+                conds,
                 ValidationState(ssi, diff, prev_ses_block),
             )
-            pre_validation_results = list(await asyncio.gather(*futures))
+            pre_validation_result = await future
             added: Optional[AddBlockResult] = None
             pre_validation_time = time.monotonic() - validation_start
             try:
-                if len(pre_validation_results) < 1:
-                    raise ValueError(f"Failed to validate block {header_hash} height {block.height}")
-                if pre_validation_results[0].error is not None:
-                    if Err(pre_validation_results[0].error) == Err.INVALID_PREV_BLOCK_HASH:
+                if pre_validation_result.error is not None:
+                    if Err(pre_validation_result.error) == Err.INVALID_PREV_BLOCK_HASH:
                         added = AddBlockResult.DISCONNECTED_BLOCK
                         error_code: Optional[Err] = Err.INVALID_PREV_BLOCK_HASH
-                    elif Err(pre_validation_results[0].error) == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
+                    elif Err(pre_validation_result.error) == Err.TIMESTAMP_TOO_FAR_IN_FUTURE:
                         raise TimestampError()
                     else:
                         raise ValueError(
                             f"Failed to validate block {header_hash} height "
-                            f"{block.height}: {Err(pre_validation_results[0].error).name}"
+                            f"{block.height}: {Err(pre_validation_result.error).name}"
                         )
                 else:
                     result_to_validate = (
-                        pre_validation_results[0] if pre_validation_result is None else pre_validation_result
+                        pre_validation_result if pre_validation_result is None else pre_validation_result
                     )
-                    assert result_to_validate.required_iters == pre_validation_results[0].required_iters
+                    assert result_to_validate.required_iters == pre_validation_result.required_iters
                     fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
                         block, result_to_validate, ssi, fork_info
@@ -2142,7 +2149,7 @@ class FullNode:
             logging.WARNING if validation_time > 2 else logging.DEBUG,
             f"Block validation: {validation_time:0.2f}s, "
             f"pre_validation: {pre_validation_time:0.2f}s, "
-            f"CLVM: {pre_validation_results[0].timing / 1000.0:0.2f}s, "
+            f"CLVM: {pre_validation_result.timing / 1000.0:0.2f}s, "
             f"post-process: {post_process_time:0.2f}s, "
             f"cost: {block.transactions_info.cost if block.transactions_info is not None else 'None'}"
             f"{percent_full_str} header_hash: {header_hash.hex()} height: {block.height}",
