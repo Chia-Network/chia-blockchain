@@ -11,6 +11,7 @@ from chia_rs import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
 from typing_extensions import Unpack
 
+import chia.server.api_protocol
 import chia.wallet.singleton
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -190,9 +191,9 @@ class NFTWallet:
         metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, data.parent_coin_spend.solution)
         self.log.debug("Got back puzhash from solution: %s", p2_puzzle_hash)
         self.log.debug("Got back updated metadata: %s", metadata)
-        derivation_record: Optional[DerivationRecord] = (
-            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
-        )
+        derivation_record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
         self.log.debug("Record for %s is: %s", p2_puzzle_hash, derivation_record)
         if derivation_record is None:
             self.log.debug("Not our NFT, pointing to %s, skipping", p2_puzzle_hash)
@@ -670,10 +671,10 @@ class NFTWallet:
         if unft.supports_did:
             if new_owner is None:
                 # If no new owner was specified and we're sending this to ourselves, let's not reset the DID
-                derivation_record: Optional[DerivationRecord] = (
-                    await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                        payments[0].puzzle_hash
-                    )
+                derivation_record: Optional[
+                    DerivationRecord
+                ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                    payments[0].puzzle_hash
                 )
                 if derivation_record is not None:
                     new_owner = unft.owner_did

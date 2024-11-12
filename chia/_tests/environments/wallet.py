@@ -305,9 +305,9 @@ class WalletTestFramework:
             for env in self.environments:
                 ph_indexes: dict[uint32, Optional[DerivationRecord]] = {}
                 for wallet_id in env.wallet_state_manager.wallets:
-                    ph_indexes[wallet_id] = (
-                        await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
-                    )
+                    ph_indexes[
+                        wallet_id
+                    ] = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
         pending_txs: list[list[TransactionRecord]] = []

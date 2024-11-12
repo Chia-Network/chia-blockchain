@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Collection
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Union
 
-from chia_rs import AugSchemeMPL, BLSCache, G1Element, SpendBundleConditions, compute_merkle_set_root
+from chia_rs import SpendBundleConditions, compute_merkle_set_root
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -20,7 +20,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -188,9 +187,6 @@ async def validate_block_body(
     height: uint32,
     conds: Optional[SpendBundleConditions],
     fork_info: ForkInfo,
-    bls_cache: Optional[BLSCache],
-    *,
-    validate_signature: bool = True,
 ) -> tuple[Optional[Err], Optional[SpendBundleConditions]]:
     """
     This assumes the header block has been completely validated.
@@ -367,6 +363,7 @@ async def validate_block_body(
 
         # 8. The CLVM program must not return any errors
         assert conds is not None
+        assert conds.validated_signature
 
         for spend in conds.spends:
             removals.append(bytes32(spend.coin_id))
@@ -550,28 +547,8 @@ async def validate_block_body(
         if error is not None:
             return error, None
 
-    # create hash_key list for aggsig check
-    pairs_pks: list[G1Element] = []
-    pairs_msgs: list[bytes] = []
-    if conds is not None:
-        pairs_pks, pairs_msgs = pkm_pairs(conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
-
-    # 22. Verify aggregated signature
-    # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
+    # 22. Verify aggregated signature is done in pre-validation
     if not block.transactions_info.aggregated_signature:
         return Err.BAD_AGGREGATE_SIGNATURE, None
-
-    # The pairing cache is not useful while syncing as each pairing is seen
-    # only once, so the extra effort of populating it is not justified.
-    # However, we force caching of pairings just for unfinished blocks
-    # as the cache is likely to be useful when validating the corresponding
-    # finished blocks later.
-    if validate_signature:
-        if bls_cache is None:
-            if not AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
-                return Err.BAD_AGGREGATE_SIGNATURE, None
-        else:
-            if not bls_cache.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
-                return Err.BAD_AGGREGATE_SIGNATURE, None
 
     return None, conds

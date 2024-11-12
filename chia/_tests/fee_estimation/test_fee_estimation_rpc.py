@@ -47,7 +47,7 @@ async def setup_node_and_rpc(
 
 @pytest.fixture(scope="function")
 async def one_node_no_blocks(
-    one_node: tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]
+    one_node: tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools],
 ) -> tuple[FullNodeRpcClient, FullNodeRpcApi]:
     full_nodes, _wallets, bt = one_node
     full_node_apis = [full_node_service._api for full_node_service in full_nodes]
