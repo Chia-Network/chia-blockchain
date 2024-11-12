@@ -196,7 +196,7 @@ class WalletEnvironment:
             new_values: dict[str, int] = {}
             existing_values: Balance = await self.node.get_balance(wallet_id)
             if "init" in kwargs and kwargs["init"]:
-                new_values = {k: v for k, v in kwargs.items() if k not in ("set_remainder", "init")}
+                new_values = {k: v for k, v in kwargs.items() if k not in {"set_remainder", "init"}}
             elif wallet_id not in self.wallet_states:
                 raise ValueError(
                     f"Wallet id {wallet_id} (alias: {self.alias_wallet_id(wallet_id)}) does not have a current state. "

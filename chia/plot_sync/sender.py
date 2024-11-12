@@ -267,7 +267,7 @@ class Sender:
         sync_id = int(time.time())
         # Make sure we have unique sync-id's even if we restart refreshing within a second (i.e. in tests)
         if sync_id == self._last_sync_id:
-            sync_id = sync_id + 1
+            sync_id += 1
         log.debug(f"sync_start {sync_id}")
         self._sync_id = uint64(sync_id)
         self._add_message(

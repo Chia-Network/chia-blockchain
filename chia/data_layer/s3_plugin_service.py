@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Optional, overload
 from urllib.parse import urlparse
 
-import boto3 as boto3
+import boto3
 import yaml
 from aiohttp import web
 from botocore.exceptions import ClientError

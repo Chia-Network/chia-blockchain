@@ -216,7 +216,7 @@ def function_to_convert_one_item(
     elif hasattr(f_type, "from_json_dict"):
         if json_parser is None:
             json_parser = f_type.from_json_dict
-        return lambda item: json_parser(item)
+        return json_parser
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)

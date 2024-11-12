@@ -291,7 +291,6 @@ class KeyringWrapper:
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
-        return None
 
     def remove_master_passphrase_from_credential_store(self) -> None:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
@@ -310,7 +309,6 @@ class KeyringWrapper:
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
-        return None
 
     def get_master_passphrase_from_credential_store(self) -> Optional[str]:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()

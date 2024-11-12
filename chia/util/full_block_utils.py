@@ -56,7 +56,7 @@ def skip_uint8(buf: memoryview) -> memoryview:
 
 
 def skip_bool(buf: memoryview) -> memoryview:
-    assert buf[0] in [0, 1]
+    assert buf[0] in {0, 1}
     return buf[1:]
 
 

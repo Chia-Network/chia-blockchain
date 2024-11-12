@@ -790,7 +790,7 @@ class Blockchain:
 
             if height == 0:
                 break
-            height = height - 1
+            height -= 1
             blocks_to_remove = self.__heights_in_cache.get(uint32(height), None)
 
     def clean_block_records(self) -> None:

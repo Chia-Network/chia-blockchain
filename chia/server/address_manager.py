@@ -81,7 +81,7 @@ class ExtendedPeerInfo:
             bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_key())[:8]),
             byteorder="big",
         )
-        hash1 = hash1 % TRIED_BUCKETS_PER_GROUP
+        hash1 %= TRIED_BUCKETS_PER_GROUP
         hash2 = int.from_bytes(
             bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_group() + bytes([hash1]))[:8]),
             byteorder="big",
@@ -96,7 +96,7 @@ class ExtendedPeerInfo:
             bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_group() + src_peer.get_group())[:8]),
             byteorder="big",
         )
-        hash1 = hash1 % NEW_BUCKETS_PER_SOURCE_GROUP
+        hash1 %= NEW_BUCKETS_PER_SOURCE_GROUP
         hash2 = int.from_bytes(
             bytes(std_hash(key.to_bytes(32, byteorder="big") + src_peer.get_group() + bytes([hash1]))[:8]),
             byteorder="big",

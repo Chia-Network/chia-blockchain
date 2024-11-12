@@ -164,7 +164,7 @@ async def test_error_conditions(
     no_peers_response = await make_dns_query(use_tcp, target_address, port, no_peers)
     assert no_peers_response.rcode() == dns.rcode.NOERROR
 
-    if request_type == dns.rdatatype.A or request_type == dns.rdatatype.AAAA:
+    if request_type in {dns.rdatatype.A, dns.rdatatype.AAAA}:
         assert len(no_peers_response.answer) == 0  # no response, as expected
     elif request_type == dns.rdatatype.ANY:  # ns + soa
         assert len(no_peers_response.answer) == 2

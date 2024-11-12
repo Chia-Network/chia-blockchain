@@ -18,7 +18,7 @@ MADMAX_PLOTTER_DIR = "madmax-plotter"
 
 
 def is_madmax_supported() -> bool:
-    return sys.platform.startswith("linux") or sys.platform in ["darwin", "win32", "cygwin"]
+    return sys.platform.startswith("linux") or sys.platform in {"darwin", "win32", "cygwin"}
 
 
 def get_madmax_src_path(plotters_root_path: Path) -> Path:
@@ -39,7 +39,7 @@ def get_madmax_exec_venv_path(ksize: int = 32) -> Optional[Path]:
     madmax_exec = "chia_plot"
     if ksize > 32:
         madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
-    if sys.platform in ["win32", "cygwin"]:
+    if sys.platform in {"win32", "cygwin"}:
         madmax_exec += ".exe"
     return venv_bin_path / madmax_exec
 
@@ -49,7 +49,7 @@ def get_madmax_exec_src_path(plotters_root_path: Path, ksize: int = 32) -> Path:
     madmax_exec = "chia_plot"
     if ksize > 32:
         madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
-    if sys.platform in ["win32", "cygwin"]:
+    if sys.platform in {"win32", "cygwin"}:
         madmax_exec += ".exe"
     return madmax_src_dir / madmax_exec
 
@@ -59,7 +59,7 @@ def get_madmax_exec_package_path(ksize: int = 32) -> Path:
     madmax_exec: str = "chia_plot"
     if ksize > 32:
         madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
-    if sys.platform in ["win32", "cygwin"]:
+    if sys.platform in {"win32", "cygwin"}:
         madmax_exec += ".exe"
     return madmax_dir / madmax_exec
 
