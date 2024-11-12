@@ -587,7 +587,7 @@ class Blockchain:
                 coin_id for coin_id, fork_rem in fork_info.removals_since_fork.items() if fork_rem.height == height
             ]
             assert fetched_block_record.timestamp is not None
-            log.error(f"WJB tx_additions {tx_additions} {tx_removals}")
+            log.error(f"WJB tx_additions {tx_additions} WJB tx_removals {tx_removals}")
             await self.coin_store.new_block(
                 height,
                 fetched_block_record.timestamp,
