@@ -13,6 +13,10 @@ BLS_MEMBER_MOD = load_clvm_maybe_recompile(
     "bls_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
 )
 
+SECPR1_MEMBER_MOD = load_clvm_maybe_recompile(
+    "secp256r1_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
+)
+
 
 @dataclass(frozen=True)
 class BLSMember(Puzzle):
@@ -23,6 +27,19 @@ class BLSMember(Puzzle):
 
     def puzzle(self, nonce: int) -> Program:
         return BLS_MEMBER_MOD.curry(bytes(self.public_key))
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()
+    
+@dataclass(frozen=True)
+class SECPR1Member(Puzzle):
+    secp_pk: bytes
+
+    def memo(self, nonce: int) -> Program:
+        return Program.to(0)
+
+    def puzzle(self, nonce: int) -> Program:
+        return SECPR1_MEMBER_MOD.curry(bytes(self.secp_pk))
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()

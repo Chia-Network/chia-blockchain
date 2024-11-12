@@ -5,6 +5,11 @@ from typing import List
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from chia._tests.clvm.test_custody_architecture import ACSDPuzValidator
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
@@ -22,7 +27,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     PuzzleWithRestrictions,
     Restriction,
 )
-from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import BLSMember
+from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import BLSMember, SECPR1Member
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -198,3 +203,75 @@ async def test_2_of_4_bls_members(cost_logger: CostLogger, with_restrictions: bo
             assert result == (MempoolInclusionStatus.SUCCESS, None)
             await sim.farm_block()
             await sim.rewind(block_height)
+
+
+@pytest.mark.anyio
+async def test_secp256r1_member(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        delegated_puzzle = Program.to(1)
+        delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
+
+        # setup keys
+        seed = 0x1A62C9636D1C9DB2E7D564D0C11603BF456AAD25AA7B12BDFD762B4E38E7EDC6
+        secp_sk = ec.derive_private_key(seed, ec.SECP256R1(), default_backend())
+        secp_pk = secp_sk.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
+
+        secpr1_member = SECPR1Member(secp_pk)
+
+        secpr1_puzzle = PuzzleWithRestrictions(0, [], secpr1_member)
+
+        # Farm and find coin
+        await sim.farm_block(secpr1_puzzle.puzzle_hash())
+        coin = (
+            await client.get_coin_records_by_puzzle_hashes([secpr1_puzzle.puzzle_hash()], include_spent_coins=False)
+        )[0].coin
+        block_height = sim.block_height
+
+        # Create an announcements to be asserted in the delegated puzzle
+        announcement = CreateCoinAnnouncement(msg=b"foo", coin_id=coin.name())
+
+        # Get signature for AGG_SIG_ME
+        coin_id = coin.name()
+        signature_message = delegated_puzzle_hash + coin_id
+        der_sig = secp_sk.sign(
+            signature_message,
+            # The type stubs are weird here, `deterministic_signing` is assuredly an argument
+            ec.ECDSA(hashes.SHA256(), deterministic_signing=True),  # type: ignore[call-arg]
+        )
+        r, s = decode_dss_signature(der_sig)
+        sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    secpr1_puzzle.puzzle_reveal(),
+                    secpr1_puzzle.solve(
+                        [],
+                        [],
+                        Program.to([
+                            sig,
+                            coin_id,
+                        ]),
+                        DelegatedPuzzleAndSolution(
+                            delegated_puzzle,
+                            Program.to(
+                                [
+                                    announcement.to_program(),
+                                    announcement.corresponding_assertion().to_program(),
+                                ]
+                            ),
+                        ),
+                    ),
+                )
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "secp spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        await sim.rewind(block_height)
