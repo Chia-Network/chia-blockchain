@@ -1,0 +1,16 @@
+(mod
+  (
+    Conditions
+  )
+
+  (include condition_codes.clib)
+
+  (defun check_conditions (conditions)
+    (if (= (f (f conditions)) ASSERT_COIN_ANNOUNCEMENT)
+        conditions
+        (c (f conditions) (check_conditions (r conditions)))
+    )
+  )
+
+  (check_conditions Conditions)
+)
