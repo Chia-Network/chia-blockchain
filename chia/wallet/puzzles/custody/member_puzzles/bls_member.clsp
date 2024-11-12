@@ -4,5 +4,5 @@
 (mod (PUBLIC_KEY Delegated_Puzzle_Hash)  ; delegated puzzle is passed in from the above M of N layer
   (include condition_codes.clib)
 
-  (list (list AGG_SIG_ME PUBLIC_KEY Delegated_Puzzle))
+  (list (list AGG_SIG_ME PUBLIC_KEY Delegated_Puzzle_Hash))
 )
