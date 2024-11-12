@@ -1,7 +1,7 @@
 ; member puzzle with SECP256-R1 signature provided by a passkey (ie Yubikey)
 
 (mod (GENESIS_CHALLENGE SECP_PK
-    Delegated_puzzle_hash
+    Delegated_Puzzle_Hash
     ; The WebAuthn authenticator data.
     ; See https://www.w3.org/TR/webauthn-2/#dom-authenticatorassertionresponse-authenticatordata.
     authenticator_data
@@ -78,7 +78,7 @@
   )
 
   (assign
-    message (b64-encode-blob (sha256 Delegated_puzzle_hash coin_id GENESIS_CHALLENGE))
+    message (b64-encode-blob (sha256 Delegated_Puzzle_Hash coin_id GENESIS_CHALLENGE))
     challenge (concat '"challenge":"' message '"')
     (if (= (substr client_data_json challenge_index (+ challenge_index (strlen challenge))) challenge)
         (c
