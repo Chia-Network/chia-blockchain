@@ -127,7 +127,8 @@ async def test_client_fetch_methods(
     except Exception as exception:
         if client_method is RpcClient.get_connections and isinstance(exception, KeyError):
             pass
-        else:
+        else:  # pragma: no cover
+            # this case will fail the test so not normally executed
             raise
 
     [request] = recording_web_server.requests
