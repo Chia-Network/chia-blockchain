@@ -246,11 +246,11 @@ async def show(rpc_info: NeedsWalletRPC, wallet_id_passed_in: Optional[int]) -> 
             await pprint_all_pool_wallet_state(wallet_info.client, summaries_response, address_prefix, pool_state_dict)
 
 
-async def get_login_link(launcher_id: bytes32) -> None:
-    async with get_any_service_client(FarmerRpcClient) as (farmer_client, _):
+async def get_login_link(launcher_id: bytes32, rpc_port: Optional[int], root_path: Optional[Path]) -> None:
+    async with get_any_service_client(FarmerRpcClient, rpc_port=rpc_port, root_path=root_path) as (farmer_client, _):
         login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
         if login_link is None:
-            print("Was not able to get login link.")
+            raise CliRpcConnectionError("Was not able to get login link.")
         else:
             print(login_link)
 

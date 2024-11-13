@@ -55,7 +55,9 @@ class GetLoginLinkCMD:
     async def run(self) -> None:
         from .plotnft_funcs import get_login_link
 
-        await get_login_link(self.launcher_id)
+        await get_login_link(
+            self.launcher_id, rpc_port=self.context.get("rpc_port"), root_path=self.context.get("root_path")
+        )
 
 
 # Functions with this mark in this file are not being ported to @tx_out_cmd due to lack of observer key support

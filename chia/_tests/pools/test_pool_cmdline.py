@@ -20,6 +20,7 @@ from chia.cmds.plotnft import (
     ChangePayoutInstructionsPlotNFTCMD,
     ClaimPlotNFTCMD,
     CreatePlotNFTCMD,
+    GetLoginLinkCMD,
     InspectPlotNFTCMD,
     JoinPlotNFTCMD,
     LeavePlotNFTCMD,
@@ -28,6 +29,7 @@ from chia.cmds.plotnft import (
 from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.simulator.setup_services import setup_farmer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import CliRpcConnectionError
@@ -909,3 +911,53 @@ async def test_plotnft_cli_change_payout(
         wanted_config = next((x for x in config if x.launcher_id == pw_info.launcher_id), None)
         assert wanted_config is not None
         assert wanted_config.payout_instructions == burn_ph.hex()
+
+
+@pytest.mark.limit_consensus_modes(reason="unneeded")
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [10],
+            "trusted": True,
+            "reuse_puzhash": False,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_get_login_link(
+    capsys: pytest.CaptureFixture[str],
+    wallet_environments: WalletTestFramework,
+    self_hostname: str,
+) -> None:
+    wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+    wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+    _client_info: WalletClientInfo = WalletClientInfo(
+        wallet_rpc,
+        wallet_state_manager.root_pubkey.get_fingerprint(),
+        wallet_state_manager.config,
+    )
+    bt = wallet_environments.full_node.bt
+
+    async with setup_farmer(
+        b_tools=bt,
+        root_path=wallet_environments.environments[0].node.root_path,
+        self_hostname=self_hostname,
+        consensus_constants=bt.constants,
+    ) as farmer:
+        root_path = wallet_environments.environments[0].node.root_path
+
+        assert farmer.rpc_server and farmer.rpc_server.webserver
+        context = {
+            "root_path": root_path,
+            "rpc_port": farmer.rpc_server.webserver.listen_port,
+        }
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            with pytest.raises(CliRpcConnectionError, match="Was not able to get login link"):
+                await GetLoginLinkCMD(
+                    context=context,
+                    launcher_id=bytes32(32 * b"0"),
+                ).run()
