@@ -3,10 +3,9 @@
 
 (mod (SECP_PK Delegated_Puzzle_Hash my_id signature)  ; delegated puzzle is passed in from the above M of N layer
   (include condition_codes.clib)
-  (include curry-and-treehash.clib)
 
   (c
-    (list (list ASSERT_MY_COIN_ID my_id))
-    (secp256r1_verify SECP_PK (sha256tree (c Delegated_Puzzle_Hash my_id)) signature)
+    (list ASSERT_MY_COIN_ID my_id)
+    (secp256r1_verify SECP_PK (sha256 Delegated_Puzzle_Hash my_id) signature)
   )
 )
