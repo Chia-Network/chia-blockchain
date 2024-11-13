@@ -327,8 +327,8 @@ async def test_secp256r1_member(cost_logger: CostLogger) -> None:
                         [],
                         [],
                         Program.to([
-                            sig,
                             coin_id,
+                            sig,
                         ]),
                         DelegatedPuzzleAndSolution(
                             delegated_puzzle,
