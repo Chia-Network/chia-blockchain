@@ -537,24 +537,51 @@ async def test_plotnft_cli_join(
                 dont_prompt=True,
             ).run()
 
-        # Mock the pool response
-        pool_response = json.dumps(
-            {
-                "name": "Pool Name",
-                "description": "Pool Description",
-                "logo_url": "https://subdomain.pool-domain.tld/path/to/logo.svg",
-                "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
-                "fee": "0.01",
-                "protocol_version": 1,
-                "relative_lock_height": 5,
-                "minimum_difficulty": 1,
-                "authentication_token_timeout": 5,
-            }
-        )
+        pool_response_dict = {
+            "name": "Pool Name",
+            "description": "Pool Description",
+            "logo_url": "https://subdomain.pool-domain.tld/path/to/logo.svg",
+            "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
+            "fee": "0.01",
+            "protocol_version": 1,
+            "relative_lock_height": 50000,
+            "minimum_difficulty": 1,
+            "authentication_token_timeout": 5,
+        }
 
+        pool_response_dict["relative_lock_height"] = 5000
         mock_get = mocker.patch("aiohttp.ClientSession.get")
-        mock_get.return_value.__aenter__.return_value.status = 200
-        mock_get.return_value.__aenter__.return_value.text.return_value = pool_response
+        mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
+
+        with pytest.raises(CliRpcConnectionError, match="Relative lock height too high for this pool"):
+            await JoinPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
+                    client_info=client_info,
+                ),
+                id=wallet_id,
+                pool_url="",
+                dont_prompt=True,
+            ).run()
+
+        pool_response_dict["relative_lock_height"] = 5
+        pool_response_dict["protocol_version"] = 2
+        mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
+
+        with pytest.raises(CliRpcConnectionError, match="Incorrect version"):
+            await JoinPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
+                    client_info=client_info,
+                ),
+                id=wallet_id,
+                pool_url="",
+                dont_prompt=True,
+            ).run()
+
+        pool_response_dict["relative_lock_height"] = 5
+        pool_response_dict["protocol_version"] = 1
+        mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
 
         # Join the new pool - this will leave the prior pool and join the new one
         # Here you can use None as the wallet_id and the code will pick the only pool wallet automatically
