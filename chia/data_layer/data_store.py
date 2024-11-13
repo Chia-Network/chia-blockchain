@@ -171,12 +171,12 @@ class DataStore:
                 )
                 await writer.execute(
                     """
-                    CREATE INDEX IF NOT EXISTS idx_ids ON ids(blob)
+                    CREATE INDEX IF NOT EXISTS ids_blob_index ON ids(blob)
                     """
                 )
                 await writer.execute(
                     """
-                    CREATE INDEX IF NOT EXISTS idx2_ids ON ids(store_id)
+                    CREATE INDEX IF NOT EXISTS ids_store_id_index ON ids(store_id)
                     """
                 )
 
