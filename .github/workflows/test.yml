@@ -160,7 +160,7 @@ jobs:
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
-      emoji: 🪟
+      os-emoji: 🪟
       matrix: windows
       name: Windows
       file_name: windows
