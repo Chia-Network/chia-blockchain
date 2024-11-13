@@ -33,6 +33,7 @@
   "everything_with_signature": "1720d13250a7c16988eaf530331cefa9dd57a76b2c82236bec8bbbff91499b89",
   "exigent_metadata_layer": "d5fd32e069fda83e230ccd8f6a7c4f652231aed5c755514b3d996cbeff4182b8",
   "flag_proofs_checker": "fe2e3c631562fbb9be095297f762bf573705a0197164e9361ad5d50e045ba241",
+  "force_1_of_2_w_restricted_variable": "4f7bc8f30deb6dad75a1e29ceacb67fd0fe0eda79173e45295ff2cfbb8de53c6",
   "force_assert_coin_announcement": "ca0daca027e5ebd4a61fad7e32cfe1e984ad5b561c2fc08dea30accf3a191fab",
   "genesis_by_coin_id": "493afb89eed93ab86741b2aa61b8f5de495d33ff9b781dfc8919e602b2afa150",
   "genesis_by_coin_id_or_singleton": "40170305e3a71c3e7523f37fbcfc3188f9f949da0818a6331f28251e76e8c56f",
