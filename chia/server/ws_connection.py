@@ -639,7 +639,7 @@ class WSChiaConnection:
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
-                    asyncio.create_task(self._wait_and_retry(message))
+                    asyncio.create_task(self._wait_and_retry(message))  # noqa: RUF006
 
                 return None
             else:
@@ -667,7 +667,7 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_info.port}"
             )
-            asyncio.create_task(self.close())
+            asyncio.create_task(self.close())  # noqa: RUF006
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
             self.log.debug(
@@ -675,11 +675,11 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_info.port}"
             )
-            asyncio.create_task(self.close())
+            asyncio.create_task(self.close())  # noqa: RUF006
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             if not self.closed:
-                asyncio.create_task(self.close())
+                asyncio.create_task(self.close())  # noqa: RUF006
                 await asyncio.sleep(3)
                 return None
         elif message.type == WSMsgType.BINARY:
@@ -700,7 +700,7 @@ class WSChiaConnection:
                         f"message: {message_type}"
                     )
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
-                    asyncio.create_task(self.close(300))
+                    asyncio.create_task(self.close(300))  # noqa: RUF006
                     await asyncio.sleep(3)
                     return None
                 else:
@@ -713,14 +713,14 @@ class WSChiaConnection:
         elif message.type == WSMsgType.ERROR:
             self.log.error(f"WebSocket Error: {message}")
             if isinstance(message.data, WebSocketError) and message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
-                asyncio.create_task(self.close(300))
+                asyncio.create_task(self.close(300))  # noqa: RUF006
             else:
-                asyncio.create_task(self.close())
+                asyncio.create_task(self.close())  # noqa: RUF006
             await asyncio.sleep(3)
 
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
-            asyncio.create_task(self.close())
+            asyncio.create_task(self.close())  # noqa: RUF006
             await asyncio.sleep(3)
         return None
 

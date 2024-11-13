@@ -46,8 +46,11 @@ ignore = [
     "PLW0603", # global-statement
 
     # Ruff Specific
+
+    # This code is problematic because using instantiated types as defaults is so common across the codebase.
+    # Its purpose is to prevent accidenatally assigning mutable defaults. However, this is a bit overkill for that.
+    # That being said, it would be nice to add some way to actually guard against that specific mutable default behavior.
     "RUF009", # function-call-in-dataclass-default-argument
-    "RUF006", # asyncio-dangling-task
     # Should probably fix this
     "RUF029",
 ]
