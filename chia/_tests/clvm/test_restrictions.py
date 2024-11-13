@@ -273,19 +273,17 @@ async def test_force_1_of_2_w_restricted_variable_wrapper(cost_logger: CostLogge
             SelfDestructRestriction(),
             ConditionsBannedRestriction(),
         ]
-        anticipated_right_side_pwr = PuzzleWithRestrictions(0, anticipated_restrictions, ACSMember())
-        anticipated_m_of_n = MofN(m=1, members=[anticipated_left_side_pwr, anticipated_right_side_pwr])
-        anticipated_pwr = PuzzleWithRestrictions(0, [], anticipated_m_of_n)
+        recovery_restriction = Force1of2wRestrictedVariable(
+            left_side_hash=anticipated_left_side_pwr.puzzle_hash(_top_level=False),
+            right_side_restrictions=anticipated_restrictions,
+        )
+        anticipated_pwr = recovery_restriction.anticipated_pwr(0, anticipated_left_side_pwr, ACSMember())
+        anticipated_m_of_n = anticipated_pwr.puzzle
+        assert isinstance(anticipated_m_of_n, MofN)
+        anticipated_right_side_pwr = anticipated_m_of_n.members[1]
 
         # The current puzzle
-        restriction = ValidatorStackRestriction(
-            [
-                Force1of2wRestrictedVariable(
-                    left_side_hash=anticipated_left_side_pwr.puzzle_hash(_top_level=False),
-                    right_side_restrictions=anticipated_restrictions,
-                )
-            ]
-        )
+        restriction = ValidatorStackRestriction([recovery_restriction])
         pwr = PuzzleWithRestrictions(0, [restriction], ACSMember())
         pwr_hash = pwr.puzzle_hash()
 

@@ -10,7 +10,10 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     INDEX_WRAPPER_HASH,
     RESTRICTION_MOD_HASH,
     MemberOrDPuz,
+    MofN,
     OneOfN_MOD_HASH,
+    Puzzle,
+    PuzzleWithRestrictions,
     Restriction,
 )
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
@@ -102,3 +105,10 @@ class Force1of2wRestrictedVariable:
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
+
+    def anticipated_pwr(
+        self, nonce: int, left_side_pwr: PuzzleWithRestrictions, right_side_member: Puzzle
+    ) -> PuzzleWithRestrictions:
+        anticipated_right_side_pwr = PuzzleWithRestrictions(nonce, self.right_side_restrictions, right_side_member)
+        anticipated_m_of_n = MofN(m=1, members=[left_side_pwr, anticipated_right_side_pwr])
+        return PuzzleWithRestrictions(nonce, [], anticipated_m_of_n)
