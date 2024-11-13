@@ -1,4 +1,4 @@
-; This is a restriction on delegated puzzles intended the force a coin announcement
+; This is a restriction on delegated puzzles intended to force a coin announcement
 ;
 ; The idea behind enforcing this is that it makes the current coin spend non-replayable since it will be implictly
 ; asserting that a specific coin ID is spent in tandem.
