@@ -184,9 +184,7 @@ class InspectPlotNFTCMD:
     async def run(self) -> None:
         from .plotnft_funcs import inspect_cmd
 
-        await inspect_cmd(
-            wallet_rpc_port=self.rpc_info.wallet_rpc_port, fingerprint=self.rpc_info.fingerprint, wallet_id=self.id
-        )
+        await inspect_cmd(rpc_info=self.rpc_info, wallet_id=self.id)
 
 
 # NOTE: tx_endpoint

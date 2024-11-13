@@ -14,11 +14,23 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.pools.test_pool_rpc import manage_temporary_pool_plot
 from chia._tests.util.misc import Marks, datacases
 from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
-from chia.cmds.plotnft import ClaimPlotNFTCMD, CreatePlotNFTCMD, JoinPlotNFTCMD, LeavePlotNFTCMD, ShowPlotNFTCMD
+from chia.cmds.param_types import CliAddress
+from chia.cmds.plotnft import (
+    ChangePayoutInstructionsPlotNFTCMD,
+    ClaimPlotNFTCMD,
+    CreatePlotNFTCMD,
+    InspectPlotNFTCMD,
+    JoinPlotNFTCMD,
+    LeavePlotNFTCMD,
+    ShowPlotNFTCMD,
+)
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import CliRpcConnectionError
 from chia.util.ints import uint32, uint64
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -327,7 +339,6 @@ async def test_plotnft_cli_show(
                 ),
                 id=15,
             ).run()
-            capsys.readouterr()
 
         wallet_id = await create_new_plotnft(wallet_environments)
 
@@ -511,6 +522,7 @@ async def test_plotnft_cli_join(
                 dont_prompt=True,
             ).run()
 
+        with pytest.raises(CliRpcConnectionError, match="Error connecting to pool"):
             await JoinPlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
                     context={"root_path": wallet_environments.environments[0].node.root_path},
@@ -727,3 +739,156 @@ async def test_plotnft_cli_claim(
                 )
             ]
         )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [10],
+            "trusted": True,
+            "reuse_puzhash": False,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_inspect(
+    wallet_environments: WalletTestFramework,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+    wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+    client_info: WalletClientInfo = WalletClientInfo(
+        wallet_rpc,
+        wallet_state_manager.root_pubkey.get_fingerprint(),
+        wallet_state_manager.config,
+    )
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
+            await InspectPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
+                    client_info=client_info,
+                ),
+                id=None,
+            ).run()
+
+        with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
+            await InspectPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
+                    client_info=client_info,
+                ),
+                id=15,
+            ).run()
+
+        wallet_id = await create_new_plotnft(wallet_environments)
+
+        # need to capture the output and verify
+        await InspectPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                context={"root_path": wallet_environments.environments[0].node.root_path},
+                client_info=client_info,
+            ),
+            id=wallet_id,
+        ).run()
+        out, _err = capsys.readouterr()
+        json_output = json.loads(out)
+
+        assert (
+            json_output["pool_wallet_info"]["current"]["owner_pubkey"]
+            == "0xb286bbf7a10fa058d2a2a758921377ef00bb7f8143e1bd40dd195ae918dbef42cfc481140f01b9eae13b430a0c8fe304"
+        )
+        assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.FARMING_TO_POOL.value
+
+        wallet_id = await create_new_plotnft(wallet_environments, self_pool=True, second_nft=True)
+
+        with pytest.raises(CliRpcConnectionError, match="More than one pool wallet"):
+            await InspectPlotNFTCMD(
+                rpc_info=NeedsWalletRPC(
+                    context={"root_path": wallet_environments.environments[0].node.root_path},
+                    client_info=client_info,
+                ),
+                id=None,
+            ).run()
+
+        await InspectPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                context={"root_path": wallet_environments.environments[0].node.root_path},
+                client_info=client_info,
+            ),
+            id=wallet_id,
+        ).run()
+        out, _err = capsys.readouterr()
+        json_output = json.loads(out)
+
+        assert (
+            json_output["pool_wallet_info"]["current"]["owner_pubkey"]
+            == "0x893474c97d04a0283483ba1af9e070768dff9e9a83d9ae2cf00a34be96ca29aec387dfb7474f2548d777000e5463f602"
+        )
+
+        assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.SELF_POOLING.value
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [10],
+            "trusted": True,
+            "reuse_puzhash": False,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_change_payout(
+    wallet_environments: WalletTestFramework,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+    wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+    _client_info: WalletClientInfo = WalletClientInfo(
+        wallet_rpc,
+        wallet_state_manager.root_pubkey.get_fingerprint(),
+        wallet_state_manager.config,
+    )
+
+    burn_ph = bytes32.from_hexstr("0x000000000000000000000000000000000000000000000000000000000000dead")
+    burn_address = encode_puzzle_hash(burn_ph, "xch")
+    test_launcher_string = "be64ad01b99efd5fbf8daa2ca959468ae1643799d4a50056b88bf043fd570acc"
+
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        await ChangePayoutInstructionsPlotNFTCMD(
+            launcher_id=bytes32.from_hexstr(test_launcher_string),
+            address=CliAddress(burn_ph, burn_address, AddressType.XCH),
+        ).run()
+        out, _err = capsys.readouterr()
+        assert f"{test_launcher_string} Not found." in out
+
+        # TODO - need to test with a valid launcher id and add to pool config
+        # wallet_id = await create_new_plotnft(wallet_environments)
+
+        # await InspectPlotNFTCMD(
+        #     rpc_info=NeedsWalletRPC(
+        #         context={"root_path": wallet_environments.environments[0].node.root_path},
+        #         client_info=client_info,
+        #     ),
+        #     id=wallet_id,
+        # ).run()
+        # out, _err = capsys.readouterr()
+        # json_output = json.loads(out)
+        # test_launcher_string = json_output["pool_wallet_info"]["launcher_id"]
+
+        # await ChangePayoutInstructionsPlotNFTCMD(
+        #     launcher_id=bytes32.from_hexstr(test_launcher_string),
+        #     address=CliAddress(burn_ph, burn_address, AddressType.XCH),
+        # ).run()
+        # out, _err = capsys.readouterr()
+        # print(f"out: {out}")

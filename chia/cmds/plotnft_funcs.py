@@ -15,7 +15,6 @@ from chia.cmds.cmd_classes import NeedsWalletRPC
 from chia.cmds.cmds_util import (
     cli_confirm,
     get_any_service_client,
-    get_wallet_client,
     transaction_status_msg,
     transaction_submitted_msg,
 )
@@ -369,10 +368,10 @@ async def self_pool(*, rpc_info: NeedsWalletRPC, fee: uint64, wallet_id: Optiona
         )
 
 
-async def inspect_cmd(wallet_rpc_port: Optional[int], fingerprint: Optional[int], wallet_id: Optional[int]) -> None:
-    async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, _):
-        selected_wallet_id = await wallet_id_lookup_and_check(wallet_client, wallet_id)
-        pool_wallet_info, unconfirmed_transactions = await wallet_client.pw_status(selected_wallet_id)
+async def inspect_cmd(rpc_info: NeedsWalletRPC, wallet_id: Optional[int]) -> None:
+    async with rpc_info.wallet_rpc() as wallet_info:
+        selected_wallet_id = await wallet_id_lookup_and_check(wallet_info.client, wallet_id)
+        pool_wallet_info, unconfirmed_transactions = await wallet_info.client.pw_status(selected_wallet_id)
         print(
             json.dumps(
                 {
