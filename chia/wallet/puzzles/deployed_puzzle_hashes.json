@@ -64,6 +64,7 @@
   "pool_waitingroom_innerpuz": "a317541a765bf8375e1c6e7c13503d0d2cbf56cacad5182befe947e78e2c0307",
   "restrictions": "a28d59d39f964a93159c986b1914694f6f2f1c9901178f91e8b0ba4045980eef",
   "rom_bootstrap_generator": "161bade1f822dcd62ab712ebaf30f3922a301e48a639e4295c5685f8bece7bd9",
+  "secp256r1_member": "05aaa1f2fb6c48b5bce952b09f3da99afa4241989878a9919aafb7d74b70ac54",
   "settlement_payments": "cfbfdeed5c4ca2de3d0bf520b9cb4bb7743a359bd2e6a188d19ce7dffc21d3e7",
   "singleton_launcher": "eff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9",
   "singleton_top_layer": "24e044101e57b3d8c908b8a38ad57848afd29d3eecc439dba45f4412df4954fd",
