@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional
+from dataclasses import field
+from pathlib import Path
+from typing import Any, Optional
 
 import click
 
@@ -45,6 +47,7 @@ class ShowPlotNFTCMD:
     "Create a login link for a pool. The farmer must be running. To get the launcher id, use plotnft show.",
 )
 class GetLoginLinkCMD:
+    context: dict[str, Any] = field(default_factory=dict)
     launcher_id: bytes32 = option(
         "-l", "--launcher_id", help="Launcher ID of the plotnft", type=Bytes32ParamType(), required=True
     )
@@ -224,14 +227,16 @@ class ClaimPlotNFTCMD:
     "Change the payout instructions for a pool. To get the launcher id, use plotnft show",
 )
 class ChangePayoutInstructionsPlotNFTCMD:
+    context: dict[str, Any] = field(default_factory=dict)
     launcher_id: bytes32 = option(
         "-l", "--launcher_id", help="Launcher ID of the plotnft", type=Bytes32ParamType(), required=True
     )
     address: CliAddress = option(
         "-a", "--address", help="New address for payout instructions", type=AddressParamType(), required=True
     )
+    root_path: Optional[Path] = None
 
     async def run(self) -> None:
         from .plotnft_funcs import change_payout_instructions
 
-        await change_payout_instructions(self.launcher_id, self.address)
+        await change_payout_instructions(self.launcher_id, self.address, root_path=self.root_path)

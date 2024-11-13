@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import pytest
+from chia_rs import G1Element
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from click.testing import CliRunner
@@ -14,7 +15,9 @@ from chia._tests.environments.wallet import WalletStateTransition, WalletTestFra
 from chia._tests.pools.test_pool_rpc import manage_temporary_pool_plot
 from chia._tests.util.misc import Marks, datacases
 from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
+from chia.cmds.param_types import CliAddress
 from chia.cmds.plotnft import (
+    ChangePayoutInstructionsPlotNFTCMD,
     ClaimPlotNFTCMD,
     CreatePlotNFTCMD,
     InspectPlotNFTCMD,
@@ -22,10 +25,14 @@ from chia.cmds.plotnft import (
     LeavePlotNFTCMD,
     ShowPlotNFTCMD,
 )
+from chia.pools.pool_config import PoolWalletConfig, load_pool_config, update_pool_config
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import CliRpcConnectionError
 from chia.util.ints import uint32, uint64
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
 
@@ -829,7 +836,7 @@ async def test_plotnft_cli_inspect(
         assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.SELF_POOLING.value
 
 
-@pytest.mark.skip("Need to fix the root path problem here")
+@pytest.mark.limit_consensus_modes(reason="unneeded")
 @pytest.mark.parametrize(
     "wallet_environments",
     [
@@ -855,39 +862,50 @@ async def test_plotnft_cli_change_payout(
         wallet_state_manager.config,
     )
 
-    # burn_ph = bytes32.from_hexstr("0x000000000000000000000000000000000000000000000000000000000000dead")
-    # burn_address = encode_puzzle_hash(burn_ph, "xch")
-    # test_launcher_string = "be64ad01b99efd5fbf8daa2ca959468ae1643799d4a50056b88bf043fd570acc"
+    zero_ph = bytes32.from_hexstr("0x0000000000000000000000000000000000000000000000000000000000000000")
+    zero_address = encode_puzzle_hash(zero_ph, "xch")
 
+    burn_ph = bytes32.from_hexstr("0x000000000000000000000000000000000000000000000000000000000000dead")
+    burn_address = encode_puzzle_hash(burn_ph, "xch")
+    root_path = wallet_environments.environments[0].node.root_path
 
-# TODO need to fix root path problem here for load config
+    wallet_id = await create_new_plotnft(wallet_environments)
+    pw_info, _ = await wallet_rpc.pw_status(wallet_id)
 
-# runner = CliRunner()
-# with runner.isolated_filesystem():
-#     await ChangePayoutInstructionsPlotNFTCMD(
-#         launcher_id=bytes32.from_hexstr(test_launcher_string),
-#         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
-#     ).run()
-#     out, _err = capsys.readouterr()
-#     assert f"{test_launcher_string} Not found." in out
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        await ChangePayoutInstructionsPlotNFTCMD(
+            launcher_id=bytes32(32 * b"0"),
+            address=CliAddress(burn_ph, burn_address, AddressType.XCH),
+            root_path=root_path,
+        ).run()
+        out, _err = capsys.readouterr()
+        assert f"{bytes32(32 * b"0").hex()} Not found." in out
 
-# TODO - need to test with a valid launcher id and add to pool config
-# wallet_id = await create_new_plotnft(wallet_environments)
+        new_config: PoolWalletConfig = PoolWalletConfig(
+            launcher_id=pw_info.launcher_id,
+            pool_url="http://pool.example.com",
+            payout_instructions=zero_address,
+            target_puzzle_hash=bytes32(32 * b"0"),
+            p2_singleton_puzzle_hash=pw_info.p2_singleton_puzzle_hash,
+            owner_public_key=G1Element(),
+        )
 
-# await InspectPlotNFTCMD(
-#     rpc_info=NeedsWalletRPC(
-#         context={"root_path": wallet_environments.environments[0].node.root_path},
-#         client_info=client_info,
-#     ),
-#     id=wallet_id,
-# ).run()
-# out, _err = capsys.readouterr()
-# json_output = json.loads(out)
-# test_launcher_string = json_output["pool_wallet_info"]["launcher_id"]
+        await update_pool_config(root_path=root_path, pool_config_list=[new_config])
+        config: list[PoolWalletConfig] = load_pool_config(root_path)
+        wanted_config = next((x for x in config if x.launcher_id == pw_info.launcher_id), None)
+        assert wanted_config is not None
+        assert wanted_config.payout_instructions == zero_address
 
-# await ChangePayoutInstructionsPlotNFTCMD(
-#     launcher_id=bytes32.from_hexstr(test_launcher_string),
-#     address=CliAddress(burn_ph, burn_address, AddressType.XCH),
-# ).run()
-# out, _err = capsys.readouterr()
-# print(f"out: {out}")
+        await ChangePayoutInstructionsPlotNFTCMD(
+            launcher_id=pw_info.launcher_id,
+            address=CliAddress(burn_ph, burn_address, AddressType.XCH),
+            root_path=root_path,
+        ).run()
+        out, _err = capsys.readouterr()
+        assert f"Payout Instructions for launcher id: {pw_info.launcher_id.hex()} successfully updated" in out
+
+        config = load_pool_config(root_path)
+        wanted_config = next((x for x in config if x.launcher_id == pw_info.launcher_id), None)
+        assert wanted_config is not None
+        assert wanted_config.payout_instructions == burn_ph.hex()

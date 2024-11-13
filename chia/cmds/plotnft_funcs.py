@@ -6,6 +6,7 @@ import json
 import time
 from collections.abc import Awaitable
 from dataclasses import replace
+from pathlib import Path
 from pprint import pprint
 from typing import Any, Callable, Optional
 
@@ -398,12 +399,14 @@ async def claim_cmd(*, rpc_info: NeedsWalletRPC, fee: uint64, wallet_id: Optiona
         )
 
 
-async def change_payout_instructions(launcher_id: bytes32, address: CliAddress) -> None:
+async def change_payout_instructions(launcher_id: bytes32, address: CliAddress, root_path: Optional[Path]) -> None:
     new_pool_configs: list[PoolWalletConfig] = []
     id_found = False
     puzzle_hash = address.validate_address_type_get_ph(AddressType.XCH)
+    if root_path is None:
+        root_path = DEFAULT_ROOT_PATH
 
-    old_configs: list[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
+    old_configs: list[PoolWalletConfig] = load_pool_config(root_path)
     for pool_config in old_configs:
         if pool_config.launcher_id == launcher_id:
             id_found = True
@@ -411,7 +414,7 @@ async def change_payout_instructions(launcher_id: bytes32, address: CliAddress) 
         new_pool_configs.append(pool_config)
     if id_found:
         print(f"Launcher Id: {launcher_id.hex()} Found, Updating Config.")
-        await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
+        await update_pool_config(root_path, new_pool_configs)
         print(f"Payout Instructions for launcher id: {launcher_id.hex()} successfully updated to: {address}.")
         print(f"You will need to change the payout instructions on every device you use to: {address}.")
     else:
