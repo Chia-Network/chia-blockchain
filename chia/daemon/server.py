@@ -1548,17 +1548,6 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
     sys.stdout.flush()
-    json_msg = dict_to_json_str(
-        {
-            "message": "cert_path",
-            "success": True,
-            "cert": f"{crt_path}",
-            "key": f"{key_path}",
-            "ca_crt": f"{ca_crt_path}",
-        }
-    )
-    sys.stdout.write("\n" + json_msg + "\n")
-    sys.stdout.flush()
     try:
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
             log.info(f"chia-blockchain version: {chia_short_version()}")
