@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.name }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
@@ -49,8 +49,10 @@ jobs:
             matrix: windows
         arch:
           - name: ARM
+            emoji: 💪
             matrix: arm
           - name: Intel
+            emoji: 🌀
             matrix: intel
         development:
           - name: Non-dev
