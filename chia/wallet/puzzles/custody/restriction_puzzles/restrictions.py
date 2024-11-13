@@ -10,6 +10,11 @@ from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 TIMELOCK_WRAPPER = load_clvm_maybe_recompile(
     "timelock.clsp", package_or_requirement="chia.wallet.puzzles.custody.restriction_puzzles.wrappers"
 )
+FORCE_COIN_ANNOUNCEMENT_WRAPPER = load_clvm_maybe_recompile(
+    "force_assert_coin_announcement.clsp",
+    package_or_requirement="chia.wallet.puzzles.custody.restriction_puzzles.wrappers",
+)
+FORCE_COIN_ANNOUNCEMENT_WRAPPER_HASH = FORCE_COIN_ANNOUNCEMENT_WRAPPER.get_tree_hash()
 
 
 @dataclass(frozen=True)
@@ -28,3 +33,19 @@ class Timelock:
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
+
+
+@dataclass(frozen=True)
+class ForceCoinAnnouncement:
+    @property
+    def member_not_dpuz(self) -> bool:
+        return False
+
+    def memo(self, nonce: int) -> Program:
+        return Program.to(None)
+
+    def puzzle(self, nonce: int) -> Program:
+        return FORCE_COIN_ANNOUNCEMENT_WRAPPER
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return FORCE_COIN_ANNOUNCEMENT_WRAPPER_HASH
