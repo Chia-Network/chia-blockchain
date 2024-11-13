@@ -639,6 +639,7 @@ class WSChiaConnection:
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
+                    # TODO: stop dropping tasks on the floor
                     asyncio.create_task(self._wait_and_retry(message))
 
                 return None
@@ -667,6 +668,7 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_info.port}"
             )
+            # TODO: stop dropping tasks on the floor
             asyncio.create_task(self.close())
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
@@ -675,10 +677,12 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_info.port}"
             )
+            # TODO: stop dropping tasks on the floor
             asyncio.create_task(self.close())
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             if not self.closed:
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(self.close())
                 await asyncio.sleep(3)
                 return None
@@ -700,6 +704,7 @@ class WSChiaConnection:
                         f"message: {message_type}"
                     )
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
+                    # TODO: stop dropping tasks on the floor
                     asyncio.create_task(self.close(300))
                     await asyncio.sleep(3)
                     return None
@@ -713,13 +718,16 @@ class WSChiaConnection:
         elif message.type == WSMsgType.ERROR:
             self.log.error(f"WebSocket Error: {message}")
             if isinstance(message.data, WebSocketError) and message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(self.close(300))
             else:
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(self.close())
             await asyncio.sleep(3)
 
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
+            # TODO: stop dropping tasks on the floor
             asyncio.create_task(self.close())
             await asyncio.sleep(3)
         return None

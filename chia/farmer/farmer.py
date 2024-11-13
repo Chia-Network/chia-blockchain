@@ -198,8 +198,10 @@ class Farmer:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(profile_task(self._root_path, "farmer", self.log))
 
+        # TODO: stop dropping tasks on the floor
         asyncio.create_task(start_task())
         try:
             yield

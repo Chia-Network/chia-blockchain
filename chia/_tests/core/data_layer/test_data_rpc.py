@@ -73,7 +73,11 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 
-pytestmark = pytest.mark.data_layer
+pytestmark = [
+    pytest.mark.data_layer,
+    pytest.mark.limit_consensus_modes(reason="save time"),
+]
+
 nodes = tuple[WalletNode, FullNodeSimulator]
 nodes_with_port_bt_ph = tuple[WalletRpcApi, FullNodeSimulator, uint16, bytes32, BlockTools]
 wallet_and_port_tuple = tuple[WalletNode, uint16]

@@ -500,6 +500,7 @@ class ChiaServer:
                 connection_type_str = connection.connection_type.name.lower()
             self.log.info(f"Connected with {connection_type_str} {target_node}")
             if is_feeler:
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(connection.close())
             return True
         except client_exceptions.ClientConnectorError as e:
