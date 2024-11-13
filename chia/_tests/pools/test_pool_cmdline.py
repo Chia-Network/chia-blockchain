@@ -880,7 +880,7 @@ async def test_plotnft_cli_change_payout(
             root_path=root_path,
         ).run()
         out, _err = capsys.readouterr()
-        assert f"{bytes32(32 * b"0").hex()} Not found." in out
+        assert f"{bytes32(32 * b'0').hex()} Not found." in out
 
         new_config: PoolWalletConfig = PoolWalletConfig(
             launcher_id=pw_info.launcher_id,
