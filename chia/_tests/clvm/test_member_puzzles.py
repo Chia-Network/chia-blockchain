@@ -395,12 +395,12 @@ async def test_secp256k1_member(cost_logger: CostLogger) -> None:
             ec.ECDSA(hashes.SHA256(), deterministic_signing=True),  # type: ignore[call-arg]
         )
         r, _s = decode_dss_signature(der_sig)
-        curve_order = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
+        curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
         if _s > curve_order // 2:
             s = -_s % curve_order
         else:
             s = _s
-        sig = r.to_bytes(32, byteorder='big') + s.to_bytes(32, byteorder='big')
+        sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
         sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
         sb = WalletSpendBundle(
             [
