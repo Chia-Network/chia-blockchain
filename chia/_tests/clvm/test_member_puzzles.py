@@ -363,7 +363,7 @@ async def test_secp256k1_member(cost_logger: CostLogger) -> None:
         delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
 
         # setup keys
-        secp_sk = ec.generate_private_key(ec.SECP256R1())
+        secp_sk = ec.generate_private_key(ec.SECP256K1())
         secp_pk = secp_sk.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
 
         secpk1_member = SECPK1Member(secp_pk)
