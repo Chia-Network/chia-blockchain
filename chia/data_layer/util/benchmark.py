@@ -67,6 +67,7 @@ async def generate_datastore(num_nodes: int) -> None:
                     insert_count += 1
                 else:
                     t1 = time.time()
+                    assert node is not None
                     await data_store.delete(key=node.key, store_id=store_id, status=Status.COMMITTED)
                     t2 = time.time()
                     delete_time += t2 - t1
