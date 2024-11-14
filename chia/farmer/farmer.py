@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import aiohttp
+import anyio
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 from chia.consensus.constants import ConsensusConstants
@@ -200,22 +201,24 @@ class Farmer:
             else:
                 asyncio.create_task(profile_task(self._root_path, "farmer", self.log))
 
-        asyncio.create_task(start_task())
-        try:
-            yield
-        finally:
-            self._shut_down = True
+        async with anyio.create_task_group() as task_group:
+            task_group.start_soon(start_task)
+            try:
+                yield
+            finally:
+                self._shut_down = True
 
-            if self.cache_clear_task is not None:
-                await self.cache_clear_task
-            if self.update_pool_state_task is not None:
-                await self.update_pool_state_task
-            if self.keychain_proxy is not None:
-                proxy = self.keychain_proxy
-                self.keychain_proxy = None
-                await proxy.close()
-                await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-            self.started = False
+                if self.cache_clear_task is not None:
+                    await self.cache_clear_task
+                if self.update_pool_state_task is not None:
+                    await self.update_pool_state_task
+                if self.keychain_proxy is not None:
+                    proxy = self.keychain_proxy
+                    self.keychain_proxy = None
+                    await proxy.close()
+                    # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
+                    await asyncio.sleep(0.5)
+                self.started = False
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
