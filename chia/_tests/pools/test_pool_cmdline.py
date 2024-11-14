@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, cast
 
 import pytest
 from chia_rs import G1Element
@@ -10,6 +10,7 @@ from chia_rs import G1Element
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from pytest_mock import MockerFixture
 
+from chia._tests.cmds.cmd_test_utils import TestWalletRpcClient
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.pools.test_pool_rpc import manage_temporary_pool_plot
 from chia._tests.util.misc import Marks, datacases
@@ -1035,3 +1036,15 @@ async def test_plotnft_cli_get_login_link(
                 context=context,
                 launcher_id=bytes32(32 * b"0"),
             ).run()
+
+
+@pytest.mark.anyio
+async def test_plotnft_cli_misc(mocker: MockerFixture, capsys: pytest.CaptureFixture[str]) -> None:
+    from chia.cmds.plotnft_funcs import wallet_id_lookup_and_check
+
+    test_rpc_client = TestWalletRpcClient()
+
+    # Test fall-through raise in wallet_id_lookup_and_check
+    mocker.patch.object(test_rpc_client, "get_wallets", side_effect=ValueError("This is a test"))
+    with pytest.raises(CliRpcConnectionError, match="ValueError: This is a test"):
+        await wallet_id_lookup_and_check(cast(WalletRpcClient, test_rpc_client), 1)
