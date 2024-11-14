@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import sys
 import traceback
 from collections.abc import AsyncIterator, Awaitable
 from dataclasses import dataclass
@@ -12,21 +13,38 @@ from ssl import SSLContext
 from types import MethodType
 from typing import Any, Callable, ClassVar, Generic, Optional, TypeVar
 
-from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
+from aiohttp import (
+    ClientConnectorError,
+    ClientSession,
+    ClientWebSocketResponse,
+    WSMsgType,
+    web,
+)
 from typing_extensions import Protocol, final
 
 from chia import __version__
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
-from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_for_server
+from chia.server.server import (
+    ChiaServer,
+    ssl_context_for_client,
+    ssl_context_for_server,
+)
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.chia_logging import default_log_level, set_log_level
 from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.network import WebServer, resolve
-from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
+from chia.util.ws_message import (
+    WsRpcMessage,
+    create_payload,
+    create_payload_dict,
+    format_response,
+    pong,
+)
 
 log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -134,6 +152,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     ssl_context: SSLContext
     ssl_client_context: SSLContext
     net_config: dict[str, Any]
+    service_config: dict[str, Any]
     webserver: Optional[WebServer] = None
     daemon_heartbeat: int = 300
     daemon_connection_task: Optional[asyncio.Task[None]] = None
@@ -150,6 +169,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         stop_cb: Callable[[], None],
         root_path: Path,
         net_config: dict[str, Any],
+        service_config: dict[str, Any],
         prefer_ipv6: bool,
     ) -> RpcServer[_T_RpcApiProtocol]:
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
@@ -166,6 +186,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
             ssl_context,
             ssl_client_context,
             net_config,
+            service_config=service_config,
             daemon_heartbeat=daemon_heartbeat,
             prefer_ipv6=prefer_ipv6,
         )
@@ -251,7 +272,11 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         network_name = self.net_config["selected_network"]
         address_prefix = self.net_config["network_overrides"]["config"][network_name]["address_prefix"]
         genesis_challenge = self.net_config["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
-        return {"network_name": network_name, "network_prefix": address_prefix, "genesis_challenge": genesis_challenge}
+        return {
+            "network_name": network_name,
+            "network_prefix": address_prefix,
+            "genesis_challenge": genesis_challenge,
+        }
 
     async def get_connections(self, request: dict[str, Any]) -> EndpointResult:
         request_node_type: Optional[NodeType] = None
@@ -301,6 +326,38 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def get_version(self, request: dict[str, Any]) -> EndpointResult:
         return {
             "version": __version__,
+        }
+
+    async def get_log_level(self, request: dict[str, Any]) -> EndpointResult:
+        logger = logging.getLogger()
+        level_number = logger.level
+        level_name = logging.getLevelName(level_number)
+
+        if sys.version_info >= (3, 11):
+            map = logging.getLevelNamesMapping()
+        else:
+            map = logging._nameToLevel
+
+        return {
+            "success": True,
+            "level": level_name,
+            "available_levels": list(map),
+        }
+
+    async def reset_log_level(self, request: dict[str, Any]) -> EndpointResult:
+        level_name = self.service_config.get("log_level", default_log_level)
+
+        return await self.set_log_level(request={"level": level_name})
+
+    async def set_log_level(self, request: dict[str, Any]) -> EndpointResult:
+        error_strings = set_log_level(log_level=request["level"], service_name=self.service_name)
+        status = await self.get_log_level(request={})
+
+        status["success"] &= len(error_strings) == 0
+
+        return {
+            **status,
+            "errors": error_strings,
         }
 
     async def ws_api(self, message: WsRpcMessage) -> Optional[dict[str, object]]:
@@ -413,6 +470,9 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
         "/get_routes": get_routes,
         "/get_version": get_version,
         "/healthz": healthz,
+        "/get_log_level": get_log_level,
+        "/set_log_level": set_log_level,
+        "/reset_log_level": reset_log_level,
     }
 
 
@@ -424,6 +484,7 @@ async def start_rpc_server(
     stop_cb: Callable[[], None],
     root_path: Path,
     net_config: dict[str, object],
+    service_config: dict[str, object],
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
 ) -> RpcServer[_T_RpcApiProtocol]:
@@ -438,7 +499,13 @@ async def start_rpc_server(
         prefer_ipv6 = str2bool(str(net_config.get("prefer_ipv6", False)))
 
         rpc_server = RpcServer.create(
-            rpc_api, rpc_api.service_name, stop_cb, root_path, net_config, prefer_ipv6=prefer_ipv6
+            rpc_api,
+            rpc_api.service_name,
+            stop_cb,
+            root_path,
+            net_config,
+            service_config=service_config,
+            prefer_ipv6=prefer_ipv6,
         )
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
         await rpc_server.start(self_hostname, rpc_port, max_request_body_size)
