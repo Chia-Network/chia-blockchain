@@ -119,6 +119,7 @@ async def test_client_fetch_methods(
         RpcClient.open_connection: {"host": "", "port": 0},
         RpcClient.close_connection: {"node_id": b""},
         RpcClient.get_connections: {"node_type": NodeType.FULL_NODE},
+        RpcClient.set_log_level: {"level": "DEBUG"},
     }
 
     try:
