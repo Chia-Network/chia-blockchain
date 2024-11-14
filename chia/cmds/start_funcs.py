@@ -33,9 +33,11 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     print(f"Starting daemon: {cmd_to_execute} run_daemon --wait-for-unlock", flush=True)
     process = subprocess.Popen(
         [cmd_to_execute, "run_daemon", "--wait-for-unlock"],
-        encoding="utf-8",
-        stdout=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
         creationflags=creationflags,
+        start_new_session=True,
     )
 
     return process
@@ -48,13 +50,8 @@ async def create_start_daemon_connection(
     if connection is None:
         print("Starting daemon", flush=True)
         # launch a daemon
-        process = launch_start_daemon(root_path)
-        # give the daemon a chance to start up
-        if process.stdout:
-            process.stdout.readline()
-        await asyncio.sleep(1)
-        # it prints "daemon: listening"
-        connection = await connect_to_daemon_and_validate(root_path, config)
+        launch_start_daemon(root_path)
+        connection = await connect_to_daemon_and_validate(root_path, config, wait_for_start=True)
     if connection:
         if skip_keyring:
             print("Skipping to unlock keyring")

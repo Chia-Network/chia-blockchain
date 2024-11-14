@@ -103,7 +103,7 @@ def configure(
             print("Target peer count updated")
             change_made = True
         if testnet:
-            if testnet == "true" or testnet == "t":
+            if testnet in {"true", "t"}:
                 print("Setting Testnet")
                 # check if network_overrides.constants.testnet11 exists
                 if (
@@ -167,7 +167,7 @@ def configure(
                 print("Default full node port, introducer and network setting updated")
                 change_made = True
 
-            elif testnet == "false" or testnet == "f":
+            elif testnet in {"false", "f"}:
                 print("Setting Mainnet")
                 mainnet_port = "8444"
                 mainnet_introducer = "introducer.chia.net"

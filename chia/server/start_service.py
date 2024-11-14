@@ -293,7 +293,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         # we only handle signals in the main process. In the ProcessPoolExecutor
         # processes, we have to ignore them. We'll shut them down gracefully
         # from the main process
-        global main_pid
         ignore = os.getpid() != main_pid
 
         # TODO: if we remove this conditional behavior, consider moving logging to common signal handling

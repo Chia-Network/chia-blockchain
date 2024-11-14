@@ -36,6 +36,7 @@ from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.wallet_protocol import TransactionAck
+from chia.server.api_protocol import ApiMetadata
 from chia.server.outbound_message import Message
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
@@ -59,7 +60,6 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle, estimate_fees
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.util.api_decorators import api_request
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -326,7 +326,12 @@ class TestMempool:
         assert spend_bundle is not None
 
 
-@api_request(peer_required=True, bytes_required=True)
+metadata = ApiMetadata()
+
+
+# this (method'ish) function is not designed per normal uses so allowing the ignore
+# for the different return type.  normal is Optional[Message]
+@metadata.request(peer_required=True, bytes_required=True)  # type: ignore[type-var]
 async def respond_transaction(
     self: FullNodeAPI,
     tx: full_node_protocol.RespondTransaction,
@@ -2227,7 +2232,7 @@ class TestGeneratorConditions:
         # note how the list of conditions isn't correctly terminated with a
         # NIL atom. This is a failure
         npc_result = generator_condition_tester("(80 50) . 3", height=softfork_height)
-        assert npc_result.error in [Err.INVALID_CONDITION.value, Err.GENERATOR_RUNTIME_ERROR.value]
+        assert npc_result.error in {Err.INVALID_CONDITION.value, Err.GENERATOR_RUNTIME_ERROR.value}
 
     @pytest.mark.parametrize(
         "opcode",
@@ -2341,7 +2346,7 @@ class TestGeneratorConditions:
             max_cost=generator_base_cost + 95 * COST_PER_BYTE + ConditionCost.CREATE_COIN.value - 1,
             height=softfork_height,
         )
-        assert npc_result.error in [Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value]
+        assert npc_result.error in {Err.BLOCK_COST_EXCEEDS_MAX.value, Err.INVALID_BLOCK_COST.value}
 
     @pytest.mark.parametrize(
         "condition",
@@ -2383,11 +2388,11 @@ class TestGeneratorConditions:
             max_cost=generator_base_cost + 117 * COST_PER_BYTE + expected_cost - 1,
             height=softfork_height,
         )
-        assert npc_result.error in [
+        assert npc_result.error in {
             Err.GENERATOR_RUNTIME_ERROR.value,
             Err.BLOCK_COST_EXCEEDS_MAX.value,
             Err.INVALID_BLOCK_COST.value,
-        ]
+        }
 
     @pytest.mark.parametrize(
         "condition",

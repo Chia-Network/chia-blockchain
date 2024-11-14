@@ -402,7 +402,7 @@ async def test_batch_update(
                 [0.4, 0.2, 0.2, 0.2],
                 k=1,
             )
-            if op_type == "insert" or op_type == "upsert-insert" or len(keys_values) == 0:
+            if op_type in {"insert", "upsert-insert"} or len(keys_values) == 0:
                 if len(keys_values) == 0:
                     op_type = "insert"
                 key = operation.to_bytes(4, byteorder="big")

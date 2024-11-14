@@ -205,7 +205,7 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
                 click.option(
                     *option_args["param_decls"],
                     type=type_arg,
-                    **{k: v for k, v in option_args.items() if k not in ("param_decls", "type")},
+                    **{k: v for k, v in option_args.items() if k not in {"param_decls", "type"}},
                 )
             )
 

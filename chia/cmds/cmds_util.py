@@ -263,7 +263,7 @@ def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Abort
     Raise a click.Abort if the user does not respond with 'y' or 'yes'
     """
     response = input(input_message).lower()
-    if response not in ["y", "yes"]:
+    if response not in {"y", "yes"}:
         print(abort_message)
         raise click.Abort()
 
@@ -325,7 +325,7 @@ def timelock_args(enable: Optional[bool] = None) -> Callable[[Callable[..., None
                     min_time=uint64.construct_optional(kwargs["valid_at"]),
                     max_time=uint64.construct_optional(kwargs["expires_at"]),
                 ),
-                **{k: v for k, v in kwargs.items() if k not in ("valid_at", "expires_at")},
+                **{k: v for k, v in kwargs.items() if k not in {"valid_at", "expires_at"}},
             )
 
         return click.option(

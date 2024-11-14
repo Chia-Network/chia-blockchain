@@ -137,7 +137,7 @@ class PoolWallet:
     @classmethod
     def _verify_self_pooled(cls, state: PoolState) -> Optional[str]:
         err = ""
-        if state.pool_url not in [None, ""]:
+        if state.pool_url not in {None, ""}:
             err += " Unneeded pool_url for self-pooling"
 
         if state.relative_lock_height != 0:
@@ -159,7 +159,7 @@ class PoolWallet:
                 f"is greater than recommended maximum ({cls.MAXIMUM_RELATIVE_LOCK_HEIGHT})"
             )
 
-        if state.pool_url in [None, ""]:
+        if state.pool_url in {None, ""}:
             err += " Empty pool url in pooling state"
         return err
 
@@ -177,10 +177,7 @@ class PoolWallet:
 
         if state.state == PoolSingletonState.SELF_POOLING.value:
             return cls._verify_self_pooled(state)
-        elif (
-            state.state == PoolSingletonState.FARMING_TO_POOL.value
-            or state.state == PoolSingletonState.LEAVING_POOL.value
-        ):
+        elif state.state in {PoolSingletonState.FARMING_TO_POOL.value, PoolSingletonState.LEAVING_POOL.value}:
             return cls._verify_pooling_state(state)
         else:
             return "Internal Error"
@@ -663,7 +660,7 @@ class PoolWallet:
             msg = f"Asked to change to current state. Target = {target_state}"
             self.log.info(msg)
             raise ValueError(msg)
-        elif current_state.current.state in [SELF_POOLING.value, LEAVING_POOL.value]:
+        elif current_state.current.state in {SELF_POOLING.value, LEAVING_POOL.value}:
             total_fee = fee
         elif current_state.current.state == FARMING_TO_POOL.value:
             total_fee = uint64(fee * 2)
@@ -846,7 +843,7 @@ class PoolWallet:
             raise ValueError(f"Internal error. Pool wallet {self.wallet_id} state: {pool_wallet_info.current}")
 
         if (
-            self.target_state.state in [FARMING_TO_POOL.value, SELF_POOLING.value]
+            self.target_state.state in {FARMING_TO_POOL.value, SELF_POOLING.value}
             and pool_wallet_info.current.state == LEAVING_POOL.value
         ):
             leave_height = tip_height + pool_wallet_info.current.relative_lock_height

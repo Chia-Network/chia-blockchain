@@ -558,7 +558,6 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: tuple[TestRpcC
     class UnconfirmedTxRpcClient(TestWalletRpcClient):
         async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
             self.add_to_log("delete_unconfirmed_transactions", (wallet_id,))
-            return None
 
     inst_rpc_client = UnconfirmedTxRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -655,7 +654,6 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
 
         async def set_cat_name(self, wallet_id: int, name: str) -> None:
             self.add_to_log("set_cat_name", (wallet_id, name))
-            return None  # we don't need to do anything here
 
     inst_rpc_client = AddTokenRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -923,6 +921,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "--exclude-taken-offers",
         "--include-completed",
         "--reverse",
+        "--sort-by-relevance",
     ]
     # these are various things that should be in the output
     assert_list = [
@@ -940,7 +939,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "Record with id: 0101010101010101010101010101010101010101010101010101010101010101",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {"get_all_offers": [(0, 10, None, True, False, True, True, True)]}
+    expected_calls: logType = {"get_all_offers": [(0, 10, "RELEVANCE", True, False, True, True, True)]}
     command_args = [
         "wallet",
         "get_offers",
@@ -960,7 +959,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     assert expected_calls["get_all_offers"] is not None
-    expected_calls["get_all_offers"].append((0, 10, None, False, True, False, False, False))
+    expected_calls["get_all_offers"].append((0, 10, "CONFIRMED_AT_HEIGHT", False, True, False, False, False))
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 
