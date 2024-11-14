@@ -95,7 +95,8 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         assert (await client.get_block_record_by_height(100)) is None
 
-        # TODO: Understand why the list(set()) is required to make this work and address it.  This shouldn't be needed.
+        # TODO: Understand why the set() is required to make this work and address it.  This shouldn't be needed.
+        # (seems to only happen on linux)
         ph = next(iter(set(blocks[-1].get_included_reward_coins()))).puzzle_hash
         coins = await client.get_coin_records_by_puzzle_hash(ph)
         print(coins)

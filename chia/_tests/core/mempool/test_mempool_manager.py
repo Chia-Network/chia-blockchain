@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 from collections.abc import Awaitable, Collection
-from typing import Any, Callable, Optional
+from typing import Any, Callable, ClassVar, Optional
 
 import pytest
 from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, AugSchemeMPL, G2Element, get_conditions_from_spendbundle
@@ -232,21 +232,20 @@ def make_test_conds(
     )
 
 
-@dataclasses.dataclass
 class TestCheckTimeLocks:
-    COIN_CONFIRMED_HEIGHT = uint32(10)
-    COIN_TIMESTAMP = uint64(10000)
-    PREV_BLOCK_HEIGHT = uint32(15)
-    PREV_BLOCK_TIMESTAMP = uint64(10150)
+    COIN_CONFIRMED_HEIGHT: ClassVar[uint32] = uint32(10)
+    COIN_TIMESTAMP: ClassVar[uint64] = uint64(10000)
+    PREV_BLOCK_HEIGHT: ClassVar[uint32] = uint32(15)
+    PREV_BLOCK_TIMESTAMP: ClassVar[uint64] = uint64(10150)
 
-    COIN_RECORD = CoinRecord(
+    COIN_RECORD: ClassVar[CoinRecord] = CoinRecord(
         TEST_COIN,
         confirmed_block_index=uint32(COIN_CONFIRMED_HEIGHT),
         spent_block_index=uint32(0),
         coinbase=False,
         timestamp=COIN_TIMESTAMP,
     )
-    REMOVALS: dict[bytes32, CoinRecord] = dataclasses.field(default_factory=lambda: {TEST_COIN.name(): COIN_RECORD})  # type: ignore[name-defined]  # noqa: F821
+    REMOVALS: ClassVar[dict[bytes32, CoinRecord]] = {TEST_COIN.name(): COIN_RECORD}
 
     @pytest.mark.parametrize(
         "conds,expected",
