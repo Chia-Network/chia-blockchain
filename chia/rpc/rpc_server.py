@@ -331,7 +331,6 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     async def get_log_level(self, request: dict[str, Any]) -> EndpointResult:
         logger = logging.getLogger()
         level_number = logger.level
-        # level_number = logger.getEffectiveLevel()
         level_name = logging.getLevelName(level_number)
 
         if sys.version_info >= (3, 11):
