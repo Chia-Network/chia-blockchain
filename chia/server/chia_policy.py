@@ -300,7 +300,7 @@ if sys.platform == "win32":
 
             future = self._register(ov, listener, finish_accept)
             coro = accept_coro(self, future, conn)
-            asyncio.ensure_future(coro, loop=self._loop)
+            asyncio.ensure_future(coro, loop=self._loop)  # noqa: RUF006
             return future
 
         def accept(self, listener: socket.socket) -> asyncio.Future[tuple[socket.socket, tuple[object, ...]]]:

@@ -757,7 +757,7 @@ def generate_simple_proposal_innerpuz(
     for recipient_puzhash, amount, asset_type in zip(recipient_puzhashes, amounts, asset_types):
         if asset_type:
             if asset_type in seen_assets:
-                asset_conds = [x for x in cat_conds if x[0] == asset_type][0]
+                asset_conds = next(x for x in cat_conds if x[0] == asset_type)
                 asset_conds[1].append([51, recipient_puzhash, amount, [recipient_puzhash]])
             else:
                 cat_conds.append([asset_type, [[51, recipient_puzhash, amount, [recipient_puzhash]]]])

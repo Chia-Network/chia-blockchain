@@ -274,7 +274,7 @@ class CoinStore:
                 f'WHERE puzzle_hash in ({"?," * (len(puzzle_hashes) - 1)}?) '
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
-                puzzle_hashes_db + (start_height, end_height),
+                (*puzzle_hashes_db, start_height, end_height),
             ) as cursor:
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
@@ -300,7 +300,7 @@ class CoinStore:
                 f'WHERE coin_name in ({"?," * (len(names) - 1)}?) '
                 f"AND confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent_index=0'}",
-                names + [start_height, end_height],
+                [*names, start_height, end_height],
             ) as cursor:
                 for row in await cursor.fetchall():
                     coin = self.row_to_coin(row)
@@ -340,7 +340,7 @@ class CoinStore:
                     f"AND (confirmed_index>=? OR spent_index>=?)"
                     f"{'' if include_spent_coins else 'AND spent_index=0'}"
                     " LIMIT ?",
-                    puzzle_hashes_db + (min_height, min_height, max_items - len(coins)),
+                    (*puzzle_hashes_db, min_height, min_height, max_items - len(coins)),
                 ) as cursor:
                     row: sqlite3.Row
                     for row in await cursor.fetchall():
@@ -370,7 +370,7 @@ class CoinStore:
                     f'FROM coin_record WHERE coin_parent in ({"?," * (len(batch.entries) - 1)}?) '
                     f"AND confirmed_index>=? AND confirmed_index<? "
                     f"{'' if include_spent_coins else 'AND spent_index=0'}",
-                    parent_ids_db + (start_height, end_height),
+                    (*parent_ids_db, start_height, end_height),
                 ) as cursor:
                     async for row in cursor:
                         coin = self.row_to_coin(row)
@@ -405,7 +405,7 @@ class CoinStore:
                     f"AND (confirmed_index>=? OR spent_index>=?) {max_height_sql}"
                     f"{'' if include_spent_coins else 'AND spent_index=0'}"
                     " LIMIT ?",
-                    coin_ids_db + (min_height, min_height, max_items - len(coins)),
+                    (*coin_ids_db, min_height, min_height, max_items - len(coins)),
                 ) as cursor:
                     for row in await cursor.fetchall():
                         coins.append(self.row_to_coin_state(row))

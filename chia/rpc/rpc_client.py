@@ -78,7 +78,7 @@ class RpcClient:
         self = cls(
             hostname=self_hostname,
             port=port,
-            url=f"{scheme}://{self_hostname}:{str(port)}/",
+            url=f"{scheme}://{self_hostname}:{port!s}/",
             session=aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)),
             ssl_context=ssl_context,
         )
@@ -145,6 +145,15 @@ class RpcClient:
 
     async def get_version(self) -> dict:
         return await self.fetch("get_version", {})
+
+    async def get_log_level(self) -> dict:
+        return await self.fetch("get_log_level", {})
+
+    async def set_log_level(self, level: str) -> dict:
+        return await self.fetch("set_log_level", {"level": level})
+
+    async def reset_log_level(self) -> dict:
+        return await self.fetch("reset_log_level", {})
 
     def close(self) -> None:
         self.closing_task = asyncio.create_task(self.session.close())

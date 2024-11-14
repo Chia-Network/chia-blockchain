@@ -80,7 +80,7 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         dns_request: Optional[DNSRecord] = parse_dns_request(data)
         if dns_request is None:  # Invalid Request, we can just drop it and move on.
             return
-        asyncio.create_task(self.handler(dns_request, addr))
+        asyncio.create_task(self.handler(dns_request, addr))  # noqa: RUF006
 
     async def respond(self) -> None:
         log.info("UDP DNS responder started.")
@@ -192,7 +192,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                     f"Received incomplete TCP DNS request of length {self.expected_length} from {self.peer_info}, "
                     f"closing connection after dns replies are sent."
                 )
-            asyncio.create_task(self.wait_for_futures())
+            asyncio.create_task(self.wait_for_futures())  # noqa: RUF006
             return True  # Keep connection open, until the futures are done.
         log.info(f"Received early EOF from {self.peer_info}, closing connection.")
         return False
@@ -474,7 +474,7 @@ class DNSServer:
 
         ttl: int = self.ttl
         # we add these to the list as it will allow us to respond to ns and soa requests
-        ips: list[RD] = [self.soa_record] + self.ns_records
+        ips: list[RD] = [self.soa_record, *self.ns_records]
         ipv4_count = 0
         ipv6_count = 0
         if question_type is QTYPE.A:

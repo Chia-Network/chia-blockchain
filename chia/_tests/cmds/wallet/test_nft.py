@@ -66,7 +66,7 @@ def test_nft_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcCli
         f"Signature: {bytes([7] * 576).hex()}",
         f"Signing Mode: {SigningMode.CHIP_0002.value}",
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args + [f"-i{did_id}"], assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-i{did_id}"], assert_list)
     expected_calls: logType = {
         "sign_message_by_id": [(did_id, message.hex())],  # xch std
     }
@@ -370,7 +370,8 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     assert_list = [
         "https://example.com/data",
         "did:chia:1qgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpq4msw0c",
-    ] + launcher_ids
+        *launcher_ids,
+    ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
         "list_nfts": [(4, 10, 50)],

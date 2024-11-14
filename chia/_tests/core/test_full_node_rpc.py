@@ -156,7 +156,9 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert len(await client.get_all_mempool_items()) == 1
         assert len(await client.get_all_mempool_tx_ids()) == 1
         assert (
-            WalletSpendBundle.from_json_dict(list((await client.get_all_mempool_items()).values())[0]["spend_bundle"])
+            WalletSpendBundle.from_json_dict(
+                next(iter((await client.get_all_mempool_items()).values()))["spend_bundle"]
+            )
             == spend_bundle
         )
         assert (await client.get_all_mempool_tx_ids())[0] == spend_bundle.name()

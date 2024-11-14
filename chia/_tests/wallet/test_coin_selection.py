@@ -540,7 +540,7 @@ class TestCoinSelection:
         assert selected_coins is not None
         assert sum(coin.amount for coin in selected_coins) >= target_amount
         assert len(selected_coins) == 1
-        assert list(selected_coins)[0] == Coin(b_hash, b_hash, uint64(6))
+        assert next(iter(selected_coins)) == Coin(b_hash, b_hash, uint64(6))
 
         excluded_all_coins = spendable_coins
         # make sure that a failure is raised if all coins are excluded.

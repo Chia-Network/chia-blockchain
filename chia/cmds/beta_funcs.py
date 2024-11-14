@@ -40,7 +40,7 @@ def prompt_for_beta_path(default_path: Path) -> Path:
     for _ in range(3):
         user_input = input(
             "\nEnter a directory where the beta test logs can be stored or press enter to use the default "
-            f"[{str(default_path)}]:"
+            f"[{default_path!s}]:"
         )
         test_path = Path(user_input) if user_input else default_path
         if not test_path.is_dir() and click.confirm(
@@ -69,7 +69,7 @@ def prompt_for_metrics_log_interval(default_interval: int) -> int:
     for _ in range(3):
         user_input = input(
             "\nEnter a number of seconds as interval in which analytics getting logged, press enter to use the default "
-            f"[{str(default_interval)}]:"
+            f"[{default_interval!s}]:"
         )
         test_interval = int(user_input) if user_input else default_interval
 

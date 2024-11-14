@@ -36,7 +36,7 @@ def get_passphrase_prompt(keyring_file: str) -> str:
             + ")"
             + colorama.Style.RESET_ALL
             + " Passphrase: "
-        ),  # noqa: E501
+        ),
     )
     return prompt
 

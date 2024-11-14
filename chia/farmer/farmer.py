@@ -198,9 +198,9 @@ class Farmer:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                asyncio.create_task(profile_task(self._root_path, "farmer", self.log))
+                asyncio.create_task(profile_task(self._root_path, "farmer", self.log))  # noqa: RUF006
 
-        asyncio.create_task(start_task())
+        asyncio.create_task(start_task())  # noqa: RUF006
         try:
             yield
         finally:

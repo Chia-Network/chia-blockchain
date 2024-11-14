@@ -93,7 +93,7 @@ def create_pool_state(
     relative_lock_height: uint32,
 ) -> PoolState:
     if state not in {s.value for s in PoolSingletonState}:
-        raise AssertionError("state {state} is not a valid PoolSingletonState,")
+        raise AssertionError(f"state {state} is not a valid PoolSingletonState,")
     ps = PoolState(
         POOL_PROTOCOL_VERSION, uint8(state), target_puzzle_hash, owner_pubkey, pool_url, relative_lock_height
     )

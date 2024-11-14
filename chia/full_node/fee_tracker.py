@@ -393,7 +393,7 @@ def clamp(n: int, smallest: int, largest: int) -> int:
 
 def get_bucket_index(buckets: list[float], fee_rate: float) -> int:
     if len(buckets) < 1:
-        raise RuntimeError("get_bucket_index: buckets is invalid ({buckets})")
+        raise RuntimeError(f"get_bucket_index: buckets is invalid ({buckets})")
     # Choose the bucket to the left if we do not have exactly this fee rate
     # Python's list.bisect_left returns the index to insert a new element into a sorted list
     bucket_index = bisect_left(buckets, fee_rate) - 1
