@@ -194,7 +194,7 @@ ACS_MEMBER_PH = ACS_MEMBER.get_tree_hash()
 @dataclass(frozen=True)
 class ACSMember:
     def memo(self, nonce: int) -> Program:
-        raise NotImplementedError()  # pragma: no cover
+        return Program.to(None)
 
     def puzzle(self, nonce: int) -> Program:
         # (r (c (q . nonce) ACS_MEMBER_PH))

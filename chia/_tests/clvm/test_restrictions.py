@@ -21,6 +21,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     ProvenSpend,
     PuzzleWithRestrictions,
     Restriction,
+    UnknownRestriction,
 )
 from chia.wallet.puzzles.custody.restriction_puzzles.restrictions import (
     Force1of2wRestrictedVariable,
@@ -287,6 +288,19 @@ async def test_force_1_of_2_w_restricted_variable_wrapper(cost_logger: CostLogge
         pwr = PuzzleWithRestrictions(0, [restriction], ACSMember())
         pwr_hash = pwr.puzzle_hash()
 
+        # Some brief memo checking
+        parsed_pwr = PuzzleWithRestrictions.from_memo(pwr.memo())
+        assert isinstance(parsed_pwr.restrictions[0], UnknownRestriction)
+        parsed_recovery_restriction = Force1of2wRestrictedVariable.from_memo(
+            parsed_pwr.restrictions[0].restriction_hint.memo.first(), recovery_restriction.left_side_hash
+        )
+        assert recovery_restriction == parsed_recovery_restriction.fill_in_unknown_puzzles(
+            {
+                SelfDestructRestriction().puzzle_hash(0): SelfDestructRestriction(),
+                ConditionsBannedRestriction().puzzle_hash(0): ConditionsBannedRestriction(),
+            }
+        )
+
         # Farm and find coin
         await sim.farm_block(pwr.puzzle_hash())
         coin = (await client.get_coin_records_by_puzzle_hashes([pwr_hash], include_spent_coins=False))[0].coin
@@ -316,7 +330,7 @@ async def test_force_1_of_2_w_restricted_variable_wrapper(cost_logger: CostLogge
         # Now actually send to the correct puzzle hash
         anticipated_pwr_hash = anticipated_pwr.puzzle_hash()
         correct_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=Program.to((1, [CreateCoin(anticipated_pwr_hash, uint64(0)).to_program()])),
+            puzzle=Program.to((1, [CreateCoin(anticipated_pwr_hash, uint64(0), []).to_program()])),
             solution=Program.to(None),
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(
