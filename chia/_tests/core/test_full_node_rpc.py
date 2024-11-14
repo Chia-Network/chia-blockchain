@@ -363,7 +363,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
             state = await client.get_blockchain_state()
             block = await client.get_block(state["peak"].header_hash)
 
-            coin_to_spend = list(block.get_included_reward_coins())[0]
+            coin_to_spend = block.get_included_reward_coins()[0]
 
             spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_2, coin_to_spend, memo=memo)
             await client.push_tx(spend_bundle)
@@ -773,7 +773,7 @@ async def test_coin_name_found_in_mempool(one_node, self_hostname):
         # empty mempool
         assert len(await client.get_all_mempool_items()) == 0
 
-        coin_to_spend = list(blocks[-1].get_included_reward_coins())[0]
+        coin_to_spend = blocks[-1].get_included_reward_coins()[0]
         spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
         await client.push_tx(spend_bundle)
 
