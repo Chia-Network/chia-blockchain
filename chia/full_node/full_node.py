@@ -1499,9 +1499,9 @@ class FullNode:
                     # already validated block, update sub slot iters, difficulty and prev sub epoch summary
                     vs.prev_ses_block = block_rec
                     if block_rec.sub_epoch_summary_included.new_sub_slot_iters is not None:
-                        vs.current_ssi = block_rec.sub_epoch_summary_included.new_sub_slot_iters
+                        vs.ssi = block_rec.sub_epoch_summary_included.new_sub_slot_iters
                     if block_rec.sub_epoch_summary_included.new_difficulty is not None:
-                        vs.current_difficulty = block_rec.sub_epoch_summary_included.new_difficulty
+                        vs.difficulty = block_rec.sub_epoch_summary_included.new_difficulty
 
             # the below section updates the fork_info object, if
             # there is one.
@@ -1588,13 +1588,13 @@ class FullNode:
                         self.constants, True, block_record, self.blockchain
                     )
                     assert cc_sub_slot.new_sub_slot_iters is not None
-                    vs.current_ssi = cc_sub_slot.new_sub_slot_iters
+                    vs.ssi = cc_sub_slot.new_sub_slot_iters
                     assert cc_sub_slot.new_difficulty is not None
-                    vs.current_difficulty = cc_sub_slot.new_difficulty
-                    assert expected_sub_slot_iters == vs.current_ssi
-                    assert expected_difficulty == vs.current_difficulty
+                    vs.difficulty = cc_sub_slot.new_difficulty
+                    assert expected_sub_slot_iters == vs.ssi
+                    assert expected_difficulty == vs.difficulty
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], vs.current_ssi, fork_info, prev_ses_block=vs.prev_ses_block
+                block, pre_validation_results[i], vs.ssi, fork_info, prev_ses_block=vs.prev_ses_block
             )
             if error is None:
                 blockchain.remove_extra_block(header_hash)
