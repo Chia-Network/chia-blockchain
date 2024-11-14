@@ -272,7 +272,7 @@ class DBWrapper2:
         await self._write_connection.execute(f"SAVEPOINT {name}")
         try:
             yield
-        except:  # noqa E722
+        except:
             await self._write_connection.execute(f"ROLLBACK TO {name}")
             raise
         finally:

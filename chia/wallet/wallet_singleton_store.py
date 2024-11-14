@@ -102,7 +102,9 @@ class WalletSingletonStore:
             coin_state.puzzle_reveal, coin_state.solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
         )
 
-        cc_cond = [cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1][0]
+        cc_cond = next(
+            cond for cond in conditions[ConditionOpcode.CREATE_COIN] if int_from_bytes(cond.vars[1]) % 2 == 1
+        )
 
         coin = Coin(coin_state.coin.name(), cc_cond.vars[0], uint64(int_from_bytes(cc_cond.vars[1])))
         inner_puz = get_inner_puzzle_from_singleton(coin_state.puzzle_reveal)

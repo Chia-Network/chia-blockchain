@@ -410,29 +410,29 @@ class SimClient:
         return await self.service.coin_store.get_coin_records_by_puzzle_hashes(**kwargs)
 
     async def get_block_record_by_height(self, height: uint32) -> SimBlockRecord:
-        return list(filter(lambda block: block.height == height, self.service.block_records))[0]
+        return next(filter(lambda block: block.height == height, self.service.block_records))
 
     async def get_block_record(self, header_hash: bytes32) -> SimBlockRecord:
-        return list(filter(lambda block: block.header_hash == header_hash, self.service.block_records))[0]
+        return next(filter(lambda block: block.header_hash == header_hash, self.service.block_records))
 
     async def get_block_records(self, start: uint32, end: uint32) -> list[SimBlockRecord]:
         return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.block_records))
 
     async def get_block(self, header_hash: bytes32) -> SimFullBlock:
-        selected_block: SimBlockRecord = list(
+        selected_block: SimBlockRecord = next(
             filter(lambda br: br.header_hash == header_hash, self.service.block_records)
-        )[0]
+        )
         block_height: uint32 = selected_block.height
-        block: SimFullBlock = list(filter(lambda block: block.height == block_height, self.service.blocks))[0]
+        block: SimFullBlock = next(filter(lambda block: block.height == block_height, self.service.blocks))
         return block
 
     async def get_all_block(self, start: uint32, end: uint32) -> list[SimFullBlock]:
         return list(filter(lambda block: (block.height >= start) and (block.height < end), self.service.blocks))
 
     async def get_additions_and_removals(self, header_hash: bytes32) -> tuple[list[CoinRecord], list[CoinRecord]]:
-        selected_block: SimBlockRecord = list(
+        selected_block: SimBlockRecord = next(
             filter(lambda br: br.header_hash == header_hash, self.service.block_records)
-        )[0]
+        )
         block_height: uint32 = selected_block.height
         additions: list[CoinRecord] = await self.service.coin_store.get_coins_added_at_height(block_height)
         removals: list[CoinRecord] = await self.service.coin_store.get_coins_removed_at_height(block_height)

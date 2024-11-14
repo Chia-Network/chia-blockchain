@@ -460,7 +460,7 @@ class FullNodeAPI:
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, None)
 
         # TODO: stop dropping tasks on the floor
-        asyncio.create_task(eventually_clear())
+        asyncio.create_task(eventually_clear())  # noqa: RUF006
 
         return msg
 
@@ -529,7 +529,7 @@ class FullNodeAPI:
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, foliage_hash)
 
         # TODO: stop dropping tasks on the floor
-        asyncio.create_task(eventually_clear())
+        asyncio.create_task(eventually_clear())  # noqa: RUF006
 
         return msg
 

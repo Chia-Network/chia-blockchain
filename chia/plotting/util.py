@@ -99,7 +99,7 @@ class HarvestingMode(IntEnum):
     GPU = 2
 
 
-def get_plot_directories(root_path: Path, config: dict = None) -> list[str]:
+def get_plot_directories(root_path: Path, config: Optional[dict] = None) -> list[str]:
     if config is None:
         config = load_config(root_path, "config.yaml")
     return config["harvester"]["plot_directories"] or []
@@ -156,7 +156,7 @@ def remove_plot_directory(root_path: Path, str_path: str) -> None:
 
 
 def remove_plot(path: Path):
-    log.debug(f"remove_plot {str(path)}")
+    log.debug(f"remove_plot {path!s}")
     # Remove absolute and relative paths
     if path.exists():
         path.unlink()

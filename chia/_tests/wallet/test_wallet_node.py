@@ -440,7 +440,7 @@ async def test_get_timestamp_for_height_from_peer(
     await wallet_server.start_client(PeerInfo(self_hostname, full_node_api.server.get_port()), None)
     wallet = wallet_node.wallet_state_manager.main_wallet
     await full_node_api.farm_blocks_to_wallet(2, wallet)
-    full_node_peer = list(wallet_server.all_connections.values())[0]
+    full_node_peer = next(iter(wallet_server.all_connections.values()))
     # There should be no timestamp available for height 10
     assert await get_timestamp(10) is None
     # The timestamp at peak height should match the one from the full node block_store.
@@ -579,7 +579,7 @@ async def test_add_states_from_peer_reorg_failure(
     coin_generator = CoinGenerator()
     coin_states = [CoinState(coin_generator.get().coin, None, None)]
     with caplog.at_level(logging.DEBUG):
-        full_node_peer = list(wallet_server.all_connections.values())[0]
+        full_node_peer = next(iter(wallet_server.all_connections.values()))
         # Close the connection to trigger a state processing failure during reorged coin processing.
         await full_node_peer.close()
         assert not await wallet_node.add_states_from_peer(coin_states, full_node_peer)
@@ -600,7 +600,9 @@ async def test_add_states_from_peer_untrusted_shutdown(
     # Generate enough coin states to fill up the max number validation/add tasks.
     coin_states = [CoinState(coin_generator.get().coin, uint32(i), uint32(i)) for i in range(3000)]
     with caplog.at_level(logging.INFO):
-        assert not await wallet_node.add_states_from_peer(coin_states, list(wallet_server.all_connections.values())[0])
+        assert not await wallet_node.add_states_from_peer(
+            coin_states, next(iter(wallet_server.all_connections.values()))
+        )
         assert "Terminating receipt and validation due to shut down request" in caplog.text
 
 

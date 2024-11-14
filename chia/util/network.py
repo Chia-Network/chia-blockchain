@@ -134,7 +134,9 @@ def is_localhost(peer_host: str) -> bool:
 def is_trusted_peer(
     host: str, node_id: bytes32, trusted_peers: dict[str, Any], trusted_cidrs: list[str], testing: bool = False
 ) -> bool:
-    return not testing and is_localhost(host) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
+    return (
+        (not testing and is_localhost(host)) or node_id.hex() in trusted_peers or is_trusted_cidr(host, trusted_cidrs)
+    )
 
 
 async def resolve(host: str, *, prefer_ipv6: bool = False) -> IPAddress:

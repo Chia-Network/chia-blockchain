@@ -155,8 +155,10 @@ PendingTxCallback = Callable[[], None]
 
 
 class WalletStateManager:
-    interested_ph_cache: dict[bytes32, list[int]] = {}
-    interested_coin_cache: dict[bytes32, list[int]] = {}
+    # Ruff thinks these are "mutable class attributes" that should be annotated with `ClassVar`
+    # When this is a dataclass, these errors should go away
+    interested_ph_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
+    interested_coin_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
     constants: ConsensusConstants
     config: dict[str, Any]
     tx_store: WalletTransactionStore
@@ -1498,7 +1500,7 @@ class WalletStateManager:
             else:
                 new_did_id = _new_did_id
         self.log.debug(
-            "Handling NFT: %s， old DID:%s, new DID:%s, old P2:%s, new P2:%s",
+            "Handling NFT: %s, old DID:%s, new DID:%s, old P2:%s, new P2:%s",
             nft_data.parent_coin_spend,
             old_did_id,
             new_did_id,
@@ -2256,7 +2258,7 @@ class WalletStateManager:
         # no matter if there is another TX updated.
         clawback = parent_coin_record is not None and parent_coin_record.coin_type == CoinType.CLAWBACK
 
-        if coinbase or clawback or not coin_confirmed_transaction and not change:
+        if coinbase or clawback or (not coin_confirmed_transaction and not change):
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=await self.wallet_node.get_timestamp_for_height(height),

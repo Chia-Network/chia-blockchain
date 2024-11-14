@@ -841,13 +841,13 @@ class Blockchain:
                 # blocks that do not have transactions.
                 header = get_block_header(block, [], [])
             else:
-                tx_additions: list[CoinRecord] = [
-                    c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
-                ]
-                removed: list[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
-                header = get_block_header(
-                    block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
+                added_coins_records, removed_coins_records = await asyncio.gather(
+                    self.coin_store.get_coins_added_at_height(block.height),
+                    self.coin_store.get_coins_removed_at_height(block.height),
                 )
+                tx_additions = [cr.coin for cr in added_coins_records if not cr.coinbase]
+                removed = [cr.coin.name() for cr in removed_coins_records]
+                header = get_block_header(block, tx_additions, removed)
             header_blocks[header.header_hash] = header
 
         return header_blocks

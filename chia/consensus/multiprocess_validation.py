@@ -79,7 +79,7 @@ def _pre_validate_block(
     block: FullBlock,
     prev_generators: Optional[list[bytes]],
     conds: Optional[SpendBundleConditions],
-    vs: ValidationState,
+    expected_vs: ValidationState,
 ) -> PreValidationResult:
     """
     Args:
@@ -88,7 +88,8 @@ def _pre_validate_block(
         block:
         prev_generators:
         conds:
-        vs:
+        expected_vs: The validation state that we calculate for the next block
+            if it's validated.
     """
 
     try:
@@ -126,7 +127,7 @@ def _pre_validate_block(
             blockchain,
             header_block,
             True,  # check_filter
-            vs,
+            expected_vs,
         )
         error_int: Optional[uint16] = None
         if error is not None:
@@ -194,9 +195,9 @@ async def pre_validate_block(
     assert isinstance(block, FullBlock)
     if len(block.finished_sub_slots) > 0:
         if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-            vs.current_difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
+            vs.difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
         if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
-            vs.current_ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
+            vs.ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
     overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
     challenge = get_block_challenge(constants, block, blockchain, prev_b is None, overflow, False)
     if block.reward_chain_block.challenge_chain_sp_vdf is None:
@@ -213,7 +214,7 @@ async def pre_validate_block(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
         block.reward_chain_block.proof_of_space.size,
-        vs.current_difficulty,
+        vs.difficulty,
         cc_sp_hash,
     )
 
@@ -223,7 +224,7 @@ async def pre_validate_block(
             blockchain,
             required_iters,
             block,
-            sub_slot_iters=vs.current_ssi,
+            sub_slot_iters=vs.ssi,
             prev_ses_block=vs.prev_ses_block,
         )
     except ValueError:

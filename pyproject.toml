@@ -53,7 +53,7 @@ clvm = "0.9.11"
 clvm_tools = "0.4.9"  # Currying Program.to other conveniences
 clvm_tools_rs = "0.1.45"  # Rust implementation of clvm_tools' compiler
 colorama = "0.4.6"  # Colorizes terminal output
-colorlog = "6.8.2"  # Adds color to logs
+colorlog = "6.9.0"  # Adds color to logs
 concurrent_log_handler = "0.9.25"  # Concurrently log and rotate logs
 cryptography = "43.0.1"  # Python cryptography library for TLS - keyring conflict
 dnslib = "0.9.25"  # dns lib
@@ -142,5 +142,7 @@ requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry_dynamic_versioning.backend"
 
 [project]
+# duplicating until poetry v2, then revisit https://github.com/Chia-Network/chia-blockchain/pull/18797
+name = "chia-blockchain"
 # This has to match the poetry python entry above
 requires-python = ">=3.9, <3.13"

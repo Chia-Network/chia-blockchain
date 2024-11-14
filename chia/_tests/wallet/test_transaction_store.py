@@ -814,9 +814,9 @@ async def test_transaction_record_is_valid() -> None:
         Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name,
     )
     # But it should become valid with one of the above attempts
-    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [mempool_success]).is_valid()
-    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [low_fee]).is_valid()
-    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [close_to_zero]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, mempool_success]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, low_fee]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, close_to_zero]).is_valid()
 
 
 @pytest.mark.anyio

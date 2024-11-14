@@ -3,13 +3,29 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Optional
 
 import pytest
 
 from chia._tests.util.misc import Marks, RecordingWebServer, datacases
 from chia.rpc.rpc_client import ResponseFailureError, RpcClient
+from chia.rpc.rpc_server import RpcServer
+from chia.server.outbound_message import NodeType
 from chia.util.ints import uint16
+
+non_fetch_client_methods = {
+    RpcClient.create,
+    RpcClient.create_as_context,
+    RpcClient.fetch,
+    RpcClient.close,
+    RpcClient.await_closed,
+}
+
+client_fetch_methods = {
+    attribute
+    for name, attribute in vars(RpcClient).items()
+    if callable(attribute) and attribute not in non_fetch_client_methods and not name.startswith("__")
+}
 
 
 @dataclass
@@ -80,3 +96,43 @@ async def test_failure_exception(
         await rpc_client.fetch(path="/table", request_json={"response": expected_response})
 
     assert exception_info.value.response == expected_response
+
+
+def test_client_standard_endpoints_match_server() -> None:
+    # NOTE: this test assumes that the client method names should match the server
+    #       route names
+    client_method_names = {method.__name__ for method in client_fetch_methods}
+    server_route_names = {method.lstrip("/") for method in RpcServer._routes.keys()}
+    assert client_method_names == server_route_names
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("client_method", client_fetch_methods)
+async def test_client_fetch_methods(
+    client_method: Callable[..., Awaitable[object]],
+    rpc_client: RpcClient,
+    recording_web_server: RecordingWebServer,
+) -> None:
+    # NOTE: this test assumes that the client method names should match the server
+    #       route names
+
+    parameters: dict[Callable[..., Awaitable[object]], dict[str, object]] = {
+        RpcClient.open_connection: {"host": "", "port": 0},
+        RpcClient.close_connection: {"node_id": b""},
+        RpcClient.get_connections: {"node_type": NodeType.FULL_NODE},
+        RpcClient.set_log_level: {"level": "DEBUG"},
+    }
+
+    try:
+        await client_method(rpc_client, **parameters.get(client_method, {}))
+    except Exception as exception:
+        if client_method is RpcClient.get_connections and isinstance(exception, KeyError):
+            pass
+        else:  # pragma: no cover
+            # this case will fail the test so not normally executed
+            raise
+
+    [request] = recording_web_server.requests
+    assert request.content_type == "application/json"
+    assert request.method == "POST"
+    assert request.path == f"/{client_method.__name__}"

@@ -427,11 +427,11 @@ class WalletNode:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
                 # TODO: stop dropping tasks on the floor
-                asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
+                asyncio.create_task(profile_task(self.root_path, "wallet", self.log))  # noqa: RUF006
 
         if self.config.get("enable_memory_profiler", False):
             # TODO: stop dropping tasks on the floor
-            asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))
+            asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))  # noqa: RUF006
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(fingerprint))
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -520,7 +520,7 @@ class WalletNode:
         if self._wallet_state_manager is None:
             return None
         # TODO: stop dropping tasks on the floor
-        asyncio.create_task(self._resend_queue())
+        asyncio.create_task(self._resend_queue())  # noqa: RUF006
 
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
@@ -722,7 +722,7 @@ class WalletNode:
                 self.log,
             )
             # TODO: stop dropping tasks on the floor
-            asyncio.create_task(self.wallet_peers.start())
+            asyncio.create_task(self.wallet_peers.start())  # noqa: RUF006
 
     async def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):

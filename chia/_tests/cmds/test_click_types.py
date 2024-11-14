@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
@@ -37,11 +38,9 @@ overflow_decimal_str = "18446744.073709551616"
 overflow_decimal = Decimal(overflow_decimal_str)
 
 
+@dataclass
 class FakeContext:
-    obj: dict[Any, Any] = {}
-
-    def __init__(self, obj: dict[Any, Any]):
-        self.obj = obj
+    obj: dict[Any, Any] = field(default_factory=dict)
 
 
 def test_click_tx_fee_type() -> None:
