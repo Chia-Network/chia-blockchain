@@ -313,6 +313,7 @@ async def test_plotnft_cli_create_errors(
 async def test_plotnft_cli_show(
     wallet_environments: WalletTestFramework,
     capsys: pytest.CaptureFixture[str],
+    self_hostname: str,
     # with_wallet_id: bool,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -327,7 +328,6 @@ async def test_plotnft_cli_show(
     with runner.isolated_filesystem():
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
-                context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
             ),
             id=None,
@@ -338,7 +338,6 @@ async def test_plotnft_cli_show(
         with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
             await ShowPlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
-                    context={"root_path": wallet_environments.environments[0].node.root_path},
                     client_info=client_info,
                 ),
                 id=15,
@@ -346,32 +345,99 @@ async def test_plotnft_cli_show(
 
         wallet_id = await create_new_plotnft(wallet_environments)
 
-        # need to capute the output and verify
+        # need to capture the output and verify
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
-                context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
             ),
             id=wallet_id,
         ).run()
         out, _err = capsys.readouterr()
         assert "Current state: FARMING_TO_POOL" in out
+        assert f"Wallet ID: {wallet_id}" in out
 
-        wallet_id = await create_new_plotnft(wallet_environments, self_pool=False, second_nft=True)
+        wallet_id_2 = await create_new_plotnft(wallet_environments, self_pool=False, second_nft=True)
 
+        # Passing in None when there are multiple pool wallets
+        # Should show the state of all pool wallets
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
-                context={"root_path": wallet_environments.environments[0].node.root_path},
                 client_info=client_info,
             ),
             id=None,
         ).run()
         out, _err = capsys.readouterr()
         assert "Current state: FARMING_TO_POOL" in out
-        assert "Wallet ID: 2" in out
-        assert "Wallet ID: 3" in out
+        assert f"Wallet ID: {wallet_id}" in out
+        assert f"Wallet ID: {wallet_id_2}" in out
 
-        #  Need to run the farmer to make further tests
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "trusted": True,
+            "reuse_puzhash": False,
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.anyio
+async def test_plotnft_cli_show_with_farmer(
+    wallet_environments: WalletTestFramework,
+    capsys: pytest.CaptureFixture[str],
+    self_hostname: str,
+    # with_wallet_id: bool,
+) -> None:
+    wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
+    wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
+    client_info: WalletClientInfo = WalletClientInfo(
+        wallet_rpc,
+        wallet_state_manager.root_pubkey.get_fingerprint(),
+        wallet_state_manager.config,
+    )
+    #  Need to run the farmer to make further tests
+    async with setup_farmer(
+        b_tools=wallet_environments.full_node.bt,
+        root_path=wallet_environments.environments[0].node.root_path,
+        self_hostname=self_hostname,
+        consensus_constants=wallet_environments.full_node.bt.constants,
+    ) as farmer:
+        root_path = wallet_environments.environments[0].node.root_path
+
+        assert farmer.rpc_server and farmer.rpc_server.webserver
+        context = {
+            "root_path": root_path,
+            "farmer_rpc_port": farmer.rpc_server.webserver.listen_port,
+        }
+
+        await ShowPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                context=context,
+                client_info=client_info,
+            ),
+            id=None,
+        ).run()
+        out, _err = capsys.readouterr()
+        assert "Sync status: Synced" in out
+        assert "Current state" not in out
+
+        wallet_id = await create_new_plotnft(wallet_environments)
+        pw_info, _ = await wallet_rpc.pw_status(wallet_id)
+
+        await ShowPlotNFTCMD(
+            rpc_info=NeedsWalletRPC(
+                context=context,
+                client_info=client_info,
+            ),
+            id=wallet_id,
+        ).run()
+        out, _err = capsys.readouterr()
+        assert "Current state: FARMING_TO_POOL" in out
+        assert f"Wallet ID: {wallet_id}" in out
+        assert f"Launcher ID: {pw_info.launcher_id.hex()}" in out
 
 
 @pytest.mark.parametrize(

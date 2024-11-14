@@ -214,7 +214,9 @@ async def show(rpc_info: NeedsWalletRPC, wallet_id_passed_in: Optional[int]) -> 
             await wallet_id_lookup_and_check(wallet_info.client, wallet_id_passed_in)
         try:
             async with get_any_service_client(
-                client_type=FarmerRpcClient, root_path=rpc_info.context.get("root_path")
+                client_type=FarmerRpcClient,
+                root_path=rpc_info.context.get("root_path"),
+                rpc_port=rpc_info.context.get("farmer_rpc_port"),
             ) as (farmer_client, _):
                 pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
                 pool_state_dict = {
@@ -222,14 +224,6 @@ async def show(rpc_info: NeedsWalletRPC, wallet_id_passed_in: Optional[int]) -> 
                     for pool_state_item in pool_state_list
                 }
                 if wallet_id_passed_in is not None:
-                    for summary in summaries_response:
-                        typ = WalletType(int(summary["type"]))
-                        if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
-                            print(
-                                f"Wallet with id: {wallet_id_passed_in} is not a pool wallet."
-                                " Please provide a different id."
-                            )
-                            return
                     pool_wallet_info, _ = await wallet_info.client.pw_status(wallet_id_passed_in)
                     await pprint_pool_wallet_state(
                         wallet_info.client,
