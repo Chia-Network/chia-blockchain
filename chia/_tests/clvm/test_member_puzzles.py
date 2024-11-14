@@ -28,7 +28,12 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     PuzzleWithRestrictions,
     Restriction,
 )
-from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import BLSMember, PasskeyMember, SECPR1Member, SECPK1Member
+from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import (
+    BLSMember,
+    PasskeyMember,
+    SECPR1Member,
+    SECPK1Member,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -355,6 +360,7 @@ async def test_secp256r1_member(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         await sim.rewind(block_height)
+
 
 @pytest.mark.anyio
 async def test_secp256k1_member(cost_logger: CostLogger) -> None:

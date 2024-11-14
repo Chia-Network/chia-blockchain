@@ -85,6 +85,7 @@ class SECPR1Member(Puzzle):
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
 
+
 @dataclass(frozen=True)
 class SECPK1Member(Puzzle):
     secp_pk: bytes
