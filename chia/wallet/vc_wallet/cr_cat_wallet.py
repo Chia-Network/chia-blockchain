@@ -222,7 +222,7 @@ class CRCATWallet(CATWallet):
                 for id, hc in compute_spend_hints_and_additions(coin_spend)[0].items()
                 if hc.hint is not None
             }
-            cr_cat: CRCAT = list(filter(lambda c: c.coin.name() == coin.name(), new_cr_cats))[0]
+            cr_cat: CRCAT = next(filter(lambda c: c.coin.name() == coin.name(), new_cr_cats))
             if (
                 await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                     cr_cat.inner_puzzle_hash
@@ -443,7 +443,9 @@ class CRCATWallet(CATWallet):
             primaries.append(payment)
 
         if change > 0:
-            origin_crcat_record = await self.wallet_state_manager.coin_store.get_coin_record(list(cat_coins)[0].name())
+            origin_crcat_record = await self.wallet_state_manager.coin_store.get_coin_record(
+                next(iter(cat_coins)).name()
+            )
             if origin_crcat_record is None:
                 raise RuntimeError("A CR-CAT coin was selected that we don't have a record for")  # pragma: no cover
             origin_crcat = self.coin_record_to_crcat(origin_crcat_record)

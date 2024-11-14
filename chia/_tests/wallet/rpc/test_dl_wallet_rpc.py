@@ -119,7 +119,7 @@ class TestWalletRpc:
                 if await is_singleton_confirmed(rpc_client, lid):
                     rec = await rpc_client.dl_latest_singleton(lid)
                     if rec is None:
-                        raise Exception("No latest singleton for: {lid!r}")
+                        raise Exception(f"No latest singleton for: {lid!r}")
                     return rec.generation == generation
                 else:
                     return False
@@ -210,7 +210,7 @@ class TestWalletRpc:
             for tx in txs:
                 if tx.spend_bundle is not None:
                     additions.extend(tx.spend_bundle.additions())
-            mirror_coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
+            mirror_coin = next(c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash())
             mirror = Mirror(
                 mirror_coin.name(),
                 launcher_id,

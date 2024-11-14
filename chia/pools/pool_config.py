@@ -22,7 +22,7 @@ pool_list:
     pool_url: localhost
     p2_singleton_puzzle_hash: 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
     target_puzzle_hash: 344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58
-"""  # noqa
+"""
 
 log = logging.getLogger(__name__)
 

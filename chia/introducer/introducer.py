@@ -106,7 +106,7 @@ class Introducer:
                         )
                         w.close()
                     except Exception as e:
-                        self.log.warning(f"Could not vet {peer}, removing. {type(e)}{str(e)}")
+                        self.log.warning(f"Could not vet {peer}, removing. {type(e)}{e!s}")
                         peer.vetted = min(peer.vetted - 1, -1)
 
                         # if we have failed 6 times in a row, remove the peer

@@ -61,7 +61,7 @@ def bech32_verify_checksum(hrp: str, data: list[int]) -> bool:
 
 def bech32_create_checksum(hrp: str, data: list[int]) -> list[int]:
     values = bech32_hrp_expand(hrp) + data
-    polymod = bech32_polymod(values + [0, 0, 0, 0, 0, 0]) ^ M
+    polymod = bech32_polymod([*values, 0, 0, 0, 0, 0, 0]) ^ M
     return [(polymod >> 5 * (5 - i)) & 31 for i in range(6)]
 
 

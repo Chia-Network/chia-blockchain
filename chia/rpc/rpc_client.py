@@ -78,7 +78,7 @@ class RpcClient:
         self = cls(
             hostname=self_hostname,
             port=port,
-            url=f"{scheme}://{self_hostname}:{str(port)}/",
+            url=f"{scheme}://{self_hostname}:{port!s}/",
             session=aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)),
             ssl_context=ssl_context,
         )

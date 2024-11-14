@@ -1849,7 +1849,7 @@ class DAOWallet:
         ) = c_a.as_iter()
 
         if current_coin is None:  # pragma: no cover
-            raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
+            raise RuntimeError(f"get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
 
         timer_coin = None
         if solution.at("rrrrrrf").as_int() == 0:

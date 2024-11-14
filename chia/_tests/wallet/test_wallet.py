@@ -112,7 +112,7 @@ class TestWalletSimulator:
         async with wallet.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=False
         ) as action_scope:
-            selected_coin = list(await wallet.select_coins(uint64(0), action_scope))[0]
+            selected_coin = next(iter(await wallet.select_coins(uint64(0), action_scope)))
         assert await wallet.match_hinted_coin(selected_coin, selected_coin.puzzle_hash)
 
     @pytest.mark.parametrize(
@@ -577,7 +577,7 @@ class TestWalletSimulator:
         assert txs["transactions"][0]["confirmed"]
         assert txs["transactions"][1]["confirmed"]
         assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
-        assert list(txs["transactions"][0]["memos"].values())[0] == b"Test".hex()
+        assert next(iter(txs["transactions"][0]["memos"].values())) == b"Test".hex()
 
     @pytest.mark.parametrize(
         "wallet_environments",
@@ -2050,7 +2050,7 @@ class TestWalletSimulator:
             )
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
-        paid_coin = [coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND][0]
+        paid_coin = next(coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND)
         assert paid_coin.parent_coin_info == coin_list[2].name()
         [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 

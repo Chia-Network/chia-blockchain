@@ -411,7 +411,7 @@ class PoolWallet:
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE:
             raise ValueError("Not enough balance in main wallet to create a managed plotting pool.")
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE + fee:
-            raise ValueError("Not enough balance in main wallet to create a managed plotting pool with fee {fee}.")
+            raise ValueError(f"Not enough balance in main wallet to create a managed plotting pool with fee {fee}.")
 
         # Verify Parameters - raise if invalid
         PoolWallet._verify_initial_target_state(initial_target_state)

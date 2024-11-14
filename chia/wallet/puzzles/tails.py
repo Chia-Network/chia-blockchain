@@ -126,12 +126,12 @@ class GenesisById(LimitationsProgram):
             CAT_MOD,
             [
                 SpendableCAT(
-                    list(
+                    next(
                         filter(
                             lambda a: a.amount == amount,
                             [add for tx in inner_action_scope.side_effects.transactions for add in tx.additions],
                         )
-                    )[0],
+                    ),
                     tail.get_tree_hash(),
                     cat_inner,
                     inner_solution,
@@ -309,7 +309,7 @@ class GenesisByIdOrSingleton(LimitationsProgram):
             CAT_MOD,
             [
                 SpendableCAT(
-                    list(filter(lambda a: a.amount == amount, tx_record.additions))[0],
+                    next(filter(lambda a: a.amount == amount, tx_record.additions)),
                     tail.get_tree_hash(),
                     cat_inner,
                     inner_solution,
