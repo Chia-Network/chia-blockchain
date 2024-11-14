@@ -102,13 +102,13 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert len(coins) >= 1
 
         pid = list(blocks[-1].get_included_reward_coins())[0].parent_coin_info
-        pid_2 = list(set(blocks[-1].get_included_reward_coins()))[1].parent_coin_info
+        pid_2 = list(blocks[-1].get_included_reward_coins())[1].parent_coin_info
         coins = await client.get_coin_records_by_parent_ids([pid, pid_2])
         print(coins)
         assert len(coins) == 2
 
         name = list(blocks[-1].get_included_reward_coins())[0].name()
-        name_2 = list(set(blocks[-1].get_included_reward_coins()))[1].name()
+        name_2 = list(blocks[-1].get_included_reward_coins())[1].name()
         coins = await client.get_coin_records_by_names([name, name_2])
         print(coins)
         assert len(coins) == 2
