@@ -15,6 +15,7 @@ from multiprocessing.context import BaseContext
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TextIO, Union, cast, final
 
+import anyio
 from chia_rs import (
     AugSchemeMPL,
     BLSCache,
@@ -225,13 +226,17 @@ class FullNode:
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
 
-        async with DBWrapper2.managed(
-            self.db_path,
-            db_version=db_version,
-            reader_count=self.config.get("db_readers", 4),
-            log_path=sql_log_path,
-            synchronous=db_sync,
-        ) as self._db_wrapper:
+        async with contextlib.AsyncExitStack() as exit_stack:
+            self._db_wrapper = await exit_stack.enter_async_context(
+                DBWrapper2.managed(
+                    self.db_path,
+                    db_version=db_version,
+                    reader_count=self.config.get("db_readers", 4),
+                    log_path=sql_log_path,
+                    synchronous=db_sync,
+                )
+            )
+            task_group = await exit_stack.enter_async_context(anyio.create_task_group())
             if self.db_wrapper.db_version != 2:
                 async with self.db_wrapper.reader_no_transaction() as conn:
                     async with conn.execute(
@@ -280,7 +285,7 @@ class FullNode:
             self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
             if self.config.get("enable_profiler", False):
-                asyncio.create_task(profile_task(self.root_path, "node", self.log))
+                task_group.start_soon(profile_task, self.root_path, "node", self.log)
 
             self.profile_block_validation = self.config.get("profile_block_validation", False)
             if self.profile_block_validation:  # pragma: no cover
@@ -290,7 +295,7 @@ class FullNode:
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
             if self.config.get("enable_memory_profiler", False):
-                asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
+                task_group.start_soon(mem_profile_task, self.root_path, "node", self.log)
 
             time_taken = time.monotonic() - start_time
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -337,7 +342,7 @@ class FullNode:
 
             self.initialized = True
             if self.full_node_peers is not None:
-                asyncio.create_task(self.full_node_peers.start())
+                task_group.start_soon(self.full_node_peers.start)
             try:
                 yield
             finally:
@@ -353,7 +358,7 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    asyncio.create_task(self.full_node_peers.close())
+                    task_group.start_soon(self.full_node_peers.close)
                 if self.uncompact_task is not None:
                     self.uncompact_task.cancel()
                 if self._transaction_queue_task is not None:
