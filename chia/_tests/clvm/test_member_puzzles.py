@@ -31,8 +31,8 @@ from chia.wallet.puzzles.custody.custody_architecture import (
 from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import (
     BLSMember,
     PasskeyMember,
-    SECPR1Member,
     SECPK1Member,
+    SECPR1Member,
 )
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
