@@ -95,23 +95,22 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
 
         assert (await client.get_block_record_by_height(100)) is None
 
-        # TODO: Understand why the list(set()) is required to make this work and address it.  This shouldn't be needed.
-        irc = blocks[-1].get_included_reward_coins()
-        irc.reverse()
+        # NOTE: indexing and hard coded values below depend on the ordering
+        included_reward_coins = sorted(blocks[-1].get_included_reward_coins(), key=lambda c: c.amount)
 
-        ph = irc[0].puzzle_hash
+        ph = included_reward_coins[0].puzzle_hash
         coins = await client.get_coin_records_by_puzzle_hash(ph)
         print(coins)
         assert len(coins) >= 1
 
-        pid = irc[0].parent_coin_info
-        pid_2 = irc[1].parent_coin_info
+        pid = included_reward_coins[0].parent_coin_info
+        pid_2 = included_reward_coins[1].parent_coin_info
         coins = await client.get_coin_records_by_parent_ids([pid, pid_2])
         print(coins)
         assert len(coins) == 2
 
-        name = irc[0].name()
-        name_2 = irc[1].name()
+        name = included_reward_coins[0].name()
+        name_2 = included_reward_coins[1].name()
         coins = await client.get_coin_records_by_names([name, name_2])
         print(coins)
         assert len(coins) == 2
@@ -139,9 +138,10 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert len(await client.get_coin_records_by_puzzle_hash(ph)) == 2
         assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 0
 
-        irc = blocks[-1].get_included_reward_coins()
+        # NOTE: indexing and hard coded values below depend on the ordering
+        included_reward_coins = sorted(blocks[-1].get_included_reward_coins(), key=lambda c: c.amount)
 
-        coin_to_spend = irc[1]
+        coin_to_spend = included_reward_coins[0]
 
         spend_bundle = wallet.generate_signed_transaction(coin_to_spend.amount, ph_receiver, coin_to_spend)
 
@@ -169,7 +169,7 @@ async def test1(two_nodes_sim_and_wallets_services, self_hostname, consensus_mod
         assert (await client.get_coin_record_by_name(coin.name())) is None
 
         # Verify that the include_pending arg to get_mempool_item_by_tx_id works
-        coin_to_spend_pending = irc[0]
+        coin_to_spend_pending = included_reward_coins[1]
         ahr = ConditionOpcode.ASSERT_HEIGHT_RELATIVE  # to force pending/potential
         condition_dic = {ahr: [ConditionWithArgs(ahr, [int_to_bytes(100)])]}
         spend_bundle_pending = wallet.generate_signed_transaction(
