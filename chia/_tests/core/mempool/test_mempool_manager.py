@@ -287,7 +287,7 @@ class TestCheckTimeLocks:
     ) -> None:
         assert (
             mempool_check_time_locks(
-                self.REMOVALS,
+                dict(self.REMOVALS),
                 conds,
                 self.PREV_BLOCK_HEIGHT,
                 self.PREV_BLOCK_TIMESTAMP,
