@@ -1062,13 +1062,25 @@ class DataStore:
 
         return keys
 
-    def get_reference_kid_side(self, merkle_blob: MerkleBlob, key: bytes, value: bytes) -> tuple[KVId, Side]:
-        seed = leaf_hash(key=key, value=value)
+    def get_reference_kid_side(self, merkle_blob: MerkleBlob, seed: bytes32) -> tuple[KVId, Side]:
         side_seed = bytes(seed)[0]
         side = Side.LEFT if side_seed < 128 else Side.RIGHT
         reference_node = merkle_blob.get_random_leaf_node(seed)
         kid = reference_node.key
         return (kid, side)
+
+    async def get_terminal_node_for_seed(self, seed: bytes32, store_id: bytes32) -> Optional[TerminalNode]:
+        root = await self.get_tree_root(store_id=store_id)
+        if root is None or root.node_hash is None:
+            return None
+
+        merkle_blob = await self.get_merkle_blob(root.node_hash)
+        assert not merkle_blob.empty()
+        kid, _ = self.get_reference_kid_side(merkle_blob, seed)
+        key = await self.get_blob_from_kvid(kid, store_id)
+        assert key is not None
+        node = await self.get_node_by_key(key, store_id)
+        return node
 
     async def insert(
         self,
@@ -1095,7 +1107,9 @@ class DataStore:
             if not was_empty and reference_kid is None:
                 if side is not None:
                     raise Exception("Side specified without reference node hash")
-                reference_kid, side = self.get_reference_kid_side(merkle_blob, key, value)
+
+                seed = leaf_hash(key=key, value=value)
+                reference_kid, side = self.get_reference_kid_side(merkle_blob, seed)
 
             try:
                 merkle_blob.insert(kid, vid, hash, reference_kid, side)
@@ -1210,7 +1224,8 @@ class DataStore:
                                 batch_hashes.append(hash)
                                 continue
                         if not merkle_blob.empty():
-                            reference_kid, side = self.get_reference_kid_side(merkle_blob, key, value)
+                            seed = leaf_hash(key=key, value=value)
+                            reference_kid, side = self.get_reference_kid_side(merkle_blob, seed)
 
                     merkle_blob.insert(kid, vid, hash, reference_kid, side)
                 elif change["action"] == "delete":

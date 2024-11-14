@@ -6,17 +6,13 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from random import Random
 
-from chia.data_layer.data_layer_util import Status
+from chia.data_layer.data_layer_util import Side, Status, leaf_hash
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-async def generate_datastore(num_nodes: int, seed: int = 101) -> None:
-    random = Random()
-    random.seed(seed, version=2)
-
+async def generate_datastore(num_nodes: int) -> None:
     with tempfile.TemporaryDirectory() as temp_directory:
         temp_directory_path = Path(temp_directory)
         db_path = temp_directory_path.joinpath("dl_benchmark.sqlite")
@@ -31,40 +27,58 @@ async def generate_datastore(num_nodes: int, seed: int = 101) -> None:
 
             insert_time = 0.0
             insert_count = 0
+            autoinsert_time = 0.0
+            autoinsert_count = 0
             delete_time = 0.0
             delete_count = 0
-            keys: list[bytes] = []
 
             for i in range(num_nodes):
-                if i % 3 == 0 or i % 3 == 1:
-                    key = i.to_bytes(4, byteorder="big")
-                    value = (2 * i).to_bytes(4, byteorder="big")
-                    keys.append(key)
+                key = i.to_bytes(4, byteorder="big")
+                value = (2 * i).to_bytes(4, byteorder="big")
+                seed = leaf_hash(key, value)
+                node = await data_store.get_terminal_node_for_seed(seed, store_id)
+
+                if i % 3 == 0:
                     t1 = time.time()
-                    await data_store.insert(
+                    await data_store.autoinsert(
                         key=key,
                         value=value,
                         store_id=store_id,
                         status=Status.COMMITTED,
                     )
                     t2 = time.time()
+                    autoinsert_count += 1
+                elif i % 3 == 1:
+                    assert node is not None
+                    reference_node_hash = node.hash
+                    side_seed = bytes(seed)[0]
+                    side = Side.LEFT if side_seed < 128 else Side.RIGHT
+                    t1 = time.time()
+                    await data_store.insert(
+                        key=key,
+                        value=value,
+                        store_id=store_id,
+                        reference_node_hash=reference_node_hash,
+                        side=side,
+                        status=Status.COMMITTED,
+                    )
+                    t2 = time.time()
                     insert_time += t2 - t1
                     insert_count += 1
                 else:
-                    key = random.choice(keys)
-                    keys.remove(key)
                     t1 = time.time()
-                    await data_store.delete(key=key, store_id=store_id, status=Status.COMMITTED)
+                    await data_store.delete(key=node.key, store_id=store_id, status=Status.COMMITTED)
                     t2 = time.time()
                     delete_time += t2 - t1
                     delete_count += 1
 
             print(f"Average insert time: {insert_time / insert_count}")
+            print(f"Average autoinsert time: {autoinsert_time / autoinsert_count}")
             print(f"Average delete time: {delete_time / delete_count}")
-            print(f"Total time for {num_nodes} operations: {insert_time + delete_time}")
+            print(f"Total time for {num_nodes} operations: {insert_time + delete_time + autoinsert_time}")
             root = await data_store.get_tree_root(store_id=store_id)
             print(f"Root hash: {root.node_hash}")
 
 
 if __name__ == "__main__":
-    asyncio.run(generate_datastore(int(sys.argv[1]), int(sys.argv[2])))
+    asyncio.run(generate_datastore(int(sys.argv[1])))

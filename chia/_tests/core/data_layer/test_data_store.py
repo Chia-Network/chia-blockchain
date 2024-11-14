@@ -961,27 +961,29 @@ async def test_kv_diff(data_store: DataStore, store_id: bytes32) -> None:
     insertions = 0
     expected_diff: set[DiffData] = set()
     root_start = None
-    keys: list[bytes] = []
 
     for i in range(500):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
+        seed = leaf_hash(key=key, value=value)
+        node = await data_store.get_terminal_node_for_seed(seed, store_id)
+        side_seed = bytes(seed)[0]
+        side = None if node is None else (Side.LEFT if side_seed < 128 else Side.RIGHT)
 
         if random.randint(0, 4) > 0 or insertions < 10:
             insertions += 1
-            await data_store.autoinsert(
+            reference_node_hash = node.hash if node is not None else None
+            await data_store.insert(
                 key=key,
                 value=value,
                 store_id=store_id,
                 status=Status.COMMITTED,
+                reference_node_hash=reference_node_hash,
+                side=side,
             )
-            keys.append(key)
             if i > 200:
                 expected_diff.add(DiffData(OperationType.INSERT, key, value))
         else:
-            key = random.choice(keys)
-            keys.remove(key)
-            node = await data_store.get_node_by_key(key, store_id)
             assert isinstance(node, TerminalNode)
             await data_store.delete(key=node.key, store_id=store_id, status=Status.COMMITTED)
             if i > 200:
