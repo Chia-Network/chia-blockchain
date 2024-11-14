@@ -378,8 +378,9 @@ class WSChiaConnection:
         except asyncio.CancelledError:
             pass
         except Exception as e:
+            expected_types = (BrokenPipeError, ConnectionResetError, TimeoutError)
             expected = False
-            if isinstance(e, (BrokenPipeError, ConnectionResetError, TimeoutError)):
+            if isinstance(e, expected_types) or isinstance(e.__cause__, expected_types):
                 expected = True
             elif isinstance(e, OSError):
                 if e.errno in {113}:
