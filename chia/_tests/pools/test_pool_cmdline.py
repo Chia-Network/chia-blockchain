@@ -323,11 +323,13 @@ async def test_plotnft_cli_show(
         wallet_state_manager.root_pubkey.get_fingerprint(),
         wallet_state_manager.config,
     )
+    root_path = wallet_environments.environments[0].node.root_path
 
-    runner = CliRunner(env={"CHIA_ROOT": str(wallet_environments.environments[0].node.root_path)})
+    runner = CliRunner()
     with runner.isolated_filesystem():
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
+                context={"root_path": root_path},
                 client_info=client_info,
             ),
             id=None,
@@ -338,6 +340,7 @@ async def test_plotnft_cli_show(
         with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
             await ShowPlotNFTCMD(
                 rpc_info=NeedsWalletRPC(
+                    context={"root_path": root_path},
                     client_info=client_info,
                 ),
                 id=15,
@@ -348,6 +351,7 @@ async def test_plotnft_cli_show(
         # need to capture the output and verify
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
+                context={"root_path": root_path},
                 client_info=client_info,
             ),
             id=wallet_id,
@@ -362,6 +366,7 @@ async def test_plotnft_cli_show(
         # Should show the state of all pool wallets
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
+                context={"root_path": root_path},
                 client_info=client_info,
             ),
             id=None,
