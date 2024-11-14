@@ -516,7 +516,7 @@ def streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
 class Streamable:
     """
     This class defines a simple serialization format, and adds methods to parse from/to bytes and json. It also
-    validates and parses all fields at construction in ´__post_init__` to make sure all fields have the correct type
+    validates and parses all fields at construction in `__post_init__` to make sure all fields have the correct type
     and can be streamed/parsed properly.
 
     The available primitives are:

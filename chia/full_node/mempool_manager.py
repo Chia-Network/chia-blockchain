@@ -248,7 +248,7 @@ class MempoolManager:
     def add_and_maybe_pop_seen(self, spend_name: bytes32) -> None:
         self.seen_bundle_hashes[spend_name] = spend_name
         while len(self.seen_bundle_hashes) > self.seen_cache_size:
-            first_in = list(self.seen_bundle_hashes.keys())[0]
+            first_in = next(iter(self.seen_bundle_hashes.keys()))
             self.seen_bundle_hashes.pop(first_in)
 
     def seen(self, bundle_hash: bytes32) -> bool:
@@ -358,7 +358,7 @@ class MempoolManager:
             info = self.mempool.add_to_pool(item)
             if info.error is not None:
                 return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.FAILED, [], info.error)
-            return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.SUCCESS, info.removals + [conflict], None)
+            return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.SUCCESS, [*info.removals, conflict], None)
         elif err is Err.MEMPOOL_CONFLICT and item is not None:
             # The transaction has a conflict with another item in the
             # mempool, put it aside and re-try it later

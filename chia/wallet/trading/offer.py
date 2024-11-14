@@ -503,9 +503,9 @@ class Offer:
             coin_to_spend_dict: dict[Coin, CoinSpend] = {}
             coin_to_solution_dict: dict[Coin, Program] = {}
             for coin in offered_coins:
-                parent_spend: CoinSpend = list(
+                parent_spend: CoinSpend = next(
                     filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self._bundle.coin_spends)
-                )[0]
+                )
                 coin_to_spend_dict[coin] = parent_spend
 
                 inner_solutions = []

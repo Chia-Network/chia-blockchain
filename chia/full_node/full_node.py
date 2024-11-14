@@ -280,7 +280,7 @@ class FullNode:
             self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
             if self.config.get("enable_profiler", False):
-                asyncio.create_task(profile_task(self.root_path, "node", self.log))
+                asyncio.create_task(profile_task(self.root_path, "node", self.log))  # noqa: RUF006
 
             self.profile_block_validation = self.config.get("profile_block_validation", False)
             if self.profile_block_validation:  # pragma: no cover
@@ -290,7 +290,7 @@ class FullNode:
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
             if self.config.get("enable_memory_profiler", False):
-                asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
+                asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))  # noqa: RUF006
 
             time_taken = time.monotonic() - start_time
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -337,7 +337,7 @@ class FullNode:
 
             self.initialized = True
             if self.full_node_peers is not None:
-                asyncio.create_task(self.full_node_peers.start())
+                asyncio.create_task(self.full_node_peers.start())  # noqa: RUF006
             try:
                 yield
             finally:
@@ -353,7 +353,7 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    asyncio.create_task(self.full_node_peers.close())
+                    asyncio.create_task(self.full_node_peers.close())  # noqa: RUF006
                 if self.uncompact_task is not None:
                     self.uncompact_task.cancel()
                 if self._transaction_queue_task is not None:
@@ -491,7 +491,7 @@ class FullNode:
             # However, doing them one at a time would be slow, because they get sent to other processes.
             await self.add_transaction_semaphore.acquire()
             item: TransactionQueueEntry = await self.transaction_queue.pop()
-            asyncio.create_task(self._handle_one_transaction(item))
+            asyncio.create_task(self._handle_one_transaction(item))  # noqa: RUF006
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
@@ -874,7 +874,7 @@ class FullNode:
         self._state_changed("add_connection")
         self._state_changed("sync_mode")
         if self.full_node_peers is not None:
-            asyncio.create_task(self.full_node_peers.on_connect(connection))
+            asyncio.create_task(self.full_node_peers.on_connect(connection))  # noqa: RUF006
 
         if self.initialized is False:
             return None
@@ -1499,9 +1499,9 @@ class FullNode:
                     # already validated block, update sub slot iters, difficulty and prev sub epoch summary
                     vs.prev_ses_block = block_rec
                     if block_rec.sub_epoch_summary_included.new_sub_slot_iters is not None:
-                        vs.current_ssi = block_rec.sub_epoch_summary_included.new_sub_slot_iters
+                        vs.ssi = block_rec.sub_epoch_summary_included.new_sub_slot_iters
                     if block_rec.sub_epoch_summary_included.new_difficulty is not None:
-                        vs.current_difficulty = block_rec.sub_epoch_summary_included.new_difficulty
+                        vs.difficulty = block_rec.sub_epoch_summary_included.new_difficulty
 
             # the below section updates the fork_info object, if
             # there is one.
@@ -1588,13 +1588,13 @@ class FullNode:
                         self.constants, True, block_record, self.blockchain
                     )
                     assert cc_sub_slot.new_sub_slot_iters is not None
-                    vs.current_ssi = cc_sub_slot.new_sub_slot_iters
+                    vs.ssi = cc_sub_slot.new_sub_slot_iters
                     assert cc_sub_slot.new_difficulty is not None
-                    vs.current_difficulty = cc_sub_slot.new_difficulty
-                    assert expected_sub_slot_iters == vs.current_ssi
-                    assert expected_difficulty == vs.current_difficulty
+                    vs.difficulty = cc_sub_slot.new_difficulty
+                    assert expected_sub_slot_iters == vs.ssi
+                    assert expected_difficulty == vs.difficulty
             result, error, state_change_summary = await self.blockchain.add_block(
-                block, pre_validation_results[i], vs.current_ssi, fork_info, prev_ses_block=vs.prev_ses_block
+                block, pre_validation_results[i], vs.ssi, fork_info, prev_ses_block=vs.prev_ses_block
             )
             if error is None:
                 blockchain.remove_extra_block(header_hash)
@@ -2088,13 +2088,9 @@ class FullNode:
                             f"{block.height}: {Err(pre_validation_result.error).name}"
                         )
                 else:
-                    result_to_validate = (
-                        pre_validation_result if pre_validation_result is None else pre_validation_result
-                    )
-                    assert result_to_validate.required_iters == pre_validation_result.required_iters
                     fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
                     (added, error_code, state_change_summary) = await self.blockchain.add_block(
-                        block, result_to_validate, ssi, fork_info
+                        block, pre_validation_result, ssi, fork_info
                     )
                 if added == AddBlockResult.ALREADY_HAVE_BLOCK:
                     return None

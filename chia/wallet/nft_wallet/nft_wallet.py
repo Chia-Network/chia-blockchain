@@ -606,7 +606,7 @@ class NFTWallet:
             metadata_update=metadata_update,
             extra_conditions=extra_conditions,
         )
-        spend_bundle = WalletSpendBundle.aggregate([unsigned_spend_bundle] + additional_bundles)
+        spend_bundle = WalletSpendBundle.aggregate([unsigned_spend_bundle, *additional_bundles])
 
         async with action_scope.use() as interface:
             other_tx_removals: set[Coin] = {
@@ -1354,7 +1354,7 @@ class NFTWallet:
             # Extract Puzzle Announcement from eve spend
             eve_sol = eve_sb.coin_spends[0].solution.to_program()
             conds = eve_fullpuz.run(eve_sol)
-            eve_puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]
+            eve_puzzle_announcement = next(x for x in conds.as_python() if int_from_bytes(x[0]) == 62)[1]
             assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)
             puzzle_assertions.add(assertion)
 
@@ -1438,7 +1438,7 @@ class NFTWallet:
         did_spend = make_spend(did_coin, did_full_puzzle, did_full_sol)
 
         # Collect up all the coin spends and sign them
-        list_of_coinspends = [did_spend] + intermediate_coin_spends + launcher_spends + xch_spend.coin_spends
+        list_of_coinspends = [did_spend, *intermediate_coin_spends, *launcher_spends, *xch_spend.coin_spends]
         unsigned_spend_bundle = WalletSpendBundle(list_of_coinspends, G2Element())
 
         # Aggregate everything into a single spend bundle
@@ -1611,7 +1611,7 @@ class NFTWallet:
             # Extract Puzzle Announcement from eve spend
             eve_sol = eve_sb.coin_spends[0].solution.to_program()
             conds = eve_fullpuz.run(eve_sol)
-            eve_puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]
+            eve_puzzle_announcement = next(x for x in conds.as_python() if int_from_bytes(x[0]) == 62)[1]
             assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)
             puzzle_assertions.add(assertion)
 
@@ -1638,7 +1638,7 @@ class NFTWallet:
                 extra_conditions += tuple(AssertPuzzleAnnouncement(ann) for ann in puzzle_assertions)
 
                 solution: Program = self.standard_wallet.make_solution(
-                    primaries=[xch_payment] + primaries,
+                    primaries=[xch_payment, *primaries],
                     fee=fee,
                     conditions=extra_conditions,
                 )

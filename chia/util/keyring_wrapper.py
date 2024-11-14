@@ -61,7 +61,7 @@ def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError) -> bool:
 
 DEFAULT_PASSPHRASE_PROMPT = (
     colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
-)  # noqa: E501
+)
 FAILED_ATTEMPT_DELAY = 0.5
 MAX_RETRIES = 3
 

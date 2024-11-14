@@ -746,7 +746,7 @@ class TestMempoolManager:
         await time_out_assert(60, node_height_at_least, True, full_node_1, start_height + num_blocks)
 
         spend_bundle1 = generate_test_spend_bundle(
-            wallet_a, coin or list(blocks[-num_blocks + 2].get_included_reward_coins())[0], dic, uint64(fee)
+            wallet_a, coin or blocks[-num_blocks + 2].get_included_reward_coins()[0], dic, uint64(fee)
         )
 
         assert spend_bundle1 is not None

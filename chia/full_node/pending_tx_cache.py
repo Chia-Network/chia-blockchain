@@ -34,7 +34,7 @@ class ConflictTxCache:
         self._cache_cost += item.cost
 
         while self._cache_cost > self._cache_max_total_cost or len(self._txs) > self._cache_max_size:
-            first_in = list(self._txs.keys())[0]
+            first_in = next(iter(self._txs.keys()))
             self._cache_cost -= self._txs[first_in].cost
             self._txs.pop(first_in)
 
@@ -82,7 +82,7 @@ class PendingTxCache:
                 self._txs.pop(to_evict[0])
                 continue
 
-            first_in = list(to_evict[1].keys())[0]
+            first_in = next(iter(to_evict[1].keys()))
             removed_item = self._txs.pop(first_in)
             self._cache_cost -= removed_item.cost
             to_evict[1].pop(first_in)
