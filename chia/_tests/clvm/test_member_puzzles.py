@@ -394,7 +394,13 @@ async def test_secp256k1_member(cost_logger: CostLogger) -> None:
             # The type stubs are weird here, `deterministic_signing` is assuredly an argument
             ec.ECDSA(hashes.SHA256(), deterministic_signing=True),  # type: ignore[call-arg]
         )
-        r, s = decode_dss_signature(der_sig)
+        r, _s = decode_dss_signature(der_sig)
+        curve_order = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
+        if _s > curve_order // 2:
+            s = -_s % curve_order
+        else:
+            s = _s
+        sig = r.to_bytes(32, byteorder='big') + s.to_bytes(32, byteorder='big')
         sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
         sb = WalletSpendBundle(
             [
