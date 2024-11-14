@@ -324,7 +324,7 @@ async def test_plotnft_cli_show(
         wallet_state_manager.config,
     )
 
-    runner = CliRunner()
+    runner = CliRunner(env={"CHIA_ROOT": str(wallet_environments.environments[0].node.root_path)})
     with runner.isolated_filesystem():
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
