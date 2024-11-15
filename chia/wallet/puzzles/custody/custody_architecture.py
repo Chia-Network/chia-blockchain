@@ -74,13 +74,13 @@ class UnknownPuzzle:
 # A spec for "restrictions" on specific inner puzzles
 MemberOrDPuz = Literal[True, False]
 
-_T_MemberNotDPuz = TypeVar("_T_MemberNotDPuz", bound=MemberOrDPuz, covariant=True)
+_T_MemberNotDPuz_co = TypeVar("_T_MemberNotDPuz_co", bound=MemberOrDPuz, covariant=True)
 
 
 @runtime_checkable
-class Restriction(Puzzle, Protocol[_T_MemberNotDPuz]):
+class Restriction(Puzzle, Protocol[_T_MemberNotDPuz_co]):
     @property
-    def member_not_dpuz(self) -> _T_MemberNotDPuz: ...
+    def member_not_dpuz(self) -> _T_MemberNotDPuz_co: ...
 
 
 @dataclass(frozen=True)
@@ -196,7 +196,7 @@ class MofN:  # Technically matches Puzzle protocol but is a bespoke part of the 
         elif self.m > 1:
             return Program.to([self._merkle_tree.generate_m_of_n_proof(spends_to_prove)])  # type: ignore[attr-defined]
         else:
-            only_key = list(spends_to_prove.keys())[0]
+            only_key = next(iter(spends_to_prove.keys()))
             proven_spend = spends_to_prove[only_key]
             proof = self._merkle_tree.generate_proof(only_key)
             return Program.to([(proof[0], proof[1][0]), proven_spend.puzzle_reveal, proven_spend.solution])
