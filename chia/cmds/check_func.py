@@ -22,7 +22,7 @@ def check_shielding() -> int:
 
                     if previous_line_index >= 0:
                         previous_line = lines[line_index - 1]
-                        ignore_match = re.search(r"^ *# shielding not required", previous_line)
+                        ignore_match = re.search(r"^ *# shielding not required: .{10,}", previous_line)
                         if ignore_match is not None:
                             continue
 
