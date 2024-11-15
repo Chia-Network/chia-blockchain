@@ -33,7 +33,7 @@ class EasyDPuzWrapper:
 @pytest.mark.anyio
 async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        restriction = ValidatorStackRestriction([EasyDPuzWrapper()])
+        restriction = ValidatorStackRestriction([EasyDPuzWrapper(), EasyDPuzWrapper()])
         pwr = PuzzleWithRestrictions(0, [restriction], ACSMember())
 
         # Farm and find coin
@@ -50,7 +50,9 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
 
         # Now actually put the dpuz in the wrapper
-        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(["bat"])])
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(
+            any_old_dpuz, [Program.to(["bat"]), Program.to(["baz"])]
+        )
         wrapped_spend = cost_logger.add_cost(
             "Minimal dpuz wrapper w/ wrapper stack enforcement",
             WalletSpendBundle(
@@ -73,7 +75,7 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # memo format assertion for coverage sake
-        assert restriction.memo(0) == Program.to([None])
+        assert restriction.memo(0) == Program.to([None, None])
 
 
 @pytest.mark.anyio
