@@ -32,6 +32,14 @@ SECPK1_MEMBER_MOD = load_clvm_maybe_recompile(
     "secp256k1_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
 )
 
+SECPR1_PUZZLE_ASSERT_MEMBER_MOD = load_clvm_maybe_recompile(
+    "secp256r1_member_puzzle_assert.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
+)
+
+SECPK1_PUZZLE_ASSERT_MEMBER_MOD = load_clvm_maybe_recompile(
+    "secp256k1_member_puzzle_assert.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
+)
+
 
 @dataclass(frozen=True)
 class BLSMember(Puzzle):
@@ -117,3 +125,30 @@ class SECPK1Member(Puzzle):
             s = _s
         sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
         return Program.to([coin_id, sig])
+
+
+@dataclass(frozen=True)
+class SECPR1PuzzleAssertMember(SECPK1Member):
+    def puzzle(self, nonce: int) -> Program:
+        return SECPR1_PUZZLE_ASSERT_MEMBER_MOD.curry(self.secp_pk)
+
+
+@dataclass(frozen=True)
+class SECPK1PuzzleAssertMember(SECPK1Member):
+    def puzzle(self, nonce: int) -> Program:
+        return SECPK1_PUZZLE_ASSERT_MEMBER_MOD.curry(self.secp_pk)
+
+    def solve(self, secp_sk: EllipticCurvePrivateKey, message: bytes, my_puzzle_hash: bytes32) -> Program:
+        der_sig = secp_sk.sign(
+            message,
+            # The type stubs are weird here, `deterministic_signing` is assuredly an argument
+            ec.ECDSA(hashes.SHA256(), deterministic_signing=True),  # type: ignore[call-arg]
+        )
+        r, _s = decode_dss_signature(der_sig)
+        curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+        if _s > curve_order // 2:
+            s = -_s % curve_order
+        else:
+            s = _s
+        sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
+        return Program.to([my_puzzle_hash, sig])
