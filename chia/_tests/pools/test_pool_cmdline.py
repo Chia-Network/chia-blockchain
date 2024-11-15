@@ -11,6 +11,7 @@ from chia_rs import G1Element
 from pytest_mock import MockerFixture
 
 from chia._tests.cmds.cmd_test_utils import TestWalletRpcClient
+from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.pools.test_pool_rpc import manage_temporary_pool_plot
 from chia._tests.util.misc import Marks, datacases
@@ -37,6 +38,11 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
+
+# limit to plain consensus mode for all tests
+pytestmark = [pytest.mark.limit_consensus_modes(reason="irrelevant")]
+
+LOCK_HEIGHT = uint32(5)
 
 
 @dataclass
@@ -150,26 +156,15 @@ async def create_new_plotnft(
 
     our_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
 
-    if self_pool:
-        await wallet_rpc.create_new_pool_wallet(
-            target_puzzlehash=our_ph,
-            pool_url="",
-            relative_lock_height=uint32(0),
-            backup_host="",
-            mode="new",
-            state="SELF_POOLING",
-            fee=uint64(0),
-        )
-    else:
-        await wallet_rpc.create_new_pool_wallet(
-            target_puzzlehash=our_ph,
-            pool_url="http://pool.example.com",
-            relative_lock_height=uint32(5),
-            backup_host="",
-            mode="new",
-            state="FARMING_TO_POOL",
-            fee=uint64(0),
-        )
+    await wallet_rpc.create_new_pool_wallet(
+        target_puzzlehash=our_ph,
+        backup_host="",
+        mode="new",
+        relative_lock_height=uint32(0) if self_pool else LOCK_HEIGHT,
+        state="SELF_POOLING" if self_pool else "FARMING_TO_POOL",
+        pool_url="" if self_pool else "http://pool.example.com",
+        fee=uint64(0),
+    )
 
     if second_nft:
         return await process_second_plotnft_create(
@@ -277,7 +272,7 @@ async def test_plotnft_cli_create(
 @pytest.mark.anyio
 async def test_plotnft_cli_create_errors(
     case: StateUrlCase,
-    capsys: pytest.CaptureFixture[str],
+    consensus_mode: ConsensusMode,
 ) -> None:
     with pytest.raises(CliRpcConnectionError, match=case.expected_error):
         await CreatePlotNFTCMD(
@@ -308,8 +303,6 @@ async def test_plotnft_cli_create_errors(
 async def test_plotnft_cli_show(
     wallet_environments: WalletTestFramework,
     capsys: pytest.CaptureFixture[str],
-    self_hostname: str,
-    # with_wallet_id: bool,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -513,7 +506,9 @@ async def test_plotnft_cli_leave(
 
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
 
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(
+        count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
+    )
 
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.SELF_POOLING)
 
@@ -616,7 +611,6 @@ async def test_plotnft_cli_join(
         "authentication_token_timeout": 5,
     }
 
-    pool_response_dict["relative_lock_height"] = 5000
     mock_get = mocker.patch("aiohttp.ClientSession.get")
     mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
 
@@ -630,7 +624,7 @@ async def test_plotnft_cli_join(
             dont_prompt=True,
         ).run()
 
-    pool_response_dict["relative_lock_height"] = 5
+    pool_response_dict["relative_lock_height"] = LOCK_HEIGHT
     pool_response_dict["protocol_version"] = 2
     mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
 
@@ -644,7 +638,7 @@ async def test_plotnft_cli_join(
             dont_prompt=True,
         ).run()
 
-    pool_response_dict["relative_lock_height"] = 5
+    pool_response_dict["relative_lock_height"] = LOCK_HEIGHT
     pool_response_dict["protocol_version"] = 1
     mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
 
@@ -659,9 +653,11 @@ async def test_plotnft_cli_join(
         dont_prompt=True,
     ).run()
 
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=3, guarantee_transaction_blocks=True)
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(
+        count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
+    )
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
     await wallet_environments.full_node.wait_for_wallet_synced(
         wallet_node=wallet_environments.environments[0].node, timeout=20
@@ -692,9 +688,11 @@ async def test_plotnft_cli_join(
         dont_prompt=True,
     ).run()
 
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=3, guarantee_transaction_blocks=True)
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.LEAVING_POOL)
-    await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=12, guarantee_transaction_blocks=True)
+    await wallet_environments.full_node.farm_blocks_to_puzzlehash(
+        count=LOCK_HEIGHT + 2, guarantee_transaction_blocks=True
+    )
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
 
     # Join the same pool test - code not ready yet for test
@@ -724,7 +722,6 @@ async def test_plotnft_cli_join(
 @pytest.mark.anyio
 async def test_plotnft_cli_claim(
     wallet_environments: WalletTestFramework,
-    mocker: MockerFixture,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -917,7 +914,6 @@ async def test_plotnft_cli_inspect(
     assert json_output["pool_wallet_info"]["current"]["state"] == PoolSingletonState.SELF_POOLING.value
 
 
-@pytest.mark.limit_consensus_modes(reason="unneeded")
 @pytest.mark.parametrize(
     "wallet_environments",
     [
@@ -990,7 +986,6 @@ async def test_plotnft_cli_change_payout(
     assert wanted_config.payout_instructions == burn_ph.hex()
 
 
-@pytest.mark.limit_consensus_modes(reason="unneeded")
 @pytest.mark.parametrize(
     "wallet_environments",
     [
@@ -1039,7 +1034,7 @@ async def test_plotnft_cli_get_login_link(
 
 
 @pytest.mark.anyio
-async def test_plotnft_cli_misc(mocker: MockerFixture, capsys: pytest.CaptureFixture[str]) -> None:
+async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: ConsensusMode) -> None:
     from chia.cmds.plotnft_funcs import wallet_id_lookup_and_check
 
     test_rpc_client = TestWalletRpcClient()
