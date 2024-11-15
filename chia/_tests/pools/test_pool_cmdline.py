@@ -144,7 +144,6 @@ async def create_new_plotnft(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-            "trusted": True,
             "reuse_puzhash": False,
         }
     ],
@@ -253,7 +252,6 @@ async def test_plotnft_cli_create_errors(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-            "trusted": True,
             "reuse_puzhash": False,
         }
     ],
@@ -329,7 +327,6 @@ async def test_plotnft_cli_show(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-            "trusted": True,
             "reuse_puzhash": False,
         }
     ],
@@ -397,7 +394,6 @@ async def test_plotnft_cli_show_with_farmer(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "trusted": True,
             "reuse_puzhash": False,
         }
     ],
@@ -479,7 +475,6 @@ async def test_plotnft_cli_leave(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "trusted": True,
             "reuse_puzhash": False,
         }
     ],
@@ -673,7 +668,6 @@ async def test_plotnft_cli_join(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "trusted": True,
             "reuse_puzhash": False,
         }
     ],
@@ -794,7 +788,6 @@ async def test_plotnft_cli_claim(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "trusted": True,
             "reuse_puzhash": False,
         }
     ],
@@ -880,7 +873,6 @@ async def test_plotnft_cli_inspect(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "trusted": True,
             "reuse_puzhash": False,
         }
     ],
@@ -952,7 +944,6 @@ async def test_plotnft_cli_change_payout(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "trusted": True,
             "reuse_puzhash": False,
         }
     ],
