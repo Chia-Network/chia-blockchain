@@ -8,6 +8,7 @@ from chia_rs import AugSchemeMPL, G2Element
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
@@ -28,7 +29,12 @@ from chia.wallet.puzzles.custody.custody_architecture import (
     PuzzleWithRestrictions,
     Restriction,
 )
-from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import BLSMember, PasskeyMember, SECPR1Member
+from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import (
+    BLSMember,
+    PasskeyMember,
+    SECPK1Member,
+    SECPR1Member,
+)
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -295,7 +301,7 @@ async def test_secp256r1_member(cost_logger: CostLogger) -> None:
         secp_pk = secp_sk.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
 
         secpr1_member = SECPR1Member(secp_pk)
-
+        assert secpr1_member.memo(0) == Program.to(0)
         secpr1_puzzle = PuzzleWithRestrictions(0, [], secpr1_member)
 
         # Farm and find coin
@@ -332,6 +338,69 @@ async def test_secp256r1_member(cost_logger: CostLogger) -> None:
                                 sig,
                             ]
                         ),
+                        DelegatedPuzzleAndSolution(
+                            delegated_puzzle,
+                            Program.to(
+                                [
+                                    announcement.to_program(),
+                                    announcement.corresponding_assertion().to_program(),
+                                ]
+                            ),
+                        ),
+                    ),
+                )
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "secp spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        await sim.rewind(block_height)
+
+
+@pytest.mark.anyio
+async def test_secp256k1_member(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        delegated_puzzle = Program.to(1)
+        delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
+
+        # setup keys
+        secp_sk: EllipticCurvePrivateKey = ec.generate_private_key(ec.SECP256K1())
+        secp_pk = secp_sk.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
+
+        secpk1_member = SECPK1Member(secp_pk)
+        assert secpk1_member.memo(0) == Program.to(0)
+
+        secpk1_puzzle = PuzzleWithRestrictions(0, [], secpk1_member)
+
+        # Farm and find coin
+        await sim.farm_block(secpk1_puzzle.puzzle_hash())
+        coin = (
+            await client.get_coin_records_by_puzzle_hashes([secpk1_puzzle.puzzle_hash()], include_spent_coins=False)
+        )[0].coin
+        block_height = sim.block_height
+
+        # Create an announcements to be asserted in the delegated puzzle
+        announcement = CreateCoinAnnouncement(msg=b"foo", coin_id=coin.name())
+
+        # Get signature for AGG_SIG_ME
+        coin_id = coin.name()
+        signature_message = delegated_puzzle_hash + coin_id
+
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    secpk1_puzzle.puzzle_reveal(),
+                    secpk1_puzzle.solve(
+                        [],
+                        [],
+                        secpk1_member.solve(secp_sk, signature_message, coin_id),
                         DelegatedPuzzleAndSolution(
                             delegated_puzzle,
                             Program.to(
