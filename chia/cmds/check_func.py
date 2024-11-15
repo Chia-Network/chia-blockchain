@@ -18,17 +18,14 @@ def check_shielding() -> int:
 
                 this_match = re.search(r"^ *(async def [^(]*(close|stop)|(except|finally)\b)[^:]*:", line)
                 if this_match is not None:
-                    previous_line_index = line_index - 1
-
-                    if previous_line_index >= 0:
-                        previous_line = lines[line_index - 1]
-                        ignore_match = re.search(r"^ *# shielding not required: .{10,}", previous_line)
-                        if ignore_match is not None:
-                            continue
-
                     next_line_index = line_index + 1
                     if next_line_index < len(lines):
                         next_line = lines[line_index + 1]
+
+                        ignore_match = re.search(r"^ *# shielding not required: .{10,}", next_line)
+                        if ignore_match is not None:
+                            continue
+
                         next_match = re.search(r"^ *with anyio.CancelScope\(shield=True\):", next_line)
                     else:
                         next_match = None
