@@ -11,8 +11,9 @@ def check_group() -> None:
 
 
 @check_group.command(name="shielding")
-def shielding_command() -> None:
-    count = check_shielding()
+@click.option("--use-file-ignore/--no-file-ignore", default=True)
+def shielding_command(use_file_ignore: bool) -> None:
+    count = check_shielding(use_file_ignore=use_file_ignore)
 
     message = f"{count} concerns found"
     if count > 0:
