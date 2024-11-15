@@ -51,12 +51,12 @@ network_overrides: &network_overrides
       MIN_PLOT_SIZE: 18
       NETWORK_TYPE: 1
       SUB_SLOT_ITERS_STARTING: 67108864
-    twofourfour:
-      AGG_SIG_ME_ADDITIONAL_DATA: 63269eb9e5ddddc550a483a837455f5bff2996a086cb11a0b2d866df9f49d7bf
+    twofourfouraio:
+      AGG_SIG_ME_ADDITIONAL_DATA: 057243b086318c3fc287b30268343bd387f3686d469be96f8372855d050fb839
       DIFFICULTY_CONSTANT_FACTOR: 10052721566054
       DIFFICULTY_STARTING: 30
       EPOCH_BLOCKS: 768
-      GENESIS_CHALLENGE: 63269eb9e5ddddc550a483a837455f5bff2996a086cb11a0b2d866df9f49d7bf
+      GENESIS_CHALLENGE: 057243b086318c3fc287b30268343bd387f3686d469be96f8372855d050fb839
       GENESIS_PRE_FARM_POOL_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
       GENESIS_PRE_FARM_FARMER_PUZZLE_HASH: 08296fc227decd043aee855741444538e4cc9a31772c4d1a9e6242d1e777e42a
       MEMPOOL_BLOCK_BUFFER: 10
@@ -76,10 +76,10 @@ network_overrides: &network_overrides
     testneta:
       address_prefix: "txch"
       default_full_node_port: 58444
-    twofourfour:
+    twofourfouraio:
       address_prefix: txch
       default_full_node_port: 58445
-selected_network: &selected_network "twofourfour"
+selected_network: &selected_network "twofourfouraio"
 # public ssl ca is included in source code
 # Private ssl ca is used for trusted connections between machines user owns
 private_ssl_ca:
@@ -115,7 +115,7 @@ seeder:
   crawler_db_path: "crawler.db"
   # Peers used for the initial run.
   bootstrap_peers:
-    - "node-twofourfour.chia.net"
+    - "node-twofourfouraio.chia.net"
   # Only consider nodes synced at least to this height.
   minimum_height: 240000
   # How many of a particular version we need to see before reporting it in the logs
@@ -383,9 +383,9 @@ full_node:
   # List of trusted DNS seeders to bootstrap from.
   # If you modify this, please change the hardcode as well from FullNode.set_server()
   dns_servers: &dns_servers
-    - dns-introducer-twofourfour.chia.net
+    - dns-introducer-twofourfouraio.chia.net
   introducer_peer:
-    host: introducer-twofourfour.chia.net # Chia AWS introducer IPv4/IPv6
+    host: introducer-twofourfouraio.chia.net # Chia AWS introducer IPv4/IPv6
     port: 58445
     enable_private_networks: False
   logging: *logging
@@ -473,7 +473,7 @@ wallet:
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000
   introducer_peer:
-    host: introducer-twofourfour.chia.net # Chia AWS introducer IPv4/IPv6
+    host: introducer-twofourfouraio.chia.net # Chia AWS introducer IPv4/IPv6
     port: 58445
     enable_private_networks: False
   ssl:
