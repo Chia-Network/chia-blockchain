@@ -112,7 +112,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
 
             for b in blocks:
                 for coin in b.get_included_reward_coins():
-                    if coin.puzzle_hash in [farmer_puzzlehash, pool_puzzlehash]:
+                    if coin.puzzle_hash in {farmer_puzzlehash, pool_puzzlehash}:
                         unspent_coins.append(coin)
                 db.execute(
                     "INSERT INTO full_blocks VALUES(?, ?, ?, ?, ?)",
@@ -194,15 +194,15 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
 
                     print(
                         f"height: {b.height} "
-                        f"spends: {i+1} "
+                        f"spends: {i + 1} "
                         f"refs: {len(block_references)} "
-                        f"fill_rate: {actual_fill_rate*100:.1f}% "
+                        f"fill_rate: {actual_fill_rate * 100:.1f}% "
                         f"new coins: {len(new_coins)} "
                         f"unspent: {len(unspent_coins)} "
                         f"difficulty: {b.weight - prev_block.weight} "
                         f"timestamp: {ts} "
                         f"time: {end_time - start_time:0.2f}s "
-                        f"tx-block-ratio: {len(transaction_blocks)*100/b.height:0.0f}% "
+                        f"tx-block-ratio: {len(transaction_blocks) * 100 / b.height:0.0f}% "
                     )
 
                     new_blocks = [

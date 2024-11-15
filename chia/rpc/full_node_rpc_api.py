@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, BlockchainMutexPriority
@@ -82,6 +82,11 @@ async def get_average_block_time(
 
 
 class FullNodeRpcApi:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcApiProtocol
+
+        _protocol_check: ClassVar[RpcApiProtocol] = cast("FullNodeRpcApi", None)
+
     def __init__(self, service: FullNode) -> None:
         self.service = service
         self.service_name = "chia_full_node"
@@ -127,7 +132,7 @@ class FullNodeRpcApi:
             change_data = {}
 
         payloads = []
-        if change == "new_peak" or change == "sync_mode":
+        if change in {"new_peak", "sync_mode"}:
             data = await self.get_blockchain_state({})
             assert data is not None
             payloads.append(
@@ -147,7 +152,7 @@ class FullNodeRpcApi:
                 )
             )
 
-        if change in ("block", "signage_point"):
+        if change in {"block", "signage_point"}:
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
         if change == "unfinished_block":

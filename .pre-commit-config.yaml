@@ -15,16 +15,9 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
-      - id: pyupgrade
-        name: pyupgrade
-        entry: ./activated.py pyupgrade --py39-plus --keep-runtime-typing
-        language: system
-        types: [python]
-  - repo: local
-    hooks:
-      - id: black
-        name: black
-        entry: ./activated.py black
+      - id: ruff_format
+        name: ruff format
+        entry: ./activated.py ruff format
         language: system
         require_serial: true
         types_or: [python, pyi]
@@ -80,6 +73,13 @@ repos:
         pass_filenames: false
   - repo: local
     hooks:
+      - id: ruff
+        name: Ruff
+        entry: ./activated.py ruff check --fix
+        language: system
+        types: [python]
+  - repo: local
+    hooks:
       - id: build mypy.ini
         name: build mypy.ini
         entry: ./activated.py python manage-mypy.py build-mypy-ini
@@ -92,24 +92,3 @@ repos:
         entry: ./activated.py mypy
         language: system
         pass_filenames: false
-  - repo: local
-    hooks:
-      - id: isort
-        name: isort
-        entry: ./activated.py isort
-        language: system
-        types: [python]
-  - repo: local
-    hooks:
-      - id: flake8
-        name: Flake8
-        entry: ./activated.py flake8
-        language: system
-        types: [python]
-  - repo: local
-    hooks:
-      - id: ruff
-        name: Ruff
-        entry: ./activated.py ruff check --fix
-        language: system
-        types: [python]

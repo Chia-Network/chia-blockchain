@@ -112,7 +112,7 @@ def create_fields(cls: type[DataclassInstance]) -> StreamableFields:
 
 
 def is_type_List(f_type: object) -> bool:
-    return get_origin(f_type) == list or f_type == list
+    return get_origin(f_type) is list or f_type is list
 
 
 def is_type_SpecificOptional(f_type: object) -> bool:
@@ -123,7 +123,7 @@ def is_type_SpecificOptional(f_type: object) -> bool:
 
 
 def is_type_Tuple(f_type: object) -> bool:
-    return get_origin(f_type) == tuple or f_type == tuple
+    return get_origin(f_type) is tuple or f_type is tuple
 
 
 def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
@@ -216,7 +216,7 @@ def function_to_convert_one_item(
     elif hasattr(f_type, "from_json_dict"):
         if json_parser is None:
             json_parser = f_type.from_json_dict
-        return lambda item: json_parser(item)
+        return json_parser
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)
@@ -389,7 +389,7 @@ def function_to_parse_one_item(f_type: type[Any]) -> ParseFunctionType:
     if hasattr(f_type, "parse"):
         # Ignoring for now as the proper solution isn't obvious
         return f_type.parse  # type: ignore[no-any-return]
-    if f_type == bytes:
+    if f_type is bytes:
         return parse_bytes
     if is_type_List(f_type):
         inner_type = get_args(f_type)[0]
@@ -453,7 +453,7 @@ def function_to_stream_one_item(f_type: type[Any]) -> StreamFunctionType:
         inner_type = get_args(f_type)[0]
         stream_inner_type_func = function_to_stream_one_item(inner_type)
         return lambda item, f: stream_optional(stream_inner_type_func, item, f)
-    elif f_type == bytes:
+    elif f_type is bytes:
         return stream_bytes
     elif hasattr(f_type, "stream"):
         return stream_streamable
@@ -516,7 +516,7 @@ def streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
 class Streamable:
     """
     This class defines a simple serialization format, and adds methods to parse from/to bytes and json. It also
-    validates and parses all fields at construction in ´__post_init__` to make sure all fields have the correct type
+    validates and parses all fields at construction in `__post_init__` to make sure all fields have the correct type
     and can be streamed/parsed properly.
 
     The available primitives are:

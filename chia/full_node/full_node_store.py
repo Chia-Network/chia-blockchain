@@ -49,7 +49,7 @@ class UnfinishedBlockEntry:
 
 
 def find_best_block(
-    result: dict[Optional[bytes32], UnfinishedBlockEntry]
+    result: dict[Optional[bytes32], UnfinishedBlockEntry],
 ) -> tuple[Optional[bytes32], Optional[UnfinishedBlock]]:
     """
     Given a collection of UnfinishedBlocks (all with the same reward block
@@ -268,7 +268,7 @@ class FullNodeStore:
         # deterministic property.
         # this sorts the UnfinishedBlocks by the foliage hash, and picks the
         # smallest hash
-        foliage_hash, block = find_best_block(result)
+        _foliage_hash, block = find_best_block(result)
         return block
 
     def get_unfinished_block2(

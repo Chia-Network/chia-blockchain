@@ -170,8 +170,8 @@ class AddressParamType(click.ParamType):
         if not isinstance(value, str):
             self.fail("Invalid Type, address must be string.", param, ctx)
         try:
-            hrp, b32data = bech32_decode(value)
-            if hrp in ["xch", "txch"]:  # I hate having to load the config here
+            hrp, _b32data = bech32_decode(value)
+            if hrp in {"xch", "txch"}:  # I hate having to load the config here
                 addr_type: AddressType = AddressType.XCH
                 expected_prefix = ctx.obj.get("expected_prefix") if ctx else None  # attempt to get cached prefix
                 if expected_prefix is None:

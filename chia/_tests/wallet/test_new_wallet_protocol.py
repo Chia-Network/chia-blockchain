@@ -278,7 +278,7 @@ async def test_request_coin_state(one_node: OneNode, self_hostname: str) -> None
         coinbase=False,
         timestamp=uint64(1),
     )
-    await simulator.full_node.coin_store._add_coin_records(coin_records + [ignored_coin])
+    await simulator.full_node.coin_store._add_coin_records([*coin_records, ignored_coin])
 
     # Request no coin states
     resp = await simulator.request_coin_state(wallet_protocol.RequestCoinState([], None, genesis, False), peer)
@@ -404,7 +404,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
 
     # Farm block to a puzzle hash we aren't looking at
-    await simulator.farm_blocks_to_puzzlehash(3, farm_to=bytes32(b"\x0A" * 32))
+    await simulator.farm_blocks_to_puzzlehash(3, farm_to=bytes32(b"\x0a" * 32))
 
     genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
 
@@ -441,7 +441,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
         timestamp=uint64(1),
     )
 
-    await simulator.full_node.coin_store._add_coin_records(coin_records + [ignored_coin])
+    await simulator.full_node.coin_store._add_coin_records([*coin_records, ignored_coin])
 
     # We already test permutations of CoinStateFilters in the CoinStore tests
     # So it's redundant to do so here

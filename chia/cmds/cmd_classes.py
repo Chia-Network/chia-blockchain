@@ -212,7 +212,7 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
                 click.option(
                     *option_args["param_decls"],
                     type=type_arg,
-                    **{k: v for k, v in option_args.items() if k not in ("param_decls", "type")},
+                    **{k: v for k, v in option_args.items() if k not in {"param_decls", "type"}},
                 )
             )
 
@@ -477,7 +477,7 @@ _T_TransactionEndpoint = TypeVar("_T_TransactionEndpoint", bound=TransactionEndp
 
 
 def transaction_endpoint_runner(
-    func: Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, list[TransactionRecord]]]
+    func: Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, list[TransactionRecord]]],
 ) -> Callable[[_T_TransactionEndpoint], Coroutine[Any, Any, None]]:
     async def wrapped_func(self: _T_TransactionEndpoint) -> None:
         txs = await func(self)

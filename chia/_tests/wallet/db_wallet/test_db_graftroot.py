@@ -29,7 +29,7 @@ GRAFTROOT_MOD = load_clvm("graftroot_dl_offers.clsp", package_or_requirement="ch
 #   (recurse solution ())
 # )
 ACS = Program.fromhex(
-    "ff02ffff01ff02ff02ffff04ff02ffff04ff03ffff01ff8080808080ffff04ffff01ff02ffff03ff05ffff01ff02ff02ffff04ff02ffff04ff0dffff04ff09ff8080808080ffff010b80ff0180ff018080"  # noqa
+    "ff02ffff01ff02ff02ffff04ff02ffff04ff03ffff01ff8080808080ffff04ffff01ff02ffff03ff05ffff01ff02ff02ffff04ff02ffff04ff0dffff04ff09ff8080808080ffff010b80ff0180ff018080"
 )
 ACS_PH = ACS.get_tree_hash()
 

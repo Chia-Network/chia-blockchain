@@ -537,7 +537,11 @@ def test_validator() -> None:
 
     # Setup the spend_p2_singleton (proposal inner puz)
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(
-        treasury_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
+        treasury_struct,
+        CAT_MOD_HASH,
+        conditions,
+        [],
+        p2_singleton_puzhash,  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
@@ -591,8 +595,6 @@ def test_validator() -> None:
     )
     conds = proposal_validator.run(solution)
     assert len(conds.as_python()) == 3
-
-    return
 
 
 def test_spend_p2_singleton() -> None:
@@ -747,8 +749,6 @@ def test_merge_p2_singleton() -> None:
         assert cca in agg_acas
         assert merge_conds[ConditionOpcode.ASSERT_MY_COIN_ID][0].vars[0] == coin_id
 
-    return
-
 
 def test_treasury() -> None:
     """
@@ -820,7 +820,11 @@ def test_treasury() -> None:
 
     # Setup the spend_p2_singleton (proposal inner puz)
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(
-        treasury_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
+        treasury_struct,
+        CAT_MOD_HASH,
+        conditions,
+        [],
+        p2_singleton_puzhash,  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
@@ -1067,7 +1071,11 @@ def test_proposal_lifecycle() -> None:
 
     # Setup the spend_p2_singleton (proposal inner puz)
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(
-        treasury_singleton_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
+        treasury_singleton_struct,
+        CAT_MOD_HASH,
+        conditions,
+        [],
+        p2_singleton_puzhash,  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 

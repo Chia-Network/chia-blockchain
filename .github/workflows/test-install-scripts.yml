@@ -22,34 +22,55 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: Test Install Scripts - ${{ matrix.development.name }} - ${{ matrix.editable.name }}
-    runs-on: ${{ matrix.os.runs-on }}
+    name: Native ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.development.name }} - ${{ matrix.editable.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
       matrix:
         python:
           - major-dot-minor: "3.10"
         os:
-          - runs-on: macos-latest
-            matrix: macos-arm
-          - runs-on: macos-13
-            matrix: macos-intel
-          - runs-on: ubuntu-latest
+          - name: Linux
+            emoji: 🐧
+            runs-on:
+              arm: [Linux, ARM64]
+              intel: ubuntu-latest
             matrix: linux
-          - runs-on: windows-latest
+          - name: macOS
+            emoji: 🍎
+            runs-on:
+              arm: macos-latest
+              intel: macos-13
+            matrix: macos
+          - name: Windows
+            emoji: 🪟
+            runs-on:
+              intel: windows-latest
             matrix: windows
+        arch:
+          - name: ARM
+            emoji: 💪
+            matrix: arm
+          - name: Intel
+            emoji: 🌀
+            matrix: intel
         development:
-          - name: Non-development
+          - name: Non-dev
             value: false
-          - name: Development
+          - name: Dev
             value: true
         editable:
-          - name: Non-editable
+          - name: Non-edit
             value: false
             matrix: non-editable
-          - name: Editable
+          - name: Edit
             value: true
             matrix: editable
+        exclude:
+          - os:
+              matrix: windows
+            arch:
+              matrix: arm
 
     steps:
       - name: Checkout Code
@@ -112,7 +133,7 @@ jobs:
           [ "$POST_VERSION" != "shooby-doowah" -a "$PRE_VERSION" = "$POST_VERSION" ]
 
   test_scripts_in_docker:
-    name: Test Install Scripts ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
+    name: Docker ${{ matrix.distribution.name }} ${{ matrix.arch.name }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     container: ${{ matrix.distribution.url }}
     strategy:

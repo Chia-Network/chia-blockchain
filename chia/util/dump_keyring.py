@@ -12,10 +12,10 @@ import colorama
 import yaml
 from cryptography.exceptions import InvalidTag
 
-from chia.cmds.passphrase_funcs import prompt_for_passphrase, read_passphrase_from_file
+from chia.cmds.passphrase_funcs import read_passphrase_from_file
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.file_keyring import FileKeyringContent
-from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
+from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper, prompt_for_passphrase
 
 DEFAULT_KEYRING_YAML = DEFAULT_KEYS_ROOT_PATH / "keyring.yaml"
 
@@ -36,7 +36,7 @@ def get_passphrase_prompt(keyring_file: str) -> str:
             + ")"
             + colorama.Style.RESET_ALL
             + " Passphrase: "
-        ),  # noqa: E501
+        ),
     )
     return prompt
 

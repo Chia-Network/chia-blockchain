@@ -269,7 +269,7 @@ class DIDWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
-        name: str = None,
+        name: Optional[str] = None,
     ):
         """
         Create a DID wallet based on the local database

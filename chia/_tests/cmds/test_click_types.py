@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
@@ -37,11 +38,9 @@ overflow_decimal_str = "18446744.073709551616"
 overflow_decimal = Decimal(overflow_decimal_str)
 
 
+@dataclass
 class FakeContext:
-    obj: dict[Any, Any] = {}
-
-    def __init__(self, obj: dict[Any, Any]):
-        self.obj = obj
+    obj: dict[Any, Any] = field(default_factory=dict)
 
 
 def test_click_tx_fee_type() -> None:
@@ -67,7 +66,7 @@ def test_click_tx_fee_type() -> None:
         TransactionFeeParamType().convert(overflow_decimal_str, None, None)
     # Test Type Failures
     with pytest.raises(BadParameter):
-        TransactionFeeParamType().convert(float(0.01), None, None)
+        TransactionFeeParamType().convert(0.01, None, None)
 
 
 def test_click_amount_type() -> None:
@@ -139,7 +138,7 @@ def test_click_address_type() -> None:
         AddressParamType().convert(burn_bad_prefix, None, None)
     # Test Type Failures
     with pytest.raises(BadParameter):
-        AddressParamType().convert(float(0.01), None, None)
+        AddressParamType().convert(0.01, None, None)
 
     # check class error handling
     with pytest.raises(ValueError):
@@ -170,7 +169,7 @@ def test_click_bytes32_type() -> None:
         Bytes32ParamType().convert("test", None, None)
     # Test Type Failures
     with pytest.raises(BadParameter):
-        Bytes32ParamType().convert(float(0.01), None, None)
+        Bytes32ParamType().convert(0.01, None, None)
 
 
 def test_click_uint64_type() -> None:
@@ -192,4 +191,4 @@ def test_click_uint64_type() -> None:
         Uint64ParamType().convert(str(overflow_ammt), None, None)
     # Test Type Failures
     with pytest.raises(BadParameter):
-        Uint64ParamType().convert(float(0.01), None, None)
+        Uint64ParamType().convert(0.01, None, None)

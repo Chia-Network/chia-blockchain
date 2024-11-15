@@ -34,7 +34,6 @@ from chia.util.db_wrapper import SQLITE_INT_MAX
 from chia.util.errors import Err, ValidationError
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint32, uint64
-from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
@@ -182,11 +181,7 @@ class MempoolManager:
         if single_threaded:
             self.pool = InlineExecutor()
         else:
-            self.pool = ThreadPoolExecutor(
-                max_workers=2,
-                initializer=setproctitle,
-                initargs=(f"{getproctitle()}_mempool_worker",),
-            )
+            self.pool = ThreadPoolExecutor(max_workers=2)
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[BlockRecordProtocol] = None
@@ -253,7 +248,7 @@ class MempoolManager:
     def add_and_maybe_pop_seen(self, spend_name: bytes32) -> None:
         self.seen_bundle_hashes[spend_name] = spend_name
         while len(self.seen_bundle_hashes) > self.seen_cache_size:
-            first_in = list(self.seen_bundle_hashes.keys())[0]
+            first_in = next(iter(self.seen_bundle_hashes.keys()))
             self.seen_bundle_hashes.pop(first_in)
 
     def seen(self, bundle_hash: bytes32) -> bool:
@@ -363,7 +358,7 @@ class MempoolManager:
             info = self.mempool.add_to_pool(item)
             if info.error is not None:
                 return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.FAILED, [], info.error)
-            return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.SUCCESS, info.removals + [conflict], None)
+            return SpendBundleAddInfo(item.cost, MempoolInclusionStatus.SUCCESS, [*info.removals, conflict], None)
         elif err is Err.MEMPOOL_CONFLICT and item is not None:
             # The transaction has a conflict with another item in the
             # mempool, put it aside and re-try it later
@@ -423,7 +418,7 @@ class MempoolManager:
                 child_coin = Coin(coin_id, puzzle_hash, uint64(amount))
                 spend_additions.append(child_coin)
                 additions_dict[child_coin.name()] = child_coin
-                addition_amount = addition_amount + child_coin.amount
+                addition_amount += child_coin.amount
             is_eligible_for_dedup = bool(spend.flags & ELIGIBLE_FOR_DEDUP)
             is_eligible_for_ff = bool(spend.flags & ELIGIBLE_FOR_FF)
             eligibility_and_additions[coin_id] = EligibilityAndAdditions(
@@ -455,7 +450,7 @@ class MempoolManager:
             )
 
         if removal_names != removal_names_from_coin_spends:
-            # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
+            # If you reach here it's probably because your puzzle reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
         removal_record_dict: dict[bytes32, CoinRecord] = {}
@@ -486,7 +481,7 @@ class MempoolManager:
                 removal_record_dict[name] = removal_record
             else:
                 removal_record = removal_record_dict[name]
-            removal_amount = removal_amount + removal_record.coin.amount
+            removal_amount += removal_record.coin.amount
 
         fees = uint64(removal_amount - addition_amount)
 
@@ -581,7 +576,7 @@ class MempoolManager:
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
             f"add_spendbundle {spend_name} took {duration:0.2f} seconds. "
-            f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
+            f"Cost: {cost} ({round(100.0 * cost / self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
         return None, potential, [item.name for item in conflicts]
@@ -806,8 +801,13 @@ def can_replace(
         # bundle with AB with a higher fee. An attacker then replaces the bundle with just B with a higher
         # fee than AB therefore kicking out A altogether. The better way to solve this would be to keep a cache
         # of booted transactions like A, and retry them after they get removed from mempool due to a conflict.
-        for coin in item.removals:
-            if coin.name() not in removal_names:
+        conflicting_removals = {c.name(): c for c in item.removals}
+        for coin in conflicting_removals.values():
+            coin_name = coin.name()
+            # if the parent of this coin is one of the spends in this
+            # transaction, it means it's an ephemeral coin spend. Such spends
+            # are not considered by the superset rule
+            if coin_name not in removal_names and coin.parent_coin_info not in conflicting_removals:
                 log.debug(f"Rejecting conflicting tx as it does not spend conflicting coin {coin.name()}")
                 return False
 

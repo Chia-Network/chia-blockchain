@@ -2,21 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import dataclasses
 import json
 import logging
 from os.path import dirname
-from typing import Any, Optional, Union, cast
+from typing import Optional, Union, cast
 
 import pytest
 from chia_rs import G1Element
-from pytest_mock import MockerFixture
 
+from chia._tests.util.misc import patch_request_handler
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.farmer.farmer import Farmer, calculate_harvester_fee_quality
 from chia.farmer.farmer_api import FarmerAPI
 from chia.full_node.full_node import FullNode
@@ -24,7 +25,6 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.harvester.harvester import Harvester
 from chia.harvester.harvester_api import HarvesterAPI
 from chia.protocols import farmer_protocol, full_node_protocol, harvester_protocol, timelord_protocol
-from chia.protocols.farmer_protocol import RequestSignedValues
 from chia.protocols.harvester_protocol import ProofOfSpaceFeeInfo, RespondSignatures, SigningDataKind
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, NodeType, make_msg
@@ -59,7 +59,6 @@ async def test_harvester_receive_source_signing_data(
         Union[FullNodeService, SimulatorFullNodeService],
         BlockTools,
     ],
-    mocker: MockerFixture,
 ) -> None:
     """
     Tests that the source data for the signatures requests sent to the
@@ -115,8 +114,9 @@ async def test_harvester_receive_source_signing_data(
     finished_validating_data = False
     farmer_reward_address = decode_puzzle_hash("txch1psqeaw0h244v5sy2r4se8pheyl62n8778zl6t5e7dep0xch9xfkqhx2mej")
 
-    async def intercept_harvester_request_signatures(*args: Any) -> Message:
-        request: harvester_protocol.RequestSignatures = harvester_protocol.RequestSignatures.from_bytes(args[0])
+    async def intercept_harvester_request_signatures(
+        self: HarvesterAPI, request: harvester_protocol.RequestSignatures
+    ) -> Optional[Message]:
         nonlocal harvester
         nonlocal farmer_reward_address
 
@@ -210,23 +210,22 @@ async def test_harvester_receive_source_signing_data(
             data_hash = data.get_hash()
             assert data_hash == hash
 
-    async def intercept_farmer_new_proof_of_space(*args: Any) -> None:
+    async def intercept_farmer_new_proof_of_space(
+        self: HarvesterAPI, request: harvester_protocol.NewProofOfSpace, peer: WSChiaConnection
+    ) -> None:
         nonlocal farmer
         nonlocal farmer_reward_address
 
-        request: harvester_protocol.NewProofOfSpace = dataclasses.replace(
-            harvester_protocol.NewProofOfSpace.from_bytes(args[0]), farmer_reward_address_override=farmer_reward_address
-        )
-        peer: WSChiaConnection = args[1]
+        request = dataclasses.replace(request, farmer_reward_address_override=farmer_reward_address)
 
         await FarmerAPI.new_proof_of_space(farmer.server.api, request, peer)
 
-    async def intercept_farmer_request_signed_values(*args: Any) -> Optional[Message]:
+    async def intercept_farmer_request_signed_values(
+        self: FarmerAPI, request: farmer_protocol.RequestSignedValues
+    ) -> Optional[Message]:
         nonlocal farmer
         nonlocal farmer_reward_address
         nonlocal full_node_2
-
-        request: RequestSignedValues = RequestSignedValues.from_bytes(args[0])
 
         # Ensure the FullNode included the source data for the signatures
         assert request.foliage_block_data
@@ -242,18 +241,37 @@ async def test_harvester_receive_source_signing_data(
 
         return await FarmerAPI.request_signed_values(farmer.server.api, request)
 
-    mocker.patch.object(farmer.server.api, "request_signed_values", side_effect=intercept_farmer_request_signed_values)
-    mocker.patch.object(farmer.server.api, "new_proof_of_space", side_effect=intercept_farmer_new_proof_of_space)
-    mocker.patch.object(harvester.server.api, "request_signatures", side_effect=intercept_harvester_request_signatures)
+    with contextlib.ExitStack() as exit_stack:
+        exit_stack.enter_context(
+            patch_request_handler(
+                api=farmer.server.api,
+                handler=intercept_farmer_request_signed_values,
+                request_type=ProtocolMessageTypes.request_signed_values,
+            )
+        )
+        exit_stack.enter_context(
+            patch_request_handler(
+                api=farmer.server.api,
+                handler=intercept_farmer_new_proof_of_space,
+                request_type=ProtocolMessageTypes.new_proof_of_space,
+            )
+        )
+        exit_stack.enter_context(
+            patch_request_handler(
+                api=harvester.server.api,
+                handler=intercept_harvester_request_signatures,
+                request_type=ProtocolMessageTypes.request_signatures,
+            )
+        )
 
-    # Start injecting signage points
-    await inject_signage_points(signage_points, full_node_1, full_node_2)
+        # Start injecting signage points
+        await inject_signage_points(signage_points, full_node_1, full_node_2)
 
-    # Wait until test finishes
-    def did_finished_validating_data() -> bool:
-        return finished_validating_data
+        # Wait until test finishes
+        def did_finished_validating_data() -> bool:
+            return finished_validating_data
 
-    await time_out_assert(60 * 60, did_finished_validating_data, True)
+        await time_out_assert(60, did_finished_validating_data, True)
 
 
 @pytest.mark.anyio
@@ -438,15 +456,19 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
         prev_ses_block = curr
     new_slot = len(block.finished_sub_slots) > 0
     ssi, diff = get_next_sub_slot_iters_and_difficulty(full_node.constants, new_slot, prev_b, full_node.blockchain)
-    futures = await pre_validate_blocks_multiprocessing(
-        full_node.blockchain.constants,
-        AugmentedBlockchain(full_node.blockchain),
-        blocks,
-        full_node.blockchain.pool,
-        {},
-        ValidationState(ssi, diff, prev_ses_block),
-        validate_signatures=True,
-    )
+    futures = []
+    chain = AugmentedBlockchain(full_node.blockchain)
+    for block in blocks:
+        futures.append(
+            await pre_validate_block(
+                full_node.blockchain.constants,
+                chain,
+                block,
+                full_node.blockchain.pool,
+                None,
+                ValidationState(ssi, diff, prev_ses_block),
+            )
+        )
     pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
     assert pre_validation_results is not None and len(pre_validation_results) == len(blocks)
     for i in range(len(blocks)):
@@ -456,15 +478,15 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
                 ssi = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
         r, _, _ = await full_node.blockchain.add_block(
-            blocks[i], pre_validation_results[i], None, sub_slot_iters=ssi, fork_info=fork_info
+            blocks[i], pre_validation_results[i], sub_slot_iters=ssi, fork_info=fork_info
         )
         assert r == AddBlockResult.NEW_PEAK
 
 
 async def inject_signage_points(signage_points: SPList, full_node_1: FullNode, full_node_2: FullNode) -> None:
-    full_node_2_peer_1 = [
+    full_node_2_peer_1 = next(
         n for n in list(full_node_2.server.all_connections.values()) if n.local_type == NodeType.FULL_NODE
-    ][0]
+    )
 
     api2 = cast(FullNodeAPI, full_node_2.server.api)
 

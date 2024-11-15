@@ -188,7 +188,7 @@ async def get_transactions(
     reverse: bool,
     clawback: bool,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, config):
         if paginate is None:
             paginate = sys.stdout.isatty()
         type_filter = (
@@ -367,7 +367,7 @@ async def send(
 
 
 async def get_address(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, new_address: bool) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         res = await wallet_client.get_next_address(wallet_id, new_address)
         print(res)
 
@@ -659,8 +659,9 @@ async def get_offers(
     include_completed: bool = False,
     summaries: bool = False,
     reverse: bool = False,
+    sort_by_relevance: bool = True,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         file_contents: bool = (filepath is not None) or summaries
         records: list[TradeRecord] = []
         if offer_id is None:
@@ -673,6 +674,7 @@ async def get_offers(
                 new_records: list[TradeRecord] = await wallet_client.get_all_offers(
                     start,
                     end,
+                    sort_key="RELEVANCE" if sort_by_relevance else "CONFIRMED_AT_HEIGHT",
                     reverse=reverse,
                     file_contents=file_contents,
                     exclude_my_offers=exclude_my_offers,
@@ -836,7 +838,7 @@ async def cancel_offer(
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> tuple[str, int]:
     if typ in {WalletType.CAT, WalletType.CRCAT}:
         return "", units["cat"]
-    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG]:
+    if typ in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG}:
         return address_prefix, units["chia"]
     return "", units["mojo"]
 
@@ -960,7 +962,7 @@ async def create_did_wallet(
 
 
 async def did_set_wallet_name(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, name: str) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
             await wallet_client.did_set_wallet_name(wallet_id, name)
             print(f"Successfully set a new name for DID wallet with id {wallet_id}: {name}")
@@ -969,7 +971,7 @@ async def did_set_wallet_name(wallet_rpc_port: Optional[int], fp: Optional[int],
 
 
 async def get_did(wallet_rpc_port: Optional[int], fp: Optional[int], did_wallet_id: int) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
             response = await wallet_client.get_did_id(did_wallet_id)
             my_did = response["my_did"]
@@ -981,7 +983,7 @@ async def get_did(wallet_rpc_port: Optional[int], fp: Optional[int], did_wallet_
 
 
 async def get_did_info(wallet_rpc_port: Optional[int], fp: Optional[int], coin_id: str, latest: bool) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         did_padding_length = 23
         try:
             response = await wallet_client.get_did_info(coin_id, latest)
@@ -1071,7 +1073,6 @@ async def transfer_did(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         try:
             target_address = target_cli_address.original_address
@@ -1105,7 +1106,7 @@ async def find_lost_did(
     recovery_list_hash: Optional[str],
     num_verification: Optional[int],
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         try:
             response = await wallet_client.find_lost_did(
                 coin_id,
@@ -1124,7 +1125,7 @@ async def find_lost_did(
 async def create_nft_wallet(
     wallet_rpc_port: Optional[int], fp: Optional[int], did_id: Optional[CliAddress] = None, name: Optional[str] = None
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
         try:
             response = await wallet_client.create_new_nft_wallet(did_id.original_address if did_id else None, name)
             wallet_id = response["wallet_id"]
@@ -1377,7 +1378,7 @@ async def set_nft_did(
 
 
 async def get_nft_info(wallet_rpc_port: Optional[int], fp: Optional[int], nft_coin_id: str) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, config):
         try:
             response = await wallet_client.get_nft_info(nft_coin_id)
             nft_info = NFTInfo.from_json_dict(response["nft_info"])
@@ -1453,7 +1454,7 @@ async def send_notification(
     push: bool,
     condition_valid_times: ConditionValidTimes,
 ) -> list[TransactionRecord]:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, _):
         amount: uint64 = cli_amount.convert_amount(units["chia"])
 
         tx = await wallet_client.send_notification(
@@ -1478,7 +1479,7 @@ async def get_notifications(
     start: Optional[int],
     end: Optional[int],
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         if ids is not None:
             ids = None if len(ids) == 0 else list(ids)
         response = await wallet_client.get_notifications(
@@ -1494,7 +1495,7 @@ async def get_notifications(
 async def delete_notifications(
     wallet_rpc_port: Optional[int], fp: Optional[int], ids: Sequence[bytes32], delete_all: bool
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         if delete_all:
             print(f"Success: {await wallet_client.delete_notifications()}")
         else:
@@ -1511,7 +1512,7 @@ async def sign_message(
     did_id: Optional[CliAddress] = None,
     nft_id: Optional[CliAddress] = None,
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         if addr_type == AddressType.XCH:
             if address is None:
                 print("Address is required for XCH address type.")
@@ -1605,7 +1606,7 @@ async def mint_vc(
 
 
 async def get_vcs(wallet_rpc_port: Optional[int], fp: Optional[int], start: int, count: int) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, config):
         vc_records, proofs = await wallet_client.vc_get_list(start, count)
         print("Proofs:")
         for hash, proof_dict in proofs.items():
@@ -1672,7 +1673,7 @@ async def spend_vc(
 async def add_proof_reveal(
     wallet_rpc_port: Optional[int], fp: Optional[int], proofs: Sequence[str], root_only: bool
 ) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         if len(proofs) == 0:
             print("Must specify at least one proof")
             return
@@ -1688,7 +1689,7 @@ async def add_proof_reveal(
 
 
 async def get_proofs_for_root(wallet_rpc_port: Optional[int], fp: Optional[int], proof_hash: str) -> None:
-    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
+    async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
         proof_dict: dict[str, str] = await wallet_client.vc_get_proofs_for_root(bytes32.from_hexstr(proof_hash))
         print("Proofs:")
         for proof in proof_dict:

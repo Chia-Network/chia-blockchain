@@ -4,7 +4,7 @@ import dataclasses
 import logging
 import time
 from collections import deque
-from typing import TYPE_CHECKING, Any, Deque, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from typing_extensions import Literal
 
@@ -257,8 +257,8 @@ class TradeManager:
         announcement_nonce: bytes32 = std_hash(b"".join(trades))
         trade_records: list[TradeRecord] = []
         all_cancellation_coins: list[list[Coin]] = []
-        announcement_creations: Deque[CreateCoinAnnouncement] = deque()
-        announcement_assertions: Deque[AssertCoinAnnouncement] = deque()
+        announcement_creations: deque[CreateCoinAnnouncement] = deque()
+        announcement_assertions: deque[AssertCoinAnnouncement] = deque()
         for trade_id in trades:
             if trade_id in trade_cache:
                 trade = trade_cache[trade_id]
@@ -852,7 +852,7 @@ class TradeManager:
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
                     raise ValueError(f"Do not have a wallet for asset ID: {asset_id} to fulfill offer")
-                elif wallet is None or wallet.type() in [WalletType.NFT, WalletType.DATA_LAYER]:
+                elif wallet is None or wallet.type() in {WalletType.NFT, WalletType.DATA_LAYER}:
                     key = asset_id
                 else:
                     key = int(wallet.id())
@@ -878,7 +878,7 @@ class TradeManager:
             if not result[0] or result[1] is None:
                 raise ValueError(result[2])
 
-            success, take_offer, error = result
+            _success, take_offer, _error = result
 
             complete_offer, valid_spend_solver = await self.check_for_final_modifications(
                 Offer.aggregate([offer, take_offer]), solver, inner_action_scope
@@ -999,12 +999,12 @@ class TradeManager:
                 k: v
                 for k, v in valid_times.to_json_dict().items()
                 if k
-                not in (
+                not in {
                     "max_secs_after_created",
                     "min_secs_since_created",
                     "max_blocks_after_created",
                     "min_blocks_since_created",
-                )
+                }
             },
         }
 
@@ -1033,8 +1033,7 @@ class TradeManager:
                     if WalletType(wallet.type()) == WalletType.VC:
                         assert isinstance(wallet, VCWallet)
                         return await wallet.add_vc_authorization(offer, solver, action_scope)
-                else:
-                    raise ValueError("No VCs to approve CR-CATs with")  # pragma: no cover
+                raise ValueError("No VCs to approve CR-CATs with")  # pragma: no cover
 
         return offer, Solver({})
 

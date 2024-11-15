@@ -385,7 +385,7 @@ def test_check_config(tmp_path: Path) -> None:
         ],
     )
     assert "    module three ignored but no cycles were found" in result.output
-    assert f"    file {str(chia_dir / 'module3.py')} ignored but no cycles were found" in result.output
+    assert f"    file {chia_dir / 'module3.py'!s} ignored but no cycles were found" in result.output
     assert (
         f"edge {str(chia_dir / 'module2.py') + ' -> ' + str(chia_dir / 'module3.py')} ignored but no cycles were found"
         in result.output
@@ -588,4 +588,4 @@ def test_parse_edges(tmp_path: Path) -> None:
             "two",
         ],
     )
-    assert result.output.strip() == f"{str(chia_dir / 'module1.py')} (one) -> {str(chia_dir / 'module2.py')} (two)"
+    assert result.output.strip() == f"{chia_dir / 'module1.py'!s} (one) -> {chia_dir / 'module2.py'!s} (two)"

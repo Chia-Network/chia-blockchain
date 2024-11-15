@@ -181,9 +181,9 @@ class Wallet:
         if new:
             return await self.get_new_puzzle()
         else:
-            record: Optional[DerivationRecord] = (
-                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            )
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
             if record is None:
                 return await self.get_new_puzzle()  # pragma: no cover
             puzzle = puzzle_for_pk(record.pubkey)
@@ -193,9 +193,9 @@ class Wallet:
         if new:
             return await self.get_new_puzzlehash()
         else:
-            record: Optional[DerivationRecord] = (
-                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
-            )
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.id())
             if record is None:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
@@ -312,7 +312,7 @@ class Wallet:
             raise ValueError("Cannot create two identical coins")
         for coin in coins:
             # Only one coin creates outputs
-            if origin_id in (None, coin.name()):
+            if origin_id in {None, coin.name()}:
                 origin_id = coin.name()
                 inner_puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 decorated_target_puzzle_hash = decorator_manager.decorate_target_puzzle_hash(
@@ -509,9 +509,9 @@ class Wallet:
 
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool:
         if hint == coin.puzzle_hash:
-            wallet_identifier: Optional[WalletIdentifier] = (
-                await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
-            )
+            wallet_identifier: Optional[
+                WalletIdentifier
+            ] = await self.wallet_state_manager.puzzle_store.get_wallet_identifier_for_puzzle_hash(coin.puzzle_hash)
             if wallet_identifier is not None and wallet_identifier.id == self.id():
                 return True
         return False

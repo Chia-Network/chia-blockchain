@@ -1,8 +1,7 @@
-# flake8: noqa E402 # See imports after multiprocessing.set_start_method
+# ruff: noqa: E402 # See imports after multiprocessing.set_start_method
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import datetime
 import functools
 import json
@@ -24,7 +23,6 @@ import pytest
 from _pytest.fixtures import SubRequest
 from pytest import MonkeyPatch
 
-import chia._tests
 from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.core.node_height import node_height_at_least
@@ -50,13 +48,10 @@ from chia._tests.util.setup_nodes import (
 from chia._tests.util.spend_sim import CostLogger
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.constants import ConsensusConstants
-from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.seeder.crawler import Crawler
-from chia.seeder.crawler_api import CrawlerAPI
 from chia.seeder.dns_server import DNSServer
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
@@ -71,13 +66,10 @@ from chia.simulator.setup_services import (
 )
 from chia.simulator.start_simulator import SimulatorFullNodeService
 from chia.simulator.wallet_tools import WalletTool
-from chia.timelord.timelord import Timelord
-from chia.timelord.timelord_api import TimelordAPI
 
 # Set spawn after stdlib imports, but before other imports
 from chia.types.aliases import (
     CrawlerService,
-    DataLayerService,
     FarmerService,
     FullNodeService,
     HarvesterService,
@@ -92,7 +84,6 @@ from chia.util.keychain import Keychain
 from chia.util.task_timing import main as task_instrumentation_main
 from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
 from chia.wallet.wallet_node import WalletNode
-from chia.wallet.wallet_node_api import WalletNodeAPI
 
 multiprocessing.set_start_method("spawn")
 
@@ -256,7 +247,7 @@ async def empty_blockchain(latest_db_version, blockchain_constants):
     """
     from chia._tests.util.blockchain import create_blockchain
 
-    async with create_blockchain(blockchain_constants, latest_db_version) as (bc1, db_wrapper):
+    async with create_blockchain(blockchain_constants, latest_db_version) as (bc1, _):
         yield bc1
 
 
@@ -639,13 +630,12 @@ async def five_nodes(db_version: int, self_hostname, blockchain_constants):
 
 @pytest.fixture(scope="function")
 async def wallet_nodes(blockchain_constants, consensus_mode):
-    constants = blockchain_constants
     async with setup_simulators_and_wallets(
         2,
         1,
         blockchain_constants.replace(MEMPOOL_BLOCK_BUFFER=1, MAX_BLOCK_COST_CLVM=400000000),
     ) as new:
-        (nodes, wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
+        (nodes, _wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
         full_node_2 = nodes[1]
         server_1 = full_node_1.full_node.server
@@ -765,7 +755,7 @@ async def wallet_nodes_perf(blockchain_constants: ConsensusConstants):
     async with setup_simulators_and_wallets(
         1, 1, blockchain_constants, config_overrides={"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000}
     ) as new:
-        (nodes, wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
+        (nodes, _wallets, bt) = make_old_setup_simulators_and_wallets(new=new)
         full_node_1 = nodes[0]
         server_1 = full_node_1.full_node.server
         wallet_a = bt.get_pool_wallet_tool()

@@ -34,6 +34,12 @@ log = logging.getLogger(__name__)
 # This definition is weaker than that one however because the arguments can be anything
 RpcEndpoint = Callable[..., Awaitable[dict[str, Any]]]
 MarshallableRpcEndpoint = Callable[..., Awaitable[Streamable]]
+if TYPE_CHECKING:
+    from chia.rpc.rpc_server import EndpointResult
+    from chia.rpc.wallet_rpc_api import WalletRpcApi
+else:
+    EndpointResult = dict[str, Any]
+    WalletRpcApi = object
 
 
 ALL_TRANSLATION_LAYERS: dict[str, TranslationLayer] = {"CHIP-0028": BLIND_SIGNER_TRANSLATION}
@@ -45,7 +51,9 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     assert issubclass(request_hint, Streamable)
     request_class = request_hint
 
-    async def rpc_endpoint(self, request: dict[str, Any], *args: object, **kwargs: object) -> dict[str, Any]:
+    async def rpc_endpoint(
+        self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
+    ) -> EndpointResult:
         response_obj: Streamable = await func(
             self,
             (
@@ -78,8 +86,10 @@ def marshal(func: MarshallableRpcEndpoint) -> RpcEndpoint:
     return rpc_endpoint
 
 
-def wrap_http_handler(f) -> Callable:
-    async def inner(request) -> aiohttp.web.Response:
+def wrap_http_handler(
+    f: Callable[[dict[str, Any]], Awaitable[EndpointResult]],
+) -> Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.StreamResponse]]:
+    async def inner(request: aiohttp.web.Request) -> aiohttp.web.StreamResponse:
         request_data = await request.json()
         try:
             res_object = await f(request_data)
@@ -105,11 +115,9 @@ def tx_endpoint(
     merge_spends: bool = True,
 ) -> Callable[[RpcEndpoint], RpcEndpoint]:
     def _inner(func: RpcEndpoint) -> RpcEndpoint:
-        async def rpc_endpoint(self, request: dict[str, Any], *args, **kwargs) -> dict[str, Any]:
-            if TYPE_CHECKING:
-                from chia.rpc.wallet_rpc_api import WalletRpcApi
-
-                assert isinstance(self, WalletRpcApi)
+        async def rpc_endpoint(
+            self: WalletRpcApi, request: dict[str, Any], *args: object, **kwargs: object
+        ) -> EndpointResult:
             assert self.service.logged_in_fingerprint is not None
             tx_config_loader: TXConfigLoader = TXConfigLoader.from_json_dict(request)
 
@@ -157,7 +165,7 @@ def tx_endpoint(
                 merge_spends=request.get("merge_spends", merge_spends),
                 sign=request.get("sign", self.service.config.get("auto_sign_txs", True)),
             ) as action_scope:
-                response: dict[str, Any] = await func(
+                response: EndpointResult = await func(
                     self,
                     request,
                     *args,
@@ -199,12 +207,8 @@ def tx_endpoint(
             new_txs = action_scope.side_effects.transactions
             if "transaction" in response:
                 if (
-                    func.__name__ == "create_new_wallet"
-                    and request["wallet_type"] == "pool_wallet"
-                    or func.__name__ == "pw_join_pool"
-                    or func.__name__ == "pw_self_pool"
-                    or func.__name__ == "pw_absorb_rewards"
-                ):
+                    func.__name__ == "create_new_wallet" and request["wallet_type"] == "pool_wallet"
+                ) or func.__name__ in {"pw_join_pool", "pw_self_pool", "pw_absorb_rewards"}:
                     # Theses RPCs return not "convenience" for some reason
                     response["transaction"] = new_txs[-1].to_json_dict()
                 else:

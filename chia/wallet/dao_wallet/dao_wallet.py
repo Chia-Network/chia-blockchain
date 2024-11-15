@@ -21,9 +21,13 @@ from chia.types.coin_spend import CoinSpend, make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet import singleton
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, SpendableCAT, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import (
+    CAT_MOD,
+    SpendableCAT,
+    construct_cat_puzzle,
+    unsigned_spend_bundle_for_spendable_cats,
+)
 from chia.wallet.cat_wallet.cat_utils import get_innerpuzzle_from_puzzle as get_innerpuzzle_from_cat_puzzle
-from chia.wallet.cat_wallet.cat_utils import unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.cat_wallet.dao_cat_wallet import DAOCATWallet
 from chia.wallet.coin_selection import select_coins
@@ -446,7 +450,6 @@ class DAOWallet:
                 self.log.info(f"DAO funding coin added: {coin.name().hex()}:{coin}. Asset ID: {asset_id}")
         except Exception as e:  # pragma: no cover
             self.log.exception(f"Error occurred during dao wallet coin addition: {e}")
-        return
 
     def get_cat_tail_hash(self) -> bytes32:
         cat_wallet: CATWallet = self.wallet_state_manager.wallets[self.dao_info.cat_wallet_id]
@@ -467,7 +470,6 @@ class DAOWallet:
         ]
         dao_info = dataclasses.replace(self.dao_info, proposals_list=new_list)
         await self.save_info(dao_info)
-        return
 
     async def resync_treasury_state(self) -> None:
         """
@@ -603,8 +605,6 @@ class DAOWallet:
             request = RequestBlockHeader(children_state.created_height)
             response: Optional[RespondBlockHeader] = await peer.call_api(FullNodeAPI.request_block_header, request)
             await wallet_node.sync_from_untrusted_close_to_peak(response.header_block, peer)
-
-        return
 
     async def generate_new_dao(
         self,
@@ -1215,8 +1215,8 @@ class DAOWallet:
             )
             c_a, curried_args_prg = uncurry_proposal(proposal_info.current_innerpuz)
             (
-                SELF_HASH,
-                PROPOSAL_ID,
+                _SELF_HASH,
+                _PROPOSAL_ID,
                 PROPOSED_PUZ_HASH,
                 YES_VOTES,
                 TOTAL_VOTES,
@@ -1257,11 +1257,11 @@ class DAOWallet:
             proposal_type, curried_args_prg = get_proposal_args(puzzle_reveal)
             if proposal_type == ProposalType.SPEND:
                 (
-                    TREASURY_SINGLETON_STRUCT,
-                    CAT_MOD_HASH,
+                    _TREASURY_SINGLETON_STRUCT,
+                    _CAT_MOD_HASH,
                     CONDITIONS,
                     LIST_OF_TAILHASH_CONDITIONS,
-                    P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
+                    _P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
                 ) = curried_args_prg.as_iter()
 
                 sum = 0
@@ -1421,18 +1421,18 @@ class DAOWallet:
 
             elif proposal_type == ProposalType.UPDATE:
                 (
-                    TREASURY_MOD_HASH,
-                    VALIDATOR_MOD_HASH,
-                    SINGLETON_STRUCT,
-                    PROPOSAL_SELF_HASH,
-                    PROPOSAL_MINIMUM_AMOUNT,
-                    PROPOSAL_EXCESS_PAYOUT_PUZHASH,
-                    PROPOSAL_LENGTH,
-                    PROPOSAL_SOFTCLOSE_LENGTH,
-                    ATTENDANCE_REQUIRED,
-                    PASS_MARGIN,
-                    PROPOSAL_SELF_DESTRUCT_TIME,
-                    ORACLE_SPEND_DELAY,
+                    _TREASURY_MOD_HASH,
+                    _VALIDATOR_MOD_HASH,
+                    _SINGLETON_STRUCT,
+                    _PROPOSAL_SELF_HASH,
+                    _PROPOSAL_MINIMUM_AMOUNT,
+                    _PROPOSAL_EXCESS_PAYOUT_PUZHASH,
+                    _PROPOSAL_LENGTH,
+                    _PROPOSAL_SOFTCLOSE_LENGTH,
+                    _ATTENDANCE_REQUIRED,
+                    _PASS_MARGIN,
+                    _PROPOSAL_SELF_DESTRUCT_TIME,
+                    _ORACLE_SPEND_DELAY,
                 ) = curried_args_prg.as_iter()
                 coin_spends = []
                 treasury_inner_puzhash = self.dao_info.current_treasury_innerpuz.get_tree_hash()
@@ -1656,11 +1656,11 @@ class DAOWallet:
                 if proposal_type == ProposalType.SPEND:
                     cat_launcher = create_cat_launcher_for_singleton_id(self.dao_info.treasury_id)
                     (
-                        TREASURY_SINGLETON_STRUCT,
-                        CAT_MOD_HASH,
+                        _TREASURY_SINGLETON_STRUCT,
+                        _CAT_MOD_HASH,
                         CONDITIONS,
                         LIST_OF_TAILHASH_CONDITIONS,
-                        P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
+                        _P2_SINGLETON_VIA_DELEGATED_PUZZLE_PUZHASH,
                     ) = curried_args.as_iter()
                     mint_amount = None
                     new_cat_puzhash = None
@@ -1822,7 +1822,7 @@ class DAOWallet:
                     )
                     await self.add_parent(new_state.coin.name(), future_parent)
                     return
-                index = index + 1
+                index += 1
 
         # check if we are the finished state
         if current_innerpuz == get_finished_state_inner_puzzle(singleton_id):
@@ -1830,26 +1830,26 @@ class DAOWallet:
 
         c_a, curried_args = uncurry_proposal(puzzle)
         (
-            DAO_PROPOSAL_TIMER_MOD_HASH,
-            SINGLETON_MOD_HASH,
-            SINGLETON_LAUNCHER_PUZHASH,
-            CAT_MOD_HASH,
-            DAO_FINISHED_STATE_HASH,
+            _DAO_PROPOSAL_TIMER_MOD_HASH,
+            _SINGLETON_MOD_HASH,
+            _SINGLETON_LAUNCHER_PUZHASH,
+            _CAT_MOD_HASH,
+            _DAO_FINISHED_STATE_HASH,
             _DAO_TREASURY_MOD_HASH,
-            lockup_self_hash,
+            _lockup_self_hash,
             cat_tail_hash,
-            treasury_id,
+            _treasury_id,
         ) = curried_args.as_iter()
         (
-            curry_one,
-            proposal_id,
-            proposed_puzzle_hash,
+            _curry_one,
+            _proposal_id,
+            _proposed_puzzle_hash,
             yes_votes,
             total_votes,
         ) = c_a.as_iter()
 
         if current_coin is None:  # pragma: no cover
-            raise RuntimeError("get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
+            raise RuntimeError(f"get_most_recent_singleton_coin_from_coin_spend({new_state}) failed")
 
         timer_coin = None
         if solution.at("rrrrrrf").as_int() == 0:
@@ -1906,7 +1906,7 @@ class DAOWallet:
                 )
                 await self.add_parent(new_state.coin.name(), future_parent)
                 return
-            index = index + 1
+            index += 1
 
         # Search for the timer coin
         if not ended:
@@ -2001,7 +2001,7 @@ class DAOWallet:
                 )
                 await self.add_parent(new_state.coin.name(), future_parent)
                 return
-            index = index + 1
+            index += 1
 
     async def get_proposal_state(self, proposal_id: bytes32) -> dict[str, Union[int, bool]]:
         """
@@ -2083,7 +2083,6 @@ class DAOWallet:
             uint64(new_state.coin.amount),
         )
         await self.add_parent(new_state.coin.name(), future_parent)
-        return
 
     async def apply_state_transition(self, new_state: CoinSpend, block_height: uint32) -> bool:
         """
@@ -2104,7 +2103,7 @@ class DAOWallet:
         puzzle = get_inner_puzzle_from_singleton(new_state.puzzle_reveal)
         assert puzzle
         try:
-            mod, curried_args = puzzle.uncurry()
+            mod, _curried_args = puzzle.uncurry()
         except ValueError as e:  # pragma: no cover
             self.log.warning("Cannot uncurry puzzle in DAO Wallet: error: %s", e)
             raise e

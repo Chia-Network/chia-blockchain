@@ -291,8 +291,10 @@ async def test_nft_mint_from_did_rpc(
                 tx_config=DEFAULT_TX_CONFIG,
             )
             sb = resp.spend_bundle
-            did_lineage_parent = [cn for cn in sb.removals() if cn.name() == did_coin.name()][0].parent_coin_info.hex()
-            did_coin = [cn for cn in sb.additions() if (cn.parent_coin_info == did_coin.name()) and (cn.amount == 1)][0]
+            did_lineage_parent = next(cn for cn in sb.removals() if cn.name() == did_coin.name()).parent_coin_info.hex()
+            did_coin = next(
+                cn for cn in sb.additions() if (cn.parent_coin_info == did_coin.name()) and (cn.amount == 1)
+            )
             spends.append(sb)
             xch_adds = [c for c in sb.additions() if c.puzzle_hash == funding_coin.puzzle_hash]
             assert len(xch_adds) == 1
@@ -476,8 +478,10 @@ async def test_nft_mint_from_did_rpc_no_royalties(
                 tx_config=DEFAULT_TX_CONFIG,
             )
             sb = resp.spend_bundle
-            did_lineage_parent = [cn for cn in sb.removals() if cn.name() == did_coin.name()][0].parent_coin_info.hex()
-            did_coin = [cn for cn in sb.additions() if (cn.parent_coin_info == did_coin.name()) and (cn.amount == 1)][0]
+            did_lineage_parent = next(cn for cn in sb.removals() if cn.name() == did_coin.name()).parent_coin_info.hex()
+            did_coin = next(
+                cn for cn in sb.additions() if (cn.parent_coin_info == did_coin.name()) and (cn.amount == 1)
+            )
             spends.append(sb)
             xch_adds = [c for c in sb.additions() if c.puzzle_hash == funding_coin.puzzle_hash]
             assert len(xch_adds) == 1

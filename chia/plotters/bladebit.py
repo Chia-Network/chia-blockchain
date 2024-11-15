@@ -20,7 +20,7 @@ BLADEBIT_PLOTTER_DIR = "bladebit"
 
 def is_bladebit_supported() -> bool:
     # bladebit >= 2.0.0 now supports macOS
-    return sys.platform.startswith("linux") or sys.platform in ["win32", "cygwin", "darwin"]
+    return sys.platform.startswith("linux") or sys.platform in {"win32", "cygwin", "darwin"}
 
 
 def meets_memory_requirement(plotters_root_path: Path) -> tuple[bool, Optional[str]]:
@@ -83,8 +83,8 @@ def get_bladebit_package_path() -> Path:
 
 def get_bladebit_exec_path(with_cuda: bool = False) -> str:
     if with_cuda:
-        return "bladebit_cuda.exe" if sys.platform in ["win32", "cygwin"] else "bladebit_cuda"
-    return "bladebit.exe" if sys.platform in ["win32", "cygwin"] else "bladebit"
+        return "bladebit_cuda.exe" if sys.platform in {"win32", "cygwin"} else "bladebit_cuda"
+    return "bladebit.exe" if sys.platform in {"win32", "cygwin"} else "bladebit"
 
 
 def get_bladebit_exec_venv_path(with_cuda: bool = False) -> Optional[Path]:
@@ -97,7 +97,7 @@ def get_bladebit_exec_venv_path(with_cuda: bool = False) -> Optional[Path]:
 
 def get_bladebit_exec_src_path(plotters_root_path: Path, with_cuda: bool = False) -> Path:
     bladebit_src_dir = get_bladebit_src_path(plotters_root_path)
-    build_dir = "build/Release" if sys.platform in ["win32", "cygwin"] else "build"
+    build_dir = "build/Release" if sys.platform in {"win32", "cygwin"} else "build"
     bladebit_exec = get_bladebit_exec_path(with_cuda)
     return bladebit_src_dir / build_dir / bladebit_exec
 
@@ -272,7 +272,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         print("Bladebit was not found.")
         return
 
-    if sys.platform in ["win32", "cygwin"]:
+    if sys.platform in {"win32", "cygwin"}:
         reset_loop_policy_for_windows()
 
     plot_keys = asyncio.run(
@@ -286,7 +286,7 @@ def plot_bladebit(args, chia_root_path, root_path):
             args.connect_to_daemon,
         )
     )
-    if args.plot_type == "ramplot" or args.plot_type == "diskplot" or args.plot_type == "cudaplot":
+    if args.plot_type in {"ramplot", "diskplot", "cudaplot"}:
         plot_type = args.plot_type
     else:
         plot_type = "diskplot"

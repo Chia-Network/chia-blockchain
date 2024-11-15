@@ -108,7 +108,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             pks.append(pk)
             msgs.append(m)
         print()
-        cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
+        _cost, r = puzzle_reveal.run_with_cost(INFINITE_COST, solution)
         print(disassemble(r))
         create_coin_conditions = [con for con in r.as_iter() if con.first().as_int() == 51]
         print()
@@ -139,13 +139,13 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
 
                     print(f"  {disassemble(as_prog)}")
             created_coin_announcements.extend(
-                [coin_name] + _.vars for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
+                [coin_name, *_.vars] for _ in conditions.get(ConditionOpcode.CREATE_COIN_ANNOUNCEMENT, [])
             )
             asserted_coin_announcements.extend(
                 [_.vars[0].hex() for _ in conditions.get(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [])]
             )
             created_puzzle_announcements.extend(
-                [puzzle_reveal.get_tree_hash()] + _.vars
+                [puzzle_reveal.get_tree_hash(), *_.vars]
                 for _ in conditions.get(ConditionOpcode.CREATE_PUZZLE_ANNOUNCEMENT, [])
             )
             asserted_puzzle_announcements.extend(

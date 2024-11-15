@@ -6,8 +6,8 @@ from chiabip158 import PyBIP158
 
 @pytest.mark.anyio
 async def test_basic_filter_test(simulator_and_wallet):
-    full_nodes, wallets, bt = simulator_and_wallet
-    wallet_node, server_2 = wallets[0]
+    _full_nodes, wallets, bt = simulator_and_wallet
+    wallet_node, _server_2 = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet
 
     num_blocks = 2

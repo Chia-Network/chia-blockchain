@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
@@ -15,6 +15,7 @@ from chia.protocols import harvester_protocol
 from chia.protocols.farmer_protocol import FarmingInfo
 from chia.protocols.harvester_protocol import Plot, PlotSyncResponse
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.api_protocol import ApiMetadata
 from chia.server.outbound_message import Message, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import (
@@ -24,14 +25,19 @@ from chia.types.blockchain_format.proof_of_space import (
     passes_plot_filter,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
 class HarvesterAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("HarvesterAPI", None)
+
     log: logging.Logger
     harvester: Harvester
+    metadata: ClassVar[ApiMetadata] = ApiMetadata()
 
     def __init__(self, harvester: Harvester):
         self.log = logging.getLogger(__name__)
@@ -40,7 +46,7 @@ class HarvesterAPI:
     def ready(self) -> bool:
         return True
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
     ) -> None:
@@ -56,7 +62,7 @@ class HarvesterAPI:
         await self.harvester.plot_sync_sender.start()
         self.harvester.plot_manager.start_refreshing()
 
-    @api_request(peer_required=True)
+    @metadata.request(peer_required=True)
     async def new_signage_point_harvester(
         self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
     ) -> None:
@@ -296,7 +302,7 @@ class HarvesterAPI:
             },
         )
 
-    @api_request(reply_types=[ProtocolMessageTypes.respond_signatures])
+    @metadata.request(reply_types=[ProtocolMessageTypes.respond_signatures])
     async def request_signatures(self, request: harvester_protocol.RequestSignatures) -> Optional[Message]:
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
@@ -347,7 +353,7 @@ class HarvesterAPI:
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    @api_request()
+    @metadata.request()
     async def request_plots(self, _: harvester_protocol.RequestPlots) -> Message:
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
@@ -369,6 +375,6 @@ class HarvesterAPI:
         response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
         return make_msg(ProtocolMessageTypes.respond_plots, response)
 
-    @api_request()
+    @metadata.request()
     async def plot_sync_response(self, response: PlotSyncResponse) -> None:
         self.harvester.plot_sync_sender.set_response(response)

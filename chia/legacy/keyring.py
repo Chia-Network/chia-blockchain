@@ -23,7 +23,6 @@ except ImportError:
     CryptFileKeyring = None
 
 
-from chia.cmds.cmds_util import prompt_yes_no
 from chia.util.errors import KeychainUserNotFound
 from chia.util.keychain import MAX_KEYS, KeyData, KeyDataSecrets, get_private_key_user
 
@@ -144,7 +143,9 @@ def clear() -> None:
 
     print_keys(keyring)
 
-    if not prompt_yes_no("\nDo you really want to remove all the keys from the legacy keyring? This can't be undone."):
+    if not click.confirm(
+        "\nDo you really want to remove all the keys from the legacy keyring? This can't be undone.", default=None
+    ):
         raise click.ClickException("Aborted!")
 
     remove_keys(keyring)

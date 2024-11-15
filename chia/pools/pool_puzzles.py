@@ -143,7 +143,7 @@ def get_template_singleton_inner_puzzle(inner_puzzle: Program) -> Program:
     r = inner_puzzle.uncurry()
     if r is None:
         return False
-    uncurried_inner_puzzle, args = r
+    uncurried_inner_puzzle, _args = r
     return uncurried_inner_puzzle
 
 
@@ -161,17 +161,17 @@ def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program) ->
 # Verify that a puzzle is a Pool Wallet Singleton
 def is_pool_singleton_inner_puzzle(inner_puzzle: Program) -> bool:
     inner_f = get_template_singleton_inner_puzzle(inner_puzzle)
-    return inner_f in [POOL_WAITING_ROOM_MOD, POOL_MEMBER_MOD]
+    return inner_f in (POOL_WAITING_ROOM_MOD, POOL_MEMBER_MOD)  # noqa: PLR6201
 
 
 def is_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> bool:
     inner_f = get_template_singleton_inner_puzzle(inner_puzzle)
-    return inner_f in [POOL_WAITING_ROOM_MOD]
+    return inner_f == POOL_WAITING_ROOM_MOD
 
 
 def is_pool_member_inner_puzzle(inner_puzzle: Program) -> bool:
     inner_f = get_template_singleton_inner_puzzle(inner_puzzle)
-    return inner_f in [POOL_MEMBER_MOD]
+    return inner_f == POOL_MEMBER_MOD
 
 
 # This spend will use the escape-type spend path for whichever state you are currently in
@@ -362,9 +362,9 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> tuple[Progra
     r = inner_puzzle.uncurry()
     if r is None:
         raise ValueError("Failed to unpack inner puzzle")
-    inner_f, args = r
+    _inner_f, args = r
     v = args.as_iter()
-    target_puzzle_hash, p2_singleton_hash, owner_pubkey, genesis_challenge, relative_lock_height = tuple(v)
+    target_puzzle_hash, p2_singleton_hash, owner_pubkey, _genesis_challenge, relative_lock_height = tuple(v)
     return target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
 
 
@@ -410,7 +410,7 @@ def solution_to_pool_state(full_spend: CoinSpend) -> Optional[PoolState]:
 
     # Spend which is not absorb, and is not the launcher
     num_args = len(inner_solution.as_python())
-    assert num_args in (2, 3)
+    assert num_args in {2, 3}
 
     if num_args == 2:
         # pool member
@@ -445,7 +445,7 @@ def pool_state_to_inner_puzzle(
         delay_time,
         delay_ph,
     )
-    if pool_state.state in [LEAVING_POOL.value, SELF_POOLING.value]:
+    if pool_state.state in {LEAVING_POOL.value, SELF_POOLING.value}:
         return escaping_inner_puzzle
     else:
         return create_pooling_inner_puzzle(
