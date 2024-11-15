@@ -439,7 +439,7 @@ def run_cli_command(capsys: object, chia_root: Path, command_list: list[str]) ->
     exited_cleanly = True
     argv_temp = sys.argv
     try:
-        sys.argv = ["chia", "--root-path", str(chia_root)] + command_list
+        sys.argv = ["chia", "--root-path", str(chia_root), *command_list]
         chia_cli()
     except SystemExit as e:
         if e.code != 0:

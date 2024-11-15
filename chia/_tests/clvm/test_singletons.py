@@ -36,7 +36,7 @@ class TransactionPushError(Exception):
 
 
 def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
-    synthetic_secret_key: PrivateKey = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_secret_key(  # noqa
+    synthetic_secret_key: PrivateKey = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_secret_key(
         PrivateKey.from_bytes(
             secret_exponent_for_index(1).to_bytes(32, "big"),
         ),
@@ -44,7 +44,7 @@ def sign_delegated_puz(del_puz: Program, coin: Coin) -> G2Element:
     )
     return AugSchemeMPL.sign(
         synthetic_secret_key,
-        (del_puz.get_tree_hash() + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),  # noqa
+        (del_puz.get_tree_hash() + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA),
     )
 
 
@@ -88,12 +88,12 @@ async def test_singleton_top_layer(version, cost_logger):
         # Generate starting info
         key_lookup = KeyTool()
         pk: G1Element = G1Element.from_bytes(public_key_for_index(1, key_lookup))
-        starting_puzzle: Program = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)  # noqa
+        starting_puzzle: Program = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)
 
         if version == 0:
             from chia.wallet.puzzles import singleton_top_layer
 
-            adapted_puzzle: Program = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle)  # noqa
+            adapted_puzzle: Program = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle)
         else:
             from chia.wallet.puzzles import singleton_top_layer_v1_1 as singleton_top_layer
 
@@ -110,19 +110,19 @@ async def test_singleton_top_layer(version, cost_logger):
         # LAUNCHING
         # Try to create an even singleton (driver test)
         try:
-            conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(  # noqa
+            conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(
                 starting_coin, adapted_puzzle, comment, (START_AMOUNT - 1)
             )
             raise AssertionError("This should fail due to an even amount")
         except ValueError as msg:
             assert str(msg) == "Coin amount cannot be even. Subtract one mojo."
-            conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(  # noqa
+            conditions, launcher_coinsol = singleton_top_layer.launch_conditions_and_coinsol(
                 starting_coin, adapted_puzzle, comment, START_AMOUNT
             )
 
         # Creating solution for standard transaction
-        delegated_puzzle: Program = p2_conditions.puzzle_for_conditions(conditions)  # noqa
-        full_solution: Program = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)  # noqa
+        delegated_puzzle: Program = p2_conditions.puzzle_for_conditions(conditions)
+        full_solution: Program = p2_delegated_puzzle_or_hidden_puzzle.solution_for_conditions(conditions)
 
         starting_coinsol = make_spend(
             starting_coin,
@@ -162,7 +162,7 @@ async def test_singleton_top_layer(version, cost_logger):
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
         # Generate the lineage proof we will need from the launcher coin
-        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(launcher_coinsol)  # noqa
+        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(launcher_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
             launcher_id,
             adapted_puzzle,
@@ -192,7 +192,7 @@ async def test_singleton_top_layer(version, cost_logger):
         # POST-EVE
         singleton: Coin = (await sim.all_non_reward_coins())[0]
         # Same delegated_puzzle / inner_solution. We're just recreating ourself
-        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_eve_coinsol)  # noqa
+        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_eve_coinsol)
         # Same puzzle_reveal too
         full_solution: Program = singleton_top_layer.solution_for_singleton(
             lineage_proof,
@@ -471,7 +471,7 @@ async def test_singleton_top_layer(version, cost_logger):
             )
         )
         inner_solution: Program = Program.to([[], delegated_puzzle, []])
-        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_even_coinsol)  # noqa
+        lineage_proof: LineageProof = singleton_top_layer.lineage_proof_for_coinsol(singleton_even_coinsol)
         puzzle_reveal: Program = singleton_top_layer.puzzle_for_singleton(
             launcher_id,
             adapted_puzzle,

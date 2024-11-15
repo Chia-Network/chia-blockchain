@@ -81,9 +81,9 @@ def test_get_transaction(capsys: object, get_test_cli_clients: tuple[TestRpcClie
         "Amount sent: 12345.678 test1",
         "To address: xch1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqs0wg4qq",
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args + [FINGERPRINT_ARG], assert_list)
-    run_cli_command_and_assert(capsys, root_dir, command_args + [FINGERPRINT_ARG, "-v"], v_assert_list)
-    run_cli_command_and_assert(capsys, root_dir, command_args + [CAT_FINGERPRINT_ARG], cat_assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, FINGERPRINT_ARG], assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, FINGERPRINT_ARG, "-v"], v_assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, CAT_FINGERPRINT_ARG], cat_assert_list)
     # these are various things that should be in the output
     expected_calls: logType = {
         "get_wallets": [(None,), (None,), (None,)],
@@ -183,7 +183,7 @@ def test_get_transactions(capsys: object, get_test_cli_clients: tuple[TestRpcCli
         "'type': 7",  # clawback tx
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    run_cli_command_and_assert(capsys, root_dir, command_args + ["-v"], v_assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, "-v"], v_assert_list)
     # these are various things that should be in the output
     expected_coin_id = Coin(get_bytes32(4), get_bytes32(5), uint64(12345678)).name()
     expected_calls: logType = {
@@ -288,7 +288,7 @@ def test_show(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
         "47482/47482 01010101... May 12",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    run_cli_command_and_assert(capsys, root_dir, command_args + ["--wallet_type", "cat"], other_assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, "--wallet_type", "cat"], other_assert_list)
     # these are various things that should be in the output
     expected_calls: logType = {
         "get_wallets": [(None,), (WalletType.CAT,)],
@@ -409,10 +409,10 @@ def test_send(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Path])
     ]
     with CliRunner().isolated_filesystem():
         run_cli_command_and_assert(
-            capsys, root_dir, command_args + [FINGERPRINT_ARG] + ["--transaction-file=temp"], assert_list
+            capsys, root_dir, [*command_args, FINGERPRINT_ARG, "--transaction-file=temp"], assert_list
         )
         run_cli_command_and_assert(
-            capsys, root_dir, command_args + [CAT_FINGERPRINT_ARG] + ["--transaction-file=temp2"], cat_assert_list
+            capsys, root_dir, [*command_args, CAT_FINGERPRINT_ARG, "--transaction-file=temp2"], cat_assert_list
         )
 
         with open("temp", "rb") as file:
@@ -490,8 +490,8 @@ def test_get_address(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
         WALLET_ID_ARG,
         FINGERPRINT_ARG,
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args + ["-n"], [addr1])
-    run_cli_command_and_assert(capsys, root_dir, command_args + ["-l"], [addr2])
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, "-n"], [addr1])
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, "-l"], [addr2])
     # these are various things that should be in the output
     expected_calls: logType = {
         "get_next_address": [(1, True), (1, False)],
@@ -558,7 +558,6 @@ def test_del_unconfirmed_tx(capsys: object, get_test_cli_clients: tuple[TestRpcC
     class UnconfirmedTxRpcClient(TestWalletRpcClient):
         async def delete_unconfirmed_transactions(self, wallet_id: int) -> None:
             self.add_to_log("delete_unconfirmed_transactions", (wallet_id,))
-            return None
 
     inst_rpc_client = UnconfirmedTxRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -617,7 +616,7 @@ def test_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcClients
         f"Signature: {bytes([6] * 576).hex()}",
         f"Signing Mode: {SigningMode.CHIP_0002.value}",
     ]
-    run_cli_command_and_assert(capsys, root_dir, command_args + [f"-a{xch_addr}"], assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-a{xch_addr}"], assert_list)
     expected_calls: logType = {
         "sign_message_by_address": [(xch_addr, message.hex())],  # xch std
     }
@@ -655,15 +654,14 @@ def test_add_token(capsys: object, get_test_cli_clients: tuple[TestRpcClients, P
 
         async def set_cat_name(self, wallet_id: int, name: str) -> None:
             self.add_to_log("set_cat_name", (wallet_id, name))
-            return None  # we don't need to do anything here
 
     inst_rpc_client = AddTokenRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = ["wallet", "add_token", FINGERPRINT_ARG, "-nexamplecat"]
     assert_list = [f"Successfully renamed test1 with wallet_id 2 on key {FINGERPRINT} to examplecat"]
     other_assert_list = [f"Successfully added examplecat with wallet id 3 on key {FINGERPRINT}"]
-    run_cli_command_and_assert(capsys, root_dir, command_args + ["--asset-id", get_bytes32(1).hex()], assert_list)
-    run_cli_command_and_assert(capsys, root_dir, command_args + ["--asset-id", get_bytes32(3).hex()], other_assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, "--asset-id", get_bytes32(1).hex()], assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, "--asset-id", get_bytes32(3).hex()], other_assert_list)
     # these are various things that should be in the output
 
     expected_calls: logType = {
@@ -687,7 +685,7 @@ def test_make_offer_bad_filename(
         "wallet",
         "make_offer",
         FINGERPRINT_ARG,
-        f"-p{str(tmp_path)}",
+        f"-p{tmp_path!s}",
         "--reuse",
         "-m0.5",
         "--offer",
@@ -707,7 +705,7 @@ def test_make_offer_bad_filename(
         "wallet",
         "make_offer",
         FINGERPRINT_ARG,
-        f"-p{str(test_file)}",
+        f"-p{test_file!s}",
         "--reuse",
         "-m0.5",
         "--offer",
@@ -775,7 +773,7 @@ def test_make_offer(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "wallet",
         "make_offer",
         FINGERPRINT_ARG,
-        f"-p{str(tmp_path / 'test.offer')}",
+        f"-p{tmp_path / 'test.offer'!s}",
         "--reuse",
         "-m0.5",
         "--offer",
@@ -923,6 +921,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "--exclude-taken-offers",
         "--include-completed",
         "--reverse",
+        "--sort-by-relevance",
     ]
     # these are various things that should be in the output
     assert_list = [
@@ -940,7 +939,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
         "Record with id: 0101010101010101010101010101010101010101010101010101010101010101",
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
-    expected_calls: logType = {"get_all_offers": [(0, 10, None, True, False, True, True, True)]}
+    expected_calls: logType = {"get_all_offers": [(0, 10, "RELEVANCE", True, False, True, True, True)]}
     command_args = [
         "wallet",
         "get_offers",
@@ -960,7 +959,7 @@ def test_get_offers(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     assert expected_calls["get_all_offers"] is not None
-    expected_calls["get_all_offers"].append((0, 10, None, False, True, False, False, False))
+    expected_calls["get_all_offers"].append((0, 10, "CONFIRMED_AT_HEIGHT", False, True, False, False, False))
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 
 

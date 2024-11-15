@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Optional
 
-from chia_rs import BLSCache
+from chia_rs import SpendBundleConditions
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.types.full_block import FullBlock
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
@@ -52,7 +51,6 @@ async def _validate_and_add_block(
     expected_error: Optional[Err] = None,
     skip_prevalidation: bool = False,
     fork_info: Optional[ForkInfo] = None,
-    use_bls_cache: bool = False,
 ) -> None:
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
@@ -73,23 +71,24 @@ async def _validate_and_add_block(
     new_slot = len(block.finished_sub_slots) > 0
     ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, blockchain)
     await check_block_store_invariant(blockchain)
+
     if skip_prevalidation:
-        results = PreValidationResult(None, uint64(1), None, False, uint32(0))
+        if block.transactions_generator is None:
+            conds = None
+        else:
+            # fake the signature validation. Just say True here.
+            conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True)
+        results = PreValidationResult(None, uint64(1), conds, uint32(0))
     else:
-        # validate_signatures must be False in order to trigger add_block() to
-        # validate the signature.
-        futures = await pre_validate_blocks_multiprocessing(
+        future = await pre_validate_block(
             blockchain.constants,
             AugmentedBlockchain(blockchain),
-            [block],
+            block,
             blockchain.pool,
-            {},
+            None,
             ValidationState(ssi, diff, prev_ses_block),
-            validate_signatures=False,
         )
-        pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
-        assert pre_validation_results is not None
-        results = pre_validation_results[0]
+        results = await future
     if results.error is not None:
         if expected_result == AddBlockResult.INVALID_BLOCK and expected_error is None:
             # We expected an error but didn't specify which one
@@ -105,16 +104,12 @@ async def _validate_and_add_block(
         return None
     if fork_info is None:
         fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-    if use_bls_cache:
-        bls_cache = BLSCache(100)
-    else:
-        bls_cache = None
 
     (
         result,
         err,
         _,
-    ) = await blockchain.add_block(block, results, bls_cache, ssi, fork_info=fork_info)
+    ) = await blockchain.add_block(block, results, ssi, fork_info=fork_info)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:

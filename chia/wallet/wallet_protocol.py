@@ -20,16 +20,18 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
-T = TypeVar("T", contravariant=True)
+T_contra = TypeVar("T_contra", contravariant=True)
 
 
-class WalletProtocol(Protocol[T]):
+class WalletProtocol(Protocol[T_contra]):
     @classmethod
     def type(cls) -> WalletType: ...
 
     def id(self) -> uint32: ...
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[T]) -> None: ...
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[T_contra]
+    ) -> None: ...
 
     async def select_coins(
         self,

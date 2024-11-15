@@ -260,8 +260,8 @@ async def test_complex_spend(cost_logger: CostLogger, consensus_mode: ConsensusM
         # Find the two new coins
         all_cats = await sim_client.get_coin_records_by_puzzle_hash(cat_ph, include_spent_coins=False)
         all_cat_coins = [cr.coin for cr in all_cats]
-        standard_to_mint = list(filter(lambda cr: cr.parent_coin_info == parent_of_mint.name(), all_cat_coins))[0]
-        standard_to_melt = list(filter(lambda cr: cr.parent_coin_info == parent_of_melt.name(), all_cat_coins))[0]
+        standard_to_mint = next(filter(lambda cr: cr.parent_coin_info == parent_of_mint.name(), all_cat_coins))
+        standard_to_melt = next(filter(lambda cr: cr.parent_coin_info == parent_of_melt.name(), all_cat_coins))
 
         # Do the complex spend
         # We have both and eve and non-eve doing both minting and melting

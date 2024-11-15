@@ -579,7 +579,7 @@ class CATWallet:
                     fee,
                     action_scope,
                 )
-                origin_id = list(chia_coins)[0].name()
+                origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
                     uint64(0),
                     (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
@@ -595,7 +595,7 @@ class CATWallet:
                     fee,
                     action_scope,
                 )
-                origin_id = list(chia_coins)[0].name()
+                origin_id = next(iter(chia_coins)).name()
                 selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
                     uint64(selected_amount + amount_to_claim - fee),
@@ -666,7 +666,7 @@ class CATWallet:
 
         if change > 0:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                list(cat_coins)[0].puzzle_hash
+                next(iter(cat_coins)).puzzle_hash
             )
             if derivation_record is not None and action_scope.config.tx_config.reuse_puzhash:
                 change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)

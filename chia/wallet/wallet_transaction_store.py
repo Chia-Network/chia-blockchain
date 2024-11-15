@@ -366,7 +366,9 @@ class WalletTransactionStore:
             )
         return 0 if len(rows) == 0 else rows[0][0]
 
-    async def get_all_transactions_for_wallet(self, wallet_id: int, type: int = None) -> list[TransactionRecord]:
+    async def get_all_transactions_for_wallet(
+        self, wallet_id: int, type: Optional[int] = None
+    ) -> list[TransactionRecord]:
         """
         Returns all stored transactions.
         """

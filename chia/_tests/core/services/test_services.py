@@ -100,7 +100,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
             "chia.timelord.timelord_launcher",
             "timelord_launcher",
             marks=pytest.mark.skipif(
-                sys.platform in ("win32", "cygwin"),
+                sys.platform in {"win32", "cygwin"},
                 reason="windows is not supported by the timelord launcher",
             ),
         ),

@@ -216,7 +216,7 @@ def compare_results(
         if data not in old:
             continue
         print(f"\ncompare: {data}, old: {old_commit_hash}, new: {new_commit_hash}")
-        print_compare_row("mode", "µs/iteration old", "µs/iteration new", "diff %")
+        print_compare_row("mode", "µs/iteration old", "µs/iteration new", "diff %")  # noqa: RUF001
         for mode, results in modes.items():
             if mode not in old[data]:
                 continue
@@ -236,7 +236,7 @@ def run(data: Data, mode: Mode, runs: int, ms: int, live: bool, output: TextIO, 
     results: dict[Data, dict[Mode, list[list[int]]]] = {}
     bench_results: dict[str, Any] = {"version": _version, "commit_hash": get_commit_hash()}
     for current_data, parameter in benchmark_parameter.items():
-        if data == Data.all or current_data == data:
+        if data in {Data.all, current_data}:
             results[current_data] = {}
             bench_results[current_data] = {}
             print(
@@ -245,14 +245,14 @@ def run(data: Data, mode: Mode, runs: int, ms: int, live: bool, output: TextIO, 
             )
             print_row(
                 mode="mode",
-                us_per_iteration="µs/iteration",
-                stdev_us_per_iteration="stdev µs/iteration %",
+                us_per_iteration="µs/iteration",  # noqa: RUF001
+                stdev_us_per_iteration="stdev µs/iteration %",  # noqa: RUF001
                 avg_iterations="avg iterations/run",
                 stdev_iterations="stdev iterations/run %",
             )
             for current_mode, current_mode_parameter in parameter.mode_parameter.items():
                 results[current_data][current_mode] = []
-                if mode == Mode.all or current_mode == mode:
+                if mode in {Mode.all, current_mode}:
                     us_iteration_results: list[int]
                     all_results: list[list[int]] = results[current_data][current_mode]
                     obj = parameter.object_creation_cb()

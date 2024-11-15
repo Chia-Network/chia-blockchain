@@ -36,9 +36,9 @@ async def test_block_cache(seeded_random: random.Random) -> None:
         if i == 0:
             continue
         assert await a.prev_block_hash([hh]) == [hashes[i - 1]]
-        assert a.try_block_record(hh) == BR(i + 1, hashes[i], hashes[i - 1])
-        assert a.block_record(hh) == BR(i + 1, hashes[i], hashes[i - 1])
-        assert a.height_to_hash(uint32(i + 1)) == hashes[i]
-        assert a.height_to_block_record(uint32(i + 1)) == BR(i + 1, hashes[i], hashes[i - 1])
+        assert a.try_block_record(hh) == BR(i + 1, hh, hashes[i - 1])
+        assert a.block_record(hh) == BR(i + 1, hh, hashes[i - 1])
+        assert a.height_to_hash(uint32(i + 1)) == hh
+        assert a.height_to_block_record(uint32(i + 1)) == BR(i + 1, hh, hashes[i - 1])
         assert a.contains_block(hh)
         assert a.contains_height(uint32(i + 1))

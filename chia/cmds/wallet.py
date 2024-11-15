@@ -541,6 +541,7 @@ def make_offer_cmd(
     "-ic", "--include-completed", help="Include offers that have been confirmed/cancelled or failed", is_flag=True
 )
 @click.option("-s", "--summaries", help="Show the assets being offered and requested for each offer", is_flag=True)
+@click.option("--sort-by-relevance/--sort-by-confirmed-height", help="Sort the offers one of two ways", is_flag=True)
 @click.option("-r", "--reverse", help="Reverse the order of the output", is_flag=True)
 def get_offers_cmd(
     wallet_rpc_port: Optional[int],
@@ -552,6 +553,7 @@ def get_offers_cmd(
     include_completed: bool,
     summaries: bool,
     reverse: bool,
+    sort_by_relevance: bool,
 ) -> None:
     from .wallet_funcs import get_offers
 
@@ -566,6 +568,7 @@ def get_offers_cmd(
             include_completed=include_completed,
             summaries=summaries,
             reverse=reverse,
+            sort_by_relevance=sort_by_relevance,
         )
     )
 

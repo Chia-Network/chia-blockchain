@@ -66,7 +66,7 @@ class Program(SExp):
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
-        self.stream(f)  # noqa
+        self.stream(f)
         return f.getvalue()
 
     def __str__(self) -> str:

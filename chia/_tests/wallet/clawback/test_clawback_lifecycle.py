@@ -66,7 +66,7 @@ async def do_spend(
 class TestClawbackLifecycle:
     # Helper function
     def sign_coin_spend(self, coin_spend: CoinSpend, index: int) -> G2Element:
-        synthetic_secret_key: PrivateKey = calculate_synthetic_secret_key(  # noqa
+        synthetic_secret_key: PrivateKey = calculate_synthetic_secret_key(
             PrivateKey.from_bytes(
                 secret_exponent_for_index(index).to_bytes(32, "big"),
             ),

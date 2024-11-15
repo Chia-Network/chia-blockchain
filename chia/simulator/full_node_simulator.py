@@ -12,7 +12,7 @@ from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import BlockchainMutexPriority
-from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.rpc_server import default_get_connections
@@ -175,22 +175,19 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                futures = await pre_validate_blocks_multiprocessing(
+                future = await pre_validate_block(
                     self.full_node.blockchain.constants,
                     AugmentedBlockchain(self.full_node.blockchain),
-                    [genesis],
+                    genesis,
                     self.full_node.blockchain.pool,
-                    {},
+                    None,
                     ValidationState(ssi, diff, None),
-                    validate_signatures=True,
                 )
-                pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
-                assert pre_validation_results is not None
+                pre_validation_result: PreValidationResult = await future
                 fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(
                     genesis,
-                    pre_validation_results[0],
-                    self.full_node._bls_cache,
+                    pre_validation_result,
                     self.full_node.constants.SUB_SLOT_ITERS_STARTING,
                     fork_info,
                 )
@@ -239,21 +236,17 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                futures = await pre_validate_blocks_multiprocessing(
+                future = await pre_validate_block(
                     self.full_node.blockchain.constants,
                     AugmentedBlockchain(self.full_node.blockchain),
-                    [genesis],
+                    genesis,
                     self.full_node.blockchain.pool,
-                    {},
+                    None,
                     ValidationState(ssi, diff, None),
-                    validate_signatures=True,
                 )
-                pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
-                assert pre_validation_results is not None
+                pre_validation_result: PreValidationResult = await future
                 fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
-                await self.full_node.blockchain.add_block(
-                    genesis, pre_validation_results[0], self.full_node._bls_cache, ssi, fork_info
-                )
+                await self.full_node.blockchain.add_block(genesis, pre_validation_result, ssi, fork_info)
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
             curr: BlockRecord = peak
@@ -656,9 +649,7 @@ class FullNodeSimulator(FullNodeAPI):
         transactions_left: set[bytes32] = {tx.name for tx in transactions}
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff in backoff_times():
-                transactions_left = transactions_left & {
-                    tx.name for tx in await wallet_state_manager.tx_store.get_all_unconfirmed()
-                }
+                transactions_left &= {tx.name for tx in await wallet_state_manager.tx_store.get_all_unconfirmed()}
                 if len(transactions_left) == 0:
                     break
 
@@ -747,7 +738,7 @@ class FullNodeSimulator(FullNodeAPI):
         return await self.full_node.synced()
 
     async def wallet_is_synced(self, wallet_node: WalletNode, peak_height: Optional[uint32] = None) -> bool:
-        if not self.self_is_synced():
+        if not await self.self_is_synced():
             # Depending on races, may not be covered every time
             return False  # pragma: no cover
         if not await wallet_node.wallet_state_manager.synced():

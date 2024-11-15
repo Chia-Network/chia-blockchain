@@ -60,7 +60,7 @@ async def run_plotter(root_path, plotter, args, progress_dict):
         process.terminate()
 
     # For Windows, we'll install a SIGINT handler to catch Ctrl-C (KeyboardInterrupt isn't raised)
-    if sys.platform in ["win32", "cygwin"]:
+    if sys.platform in {"win32", "cygwin"}:
         signal.signal(signal.SIGINT, sigint_handler)
         installed_sigint_handler = True
 
