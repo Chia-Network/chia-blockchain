@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 from collections.abc import Awaitable, Collection
-from typing import Any, Callable, Optional
+from typing import Any, Callable, ClassVar, Optional
 
 import pytest
 from chia_rs import ELIGIBLE_FOR_DEDUP, ELIGIBLE_FOR_FF, AugSchemeMPL, G2Element, get_conditions_from_spendbundle
@@ -233,51 +233,51 @@ def make_test_conds(
 
 
 class TestCheckTimeLocks:
-    COIN_CONFIRMED_HEIGHT = uint32(10)
-    COIN_TIMESTAMP = uint64(10000)
-    PREV_BLOCK_HEIGHT = uint32(15)
-    PREV_BLOCK_TIMESTAMP = uint64(10150)
+    COIN_CONFIRMED_HEIGHT: ClassVar[uint32] = uint32(10)
+    COIN_TIMESTAMP: ClassVar[uint64] = uint64(10000)
+    PREV_BLOCK_HEIGHT: ClassVar[uint32] = uint32(15)
+    PREV_BLOCK_TIMESTAMP: ClassVar[uint64] = uint64(10150)
 
-    COIN_RECORD = CoinRecord(
+    COIN_RECORD: ClassVar[CoinRecord] = CoinRecord(
         TEST_COIN,
         confirmed_block_index=uint32(COIN_CONFIRMED_HEIGHT),
         spent_block_index=uint32(0),
         coinbase=False,
         timestamp=COIN_TIMESTAMP,
     )
-    REMOVALS: dict[bytes32, CoinRecord] = {TEST_COIN.name(): COIN_RECORD}
+    REMOVALS: ClassVar[dict[bytes32, CoinRecord]] = {TEST_COIN.name(): COIN_RECORD}
 
     @pytest.mark.parametrize(
         "conds,expected",
         [
             (make_test_conds(height_relative=5), None),
             (make_test_conds(height_relative=6), Err.ASSERT_HEIGHT_RELATIVE_FAILED),
-            (make_test_conds(height_absolute=15), None),
-            (make_test_conds(height_absolute=16), Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
+            (make_test_conds(height_absolute=PREV_BLOCK_HEIGHT), None),
+            (make_test_conds(height_absolute=uint32(PREV_BLOCK_HEIGHT + 1)), Err.ASSERT_HEIGHT_ABSOLUTE_FAILED),
             (make_test_conds(seconds_relative=150), None),
             (make_test_conds(seconds_relative=151), Err.ASSERT_SECONDS_RELATIVE_FAILED),
-            (make_test_conds(seconds_absolute=10150), None),
-            (make_test_conds(seconds_absolute=10151), Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
+            (make_test_conds(seconds_absolute=PREV_BLOCK_TIMESTAMP), None),
+            (make_test_conds(seconds_absolute=uint64(PREV_BLOCK_TIMESTAMP + 1)), Err.ASSERT_SECONDS_ABSOLUTE_FAILED),
             # the coin's confirmed height is 10
             (make_test_conds(birth_height=9), Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
             (make_test_conds(birth_height=10), None),
             (make_test_conds(birth_height=11), Err.ASSERT_MY_BIRTH_HEIGHT_FAILED),
             # coin timestamp is 10000
-            (make_test_conds(birth_seconds=9999), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
-            (make_test_conds(birth_seconds=10000), None),
-            (make_test_conds(birth_seconds=10001), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (make_test_conds(birth_seconds=uint64(COIN_TIMESTAMP - 1)), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
+            (make_test_conds(birth_seconds=COIN_TIMESTAMP), None),
+            (make_test_conds(birth_seconds=uint64(COIN_TIMESTAMP + 1)), Err.ASSERT_MY_BIRTH_SECONDS_FAILED),
             # the coin is 5 blocks old in this test
             (make_test_conds(before_height_relative=5), Err.ASSERT_BEFORE_HEIGHT_RELATIVE_FAILED),
             (make_test_conds(before_height_relative=6), None),
             # The block height is 15
-            (make_test_conds(before_height_absolute=15), Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED),
-            (make_test_conds(before_height_absolute=16), None),
+            (make_test_conds(before_height_absolute=PREV_BLOCK_HEIGHT), Err.ASSERT_BEFORE_HEIGHT_ABSOLUTE_FAILED),
+            (make_test_conds(before_height_absolute=uint64(PREV_BLOCK_HEIGHT + 1)), None),
             # the coin is 150 seconds old in this test
             (make_test_conds(before_seconds_relative=150), Err.ASSERT_BEFORE_SECONDS_RELATIVE_FAILED),
             (make_test_conds(before_seconds_relative=151), None),
             # The block timestamp is 10150
-            (make_test_conds(before_seconds_absolute=10150), Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
-            (make_test_conds(before_seconds_absolute=10151), None),
+            (make_test_conds(before_seconds_absolute=PREV_BLOCK_TIMESTAMP), Err.ASSERT_BEFORE_SECONDS_ABSOLUTE_FAILED),
+            (make_test_conds(before_seconds_absolute=uint64(PREV_BLOCK_TIMESTAMP + 1)), None),
         ],
     )
     def test_conditions(
@@ -287,7 +287,7 @@ class TestCheckTimeLocks:
     ) -> None:
         assert (
             mempool_check_time_locks(
-                self.REMOVALS,
+                dict(self.REMOVALS),
                 conds,
                 self.PREV_BLOCK_HEIGHT,
                 self.PREV_BLOCK_TIMESTAMP,

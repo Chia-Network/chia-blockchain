@@ -597,7 +597,7 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
             additions.extend(tx.spend_bundle.additions())
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
-    mirror_coin: Coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
+    mirror_coin: Coin = next(c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash())
     mirror = Mirror(
         bytes32(mirror_coin.name()),
         bytes32(launcher_id_2),

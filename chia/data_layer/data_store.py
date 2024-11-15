@@ -1212,7 +1212,7 @@ class DataStore:
 
             if was_empty:
                 if side is not None:
-                    raise Exception("Tree was empty so side must be unspecified, got: {side!r}")
+                    raise Exception(f"Tree was empty so side must be unspecified, got: {side!r}")
 
                 new_root = await self._insert_root(
                     store_id=store_id,

@@ -467,7 +467,7 @@ def test_basic() -> None:
         g: tuple[uint32, str, bytes]
 
     # we want to test invalid here, hence the ignore.
-    a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))  # type: ignore[arg-type,list-item] # noqa: E501
+    a = TestClass(24, 352, [1, 2, 4], [[1, 2, 3], [3, 4]], 728, None, (383, "hello", b"goodbye"))  # type: ignore[arg-type,list-item]
 
     b: bytes = bytes(a)
     assert a == TestClass.from_bytes(b)

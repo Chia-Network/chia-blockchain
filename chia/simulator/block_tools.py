@@ -463,11 +463,11 @@ class BlockTools:
 
             if len(created):
                 assert len(existed) == 0
-                plot_id_new, path_new = list(created.items())[0]
+                plot_id_new, path_new = next(iter(created.items()))
 
             if len(existed):
                 assert len(created) == 0
-                plot_id_new, path_new = list(existed.items())[0]
+                plot_id_new, path_new = next(iter(existed.items()))
                 new_plot = False
             assert plot_id_new is not None
             assert path_new is not None

@@ -484,9 +484,9 @@ async def add_test_blocks_into_full_node(blocks: list[FullBlock], full_node: Ful
 
 
 async def inject_signage_points(signage_points: SPList, full_node_1: FullNode, full_node_2: FullNode) -> None:
-    full_node_2_peer_1 = [
+    full_node_2_peer_1 = next(
         n for n in list(full_node_2.server.all_connections.values()) if n.local_type == NodeType.FULL_NODE
-    ][0]
+    )
 
     api2 = cast(FullNodeAPI, full_node_2.server.api)
 

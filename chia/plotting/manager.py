@@ -312,7 +312,7 @@ class PlotManager:
             if entry is not None:
                 _loaded_parent, duplicates = entry
                 if str(file_path.parent) in duplicates:
-                    log.debug(f"Skip duplicated plot {str(file_path)}")
+                    log.debug(f"Skip duplicated plot {file_path!s}")
                     return None
             try:
                 if not file_path.exists():
@@ -325,7 +325,7 @@ class PlotManager:
                 if not cache_hit:
                     prover = DiskProver(str(file_path))
 
-                    log.debug(f"process_file {str(file_path)}")
+                    log.debug(f"process_file {file_path!s}")
 
                     expected_size = _expected_plot_size(prover.get_size()) * UI_ACTUAL_SPACE_CONSTANT_FACTOR
 

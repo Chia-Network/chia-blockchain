@@ -585,7 +585,7 @@ def validate_unfinished_header_block(
             RewardChainSubSlot(dummy_vdf_info, bytes32.zeros, None, uint8(0)),
             SubSlotProofs(VDFProof(uint8(0), b"", False), None, VDFProof(uint8(0), b"", False)),
         )
-        sub_slots_to_pass_in = header_block.finished_sub_slots + [dummy_sub_slot]
+        sub_slots_to_pass_in = [*header_block.finished_sub_slots, dummy_sub_slot]
     else:
         sub_slots_to_pass_in = header_block.finished_sub_slots
     (
@@ -835,7 +835,7 @@ def validate_finished_header_block(
     blocks: BlockRecordsProtocol,
     header_block: HeaderBlock,
     check_filter: bool,
-    vs: ValidationState,
+    expected_vs: ValidationState,
     check_sub_epoch_summary: bool = True,
 ) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
@@ -857,11 +857,11 @@ def validate_finished_header_block(
         blocks,
         unfinished_header_block,
         check_filter,
-        vs.current_difficulty,
-        vs.current_ssi,
+        expected_vs.difficulty,
+        expected_vs.ssi,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
-        prev_ses_block=vs.prev_ses_block,
+        prev_ses_block=expected_vs.prev_ses_block,
     )
 
     genesis_block = False
@@ -879,7 +879,7 @@ def validate_finished_header_block(
 
     ip_iters: uint64 = calculate_ip_iters(
         constants,
-        vs.current_ssi,
+        expected_vs.ssi,
         header_block.reward_chain_block.signage_point_index,
         required_iters,
     )
@@ -890,8 +890,8 @@ def validate_finished_header_block(
             return None, ValidationError(Err.INVALID_HEIGHT)
 
         # 28. Check weight
-        if header_block.weight != prev_b.weight + vs.current_difficulty:
-            log.error(f"INVALID WEIGHT: {header_block} {prev_b} {vs.current_difficulty}")
+        if header_block.weight != prev_b.weight + expected_vs.difficulty:
+            log.error(f"INVALID WEIGHT: {header_block} {prev_b} {expected_vs.difficulty}")
             return None, ValidationError(Err.INVALID_WEIGHT)
     else:
         # 27b. Check genesis block height, weight, and prev block hash

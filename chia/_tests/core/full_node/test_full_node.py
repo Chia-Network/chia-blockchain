@@ -812,7 +812,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-2].reward_chain_block.get_unfinished().get_hash(),
         )
-        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
+        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))  # noqa: RUF006
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
 
         # Does not ignore equal weight
@@ -823,7 +823,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-1].reward_chain_block.get_unfinished().get_hash(),
         )
-        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
+        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))  # noqa: RUF006
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.anyio

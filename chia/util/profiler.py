@@ -135,7 +135,7 @@ if __name__ == "__main__":
             output_file += f"-{last}"
 
         print(f"generating call tree for slot(s) [{first}, {last}]")
-        check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot"] + files)
+        check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot", *files])
         with open(output_file + ".png", "w+") as f:
             check_call(["dot", "-T", "png", output_file + ".dot"], stdout=f)
         print(f"output written to: {output_file}.png")

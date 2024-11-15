@@ -111,8 +111,8 @@ class WalletBlockchain:
             difficulty = self._difficulty
 
         # Validation requires a block cache (self) that goes back to a subepoch barrier
-        vs = ValidationState(sub_slot_iters, difficulty, None)
-        required_iters, error = validate_finished_header_block(self.constants, self, block, False, vs, False)
+        expected_vs = ValidationState(sub_slot_iters, difficulty, None)
+        required_iters, error = validate_finished_header_block(self.constants, self, block, False, expected_vs, False)
         if error is not None:
             return AddBlockResult.INVALID_BLOCK, error.code
         if required_iters is None:

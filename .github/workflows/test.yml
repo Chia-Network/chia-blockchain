@@ -113,7 +113,7 @@ jobs:
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
-      emoji: 🍎
+      os-emoji: 🍎
       matrix: macos-intel
       name: macOS Intel
       file_name: macos
@@ -122,12 +122,13 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-13
       arch: intel
+      arch-emoji: 🌀
   macos-arm:
     if: github.event_name != 'workflow_dispatch' || inputs.run-macos-arm
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
-      emoji: 🍎
+      os-emoji: 🍎
       matrix: macos
       name: macOS ARM
       file_name: macos-arm
@@ -136,13 +137,14 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-14
       arch: arm
+      arch-emoji: 💪
       collect-junit: false
   ubuntu:
     if: github.event_name != 'workflow_dispatch' || inputs.run-linux
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
-      emoji: 🐧
+      os-emoji: 🐧
       matrix: ubuntu
       name: Ubuntu
       file_name: ubuntu
@@ -151,13 +153,14 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
       arch: intel
+      arch-emoji: 🌀
       collect-junit: false
   windows:
     if: github.event_name != 'workflow_dispatch' || inputs.run-windows
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
-      emoji: 🪟
+      os-emoji: 🪟
       matrix: windows
       name: Windows
       file_name: windows
@@ -166,6 +169,7 @@ jobs:
       matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-latest
       arch: intel
+      arch-emoji: 🌀
       collect-junit: false
 
   coverage:

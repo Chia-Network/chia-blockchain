@@ -1192,7 +1192,7 @@ class WebSocketServer:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._start_plotting(id, loop, queue))
+                loop.create_task(self._start_plotting(id, loop, queue))  # noqa: RUF006
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
@@ -1547,17 +1547,6 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
-    sys.stdout.flush()
-    json_msg = dict_to_json_str(
-        {
-            "message": "cert_path",
-            "success": True,
-            "cert": f"{crt_path}",
-            "key": f"{key_path}",
-            "ca_crt": f"{ca_crt_path}",
-        }
-    )
-    sys.stdout.write("\n" + json_msg + "\n")
     sys.stdout.flush()
     try:
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):

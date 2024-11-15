@@ -355,7 +355,7 @@ class Blockchain:
         assert block.height == 0 or fork_info.peak_hash == block.prev_header_hash
 
         assert block.transactions_generator is None or pre_validation_result.validated_signature
-        error_code, _ = await validate_block_body(
+        error_code = await validate_block_body(
             self.constants,
             self,
             self.coin_store.get_coin_records,
@@ -706,20 +706,21 @@ class Blockchain:
 
         fork_info = ForkInfo(prev_height, prev_height, block.prev_header_hash)
 
-        error_code, cost_result = await validate_block_body(
+        conds = None if npc_result is None else npc_result.conds
+        error_code = await validate_block_body(
             self.constants,
             self,
             self.coin_store.get_coin_records,
             block,
             uint32(prev_height + 1),
-            None if npc_result is None else npc_result.conds,
+            conds,
             fork_info,
         )
 
         if error_code is not None:
             return PreValidationResult(uint16(error_code.value), None, None, uint32(0))
 
-        return PreValidationResult(None, required_iters, cost_result, uint32(0))
+        return PreValidationResult(None, required_iters, conds, uint32(0))
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
@@ -840,13 +841,13 @@ class Blockchain:
                 # blocks that do not have transactions.
                 header = get_block_header(block, [], [])
             else:
-                tx_additions: list[CoinRecord] = [
-                    c for c in (await self.coin_store.get_coins_added_at_height(block.height)) if not c.coinbase
-                ]
-                removed: list[CoinRecord] = await self.coin_store.get_coins_removed_at_height(block.height)
-                header = get_block_header(
-                    block, [record.coin for record in tx_additions], [record.coin.name() for record in removed]
+                added_coins_records, removed_coins_records = await asyncio.gather(
+                    self.coin_store.get_coins_added_at_height(block.height),
+                    self.coin_store.get_coins_removed_at_height(block.height),
                 )
+                tx_additions = [cr.coin for cr in added_coins_records if not cr.coinbase]
+                removed = [cr.coin.name() for cr in removed_coins_records]
+                header = get_block_header(block, tx_additions, removed)
             header_blocks[header.header_hash] = header
 
         return header_blocks

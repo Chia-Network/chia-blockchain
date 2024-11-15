@@ -459,7 +459,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, None)
 
-        asyncio.create_task(eventually_clear())
+        asyncio.create_task(eventually_clear())  # noqa: RUF006
 
         return msg
 
@@ -527,7 +527,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, foliage_hash)
 
-        asyncio.create_task(eventually_clear())
+        asyncio.create_task(eventually_clear())  # noqa: RUF006
 
         return msg
 
