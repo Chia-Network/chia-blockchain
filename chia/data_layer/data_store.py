@@ -343,7 +343,7 @@ class DataStore:
                 raise Exception(f"Cannot find merkle blob for root hash {root_hash.hex()}")
 
             merkle_blob = MerkleBlob(blob=bytearray(row["blob"]))
-            self.recent_merkle_blobs.put(root_hash, merkle_blob)
+            self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
             return merkle_blob
 
     async def insert_root_from_merkle_blob(
@@ -369,7 +369,7 @@ class DataStore:
                     """,
                     (root_hash, merkle_blob.blob, store_id),
                 )
-            self.recent_merkle_blobs.put(root_hash, merkle_blob)
+            self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
 
         return await self._insert_root(store_id, root_hash, status)
 
