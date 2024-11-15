@@ -502,9 +502,9 @@ class FullNode:
             # However, doing them one at a time would be slow, because they get sent to other processes.
             await self.add_transaction_semaphore.acquire()
 
-            # Clean up task reference list (used to prevent gc from killing running tasks)      
+            # Clean up task reference list (used to prevent gc from killing running tasks)
             for oldtask in self._tx_task_list[:]:
-                if oldtask.done(): 
+                if oldtask.done():
                     self._tx_task_list.remove(oldtask)
 
             item: TransactionQueueEntry = await self.transaction_queue.pop()
