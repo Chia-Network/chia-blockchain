@@ -52,6 +52,7 @@ from chia.data_layer.util.merkle_blob import (
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
 
     db_wrapper: DBWrapper2
+    recent_merkle_blobs: LRUCache
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -84,7 +86,8 @@ class DataStore:
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
-            self = cls(db_wrapper=db_wrapper)
+            recent_merkle_blobs = LRUCache(capacity=128)
+            self = cls(db_wrapper=db_wrapper, recent_merkle_blobs=recent_merkle_blobs)
 
             async with db_wrapper.writer() as writer:
                 await writer.execute(
@@ -321,6 +324,10 @@ class DataStore:
         if root_hash is None:
             return MerkleBlob(blob=bytearray())
 
+        existing_blob = self.recent_merkle_blobs.get(root_hash)
+        if existing_blob is not None:
+            return existing_blob
+
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
                 "SELECT blob FROM merkleblob WHERE hash == :root_hash",
@@ -335,6 +342,7 @@ class DataStore:
                 raise Exception(f"Cannot find merkle blob for root hash {root_hash.hex()}")
 
             merkle_blob = MerkleBlob(blob=bytearray(row["blob"]))
+            self.recent_merkle_blobs.put(root_hash, merkle_blob)
             return merkle_blob
 
     async def insert_root_from_merkle_blob(
@@ -360,6 +368,7 @@ class DataStore:
                     """,
                     (root_hash, merkle_blob.blob, store_id),
                 )
+            self.recent_merkle_blobs.put(root_hash, merkle_blob)
 
         return await self._insert_root(store_id, root_hash, status)
 
