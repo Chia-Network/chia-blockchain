@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import enum
 import logging
@@ -10,6 +11,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
+import anyio
 from chia_rs import additions_and_removals, get_flags_for_height_and_constants
 
 from chia.consensus.block_body_validation import ForkInfo, validate_block_body
@@ -419,20 +421,19 @@ class Blockchain:
                 self._peak_height = block_record.height
 
         except BaseException as e:
-            # depending on exactly when the failure of adding the block
-            # happened, we may not have added it to the block record cache
-            try:
-                self.remove_block_record(header_hash)
-            except KeyError:
-                pass
-            fork_info.rollback(header_hash, -1 if previous_peak_height is None else previous_peak_height)
-            self.block_store.rollback_cache_block(header_hash)
-            self._peak_height = previous_peak_height
-            log.error(
-                f"Error while adding block {header_hash} height {block.height},"
-                f" rolling back: {traceback.format_exc()} {e}"
-            )
-            raise
+            with anyio.CancelScope(shield=True):
+                # depending on exactly when the failure of adding the block
+                # happened, we may not have added it to the block record cache
+                with contextlib.suppress(KeyError):
+                    self.remove_block_record(header_hash)
+                fork_info.rollback(header_hash, -1 if previous_peak_height is None else previous_peak_height)
+                self.block_store.rollback_cache_block(header_hash)
+                self._peak_height = previous_peak_height
+                log.error(
+                    f"Error while adding block {header_hash} height {block.height},"
+                    f" rolling back: {traceback.format_exc()} {e}"
+                )
+                raise
 
         # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
         await self.__height_map.maybe_flush()

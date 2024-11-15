@@ -8,12 +8,10 @@ def check_shielding(use_file_ignore: bool) -> int:
     exclude = {"mozilla-ca"}
     roots = [path.parent for path in sorted(pathlib.Path(".").glob("*/__init__.py")) if path.parent.name not in exclude]
 
-    count = 0
+    total_count = 0
+    paths_with_concerns: set[pathlib.Path] = set()
     for root in roots:
         for path in sorted(root.glob("**/*.py")):
-            if use_file_ignore and path.as_posix() in hardcoded_file_ignore_list:
-                continue
-
             lines = path.read_text().splitlines()
 
             for line_index, line in enumerate(lines):
@@ -41,15 +39,28 @@ def check_shielding(use_file_ignore: bool) -> int:
 
                             async_def_match = re.search(r"^ *async def", def_line)
                             if async_def_match is not None:
-                                count += 1
-                                print(f"{path.as_posix()}:{line_number}: {line}")
+                                paths_with_concerns.add(path)
+                                if not (use_file_ignore and path in hardcoded_file_ignore_list):
+                                    total_count += 1
+                                    print(f"{path.as_posix()}:{line_number}: {line}")
                                 break
 
-    return count
+    if use_file_ignore:
+        for path in hardcoded_file_ignore_list - paths_with_concerns:
+            total_count += 1
+            source = pathlib.Path(__file__).relative_to(pathlib.Path(".").absolute())
+            line_number = next(
+                line_number
+                for line_number, line in enumerate(source.read_text().splitlines(), start=1)
+                if line.find(f'"{path.as_posix()}"') >= 0
+            )
+            print(f"{source.as_posix()}:{line_number}: {path.as_posix()} unnecessarily in file ignore list")
+
+    return total_count
 
 
 # chia dev check shielding --no-file-ignore &| sed -nE 's/^([^:]*):[0-9]*:.*/    "\1",/p' | sort | uniq
-hardcoded_file_ignore_list = {
+hardcoded_file_ignore_list_strings = {
     "benchmarks/utils.py",
     "chia/cmds/check_wallet_db.py",
     "chia/cmds/cmds_util.py",
@@ -63,7 +74,6 @@ hardcoded_file_ignore_list = {
     "chia/cmds/sim_funcs.py",
     "chia/cmds/start_funcs.py",
     "chia/cmds/wallet_funcs.py",
-    "chia/consensus/blockchain.py",
     "chia/consensus/multiprocess_validation.py",
     "chia/daemon/client.py",
     "chia/daemon/keychain_proxy.py",
@@ -179,3 +189,5 @@ hardcoded_file_ignore_list = {
     "chia/wallet/wallet_state_manager.py",
     "chia/wallet/wallet_transaction_store.py",
 }
+
+hardcoded_file_ignore_list = {pathlib.Path(path_string) for path_string in hardcoded_file_ignore_list_strings}
