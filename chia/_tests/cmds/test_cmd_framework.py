@@ -511,7 +511,6 @@ async def test_transaction_endpoint_mixin() -> None:
 
         @chia_command(cmd, "bad_cmd", "blah")
         class BadCMD(TransactionEndpoint):
-
             def run(self) -> None:
                 pass  # pragma: no cover
 
@@ -519,7 +518,6 @@ async def test_transaction_endpoint_mixin() -> None:
 
     @chia_command(cmd, "cs_cmd", "blah")
     class TxCMD(TransactionEndpoint):
-
         @transaction_endpoint_runner
         async def run(self) -> list[TransactionRecord]:
             assert self.load_condition_valid_times() == ConditionValidTimes(

@@ -339,7 +339,7 @@ async def test_combine_coins(wallet_environments: WalletTestFramework, capsys: p
 
     # Grab one of the 0.25 ones to specify
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
-        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        target_coin = next(iter(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope)))
         assert target_coin.amount == 250_000_000_000
 
     # These parameters will give us the maximum amount of behavior coverage
@@ -567,7 +567,7 @@ async def test_fee_bigger_than_selection_coin_combining(wallet_environments: Wal
 
     # Grab one of the 0.25 ones to specify
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
-        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        target_coin = next(iter(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope)))
         assert target_coin.amount == 250_000_000_000
 
     fee = uint64(1_750_000_000_000)
@@ -681,7 +681,7 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
 
     # Test XCH first
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
-        target_coin = list(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope))[0]
+        target_coin = next(iter(await env.xch_wallet.select_coins(uint64(250_000_000_000), action_scope)))
         assert target_coin.amount == 250_000_000_000
 
     xch_request = SplitCMD(
@@ -788,7 +788,7 @@ async def test_split_coins(wallet_environments: WalletTestFramework, capsys: pyt
     )
 
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config) as action_scope:
-        target_coin = list(await cat_wallet.select_coins(uint64(50), action_scope))[0]
+        target_coin = next(iter(await cat_wallet.select_coins(uint64(50), action_scope)))
         assert target_coin.amount == 50
 
     cat_request = SplitCMD(
