@@ -144,23 +144,13 @@ async def create_new_plotnft(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-            "reuse_puzhash": False,
         }
     ],
     indirect=True,
 )
-@datacases(
-    StateUrlCase(
-        id="local state without pool url",
-        state="local",
-        pool_url=None,
-        expected_error=None,
-    )
-)
 @pytest.mark.anyio
 async def test_plotnft_cli_create(
     wallet_environments: WalletTestFramework,
-    case: StateUrlCase,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -170,13 +160,17 @@ async def test_plotnft_cli_create(
         wallet_state_manager.config,
     )
 
+    wallet_state_manager.config["reuse_public_key_for_change"][str(client_info.fingerprint)] = (
+        wallet_environments.tx_config.reuse_puzhash
+    )
+
     await CreatePlotNFTCMD(
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),
-        state=case.state,
+        state="local",
         dont_prompt=True,
-        pool_url=case.pool_url,
+        pool_url=None,
     ).run()
 
     await wallet_environments.process_pending_states(
@@ -252,7 +246,6 @@ async def test_plotnft_cli_create_errors(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-            "reuse_puzhash": False,
         }
     ],
     indirect=True,
@@ -270,6 +263,9 @@ async def test_plotnft_cli_show(
         wallet_state_manager.config,
     )
     root_path = wallet_environments.environments[0].node.root_path
+    wallet_state_manager.config["reuse_public_key_for_change"][str(client_info.fingerprint)] = (
+        wallet_environments.tx_config.reuse_puzhash
+    )
 
     await ShowPlotNFTCMD(
         rpc_info=NeedsWalletRPC(
@@ -327,7 +323,6 @@ async def test_plotnft_cli_show(
         {
             "num_environments": 1,
             "blocks_needed": [1],
-            "reuse_puzhash": False,
         }
     ],
     indirect=True,
@@ -346,6 +341,10 @@ async def test_plotnft_cli_show_with_farmer(
         wallet_state_manager.root_pubkey.get_fingerprint(),
         wallet_state_manager.config,
     )
+    wallet_state_manager.config["reuse_public_key_for_change"][str(client_info.fingerprint)] = (
+        wallet_environments.tx_config.reuse_puzhash
+    )
+
     #  Need to run the farmer to make further tests
     async with setup_farmer(
         b_tools=wallet_environments.full_node.bt,
@@ -394,7 +393,6 @@ async def test_plotnft_cli_show_with_farmer(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "reuse_puzhash": False,
         }
     ],
     indirect=True,
@@ -409,6 +407,9 @@ async def test_plotnft_cli_leave(
         wallet_rpc,
         wallet_state_manager.root_pubkey.get_fingerprint(),
         wallet_state_manager.config,
+    )
+    wallet_state_manager.config["reuse_public_key_for_change"][str(client_info.fingerprint)] = (
+        wallet_environments.tx_config.reuse_puzhash
     )
 
     with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
@@ -475,7 +476,6 @@ async def test_plotnft_cli_leave(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "reuse_puzhash": False,
         }
     ],
     indirect=True,
@@ -491,6 +491,9 @@ async def test_plotnft_cli_join(
         wallet_rpc,
         wallet_state_manager.root_pubkey.get_fingerprint(),
         wallet_state_manager.config,
+    )
+    wallet_state_manager.config["reuse_public_key_for_change"][str(client_info.fingerprint)] = (
+        wallet_environments.tx_config.reuse_puzhash
     )
 
     # Test error cases
@@ -668,7 +671,6 @@ async def test_plotnft_cli_join(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "reuse_puzhash": False,
         }
     ],
     indirect=True,
@@ -683,6 +685,9 @@ async def test_plotnft_cli_claim(
         wallet_rpc,
         wallet_state_manager.root_pubkey.get_fingerprint(),
         wallet_state_manager.config,
+    )
+    wallet_state_manager.config["reuse_public_key_for_change"][str(client_info.fingerprint)] = (
+        wallet_environments.tx_config.reuse_puzhash
     )
 
     # Test error cases
@@ -788,7 +793,6 @@ async def test_plotnft_cli_claim(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "reuse_puzhash": False,
         }
     ],
     indirect=True,
@@ -804,6 +808,9 @@ async def test_plotnft_cli_inspect(
         wallet_rpc,
         wallet_state_manager.root_pubkey.get_fingerprint(),
         wallet_state_manager.config,
+    )
+    wallet_state_manager.config["reuse_public_key_for_change"][str(client_info.fingerprint)] = (
+        wallet_environments.tx_config.reuse_puzhash
     )
 
     with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
@@ -873,7 +880,6 @@ async def test_plotnft_cli_inspect(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "reuse_puzhash": False,
         }
     ],
     indirect=True,
@@ -885,10 +891,13 @@ async def test_plotnft_cli_change_payout(
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
-    _client_info: WalletClientInfo = WalletClientInfo(
+    client_info: WalletClientInfo = WalletClientInfo(
         wallet_rpc,
         wallet_state_manager.root_pubkey.get_fingerprint(),
         wallet_state_manager.config,
+    )
+    wallet_state_manager.config["reuse_public_key_for_change"][str(client_info.fingerprint)] = (
+        wallet_environments.tx_config.reuse_puzhash
     )
 
     zero_ph = bytes32.from_hexstr("0x0000000000000000000000000000000000000000000000000000000000000000")
@@ -944,7 +953,6 @@ async def test_plotnft_cli_change_payout(
         {
             "num_environments": 1,
             "blocks_needed": [10],
-            "reuse_puzhash": False,
         }
     ],
     indirect=True,
