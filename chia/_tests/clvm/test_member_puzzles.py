@@ -8,6 +8,7 @@ from chia_rs import AugSchemeMPL, G2Element
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
@@ -369,7 +370,7 @@ async def test_secp256k1_member(cost_logger: CostLogger) -> None:
         delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
 
         # setup keys
-        secp_sk = ec.generate_private_key(ec.SECP256K1())
+        secp_sk: EllipticCurvePrivateKey = ec.generate_private_key(ec.SECP256K1())
         secp_pk = secp_sk.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
 
         secpk1_member = SECPK1Member(secp_pk)

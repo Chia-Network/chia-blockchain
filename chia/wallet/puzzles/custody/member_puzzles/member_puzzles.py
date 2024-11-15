@@ -8,6 +8,7 @@ from typing import Any
 from chia_rs import G1Element
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 from chia.types.blockchain_format.program import Program
@@ -102,7 +103,7 @@ class SECPK1Member(Puzzle):
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
 
-    def solve(self, secp_sk, message, coin_id) -> Program:
+    def solve(self, secp_sk: EllipticCurvePrivateKey, message: bytes, coin_id: bytes32) -> Program:
         der_sig = secp_sk.sign(
             message,
             # The type stubs are weird here, `deterministic_signing` is assuredly an argument
