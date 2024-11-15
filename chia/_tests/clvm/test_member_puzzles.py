@@ -373,6 +373,7 @@ async def test_secp256k1_member(cost_logger: CostLogger) -> None:
         secp_pk = secp_sk.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
 
         secpk1_member = SECPK1Member(secp_pk)
+        assert secpk1_member.memo(0) == Program.to(0)
 
         secpk1_puzzle = PuzzleWithRestrictions(0, [], secpk1_member)
 
