@@ -45,6 +45,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper2, generate_in_memory_db_uri
+from chia.util.lru_cache import LRUCache
 
 log = logging.getLogger(__name__)
 
@@ -1977,6 +1978,7 @@ async def test_migration(
         for table in tables:
             await writer.execute(f"DELETE FROM {table}")
 
+    data_store.recent_merkle_blobs = LRUCache(capacity=128)
     assert await data_store.get_keys_values(store_id=store_id) == []
     await data_store.migrate_db(tmp_path)
     assert await data_store.get_keys_values(store_id=store_id) == kv_before
