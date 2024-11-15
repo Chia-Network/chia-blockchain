@@ -300,7 +300,7 @@ async def test_secp256r1_member(cost_logger: CostLogger) -> None:
         secp_pk = secp_sk.public_key().public_bytes(Encoding.X962, PublicFormat.CompressedPoint)
 
         secpr1_member = SECPR1Member(secp_pk)
-
+        assert secpr1_member.memo(0) == Program.to(0)
         secpr1_puzzle = PuzzleWithRestrictions(0, [], secpr1_member)
 
         # Farm and find coin
