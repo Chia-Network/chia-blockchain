@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from chia_rs import G1Element
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -98,3 +101,18 @@ class SECPK1Member(Puzzle):
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
+
+    def solve(self, secp_sk, message, coin_id) -> Program:
+        der_sig = secp_sk.sign(
+            message,
+            # The type stubs are weird here, `deterministic_signing` is assuredly an argument
+            ec.ECDSA(hashes.SHA256(), deterministic_signing=True),  # type: ignore[call-arg]
+        )
+        r, _s = decode_dss_signature(der_sig)
+        curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+        if _s > curve_order // 2:
+            s = -_s % curve_order
+        else:
+            s = _s
+        sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
+        return Program.to([coin_id, sig])

@@ -390,19 +390,7 @@ async def test_secp256k1_member(cost_logger: CostLogger) -> None:
         # Get signature for AGG_SIG_ME
         coin_id = coin.name()
         signature_message = delegated_puzzle_hash + coin_id
-        der_sig = secp_sk.sign(
-            signature_message,
-            # The type stubs are weird here, `deterministic_signing` is assuredly an argument
-            ec.ECDSA(hashes.SHA256(), deterministic_signing=True),  # type: ignore[call-arg]
-        )
-        r, _s = decode_dss_signature(der_sig)
-        curve_order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-        if _s > curve_order // 2:
-            s = -_s % curve_order
-        else:
-            s = _s
-        sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
-        sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
+
         sb = WalletSpendBundle(
             [
                 make_spend(
@@ -411,12 +399,7 @@ async def test_secp256k1_member(cost_logger: CostLogger) -> None:
                     secpk1_puzzle.solve(
                         [],
                         [],
-                        Program.to(
-                            [
-                                coin_id,
-                                sig,
-                            ]
-                        ),
+                        secpk1_member.solve(secp_sk, signature_message, coin_id),
                         DelegatedPuzzleAndSolution(
                             delegated_puzzle,
                             Program.to(
