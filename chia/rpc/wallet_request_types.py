@@ -404,7 +404,7 @@ class TransactionRecordMetadata:
         return TransactionRecordMetadata(
             coin_id=bytes32.from_hexstr(json_dict["coin_id"]),
             spent=json_dict["spent"],
-            content={k: v for k, v in json_dict.items() if k not in ("coin_id", "spent")},
+            content={k: v for k, v in json_dict.items() if k not in {"coin_id", "spent"}},
         )
 
 
