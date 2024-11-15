@@ -66,7 +66,7 @@ class DataStore:
     """A key/value store with the pairs being terminal nodes in a CLVM object tree."""
 
     db_wrapper: DBWrapper2
-    recent_merkle_blobs: LRUCache
+    recent_merkle_blobs: LRUCache[bytes32, MerkleBlob]
 
     @classmethod
     @contextlib.asynccontextmanager
@@ -86,7 +86,7 @@ class DataStore:
             row_factory=aiosqlite.Row,
             log_path=sql_log_path,
         ) as db_wrapper:
-            recent_merkle_blobs = LRUCache(capacity=128)
+            recent_merkle_blobs: LRUCache[bytes32, MerkleBlob] = LRUCache(capacity=128)
             self = cls(db_wrapper=db_wrapper, recent_merkle_blobs=recent_merkle_blobs)
 
             async with db_wrapper.writer() as writer:
