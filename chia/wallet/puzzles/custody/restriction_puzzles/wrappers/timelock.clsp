@@ -10,7 +10,7 @@
   (defun check_conditions (TIMELOCK conditions)
     (if (and (= (f (f conditions)) ASSERT_SECONDS_RELATIVE) (= (f (r (f conditions))) TIMELOCK))
         conditions
-        (check_conditions TIMELOCK (r conditions))
+        (c (f conditions) (check_conditions TIMELOCK (r conditions)))
     )
   )
 
