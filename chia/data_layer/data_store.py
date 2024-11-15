@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import copy
 import logging
 from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable
@@ -326,7 +327,7 @@ class DataStore:
 
         existing_blob = self.recent_merkle_blobs.get(root_hash)
         if existing_blob is not None:
-            return existing_blob
+            return copy.deepcopy(existing_blob)
 
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
