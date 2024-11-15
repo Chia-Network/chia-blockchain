@@ -6,11 +6,11 @@ import re
 
 def check_shielding() -> int:
     exclude = {"mozilla-ca"}
-    roots = [path.parent for path in pathlib.Path(".").glob("*/__init__.py") if path.parent.name not in exclude]
+    roots = [path.parent for path in sorted(pathlib.Path(".").glob("*/__init__.py")) if path.parent.name not in exclude]
 
     count = 0
     for root in roots:
-        for path in root.glob("**/*.py"):
+        for path in sorted(root.glob("**/*.py")):
             lines = path.read_text().splitlines()
 
             for line_index, line in enumerate(lines):
