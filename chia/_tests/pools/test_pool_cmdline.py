@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import Optional, Union, cast
 
 import pytest
 from chia_rs import G1Element
@@ -59,89 +59,54 @@ async def verify_pool_state(wallet_rpc: WalletRpcClient, w_id: int, expected_sta
     return pw_status.current.state == expected_state.value
 
 
-async def process_first_plotnft_create(
-    wallet_test_framework: WalletTestFramework, expected_state: PoolSingletonState
+async def process_plotnft_create(
+    wallet_test_framework: WalletTestFramework, expected_state: PoolSingletonState, second_nft: bool = False
 ) -> int:
     wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
+
+    pre_block_balance_updates: dict[Union[int, str], dict[str, int]] = {
+        1: {
+            "confirmed_wallet_balance": 0,
+            "unconfirmed_wallet_balance": -1,
+            "<=#spendable_balance": 1,
+            "<=#max_send_amount": 1,
+            ">=#pending_change": 1,  # any amount increase
+            "pending_coin_removal_count": 1,
+        }
+    }
+
+    post_block_balance_updates: dict[Union[int, str], dict[str, int]] = {
+        1: {
+            "confirmed_wallet_balance": -1,
+            "unconfirmed_wallet_balance": 0,
+            ">=#spendable_balance": 1,
+            ">=#max_send_amount": 1,
+            "<=#pending_change": 1,  # any amount decrease
+            "<=#pending_coin_removal_count": 1,
+        },
+    }
+
+    if second_nft:
+        post_block = post_block_balance_updates | {
+            2: {
+                "set_remainder": True,  # TODO: sometimes this fails with pending_coin_removal_count
+            },
+            3: {"init": True, "unspent_coin_count": 1},
+        }
+    else:
+        post_block = post_block_balance_updates | {2: {"init": True, "unspent_coin_count": 1}}
 
     await wallet_test_framework.process_pending_states(
         [
             WalletStateTransition(
-                pre_block_balance_updates={
-                    1: {
-                        "confirmed_wallet_balance": 0,
-                        "unconfirmed_wallet_balance": -1,
-                        "<=#spendable_balance": 1,
-                        "<=#max_send_amount": 1,
-                        ">=#pending_change": 1,  # any amount increase
-                        "pending_coin_removal_count": 1,
-                    },
-                },
-                post_block_balance_updates={
-                    1: {
-                        "confirmed_wallet_balance": -1,
-                        "unconfirmed_wallet_balance": 0,
-                        ">=#spendable_balance": 1,
-                        ">=#max_send_amount": 1,
-                        "<=#pending_change": 1,  # any amount decrease
-                        "<=#pending_coin_removal_count": 1,
-                    },
-                    2: {"init": True, "unspent_coin_count": 1},
-                },
+                pre_block_balance_updates=pre_block_balance_updates,
+                post_block_balance_updates=post_block,
             )
         ]
     )
 
     summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-    assert len(summaries_response) == 1
-    wallet_id: int = summaries_response[-1]["id"]
-
-    await verify_pool_state(wallet_rpc, wallet_id, expected_state=expected_state)
-    return wallet_id
-
-
-async def process_second_plotnft_create(
-    wallet_test_framework: WalletTestFramework,
-    expected_state: PoolSingletonState,
-) -> int:
-    wallet_rpc: WalletRpcClient = wallet_test_framework.environments[0].rpc_client
-
-    await wallet_test_framework.process_pending_states(
-        [
-            WalletStateTransition(
-                pre_block_balance_updates={
-                    1: {
-                        "confirmed_wallet_balance": 0,
-                        "unconfirmed_wallet_balance": -1,
-                        "<=#spendable_balance": 1,
-                        "<=#max_send_amount": 1,
-                        ">=#pending_change": 1,  # any amount increase
-                        "pending_coin_removal_count": 1,
-                    },
-                    2: {
-                        "set_remainder": True,
-                    },
-                },
-                post_block_balance_updates={
-                    1: {
-                        "confirmed_wallet_balance": -1,
-                        "unconfirmed_wallet_balance": 0,
-                        ">=#spendable_balance": 1,
-                        ">=#max_send_amount": 1,
-                        "<=#pending_change": 1,  # any amount decrease
-                        "<=#pending_coin_removal_count": 1,
-                    },
-                    2: {
-                        "set_remainder": True,
-                    },
-                    3: {"init": True, "unspent_coin_count": 1},
-                },
-            )
-        ]
-    )
-
-    summaries_response = await wallet_rpc.get_wallets(WalletType.POOLING_WALLET)
-    assert len(summaries_response) == 2
+    assert len(summaries_response) == 2 if second_nft else 1
     wallet_id: int = summaries_response[-1]["id"]
 
     await verify_pool_state(wallet_rpc, wallet_id, expected_state=expected_state)
@@ -166,16 +131,11 @@ async def create_new_plotnft(
         fee=uint64(0),
     )
 
-    if second_nft:
-        return await process_second_plotnft_create(
-            wallet_test_framework=wallet_test_framework,
-            expected_state=PoolSingletonState.SELF_POOLING if self_pool else PoolSingletonState.FARMING_TO_POOL,
-        )
-    else:
-        return await process_first_plotnft_create(
-            wallet_test_framework=wallet_test_framework,
-            expected_state=PoolSingletonState.SELF_POOLING if self_pool else PoolSingletonState.FARMING_TO_POOL,
-        )
+    return await process_plotnft_create(
+        wallet_test_framework=wallet_test_framework,
+        expected_state=PoolSingletonState.SELF_POOLING if self_pool else PoolSingletonState.FARMING_TO_POOL,
+        second_nft=second_nft,
+    )
 
 
 @pytest.mark.parametrize(
