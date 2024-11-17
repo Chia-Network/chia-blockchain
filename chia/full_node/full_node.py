@@ -145,6 +145,7 @@ class FullNode:
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]] = None
     _sync_task_list: list[asyncio.Task[None]] = dataclasses.field(default_factory=list)
     _transaction_queue: Optional[TransactionQueue] = None
+    _tx_task_list: list[asyncio.Task[None]] = dataclasses.field(default_factory=list)
     _compact_vdf_sem: Optional[LimitedSemaphore] = None
     _new_peak_sem: Optional[LimitedSemaphore] = None
     _add_transaction_semaphore: Optional[asyncio.Semaphore] = None
@@ -359,6 +360,9 @@ class FullNode:
                 if self._transaction_queue_task is not None:
                     self._transaction_queue_task.cancel()
                 cancel_task_safe(task=self.wallet_sync_task, log=self.log)
+                for one_tx_task in self._tx_task_list:
+                    if not one_tx_task.done():
+                        cancel_task_safe(task=one_tx_task, log=self.log)
                 for one_sync_task in self._sync_task_list:
                     if not one_sync_task.done():
                         cancel_task_safe(task=one_sync_task, log=self.log)
@@ -367,6 +371,13 @@ class FullNode:
                     cancel_task_safe(task, self.log)
                 if self._init_weight_proof is not None:
                     await asyncio.wait([self._init_weight_proof])
+                for one_tx_task in self._tx_task_list:
+                    if one_tx_task.done():
+                        self.log.info(f"TX task {one_tx_task.get_name()} done")
+                    else:
+                        with contextlib.suppress(asyncio.CancelledError):
+                            self.log.info(f"Awaiting TX task {one_tx_task.get_name()}")
+                            await one_tx_task
                 for one_sync_task in self._sync_task_list:
                     if one_sync_task.done():
                         self.log.info(f"Long sync task {one_sync_task.get_name()} done")
@@ -490,8 +501,14 @@ class FullNode:
             # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
             # However, doing them one at a time would be slow, because they get sent to other processes.
             await self.add_transaction_semaphore.acquire()
+
+            # Clean up task reference list (used to prevent gc from killing running tasks)
+            for oldtask in self._tx_task_list[:]:
+                if oldtask.done():
+                    self._tx_task_list.remove(oldtask)
+
             item: TransactionQueueEntry = await self.transaction_queue.pop()
-            asyncio.create_task(self._handle_one_transaction(item))  # noqa: RUF006
+            self._tx_task_list.append(asyncio.create_task(self._handle_one_transaction(item)))
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
