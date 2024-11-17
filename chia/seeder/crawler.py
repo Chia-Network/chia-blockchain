@@ -294,6 +294,7 @@ class Crawler:
                 self.with_peak = set()
 
                 if len(peers_to_crawl) == 0:
+                    await asyncio.sleep(15)
                     continue
 
                 peer_cutoff = int(self.config.get("crawler", {}).get("prune_peer_days", 90))
