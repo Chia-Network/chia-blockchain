@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, ClassVar, Optional, cast
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element
 
@@ -30,6 +30,11 @@ from chia.wallet.derive_keys import master_sk_to_local_sk
 
 
 class HarvesterAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("HarvesterAPI", None)
+
     log: logging.Logger
     harvester: Harvester
 

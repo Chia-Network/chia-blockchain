@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.seeder.crawler import Crawler
@@ -9,6 +9,11 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class CrawlerRpcApi:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcApiProtocol
+
+        _protocol_check: ClassVar[RpcApiProtocol] = cast("CrawlerRpcApi", None)
+
     def __init__(self, crawler: Crawler):
         self.service = crawler
         self.service_name = "chia_crawler"

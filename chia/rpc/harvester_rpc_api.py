@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from chia.harvester.harvester import Harvester
 from chia.rpc.rpc_server import Endpoint, EndpointResult
@@ -9,6 +9,11 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
 class HarvesterRpcApi:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcApiProtocol
+
+        _protocol_check: ClassVar[RpcApiProtocol] = cast("HarvesterRpcApi", None)
+
     def __init__(self, harvester: Harvester):
         self.service = harvester
         self.service_name = "chia_harvester"

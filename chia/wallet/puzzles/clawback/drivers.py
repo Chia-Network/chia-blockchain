@@ -76,7 +76,7 @@ def create_merkle_proof(merkle_tree: MerkleTree, puzzle_hash: bytes32) -> Progra
     To spend a p2_1_of_n clawback we recreate the full merkle tree
     The required proof is then selected from the merkle tree based on the puzzle_hash of the puzzle we
     want to execute
-    Returns a proof: (int, List[bytes32]) which can be provided to the p2_1_of_n solution
+    Returns a proof: (int, list[bytes32]) which can be provided to the p2_1_of_n solution
     """
     proof = merkle_tree.generate_proof(puzzle_hash)
     program: Program = Program.to((proof[0], proof[1][0]))

@@ -69,7 +69,7 @@ async def make_and_spend_bundle(
         spend_bundle = cost_logger.add_cost(cost_log_msg, spend_bundle)
 
     try:
-        result, error = await sim_client.push_tx(spend_bundle)
+        _result, error = await sim_client.push_tx(spend_bundle)
         if error is None:
             await sim.farm_block()
         elif ex_error is not None:
@@ -334,7 +334,7 @@ async def test_singleton_top_layer(version, cost_logger):
             DELAY_TIME,
             DELAY_PH,
         )
-        result, error = await sim_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
+        _result, error = await sim_client.push_tx(SpendBundle([to_delay_ph_coinsol], G2Element()))
         assert error == Err.ASSERT_SECONDS_RELATIVE_FAILED
 
         # SPEND TO DELAYED PUZZLE HASH

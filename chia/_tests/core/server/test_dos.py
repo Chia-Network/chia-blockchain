@@ -1,4 +1,3 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
 import asyncio
@@ -175,7 +174,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
-        full_node_1, full_node_2 = nodes
+        _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -230,7 +229,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_spam_message_non_tx(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
-        full_node_1, full_node_2 = nodes
+        _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -279,7 +278,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_spam_message_too_large(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
-        full_node_1, full_node_2 = nodes
+        _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 

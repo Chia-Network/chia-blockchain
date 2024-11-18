@@ -151,7 +151,7 @@ class SPIn(_SPTranslation):
 
     def read_sp_input(self, typ: type[_T_ClvmStreamable]) -> list[_T_ClvmStreamable]:
         final_list: list[_T_ClvmStreamable] = []
-        for filename in self.signer_protocol_input:  # pylint: disable=not-an-iterable
+        for filename in self.signer_protocol_input:
             with open(Path(filename), "rb") as file:
                 final_list.append(
                     byte_deserialize_clvm_streamable(

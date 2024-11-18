@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -o errexit
 
@@ -131,7 +131,7 @@ else
     symlink_vdf_bench "$PYTHON_VERSION"
   elif [ -e venv/bin/python ] && test "$MACOS"; then
     echo "Installing chiavdf dependencies for MacOS."
-    brew install boost cmake gmp
+    brew install --formula --quiet boost cmake gmp
     echo "Installing chiavdf from source."
     # User needs to provide required packages
     echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"

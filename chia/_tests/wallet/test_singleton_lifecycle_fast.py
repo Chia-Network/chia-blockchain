@@ -35,7 +35,7 @@ ANYONE_CAN_SPEND_WITH_PADDING_PUZZLE_HASH = Program.to(binutils.assemble("(a (q 
 
 POOL_REWARD_PREFIX_MAINNET = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a00000000000000000000000000000000")
 
-MAX_BLOCK_COST_CLVM = int(1e18)
+MAX_BLOCK_COST_CLVM = 10**18
 
 T = TypeVar("T")
 
@@ -56,7 +56,7 @@ def satisfies_hint(obj: T, type_hint: type[T]) -> bool:
             if not isinstance(obj, origin):
                 return False
             if len(args) > 0:
-                # Tuple[T, ...] gets handled just like List[T]
+                # tuple[T, ...] gets handled just like list[T]
                 if origin is list or (origin is tuple and args[-1] is Ellipsis):
                     object_hint_pairs.extend((item, args[0]) for item in obj)
                 elif origin is tuple:

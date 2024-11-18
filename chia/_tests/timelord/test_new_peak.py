@@ -29,8 +29,8 @@ class TestNewPeak:
     async def test_timelord_new_peak_basic(
         self, bt: BlockTools, timelord: tuple[TimelordAPI, ChiaServer], default_1000_blocks: list[FullBlock]
     ) -> None:
-        async with create_blockchain(bt.constants, 2) as (b1, db_wrapper1):
-            async with create_blockchain(bt.constants, 2) as (b2, db_wrapper2):
+        async with create_blockchain(bt.constants, 2) as (b1, _):
+            async with create_blockchain(bt.constants, 2) as (b2, _):
                 timelord_api, _ = timelord
                 for block in default_1000_blocks:
                     await _validate_and_add_block(b1, block)
@@ -67,7 +67,7 @@ class TestNewPeak:
     async def test_timelord_new_peak_unfinished_not_orphaned(
         self, bt: BlockTools, timelord: tuple[TimelordAPI, ChiaServer], default_1000_blocks: list[FullBlock]
     ) -> None:
-        async with create_blockchain(bt.constants, 2) as (b1, db_wrapper1):
+        async with create_blockchain(bt.constants, 2) as (b1, _):
             timelord_api, _ = timelord
             for block in default_1000_blocks:
                 await _validate_and_add_block(b1, block)
@@ -122,8 +122,8 @@ class TestNewPeak:
     ) -> None:
         [full_node_service], _, bt = one_node
         full_node = full_node_service._node
-        async with create_blockchain(bt.constants, 2) as (b1, db_wrapper1):
-            async with create_blockchain(bt.constants, 2) as (b2, db_wrapper2):
+        async with create_blockchain(bt.constants, 2) as (b1, _):
+            async with create_blockchain(bt.constants, 2) as (b2, _):
                 timelord_api, _ = timelord
                 for block in default_1000_blocks:
                     await _validate_and_add_block(b1, block)
@@ -227,8 +227,8 @@ class TestNewPeak:
     async def test_timelord_new_peak_unfinished_orphaned_overflow(
         self, bt: BlockTools, timelord: tuple[TimelordAPI, ChiaServer], default_1000_blocks: list[FullBlock]
     ) -> None:
-        async with create_blockchain(bt.constants, 2) as (b1, db_wrapper1):
-            async with create_blockchain(bt.constants, 2) as (b2, db_wrapper2):
+        async with create_blockchain(bt.constants, 2) as (b1, _):
+            async with create_blockchain(bt.constants, 2) as (b2, _):
                 timelord_api, _ = timelord
                 for block in default_1000_blocks:
                     await _validate_and_add_block(b1, block)
@@ -288,8 +288,8 @@ class TestNewPeak:
     async def test_timelord_new_peak_unfinished_eos(
         self, bt: BlockTools, timelord: tuple[TimelordAPI, ChiaServer], default_1000_blocks: list[FullBlock]
     ) -> None:
-        async with create_blockchain(bt.constants, 2) as (b1, db_wrapper1):
-            async with create_blockchain(bt.constants, 2) as (b2, db_wrapper2):
+        async with create_blockchain(bt.constants, 2) as (b1, _):
+            async with create_blockchain(bt.constants, 2) as (b2, _):
                 timelord_api, _ = timelord
                 for block in default_1000_blocks:
                     await _validate_and_add_block(b1, block)

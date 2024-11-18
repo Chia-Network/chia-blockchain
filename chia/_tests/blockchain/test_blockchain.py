@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
 import time
@@ -52,6 +53,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
 from chia.util.generator_tools import get_block_header
@@ -75,7 +77,7 @@ async def make_empty_blockchain(constants: ConsensusConstants) -> AsyncIterator[
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
 
-    async with create_blockchain(constants, 2) as (bc, db_wrapper):
+    async with create_blockchain(constants, 2) as (bc, _):
         yield bc
 
 
@@ -604,7 +606,7 @@ class TestBlockHeaderValidation:
             ),
             keychain=keychain,
         )
-        async with create_blockchain(bt_high_iters.constants, db_version) as (bc1, db_wrapper):
+        async with create_blockchain(bt_high_iters.constants, db_version) as (bc1, _):
             blocks = bt_high_iters.get_consecutive_blocks(10)
             for block in blocks:
                 if (
@@ -1790,15 +1792,16 @@ class TestPreValidation:
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_block.total_iters", blocks[-1].reward_chain_block.total_iters + 1
         )
-        res = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             empty_blockchain.constants,
-            empty_blockchain,
+            AugmentedBlockchain(empty_blockchain),
             [blocks[0], block_bad],
             empty_blockchain.pool,
             {},
             ValidationState(ssi, difficulty, None),
             validate_signatures=True,
         )
+        res: list[PreValidationResult] = list(await asyncio.gather(*futures))
         assert res[0].error is None
         assert res[1].error is not None
 
@@ -1817,15 +1820,16 @@ class TestPreValidation:
             end_i = min(i + n_at_a_time, len(blocks))
             blocks_to_validate = blocks[i:end_i]
             start_pv = time.time()
-            res = await pre_validate_blocks_multiprocessing(
+            futures = await pre_validate_blocks_multiprocessing(
                 empty_blockchain.constants,
-                empty_blockchain,
+                AugmentedBlockchain(empty_blockchain),
                 blocks_to_validate,
                 empty_blockchain.pool,
                 {},
                 ValidationState(ssi, difficulty, None),
                 validate_signatures=True,
             )
+            res: list[PreValidationResult] = list(await asyncio.gather(*futures))
             end_pv = time.time()
             times_pv.append(end_pv - start_pv)
             assert res is not None
@@ -1846,8 +1850,8 @@ class TestPreValidation:
                 )
         end = time.time()
         log.info(f"Total time: {end - start} seconds")
-        log.info(f"Average pv: {sum(times_pv)/(len(blocks)/n_at_a_time)}")
-        log.info(f"Average rb: {sum(times_rb)/(len(blocks))}")
+        log.info(f"Average pv: {sum(times_pv) / (len(blocks) / n_at_a_time)}")
+        log.info(f"Average rb: {sum(times_rb) / (len(blocks))}")
 
 
 class TestBodyValidation:
@@ -1924,15 +1928,16 @@ class TestBodyValidation:
         )
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [blocks[-1]],
             b.pool,
             {},
             ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
+        pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
         block = blocks[-1]
@@ -2050,15 +2055,16 @@ class TestBodyValidation:
             )
             ssi = b.constants.SUB_SLOT_ITERS_STARTING
             diff = b.constants.DIFFICULTY_STARTING
-            pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            futures = await pre_validate_blocks_multiprocessing(
                 b.constants,
-                b,
+                AugmentedBlockchain(b),
                 [blocks[-1]],
                 b.pool,
                 {},
                 ValidationState(ssi, diff, None),
                 validate_signatures=True,
             )
+            pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
             assert pre_validation_results is not None
             block = blocks[-1]
             fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
@@ -2133,15 +2139,16 @@ class TestBodyValidation:
         )
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [blocks[-1]],
             b.pool,
             {},
             ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
+        pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         # Ignore errors from pre-validation, we are testing block_body_validation
         repl_preval_results = replace(pre_validation_results[0], error=None, required_iters=uint64(1))
         block = blocks[-1]
@@ -2261,15 +2268,16 @@ class TestBodyValidation:
             )
             ssi = b.constants.SUB_SLOT_ITERS_STARTING
             diff = b.constants.DIFFICULTY_STARTING
-            pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+            futures = await pre_validate_blocks_multiprocessing(
                 b.constants,
-                b,
+                AugmentedBlockchain(b),
                 [blocks[-1]],
                 b.pool,
                 {},
                 ValidationState(ssi, diff, None),
                 validate_signatures=True,
             )
+            pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
             assert pre_validation_results is not None
             block = blocks[-1]
             fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
@@ -2627,15 +2635,16 @@ class TestBodyValidation:
             )
         )[1]
         assert err in [Err.BLOCK_COST_EXCEEDS_MAX]
-        results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [blocks[-1]],
             b.pool,
             {},
             ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
+        results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         assert results is not None
         assert Err(results[0].error) == Err.BLOCK_COST_EXCEEDS_MAX
 
@@ -2766,7 +2775,7 @@ class TestBodyValidation:
             block_generator, max_cost, mempool_mode=False, height=softfork_height, constants=bt.constants
         )
         fork_info = ForkInfo(block_2.height - 1, block_2.height - 1, block_2.prev_header_hash)
-        result, err, _ = await b.add_block(
+        _result, err, _ = await b.add_block(
             block_2,
             PreValidationResult(None, uint64(1), npc_result.conds, False, uint32(0)),
             None,
@@ -2808,7 +2817,7 @@ class TestBodyValidation:
 
         #     wt: WalletTool = bt_2.get_pool_wallet_tool()
 
-        #     condition_dict: Dict[ConditionOpcode, List[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
+        #     condition_dict: dict[ConditionOpcode, list[ConditionWithArgs]] = {ConditionOpcode.CREATE_COIN: []}
         #     output = ConditionWithArgs(ConditionOpcode.CREATE_COIN, [bt_2.pool_ph, int_to_bytes(2 ** 64)])
         #     condition_dict[ConditionOpcode.CREATE_COIN].append(output)
 
@@ -3233,15 +3242,16 @@ class TestBodyValidation:
         # Bad signature also fails in prevalidation
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        preval_results = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [last_block],
             b.pool,
             {},
             ValidationState(ssi, diff, None),
             validate_signatures=True,
         )
+        preval_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         assert preval_results is not None
         assert preval_results[0].error == Err.BAD_AGGREGATE_SIGNATURE.value
 
@@ -3352,15 +3362,16 @@ class TestReorgs:
         print(f"pre-validating {len(blocks)} blocks")
         ssi = b.constants.SUB_SLOT_ITERS_STARTING
         diff = b.constants.DIFFICULTY_STARTING
-        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             blocks,
             b.pool,
             {},
             ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
+        pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         for i, block in enumerate(blocks):
             if block.height != 0 and len(block.finished_sub_slots) > 0:
                 if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
@@ -3919,29 +3930,29 @@ async def test_reorg_flip_flop(empty_blockchain: Blockchain, bt: BlockTools) -> 
             block1, block2 = b1, b2
         counter += 1
 
-        preval: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [block1],
             b.pool,
             {},
             ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
-
+        preval: list[PreValidationResult] = list(await asyncio.gather(*futures))
         fork_info = ForkInfo(block1.height - 1, block1.height - 1, block1.prev_header_hash)
         _, err, _ = await b.add_block(block1, preval[0], None, sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
-        preval = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             b.constants,
-            b,
+            AugmentedBlockchain(b),
             [block2],
             b.pool,
             {},
             ValidationState(ssi, diff, None),
             validate_signatures=False,
         )
-
+        preval = list(await asyncio.gather(*futures))
         fork_info = ForkInfo(block2.height - 1, block2.height - 1, block2.prev_header_hash)
         _, err, _ = await b.add_block(block2, preval[0], None, sub_slot_iters=ssi, fork_info=fork_info)
         assert err is None
@@ -3967,15 +3978,16 @@ async def test_get_tx_peak(default_400_blocks: list[FullBlock], empty_blockchain
     test_blocks = default_400_blocks[:100]
     ssi = bc.constants.SUB_SLOT_ITERS_STARTING
     diff = bc.constants.DIFFICULTY_STARTING
-    res = await pre_validate_blocks_multiprocessing(
+    futures = await pre_validate_blocks_multiprocessing(
         bc.constants,
-        bc,
+        AugmentedBlockchain(bc),
         test_blocks,
         bc.pool,
         {},
         ValidationState(ssi, diff, None),
         validate_signatures=False,
     )
+    res: list[PreValidationResult] = list(await asyncio.gather(*futures))
 
     last_tx_block_record = None
     for b, prevalidation_res in zip(test_blocks, res):

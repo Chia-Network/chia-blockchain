@@ -24,7 +24,7 @@ def excepted(path: pathlib.Path) -> bool:
     # TODO: This should be implemented with a real file name parser though i'm
     #       uncertain at the moment what package that would be.
 
-    name, dash, rest = path.name.partition("-")
+    name, _dash, _rest = path.name.partition("-")
     return name in excepted_packages
 
 

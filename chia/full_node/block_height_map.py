@@ -124,7 +124,7 @@ class BlockHeightMap:
 
         log.info(
             f"Loaded sub-epoch-summaries: {len(self.__sub_epoch_summaries)} "
-            f"height-to-hash: {len(self.__height_to_hash)//32}"
+            f"height-to-hash: {len(self.__height_to_hash) // 32}"
         )
 
         # prepopulate the height -> hash mapping

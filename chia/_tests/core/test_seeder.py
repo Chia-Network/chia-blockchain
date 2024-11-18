@@ -216,7 +216,7 @@ async def test_error_conditions(
             r = await dns.asyncquery.tcp(q=no_peers, where=target_address, timeout=timeout, sock=socket)
             assert r.answer == no_peers_response.answer
             # send 120, as the first 2 bytes / the length of the packet, so that the server expects more.
-            await socket.sendall(int(120).to_bytes(2, byteorder="big"), int(time.time() + timeout))
+            await socket.sendall((120).to_bytes(2, byteorder="big"), int(time.time() + timeout))
             await socket.close()
             with pytest.raises(EOFError):
                 await dns.asyncquery.receive_tcp(tcp_socket, timeout)

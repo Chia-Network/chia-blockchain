@@ -253,7 +253,8 @@ def test_add_tx_called() -> None:
 
     # Replace with test method
     mempool.fee_estimator.tracker.add_tx = types.MethodType(  # type: ignore[attr-defined]
-        add_tx_called_fun, mempool.fee_estimator.tracker  # type: ignore[attr-defined]
+        add_tx_called_fun,
+        mempool.fee_estimator.tracker,  # type: ignore[attr-defined]
     )
 
     mempool.add_to_pool(item)

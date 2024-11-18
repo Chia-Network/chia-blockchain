@@ -62,7 +62,7 @@ def npc_to_dict(npc: NPC) -> dict[str, Any]:
 
 def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> list[CAT]:
     block_args = block_generator.generator_refs
-    cost, block_result = block_generator.program.run_with_cost(max_cost, [DESERIALIZE_MOD, block_args])
+    _cost, block_result = block_generator.program.run_with_cost(max_cost, [DESERIALIZE_MOD, block_args])
 
     coin_spends = block_result.first()
 

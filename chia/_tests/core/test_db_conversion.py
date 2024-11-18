@@ -76,7 +76,7 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                 # await _validate_and_add_block(bc, block)
                 results = PreValidationResult(None, uint64(1), None, False, uint32(0))
                 fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-                result, err, _ = await bc.add_block(
+                _result, err, _ = await bc.add_block(
                     block, results, None, sub_slot_iters=sub_slot_iters, fork_info=fork_info
                 )
                 assert err is None

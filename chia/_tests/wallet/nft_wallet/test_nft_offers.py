@@ -145,7 +145,7 @@ async def test_nft_offer_with_fee(
 
     taker_fee = uint64(1)
 
-    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     peer = wallet_node_1.get_full_node_peer()
@@ -221,7 +221,7 @@ async def test_nft_offer_with_fee(
 
     taker_fee = uint64(1)
 
-    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -488,7 +488,7 @@ async def test_nft_offer_with_metadata_update(
 
     taker_fee = uint64(1)
 
-    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     peer = wallet_node_1.get_full_node_peer()
@@ -665,7 +665,7 @@ async def test_nft_offer_nft_for_cat(
 
     taker_fee = uint64(1)
 
-    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     peer = wallet_node_1.get_full_node_peer()
@@ -753,7 +753,7 @@ async def test_nft_offer_nft_for_cat(
 
     taker_fee = uint64(1)
 
-    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -907,7 +907,7 @@ async def test_nft_offer_nft_for_nft(
 
     taker_fee = uint64(1)
 
-    [maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_0.wallet_state_manager.sign_offers(
         [Offer.from_bytes(trade_make.offer)]
     )
     peer = wallet_node_1.get_full_node_peer()

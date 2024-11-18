@@ -15,7 +15,6 @@ from chia.util.ints import uint32
 
 @dataclass
 class NullBlockchain:
-
     if TYPE_CHECKING:
         from chia.consensus.blockchain_interface import BlocksProtocol
 
@@ -72,7 +71,6 @@ def BR(b: FullBlock) -> BlockRecord:
 @pytest.mark.anyio
 @pytest.mark.limit_consensus_modes(reason="save time")
 async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
-
     blocks = default_10000_blocks
     # this test blockchain is expected to have block generators at these
     # heights:

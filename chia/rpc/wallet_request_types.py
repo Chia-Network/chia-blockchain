@@ -1,5 +1,3 @@
-# pylint: disable=invalid-field-call
-
 from __future__ import annotations
 
 import sys
@@ -171,7 +169,18 @@ class GetHeightInfoResponse(Streamable):
 @streamable
 @dataclass(frozen=True)
 class PushTX(Streamable):
-    spend_bundle: bytes
+    spend_bundle: WalletSpendBundle
+
+    # We allow for flexibility in transaction parsing here so we need to override
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> PushTX:
+        if isinstance(json_dict["spend_bundle"], str):
+            spend_bundle = WalletSpendBundle.from_bytes(hexstr_to_bytes(json_dict["spend_bundle"]))
+        else:
+            spend_bundle = WalletSpendBundle.from_json_dict(json_dict["spend_bundle"])
+
+        json_dict["spend_bundle"] = spend_bundle.to_json_dict()
+        return super().from_json_dict(json_dict)
 
 
 @streamable

@@ -47,9 +47,9 @@ async def setup_node_and_rpc(
 
 @pytest.fixture(scope="function")
 async def one_node_no_blocks(
-    one_node: tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools]
+    one_node: tuple[list[SimulatorFullNodeService], list[WalletService], BlockTools],
 ) -> tuple[FullNodeRpcClient, FullNodeRpcApi]:
-    full_nodes, wallets, bt = one_node
+    full_nodes, _wallets, bt = one_node
     full_node_apis = [full_node_service._api for full_node_service in full_nodes]
     full_node_api: FullNodeSimulator = full_node_apis[0]
     full_node_service_1 = full_nodes[0]
@@ -75,7 +75,7 @@ async def test_get_blockchain_state(setup_node_and_rpc: tuple[FullNodeRpcClient,
 
 @pytest.mark.anyio
 async def test_empty_request(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
 
     with pytest.raises(ValueError):
         await full_node_rpc_api.get_fee_estimate({})
@@ -83,7 +83,7 @@ async def test_empty_request(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNo
 
 @pytest.mark.anyio
 async def test_empty_peak(one_node_no_blocks: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = one_node_no_blocks
+    _client, full_node_rpc_api = one_node_no_blocks
     response = await full_node_rpc_api.get_fee_estimate({"target_times": [], "cost": 1})
     del response["node_time_utc"]
     assert response == {
@@ -106,56 +106,56 @@ async def test_empty_peak(one_node_no_blocks: tuple[FullNodeRpcClient, FullNodeR
 
 @pytest.mark.anyio
 async def test_no_target_times(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(ValueError):
         await full_node_rpc_api.get_fee_estimate({"cost": 1})
 
 
 @pytest.mark.anyio
 async def test_negative_time(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(ValueError):
         await full_node_rpc_api.get_fee_estimate({"cost": 1, "target_times": [-1]})
 
 
 @pytest.mark.anyio
 async def test_negative_cost(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(ValueError):
         await full_node_rpc_api.get_fee_estimate({"cost": -1, "target_times": [1]})
 
 
 @pytest.mark.anyio
 async def test_no_cost_or_tx(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(ValueError):
         await full_node_rpc_api.get_fee_estimate({"target_times": []})
 
 
 @pytest.mark.anyio
 async def test_both_cost_and_tx(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(ValueError):
         await full_node_rpc_api.get_fee_estimate({"target_times": [], "cost": 1, "spend_bundle": "80"})
 
 
 @pytest.mark.anyio
 async def test_target_times_invalid_type(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(TypeError):
         await full_node_rpc_api.get_fee_estimate({"target_times": 1, "cost": 1})
 
 
 @pytest.mark.anyio
 async def test_cost_invalid_type(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(ValueError):
         await full_node_rpc_api.get_fee_estimate({"target_times": [], "cost": "a lot"})
 
 
 @pytest.mark.anyio
 async def test_tx_invalid_type(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(TypeError):
         await full_node_rpc_api.get_fee_estimate({"target_times": [], "spend_bundle": {"coin_spends": 1}})
 
@@ -165,7 +165,7 @@ async def test_tx_invalid_type(setup_node_and_rpc: tuple[FullNodeRpcClient, Full
 
 @pytest.mark.anyio
 async def test_empty_target_times(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     response = await full_node_rpc_api.get_fee_estimate({"target_times": [], "cost": 1})
     assert response["estimates"] == []
     assert response["target_times"] == []
@@ -173,7 +173,7 @@ async def test_empty_target_times(setup_node_and_rpc: tuple[FullNodeRpcClient, F
 
 @pytest.mark.anyio
 async def test_cost(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     response = await full_node_rpc_api.get_fee_estimate({"target_times": [1], "cost": 1})
     assert response["estimates"] == [0]
     assert response["target_times"] == [1]
@@ -181,7 +181,7 @@ async def test_cost(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]
 
 @pytest.mark.anyio
 async def test_tx(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     wallet_a: WalletTool = bt.get_pool_wallet_tool()
     my_puzzle_hash = wallet_a.get_new_puzzlehash()
     recevier_puzzle_hash = bytes32(b"0" * 32)
@@ -198,7 +198,7 @@ async def test_tx(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi], 
 
 @pytest.mark.anyio
 async def test_multiple(setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     response = await full_node_rpc_api.get_fee_estimate({"target_times": [1, 5, 10, 15, 60, 120, 180, 240], "cost": 1})
     assert response["estimates"] == [0, 0, 0, 0, 0, 0, 0, 0]
     assert response["target_times"] == [1, 5, 10, 15, 60, 120, 180, 240]
@@ -217,7 +217,7 @@ async def test_validate_fee_estimate_cost_err(
     setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
 ) -> None:
     spend_bundle = get_test_spendbundle(bt)
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     bad_arglist: list[list[Any]] = [
         [["foo", "bar"]],
         [["spend_bundle", spend_bundle.to_json_dict()], ["cost", 1]],
@@ -242,7 +242,7 @@ async def test_validate_fee_estimate_cost_ok(
     setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
 ) -> None:
     spend_bundle = get_test_spendbundle(bt)
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
 
     good_arglist: list[list[Any]] = [
         ["spend_bundle", spend_bundle.to_json_dict()],
@@ -259,7 +259,7 @@ async def test_validate_fee_estimate_cost_ok(
 async def test_get_spendbundle_type_cost_missing(
     setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
 ) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(KeyError, match=re.escape("INVALID")):
         request = {"target_times": [1], "spend_type": "INVALID"}
         _ = await full_node_rpc_api.get_fee_estimate(request)
@@ -269,7 +269,7 @@ async def test_get_spendbundle_type_cost_missing(
 async def test_get_spendbundle_type_cost_spend_count_ok(
     setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
 ) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     spend_counts = [0, 1, 2]
     for spend_count in spend_counts:
         request = {"target_times": [1], "spend_type": "send_xch_transaction", "spend_count": spend_count}
@@ -281,7 +281,7 @@ async def test_get_spendbundle_type_cost_spend_count_ok(
 async def test_get_spendbundle_type_cost_spend_count_bad(
     setup_node_and_rpc: tuple[FullNodeRpcClient, FullNodeRpcApi], bt: BlockTools
 ) -> None:
-    client, full_node_rpc_api = setup_node_and_rpc
+    _client, full_node_rpc_api = setup_node_and_rpc
     with pytest.raises(ValueError):
         request = {"target_times": [1], "spend_type": "send_xch_transaction", "spend_count": -1}
         _ = await full_node_rpc_api.get_fee_estimate(request)

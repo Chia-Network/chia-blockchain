@@ -118,7 +118,7 @@ def encode_puzzle_hash(puzzle_hash: bytes32, prefix: str) -> str:
 
 
 def decode_puzzle_hash(address: str) -> bytes32:
-    hrpgot, data = bech32_decode(address)
+    _hrpgot, data = bech32_decode(address)
     if data is None:
         raise ValueError("Invalid Address")
     decoded = convertbits(data, 5, 8, False)

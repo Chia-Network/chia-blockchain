@@ -9,7 +9,6 @@ from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 
 
 class WalletSpendBundle(SpendBundle):
-
     @classmethod
     def aggregate(cls, spend_bundles: list[T_SpendBundle]) -> WalletSpendBundle:
         coin_spends: list[CoinSpend] = []

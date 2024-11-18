@@ -147,9 +147,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         solution,
     )
 
-    derivation_record: Optional[DerivationRecord] = (
-        await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
-    )
+    derivation_record: Optional[
+        DerivationRecord
+    ] = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
     assert derivation_record is not None
     pubkey: G1Element = derivation_record.pubkey
     atom = puzzle.uncurry()[1].at("f").atom

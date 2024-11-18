@@ -29,7 +29,6 @@ class ResourceManager(Protocol):
 
 @dataclass
 class SQLiteResourceManager:
-
     _db: DBWrapper2
     _active_writer: Optional[aiosqlite.Connection] = field(init=False, default=None)
 

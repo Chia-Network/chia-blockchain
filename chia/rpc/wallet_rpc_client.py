@@ -961,7 +961,6 @@ class WalletRpcClient(RpcClient):
             {
                 "secure": secure,
                 "batch_fee": batch_fee,
-                "secure": secure,
                 "batch_size": batch_size,
                 "cancel_all": cancel_all,
                 "asset_id": None if asset_id is None else asset_id.hex(),

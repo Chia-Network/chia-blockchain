@@ -570,7 +570,7 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.anyio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> None:
     harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]

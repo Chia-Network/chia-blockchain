@@ -45,7 +45,7 @@ def test_set_connection_values(bt: BlockTools, seeded_random: random.Random) -> 
     # Test setting a valid connection works
     sender.set_connection(farmer_connection)  # type:ignore[arg-type]
     assert sender._connection is not None
-    assert sender._connection == farmer_connection  # type: ignore[comparison-overlap]
+    assert id(sender._connection) == id(farmer_connection)
 
 
 @pytest.mark.anyio

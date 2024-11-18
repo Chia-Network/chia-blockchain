@@ -37,7 +37,7 @@ class TestStartSimulator:
     async def test_start_simulator(
         self, get_chia_simulator: tuple[FullNodeSimulator, Path, dict[str, Any], str, int, Keychain]
     ) -> None:
-        simulator, root_path, config, mnemonic, fingerprint, keychain = get_chia_simulator
+        simulator, root_path, config, _mnemonic, fingerprint, keychain = get_chia_simulator
         ph_1: bytes32 = get_puzzle_hash_from_key(keychain=keychain, fingerprint=fingerprint, key_id=1)
         ph_2: bytes32 = get_puzzle_hash_from_key(keychain=keychain, fingerprint=fingerprint, key_id=2)
         dummy_hash: bytes32 = std_hash(b"test")

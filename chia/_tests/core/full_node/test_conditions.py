@@ -70,7 +70,7 @@ async def check_spend_bundle_validity(
     or fails with the correct error code.
     """
 
-    async with create_ram_blockchain(bt.constants) as (db_wrapper, blockchain):
+    async with create_ram_blockchain(bt.constants) as (_, blockchain):
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
 
@@ -142,7 +142,7 @@ class TestConditions:
         self, opcode: int, expected_cost: int, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         conditions = Program.to(assemble(f"(({opcode} 1337))"))
-        additions, removals, new_block = await check_conditions(bt, conditions)
+        _additions, _removals, new_block = await check_conditions(bt, conditions)
 
         # once the hard fork activates, blocks no longer pay the cost of the ROM
         # generator (which includes hashing all puzzles).
@@ -165,7 +165,7 @@ class TestConditions:
         self, condition: str, expected_cost: int, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         conditions = Program.to(assemble(condition))
-        additions, removals, new_block = await check_conditions(bt, conditions)
+        _additions, _removals, new_block = await check_conditions(bt, conditions)
 
         if consensus_mode < ConsensusMode.HARD_FORK_2_0:
             block_base_cost = 737056
@@ -503,7 +503,6 @@ class TestConditions:
         bt: BlockTools,
         consensus_mode: ConsensusMode,
     ) -> None:
-
         c = bt.constants
 
         additional_data = agg_sig_additional_data(c.AGG_SIG_ME_ADDITIONAL_DATA)

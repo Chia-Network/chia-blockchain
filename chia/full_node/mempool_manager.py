@@ -338,7 +338,7 @@ class MempoolManager:
         Returns:
             Optional[uint64]: cost of the entire transaction, None iff status is FAILED
             MempoolInclusionStatus:  SUCCESS (should add to pool), FAILED (cannot add), and PENDING (can add later)
-            List[MempoolRemoveInfo]: conflicting mempool items which were removed, if no Err
+            list[MempoolRemoveInfo]: conflicting mempool items which were removed, if no Err
             Optional[Err]: Err is set iff status is FAILED
         """
 
@@ -401,7 +401,7 @@ class MempoolManager:
         Returns:
             Optional[Err]: Err is set if we cannot add to the mempool, None if we will immediately add to mempool
             Optional[MempoolItem]: the item to add (to mempool or pending pool)
-            List[bytes32]: conflicting mempool items to remove, if no Err
+            list[bytes32]: conflicting mempool items to remove, if no Err
         """
         start_time = time.time()
         if self.peak is None:
@@ -581,7 +581,7 @@ class MempoolManager:
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
             f"add_spendbundle {spend_name} took {duration:0.2f} seconds. "
-            f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
+            f"Cost: {cost} ({round(100.0 * cost / self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
         return None, potential, [item.name for item in conflicts]

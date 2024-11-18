@@ -537,7 +537,11 @@ def test_validator() -> None:
 
     # Setup the spend_p2_singleton (proposal inner puz)
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(
-        treasury_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
+        treasury_struct,
+        CAT_MOD_HASH,
+        conditions,
+        [],
+        p2_singleton_puzhash,  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
@@ -820,7 +824,11 @@ def test_treasury() -> None:
 
     # Setup the spend_p2_singleton (proposal inner puz)
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(
-        treasury_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
+        treasury_struct,
+        CAT_MOD_HASH,
+        conditions,
+        [],
+        p2_singleton_puzhash,  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
@@ -1067,7 +1075,11 @@ def test_proposal_lifecycle() -> None:
 
     # Setup the spend_p2_singleton (proposal inner puz)
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(
-        treasury_singleton_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
+        treasury_singleton_struct,
+        CAT_MOD_HASH,
+        conditions,
+        [],
+        p2_singleton_puzhash,  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 

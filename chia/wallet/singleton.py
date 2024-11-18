@@ -36,7 +36,7 @@ def get_inner_puzzle_from_singleton(puzzle: Union[Program, SerializedProgram]) -
     inner_f, args = r
     if not is_singleton(inner_f):
         return None
-    SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
+    _SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
     return Program(INNER_PUZZLE)
 
 
@@ -52,7 +52,7 @@ def get_singleton_id_from_puzzle(puzzle: Union[Program, SerializedProgram]) -> O
     inner_f, args = r
     if not is_singleton(inner_f):
         return None
-    SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
+    SINGLETON_STRUCT, _INNER_PUZZLE = list(args.as_iter())
     return bytes32(Program(SINGLETON_STRUCT).rest().first().as_atom())
 
 

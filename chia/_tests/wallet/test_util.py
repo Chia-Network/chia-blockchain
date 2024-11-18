@@ -21,6 +21,7 @@ from chia.wallet.util.tx_config import (
     CoinSelectionConfigLoader,
     TXConfigLoader,
 )
+from chia.wallet.util.wallet_types import WalletType
 
 
 def test_compute_spend_hints_and_additions() -> None:
@@ -76,9 +77,7 @@ def test_cs_config() -> None:
         {
             "excluded_coins": [coin_to_exclude.to_json_dict()],
         }
-    ).override(
-        max_coin_amount=100
-    ).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
+    ).override(max_coin_amount=100).autofill(constants=DEFAULT_CONSTANTS).to_json_dict() == {
         **default_cs_config,
         "excluded_coin_ids": ["0x" + coin_to_exclude.name().hex()],
         "max_coin_amount": 100,
@@ -175,3 +174,12 @@ def test_lineage_proof_errors() -> None:
         LineageProof.from_program(Program.to([bytes32([1] * 32)]), [LineageProofField.AMOUNT])
     with pytest.raises(ValueError):
         LineageProof.from_program(Program.to([uint64(0)]), [LineageProofField.PARENT_NAME])
+
+
+# this is the only test that has coverage for `WalletType.to_json_dict`
+# it's possible it could even be deleted
+
+
+def test_wallet_type_to_json() -> None:
+    for w in WalletType:
+        assert w.to_json_dict() == w.name

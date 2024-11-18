@@ -43,7 +43,8 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: dict[st
         sync_current_block = blockchain_state["sync"]["sync_progress_height"]
         print(
             f"Current Blockchain Status: Syncing {sync_current_block}/{sync_max_block} "
-            f"({sync_max_block - sync_current_block} behind). ({sync_current_block*100.0/sync_max_block:2.2f}% synced)"
+            f"({sync_max_block - sync_current_block} behind). "
+            f"({sync_current_block * 100.0 / sync_max_block:2.2f}% synced)"
         )
         print("Peak: Hash:", bytes32(peak.header_hash) if peak is not None else "")
     elif peak is not None:

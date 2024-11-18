@@ -404,7 +404,7 @@ async def test_request_puzzle_state(one_node: OneNode, self_hostname: str) -> No
     simulator, _, peer = await connect_to_simulator(one_node, self_hostname)
 
     # Farm block to a puzzle hash we aren't looking at
-    await simulator.farm_blocks_to_puzzlehash(3, farm_to=bytes32(b"\x0A" * 32))
+    await simulator.farm_blocks_to_puzzlehash(3, farm_to=bytes32(b"\x0a" * 32))
 
     genesis = simulator.full_node.blockchain.constants.GENESIS_CHALLENGE
 

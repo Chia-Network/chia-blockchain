@@ -1,4 +1,3 @@
-# flake8: noqa
 from __future__ import annotations
 
 import ast
@@ -34,18 +33,17 @@ def types_in_module(mod: Any) -> set[str]:
     return types
 
 
+STANDARD_ADVICE = "Make sure to update the protocol message regression test to include the new message"
+
+
 def test_missing_messages_state_machine() -> None:
     from chia.protocols.protocol_state_machine import NO_REPLY_EXPECTED, VALID_REPLY_MESSAGE_MAP
 
     # if these asserts fail, make sure to add the new network protocol messages
     # to the visitor in build_network_protocol_files.py and rerun it. Then
     # update this test
-    assert (
-        len(VALID_REPLY_MESSAGE_MAP) == 26
-    ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
-    assert (
-        len(NO_REPLY_EXPECTED) == 10
-    ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
+    assert len(VALID_REPLY_MESSAGE_MAP) == 26, f"A message was added to the protocol state machine. {STANDARD_ADVICE}"
+    assert len(NO_REPLY_EXPECTED) == 10, f"A message was added to the protocol state machine. {STANDARD_ADVICE}"
 
 
 def test_message_ids() -> None:
@@ -63,7 +61,8 @@ def test_message_ids() -> None:
             message_name = entry.targets[0].id
             if message_id in message_ids:  # pragma: no cover
                 raise AssertionError(
-                    f'protocol message ID clash between "{message_name}" and "{message_ids[message_id]}". Value {message_id}'
+                    f'protocol message ID clash between "{message_name}" and "{message_ids[message_id]}". '
+                    f"Value {message_id}"
                 )
             message_ids[message_id] = message_name
             if message_id < 0 or message_id > 255:  # pragma: no cover
@@ -226,32 +225,32 @@ def test_missing_messages() -> None:
     # update this test
     assert (
         types_in_module(wallet_protocol) == wallet_msgs
-    ), "message types were added or removed from wallet_protocol. Make sure to update the protocol message regression test to include the new message"
+    ), f"message types were added or removed from wallet_protocol. {STANDARD_ADVICE}"
 
     assert (
         types_in_module(farmer_protocol) == farmer_msgs
-    ), "message types were added or removed from farmer_protocol. Make sure to update the protocol message regression test to include the new message"
+    ), f"message types were added or removed from farmer_protocol. {STANDARD_ADVICE}"
 
     assert (
         types_in_module(full_node_protocol) == full_node_msgs
-    ), "message types were added or removed from full_node_protocol. Make sure to update the protocol message regression test to include the new message"
+    ), f"message types were added or removed from full_node_protocol. {STANDARD_ADVICE}"
 
     assert (
         types_in_module(harvester_protocol) == harvester_msgs
-    ), "message types were added or removed from harvester_protocol. Make sure to update the protocol message regression test to include the new message"
+    ), f"message types were added or removed from harvester_protocol. {STANDARD_ADVICE}"
 
     assert (
         types_in_module(introducer_protocol) == introducer_msgs
-    ), "message types were added or removed from introducer_protocol. Make sure to update the protocol message regression test to include the new message"
+    ), f"message types were added or removed from introducer_protocol. {STANDARD_ADVICE}"
 
     assert (
         types_in_module(pool_protocol) == pool_msgs
-    ), "message types were added or removed from pool_protocol. Make sure to update the protocol message regression test to include the new message"
+    ), f"message types were added or removed from pool_protocol. {STANDARD_ADVICE}"
 
     assert (
         types_in_module(timelord_protocol) == timelord_msgs
-    ), "message types were added or removed from timelord_protocol. Make sure to update the protocol message regression test to include the new message"
+    ), f"message types were added or removed from timelord_protocol. {STANDARD_ADVICE}"
 
     assert (
         types_in_module(shared_protocol) == shared_msgs
-    ), "message types were added or removed from shared_protocol. Make sure to update the protocol message regression test to include the new message"
+    ), f"message types were added or removed from shared_protocol. {STANDARD_ADVICE}"

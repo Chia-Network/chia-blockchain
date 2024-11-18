@@ -787,7 +787,7 @@ async def test_get_coin_records_total_count_cache() -> None:
         assert (await store.get_coin_records(include_total_count=True)).total_count == 3
         # Make sure the total count increases for the same query when rolling back
         assert (await store.get_coin_records(include_total_count=True)).total_count == 3
-        await store.rollback_to_block(0),
+        await store.rollback_to_block(0)
         assert (await store.get_coin_records(include_total_count=True)).total_count == 0
 
 

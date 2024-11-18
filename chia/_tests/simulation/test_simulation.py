@@ -194,7 +194,7 @@ class TestSimulation:
         full_node_api = full_nodes[0]
         server_1 = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
+        wallet_node_2, _server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         wallet_node.config["trusted_peers"] = {}

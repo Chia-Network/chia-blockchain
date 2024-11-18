@@ -168,7 +168,7 @@ def check_and_fix_permissions_for_ssl_file(file: Path, mask: int, updated_mode: 
 
     # Check that the file permissions are not too permissive
     try:
-        (good_perms, mode) = verify_file_permissions(file, mask)
+        (good_perms, _mode) = verify_file_permissions(file, mask)
         if not good_perms:
             valid = False
             print(

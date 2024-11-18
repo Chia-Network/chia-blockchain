@@ -36,7 +36,7 @@ def test_nft_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
             self.add_to_log("create_new_nft_wallet", (did_id, name))
             return {"wallet_id": 4}
 
-    inst_rpc_client = NFTCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NFTCreateRpcClient()
     did_id = encode_puzzle_hash(get_bytes32(2), "did:chia:")
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = ["wallet", "nft", "create", FINGERPRINT_ARG, "-ntest", "--did-id", did_id]
@@ -54,7 +54,7 @@ def test_nft_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcCli
 
     # set RPC Client
 
-    inst_rpc_client = TestWalletRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = TestWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     did_id = encode_puzzle_hash(get_bytes32(1), "nft")
     message = b"hello nft world!!"
@@ -132,7 +132,7 @@ def test_nft_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 bytes32.zeros.hex(),
             )
 
-    inst_rpc_client = NFTCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NFTCreateRpcClient()
     target_addr = encode_puzzle_hash(get_bytes32(2), "xch")
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [
@@ -209,7 +209,7 @@ def test_nft_add_uri(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
             self.add_to_log("add_uri_to_nft", (wallet_id, nft_coin_id, key, uri, fee, tx_config, push, timelock_info))
             return NFTAddURIResponse([STD_UTX], [STD_TX], uint32(wallet_id), WalletSpendBundle([], G2Element()))
 
-    inst_rpc_client = NFTAddUriRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NFTAddUriRpcClient()
     nft_coin_id = get_bytes32(2).hex()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [
@@ -275,7 +275,7 @@ def test_nft_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 WalletSpendBundle([], G2Element()),
             )
 
-    inst_rpc_client = NFTTransferRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NFTTransferRpcClient()
     nft_coin_id = get_bytes32(2).hex()
     target_address = encode_puzzle_hash(get_bytes32(2), "xch")
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -352,7 +352,7 @@ def test_nft_list(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
                 )
             return {"nft_list": nft_list}
 
-    inst_rpc_client = NFTListRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NFTListRpcClient()
     launcher_ids = [bytes32([i] * 32).hex() for i in range(50, 60)]
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [
@@ -401,7 +401,7 @@ def test_nft_set_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
                 WalletSpendBundle([], G2Element()),
             )
 
-    inst_rpc_client = NFTSetDidRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NFTSetDidRpcClient()
     nft_coin_id = get_bytes32(2).hex()
     did_id = encode_puzzle_hash(get_bytes32(3), "did:chia:")
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -447,7 +447,7 @@ def test_nft_get_info(capsys: object, get_test_cli_clients: tuple[TestRpcClients
 
     # set RPC Client
 
-    inst_rpc_client = TestWalletRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = TestWalletRpcClient()
     nft_coin_id = get_bytes32(2).hex()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [

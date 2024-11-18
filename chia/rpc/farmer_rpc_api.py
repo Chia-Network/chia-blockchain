@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import operator
-from typing import Any, Callable, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, cast
 
 from typing_extensions import Protocol
 
@@ -78,6 +78,11 @@ def plot_matches_filter(plot: Plot, filter_item: FilterItem) -> bool:
 
 
 class FarmerRpcApi:
+    if TYPE_CHECKING:
+        from chia.rpc.rpc_server import RpcApiProtocol
+
+        _protocol_check: ClassVar[RpcApiProtocol] = cast("FarmerRpcApi", None)
+
     def __init__(self, farmer: Farmer):
         self.service = farmer
         self.service_name = "chia_farmer"
@@ -316,7 +321,7 @@ class FarmerRpcApi:
         return await self.service.get_harvesters(True)
 
     async def get_harvester_plots_valid(self, request_dict: dict[str, object]) -> EndpointResult:
-        # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
+        # TODO: Consider having a extra list[PlotInfo] in Receiver to avoid rebuilding the list for each call
         request = PlotInfoRequestData.from_json_dict(request_dict)
         plot_list = list(self.service.get_receiver(request.node_id).plots().values())
         # Apply filter

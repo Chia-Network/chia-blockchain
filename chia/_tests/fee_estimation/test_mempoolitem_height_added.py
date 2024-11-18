@@ -79,11 +79,11 @@ async def init_test(
 @pytest.mark.anyio
 async def test_mempool_inclusion_filter_basic() -> None:
     async with sim_and_client(defaults=NEW_DEFAULT_CONSTANTS, pass_prefarm=False) as (sim, cli):
-        estimator, spend_coins, fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)
+        _estimator, spend_coins, _fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)
         assert sim.mempool_manager.mempool.size() == 0
 
         spend_bundle: SpendBundle = make_tx_sb(spend_coins[0])
-        status, error = await cli.push_tx(spend_bundle)
+        _status, error = await cli.push_tx(spend_bundle)
         assert sim.mempool_manager.mempool.size() == 1
         assert error is None
 
@@ -96,11 +96,11 @@ async def test_mempool_inclusion_filter_basic() -> None:
         def include_all(bundle_name: bytes32) -> bool:
             return True
 
-        additions, removals = await sim.farm_block(the_puzzle_hash, item_inclusion_filter=include_none)
+        _additions, removals = await sim.farm_block(the_puzzle_hash, item_inclusion_filter=include_none)
         assert sim.mempool_manager.mempool.size() == 1
         assert removals == []
 
-        additions, removals = await sim.farm_block(the_puzzle_hash, item_inclusion_filter=include_all)
+        _additions, removals = await sim.farm_block(the_puzzle_hash, item_inclusion_filter=include_all)
         assert sim.mempool_manager.mempool.size() == 0
         removal_ids = [c.name() for c in removals]
         assert mempool_item.name not in removal_ids
@@ -109,7 +109,7 @@ async def test_mempool_inclusion_filter_basic() -> None:
 @pytest.mark.anyio
 async def test_mempoolitem_height_added(db_version: int) -> None:
     async with sim_and_client(defaults=NEW_DEFAULT_CONSTANTS, pass_prefarm=False) as (sim, cli):
-        estimator, spend_coins, fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)
+        _estimator, spend_coins, _fee_coins = await init_test(sim, cli, the_puzzle_hash, 1)
         assert sim.mempool_manager.mempool.size() == 0
 
         spend_bundle: SpendBundle = make_tx_sb(spend_coins[0])
@@ -126,7 +126,7 @@ async def test_mempoolitem_height_added(db_version: int) -> None:
             assert mempool_item
             return bundle_name != mempool_item.name
 
-        additions, removals = await sim.farm_block(the_puzzle_hash, item_inclusion_filter=ignore_spend)
+        _additions, removals = await sim.farm_block(the_puzzle_hash, item_inclusion_filter=ignore_spend)
         removal_ids = [c.name() for c in removals]
         assert mempool_item.name not in removal_ids
 
@@ -139,7 +139,7 @@ async def test_mempoolitem_height_added(db_version: int) -> None:
         assert mempool_item2.height_added_to_mempool == mempool_item2.height_added_to_mempool
 
         # Now farm it into the next block
-        additions, removals = await sim.farm_block(the_puzzle_hash)
+        _additions, removals = await sim.farm_block(the_puzzle_hash)
         assert sim.mempool_manager.mempool.size() == 0
         assert len(removals) == 1
 

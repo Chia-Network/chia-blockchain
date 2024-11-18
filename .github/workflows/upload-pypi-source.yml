@@ -118,12 +118,8 @@ jobs:
         python:
           - major_dot_minor: "3.10"
         check:
-          - name: black
-            command: black --check --diff .
-          - name: flake8
-            command: flake8 benchmarks build_scripts chia tools *.py
-          - name: pylint
-            command: pylint benchmarks build_scripts chia tools *.py
+          - name: ruff
+            command: ruff format --check --diff .
           - name: generated protocol tests
             command: |
               python3 -m chia._tests.util.build_network_protocol_files

@@ -112,7 +112,7 @@ def create_fields(cls: type[DataclassInstance]) -> StreamableFields:
 
 
 def is_type_List(f_type: object) -> bool:
-    return get_origin(f_type) == list or f_type == list
+    return get_origin(f_type) is list or f_type is list
 
 
 def is_type_SpecificOptional(f_type: object) -> bool:
@@ -123,7 +123,7 @@ def is_type_SpecificOptional(f_type: object) -> bool:
 
 
 def is_type_Tuple(f_type: object) -> bool:
-    return get_origin(f_type) == tuple or f_type == tuple
+    return get_origin(f_type) is tuple or f_type is tuple
 
 
 def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
@@ -389,7 +389,7 @@ def function_to_parse_one_item(f_type: type[Any]) -> ParseFunctionType:
     if hasattr(f_type, "parse"):
         # Ignoring for now as the proper solution isn't obvious
         return f_type.parse  # type: ignore[no-any-return]
-    if f_type == bytes:
+    if f_type is bytes:
         return parse_bytes
     if is_type_List(f_type):
         inner_type = get_args(f_type)[0]
@@ -453,7 +453,7 @@ def function_to_stream_one_item(f_type: type[Any]) -> StreamFunctionType:
         inner_type = get_args(f_type)[0]
         stream_inner_type_func = function_to_stream_one_item(inner_type)
         return lambda item, f: stream_optional(stream_inner_type_func, item, f)
-    elif f_type == bytes:
+    elif f_type is bytes:
         return stream_bytes
     elif hasattr(f_type, "stream"):
         return stream_streamable
@@ -530,8 +530,8 @@ class Streamable:
 
     An item is one of:
     * primitive
-    * Tuple[item1, .. itemx]
-    * List[item1, .. itemx]
+    * tuple[item1, .. itemx]
+    * list[item1, .. itemx]
     * Optional[item]
     * Custom item
 

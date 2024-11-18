@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from chia.protocols import full_node_protocol, introducer_protocol, wallet_protocol
 from chia.server.outbound_message import NodeType
@@ -12,6 +13,11 @@ from chia.wallet.wallet_node import WalletNode
 
 
 class WalletNodeAPI:
+    if TYPE_CHECKING:
+        from chia.server.api_protocol import ApiProtocol
+
+        _protocol_check: ClassVar[ApiProtocol] = cast("WalletNodeAPI", None)
+
     log: logging.Logger
     wallet_node: WalletNode
 

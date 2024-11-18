@@ -6,7 +6,6 @@ import base64
 import contextlib
 import os
 import shutil
-import sys
 import threading
 from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
@@ -53,18 +52,6 @@ def generate_salt() -> bytes:
 
 def symmetric_key_from_passphrase(passphrase: str, salt: bytes) -> bytes:
     return pbkdf2_hmac("sha256", passphrase.encode(), salt, HASH_ITERS)
-
-
-def get_symmetric_key(salt: bytes) -> bytes:
-    from chia.cmds.passphrase_funcs import obtain_current_passphrase
-
-    try:
-        passphrase = obtain_current_passphrase(use_passphrase_cache=True)
-    except Exception as e:
-        print(f"Unable to unlock the keyring: {e}")
-        sys.exit(1)
-
-    return symmetric_key_from_passphrase(passphrase, salt)
 
 
 def encrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
