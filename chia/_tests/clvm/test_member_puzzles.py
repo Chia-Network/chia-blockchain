@@ -661,17 +661,18 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         coin = (await client.get_coin_records_by_puzzle_hashes([puz.get_tree_hash()], include_spent_coins=False))[
             0
         ].coin
-        eve_coin = Coin(coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(1))
-        singleton_member_puzzle = PuzzleWithRestrictions(0, [], SingletonMember(eve_coin.name()))
+        
+        launcher_coin = Coin(coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(1))
+        singleton_member_puzzle = PuzzleWithRestrictions(0, [], SingletonMember(launcher_coin.name()))
 
-        singleton_struct = (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (eve_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH))
+        singleton_struct = (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (launcher_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH))
         singleton_innerpuz = Program.to(1)
         singleton_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, singleton_innerpuz)
         launcher_solution = Program.to([singleton_puzzle.get_tree_hash(), 1, 0])
 
         conditions_list = [
             [51, SINGLETON_LAUNCHER_PUZZLE_HASH, 1],
-            [61, std_hash(eve_coin.name() + launcher_solution.get_tree_hash())],
+            [61, std_hash(launcher_coin.name() + launcher_solution.get_tree_hash())],
         ]
         solution = Program.to([0, (1, conditions_list), 0])
 
@@ -682,7 +683,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         sb = WalletSpendBundle(
             [
                 make_spend(coin, puz, solution),
-                make_spend(eve_coin, SINGLETON_LAUNCHER_PUZZLE, launcher_solution),
+                make_spend(launcher_coin, SINGLETON_LAUNCHER_PUZZLE, launcher_solution),
             ],
             sig,
         )
@@ -732,7 +733,9 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         announcement = CreateCoinAnnouncement(msg=b"foo", coin_id=coin.name())
 
         # Make solution for singleton
-        fullsol = Program.to([[eve_coin.parent_coin_info, 1], 1, 
+        fullsol = Program.to([
+            [launcher_coin.parent_coin_info, 1], 
+            1, 
             [
                 [51, Program.to(1).get_tree_hash(), 1],
                 [66, 0x07, delegated_puzzle.get_tree_hash(), coin.name()],
