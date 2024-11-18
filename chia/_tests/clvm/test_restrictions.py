@@ -11,7 +11,7 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint64
-from chia.wallet.conditions import CreateCoinAnnouncement
+from chia.wallet.conditions import CreateCoinAnnouncement, Remark, parse_conditions_non_consensus
 from chia.wallet.puzzles.custody.custody_architecture import DelegatedPuzzleAndSolution, PuzzleWithRestrictions
 from chia.wallet.puzzles.custody.restriction_puzzles.restrictions import ForceCoinAnnouncement, Timelock
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
@@ -33,7 +33,7 @@ class EasyDPuzWrapper:
 @pytest.mark.anyio
 async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
-        restriction = ValidatorStackRestriction([EasyDPuzWrapper()])
+        restriction = ValidatorStackRestriction([EasyDPuzWrapper(), EasyDPuzWrapper()])
         pwr = PuzzleWithRestrictions(0, [restriction], ACSMember())
 
         # Farm and find coin
@@ -50,7 +50,9 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
 
         # Now actually put the dpuz in the wrapper
-        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(["bat"])])
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(
+            any_old_dpuz, [Program.to(["bat"]), Program.to(["baz"])]
+        )
         wrapped_spend = cost_logger.add_cost(
             "Minimal dpuz wrapper w/ wrapper stack enforcement",
             WalletSpendBundle(
@@ -73,7 +75,7 @@ async def test_dpuz_validator_stack_restriction(cost_logger: CostLogger) -> None
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # memo format assertion for coverage sake
-        assert restriction.memo(0) == Program.to([None])
+        assert restriction.memo(0) == Program.to([None, None])
 
 
 @pytest.mark.anyio
@@ -106,7 +108,7 @@ async def test_timelock_wrapper(cost_logger: CostLogger) -> None:
 
         # Now actually put a timelock in the dpuz
         timelocked_dpuz = DelegatedPuzzleAndSolution(
-            puzzle=Program.to((1, [[80, 100], [1, "foo"]])), solution=Program.to(None)
+            puzzle=Program.to((1, [[80, 100], [1, "foo"], [1, "bat"]])), solution=Program.to(None)
         )
         wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(timelocked_dpuz, [Program.to(None)])
         sb = cost_logger.add_cost(
@@ -134,6 +136,13 @@ async def test_timelock_wrapper(cost_logger: CostLogger) -> None:
         await sim.farm_block()
         result = await client.push_tx(sb)
         assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        conditions = parse_conditions_non_consensus(
+            sb.coin_spends[0].puzzle_reveal.to_program().run(sb.coin_spends[0].solution.to_program()).as_iter()
+        )
+        assert Remark(Program.to(["foo"])) in conditions
+        assert Remark(Program.to(["bar"])) in conditions
+        assert Remark(Program.to(["bat"])) in conditions
 
         # memo format assertion for coverage sake
         assert restriction.memo(0) == Program.to([None])

@@ -42,7 +42,7 @@
                       (branch_hash
                         (branch_hash
                           SHA_1_1
-                          (wrap_inner_most_puzzle_hash ADD_WRAPPER_MOD_HASH (r WRAPPER_STACK) inner_most_puzzle_hash)
+                          (wrap_inner_most_puzzle_hash QUOTED_ADD_WRAPPER_MOD_HASH (r WRAPPER_STACK) inner_most_puzzle_hash)
                         )
                         SHA_1_&_NIL
                       )
