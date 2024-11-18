@@ -23,6 +23,9 @@ BLS_MEMBER_MOD = load_clvm_maybe_recompile(
 PASSKEY_MEMBER_MOD = load_clvm_maybe_recompile(
     "passkey_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
 )
+PASSKEY_PUZZLE_ASSERT_MEMBER_MOD = load_clvm_maybe_recompile(
+    "passkey_member_puzzle_assert.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
+)
 
 SECPR1_MEMBER_MOD = load_clvm_maybe_recompile(
     "secp256r1_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
@@ -69,8 +72,8 @@ class PasskeyMember(Puzzle):
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
 
-    def create_message(self, delegated_puzzle_hash: bytes32, coin_id: bytes32) -> str:
-        message = base64.urlsafe_b64encode(std_hash(delegated_puzzle_hash + coin_id + self.genesis_challenge))
+    def create_message(self, delegated_puzzle_hash: bytes32, asserted_info: bytes32) -> str:
+        message = base64.urlsafe_b64encode(std_hash(delegated_puzzle_hash + asserted_info + self.genesis_challenge))
         return message.decode("utf-8").rstrip("=")
 
     @staticmethod
@@ -78,10 +81,16 @@ class PasskeyMember(Puzzle):
         return json.dumps(client_data, separators=(",", ":"))
 
     def solve(
-        self, authenticator_data: bytes, client_data: dict[str, Any], signature: bytes, coin_id: bytes32
+        self, authenticator_data: bytes, client_data: dict[str, Any], signature: bytes, asserted_info: bytes32
     ) -> Program:
         json_str = PasskeyMember.format_client_data_as_str(client_data)
-        return Program.to([authenticator_data, json_str, json_str.find('"challenge":'), signature, coin_id])
+        return Program.to([authenticator_data, json_str, json_str.find('"challenge":'), signature, asserted_info])
+
+
+@dataclass(frozen=True)
+class PasskeyPuzzleAssertMember(PasskeyMember):
+    def puzzle(self, nonce: int) -> Program:
+        return PASSKEY_PUZZLE_ASSERT_MEMBER_MOD.curry(self.genesis_challenge, self.secp_pk)
 
 
 @dataclass(frozen=True)
