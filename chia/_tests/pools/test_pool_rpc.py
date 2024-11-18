@@ -450,7 +450,7 @@ class TestPoolWalletRpc:
                     [
                         tx
                         for tx in await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
-                        if TransactionType(tx.type) is TransactionType.INCOMING_TX
+                        if TransactionType(tx.type) is TransactionType.INCOMING_TX and tx.amount == 1_750_000_000_000
                     ]
                 )
                 == 2

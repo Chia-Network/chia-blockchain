@@ -808,7 +808,6 @@ class PoolWallet:
         current_time = uint64(int(time.time()))
         # The claim spend, minus the fee amount from the main wallet
         async with action_scope.use() as interface:
-            pool_reward_coin_ids = {cr.coin.name() for cr in unspent_coin_records}
             interface.side_effects.transactions.append(
                 TransactionRecord(
                     confirmed_at_height=uint32(0),
@@ -819,7 +818,7 @@ class PoolWallet:
                     confirmed=False,
                     sent=uint32(0),
                     spend_bundle=claim_spend,
-                    additions=[add for add in claim_spend.additions() if add.parent_coin_info in pool_reward_coin_ids],
+                    additions=[add for add in claim_spend.additions() if add.amount == last_solution.coin.amount],
                     removals=claim_spend.removals(),
                     wallet_id=uint32(self.wallet_id),
                     sent_to=[],
