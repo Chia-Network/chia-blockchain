@@ -2079,7 +2079,7 @@ async def test_clear_pending_roots(
     layer: InterfaceLayer,
     bt: BlockTools,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
@@ -2172,7 +2172,7 @@ async def test_clear_pending_roots(
 async def test_issue_15955_deadlock(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    wallet_rpc_api, full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
 
@@ -2391,7 +2391,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     layer: InterfaceLayer,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     primary_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
@@ -3117,7 +3117,7 @@ async def test_pagination_cmds(
             )
         elif layer == InterfaceLayer.cli:
             for command in ("get_keys", "get_keys_values", "get_kv_diff"):
-                if command == "get_keys" or command == "get_keys_values":
+                if command in {"get_keys", "get_keys_values"}:
                     args: list[str] = [
                         sys.executable,
                         "-m",
@@ -3820,7 +3820,7 @@ async def test_auto_subscribe_to_local_stores(
     monkeypatch: Any,
     auto_subscribe_to_local_stores: bool,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     manage_data_interval = 5
@@ -3869,7 +3869,7 @@ async def test_local_store_exception(
     monkeypatch: Any,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     manage_data_interval = 5

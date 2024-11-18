@@ -57,7 +57,7 @@ def test_known_active_capabilities_filter(
     disabled: bool,
 ) -> None:
     if duplicated:
-        values = values * 2
+        values *= 2
 
     if disabled:
         values = [(value, "0") for value, state in values]

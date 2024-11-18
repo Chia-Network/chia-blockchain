@@ -37,11 +37,11 @@ tr1 = TransactionRecord(
     [coin_2, coin_3],  # additions
     [coin_1],  # removals
     uint32(1),  # wallet_id
-    [],  # List[Tuple[str, uint8, Optional[str]]] sent_to
+    [],  # list[tuple[str, uint8, Optional[str]]] sent_to
     bytes32(bytes32.random(module_seeded_random)),  # trade_id
     uint32(TransactionType.OUTGOING_TX),  # type
     bytes32(bytes32.random(module_seeded_random)),  # name
-    [],  # List[Tuple[bytes32, List[bytes]]] memos
+    [],  # list[tuple[bytes32, list[bytes]]] memos
     ConditionValidTimes(),
 )
 
@@ -814,9 +814,9 @@ async def test_transaction_record_is_valid() -> None:
         Err.INVALID_FEE_TOO_CLOSE_TO_ZERO.name,
     )
     # But it should become valid with one of the above attempts
-    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [mempool_success]).is_valid()
-    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [low_fee]).is_valid()
-    assert dataclasses.replace(tr1, sent_to=invalid_attempts + [close_to_zero]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, mempool_success]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, low_fee]).is_valid()
+    assert dataclasses.replace(tr1, sent_to=[*invalid_attempts, close_to_zero]).is_valid()
 
 
 @pytest.mark.anyio

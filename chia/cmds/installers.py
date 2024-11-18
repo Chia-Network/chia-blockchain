@@ -61,6 +61,7 @@ def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
         capture_output=True,
         encoding="utf-8",
         timeout=adjusted_timeout(30),
+        check=False,
     )
     assert chia_version_process.returncode == 0
     assert chia_version_process.stderr == ""
@@ -76,6 +77,7 @@ def test_command(expected_chia_version_str: str, require_madmax: bool) -> None:
         capture_output=True,
         encoding="utf-8",
         timeout=adjusted_timeout(30),
+        check=False,
     )
 
     print()

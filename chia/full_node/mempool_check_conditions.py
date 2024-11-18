@@ -3,9 +3,16 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from chia_rs import DONT_VALIDATE_SIGNATURE, MEMPOOL_MODE, G2Element, get_flags_for_height_and_constants
+from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    MEMPOOL_MODE,
+    G2Element,
+    get_flags_for_height_and_constants,
+    run_block_generator,
+    run_block_generator2,
+    run_chia_program,
+)
 from chia_rs import get_puzzle_and_solution_for_coin2 as get_puzzle_and_solution_for_coin_rust
-from chia_rs import run_block_generator, run_block_generator2, run_chia_program
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.cost_calculator import NPCResult
@@ -39,7 +46,7 @@ def get_name_puzzle_conditions(
     flags = get_flags_for_height_and_constants(height, constants) | DONT_VALIDATE_SIGNATURE
 
     if mempool_mode:
-        flags = flags | MEMPOOL_MODE
+        flags |= MEMPOOL_MODE
 
     if height >= constants.HARD_FORK_HEIGHT:
         run_block = run_block_generator2

@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+import sys
+import time
+from getpass import getpass
 from pathlib import Path
 from sys import platform
 from typing import ClassVar, Optional, Union, overload
 
+import colorama
 from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
 from keyring.errors import KeyringError, PasswordDeleteError
 from typing_extensions import Literal
 
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
+from chia.util.errors import KeychainMaxUnlockAttempts
 from chia.util.file_keyring import FileKeyring
 
 # We want to protect the keyring, even if a user-specified master passphrase isn't provided
@@ -52,6 +57,62 @@ def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError) -> bool:
         )
         return True
     return False
+
+
+DEFAULT_PASSPHRASE_PROMPT = (
+    colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
+)
+FAILED_ATTEMPT_DELAY = 0.5
+MAX_RETRIES = 3
+
+
+def prompt_for_passphrase(prompt: str) -> str:
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        print(prompt, end="", flush=True)
+        prompt = ""
+    return getpass(prompt)
+
+
+def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passphrase_cache: bool = False) -> str:
+    from chia.util.keyring_wrapper import KeyringWrapper
+
+    """
+    Obtains the master passphrase for the keyring, optionally using the cached
+    value (if previously set). If the passphrase isn't already cached, the user is
+    prompted interactively to enter their passphrase a max of MAX_RETRIES times
+    before failing.
+    """
+
+    if use_passphrase_cache:
+        passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
+        if passphrase:
+            # If the cached passphrase was previously validated, we assume it's... valid
+            if validated:
+                return passphrase
+
+            # Cached passphrase needs to be validated
+            if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
+                return passphrase
+            else:
+                # Cached passphrase is bad, clear the cache
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(None)
+
+    # Prompt interactively with up to MAX_RETRIES attempts
+    for i in range(MAX_RETRIES):
+        colorama.init()
+
+        passphrase = prompt_for_passphrase(prompt)
+
+        if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
+            # If using the passphrase cache, and the user inputted a passphrase, update the cache
+            if use_passphrase_cache:
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
+            return passphrase
+
+        time.sleep(FAILED_ATTEMPT_DELAY)
+        print("Incorrect passphrase\n")
+    raise KeychainMaxUnlockAttempts()
 
 
 class KeyringWrapper:
@@ -230,7 +291,6 @@ class KeyringWrapper:
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
-        return None
 
     def remove_master_passphrase_from_credential_store(self) -> None:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
@@ -249,7 +309,6 @@ class KeyringWrapper:
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
-        return None
 
     def get_master_passphrase_from_credential_store(self) -> Optional[str]:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()

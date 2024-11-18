@@ -41,9 +41,10 @@ from chia.data_layer.data_layer_util import (
     row_to_node,
     unspecified,
 )
-from chia.data_layer.util.merkle_blob import KVId, MerkleBlob, NodeMetadata
-from chia.data_layer.util.merkle_blob import NodeType as NodeTypeMerkleBlob
 from chia.data_layer.util.merkle_blob import (
+    KVId,
+    MerkleBlob,
+    NodeMetadata,
     RawInternalMerkleNode,
     RawLeafMerkleNode,
     TreeIndex,
@@ -51,6 +52,7 @@ from chia.data_layer.util.merkle_blob import (
     pack_raw_node,
     undefined_index,
 )
+from chia.data_layer.util.merkle_blob import NodeType as NodeTypeMerkleBlob
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.lru_cache import LRUCache
@@ -262,7 +264,7 @@ class DataStore:
             try:
                 root = await self.get_tree_root(store_id=store_id)
                 roots = await self.get_roots_between(store_id, 1, root.generation)
-                all_roots.append(roots + [root])
+                all_roots.append([*roots, root])
             except Exception as e:
                 if "unable to find root for id, generation" in str(e):
                     log.error(f"Cannot find roots for {store_id}. Skipping it.")
@@ -668,8 +670,7 @@ class DataStore:
 
     async def check(self) -> None:
         for check in self._checks:
-            # pylint seems to think these are bound methods not unbound methods.
-            await check(self)  # pylint: disable=too-many-function-args
+            await check(self)
 
     async def _check_roots_are_incrementing(self) -> None:
         async with self.db_wrapper.reader() as reader:

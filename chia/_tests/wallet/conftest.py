@@ -6,16 +6,23 @@ from dataclasses import replace
 from typing import Any, Callable, Literal, Optional
 
 import pytest
+from chia_rs import (
+    DONT_VALIDATE_SIGNATURE,
+    SpendBundleConditions,
+    get_flags_for_height_and_constants,
+    run_block_generator,
+    run_block_generator2,
+)
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.full_node import FullNode
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
@@ -56,8 +63,8 @@ async def ignore_block_validation(
     if "standard_block_tools" in request.keywords:
         return None
 
-    async def validate_block_body(*args: Any, **kwargs: Any) -> tuple[Literal[None], NPCResult]:
-        return None, args[7]
+    async def validate_block_body(*args: Any) -> Literal[None]:
+        return None
 
     def create_wrapper(original_create: Any) -> Any:
         async def new_create(*args: Any, **kwargs: Any) -> Any:
@@ -74,9 +81,34 @@ async def ignore_block_validation(
 
         return new_create
 
+    def run_block(
+        block: FullBlock, prev_generators: list[bytes], constants: ConsensusConstants
+    ) -> tuple[Optional[int], Optional[SpendBundleConditions]]:
+        assert block.transactions_generator is not None
+        assert block.transactions_info is not None
+        flags = get_flags_for_height_and_constants(block.height, constants) | DONT_VALIDATE_SIGNATURE
+        if block.height >= constants.HARD_FORK_HEIGHT:
+            run_block = run_block_generator2
+        else:
+            run_block = run_block_generator
+        err, conds = run_block(
+            bytes(block.transactions_generator),
+            prev_generators,
+            block.transactions_info.cost,
+            flags,
+            block.transactions_info.aggregated_signature,
+            None,
+            constants,
+        )
+        # pretend that the signatures are OK
+        if conds is not None:
+            conds = conds.replace(validated_signature=True)
+        return err, conds
+
     monkeypatch.setattr("chia.simulator.block_tools.BlockTools", WalletBlockTools)
     monkeypatch.setattr(FullNode, "create", create_wrapper(FullNode.create))
     monkeypatch.setattr("chia.consensus.blockchain.validate_block_body", validate_block_body)
+    monkeypatch.setattr("chia.consensus.multiprocess_validation._run_block", run_block)
     monkeypatch.setattr(
         "chia.consensus.block_header_validation.validate_unfinished_header_block", lambda *_, **__: (uint64(1), None)
     )

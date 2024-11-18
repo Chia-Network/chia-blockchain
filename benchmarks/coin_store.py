@@ -293,14 +293,14 @@ async def run_new_block_benchmark(version: int) -> None:
         if verbose:
             print("")
         print(
-            f"{total_time:0.4f}s, GET COINS REMOVED AT HEIGHT {block_height-1} blocks, "
+            f"{total_time:0.4f}s, GET COINS REMOVED AT HEIGHT {block_height - 1} blocks, "
             f"found {found_coins} coins in total"
         )
         all_test_time += total_time
         print(f"all tests completed in {all_test_time:0.4f}s")
 
     db_size = os.path.getsize(Path("coin-store-benchmark.db"))
-    print(f"database size: {db_size/1000000:.3f} MB")
+    print(f"database size: {db_size / 1000000:.3f} MB")
 
 
 if __name__ == "__main__":

@@ -293,13 +293,11 @@ class Crawler:
                 self.server.banned_peers = {}
                 self.with_peak = set()
 
-                if len(peers_to_crawl) == 0:
-                    continue
-
-                peer_cutoff = int(self.config.get("crawler", {}).get("prune_peer_days", 90))
-                await self.save_to_db()
-                await self.crawl_store.prune_old_peers(older_than_days=peer_cutoff)
-                await self.print_summary(t_start, total_nodes, tried_nodes)
+                if len(peers_to_crawl) > 0:
+                    peer_cutoff = int(self.config.get("crawler", {}).get("prune_peer_days", 90))
+                    await self.save_to_db()
+                    await self.crawl_store.prune_old_peers(older_than_days=peer_cutoff)
+                    await self.print_summary(t_start, total_nodes, tried_nodes)
                 await asyncio.sleep(15)  # 15 seconds between db updates
                 self._state_changed("crawl_batch_completed")
         except Exception as e:

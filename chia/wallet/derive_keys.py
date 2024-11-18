@@ -139,7 +139,7 @@ def match_address_to_sk(
             if address in phs:
                 found_addresses.add(address)
 
-        search_list = search_list - found_addresses
+        search_list -= found_addresses
         if not len(search_list):
             return found_addresses
 

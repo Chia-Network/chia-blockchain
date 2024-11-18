@@ -20,16 +20,18 @@ from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
-T = TypeVar("T", contravariant=True)
+T_contra = TypeVar("T_contra", contravariant=True)
 
 
-class WalletProtocol(Protocol[T]):
+class WalletProtocol(Protocol[T_contra]):
     @classmethod
     def type(cls) -> WalletType: ...
 
     def id(self) -> uint32: ...
 
-    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[T]) -> None: ...
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection, coin_data: Optional[T_contra]
+    ) -> None: ...
 
     async def select_coins(
         self,
@@ -58,9 +60,7 @@ class WalletProtocol(Protocol[T]):
     async def match_hinted_coin(self, coin: Coin, hint: bytes32) -> bool: ...
 
     wallet_info: WalletInfo
-    # WalletStateManager is only imported for type hinting thus leaving pylint
-    # unable to process this
-    wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
+    wallet_state_manager: WalletStateManager
 
 
 class GSTOptionalArgs(TypedDict):

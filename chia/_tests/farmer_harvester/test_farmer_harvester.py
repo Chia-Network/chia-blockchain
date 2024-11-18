@@ -44,7 +44,7 @@ async def update_harvester_config(harvester_rpc_port: Optional[int], root_path: 
 
 @pytest.mark.anyio
 async def test_start_with_empty_keychain(
-    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> None:
     _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
@@ -67,7 +67,7 @@ async def test_start_with_empty_keychain(
 
 @pytest.mark.anyio
 async def test_harvester_handshake(
-    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester_not_started: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> None:
     harvesters, farmer_service, bt = farmer_one_harvester_not_started
     harvester_service = harvesters[0]
@@ -170,7 +170,7 @@ async def test_farmer_respond_signatures(
 
 @pytest.mark.anyio
 async def test_harvester_config(farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools]) -> None:
-    harvester_services, farmer_service, bt = farmer_one_harvester
+    harvester_services, _farmer_service, bt = farmer_one_harvester
     harvester_service = harvester_services[0]
 
     assert harvester_service.rpc_server and harvester_service.rpc_server.webserver
@@ -202,7 +202,7 @@ async def test_harvester_config(farmer_one_harvester: tuple[list[HarvesterServic
     harvester_config["parallel_decompressor_count"] += 1
     harvester_config["decompressor_thread_count"] += 1
     harvester_config["recursive_plot_scan"] = not harvester_config["recursive_plot_scan"]
-    harvester_config["refresh_parameter_interval_seconds"] = harvester_config["refresh_parameter_interval_seconds"] + 1
+    harvester_config["refresh_parameter_interval_seconds"] += 1
 
     res = await update_harvester_config(harvester_rpc_port, bt.root_path, harvester_config)
     assert res is True
@@ -212,9 +212,9 @@ async def test_harvester_config(farmer_one_harvester: tuple[list[HarvesterServic
 
 @pytest.mark.anyio
 async def test_missing_signage_point(
-    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools]
+    farmer_one_harvester: tuple[list[HarvesterService], FarmerService, BlockTools],
 ) -> None:
-    _, farmer_service, bt = farmer_one_harvester
+    _, farmer_service, _bt = farmer_one_harvester
     farmer_api = farmer_service._api
     farmer = farmer_api.farmer
 
@@ -286,7 +286,7 @@ async def test_missing_signage_point(
 async def test_harvester_has_no_server(
     farmer_one_harvester: tuple[list[FarmerService], HarvesterService, BlockTools],
 ) -> None:
-    harvesters, _, bt = farmer_one_harvester
+    harvesters, _, _bt = farmer_one_harvester
     harvester_server = harvesters[0]._server
 
     assert harvester_server.webserver is None

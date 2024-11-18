@@ -112,7 +112,7 @@ class TestWalletSimulator:
         async with wallet.wallet_state_manager.new_action_scope(
             wallet_environments.tx_config, push=False
         ) as action_scope:
-            selected_coin = list(await wallet.select_coins(uint64(0), action_scope))[0]
+            selected_coin = next(iter(await wallet.select_coins(uint64(0), action_scope)))
         assert await wallet.match_hinted_coin(selected_coin, selected_coin.puzzle_hash)
 
     @pytest.mark.parametrize(
@@ -577,7 +577,7 @@ class TestWalletSimulator:
         assert txs["transactions"][0]["confirmed"]
         assert txs["transactions"][1]["confirmed"]
         assert txs["transactions"][0]["memos"] != txs["transactions"][1]["memos"]
-        assert list(txs["transactions"][0]["memos"].values())[0] == b"Test".hex()
+        assert next(iter(txs["transactions"][0]["memos"].values())) == b"Test".hex()
 
     @pytest.mark.parametrize(
         "wallet_environments",
@@ -1113,10 +1113,10 @@ class TestWalletSimulator:
         await time_out_assert(20, wsm_2.coin_store.count_small_unspent, 0, 1000, CoinType.CLAWBACK)
 
         before_txs: dict[str, dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
-        before_txs["sender"][TransactionType.INCOMING_CLAWBACK_SEND] = (
-            await wsm_1.tx_store.get_transaction_count_for_wallet(
-                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
-            )
+        before_txs["sender"][
+            TransactionType.INCOMING_CLAWBACK_SEND
+        ] = await wsm_1.tx_store.get_transaction_count_for_wallet(
+            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
         )
         before_txs["sender"][TransactionType.OUTGOING_CLAWBACK] = await wsm_1.tx_store.get_transaction_count_for_wallet(
             1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
@@ -1130,10 +1130,10 @@ class TestWalletSimulator:
         before_txs["sender"][TransactionType.COINBASE_REWARD] = await wsm_1.tx_store.get_transaction_count_for_wallet(
             1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
         )
-        before_txs["recipient"][TransactionType.INCOMING_CLAWBACK_RECEIVE] = (
-            await wsm_2.tx_store.get_transaction_count_for_wallet(
-                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
-            )
+        before_txs["recipient"][
+            TransactionType.INCOMING_CLAWBACK_RECEIVE
+        ] = await wsm_2.tx_store.get_transaction_count_for_wallet(
+            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
         )
         # Resync start
         env_1.node._close()
@@ -1160,10 +1160,10 @@ class TestWalletSimulator:
         wsm_2 = env_2.node.wallet_state_manager
 
         after_txs: dict[str, dict[TransactionType, int]] = {"sender": {}, "recipient": {}}
-        after_txs["sender"][TransactionType.INCOMING_CLAWBACK_SEND] = (
-            await wsm_1.tx_store.get_transaction_count_for_wallet(
-                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
-            )
+        after_txs["sender"][
+            TransactionType.INCOMING_CLAWBACK_SEND
+        ] = await wsm_1.tx_store.get_transaction_count_for_wallet(
+            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_SEND])
         )
         after_txs["sender"][TransactionType.OUTGOING_CLAWBACK] = await wsm_1.tx_store.get_transaction_count_for_wallet(
             1, type_filter=TransactionTypeFilter.include([TransactionType.OUTGOING_CLAWBACK])
@@ -1177,10 +1177,10 @@ class TestWalletSimulator:
         after_txs["sender"][TransactionType.COINBASE_REWARD] = await wsm_1.tx_store.get_transaction_count_for_wallet(
             1, type_filter=TransactionTypeFilter.include([TransactionType.COINBASE_REWARD])
         )
-        after_txs["recipient"][TransactionType.INCOMING_CLAWBACK_RECEIVE] = (
-            await wsm_2.tx_store.get_transaction_count_for_wallet(
-                1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
-            )
+        after_txs["recipient"][
+            TransactionType.INCOMING_CLAWBACK_RECEIVE
+        ] = await wsm_2.tx_store.get_transaction_count_for_wallet(
+            1, type_filter=TransactionTypeFilter.include([TransactionType.INCOMING_CLAWBACK_RECEIVE])
         )
         # Check clawback
         clawback_tx_1 = await wsm_1.tx_store.get_transaction_record(clawback_coin_id_1)
@@ -2050,7 +2050,7 @@ class TestWalletSimulator:
             )
         [tx] = action_scope.side_effects.transactions
         assert tx.spend_bundle is not None
-        paid_coin = [coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND][0]
+        paid_coin = next(coin for coin in tx.spend_bundle.additions() if coin.amount == AMOUNT_TO_SEND)
         assert paid_coin.parent_coin_info == coin_list[2].name()
         [tx] = await wallet.wallet_state_manager.add_pending_transactions([tx])
 
@@ -2133,7 +2133,7 @@ def test_get_wallet_db_path_testnet() -> None:
 async def test_wallet_has_no_server(
     simulator_and_wallet: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
-    full_nodes, wallets, bt = simulator_and_wallet
-    wallet_node, wallet_server = wallets[0]
+    _full_nodes, wallets, _bt = simulator_and_wallet
+    _wallet_node, wallet_server = wallets[0]
 
     assert wallet_server.webserver is None

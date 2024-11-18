@@ -436,9 +436,9 @@ class CATWallet:
         if new:
             return await self.get_new_puzzlehash()
         else:
-            record: Optional[DerivationRecord] = (
-                await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.standard_wallet.id())
-            )
+            record: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.get_current_derivation_record_for_wallet(self.standard_wallet.id())
             if record is None:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
@@ -538,18 +538,18 @@ class CATWallet:
         return coins
 
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
-        record: Optional[DerivationRecord] = (
-            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
-        )
+        record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
         if record is None:
             raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
         inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
         return inner_puzzle
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
-        record: Optional[DerivationRecord] = (
-            await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
-        )
+        record: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash)
         if record is None:
             return puzzle_hash  # TODO: check if we have a test for this case!
         else:
@@ -579,7 +579,7 @@ class CATWallet:
                     fee,
                     action_scope,
                 )
-                origin_id = list(chia_coins)[0].name()
+                origin_id = next(iter(chia_coins)).name()
                 await self.standard_wallet.generate_signed_transaction(
                     uint64(0),
                     (await self.standard_wallet.get_puzzle_hash(not action_scope.config.tx_config.reuse_puzhash)),
@@ -595,7 +595,7 @@ class CATWallet:
                     fee,
                     action_scope,
                 )
-                origin_id = list(chia_coins)[0].name()
+                origin_id = next(iter(chia_coins)).name()
                 selected_amount = sum(c.amount for c in chia_coins)
                 await self.standard_wallet.generate_signed_transaction(
                     uint64(selected_amount + amount_to_claim - fee),
@@ -666,7 +666,7 @@ class CATWallet:
 
         if change > 0:
             derivation_record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-                list(cat_coins)[0].puzzle_hash
+                next(iter(cat_coins)).puzzle_hash
             )
             if derivation_record is not None and action_scope.config.tx_config.reuse_puzhash:
                 change_puzhash = self.standard_wallet.puzzle_hash_for_pk(derivation_record.pubkey)
