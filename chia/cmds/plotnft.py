@@ -38,7 +38,13 @@ class ShowPlotNFTCMD:
     async def run(self) -> None:
         from .plotnft_funcs import show
 
-        await show(self.rpc_info, self.id)
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await show(
+                wallet_info=wallet_info,
+                root_path=self.rpc_info.context.get("root_path"),
+                farmer_rpc_port=self.rpc_info.context.get("farmer_rpc_port"),
+                wallet_id_passed_in=self.id,
+            )
 
 
 @chia_command(
@@ -98,13 +104,14 @@ class CreatePlotNFTCMD:
         if self.pool_url in {None, ""} and self.state == "pool":
             raise CliRpcConnectionError("A pool url argument (-u/--pool-url) is required with 'pool' state")
 
-        await create(
-            rpc_info=self.rpc_info,
-            pool_url=self.pool_url,
-            state="FARMING_TO_POOL" if self.state == "pool" else "SELF_POOLING",
-            fee=self.fee,
-            prompt=not self.dont_prompt,
-        )
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await create(
+                wallet_info=wallet_info,
+                pool_url=self.pool_url,
+                state="FARMING_TO_POOL" if self.state == "pool" else "SELF_POOLING",
+                fee=self.fee,
+                prompt=not self.dont_prompt,
+            )
 
 
 # NOTE: tx_endpoint
@@ -133,13 +140,14 @@ class JoinPlotNFTCMD:
     async def run(self) -> None:
         from .plotnft_funcs import join_pool
 
-        await join_pool(
-            rpc_info=self.rpc_info,
-            pool_url=self.pool_url,
-            fee=self.fee,
-            wallet_id=self.id,
-            prompt=not self.dont_prompt,
-        )
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await join_pool(
+                wallet_info=wallet_info,
+                pool_url=self.pool_url,
+                fee=self.fee,
+                wallet_id=self.id,
+                prompt=not self.dont_prompt,
+            )
 
 
 # NOTE: tx_endpoint
@@ -167,12 +175,13 @@ class LeavePlotNFTCMD:
     async def run(self) -> None:
         from .plotnft_funcs import self_pool
 
-        await self_pool(
-            rpc_info=self.rpc_info,
-            fee=self.fee,
-            wallet_id=self.id,
-            prompt=not self.dont_prompt,
-        )
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await self_pool(
+                wallet_info=wallet_info,
+                fee=self.fee,
+                wallet_id=self.id,
+                prompt=not self.dont_prompt,
+            )
 
 
 @chia_command(
@@ -189,7 +198,8 @@ class InspectPlotNFTCMD:
     async def run(self) -> None:
         from .plotnft_funcs import inspect_cmd
 
-        await inspect_cmd(rpc_info=self.rpc_info, wallet_id=self.id)
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await inspect_cmd(wallet_info=wallet_info, wallet_id=self.id)
 
 
 # NOTE: tx_endpoint
@@ -216,11 +226,12 @@ class ClaimPlotNFTCMD:
     async def run(self) -> None:
         from .plotnft_funcs import claim_cmd
 
-        await claim_cmd(
-            rpc_info=self.rpc_info,
-            fee=self.fee,
-            wallet_id=self.id,
-        )
+        async with self.rpc_info.wallet_rpc() as wallet_info:
+            await claim_cmd(
+                wallet_info=wallet_info,
+                fee=self.fee,
+                wallet_id=self.id,
+            )
 
 
 @chia_command(
