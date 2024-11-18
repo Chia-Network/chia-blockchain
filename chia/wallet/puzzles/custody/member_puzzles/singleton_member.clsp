@@ -15,7 +15,7 @@
 
   (list (list
       RECEIVE_MESSAGE
-      0x7  ; mode = coin
+      0x3F  ; mode = coin
       Delegated_Puzzle
       (calculate_coin_id  ; calculate singleton coin ID
         singleton_parent 

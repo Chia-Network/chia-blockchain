@@ -738,7 +738,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
             1,
             [
                 [51, Program.to(1).get_tree_hash(), 1],
-                [67, 0x07, delegated_puzzle.get_tree_hash(), coin.name()],
+                [67, 0x3F, delegated_puzzle.get_tree_hash(), coin.name()],
             ],  # create approval message to singleton member puzzle
         ])
 
@@ -806,12 +806,12 @@ async def test_message_conditions(cost_logger: CostLogger) -> None:
                 make_spend(
                     coin_1,
                     Program.to(1),
-                    Program.to([[66, 0x07, bytes32.zeros, coin_2.name()]]),
+                    Program.to([[66, 0x3F, Program.to(1).get_tree_hash(), coin_2.name()]]),
                 ),
                 make_spend(
                     coin_2,
                     Program.to(1),
-                    Program.to([[67, 0x07, bytes32.zeros, coin_1.name()]]),
+                    Program.to([[67, 0x3F, Program.to(1).get_tree_hash(), coin_1.name()]]),
                 ),
             ],
             G2Element(),
