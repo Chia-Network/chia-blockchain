@@ -661,7 +661,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         coin = (await client.get_coin_records_by_puzzle_hashes([puz.get_tree_hash()], include_spent_coins=False))[
             0
         ].coin
-        
+
         launcher_coin = Coin(coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(1))
         singleton_member_puzzle = PuzzleWithRestrictions(0, [], SingletonMember(launcher_coin.name()))
 
@@ -695,7 +695,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
-        await sim.farm_block(singleton_puzzle.get_tree_hash())
+        await sim.farm_block()
 
         singleton_coin = (
             await client.get_coin_records_by_puzzle_hashes(
@@ -734,11 +734,11 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
 
         # Make solution for singleton
         fullsol = Program.to([
-            [launcher_coin.parent_coin_info, 1], 
-            1, 
+            [launcher_coin.parent_coin_info, 1],
+            1,
             [
                 [51, Program.to(1).get_tree_hash(), 1],
-                [66, 0x07, delegated_puzzle.get_tree_hash(), coin.name()],
+                [67, 0x07, delegated_puzzle.get_tree_hash(), coin.name()],
             ],  # create approval message to singleton member puzzle
         ])
 
@@ -781,3 +781,45 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         await sim.rewind(block_height)
+
+
+@pytest.mark.anyio
+async def test_message_conditions(cost_logger: CostLogger) -> None:
+    async with sim_and_client(defaults=FORK_ENABLED_CONSTANTS) as (sim, client):
+        ## Temp
+        # Farm and find coin
+        await sim.farm_block(Program.to(1).get_tree_hash())
+        await sim.farm_block(Program.to(1).get_tree_hash())
+        coin_1 = (
+            await client.get_coin_records_by_puzzle_hashes(
+                [Program.to(1).get_tree_hash()], include_spent_coins=False
+            )
+        )[0].coin
+        coin_2 = (
+            await client.get_coin_records_by_puzzle_hashes(
+                [Program.to(1).get_tree_hash()], include_spent_coins=False
+            )
+        )[1].coin
+
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin_1,
+                    Program.to(1),
+                    Program.to([[66, 0x07, bytes32.zeros, coin_2.name()]]),
+                ),
+                make_spend(
+                    coin_2,
+                    Program.to(1),
+                    Program.to([[67, 0x07, bytes32.zeros, coin_1.name()]]),
+                ),
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "BLSMember spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
