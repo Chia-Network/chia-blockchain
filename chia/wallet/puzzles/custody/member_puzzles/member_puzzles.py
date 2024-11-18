@@ -158,6 +158,7 @@ class SECPK1PuzzleAssertMember(SECPK1Member):
         sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
         return Program.to([my_puzzle_hash, sig])
 
+@dataclass(frozen=True)
 class SingletonMember(Puzzle):
     singleton_id: bytes32
 
