@@ -999,6 +999,10 @@ class FullNode:
             async with self.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
                 await self.blockchain.warmup(fork_point)
                 await self.sync_from_fork_point(fork_point, target_peak.height, target_peak.header_hash, summaries)
+            peak = self.blockchain.get_peak()
+            assert peak is not None
+            if self.weight_proof_handler is not None:
+                await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
@@ -1685,10 +1689,6 @@ class FullNode:
                     peak_fb, state_change_summary, None
                 )
                 await self.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
-
-        if peak is not None and self.weight_proof_handler is not None:
-            await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
-            self._state_changed("block")
 
     def has_valid_pool_sig(self, block: Union[UnfinishedBlock, FullBlock]) -> bool:
         if (
