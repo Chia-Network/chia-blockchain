@@ -281,6 +281,7 @@ class FullNode:
             self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
             if self.config.get("enable_profiler", False):
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(profile_task(self.root_path, "node", self.log))  # noqa: RUF006
 
             self.profile_block_validation = self.config.get("profile_block_validation", False)
@@ -291,6 +292,7 @@ class FullNode:
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
             if self.config.get("enable_memory_profiler", False):
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))  # noqa: RUF006
 
             time_taken = time.monotonic() - start_time
@@ -338,6 +340,7 @@ class FullNode:
 
             self.initialized = True
             if self.full_node_peers is not None:
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(self.full_node_peers.start())  # noqa: RUF006
             try:
                 yield
@@ -354,6 +357,7 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
+                    # TODO: stop dropping tasks on the floor
                     asyncio.create_task(self.full_node_peers.close())  # noqa: RUF006
                 if self.uncompact_task is not None:
                     self.uncompact_task.cancel()
@@ -891,6 +895,7 @@ class FullNode:
         self._state_changed("add_connection")
         self._state_changed("sync_mode")
         if self.full_node_peers is not None:
+            # TODO: stop dropping tasks on the floor
             asyncio.create_task(self.full_node_peers.on_connect(connection))  # noqa: RUF006
 
         if self.initialized is False:

@@ -502,6 +502,7 @@ class ChiaServer:
                 self.log.info(f"Connected with {connection_type_str} {target_node}")
             else:
                 self.log.debug(f"Successful feeler connection with {connection_type_str} {target_node}")
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(connection.close())  # noqa: RUF006
             return True
         except client_exceptions.ClientConnectorError as e:

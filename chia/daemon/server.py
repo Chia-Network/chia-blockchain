@@ -1192,6 +1192,7 @@ class WebSocketServer:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
+                # TODO: stop dropping tasks on the floor
                 loop.create_task(self._start_plotting(id, loop, queue))  # noqa: RUF006
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
