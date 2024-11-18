@@ -4,7 +4,7 @@ from typing import Optional
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
-from chia.full_node.full_node import FullNode, PeakPostProcessingResult
+from chia.full_node.full_node import FullNode
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
@@ -39,7 +39,7 @@ async def add_blocks_in_batches(
         if (b.height % 128) == 0:
             print(f"main chain: {b.height:4} weight: {b.weight}")
         # vs is updated by the call to add_block_batch()
-        success, state_change_summary, err = await full_node.add_block_batch(
+        success, _, err = await full_node.add_block_batch(
             AugmentedBlockchain(full_node.blockchain),
             block_batch.entries,
             PeerInfo("0.0.0.0", 0),
@@ -48,11 +48,11 @@ async def add_blocks_in_batches(
         )
         assert err is None
         assert success is True
-        if state_change_summary is not None:
-            peak_fb: Optional[FullBlock] = await full_node.blockchain.get_full_peak()
-            assert peak_fb is not None
-            ppp_result: PeakPostProcessingResult = await full_node.peak_post_processing(
-                peak_fb, state_change_summary, None
-            )
-            await full_node.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
+        # if state_change_summary is not None:
+        #     peak_fb: Optional[FullBlock] = await full_node.blockchain.get_full_peak()
+        #     assert peak_fb is not None
+        #     ppp_result: PeakPostProcessingResult = await full_node.peak_post_processing(
+        #         peak_fb, state_change_summary, None
+        #     )
+        #     await full_node.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
     await full_node._finish_sync(fork_height)

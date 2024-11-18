@@ -404,9 +404,17 @@ async def test_wallet_reorg_sync(
     # Insert 400 blocks
     await add_blocks_in_batches(default_400_blocks, full_node)
     # Farm few more with reward
+
+    wallet_node1, _ = wallets[0]
+    wallet1 = wallet_node.wallet_state_manager.main_wallet
+    wallet_node2, _ = wallets[1]
+    wallet2 = wallet_node2.wallet_state_manager.main_wallet
+
+    await time_out_assert(60, wallet_height_at_least, True, wallet1, 399)
+    await time_out_assert(60, wallet_height_at_least, True, wallet2, 399)
+
     for _ in range(num_blocks - 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(phs[0]))
-
     for _ in range(num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(phs[1]))
 
@@ -415,10 +423,13 @@ async def test_wallet_reorg_sync(
         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)
     )
 
-    for wallet_node, wallet_server in wallets:
-        wallet = wallet_node.wallet_state_manager.main_wallet
-        await time_out_assert(60, wallet.get_confirmed_balance, funds)
-        await time_out_assert(60, get_tx_count, 2 * (num_blocks - 1), wallet_node.wallet_state_manager, 1)
+    await time_out_assert(60, wallet_height_at_least, True, wallet1, 408)
+    await time_out_assert(60, wallet1.get_confirmed_balance, funds)
+    await time_out_assert(60, get_tx_count, 2 * (num_blocks - 1), wallet_node1.wallet_state_manager, 1)
+
+    await time_out_assert(60, wallet_height_at_least, True, wallet2, 408)
+    await time_out_assert(60, wallet2.get_confirmed_balance, funds)
+    await time_out_assert(60, get_tx_count, 2 * (num_blocks - 1), wallet_node2.wallet_state_manager, 1)
 
     # Reorg blocks that carry reward
     num_blocks = 30
