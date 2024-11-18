@@ -35,6 +35,7 @@
   "flag_proofs_checker": "fe2e3c631562fbb9be095297f762bf573705a0197164e9361ad5d50e045ba241",
   "force_1_of_2_w_restricted_variable": "4f7bc8f30deb6dad75a1e29ceacb67fd0fe0eda79173e45295ff2cfbb8de53c6",
   "force_assert_coin_announcement": "ca0daca027e5ebd4a61fad7e32cfe1e984ad5b561c2fc08dea30accf3a191fab",
+  "force_coin_message": "9618c96b30b96362f6c01716a11f76c630a786697d5bac92345f5ff90b882268",
   "genesis_by_coin_id": "493afb89eed93ab86741b2aa61b8f5de495d33ff9b781dfc8919e602b2afa150",
   "genesis_by_coin_id_or_singleton": "40170305e3a71c3e7523f37fbcfc3188f9f949da0818a6331f28251e76e8c56f",
   "genesis_by_puzzle_hash": "de5a6e06d41518be97ff6365694f4f89475dda773dede267caa33da63b434e36",
