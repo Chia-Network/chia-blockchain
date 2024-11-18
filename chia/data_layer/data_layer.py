@@ -41,18 +41,14 @@ from chia.data_layer.data_layer_util import (
     TerminalNode,
     Unspecified,
     UnsubscribeData,
+    get_delta_filename_path,
+    get_full_tree_filename_path,
     leaf_hash,
     unspecified,
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import (
-    delete_full_file_if_exists,
-    get_delta_filename_path,
-    get_full_tree_filename_path,
-    insert_from_delta_file,
-    write_files_for_root,
-)
+from chia.data_layer.download_data import delete_full_file_if_exists, insert_from_delta_file, write_files_for_root
 from chia.rpc.rpc_server import StateChangedProtocol, default_get_connections
 from chia.rpc.wallet_request_types import LogIn
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -199,7 +195,7 @@ class DataLayer:
         async with DataStore.managed(database=self.db_path, sql_log_path=sql_log_path) as self._data_store:
             self._wallet_rpc = await self.wallet_rpc_init
 
-            await self._data_store.migrate_db()
+            await self._data_store.migrate_db(self.server_files_location)
             self.periodically_manage_data_task = asyncio.create_task(self.periodically_manage_data())
             try:
                 yield
@@ -254,7 +250,6 @@ class DataLayer:
     ) -> Optional[TransactionRecord]:
         status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
         await self.batch_insert(store_id=store_id, changelist=changelist, status=status)
-        await self.data_store.clean_node_table()
 
         if submit_on_chain:
             return await self.publish_update(store_id=store_id, fee=fee)
@@ -287,8 +282,6 @@ class DataLayer:
 
             status = Status.PENDING if submit_on_chain else Status.PENDING_BATCH
             await self.batch_insert(store_id=store_id, changelist=changelist, status=status)
-
-        await self.data_store.clean_node_table()
 
         if submit_on_chain:
             update_dictionary: dict[bytes32, bytes32] = {}
@@ -532,7 +525,6 @@ class DataLayer:
                     and pending_root.status == Status.PENDING
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
-                    await self.data_store.build_ancestor_table_for_latest_root(store_id=store_id)
             await self.data_store.clear_pending_roots(store_id=store_id)
 
     async def fetch_and_validate(self, store_id: bytes32) -> None:
@@ -835,8 +827,6 @@ class DataLayer:
         # stop tracking first, then unsubscribe from the data store
         await self.wallet_rpc.dl_stop_tracking(store_id)
         await self.data_store.unsubscribe(store_id)
-        if not retain_data:
-            await self.data_store.delete_store_data(store_id)
 
         self.log.info(f"Unsubscribed to {store_id}")
         for file_path in paths:
@@ -1137,7 +1127,6 @@ class DataLayer:
 
             verify_offer(maker=offer.maker, taker=offer.taker, summary=summary)
 
-        await self.data_store.clean_node_table()
         return offer
 
     async def take_offer(
@@ -1196,8 +1185,6 @@ class DataLayer:
                     for our_offer_store in taker
                 },
             }
-
-        await self.data_store.clean_node_table()
 
         # Excluding wallet from transaction since failures in the wallet may occur
         # after the transaction is submitted to the chain.  If we roll back data we
