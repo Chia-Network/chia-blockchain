@@ -1,0 +1,7 @@
+(mod
+  (Delegated_Puzzle_Hash)
+  (if (= Delegated_Puzzle_Hash (sha256 1 ()))
+      ()
+      (x "only self destruct allowed")
+  )
+)

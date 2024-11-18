@@ -29,6 +29,7 @@ from chia.wallet.puzzles.custody.restriction_puzzles.restrictions import (
     Timelock,
 )
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 
@@ -234,16 +235,7 @@ class SelfDestructRestriction:
         return Program.to(None)
 
     def puzzle(self, nonce: int) -> Program:
-        # (mod
-        #   (Delegated_Puzzle_Hash)
-        #   (if (= Delegated_Puzzle_Hash (sha256 1 ()))
-        #       ()
-        #       (x "only self destruct allowed")
-        #   )
-        # )
-        return Program.fromhex(
-            "ff02ffff03ffff09ff02ffff01a04bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a80ff80ffff01ff08ffff019a6f6e6c792073656c6620646573747275637420616c6c6f7765648080ff0180"
-        )
+        return load_clvm_maybe_recompile("self_destruct.clsp", package_or_requirement="chia._tests.clvm.puzzles")
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
@@ -259,16 +251,7 @@ class ConditionsBannedRestriction:
         return Program.to(None)
 
     def puzzle(self, nonce: int) -> Program:
-        # (mod
-        #   (Conditions)
-        #   (if (= Conditions ())
-        #       ()
-        #       (x "conditions banned")
-        #   )
-        # )
-        return Program.fromhex(
-            "ff02ffff03ffff09ff02ff8080ff80ffff01ff08ffff0191636f6e646974696f6e732062616e6e65648080ff0180"
-        )
+        return load_clvm_maybe_recompile("conditions_banned.clsp", package_or_requirement="chia._tests.clvm.puzzles")
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
