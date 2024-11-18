@@ -37,11 +37,11 @@ tr1 = TransactionRecord(
     [coin_2, coin_3],  # additions
     [coin_1],  # removals
     uint32(1),  # wallet_id
-    [],  # List[Tuple[str, uint8, Optional[str]]] sent_to
+    [],  # list[tuple[str, uint8, Optional[str]]] sent_to
     bytes32(bytes32.random(module_seeded_random)),  # trade_id
     uint32(TransactionType.OUTGOING_TX),  # type
     bytes32(bytes32.random(module_seeded_random)),  # name
-    [],  # List[Tuple[bytes32, List[bytes]]] memos
+    [],  # list[tuple[bytes32, list[bytes]]] memos
     ConditionValidTimes(),
 )
 

@@ -423,7 +423,7 @@ async def make_offer(
         else:
             offer_dict: dict[Union[uint32, str], int] = {}
             driver_dict: dict[str, Any] = {}
-            printable_dict: dict[str, tuple[str, int, int]] = {}  # Dict[asset_name, Tuple[amount, unit, multiplier]]
+            printable_dict: dict[str, tuple[str, int, int]] = {}  # dict[asset_name, tuple[amount, unit, multiplier]]
             royalty_asset_dict: dict[Any, tuple[Any, uint16]] = {}
             fungible_asset_dict: dict[Any, uint64] = {}
             for item in [*offers, *requests]:

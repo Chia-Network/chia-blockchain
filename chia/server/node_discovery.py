@@ -26,6 +26,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint64
 from chia.util.ip_address import IPAddress
 from chia.util.network import resolve
+from chia.util.safe_cancel_task import cancel_task_safe
 
 MAX_PEERS_RECEIVED_PER_REQUEST = 1000
 MAX_TOTAL_PEERS_RECEIVED = 3000
@@ -103,20 +104,13 @@ class FullNodeDiscovery:
 
     async def _close_common(self) -> None:
         self.is_closed = True
-        self.cancel_task_safe(self.connect_peers_task)
-        self.cancel_task_safe(self.serialize_task)
-        self.cancel_task_safe(self.cleanup_task)
+        cancel_task_safe(self.connect_peers_task, self.log)
+        cancel_task_safe(self.serialize_task, self.log)
+        cancel_task_safe(self.cleanup_task, self.log)
         for t in self.pending_tasks:
-            self.cancel_task_safe(t)
+            cancel_task_safe(t, self.log)
         if len(self.pending_tasks) > 0:
             await asyncio.wait(self.pending_tasks)
-
-    def cancel_task_safe(self, task: Optional[asyncio.Task[None]]) -> None:
-        if task is not None:
-            try:
-                task.cancel()
-            except Exception as e:
-                self.log.error(f"Error while canceling task.{e} {task}")
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         if (
@@ -534,8 +528,8 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def close(self) -> None:
         await self._close_common()
-        self.cancel_task_safe(self.self_advertise_task)
-        self.cancel_task_safe(self.address_relay_task)
+        cancel_task_safe(self.self_advertise_task, self.log)
+        cancel_task_safe(self.address_relay_task, self.log)
 
     async def _periodically_self_advertise_and_clean_data(self) -> None:
         while not self.is_closed:

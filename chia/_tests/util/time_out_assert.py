@@ -125,7 +125,7 @@ async def time_out_assert_custom_interval(
                 timed_out=timed_out,
             )
 
-            ether.record_property(  # pylint: disable=E1102
+            ether.record_property(
                 data.tag,
                 json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
             )

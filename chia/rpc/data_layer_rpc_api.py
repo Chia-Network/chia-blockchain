@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
 def process_change(change: dict[str, Any]) -> dict[str, Any]:
     # TODO: A full class would likely be nice for this so downstream doesn't
-    #       have to deal with maybe-present attributes or Dict[str, Any] hints.
+    #       have to deal with maybe-present attributes or dict[str, Any] hints.
     reference_node_hash = change.get("reference_node_hash")
     if reference_node_hash is not None:
         reference_node_hash = bytes32.from_hexstr(reference_node_hash)

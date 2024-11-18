@@ -26,6 +26,7 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -174,15 +175,16 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                futures = await pre_validate_blocks_multiprocessing(
                     self.full_node.blockchain.constants,
-                    self.full_node.blockchain,
+                    AugmentedBlockchain(self.full_node.blockchain),
                     [genesis],
                     self.full_node.blockchain.pool,
                     {},
                     ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
+                pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 assert pre_validation_results is not None
                 fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(
@@ -237,15 +239,16 @@ class FullNodeSimulator(FullNodeAPI):
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+                futures = await pre_validate_blocks_multiprocessing(
                     self.full_node.blockchain.constants,
-                    self.full_node.blockchain,
+                    AugmentedBlockchain(self.full_node.blockchain),
                     [genesis],
                     self.full_node.blockchain.pool,
                     {},
                     ValidationState(ssi, diff, None),
                     validate_signatures=True,
                 )
+                pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
                 assert pre_validation_results is not None
                 fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
                 await self.full_node.blockchain.add_block(

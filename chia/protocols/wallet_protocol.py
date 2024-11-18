@@ -208,9 +208,9 @@ class RegisterForPhUpdates(Streamable):
 # @streamable
 # @dataclass(frozen=True)
 # class RespondToPhUpdates(Streamable):
-#    puzzle_hashes: List[bytes32]
+#    puzzle_hashes: list[bytes32]
 #    min_height: uint32
-#    coin_states: List[CoinState]
+#    coin_states: list[CoinState]
 
 
 @streamable
@@ -267,7 +267,7 @@ class RespondSESInfo(Streamable):
 @dataclass(frozen=True)
 class RequestFeeEstimates(Streamable):
     """
-    time_targets (List[uint64]): Epoch timestamps in seconds to estimate FeeRates for.
+    time_targets (list[uint64]): Epoch timestamps in seconds to estimate FeeRates for.
     """
 
     time_targets: list[uint64]

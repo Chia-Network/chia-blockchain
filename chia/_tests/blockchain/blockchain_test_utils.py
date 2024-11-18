@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Optional
 
 from chia_rs import BLSCache
@@ -10,6 +11,7 @@ from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_dif
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
 from chia.types.full_block import FullBlock
 from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 
@@ -76,15 +78,16 @@ async def _validate_and_add_block(
     else:
         # validate_signatures must be False in order to trigger add_block() to
         # validate the signature.
-        pre_validation_results: list[PreValidationResult] = await pre_validate_blocks_multiprocessing(
+        futures = await pre_validate_blocks_multiprocessing(
             blockchain.constants,
-            blockchain,
+            AugmentedBlockchain(blockchain),
             [block],
             blockchain.pool,
             {},
             ValidationState(ssi, diff, prev_ses_block),
             validate_signatures=False,
         )
+        pre_validation_results: list[PreValidationResult] = list(await asyncio.gather(*futures))
         assert pre_validation_results is not None
         results = pre_validation_results[0]
     if results.error is not None:

@@ -20,7 +20,7 @@ async def load_plugin_configurations(root_path: Path, config_type: str, log: log
         config_type (str): The type of plugins to load ('downloaders' or 'uploaders').
 
     Returns:
-        List[PluginRemote]: A list of valid PluginRemote instances for the specified plugin type.
+        list[PluginRemote]: A list of valid PluginRemote instances for the specified plugin type.
     """
     config_path = root_path / "plugins" / config_type
     config_path.mkdir(parents=True, exist_ok=True)  # Ensure the config directory exists

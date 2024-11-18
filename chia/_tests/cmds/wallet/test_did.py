@@ -45,7 +45,7 @@ def test_did_create(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
             )
             return {"wallet_id": 3, "my_did": "did:chia:testdid123456"}
 
-    inst_rpc_client = DidCreateRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DidCreateRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = [
         "wallet",
@@ -78,7 +78,7 @@ def test_did_sign_message(capsys: object, get_test_cli_clients: tuple[TestRpcCli
     test_rpc_clients, root_dir = get_test_cli_clients
 
     # set RPC Client
-    inst_rpc_client = TestWalletRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = TestWalletRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     did_id = encode_puzzle_hash(get_bytes32(1), "did:chia:")
     message = b"hello did world!!"
@@ -106,7 +106,7 @@ def test_did_set_name(capsys: object, get_test_cli_clients: tuple[TestRpcClients
             self.add_to_log("did_set_wallet_name", (wallet_id, name))
             return {}
 
-    inst_rpc_client = DidSetNameRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DidSetNameRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     w_id = 3
     did_name = "testdid"
@@ -129,7 +129,7 @@ def test_did_get_did(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
             self.add_to_log("get_did_id", (wallet_id,))
             return {"my_did": encode_puzzle_hash(get_bytes32(1), "did:chia:"), "coin_id": get_bytes32(2).hex()}
 
-    inst_rpc_client = DidGetDidRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DidGetDidRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     w_id = 3
     expected_did = encode_puzzle_hash(get_bytes32(1), "did:chia:")
@@ -165,7 +165,7 @@ def test_did_get_details(capsys: object, get_test_cli_clients: tuple[TestRpcClie
             }
             return response
 
-    inst_rpc_client = DidGetDetailsRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DidGetDetailsRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     did_coin_id_hex = get_bytes32(1).hex()
     command_args = ["wallet", "did", "get_details", FINGERPRINT_ARG, "--coin_id", did_coin_id_hex]
@@ -207,7 +207,7 @@ def test_did_update_metadata(capsys: object, get_test_cli_clients: tuple[TestRpc
             self.add_to_log("update_did_metadata", (wallet_id, metadata, tx_config, push, timelock_info))
             return DIDUpdateMetadataResponse([STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()), uint32(wallet_id))
 
-    inst_rpc_client = DidUpdateMetadataRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DidUpdateMetadataRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     w_id = 3
     json_mdata = '{"test": true}'
@@ -252,7 +252,7 @@ def test_did_find_lost(capsys: object, get_test_cli_clients: tuple[TestRpcClient
             self.add_to_log("find_lost_did", (coin_id, recovery_list_hash, metadata, num_verification))
             return {"success": True, "latest_coin_id": get_bytes32(2).hex()}
 
-    inst_rpc_client = DidFindLostRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DidFindLostRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     c_id = get_bytes32(1)
     json_mdata = '{"test": true}'
@@ -291,7 +291,7 @@ def test_did_message_spend(capsys: object, get_test_cli_clients: tuple[TestRpcCl
             self.add_to_log("did_message_spend", (wallet_id, tx_config, extra_conditions, push, timelock_info))
             return DIDMessageSpendResponse([STD_UTX], [STD_TX], WalletSpendBundle([], G2Element()))
 
-    inst_rpc_client = DidMessageSpendRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DidMessageSpendRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     w_id = 3
     c_announcements = [get_bytes32(1), get_bytes32(2)]
@@ -357,7 +357,7 @@ def test_did_transfer(capsys: object, get_test_cli_clients: tuple[TestRpcClients
                 STD_TX.name,
             )
 
-    inst_rpc_client = DidTransferRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = DidTransferRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     w_id = 3
     t_address = encode_puzzle_hash(get_bytes32(1), "xch")

@@ -106,3 +106,10 @@ repos:
         entry: ./activated.py flake8
         language: system
         types: [python]
+  - repo: local
+    hooks:
+      - id: ruff
+        name: Ruff
+        entry: ./activated.py ruff check --fix
+        language: system
+        types: [python]

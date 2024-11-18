@@ -92,7 +92,7 @@ class FullNodeStore:
     candidate_backup_blocks: dict[bytes32, tuple[uint32, UnfinishedBlock]]
 
     # Block hashes of unfinished blocks that we have seen recently. This is
-    # effectively a Set[bytes32] but in order to evict the oldest items first,
+    # effectively a set[bytes32] but in order to evict the oldest items first,
     # we use a Dict that preserves insertion order, and remove from the
     # beginning
     seen_unfinished_blocks: dict[bytes32, None]
@@ -135,7 +135,7 @@ class FullNodeStore:
     recent_eos: LRUCache[bytes32, tuple[EndOfSubSlotBundle, float]]
 
     pending_tx_request: dict[bytes32, bytes32]  # tx_id: peer_id
-    peers_with_tx: dict[bytes32, set[bytes32]]  # tx_id: Set[peer_ids}
+    peers_with_tx: dict[bytes32, set[bytes32]]  # tx_id: set[peer_ids}
     tx_fetch_tasks: dict[bytes32, asyncio.Task[None]]  # Task id: task
     serialized_wp_message: Optional[Message]
     serialized_wp_message_tip: Optional[bytes32]

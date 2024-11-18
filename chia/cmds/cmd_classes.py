@@ -41,7 +41,7 @@ def option(*param_decls: str, **kwargs: Any) -> Any:
     else:
         default_default = MISSING
 
-    return field(  # pylint: disable=invalid-field-call
+    return field(
         metadata=dict(
             option_args=dict(
                 param_decls=tuple(param_decls),
@@ -268,7 +268,7 @@ class WalletClientInfo:
 
 @command_helper
 class NeedsWalletRPC:
-    context: Context = field(default_factory=dict)  # pylint: disable=invalid-field-call
+    context: Context = field(default_factory=dict)
     client_info: Optional[WalletClientInfo] = None
     wallet_rpc_port: Optional[int] = option(
         "-wp",
@@ -294,7 +294,7 @@ class NeedsWalletRPC:
             yield self.client_info
         else:
             if "root_path" not in kwargs:
-                kwargs["root_path"] = self.context["root_path"]  # pylint: disable=unsubscriptable-object
+                kwargs["root_path"] = self.context["root_path"]
             async with get_wallet_client(self.wallet_rpc_port, self.fingerprint, **kwargs) as (
                 wallet_client,
                 fp,

@@ -1,4 +1,4 @@
-# Package: utils
+# Package: virtual_project_analysis
 
 from __future__ import annotations
 

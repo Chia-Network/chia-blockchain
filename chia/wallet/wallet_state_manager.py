@@ -721,7 +721,7 @@ class WalletStateManager:
         Returns the balance, including coinbase rewards that are not spendable, and unconfirmed
         transactions.
         """
-        # This API should change so that get_balance_from_coin_records is called for Set[WalletCoinRecord]
+        # This API should change so that get_balance_from_coin_records is called for set[WalletCoinRecord]
         # and this method is called only for the unspent_coin_records==None case.
         if unspent_coin_records is None:
             wallet_type: WalletType = self.wallets[uint32(wallet_id)].type()

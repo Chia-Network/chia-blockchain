@@ -530,8 +530,8 @@ class Streamable:
 
     An item is one of:
     * primitive
-    * Tuple[item1, .. itemx]
-    * List[item1, .. itemx]
+    * tuple[item1, .. itemx]
+    * list[item1, .. itemx]
     * Optional[item]
     * Custom item
 

@@ -40,7 +40,7 @@ def test_notifications_send(capsys: object, get_test_cli_clients: tuple[TestRpcC
 
             return cast(TransactionRecord, FakeTransactionRecord(get_bytes32(2).hex()))
 
-    inst_rpc_client = NotificationsSendRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NotificationsSendRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     target_ph = get_bytes32(1)
     target_addr = encode_puzzle_hash(target_ph, "xch")
@@ -82,7 +82,7 @@ def test_notifications_get(capsys: object, get_test_cli_clients: tuple[TestRpcCl
                 [Notification(get_bytes32(1), bytes("hello", "utf8"), uint64(1000000000), uint32(50))]
             )
 
-    inst_rpc_client = NotificationsGetRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NotificationsGetRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     target_ph = get_bytes32(1)
     command_args = [
@@ -114,7 +114,7 @@ def test_notifications_delete(capsys: object, get_test_cli_clients: tuple[TestRp
             self.add_to_log("delete_notifications", (ids,))
             return True
 
-    inst_rpc_client = NotificationsDeleteRpcClient()  # pylint: disable=no-value-for-parameter
+    inst_rpc_client = NotificationsDeleteRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
     command_args = ["wallet", "notifications", "delete", FINGERPRINT_ARG, "--all"]
     # these are various things that should be in the output

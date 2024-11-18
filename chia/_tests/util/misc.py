@@ -348,7 +348,7 @@ class _AssertRuntime:
                 label=self.label,
             )
 
-            ether.record_property(  # pylint: disable=E1102
+            ether.record_property(
                 data.tag,
                 json.dumps(data.marshal(), ensure_ascii=True, sort_keys=True),
             )
