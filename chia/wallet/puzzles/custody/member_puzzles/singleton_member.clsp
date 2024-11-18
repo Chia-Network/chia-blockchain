@@ -16,7 +16,11 @@
   (list (list
       RECEIVE_MESSAGE
       0x7  ; mode = coin
-      (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_innerpuzhash)
       Delegated_Puzzle
+      (calculate_coin_id  ; calculate singleton coin ID
+        singleton_parent 
+        (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_innerpuzhash) 
+        singleton_amount
+      )
   ))
 )

@@ -662,16 +662,10 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
             0
         ].coin
         eve_coin = Coin(coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH, uint64(1))
+        singleton_member_puzzle = PuzzleWithRestrictions(0, [], SingletonMember(eve_coin.name()))
+
         singleton_struct = (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (eve_coin.name(), SINGLETON_LAUNCHER_PUZZLE_HASH))
-        singleton_innerpuz = Program.to(
-            (
-                1,
-                [
-                    [51, Program.to(1).get_tree_hash(), 1],
-                    [66, 0x07, delegated_puzzle.get_tree_hash(), coin.name()],
-                ],  # create approval message to singleton member puzzle
-            )
-        )
+        singleton_innerpuz = Program.to(1)
         singleton_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, singleton_innerpuz)
         launcher_solution = Program.to([singleton_puzzle.get_tree_hash(), 1, 0])
 
@@ -708,7 +702,6 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
             )
         )[0].coin
 
-        singleton_member_puzzle = PuzzleWithRestrictions(0, [], SingletonMember(eve_coin.name()))
         memo = PuzzleHint(
             singleton_member_puzzle.puzzle.puzzle_hash(0),
             singleton_member_puzzle.puzzle.memo(0),
@@ -739,7 +732,12 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         announcement = CreateCoinAnnouncement(msg=b"foo", coin_id=coin.name())
 
         # Make solution for singleton
-        fullsol = Program.to([[eve_coin.parent_coin_info, 1], 1, 0])
+        fullsol = Program.to([[eve_coin.parent_coin_info, 1], 1, 
+            [
+                [51, Program.to(1).get_tree_hash(), 1],
+                [66, 0x07, delegated_puzzle.get_tree_hash(), coin.name()],
+            ],  # create approval message to singleton member puzzle
+        ])
 
         sb = WalletSpendBundle(
             [
@@ -750,7 +748,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
                         [],
                         [],
                         Program.to(
-                            [[singleton_coin.parent_coin_info, singleton_innerpuz.get_tree_hash(), 1]]
+                            [[singleton_coin.parent_coin_info, singleton_innerpuz.get_tree_hash(), singleton_coin.amount]]
                         ),  # singleton member puzzle only requires singleton's current innerpuz
                         DelegatedPuzzleAndSolution(
                             delegated_puzzle,
