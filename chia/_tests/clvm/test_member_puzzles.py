@@ -738,7 +738,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
             1,
             [
                 [51, Program.to(1).get_tree_hash(), 1],
-                [67, 0x17, delegated_puzzle.get_tree_hash(), coin.name()],  # 00010111  - puzzle sender, coin receiver
+                [66, 0x17, delegated_puzzle.get_tree_hash(), coin.name()],  # 00010111  - puzzle sender, coin receiver
             ],  # create approval message to singleton member puzzle
         ])
 
