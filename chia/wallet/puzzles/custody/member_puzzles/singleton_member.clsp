@@ -17,6 +17,6 @@
       RECEIVE_MESSAGE
       0x17  ; mode = coin
       Delegated_Puzzle
-      (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_innerpuzhash) 
+      (calculate_full_puzzle_hash SINGLETON_STRUCT singleton_innerpuzhash)
   ))
 )
