@@ -155,8 +155,10 @@ PendingTxCallback = Callable[[], None]
 
 
 class WalletStateManager:
-    interested_ph_cache: dict[bytes32, list[int]] = {}
-    interested_coin_cache: dict[bytes32, list[int]] = {}
+    # Ruff thinks these are "mutable class attributes" that should be annotated with `ClassVar`
+    # When this is a dataclass, these errors should go away
+    interested_ph_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
+    interested_coin_cache: dict[bytes32, list[int]] = {}  # noqa: RUF012
     constants: ConsensusConstants
     config: dict[str, Any]
     tx_store: WalletTransactionStore
@@ -1498,7 +1500,7 @@ class WalletStateManager:
             else:
                 new_did_id = _new_did_id
         self.log.debug(
-            "Handling NFT: %s， old DID:%s, new DID:%s, old P2:%s, new P2:%s",
+            "Handling NFT: %s, old DID:%s, new DID:%s, old P2:%s, new P2:%s",
             nft_data.parent_coin_spend,
             old_did_id,
             new_did_id,
@@ -1692,10 +1694,9 @@ class WalletStateManager:
         self.log.info(f"Found verified credential {vc.launcher_id.hex()}.")
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.VC):
             return WalletIdentifier(wallet_info.id, WalletType.VC)
-        else:
-            # Create a new VC wallet
-            vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)  # pragma: no cover
-            return WalletIdentifier(vc_wallet.id(), WalletType.VC)  # pragma: no cover
+        # Create a new VC wallet
+        vc_wallet = await VCWallet.create_new_vc_wallet(self, self.main_wallet)  # pragma: no cover
+        return WalletIdentifier(vc_wallet.id(), WalletType.VC)  # pragma: no cover
 
     async def _add_coin_states(
         self,
@@ -1982,7 +1983,7 @@ class WalletStateManager:
                                         unconfirmed_record.name, uint32(coin_state.spent_height)
                                     )
 
-                        if record.wallet_type in [WalletType.POOLING_WALLET, WalletType.DAO]:
+                        if record.wallet_type in {WalletType.POOLING_WALLET, WalletType.DAO}:
                             wallet_type_to_class = {WalletType.POOLING_WALLET: PoolWallet, WalletType.DAO: DAOWallet}
                             if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
                                 singleton_wallet: Union[PoolWallet, DAOWallet] = self.get_wallet(
@@ -2257,7 +2258,7 @@ class WalletStateManager:
         # no matter if there is another TX updated.
         clawback = parent_coin_record is not None and parent_coin_record.coin_type == CoinType.CLAWBACK
 
-        if coinbase or clawback or not coin_confirmed_transaction and not change:
+        if coinbase or clawback or (not coin_confirmed_transaction and not change):
             tx_record = TransactionRecord(
                 confirmed_at_height=uint32(height),
                 created_at_time=await self.wallet_node.get_timestamp_for_height(height),
@@ -2385,18 +2386,18 @@ class WalletStateManager:
                 if (
                     send_status != MempoolInclusionStatus.SUCCESS
                     and error
-                    and error not in (Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO)
+                    and error not in {Err.INVALID_FEE_LOW_FEE, Err.INVALID_FEE_TOO_CLOSE_TO_ZERO}
                 ):
                     coins_removed = tx.spend_bundle.removals()
                     trade_coins_removed = set()
                     trades = []
                     for removed_coin in coins_removed:
                         trade = await self.trade_manager.get_trade_by_coin(removed_coin)
-                        if trade is not None and trade.status in (
+                        if trade is not None and trade.status in {
                             TradeStatus.PENDING_CONFIRM.value,
                             TradeStatus.PENDING_ACCEPT.value,
                             TradeStatus.PENDING_CANCEL.value,
-                        ):
+                        }:
                             if trade not in trades:
                                 trades.append(trade)
                             # offer was tied to these coins, lets subscribe to them to get a confirmation to
@@ -2465,14 +2466,14 @@ class WalletStateManager:
         reorged: list[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
         for record in reorged:
-            if TransactionType(record.type) in [
+            if TransactionType(record.type) in {
                 TransactionType.OUTGOING_TX,
                 TransactionType.OUTGOING_TRADE,
                 TransactionType.INCOMING_TRADE,
                 TransactionType.OUTGOING_CLAWBACK,
                 TransactionType.INCOMING_CLAWBACK_SEND,
                 TransactionType.INCOMING_CLAWBACK_RECEIVE,
-            ]:
+            }:
                 await self.tx_store.tx_reorged(record)
 
         # Removes wallets that were created from a blockchain transaction which got reorged.
@@ -2500,7 +2501,7 @@ class WalletStateManager:
 
     async def get_wallet_for_asset_id(self, asset_id: str) -> Optional[WalletProtocol[Any]]:
         for wallet_id, wallet in self.wallets.items():
-            if wallet.type() in (WalletType.CAT, WalletType.CRCAT):
+            if wallet.type() in {WalletType.CAT, WalletType.CRCAT}:
                 assert isinstance(wallet, CATWallet)
                 if wallet.get_asset_id() == asset_id:
                     return wallet
@@ -2619,7 +2620,7 @@ class WalletStateManager:
     async def convert_puzzle_hash(self, wallet_id: uint32, puzzle_hash: bytes32) -> bytes32:
         wallet = self.wallets[wallet_id]
         # This should be general to wallets but for right now this is just for CATs so we'll add this if
-        if wallet.type() in (WalletType.CAT.value, WalletType.CRCAT.value):
+        if wallet.type() in {WalletType.CAT.value, WalletType.CRCAT.value}:
             assert isinstance(wallet, CATWallet)
             return await wallet.convert_puzzle_hash(puzzle_hash)
 

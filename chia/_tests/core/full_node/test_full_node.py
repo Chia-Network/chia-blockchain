@@ -7,10 +7,10 @@ import logging
 import random
 import time
 from collections.abc import Coroutine
-from typing import Optional
+from typing import Awaitable, Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element, PrivateKey
+from chia_rs import AugSchemeMPL, G2Element, PrivateKey, SpendBundleConditions
 from clvm.casts import int_to_bytes
 from packaging.version import Version
 
@@ -24,7 +24,7 @@ from chia._tests.util.misc import wallet_height_at_least
 from chia._tests.util.setup_nodes import SimulatorsAndWalletsServices
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from chia.consensus.block_body_validation import ForkInfo
-from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_blocks_multiprocessing
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
@@ -71,6 +71,16 @@ from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
+
+
+def test_pre_validation_result() -> None:
+    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True)
+    results = PreValidationResult(None, uint64(1), conds, uint32(0))
+    assert results.validated_signature is True
+
+    conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False)
+    results = PreValidationResult(None, uint64(1), conds, uint32(0))
+    assert results.validated_signature is False
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -430,17 +440,21 @@ class TestFullNodeBlockCompression:
                 for reorg_block in reog_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, reorg_block, fork_info=fork_info)
                 for i in range(1, height):
-                    futures = await pre_validate_blocks_multiprocessing(
-                        blockchain.constants,
-                        AugmentedBlockchain(blockchain),
-                        all_blocks[:i],
-                        blockchain.pool,
-                        {},
-                        ValidationState(ssi, diff, None),
-                        validate_signatures=False,
-                    )
+                    vs = ValidationState(ssi, diff, None)
+                    chain = AugmentedBlockchain(blockchain)
+                    futures: list[Awaitable[PreValidationResult]] = []
+                    for block in all_blocks[:i]:
+                        futures.append(
+                            await pre_validate_block(
+                                blockchain.constants,
+                                chain,
+                                block,
+                                blockchain.pool,
+                                None,
+                                vs,
+                            )
+                        )
                     results: list[PreValidationResult] = list(await asyncio.gather(*futures))
-                    assert results is not None
                     for result in results:
                         assert result.error is None
 
@@ -449,17 +463,14 @@ class TestFullNodeBlockCompression:
                 for block in all_blocks[:r]:
                     await _validate_and_add_block_no_error(blockchain, block, fork_info=fork_info)
                 for i in range(1, height):
-                    futures = await pre_validate_blocks_multiprocessing(
-                        blockchain.constants,
-                        AugmentedBlockchain(blockchain),
-                        all_blocks[:i],
-                        blockchain.pool,
-                        {},
-                        ValidationState(ssi, diff, None),
-                        validate_signatures=False,
-                    )
-                    results: list[PreValidationResult] = list(await asyncio.gather(*futures))
-                    assert results is not None
+                    vs = ValidationState(ssi, diff, None)
+                    chain = AugmentedBlockchain(blockchain)
+                    futures = []
+                    for block in all_blocks[:i]:
+                        futures.append(
+                            await pre_validate_block(blockchain.constants, chain, block, blockchain.pool, None, vs)
+                        )
+                    results = list(await asyncio.gather(*futures))
                     for result in results:
                         assert result.error is None
 
@@ -499,7 +510,7 @@ class TestFullNodeProtocol:
             if msg is not None and not (len(msg.peer_list) == 1):
                 return False
             peer = msg.peer_list[0]
-            return (peer.host == self_hostname or peer.host == "127.0.0.1") and peer.port == 1000
+            return (peer.host in {self_hostname, "127.0.0.1"}) and peer.port == 1000
 
         await time_out_assert_custom_interval(10, 1, have_msgs, True)
         full_node_1.full_node.full_node_peers.address_manager = AddressManager()
@@ -801,7 +812,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-2].reward_chain_block.get_unfinished().get_hash(),
         )
-        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
+        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))  # noqa: RUF006
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
 
         # Does not ignore equal weight
@@ -812,7 +823,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-1].reward_chain_block.get_unfinished().get_hash(),
         )
-        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
+        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))  # noqa: RUF006
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.anyio

@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Collection
 from dataclasses import dataclass, field
 from typing import Callable, Optional, Union
 
-from chia_rs import AugSchemeMPL, BLSCache, G1Element, SpendBundleConditions, compute_merkle_set_root
+from chia_rs import SpendBundleConditions, compute_merkle_set_root
 from chiabip158 import PyBIP158
 
 from chia.consensus.block_record import BlockRecord
@@ -20,7 +20,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
@@ -188,17 +187,12 @@ async def validate_block_body(
     height: uint32,
     conds: Optional[SpendBundleConditions],
     fork_info: ForkInfo,
-    bls_cache: Optional[BLSCache],
-    *,
-    validate_signature: bool = True,
-) -> tuple[Optional[Err], Optional[SpendBundleConditions]]:
+) -> Optional[Err]:
     """
     This assumes the header block has been completely validated.
     Validates the transactions and body of the block.
-    Returns None for the first value if everything validates correctly, or an
-        Err if something does not validate.
-    For the second value, returns a SpendBundleConditions only if validation
-        succeeded, and there are transactions. In other cases it returns None.
+    Returns None if everything validates correctly, or an Err if something does
+        not validate.
     conds is the result of running the generator with the previous generators
         refs. It must be set for transaction blocks and must be None for
         non-transaction blocks.
@@ -220,7 +214,7 @@ async def validate_block_body(
             or block.transactions_info is not None
             or block.transactions_generator is not None
         ):
-            return Err.NOT_BLOCK_BUT_HAS_DATA, None
+            return Err.NOT_BLOCK_BUT_HAS_DATA
 
         prev_tb: Optional[BlockRecord] = records.block_record(block.prev_header_hash)
         assert prev_tb is not None
@@ -229,16 +223,18 @@ async def validate_block_body(
             assert prev_tb is not None
         assert prev_tb.timestamp is not None
         if len(block.transactions_generator_ref_list) > 0:
-            return Err.NOT_BLOCK_BUT_HAS_DATA, None
+            return Err.NOT_BLOCK_BUT_HAS_DATA
 
         assert fork_info.peak_height == height - 1
 
-        return None, None  # This means the block is valid
+        assert conds is None
+        # This means the block is valid
+        return None
 
     # All checks below this point correspond to transaction blocks
     # 2. For blocks, foliage block, transactions info must not be empty
     if block.foliage_transaction_block is None or block.transactions_info is None:
-        return Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA, None
+        return Err.IS_TRANSACTION_BLOCK_BUT_NO_DATA
     assert block.foliage_transaction_block is not None
 
     # keeps track of the reward coins that need to be incorporated
@@ -246,11 +242,11 @@ async def validate_block_body(
 
     # 3. The transaction info hash in the Foliage block must match the transaction info
     if block.foliage_transaction_block.transactions_info_hash != std_hash(block.transactions_info):
-        return Err.INVALID_TRANSACTIONS_INFO_HASH, None
+        return Err.INVALID_TRANSACTIONS_INFO_HASH
 
     # 4. The foliage block hash in the foliage block must match the foliage block
     if block.foliage.foliage_transaction_block_hash != std_hash(block.foliage_transaction_block):
-        return Err.INVALID_FOLIAGE_BLOCK_HASH, None
+        return Err.INVALID_FOLIAGE_BLOCK_HASH
 
     # 5. The reward claims must be valid for the previous blocks, and current block fees
     # If height == 0, expected_reward_coins will be left empty
@@ -303,10 +299,10 @@ async def validate_block_body(
                 assert curr_b is not None
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
-        return Err.INVALID_REWARD_COINS, None
+        return Err.INVALID_REWARD_COINS
 
     if len(block.transactions_info.reward_claims_incorporated) != len(expected_reward_coins):
-        return Err.INVALID_REWARD_COINS, None
+        return Err.INVALID_REWARD_COINS
 
     removals: list[bytes32] = []
 
@@ -326,10 +322,10 @@ async def validate_block_body(
     #     the generator for this block (or zeroes if no generator)
     if block.transactions_generator is not None:
         if std_hash(bytes(block.transactions_generator)) != block.transactions_info.generator_root:
-            return Err.INVALID_TRANSACTIONS_GENERATOR_HASH, None
+            return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
     else:
         if block.transactions_info.generator_root != bytes([0] * 32):
-            return Err.INVALID_TRANSACTIONS_GENERATOR_HASH, None
+            return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
     # 8a. The generator_ref_list must be the hash of the serialized bytes of
     #     the generator ref list for this block (or 'one' bytes [0x01] if no generator)
@@ -337,20 +333,20 @@ async def validate_block_body(
     # 8c. The generator ref list must not point to a height >= this block's height
     if block.transactions_generator_ref_list in (None, []):
         if block.transactions_info.generator_refs_root != bytes([1] * 32):
-            return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
+            return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
     else:
         # If we have a generator reference list, we must have a generator
         if block.transactions_generator is None:
-            return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
+            return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
 
         # The generator_refs_root must be the hash of the concatenation of the list[uint32]
         generator_refs_hash = std_hash(b"".join([i.stream_to_bytes() for i in block.transactions_generator_ref_list]))
         if block.transactions_info.generator_refs_root != generator_refs_hash:
-            return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT, None
+            return Err.INVALID_TRANSACTIONS_GENERATOR_REFS_ROOT
         if len(block.transactions_generator_ref_list) > constants.MAX_GENERATOR_REF_LIST_SIZE:
-            return Err.TOO_MANY_GENERATOR_REFS, None
+            return Err.TOO_MANY_GENERATOR_REFS
         if any([index >= height for index in block.transactions_generator_ref_list]):
-            return Err.FUTURE_GENERATOR_REFS, None
+            return Err.FUTURE_GENERATOR_REFS
 
     if block.transactions_generator is not None:
         # Get List of names removed, puzzles hashes for removed coins and conditions created
@@ -363,10 +359,11 @@ async def validate_block_body(
             f"percent full: {round(100 * (cost / constants.MAX_BLOCK_COST_CLVM), 2)}%"
         )
         if cost > constants.MAX_BLOCK_COST_CLVM:
-            return Err.BLOCK_COST_EXCEEDS_MAX, None
+            return Err.BLOCK_COST_EXCEEDS_MAX
 
         # 8. The CLVM program must not return any errors
         assert conds is not None
+        assert conds.validated_signature
 
         for spend in conds.spends:
             removals.append(bytes32(spend.coin_id))
@@ -379,7 +376,7 @@ async def validate_block_body(
 
     # 9. Check that the correct cost is in the transactions info
     if block.transactions_info.cost != cost:
-        return Err.INVALID_BLOCK_COST, None
+        return Err.INVALID_BLOCK_COST
 
     additions_dic: dict[bytes32, Coin] = {}
     # 10. Check additions for max coin amount
@@ -388,10 +385,10 @@ async def validate_block_body(
     for coin, coin_name in additions + coinbase_additions:
         additions_dic[coin_name] = coin
         if coin.amount < 0:
-            return Err.COIN_AMOUNT_NEGATIVE, None
+            return Err.COIN_AMOUNT_NEGATIVE
 
         if coin.amount > constants.MAX_COIN_AMOUNT:
-            return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM, None
+            return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
     # 11. Validate addition and removal roots
     root_error = validate_block_merkle_roots(
@@ -400,8 +397,8 @@ async def validate_block_body(
         additions + coinbase_additions,
         removals,
     )
-    if root_error:
-        return root_error, None
+    if root_error is not None:
+        return root_error
 
     # 12. The additions and removals must result in the correct filter
     byte_array_tx: list[bytearray] = []
@@ -416,19 +413,19 @@ async def validate_block_body(
     filter_hash = std_hash(encoded_filter)
 
     if filter_hash != block.foliage_transaction_block.filter_hash:
-        return Err.INVALID_TRANSACTIONS_FILTER_HASH, None
+        return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
     # 13. Check for duplicate outputs in additions
     addition_counter = collections.Counter(coin_name for _, coin_name in additions + coinbase_additions)
     for count in addition_counter.values():
         if count > 1:
-            return Err.DUPLICATE_OUTPUT, None
+            return Err.DUPLICATE_OUTPUT
 
     # 14. Check for duplicate spends inside block
     removal_counter = collections.Counter(removals)
     for count in removal_counter.values():
         if count > 1:
-            return Err.DOUBLE_SPEND, None
+            return Err.DOUBLE_SPEND
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
     # The fork point is the last block in common between the peak chain and the chain of `block`
@@ -458,7 +455,7 @@ async def validate_block_body(
             if rem in fork_info.removals_since_fork:
                 # This coin was spent in the fork
                 log.error(f"Err.DOUBLE_SPEND_IN_FORK {fork_info.removals_since_fork[rem]}")
-                return Err.DOUBLE_SPEND_IN_FORK, None
+                return Err.DOUBLE_SPEND_IN_FORK
             removals_from_db.append(rem)
 
     unspent_records = await get_coin_records(removals_from_db)
@@ -472,7 +469,7 @@ async def validate_block_body(
             # (We ignore all coins confirmed after fork)
             if unspent.spent == 1 and unspent.spent_block_index <= fork_info.fork_height:
                 # Check for coins spent in an ancestor block
-                return Err.DOUBLE_SPEND, None
+                return Err.DOUBLE_SPEND
             removal_coin_records[unspent.name] = unspent
         else:
             look_in_fork.append(unspent.name)
@@ -491,7 +488,7 @@ async def validate_block_body(
         if rem not in fork_info.additions_since_fork:
             # Check for spending a coin that does not exist in this fork
             log.error(f"Err.UNKNOWN_UNSPENT: COIN ID: {rem} fork_info: {fork_info}")
-            return Err.UNKNOWN_UNSPENT, None
+            return Err.UNKNOWN_UNSPENT
         addition: ForkAdd = fork_info.additions_since_fork[rem]
         new_coin_record: CoinRecord = CoinRecord(
             addition.coin,
@@ -512,7 +509,7 @@ async def validate_block_body(
 
     # 16. Check that the total coin amount for added is <= removed
     if removed < added:
-        return Err.MINTING_COIN, None
+        return Err.MINTING_COIN
 
     fees = removed - added
     assert fees >= 0
@@ -523,20 +520,20 @@ async def validate_block_body(
 
     # 17. Check that the assert fee sum <= fees, and that each reserved fee is non-negative
     if fees < assert_fee_sum:
-        return Err.RESERVE_FEE_CONDITION_FAILED, None
+        return Err.RESERVE_FEE_CONDITION_FAILED
 
     # 18. Check that the fee amount + farmer reward < maximum coin amount
     if fees + calculate_base_farmer_reward(height) > constants.MAX_COIN_AMOUNT:
-        return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM, None
+        return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
     # 19. Check that the computed fees are equal to the fees in the block header
     if block.transactions_info.fees != fees:
-        return Err.INVALID_BLOCK_FEE_AMOUNT, None
+        return Err.INVALID_BLOCK_FEE_AMOUNT
 
     # 20. Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
     for unspent in removal_coin_records.values():
         if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name]:
-            return Err.WRONG_PUZZLE_HASH, None
+            return Err.WRONG_PUZZLE_HASH
 
     # 21. Verify conditions
     # verify absolute/relative height/time conditions
@@ -548,30 +545,10 @@ async def validate_block_body(
             prev_transaction_block_timestamp,
         )
         if error is not None:
-            return error, None
+            return error
 
-    # create hash_key list for aggsig check
-    pairs_pks: list[G1Element] = []
-    pairs_msgs: list[bytes] = []
-    if conds is not None:
-        pairs_pks, pairs_msgs = pkm_pairs(conds, constants.AGG_SIG_ME_ADDITIONAL_DATA)
-
-    # 22. Verify aggregated signature
-    # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
+    # 22. Verify aggregated signature is done in pre-validation
     if not block.transactions_info.aggregated_signature:
-        return Err.BAD_AGGREGATE_SIGNATURE, None
+        return Err.BAD_AGGREGATE_SIGNATURE
 
-    # The pairing cache is not useful while syncing as each pairing is seen
-    # only once, so the extra effort of populating it is not justified.
-    # However, we force caching of pairings just for unfinished blocks
-    # as the cache is likely to be useful when validating the corresponding
-    # finished blocks later.
-    if validate_signature:
-        if bls_cache is None:
-            if not AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
-                return Err.BAD_AGGREGATE_SIGNATURE, None
-        else:
-            if not bls_cache.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature):
-                return Err.BAD_AGGREGATE_SIGNATURE, None
-
-    return None, conds
+    return None

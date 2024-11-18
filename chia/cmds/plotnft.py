@@ -76,7 +76,7 @@ def create_cmd(
     if pool_url is not None and state.lower() == "local":
         print(f"  pool_url argument [{pool_url}] is not allowed when creating in 'local' state")
         return
-    if pool_url in [None, ""] and state.lower() == "pool":
+    if pool_url in {None, ""} and state.lower() == "pool":
         print("  pool_url argument (-u) is required for pool starting state")
         return
     valid_initial_states = {"pool": "FARMING_TO_POOL", "local": "SELF_POOLING"}

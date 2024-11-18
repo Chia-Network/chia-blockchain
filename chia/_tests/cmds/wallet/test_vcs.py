@@ -194,7 +194,6 @@ def test_vcs_add_proof_reveal(capsys: object, get_test_cli_clients: tuple[TestRp
     class VcsAddProofRevealRpcClient(TestWalletRpcClient):
         async def vc_add_proofs(self, proofs: dict[str, Any]) -> None:
             self.add_to_log("vc_add_proofs", (proofs,))
-            return None
 
     inst_rpc_client = VcsAddProofRevealRpcClient()
     test_rpc_clients.wallet_rpc_client = inst_rpc_client
@@ -205,7 +204,7 @@ def test_vcs_add_proof_reveal(capsys: object, get_test_cli_clients: tuple[TestRp
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
 
     root_assert_list = ["Proof Hash: 5fdf0dfd1fddc56c0f9f68fdb31390721625321ce79f5606b3d2c6ddebbf2a79"]
-    run_cli_command_and_assert(capsys, root_dir, command_args + ["-r"], root_assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, "-r"], root_assert_list)
 
     expected_calls: logType = {"vc_add_proofs": [({new_proof: "1"},)]}
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
@@ -279,8 +278,8 @@ def test_vcs_revoke(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
     ]
     # these are various things that should be in the output
     assert_list = ["VC successfully revoked!", f"Transaction {get_bytes32(2).hex()}"]
-    run_cli_command_and_assert(capsys, root_dir, command_args + [f"-p{parent_id.hex()}"], assert_list)
-    run_cli_command_and_assert(capsys, root_dir, command_args + [f"-l{vc_id.hex()}"], assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-p{parent_id.hex()}"], assert_list)
+    run_cli_command_and_assert(capsys, root_dir, [*command_args, f"-l{vc_id.hex()}"], assert_list)
     expected_calls: logType = {
         "vc_get": [(vc_id,)],
         "vc_revoke": [

@@ -219,12 +219,12 @@ class TestPoolPuzzles(TestCase):
         )
 
         # ABSORB A NON EXISTENT REWARD (Negative test)
-        last_coinsol: CoinSpend = list(
+        last_coinsol: CoinSpend = next(
             filter(
                 lambda e: e.coin.amount == START_AMOUNT,
                 coin_sols,
             )
-        )[0]
+        )
         coin_sols: list[CoinSpend] = create_absorb_spend(
             last_coinsol,
             pool_state,
@@ -235,12 +235,12 @@ class TestPoolPuzzles(TestCase):
             DELAY_PH,  # height
         )
         # pick the larger coin, otherwise we'll fail with Err.MINTING_COIN
-        singleton_coinsol: CoinSpend = list(
+        singleton_coinsol: CoinSpend = next(
             filter(
                 lambda e: e.coin.amount != START_AMOUNT,
                 coin_sols,
             )
-        )[0]
+        )
         # Spend it and hope it fails!
         with pytest.raises(
             BadSpendBundleError, match="condition validation failure Err.ASSERT_ANNOUNCE_CONSUMED_FAILED"
@@ -348,12 +348,12 @@ class TestPoolPuzzles(TestCase):
         # LEAVE THE WAITING ROOM
         time = CoinTimestamp(20000000, 10000)
         # find the singleton
-        singleton_coinsol: CoinSpend = list(
+        singleton_coinsol: CoinSpend = next(
             filter(
                 lambda e: e.coin.amount == START_AMOUNT,
                 coin_sols,
             )
-        )[0]
+        )
         singleton: Coin = get_most_recent_singleton_coin_from_coin_spend(singleton_coinsol)
         # get the relevant coin solution
         return_coinsol, _ = create_travel_spend(

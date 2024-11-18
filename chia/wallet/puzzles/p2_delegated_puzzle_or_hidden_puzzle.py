@@ -74,7 +74,7 @@ from .p2_conditions import puzzle_for_conditions
 
 DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 
-DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(x)` always fails
+DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(=)` always fails
 
 MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clsp")
 
