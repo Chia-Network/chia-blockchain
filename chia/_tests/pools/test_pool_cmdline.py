@@ -368,14 +368,13 @@ async def test_plotnft_cli_show_with_farmer(
     )
 
     #  Need to run the farmer to make further tests
+    root_path = wallet_environments.environments[0].node.root_path
     async with setup_farmer(
         b_tools=wallet_environments.full_node.bt,
-        root_path=wallet_environments.environments[0].node.root_path,
+        root_path=root_path,
         self_hostname=self_hostname,
         consensus_constants=wallet_environments.full_node.bt.constants,
     ) as farmer:
-        root_path = wallet_environments.environments[0].node.root_path
-
         assert farmer.rpc_server and farmer.rpc_server.webserver
         context = {
             "root_path": root_path,
@@ -676,6 +675,7 @@ async def test_plotnft_cli_join(
     await verify_pool_state(wallet_rpc, wallet_id, PoolSingletonState.FARMING_TO_POOL)
 
     # Join the same pool test - code not ready yet for test
+    # Needs PR #18822
     # with pytest.raises(CliRpcConnectionError, match="already joined"):
     #     await JoinPlotNFTCMD(
     #         rpc_info=NeedsWalletRPC(
