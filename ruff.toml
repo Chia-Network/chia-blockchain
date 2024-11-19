@@ -10,6 +10,8 @@ select = [
 	"RUF", # Ruff specific
 	# Flake8 core
 	"F",
+	# Flake8 async
+	"ASYNC",
 	"E",
 	"W",
 ]
@@ -44,6 +46,12 @@ ignore = [
     "PLW2901", # redefined-loop-name
     "PLW1514", # unspecified-encoding
     "PLW0603", # global-statement
+
+    # Flake8 async
+    # Should probably fix these
+    "ASYNC230", # blocking-open-call-in-async-function
+    # Should probably fix these after dealing with shielding for anyio
+    "ASYNC109", # async-function-with-timeout
 
     # Ruff Specific
 

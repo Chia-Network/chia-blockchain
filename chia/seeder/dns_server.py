@@ -85,7 +85,8 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
 
     async def respond(self) -> None:
         log.info("UDP DNS responder started.")
-        while self.transport is None:  # we wait for the transport to be set.
+        # TODO: switch to event driven code
+        while self.transport is None:  # we wait for the transport to be set.  # noqa: ASYNC110
             await asyncio.sleep(0.1)
         while not self.transport.is_closing():
             try:

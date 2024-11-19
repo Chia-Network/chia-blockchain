@@ -10,7 +10,6 @@ import signal
 import ssl
 import subprocess
 import sys
-import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
@@ -829,7 +828,7 @@ class WebSocketServer:
                     if word in new_data:
                         return None
             else:
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
 
     async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
         file_path = config["out_file"]
