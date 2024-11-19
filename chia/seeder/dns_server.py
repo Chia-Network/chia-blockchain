@@ -439,7 +439,6 @@ class DNSServer:
                                     new_reliable_peers.append(ip)
                                 except ValueError:
                                     pass
-                    continue
 
         if len(new_reliable_peers) == 0:
             log.warning("No reliable peers found in database, waiting for db to be populated.")
