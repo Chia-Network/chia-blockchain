@@ -16,6 +16,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.wallet.puzzles.custody.custody_architecture import Puzzle
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE_HASH, SINGLETON_TOP_LAYER_MOD_HASH
 
 BLS_MEMBER_MOD = load_clvm_maybe_recompile(
     "bls_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
@@ -38,6 +39,10 @@ SECPR1_PUZZLE_ASSERT_MEMBER_MOD = load_clvm_maybe_recompile(
 
 SECPK1_PUZZLE_ASSERT_MEMBER_MOD = load_clvm_maybe_recompile(
     "secp256k1_member_puzzle_assert.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
+)
+
+SINGLETON_MEMBER_MOD = load_clvm_maybe_recompile(
+    "singleton_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
 )
 
 
@@ -152,3 +157,20 @@ class SECPK1PuzzleAssertMember(SECPK1Member):
             s = _s
         sig = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
         return Program.to([my_puzzle_hash, sig])
+
+
+@dataclass(frozen=True)
+class SingletonMember(Puzzle):
+    singleton_id: bytes32
+    singleton_mod_hash = SINGLETON_TOP_LAYER_MOD_HASH
+    singleton_launcher_hash = SINGLETON_LAUNCHER_PUZZLE_HASH
+
+    def memo(self, nonce: int) -> Program:
+        return Program.to(0)
+
+    def puzzle(self, nonce: int) -> Program:
+        singleton_struct = (self.singleton_mod_hash, (self.singleton_id, self.singleton_launcher_hash))
+        return SINGLETON_MEMBER_MOD.curry(singleton_struct)
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()
