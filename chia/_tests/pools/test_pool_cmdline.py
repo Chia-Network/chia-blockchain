@@ -14,7 +14,7 @@ from chia._tests.cmds.cmd_test_utils import TestWalletRpcClient
 from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletStateTransition, WalletTestFramework
 from chia._tests.pools.test_pool_rpc import manage_temporary_pool_plot
-from chia._tests.util.misc import Marks, datacases
+from chia._tests.util.misc import Marks, boolean_datacases, datacases
 from chia.cmds.cmd_classes import NeedsWalletRPC, WalletClientInfo
 from chia.cmds.param_types import CliAddress
 from chia.cmds.plotnft import (
@@ -148,9 +148,12 @@ async def create_new_plotnft(
     ],
     indirect=True,
 )
+@boolean_datacases(name="self_pool", true="local", false="pool")
 @pytest.mark.anyio
 async def test_plotnft_cli_create(
     wallet_environments: WalletTestFramework,
+    self_pool: bool,
+    mocker: MockerFixture,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -164,13 +167,32 @@ async def test_plotnft_cli_create(
         wallet_environments.tx_config.reuse_puzhash
     )
 
+    state = "local" if self_pool else "pool"
+    pool_url = None if self_pool else "http://pool.example.com"
+
+    if not self_pool:
+        pool_response_dict = {
+            "name": "Pool Name",
+            "description": "Pool Description",
+            "logo_url": "https://subdomain.pool-domain.tld/path/to/logo.svg",
+            "target_puzzle_hash": "344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58",
+            "fee": "0.01",
+            "protocol_version": 1,
+            "relative_lock_height": 5,
+            "minimum_difficulty": 1,
+            "authentication_token_timeout": 5,
+        }
+
+        mock_get = mocker.patch("aiohttp.ClientSession.get")
+        mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
+
     await CreatePlotNFTCMD(
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),
-        state="local",
+        state=state,
         dont_prompt=True,
-        pool_url=None,
+        pool_url=pool_url,
     ).run()
 
     await wallet_environments.process_pending_states(
@@ -1002,3 +1024,16 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
     mocker.patch.object(test_rpc_client, "get_wallets", side_effect=ValueError("This is a test"))
     with pytest.raises(CliRpcConnectionError, match="ValueError: This is a test"):
         await wallet_id_lookup_and_check(cast(WalletRpcClient, test_rpc_client), 1)
+
+    with pytest.raises(ValueError, match="Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state"):
+        from chia.cmds.plotnft_funcs import create
+
+        await create(
+            wallet_info=WalletClientInfo(
+                client=cast(WalletRpcClient, TestWalletRpcClient()), fingerprint=0, config=dict()
+            ),
+            pool_url=None,
+            state="Invalid State",
+            fee=uint64(0),
+            prompt=False,
+        )
