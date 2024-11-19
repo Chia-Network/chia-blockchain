@@ -16,7 +16,7 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 # from subprocess.pyi
-_FILE = Union[None, int, IO[Any]]
+_FILE = Union[int, IO[Any], None]
 
 
 if TYPE_CHECKING:
