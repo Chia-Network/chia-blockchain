@@ -45,6 +45,10 @@ SINGLETON_MEMBER_MOD = load_clvm_maybe_recompile(
     "singleton_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
 )
 
+FIXED_PUZZLE_MEMBER_MOD = load_clvm_maybe_recompile(
+    "fixed_puzzle_member.clsp", package_or_requirement="chia.wallet.puzzles.custody.member_puzzles"
+)
+
 
 @dataclass(frozen=True)
 class BLSMember(Puzzle):
@@ -171,6 +175,20 @@ class SingletonMember(Puzzle):
     def puzzle(self, nonce: int) -> Program:
         singleton_struct = (self.singleton_mod_hash, (self.singleton_id, self.singleton_launcher_hash))
         return SINGLETON_MEMBER_MOD.curry(singleton_struct)
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return self.puzzle(nonce).get_tree_hash()
+
+
+@dataclass(frozen=True)
+class FixedPuzzleMember(Puzzle):
+    fixed_puzzle_hash: bytes32
+
+    def memo(self, nonce: int) -> Program:
+        return Program.to(0)
+
+    def puzzle(self, nonce: int) -> Program:
+        return FIXED_PUZZLE_MEMBER_MOD.curry(self.fixed_puzzle_hash)
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()

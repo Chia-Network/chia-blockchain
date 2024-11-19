@@ -19,6 +19,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.conditions import CreateCoinAnnouncement
@@ -33,6 +34,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
 )
 from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import (
     BLSMember,
+    FixedPuzzleMember,
     PasskeyMember,
     SECPK1Member,
     SECPK1PuzzleAssertMember,
@@ -711,3 +713,103 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         await sim.rewind(block_height)
+
+
+@pytest.mark.anyio
+async def test__member(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        delegated_puzzle = Program.to(1)
+        delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
+
+        bls_puzzle = PuzzleWithRestrictions(0, [], FixedPuzzleMember(delegated_puzzle_hash))
+        memo = PuzzleHint(
+            bls_puzzle.puzzle.puzzle_hash(0),
+            bls_puzzle.puzzle.memo(0),
+        )
+
+        assert bls_puzzle.memo() == Program.to(
+            (
+                bls_puzzle.spec_namespace,
+                [
+                    bls_puzzle.nonce,
+                    [],
+                    0,
+                    memo.to_program(),
+                ],
+            )
+        )
+
+        # Farm and find coin
+        await sim.farm_block(bls_puzzle.puzzle_hash())
+        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.puzzle_hash()], include_spent_coins=False))[
+            0
+        ].coin
+        block_height = sim.block_height
+
+        # Create an announcements to be asserted in the delegated puzzle
+        announcement = CreateCoinAnnouncement(msg=b"foo", coin_id=coin.name())
+
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    bls_puzzle.puzzle_reveal(),
+                    bls_puzzle.solve(
+                        [],
+                        [],
+                        Program.to(0),
+                        DelegatedPuzzleAndSolution(
+                            Program.to(0),  # not the fixed puzzle
+                            Program.to(
+                                [
+                                    announcement.to_program(),
+                                    announcement.corresponding_assertion().to_program(),
+                                ]
+                            ),
+                        ),
+                    ),
+                )
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "BLSMember spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+        await sim.farm_block()
+        await sim.rewind(block_height)
+
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    bls_puzzle.puzzle_reveal(),
+                    bls_puzzle.solve(
+                        [],
+                        [],
+                        Program.to(0),
+                        DelegatedPuzzleAndSolution(
+                            delegated_puzzle,  # the fixed puzzle
+                            Program.to(
+                                [
+                                    announcement.to_program(),
+                                    announcement.corresponding_assertion().to_program(),
+                                ]
+                            ),
+                        ),
+                    ),
+                )
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "BLSMember spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
