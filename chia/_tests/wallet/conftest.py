@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import AsyncExitStack
 from dataclasses import replace
@@ -144,6 +145,25 @@ def tx_config(request: Any) -> TXConfig:
     return replace(DEFAULT_TX_CONFIG, reuse_puzhash=request.param)
 
 
+def new_action_scope_wrapper(func: Any) -> Any:
+    @contextlib.asynccontextmanager
+    async def wrapped_new_action_scope(self: WalletStateManager, *args: Any, **kwargs: Any) -> Any:
+        # Take note of the number of puzzle hashes if we're supposed to be reusing
+        ph_indexes: dict[uint32, int] = {}
+        for wallet_id in self.wallets:
+            ph_indexes[wallet_id] = await self.puzzle_store.get_unused_count(wallet_id)
+
+        async with func(self, *args, **kwargs) as action_scope:
+            yield action_scope
+
+        # Finally, check that the number of puzzle hashes did or did not increase by the specified amount
+        if action_scope.config.tx_config.reuse_puzhash:
+            for wallet_id, ph_index in zip(self.wallets, ph_indexes):
+                assert ph_indexes[wallet_id] == (await self.puzzle_store.get_unused_count(wallet_id))
+
+    return wrapped_new_action_scope
+
+
 # This fixture automatically creates 4 parametrized tests trusted/untrusted x reuse/new derivations
 # These parameterizations can be skipped by manually specifying "trusted" or "reuse puzhash" to the fixture
 @pytest.fixture(scope="function")
@@ -187,6 +207,10 @@ async def wallet_environments(
                     **config_overrides,
                 }
                 service._node.wallet_state_manager.config = service._node.config
+                # mypy doesn't like monkeypatching (which is fair enough)
+                service._node.wallet_state_manager.new_action_scope = new_action_scope_wrapper(  # type: ignore[method-assign]
+                    service._node.wallet_state_manager.new_action_scope
+                )
                 # Shorten the 10 seconds default value
                 service._node.coin_state_retry_seconds = 2
                 await service._node.server.start_client(

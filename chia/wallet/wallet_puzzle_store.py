@@ -363,3 +363,18 @@ class WalletPuzzleStore:
         except KeyError:
             pass
         self.last_derivation_index = None
+
+    async def get_unused_count(self, wallet_id: uint32) -> int:
+        """
+        Returns a count of unused derivation indexes
+        """
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn,
+                "SELECT COUNT(*) FROM derivation_paths WHERE wallet_id=? AND used=1",
+                (wallet_id,),
+            )
+            row_count = 0 if row is None else row[0]
+
+        return row_count

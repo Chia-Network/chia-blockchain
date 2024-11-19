@@ -2966,7 +2966,7 @@ async def test_combine_coins(wallet_environments: WalletTestFramework) -> None:
     async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
         await cat_wallet.generate_signed_transaction(
             [BIG_COIN_AMOUNT, SMALL_COIN_AMOUNT, REALLY_SMALL_COIN_AMOUNT],
-            [await env.xch_wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash)] * 3,
+            [await env.xch_wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)] * 3,
             action_scope,
         )
 

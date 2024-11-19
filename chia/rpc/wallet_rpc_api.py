@@ -1256,7 +1256,7 @@ class WalletRpcApi:
             primary_output_amount = uint64(primary_output_amount - request.fee)
             await wallet.generate_signed_transaction(
                 primary_output_amount,
-                await wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash),
+                await wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash),
                 action_scope,
                 request.fee,
                 set(coins),
@@ -1266,7 +1266,7 @@ class WalletRpcApi:
             assert isinstance(wallet, CATWallet)
             await wallet.generate_signed_transaction(
                 [primary_output_amount],
-                [await wallet.get_puzzle_hash(new=action_scope.config.tx_config.reuse_puzhash)],
+                [await wallet.get_puzzle_hash(new=not action_scope.config.tx_config.reuse_puzhash)],
                 action_scope,
                 request.fee,
                 coins=set(coins),
