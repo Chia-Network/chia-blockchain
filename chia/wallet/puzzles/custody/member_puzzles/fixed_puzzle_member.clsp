@@ -1,0 +1,6 @@
+(mod (FIXED_PUZZLE_HASH Delegated_Puzzle_Hash)
+  (if (= FIXED_PUZZLE_HASH Delegated_Puzzle_Hash)
+      ()
+      (x)
+  )
+)

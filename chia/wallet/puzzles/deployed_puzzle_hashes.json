@@ -33,6 +33,7 @@
   "enforce_dpuz_wrappers": "1f94aa2381c1c02fec90687c0b045ef3cad4b458f8eac5bd90695b4d89624f09",
   "everything_with_signature": "1720d13250a7c16988eaf530331cefa9dd57a76b2c82236bec8bbbff91499b89",
   "exigent_metadata_layer": "d5fd32e069fda83e230ccd8f6a7c4f652231aed5c755514b3d996cbeff4182b8",
+  "fixed_puzzle_member": "34ede3eadc52ed750e405f2b9dea9891506547f651290bb606356d997c64f219",
   "flag_proofs_checker": "fe2e3c631562fbb9be095297f762bf573705a0197164e9361ad5d50e045ba241",
   "force_1_of_2_w_restricted_variable": "4f7bc8f30deb6dad75a1e29ceacb67fd0fe0eda79173e45295ff2cfbb8de53c6",
   "force_assert_coin_announcement": "ca0daca027e5ebd4a61fad7e32cfe1e984ad5b561c2fc08dea30accf3a191fab",
