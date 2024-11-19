@@ -306,3 +306,39 @@ async def test_db_processing(
     std_query_response = await make_dns_query(use_tcp, target_address, port, query)
     assert std_query_response.rcode() == dns.rcode.NOERROR
     assert_standard_results(std_query_response.answer, request_type, num_ns)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "use_tcp, target_address, request_type",
+    [
+        [False, "127.0.0.1", dns.rdatatype.A],
+        [False, "127.0.0.1", dns.rdatatype.AAAA],
+        [True, "127.0.0.1", dns.rdatatype.A],
+        [True, "127.0.0.1", dns.rdatatype.AAAA],
+        [False, "::1", dns.rdatatype.A],
+        [False, "::1", dns.rdatatype.AAAA],
+        [True, "::1", dns.rdatatype.A],
+        [True, "::1", dns.rdatatype.AAAA],
+    ],
+)
+async def test_static_peers(
+    seeder_service: DNSServer,
+    database_peers: dict[str, PeerReliability],
+    use_tcp: bool,
+    target_address: str,
+    request_type: dns.rdatatype.RdataType,
+) -> None:
+    port = get_dns_port(seeder_service, False, target_address)
+    domain = seeder_service.domain  # default is: seeder.example.com
+
+    seeder_service.config["static_peers"] = ["1.2.3.4", "2001:0DB8::5"]
+    await seeder_service.refresh_reliable_peers()
+
+    query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
+    std_query_response = await make_dns_query(False, target_address, port, query)
+    assert std_query_response.rcode() == dns.rcode.NOERROR
+    assert len(std_query_response.answer) == 1  # only 1 kind of answer
+    answer = std_query_response.answer[0]
+    assert answer.rdtype == request_type
+    assert len(answer) == 1
