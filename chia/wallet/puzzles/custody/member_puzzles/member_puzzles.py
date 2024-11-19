@@ -162,12 +162,14 @@ class SECPK1PuzzleAssertMember(SECPK1Member):
 @dataclass(frozen=True)
 class SingletonMember(Puzzle):
     singleton_id: bytes32
+    singleton_mod_hash = SINGLETON_TOP_LAYER_MOD_HASH
+    singleton_launcher_hash = SINGLETON_LAUNCHER_PUZZLE_HASH
 
     def memo(self, nonce: int) -> Program:
         return Program.to(0)
 
     def puzzle(self, nonce: int) -> Program:
-        singleton_struct = (SINGLETON_TOP_LAYER_MOD_HASH, (self.singleton_id, SINGLETON_LAUNCHER_PUZZLE_HASH))
+        singleton_struct = (self.singleton_mod_hash, (self.singleton_id, self.singleton_launcher_hash))
         return SINGLETON_MEMBER_MOD.curry(singleton_struct)
 
     def puzzle_hash(self, nonce: int) -> bytes32:
