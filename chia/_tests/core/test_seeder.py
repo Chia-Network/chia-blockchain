@@ -17,7 +17,6 @@ from dns.rdtypes.IN.A import A
 from dns.rdtypes.IN.AAAA import AAAA
 from dns.rrset import RRset
 
-from chia._tests.util.time_out_assert import time_out_assert
 from chia.seeder.dns_server import DNSServer
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.util.ints import uint32, uint64
@@ -281,7 +280,6 @@ async def test_dns_queries(
             await make_dns_query(use_tcp, target_address, port, e_query)
 
 
-@pytest.mark.skip(reason="Flaky test with fixes in progress")
 @pytest.mark.anyio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_db_processing(
@@ -306,8 +304,9 @@ async def test_db_processing(
     # Write these new peers to db.
     await crawl_store.load_reliable_peers_to_db()
 
-    # wait for the new db to be read.
-    await time_out_assert(30, lambda: seeder_service.reliable_peers_v4 != [])
+    # Force a DB reload and ensure it loaded the peers
+    await seeder_service.refresh_reliable_peers()
+    assert seeder_service.reliable_peers_v4 != []
 
     # now we check that the db peers are being used.
     query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
