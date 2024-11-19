@@ -602,10 +602,9 @@ class FullNode:
         for task in self._segment_task_list[:]:
             if task.done():
                 self._segment_task_list.remove(task)
-            try:
-                task.cancel()
-            except Exception as e:
-                self.log.warning(f"failed to cancel segment task {e}")
+            else:
+                cancel_task_safe(task=task, log=self.log)
+
         try:
             peer_info = peer.get_peer_logging()
             if start_height > 0:
