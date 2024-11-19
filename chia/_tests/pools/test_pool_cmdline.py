@@ -1016,24 +1016,44 @@ async def test_plotnft_cli_get_login_link(
 
 @pytest.mark.anyio
 async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: ConsensusMode) -> None:
-    from chia.cmds.plotnft_funcs import wallet_id_lookup_and_check
+    from chia.cmds.plotnft_funcs import create, wallet_id_lookup_and_check
 
     test_rpc_client = TestWalletRpcClient()
+
+    with pytest.raises(CliRpcConnectionError, match="Pool URLs must be HTTPS on mainnet"):
+        await create(
+            wallet_info=WalletClientInfo(
+                client=cast(WalletRpcClient, test_rpc_client),
+                fingerprint=0,
+                config={"selected_network": "mainnet"},
+            ),
+            pool_url="http://pool.example.com",
+            state="FARMING_TO_POOL",
+            fee=uint64(0),
+            prompt=False,
+        )
+
+    with pytest.raises(ValueError, match="Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state"):
+        await create(
+            wallet_info=WalletClientInfo(client=cast(WalletRpcClient, test_rpc_client), fingerprint=0, config=dict()),
+            pool_url=None,
+            state="Invalid State",
+            fee=uint64(0),
+            prompt=False,
+        )
 
     # Test fall-through raise in wallet_id_lookup_and_check
     mocker.patch.object(test_rpc_client, "get_wallets", side_effect=ValueError("This is a test"))
     with pytest.raises(CliRpcConnectionError, match="ValueError: This is a test"):
         await wallet_id_lookup_and_check(cast(WalletRpcClient, test_rpc_client), 1)
 
-    with pytest.raises(ValueError, match="Plot NFT must be created in SELF_POOLING or FARMING_TO_POOL state"):
-        from chia.cmds.plotnft_funcs import create
-
+    # Test fall-through raise in create
+    mocker.patch.object(test_rpc_client, "create_new_pool_wallet", side_effect=ValueError("Injected error"))
+    with pytest.raises(CliRpcConnectionError, match="Error creating plot NFT: Injected error"):
         await create(
-            wallet_info=WalletClientInfo(
-                client=cast(WalletRpcClient, TestWalletRpcClient()), fingerprint=0, config=dict()
-            ),
+            wallet_info=WalletClientInfo(client=cast(WalletRpcClient, test_rpc_client), fingerprint=0, config=dict()),
             pool_url=None,
-            state="Invalid State",
+            state="SELF_POOLING",
             fee=uint64(0),
             prompt=False,
         )

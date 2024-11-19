@@ -110,7 +110,9 @@ async def create(
                 print(transaction_status_msg(wallet_info.fingerprint, tx_record.name))
                 return None
     except Exception as e:
-        print(f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with:  chia start -r farmer")
+        raise CliRpcConnectionError(
+            f"Error creating plot NFT: {e}\n    Please start both farmer and wallet with: chia start -r farmer"
+        )
 
 
 async def pprint_pool_wallet_state(

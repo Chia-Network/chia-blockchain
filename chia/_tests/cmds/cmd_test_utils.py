@@ -29,7 +29,7 @@ from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.ints import uint8, uint16, uint32, uint64
-from chia.wallet.conditions import ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes
 from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
@@ -105,6 +105,26 @@ class TestWalletRpcClient(TestRpcClient):
         else:
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
         return [{"id": 1, "type": w_type}]
+
+    async def create_new_pool_wallet(
+        self,
+        target_puzzlehash: Optional[bytes32],
+        pool_url: Optional[str],
+        relative_lock_height: uint32,
+        backup_host: str,
+        mode: str,
+        state: str,
+        fee: uint64,
+        p2_singleton_delay_time: Optional[uint64] = None,
+        p2_singleton_delayed_ph: Optional[bytes32] = None,
+        extra_conditions: tuple[Condition, ...] = tuple(),
+        timelock_info: ConditionValidTimes = ConditionValidTimes(),
+    ) -> TransactionRecord:
+        self.add_to_log(
+            "create_new_pool_wallet", (target_puzzlehash, pool_url, relative_lock_height, backup_host, mode)
+        )
+
+        return await self.get_transaction(bytes32([1] * 32))
 
     async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
         self.add_to_log("get_transaction", (transaction_id,))
