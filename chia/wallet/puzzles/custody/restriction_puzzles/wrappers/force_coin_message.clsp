@@ -12,7 +12,13 @@
 
   (defun check_conditions (conditions)
     ; If we run out of conditions without finding an assertion, this will raise with "path into atom"
-    (if (and (= (f (f conditions)) SEND_MESSAGE) (logand (f (r (f conditions))) 0x07))  ; 0x07 == 00000111
+    (if (and
+          (= (f (f conditions)) SEND_MESSAGE)
+          ; This message filter will make sure that the last three bits of the bitmask are set.
+          ; The reason we do this is to make sure that there will be a RECIPIENT whose coin ID must be spent
+          ; in order for this spend to happen.
+          (logand (f (r (f conditions))) 0x07)  ; 0x07 == 00 000 111
+        )
         conditions
         (c (f conditions) (check_conditions (r conditions)))
     )
