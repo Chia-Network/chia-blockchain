@@ -412,7 +412,7 @@ class DNSServer:
         if self.crawl_store is None:
             return
         new_reliable_peers: list[str] = []
-        while True:
+        while not self.shutdown_event.is_set() and self.crawl_store is not None:
             try:
                 new_reliable_peers = await self.crawl_store.get_good_peers()
             except Exception as e:
