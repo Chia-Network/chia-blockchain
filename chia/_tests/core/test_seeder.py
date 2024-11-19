@@ -5,16 +5,17 @@ from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address
 from socket import AF_INET, AF_INET6, SOCK_STREAM
 from typing import cast
+from unittest.mock import AsyncMock
 
 import dns
-from unittest.mock import AsyncMock
+import pytest
+from dns.name import from_text
+from dns.rdataclass import IN
+from dns.rdatatype import AAAA as AAAA_TYPE
+from dns.rdatatype import A as A_TYPE
 from dns.rdtypes.IN.A import A
 from dns.rdtypes.IN.AAAA import AAAA
 from dns.rrset import RRset
-from dns.name import from_text
-from dns.rdataclass import IN
-from dns.rdatatype import A as A_TYPE, AAAA as AAAA_TYPE
-import pytest
 
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.seeder.dns_server import DNSServer
