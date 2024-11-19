@@ -408,7 +408,9 @@ class DNSServer:
             sleep_interval = min(15, sleep_interval + 1)
             await asyncio.sleep(sleep_interval * 60)
 
-    async def refresh_reliable_peers(self):
+    async def refresh_reliable_peers(self) -> None:
+        if self.crawl_store is None:
+            return
         try:
             new_reliable_peers = await self.crawl_store.get_good_peers()
         except Exception as e:

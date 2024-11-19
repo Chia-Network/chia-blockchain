@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address
 from socket import AF_INET, AF_INET6, SOCK_STREAM
-from typing import cast
+from typing import Optional, Union, cast
 from unittest.mock import AsyncMock
 
 import dns
@@ -354,20 +354,24 @@ async def test_static_peers(
     assert answer[0].to_text() == expected
 
 
-def get_mock_resolver():
+def get_mock_resolver() -> AsyncMock:
     # Mock IPv4 response
     mock_rrset_a = RRset(from_text("node.example.com."), IN, A_TYPE)
-    mock_rrset_a.add(A(IN, A_TYPE, "1.2.3.4"))
+    mock_rrset_a.add(A(IN, A_TYPE, "1.2.3.4"))  # type: ignore
 
     # Mock IPv6 response
     mock_rrset_aaaa = RRset(from_text("node.example.com."), IN, AAAA_TYPE)
-    mock_rrset_aaaa.add(AAAA(IN, AAAA_TYPE, "2001:db8::5"))
+    mock_rrset_aaaa.add(AAAA(IN, AAAA_TYPE, "2001:db8::5"))  # type: ignore
 
     # Create a mock Resolver
     mock_resolver = AsyncMock()
 
     # Adjust mock_resolve to accept all arguments
-    async def mock_resolve(qname, rdtype="A", *args, **kwargs):
+    async def mock_resolve(
+        qname: Union[dns.name.Name, str],
+        rdtype: Union[dns.rdatatype.RdataType, str] = dns.rdatatype.A,
+        lifetime: Optional[float] = None,
+    ) -> RRset:
         if rdtype == "A":
             return mock_rrset_a
         elif rdtype == "AAAA":
