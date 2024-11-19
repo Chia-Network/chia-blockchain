@@ -422,6 +422,12 @@ class CATWallet:
                         # We also need to make sure there's no record of the transaction
                         await self.wallet_state_manager.tx_store.delete_transaction_record(record.coin.name())
 
+    async def get_inner_puzzle(self, new: bool) -> Program:
+        return await self.standard_wallet.get_puzzle(new=new)
+
+    async def get_inner_puzzle_hash(self, new: bool) -> bytes32:
+        return await self.standard_wallet.get_puzzle_hash(new=new)
+
     async def get_new_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_inner_puzzle()
         return puzzle.get_tree_hash()
