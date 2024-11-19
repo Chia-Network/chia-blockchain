@@ -212,7 +212,7 @@ def blockchain_constants(consensus_mode: ConsensusMode) -> ConsensusConstants:
         )
     if consensus_mode >= ConsensusMode.SOFT_FORK_5:
         ret = ret.replace(
-            SOFT_FORK5_HEIGHT=uint32(2),
+            SOFT_FORK6_HEIGHT=uint32(2),
         )
     return ret
 
