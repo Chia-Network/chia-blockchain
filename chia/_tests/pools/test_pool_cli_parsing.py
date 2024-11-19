@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from chia._tests.cmds.test_cmd_framework import check_click_parsing
 from chia.cmds.cmd_classes import NeedsWalletRPC
+from chia.cmds.param_types import CliAddress
 from chia.cmds.plotnft import (
+    ChangePayoutInstructionsPlotNFTCMD,
     ClaimPlotNFTCMD,
     CreatePlotNFTCMD,
     GetLoginLinkCMD,
@@ -12,7 +14,9 @@ from chia.cmds.plotnft import (
     ShowPlotNFTCMD,
 )
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint64
+from chia.wallet.util.address_type import AddressType
 
 
 def test_plotnft_command_default_parsing() -> None:
@@ -23,17 +27,18 @@ def test_plotnft_command_default_parsing() -> None:
         launcher_id.hex(),
     )
 
-    # burn_ph = bytes32.from_hexstr("0x000000000000000000000000000000000000000000000000000000000000dead")
-    # burn_address = encode_puzzle_hash(burn_ph, "xch")
-    # check_click_parsing(
-    #     ChangePayoutInstructionsPlotNFTCMD(
-    #         launcher_id=launcher_id, address=CliAddress(burn_ph, burn_address, AddressType.XCH)
-    #     ),
-    #     "-l",
-    #     launcher_id.hex(),
-    #     "-a",
-    #     burn_address,
-    # )
+    burn_ph = bytes32.from_hexstr("0x000000000000000000000000000000000000000000000000000000000000dead")
+    burn_address = encode_puzzle_hash(burn_ph, "xch")
+    check_click_parsing(
+        ChangePayoutInstructionsPlotNFTCMD(
+            launcher_id=launcher_id, address=CliAddress(burn_ph, burn_address, AddressType.XCH)
+        ),
+        "-l",
+        launcher_id.hex(),
+        "-a",
+        burn_address,
+        obj={"expected_prefix": "xch"},  # Needed for AddressParamType to work correctly without config
+    )
 
     check_click_parsing(
         ClaimPlotNFTCMD(
