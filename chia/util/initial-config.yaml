@@ -361,6 +361,10 @@ full_node:
   # profiled.
   single_threaded: False
 
+  # when enabled, logs coins additions, removals and reorgs at INFO level.
+  # Requires the log level to be INFO or DEBUG as well.
+  log_coins: False
+
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
   # How long to wait for a peer connection
