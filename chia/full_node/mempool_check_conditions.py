@@ -46,7 +46,7 @@ def get_name_puzzle_conditions(
     flags = get_flags_for_height_and_constants(height, constants) | DONT_VALIDATE_SIGNATURE
 
     if mempool_mode:
-        flags = flags | MEMPOOL_MODE
+        flags |= MEMPOOL_MODE
 
     if height >= constants.HARD_FORK_HEIGHT:
         run_block = run_block_generator2

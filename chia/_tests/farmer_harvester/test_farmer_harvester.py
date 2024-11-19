@@ -202,7 +202,7 @@ async def test_harvester_config(farmer_one_harvester: tuple[list[HarvesterServic
     harvester_config["parallel_decompressor_count"] += 1
     harvester_config["decompressor_thread_count"] += 1
     harvester_config["recursive_plot_scan"] = not harvester_config["recursive_plot_scan"]
-    harvester_config["refresh_parameter_interval_seconds"] = harvester_config["refresh_parameter_interval_seconds"] + 1
+    harvester_config["refresh_parameter_interval_seconds"] += 1
 
     res = await update_harvester_config(harvester_rpc_port, bt.root_path, harvester_config)
     assert res is True

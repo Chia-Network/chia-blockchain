@@ -99,7 +99,7 @@ class HarvestingMode(IntEnum):
     GPU = 2
 
 
-def get_plot_directories(root_path: Path, config: dict = None) -> list[str]:
+def get_plot_directories(root_path: Path, config: Optional[dict] = None) -> list[str]:
     if config is None:
         config = load_config(root_path, "config.yaml")
     return config["harvester"]["plot_directories"] or []
@@ -110,13 +110,14 @@ def get_plot_filenames(root_path: Path) -> dict[Path, list[Path]]:
     all_files: dict[Path, list[Path]] = {}
     config = load_config(root_path, "config.yaml")
     recursive_scan: bool = config["harvester"].get("recursive_plot_scan", DEFAULT_RECURSIVE_PLOT_SCAN)
+    recursive_follow_links: bool = config["harvester"].get("recursive_follow_links", False)
     for directory_name in get_plot_directories(root_path, config):
         try:
             directory = Path(directory_name).resolve()
         except (OSError, RuntimeError):
             log.exception(f"Failed to resolve {directory_name}")
             continue
-        all_files[directory] = get_filenames(directory, recursive_scan)
+        all_files[directory] = get_filenames(directory, recursive_scan, recursive_follow_links)
     return all_files
 
 
@@ -155,7 +156,7 @@ def remove_plot_directory(root_path: Path, str_path: str) -> None:
 
 
 def remove_plot(path: Path):
-    log.debug(f"remove_plot {str(path)}")
+    log.debug(f"remove_plot {path!s}")
     # Remove absolute and relative paths
     if path.exists():
         path.unlink()
@@ -219,7 +220,7 @@ def update_harvester_config(
         save_config(root_path, "config.yaml", config)
 
 
-def get_filenames(directory: Path, recursive: bool) -> list[Path]:
+def get_filenames(directory: Path, recursive: bool, follow_links: bool) -> list[Path]:
     try:
         if not directory.exists():
             log.warning(f"Directory: {directory} does not exist.")
@@ -229,8 +230,19 @@ def get_filenames(directory: Path, recursive: bool) -> list[Path]:
         return []
     all_files: list[Path] = []
     try:
-        glob_function = directory.rglob if recursive else directory.glob
-        all_files = [child for child in glob_function("*.plot") if child.is_file() and not child.name.startswith("._")]
+        if follow_links and recursive:
+            import glob
+
+            files = glob.glob(str(directory / "**" / "*.plot"), recursive=True)
+            for file in files:
+                filepath = Path(file).resolve()
+                if filepath.is_file() and not filepath.name.startswith("._"):
+                    all_files.append(filepath)
+        else:
+            glob_function = directory.rglob if recursive else directory.glob
+            all_files = [
+                child for child in glob_function("*.plot") if child.is_file() and not child.name.startswith("._")
+            ]
         log.debug(f"get_filenames: {len(all_files)} files found in {directory}, recursive: {recursive}")
     except Exception as e:
         log.warning(f"Error reading directory {directory} {e}")

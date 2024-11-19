@@ -3087,7 +3087,7 @@ async def test_pagination_cmds(
             )
         elif layer == InterfaceLayer.cli:
             for command in ("get_keys", "get_keys_values", "get_kv_diff"):
-                if command == "get_keys" or command == "get_keys_values":
+                if command in {"get_keys", "get_keys_values"}:
                     args: list[str] = [
                         sys.executable,
                         "-m",

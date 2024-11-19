@@ -9,6 +9,6 @@ from chia.util.ints import uint64
 
 @dataclasses.dataclass
 class ValidationState:
-    current_ssi: uint64
-    current_difficulty: uint64
+    ssi: uint64
+    difficulty: uint64
     prev_ses_block: Optional[BlockRecord] = None

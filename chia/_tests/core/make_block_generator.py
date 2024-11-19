@@ -18,7 +18,7 @@ GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
 
 
 def int_to_public_key(index: int) -> G1Element:
-    index = index % GROUP_ORDER
+    index %= GROUP_ORDER
     private_key_from_int = PrivateKey.from_bytes(index.to_bytes(32, "big"))
     return private_key_from_int.get_g1()
 

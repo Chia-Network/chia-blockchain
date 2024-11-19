@@ -61,7 +61,7 @@ def warn_if_macos_errSecInteractionNotAllowed(error: KeyringError) -> bool:
 
 DEFAULT_PASSPHRASE_PROMPT = (
     colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
-)  # noqa: E501
+)
 FAILED_ATTEMPT_DELAY = 0.5
 MAX_RETRIES = 3
 
@@ -291,7 +291,6 @@ class KeyringWrapper:
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
-        return None
 
     def remove_master_passphrase_from_credential_store(self) -> None:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()
@@ -310,7 +309,6 @@ class KeyringWrapper:
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
                     raise
-        return None
 
     def get_master_passphrase_from_credential_store(self) -> Optional[str]:
         passphrase_store: Optional[OSPassphraseStore] = get_os_passphrase_store()

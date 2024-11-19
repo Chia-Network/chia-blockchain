@@ -120,7 +120,7 @@ class Formatter:
                 if self.getting_form_name == 1 and not (ch == b" "):
                     self.getting_form_name = 2
                     self.form_name.append(ch)
-                elif self.getting_form_name == 2 and ch in (b" ", b"(", b")"):
+                elif self.getting_form_name == 2 and ch in {b" ", b"(", b")"}:
                     self.getting_form_name = 0
                     self.got_form_on_line = self.cur_line
                 else:
@@ -151,7 +151,7 @@ class Formatter:
 
             if semis == 0:
                 # We've entered a string, stop processing
-                if ch == b"'" or ch == b'"':
+                if ch in {b"'", b'"'}:
                     in_string = ch
                     continue
                 elif ch == b"(":

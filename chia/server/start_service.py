@@ -236,7 +236,8 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                             self.stop_requested.set,
                             self.root_path,
                             self.config,
-                            self._connect_to_daemon,
+                            service_config=self.service_config,
+                            connect_to_daemon=self._connect_to_daemon,
                             max_request_body_size=self.max_request_body_size,
                         )
                 yield
@@ -292,7 +293,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         # we only handle signals in the main process. In the ProcessPoolExecutor
         # processes, we have to ignore them. We'll shut them down gracefully
         # from the main process
-        global main_pid
         ignore = os.getpid() != main_pid
 
         # TODO: if we remove this conditional behavior, consider moving logging to common signal handling

@@ -23,7 +23,7 @@ def program_roundtrip(o: CastableType) -> None:
 
 
 def test_serialized_program_to() -> None:
-    prg = "(q ((0x0101010101010101010101010101010101010101010101010101010101010101 80 123 (() (q . ())))))"  # noqa
+    prg = "(q ((0x0101010101010101010101010101010101010101010101010101010101010101 80 123 (() (q . ())))))"
     tests: list[CastableType] = [
         0,
         1,

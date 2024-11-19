@@ -48,7 +48,7 @@ async def generate_coins(
     sim: SpendSim, sim_client: SimClient, requested_coins: dict[Optional[str], list[int]]
 ) -> dict[Optional[str], list[Coin]]:
     await sim.farm_block(acs_ph)
-    parent_coin = [cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph)][0]
+    parent_coin = next(cr.coin for cr in await sim_client.get_coin_records_by_puzzle_hash(acs_ph))
 
     # We need to gather a list of initial coins to create as well as spends that do the eve spend for every CAT
     payments = []
@@ -261,7 +261,7 @@ async def test_complex_offer(cost_logger: CostLogger) -> None:
         new_spends_list = [blue_spend, *new_offer.to_spend_bundle().coin_spends]
         tail_offer = Offer.from_spend_bundle(WalletSpendBundle(new_spends_list, G2Element()))
         valid_spend = tail_offer.to_valid_spend(random_hash)
-        real_blue_spend = [spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend)][0]
+        real_blue_spend = next(spend for spend in valid_spend.coin_spends if b"hey there" in bytes(spend))
         real_blue_spend_replaced = real_blue_spend.replace(
             solution=SerializedProgram.from_program(
                 real_blue_spend.solution.to_program().replace(

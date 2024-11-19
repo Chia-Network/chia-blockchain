@@ -193,7 +193,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         # (mod (METADATA TP solution) (a (q . (c (c (q . 1) (c 2 (c 5 ()))) 11)) (a TP (list METADATA () solution))))
         # (a (q 4 (c (q . 1) (c 2 (c 5 ()))) 11) (a 5 (c 2 (c () (c 11 ())))))
         MOCK_OWNERSHIP_LAYER: Program = Program.fromhex(
-            "ff02ffff01ff04ffff04ffff0101ffff04ff02ffff04ff05ff80808080ff0b80ffff02ff05ffff04ff02ffff04ff80ffff04ff0bff808080808080"  # noqa: E501
+            "ff02ffff01ff04ffff04ffff0101ffff04ff02ffff04ff05ff80808080ff0b80ffff02ff05ffff04ff02ffff04ff80ffff04ff0bff808080808080"
         )
         # Create it with mock singleton info
         transfer_program: Program = create_did_tp(MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
@@ -716,7 +716,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             62,
                             (
                                 cr_1.expected_announcement()
-                                if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
+                                if error not in {"use_malicious_cats", "attempt_honest_cat_piggyback"}
                                 else malicious_cr_1.expected_announcement()
                             ),
                         ],
@@ -724,7 +724,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             62,
                             (
                                 cr_2.expected_announcement()
-                                if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
+                                if error not in {"use_malicious_cats", "attempt_honest_cat_piggyback"}
                                 else malicious_cr_2.expected_announcement()
                             ),
                         ],
@@ -755,7 +755,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 else:
                     vc = new_vc
                 await sim.farm_block()
-            elif error in ["forget_vc", "use_malicious_cats", "attempt_honest_cat_piggyback"]:
+            elif error in {"forget_vc", "use_malicious_cats", "attempt_honest_cat_piggyback"}:
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
             elif error == "make_banned_announcement":
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)

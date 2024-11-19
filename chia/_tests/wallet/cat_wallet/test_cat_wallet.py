@@ -1045,7 +1045,7 @@ async def test_cat_spend_multiple(wallet_environments: WalletTestFramework) -> N
             assert len(memos) == 2  # One for tx, one for change
             assert b"Markus Walburg" in [v for v_list in memos.values() for v in v_list]
             assert tx.spend_bundle is not None
-            assert list(memos.keys())[0] in [a.name() for a in tx.spend_bundle.additions()]
+            assert next(iter(memos.keys())) in [a.name() for a in tx.spend_bundle.additions()]
 
 
 @pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.PLAIN], reason="irrelevant")

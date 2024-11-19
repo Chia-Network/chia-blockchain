@@ -33,7 +33,7 @@ def compute_spend_hints_and_additions(
             raise ValidationError(Err.BLOCK_COST_EXCEEDS_MAX, "compute_spend_hints_and_additions() for CoinSpend")
         atoms = condition.as_iter()
         op = next(atoms).atom
-        if op in [
+        if op in {
             ConditionOpcode.AGG_SIG_PARENT,
             ConditionOpcode.AGG_SIG_PUZZLE,
             ConditionOpcode.AGG_SIG_AMOUNT,
@@ -42,7 +42,7 @@ def compute_spend_hints_and_additions(
             ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
             ConditionOpcode.AGG_SIG_UNSAFE,
             ConditionOpcode.AGG_SIG_ME,
-        ]:
+        }:
             cost += ConditionCost.AGG_SIG.value
             continue
         if op != ConditionOpcode.CREATE_COIN.value:
