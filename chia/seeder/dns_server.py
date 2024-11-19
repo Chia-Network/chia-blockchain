@@ -411,39 +411,45 @@ class DNSServer:
     async def refresh_reliable_peers(self) -> None:
         if self.crawl_store is None:
             return
-        try:
-            new_reliable_peers = await self.crawl_store.get_good_peers()
-        except Exception as e:
-            log.error(f"Error loading reliable peers from database: {e}. Traceback: {traceback.format_exc()}.")
-            return
-        static_peers = self.config.get("static_peers", [])
-        if len(static_peers) > 0:
-            log.warning("have static peers, resolving ip addresses")
-            for static_peer in static_peers:
-                try:
-                    log.warning(f"Handling static peer {static_peer}")
-                    # Attempt to parse as an IP address
-                    # If this doesn't throw, we can just add to the list
-                    # Otherwise, we have to resolve the hostname
-                    ip_address(static_peer)
-                    new_reliable_peers.append(static_peer)
-                except ValueError:
-                    # Wasn't an IP address, so resolve the hostname
-                    log.warning(f"Not an IP address, trying to resolve {static_peer} to an IP address")
-                    if self.resolver is not None:
-                        for rdtype in ["A", "AAAA"]:
-                            result = await self.resolver.resolve(qname=static_peer, rdtype=rdtype, lifetime=30)
-                            for ip in result:
-                                try:
-                                    ip_address(ip)
-                                    new_reliable_peers.append(ip)
-                                except ValueError:
-                                    pass
+        new_reliable_peers: list[str] = []
+        while True:
+            try:
+                new_reliable_peers = await self.crawl_store.get_good_peers()
+            except Exception as e:
+                log.error(f"Error loading reliable peers from database: {e}. Traceback: {traceback.format_exc()}.")
+                await asyncio.sleep(2)
+                continue
 
-        if len(new_reliable_peers) == 0:
+            static_peers = self.config.get("static_peers", [])
+            if len(static_peers) > 0:
+                log.warning("have static peers, resolving ip addresses")
+                for static_peer in static_peers:
+                    try:
+                        log.warning(f"Handling static peer {static_peer}")
+                        # Attempt to parse as an IP address
+                        # If this doesn't throw, we can just add to the list
+                        # Otherwise, we have to resolve the hostname
+                        ip_address(static_peer)
+                        new_reliable_peers.append(static_peer)
+                    except ValueError:
+                        # Wasn't an IP address, so resolve the hostname
+                        log.warning(f"Not an IP address, trying to resolve {static_peer} to an IP address")
+                        if self.resolver is not None:
+                            for rdtype in ["A", "AAAA"]:
+                                result = await self.resolver.resolve(qname=static_peer, rdtype=rdtype, lifetime=30)
+                                for ip in result:
+                                    try:
+                                        ip_address(ip)
+                                        new_reliable_peers.append(ip)
+                                    except ValueError:
+                                        pass
+
+            if len(new_reliable_peers) > 0:
+                break
+
             log.warning("No reliable peers found in database, waiting for db to be populated.")
             await asyncio.sleep(2)  # sleep for 2 seconds, because the db has not been populated yet.
-            return
+
         async with self.lock:
             self.reliable_peers_v4 = []
             self.reliable_peers_v6 = []
