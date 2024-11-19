@@ -16,6 +16,7 @@ MofN_MOD = load_clvm_maybe_recompile(
 OneOfN_MOD = load_clvm_maybe_recompile(
     "1_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.optimization_puzzles"
 )
+OneOfN_MOD_HASH = OneOfN_MOD.get_tree_hash()
 NofN_MOD = load_clvm_maybe_recompile(
     "n_of_n.clsp", package_or_requirement="chia.wallet.puzzles.custody.optimization_puzzles"
 )
@@ -29,6 +30,7 @@ DELEGATED_PUZZLE_FEEDER = load_clvm_maybe_recompile(
 DELEGATED_PUZZLE_FEEDER_HASH = DELEGATED_PUZZLE_FEEDER.get_tree_hash()
 # (mod (INDEX INNER_PUZZLE . inner_solution) (a INNER_PUZZLE inner_solution))
 INDEX_WRAPPER = Program.to([2, 5, 7])
+INDEX_WRAPPER_HASH = INDEX_WRAPPER.get_tree_hash()
 
 
 # General (inner) puzzle driver spec
@@ -364,6 +366,9 @@ class PuzzleWithRestrictions:
             fed_inner_puzzle = DELEGATED_PUZZLE_FEEDER.curry(restricted_inner_puzzle)
         else:
             fed_inner_puzzle = restricted_inner_puzzle
+
+        # if len(self.restrictions) > 1:
+        #     breakpoint()
 
         return INDEX_WRAPPER.curry(self.nonce, fed_inner_puzzle)
 
