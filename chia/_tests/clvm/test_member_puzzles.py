@@ -716,7 +716,7 @@ async def test_singleton_member(cost_logger: CostLogger) -> None:
 
 
 @pytest.mark.anyio
-async def test__member(cost_logger: CostLogger) -> None:
+async def test_fixed_puzzle_member(cost_logger: CostLogger) -> None:
     async with sim_and_client() as (sim, client):
         delegated_puzzle = Program.to(1)
         delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
