@@ -64,6 +64,7 @@
   "p2_singleton_or_delayed_puzhash": "adb656e0211e2ab4f42069a4c5efc80dc907e7062be08bf1628c8e5b6d94d25b",
   "p2_singleton_via_delegated_puzzle": "9590eaa169e45b655a31d3c06bbd355a3e2b2e3e410d3829748ce08ab249c39e",
   "passkey_member": "2877c080c18a408111ec86b108da56dd667f968ce38f87623ca084934127059c",
+  "passkey_member_puzzle_assert": "0bf2d91cf0442a139b2cb9f9c2a68a3ac3b497093fc66595b3c4c398ae94d206",
   "pool_member_innerpuz": "a8490702e333ddd831a3ac9c22d0fa26d2bfeaf2d33608deb22f0e0123eb0494",
   "pool_waitingroom_innerpuz": "a317541a765bf8375e1c6e7c13503d0d2cbf56cacad5182befe947e78e2c0307",
   "restrictions": "a28d59d39f964a93159c986b1914694f6f2f1c9901178f91e8b0ba4045980eef",
