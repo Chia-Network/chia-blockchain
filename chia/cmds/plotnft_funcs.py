@@ -30,7 +30,6 @@ from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import CliRpcConnectionError
 from chia.util.ints import uint32, uint64
@@ -77,13 +76,10 @@ async def create(
         relative_lock_height = uint32(0)
         target_puzzle_hash = None  # wallet will fill this in
     elif state == "FARMING_TO_POOL":
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        enforce_https = config["full_node"]["selected_network"] == "mainnet"
+        enforce_https = wallet_info.config["selected_network"] == "mainnet"
         assert pool_url is not None
         if enforce_https and not pool_url.startswith("https://"):
-            print(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
-            return
-        assert pool_url is not None
+            raise CliRpcConnectionError(f"Pool URLs must be HTTPS on mainnet {pool_url}.")
         json_dict = await create_pool_args(pool_url)
         relative_lock_height = json_dict["relative_lock_height"]
         target_puzzle_hash = bytes32.from_hexstr(json_dict["target_puzzle_hash"])
@@ -313,7 +309,7 @@ async def join_pool(
     enforce_https = wallet_info.config["selected_network"] == "mainnet"
 
     if enforce_https and not pool_url.startswith("https://"):
-        raise CliRpcConnectionError(f"Pool URLs must be HTTPS on mainnet {pool_url}. Aborting.")
+        raise CliRpcConnectionError(f"Pool URLs must be HTTPS on mainnet {pool_url}.")
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{pool_url}/pool_info", ssl=ssl_context_for_root(get_mozilla_ca_crt())) as response:
