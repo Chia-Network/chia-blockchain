@@ -11,6 +11,7 @@ select = [
 	"F",  # Flake8 core
 	"ASYNC",  # Flake8 async
 	"ISC",  # flake8-implicit-str-concat
+    "TID",  # flake8-tidy-imports
 	"E",
 	"W",
 ]
@@ -69,6 +70,13 @@ ignore = [
 [lint.flake8-implicit-str-concat]
 # Found 3279 errors.
 # allow-multiline = false
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.flake8-tidy-imports.banned-api]
+# for use with another pr
+# "asyncio.create_task".msg = "Use `from chia.util.pit import pit` and `pit.create_task()`"
 
 [lint.isort]
 required-imports = ["from __future__ import annotations"]

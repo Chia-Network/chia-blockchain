@@ -13,7 +13,9 @@ from chia_rs import AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 from clvm_tools.binutils import assemble
 
+from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
+from chia._tests.core.full_node.ram_db import create_ram_blockchain
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.program import Program
@@ -27,9 +29,6 @@ from chia.util.condition_tools import agg_sig_additional_data
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
-
-from ...blockchain.blockchain_test_utils import _validate_and_add_block
-from .ram_db import create_ram_blockchain
 
 
 def cleanup_keyring(keyring: TempKeyring) -> None:
