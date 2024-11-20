@@ -2439,3 +2439,32 @@ async def test_long_reorg_nodes(
 
     print(f"reorg1 timing: {reorg1_timing:0.2f}s")
     print(f"reorg2 timing: {reorg2_timing:0.2f}s")
+
+
+@pytest.mark.anyio
+@pytest.mark.limit_consensus_modes(allowed=[ConsensusMode.HARD_FORK_2_0], reason="save time")
+async def test_eviction_from_bls_cache(one_node_one_block: tuple[FullNodeSimulator, ChiaServer, BlockTools]) -> None:
+    """
+    This test covers the case where adding a block to the blockchain evicts
+    all its pk msg pairs from the BLS cache.
+    """
+    full_node_1, _, bt = one_node_one_block
+    blocks = bt.get_consecutive_blocks(
+        3, guarantee_transaction_block=True, farmer_reward_puzzle_hash=bt.pool_ph, pool_reward_puzzle_hash=bt.pool_ph
+    )
+    for block in blocks:
+        await full_node_1.full_node.add_block(block)
+    wt = bt.get_pool_wallet_tool()
+    reward_coins = blocks[-1].get_included_reward_coins()
+    # Setup a test block with two pk msg pairs
+    tx1 = wt.generate_signed_transaction(uint64(42), wt.get_new_puzzlehash(), reward_coins[0])
+    tx2 = wt.generate_signed_transaction(uint64(1337), wt.get_new_puzzlehash(), reward_coins[1])
+    tx = SpendBundle.aggregate([tx1, tx2])
+    await full_node_1.full_node.add_transaction(tx, tx.name(), None, test=True)
+    assert len(full_node_1.full_node._bls_cache.items()) == 2
+    blocks = bt.get_consecutive_blocks(
+        1, block_list_input=blocks, guarantee_transaction_block=True, transaction_data=tx
+    )
+    # Farming a block with this tx evicts those pk msg pairs from the BLS cache
+    await full_node_1.full_node.add_block(blocks[-1], None, full_node_1.full_node._bls_cache)
+    assert len(full_node_1.full_node._bls_cache.items()) == 0
