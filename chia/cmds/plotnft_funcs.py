@@ -278,24 +278,24 @@ async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: 
     selected_wallet_id: int
     try:
         pool_wallets = await wallet_client.get_wallets(wallet_type=WalletType.POOLING_WALLET)
-
-        if wallet_id is None:
-            if len(pool_wallets) == 0:
-                raise CliRpcConnectionError(
-                    "No pool wallet found. Use 'chia plotnft create' to create a new pooling wallet."
-                )
-            if len(pool_wallets) > 1:
-                raise CliRpcConnectionError("More than one pool wallet found. Use -i to specify pool wallet id.")
-            selected_wallet_id = pool_wallets[0]["id"]
-        else:
-            selected_wallet_id = wallet_id
-
-        if not any(wallet["id"] == selected_wallet_id for wallet in pool_wallets):
-            raise CliRpcConnectionError(f"Wallet with id: {selected_wallet_id} is not a pool wallet.")
-
-        return selected_wallet_id
     except ValueError as e:
         raise CliRpcConnectionError(f"Error: {type(e).__name__}: {e}")
+
+    if wallet_id is None:
+        if len(pool_wallets) == 0:
+            raise CliRpcConnectionError(
+                "No pool wallet found. Use 'chia plotnft create' to create a new pooling wallet."
+            )
+        if len(pool_wallets) > 1:
+            raise CliRpcConnectionError("More than one pool wallet found. Use -i to specify pool wallet id.")
+        selected_wallet_id = pool_wallets[0]["id"]
+    else:
+        selected_wallet_id = wallet_id
+
+    if not any(wallet["id"] == selected_wallet_id for wallet in pool_wallets):
+        raise CliRpcConnectionError(f"Wallet with id: {selected_wallet_id} is not a pool wallet.")
+
+    return selected_wallet_id
 
 
 async def join_pool(

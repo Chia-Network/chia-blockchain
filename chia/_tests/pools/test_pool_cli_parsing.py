@@ -23,7 +23,7 @@ def test_plotnft_command_default_parsing() -> None:
     launcher_id = bytes32([1] * 32)
     check_click_parsing(
         GetLoginLinkCMD(context=dict(), launcher_id=launcher_id),
-        "-l",
+        "--launcher_id",
         launcher_id.hex(),
     )
 
@@ -33,9 +33,9 @@ def test_plotnft_command_default_parsing() -> None:
         ChangePayoutInstructionsPlotNFTCMD(
             launcher_id=launcher_id, address=CliAddress(burn_ph, burn_address, AddressType.XCH)
         ),
-        "-l",
+        "--launcher_id",
         launcher_id.hex(),
-        "-a",
+        "--address",
         burn_address,
         obj={"expected_prefix": "xch"},  # Needed for AddressParamType to work correctly without config
     )
