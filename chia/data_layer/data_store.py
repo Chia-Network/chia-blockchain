@@ -12,7 +12,7 @@ from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 
-from chia.data_layer.data_layer_errors import KeyNotFoundError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import MerkleBlobNotFoundError, KeyNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InsertResult,
@@ -340,7 +340,7 @@ class DataStore:
             row = await cursor.fetchone()
 
             if row is None:
-                raise Exception(f"Cannot find merkle blob for root hash {root_hash.hex()}")
+                raise MerkleBlobNotFoundError(root_hash=root_hash)
 
             merkle_blob = MerkleBlob(blob=bytearray(row["blob"]))
             self.recent_merkle_blobs.put(root_hash, copy.deepcopy(merkle_blob))
@@ -866,10 +866,8 @@ class DataStore:
 
             try:
                 merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
-            except Exception as e:
-                if str(e).startswith("Cannot find merkle blob for root hash"):
-                    return []
-                raise
+            except MerkleBlobNotFoundError:
+                return []
 
             kv_ids = merkle_blob.get_keys_values()
 
@@ -899,10 +897,9 @@ class DataStore:
             if resolved_root_hash is not None:
                 try:
                     merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
-                except Exception as e:
-                    if str(e).startswith("Cannot find merkle blob for root hash"):
-                        return KeysValuesCompressed({}, {}, {}, resolved_root_hash)
-                    raise
+                except MerkleBlobNotFoundError:
+                    return KeysValuesCompressed({}, {}, {}, resolved_root_hash)
+
                 kv_ids = merkle_blob.get_keys_values()
                 for kid, vid in kv_ids.items():
                     node = await self.get_terminal_node(kid, vid, store_id)
@@ -1057,10 +1054,8 @@ class DataStore:
 
             try:
                 merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
-            except Exception as e:
-                if str(e).startswith("Cannot find merkle blob for root hash"):
-                    return []
-                raise
+            except MerkleBlobNotFoundError:
+                return []
 
             kv_ids = merkle_blob.get_keys_values()
             keys: list[bytes] = []
@@ -1330,10 +1325,8 @@ class DataStore:
 
             try:
                 merkle_blob = await self.get_merkle_blob(root_hash=resolved_root_hash)
-            except Exception as e:
-                if str(e).startswith("Cannot find merkle blob for root hash"):
-                    raise KeyNotFoundError(key=key)
-                raise
+            except MerkleBlobNotFoundError:
+                raise KeyNotFoundError(key=key)
 
             kid = await self.get_kvid(key, store_id)
             if kid is None:
