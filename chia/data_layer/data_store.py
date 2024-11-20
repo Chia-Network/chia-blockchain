@@ -12,7 +12,7 @@ from typing import Any, BinaryIO, Callable, Optional, Union
 
 import aiosqlite
 
-from chia.data_layer.data_layer_errors import MerkleBlobNotFoundError, KeyNotFoundError, TreeGenerationIncrementingError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, MerkleBlobNotFoundError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InsertResult,
