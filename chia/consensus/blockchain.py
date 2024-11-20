@@ -36,6 +36,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
@@ -677,13 +678,13 @@ class Blockchain:
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants, len(unfinished_header_block.finished_sub_slots) > 0, prev_b, self
         )
+        expected_vs = ValidationState(sub_slot_iters, difficulty, None)
         required_iters, error = validate_unfinished_header_block(
             self.constants,
             self,
             unfinished_header_block,
             False,
-            difficulty,
-            sub_slot_iters,
+            expected_vs,
             skip_overflow_ss_validation,
         )
         if error is not None:
