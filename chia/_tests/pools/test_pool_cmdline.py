@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from io import StringIO
 from typing import Optional, Union, cast
 
 import pytest
@@ -150,10 +151,12 @@ async def create_new_plotnft(
     indirect=True,
 )
 @boolean_datacases(name="self_pool", true="local", false="pool")
+@boolean_datacases(name="prompt", true="prompt", false="dont_prompt")
 @pytest.mark.anyio
 async def test_plotnft_cli_create(
     wallet_environments: WalletTestFramework,
     self_pool: bool,
+    prompt: bool,
     mocker: MockerFixture,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -187,12 +190,15 @@ async def test_plotnft_cli_create(
         mock_get = mocker.patch("aiohttp.ClientSession.get")
         mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
 
+    if prompt:
+        mocker.patch("sys.stdin", StringIO("yes\n"))
+
     await CreatePlotNFTCMD(
         rpc_info=NeedsWalletRPC(
             client_info=client_info,
         ),
         state=state,
-        dont_prompt=True,
+        dont_prompt=not prompt,
         pool_url=pool_url,
     ).run()
 
@@ -423,9 +429,12 @@ async def test_plotnft_cli_show_with_farmer(
     ],
     indirect=True,
 )
+@boolean_datacases(name="prompt", true="prompt", false="dont_prompt")
 @pytest.mark.anyio
 async def test_plotnft_cli_leave(
     wallet_environments: WalletTestFramework,
+    prompt: bool,
+    mocker: MockerFixture,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
     wallet_rpc: WalletRpcClient = wallet_environments.environments[0].rpc_client
@@ -438,13 +447,16 @@ async def test_plotnft_cli_leave(
         wallet_environments.tx_config.reuse_puzhash
     )
 
+    if prompt:
+        mocker.patch("sys.stdin", StringIO("yes\n"))
+
     with pytest.raises(CliRpcConnectionError, match="No pool wallet found"):
         await LeavePlotNFTCMD(
             rpc_info=NeedsWalletRPC(
                 client_info=client_info,
             ),
             id=None,
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
 
     with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
@@ -453,7 +465,7 @@ async def test_plotnft_cli_leave(
                 client_info=client_info,
             ),
             id=15,
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
 
     wallet_id = await create_new_plotnft(wallet_environments)
@@ -463,7 +475,7 @@ async def test_plotnft_cli_leave(
             client_info=client_info,
         ),
         id=wallet_id,
-        dont_prompt=True,
+        dont_prompt=not prompt,
     ).run()
 
     await wallet_environments.process_pending_states(
@@ -506,9 +518,11 @@ async def test_plotnft_cli_leave(
     ],
     indirect=True,
 )
+@boolean_datacases(name="prompt", true="prompt", false="dont_prompt")
 @pytest.mark.anyio
 async def test_plotnft_cli_join(
     wallet_environments: WalletTestFramework,
+    prompt: bool,
     mocker: MockerFixture,
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -531,7 +545,7 @@ async def test_plotnft_cli_join(
             ),
             pool_url="http://127.0.0.1",
             id=None,
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
 
     # Wallet id not a pool wallet
@@ -542,7 +556,7 @@ async def test_plotnft_cli_join(
             ),
             pool_url="http://127.0.0.1",
             id=1,
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
 
     # Create a farming plotnft to url http://pool.example.com
@@ -559,7 +573,7 @@ async def test_plotnft_cli_join(
             ),
             pool_url="http://127.0.0.1",
             id=wallet_id,
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
 
     # Some more error cases
@@ -570,7 +584,7 @@ async def test_plotnft_cli_join(
             ),
             id=wallet_id,
             pool_url="http://127.0.0.1",
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
 
     with pytest.raises(CliRpcConnectionError, match="Error connecting to pool"):
@@ -580,7 +594,7 @@ async def test_plotnft_cli_join(
             ),
             id=wallet_id,
             pool_url="",
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
 
     pool_response_dict = {
@@ -605,7 +619,7 @@ async def test_plotnft_cli_join(
             ),
             id=wallet_id,
             pool_url="",
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
 
     pool_response_dict["relative_lock_height"] = LOCK_HEIGHT
@@ -619,12 +633,15 @@ async def test_plotnft_cli_join(
             ),
             id=wallet_id,
             pool_url="",
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
 
     pool_response_dict["relative_lock_height"] = LOCK_HEIGHT
     pool_response_dict["protocol_version"] = 1
     mock_get.return_value.__aenter__.return_value.text.return_value = json.dumps(pool_response_dict)
+
+    if prompt:
+        mocker.patch("sys.stdin", StringIO("yes\n"))
 
     # Join the new pool - this will leave the prior pool and join the new one
     # Here you can use None as the wallet_id and the code will pick the only pool wallet automatically
@@ -634,7 +651,7 @@ async def test_plotnft_cli_join(
         ),
         id=None,
         pool_url="http://127.0.0.1",
-        dont_prompt=True,
+        dont_prompt=not prompt,
     ).run()
 
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
@@ -659,8 +676,11 @@ async def test_plotnft_cli_join(
             ),
             id=None,
             pool_url="http://127.0.0.1",
-            dont_prompt=True,
+            dont_prompt=not prompt,
         ).run()
+
+    if prompt:
+        mocker.patch("sys.stdin", StringIO("yes\n"))
 
     # Join the new pool - this will leave the prior pool and join the new one and specific wallet_id
     await JoinPlotNFTCMD(
@@ -669,7 +689,7 @@ async def test_plotnft_cli_join(
         ),
         id=wallet_id,
         pool_url="http://127.0.0.1",
-        dont_prompt=True,
+        dont_prompt=not prompt,
     ).run()
 
     await wallet_environments.full_node.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
@@ -688,7 +708,7 @@ async def test_plotnft_cli_join(
     #         ),
     #         id=wallet_id,
     #         pool_url="http://127.0.0.1",
-    #         dont_prompt=True,
+    #         dont_prompt=not prompt,
     #     ).run()
 
 
