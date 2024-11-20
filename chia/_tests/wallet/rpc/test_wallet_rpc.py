@@ -2728,10 +2728,11 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
     )
     assert response == SplitCoinsResponse([], [])
 
-    await env.rpc_client.split_coins(
-        xch_request,
-        wallet_environments.tx_config,
-    )
+    with wallet_environments.new_puzzle_hashes_allowed():
+        await env.rpc_client.split_coins(
+            xch_request,
+            wallet_environments.tx_config,
+        )
 
     await wallet_environments.process_pending_states(
         [
@@ -2797,10 +2798,11 @@ async def test_split_coins(wallet_environments: WalletTestFramework) -> None:
         push=True,
     )
 
-    await env.rpc_client.split_coins(
-        cat_request,
-        wallet_environments.tx_config,
-    )
+    with wallet_environments.new_puzzle_hashes_allowed():
+        await env.rpc_client.split_coins(
+            cat_request,
+            wallet_environments.tx_config,
+        )
 
     await wallet_environments.process_pending_states(
         [
