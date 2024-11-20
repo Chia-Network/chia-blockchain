@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
@@ -92,7 +92,7 @@ class BLSWithTaprootMember(Puzzle):
     def puzzle_hash(self, nonce: int) -> bytes32:
         return self.puzzle(nonce).get_tree_hash()
 
-    def sign_with_synthetic_secret_key(self, original_secret_key, message) -> G2Element:
+    def sign_with_synthetic_secret_key(self, original_secret_key: PrivateKey, message: bytes) -> G2Element:
         synthetic_sk = calculate_synthetic_secret_key(original_secret_key, self.hidden_puzzle.get_tree_hash())
         return AugSchemeMPL.sign(synthetic_sk, message)
 
