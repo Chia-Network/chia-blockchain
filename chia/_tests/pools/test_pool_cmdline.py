@@ -934,6 +934,7 @@ async def test_plotnft_cli_inspect(
 @pytest.mark.anyio
 async def test_plotnft_cli_change_payout(
     wallet_environments: WalletTestFramework,
+    mocker: MockerFixture,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     wallet_state_manager: WalletStateManager = wallet_environments.environments[0].wallet_state_manager
@@ -957,10 +958,12 @@ async def test_plotnft_cli_change_payout(
     wallet_id = await create_new_plotnft(wallet_environments)
     pw_info, _ = await wallet_rpc.pw_status(wallet_id)
 
+    # This tests what happens when using None for root_path
+    mocker.patch("chia.util.default_root.DEFAULT_ROOT_PATH", root_path)
     await ChangePayoutInstructionsPlotNFTCMD(
         launcher_id=bytes32(32 * b"0"),
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
-        root_path=root_path,
+        root_path=None,
     ).run()
     out, _err = capsys.readouterr()
     assert f"{bytes32(32 * b'0').hex()} Not found." in out

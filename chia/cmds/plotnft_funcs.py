@@ -388,7 +388,7 @@ async def change_payout_instructions(launcher_id: bytes32, address: CliAddress, 
     id_found = False
     puzzle_hash = address.validate_address_type_get_ph(AddressType.XCH)
     if root_path is None:
-        root_path = DEFAULT_ROOT_PATH  # pragma: no cover
+        root_path = DEFAULT_ROOT_PATH
 
     old_configs: list[PoolWalletConfig] = load_pool_config(root_path)
     for pool_config in old_configs:
