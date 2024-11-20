@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import operator
+import unittest
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -259,6 +261,22 @@ class WalletEnvironment:
         return pending_txs
 
 
+class NewPuzzleHashError(Exception):
+    pass
+
+
+def catch_puzzle_hash_errors(func: Any) -> Any:
+    @contextlib.asynccontextmanager
+    async def catching_puzhash_errors(self: WalletStateManager, *args: Any, **kwargs: Any) -> Any:
+        try:
+            async with func(self, *args, **kwargs) as action_scope:
+                yield action_scope
+        except NewPuzzleHashError:
+            pass
+
+    return catching_puzhash_errors
+
+
 @dataclass
 class WalletTestFramework:
     full_node: FullNodeSimulator
@@ -266,6 +284,15 @@ class WalletTestFramework:
     trusted_full_node: bool
     environments: list[WalletEnvironment]
     tx_config: TXConfig = DEFAULT_TX_CONFIG
+
+    @staticmethod
+    @contextlib.contextmanager
+    def new_puzzle_hashes_allowed() -> Iterator[None]:
+        with unittest.mock.patch(
+            "chia.wallet.wallet_state_manager.WalletStateManager.new_action_scope",
+            catch_puzzle_hash_errors(WalletStateManager.new_action_scope),
+        ):
+            yield
 
     async def process_pending_states(
         self, state_transitions: list[WalletStateTransition], invalid_transactions: list[bytes32] = []

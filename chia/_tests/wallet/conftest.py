@@ -16,7 +16,7 @@ from chia_rs import (
     run_block_generator2,
 )
 
-from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
+from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.consensus.constants import ConsensusConstants
@@ -160,7 +160,10 @@ def new_action_scope_wrapper(func: Any) -> Any:
         # Finally, check that the number of puzzle hashes did or did not increase by the specified amount
         if action_scope.config.tx_config.reuse_puzhash:
             for wallet_id, ph_index in zip(self.wallets, ph_indexes):
-                assert ph_indexes[wallet_id] == (await self.puzzle_store.get_unused_count(wallet_id))
+                if not ph_indexes[wallet_id] == (await self.puzzle_store.get_unused_count(wallet_id)):
+                    raise NewPuzzleHashError(
+                        f"wallet ID {wallet_id} generated new puzzle hashes while reuse_puzhash was False"
+                    )
 
     return wrapped_new_action_scope
 
