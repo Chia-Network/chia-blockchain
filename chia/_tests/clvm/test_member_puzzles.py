@@ -286,6 +286,8 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
             )
         )
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+        assert bls_with_taproot_member.hidden_puzzle is not None
+        assert bls_with_taproot_member.public_key is not None
         synthetic_public_key = calculate_synthetic_public_key(
             bls_with_taproot_member.public_key, bls_with_taproot_member.hidden_puzzle.get_tree_hash()
         )

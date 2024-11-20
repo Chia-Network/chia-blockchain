@@ -92,6 +92,7 @@ class BLSWithTaprootMember(Puzzle):
 
     def puzzle(self, nonce: int) -> Program:
         if self.synthetic_key is None:
+            assert self.public_key is not None and self.hidden_puzzle is not None
             synthetic_public_key = calculate_synthetic_public_key(self.public_key, self.hidden_puzzle.get_tree_hash())
             return BLS_WITH_TAPROOT_MEMBER_MOD.curry(bytes(synthetic_public_key))
         else:
