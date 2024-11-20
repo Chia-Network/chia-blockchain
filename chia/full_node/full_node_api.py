@@ -229,9 +229,7 @@ class FullNodeAPI:
                         full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
             task_id: bytes32 = bytes32.secret()
-            fetch_task = asyncio.create_task(
-                tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
-            )
+            fetch_task = pit.create_task(tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id))
             self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
             return None
         return None

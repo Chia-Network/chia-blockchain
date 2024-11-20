@@ -456,8 +456,8 @@ class WalletNode:
         self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
-        self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
-        self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
+        self._process_new_subscriptions_task = pit.create_task(self._process_new_subscriptions())
+        self._retry_failed_states_task = pit.create_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
         self.log_in(fingerprint)
@@ -1000,7 +1000,7 @@ class WalletNode:
                             self.log.info("Terminating receipt and validation due to shut down request")
                             await asyncio.gather(*all_tasks)
                             return False
-                    all_tasks.append(asyncio.create_task(validate_and_add(batch.entries, idx)))
+                    all_tasks.append(pit.create_task(validate_and_add(batch.entries, idx)))
             idx += len(batch.entries)
 
         still_connected = self._server is not None and peer.peer_node_id in self.server.all_connections
@@ -1231,9 +1231,7 @@ class WalletNode:
         self.log.info("Secondary peer syncing")
         # In this case we will not rollback so it's OK to check some older updates as well, to ensure
         # that no recent transactions are being hidden.
-        self._secondary_peer_sync_task = asyncio.create_task(
-            self.long_sync(new_peak_hb.height, peer, 0, rollback=False)
-        )
+        self._secondary_peer_sync_task = pit.create_task(self.long_sync(new_peak_hb.height, peer, 0, rollback=False))
 
     async def sync_from_untrusted_close_to_peak(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> bool:
         async with self.wallet_state_manager.lock:

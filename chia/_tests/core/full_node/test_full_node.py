@@ -791,13 +791,13 @@ class TestFullNodeProtocol:
                 uint32(0),
                 block.reward_chain_block.get_unfinished().get_hash(),
             )
-            task_1 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            task_1 = pit.create_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
             task_1.cancel()
 
             await full_node_1.full_node.add_block(block, peer)
             # Ignores, already have
-            task_2 = asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            task_2 = pit.create_task(full_node_1.new_peak(new_peak, dummy_peer))
             await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
             task_2.cancel()
 
@@ -1550,7 +1550,7 @@ class TestFullNodeProtocol:
         block_2 = recursive_replace(block_2, "foliage.foliage_transaction_block_signature", new_fbh_sig)
         block_2 = recursive_replace(block_2, "transactions_generator", None)
 
-        rb_task = asyncio.create_task(full_node_2.full_node.add_block(block_2, dummy_peer))
+        rb_task = pit.create_task(full_node_2.full_node.add_block(block_2, dummy_peer))
 
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
         rb_task.cancel()

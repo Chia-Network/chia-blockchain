@@ -296,9 +296,9 @@ class WSChiaConnection:
             # "1" means capability is enabled
             self.peer_capabilities = known_active_capabilities(inbound_handshake.capabilities)
 
-        self.outbound_task = asyncio.create_task(self.outbound_handler())
-        self.inbound_task = asyncio.create_task(self.inbound_handler())
-        self.incoming_message_task = asyncio.create_task(self.incoming_message_handler())
+        self.outbound_task = pit.create_task(self.outbound_handler())
+        self.inbound_task = pit.create_task(self.inbound_handler())
+        self.incoming_message_task = pit.create_task(self.incoming_message_handler())
 
     async def close(
         self,
@@ -503,7 +503,7 @@ class WSChiaConnection:
         while True:
             message = await self.incoming_queue.get()
             task_id: bytes32 = bytes32.secret()
-            api_task = asyncio.create_task(self._api_call(message, task_id))
+            api_task = pit.create_task(self._api_call(message, task_id))
             self.api_tasks[task_id] = api_task
 
     async def inbound_handler(self) -> None:

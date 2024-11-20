@@ -277,9 +277,9 @@ class FullNode:
 
             # Transactions go into this queue from the server, and get sent to respond_transaction
             self._transaction_queue = TransactionQueue(1000, self.log)
-            self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
+            self._transaction_queue_task: asyncio.Task[None] = pit.create_task(self._handle_transactions())
 
-            self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
+            self._init_weight_proof = pit.create_task(self.initialize_weight_proof())
 
             if self.config.get("enable_profiler", False):
                 pit.create_task(profile_task(self.root_path, "node", self.log))
@@ -327,7 +327,7 @@ class FullNode:
                 if "sanitize_weight_proof_only" in self.config:
                     sanitize_weight_proof_only = self.config["sanitize_weight_proof_only"]
                 assert self.config["target_uncompact_proofs"] != 0
-                self.uncompact_task = asyncio.create_task(
+                self.uncompact_task = pit.create_task(
                     self.broadcast_uncompact_blocks(
                         self.config["send_uncompact_interval"],
                         self.config["target_uncompact_proofs"],
@@ -335,7 +335,7 @@ class FullNode:
                     )
                 )
             if self.wallet_sync_task is None or self.wallet_sync_task.done():
-                self.wallet_sync_task = asyncio.create_task(self._wallets_sync_task_handler())
+                self.wallet_sync_task = pit.create_task(self._wallets_sync_task_handler())
 
             self.initialized = True
             if self.full_node_peers is not None:
@@ -509,7 +509,7 @@ class FullNode:
                     self._tx_task_list.remove(oldtask)
 
             item: TransactionQueueEntry = await self.transaction_queue.pop()
-            self._tx_task_list.append(asyncio.create_task(self._handle_one_transaction(item)))
+            self._tx_task_list.append(pit.create_task(self._handle_one_transaction(item)))
 
     async def initialize_weight_proof(self) -> None:
         self.weight_proof_handler = WeightProofHandler(
@@ -730,7 +730,7 @@ class FullNode:
             # Updates heights in the UI. Sleeps 1.5s before, so other peers have time to update their peaks as well.
             # Limit to 3 refreshes.
             if not seen_header_hash and len(self._ui_tasks) < 3:
-                self._ui_tasks.add(asyncio.create_task(self._refresh_ui_connections(1.5)))
+                self._ui_tasks.add(pit.create_task(self._refresh_ui_connections(1.5)))
             # Prune completed connect tasks
             self._ui_tasks = set(filter(lambda t: not t.done(), self._ui_tasks))
         except Exception as e:
@@ -802,7 +802,7 @@ class FullNode:
             # point being in the past), or we are very far behind. Performs a long sync.
             # Multiple tasks may be created here. If we don't save all handles, a task could enter a sync object
             # and be cleaned up by the GC, corrupting the sync object and possibly not allowing anything else in.
-            self._sync_task_list.append(asyncio.create_task(self._sync()))
+            self._sync_task_list.append(pit.create_task(self._sync()))
 
     async def send_peak_to_timelords(
         self, peak_block: Optional[FullBlock] = None, peer: Optional[WSChiaConnection] = None
@@ -1374,9 +1374,9 @@ class FullNode:
             Optional[tuple[WSChiaConnection, ValidationState, list[Awaitable[PreValidationResult]], list[FullBlock]]]
         ] = asyncio.Queue(maxsize=10)
 
-        fetch_task = asyncio.create_task(fetch_blocks(block_queue))
-        validate_task = asyncio.create_task(validate_blocks(block_queue, validation_queue))
-        ingest_task = asyncio.create_task(ingest_blocks(validation_queue))
+        fetch_task = pit.create_task(fetch_blocks(block_queue))
+        validate_task = pit.create_task(validate_blocks(block_queue, validation_queue))
+        ingest_task = pit.create_task(ingest_blocks(validation_queue))
         try:
             await asyncio.gather(fetch_task, validate_task, ingest_task)
         except Exception:
@@ -2218,7 +2218,7 @@ class FullNode:
         record = self.blockchain.block_record(block.header_hash)
         if self.weight_proof_handler is not None and record.sub_epoch_summary_included is not None:
             if self._segment_task is None or self._segment_task.done():
-                self._segment_task = asyncio.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
+                self._segment_task = pit.create_task(self.weight_proof_handler.create_prev_sub_epoch_segments())
         return None
 
     async def add_unfinished_block(

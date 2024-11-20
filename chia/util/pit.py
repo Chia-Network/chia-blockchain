@@ -7,6 +7,8 @@ import asyncio
 import dataclasses
 import typing
 
+T = typing.TypeVar("T")
+
 
 @dataclasses.dataclass
 class Pit:
@@ -14,9 +16,9 @@ class Pit:
 
     def create_task(
         self,
-        coroutine: typing.Coroutine[object, object, object],
+        coroutine: typing.Coroutine[object, object, T],
         name: typing.Optional[str] = None,
-    ) -> asyncio.Task[object]:
+    ) -> asyncio.Task[T]:
         task = asyncio.create_task(coro=coroutine, name=name)
         # TODO: consider collecting results and logging errors
         self.tasks = [task for task in self.tasks if not task.done()]

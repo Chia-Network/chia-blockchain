@@ -9,6 +9,7 @@ import sys
 import time
 
 from chia._tests.util.misc import create_logger
+from chia.util.pit import pit
 
 # TODO: CAMPid 0945094189459712842390t591
 IP = "127.0.0.1"
@@ -62,7 +63,7 @@ async def main() -> None:
 
         task.cancel()
 
-    file_task = asyncio.create_task(dun())
+    file_task = pit.create_task(dun())
 
     with out_path.open(mode="w") as file:
         logger = create_logger(file=file)
@@ -70,7 +71,7 @@ async def main() -> None:
         async def f() -> None:
             await asyncio.gather(*[tcp_echo_client(task_counter=f"{i}", logger=logger) for i in range(0, NUM_CLIENTS)])
 
-        task = asyncio.create_task(f())
+        task = pit.create_task(f())
         try:
             await task
         except asyncio.CancelledError:

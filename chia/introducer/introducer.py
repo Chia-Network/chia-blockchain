@@ -13,6 +13,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.ints import uint64
+from chia.util.pit import pit
 
 
 class Introducer:
@@ -39,7 +40,7 @@ class Introducer:
 
     @contextlib.asynccontextmanager
     async def manage(self) -> AsyncIterator[None]:
-        self._vetting_task = asyncio.create_task(self._vetting_loop())
+        self._vetting_task = pit.create_task(self._vetting_loop())
         try:
             yield
         finally:

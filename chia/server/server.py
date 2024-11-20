@@ -286,7 +286,7 @@ class ChiaServer:
         if self.webserver is not None:
             raise RuntimeError("ChiaServer already started")
         if self.gc_task is None:
-            self.gc_task = asyncio.create_task(self.garbage_collect_connections_task())
+            self.gc_task = pit.create_task(self.garbage_collect_connections_task())
 
         if self._port is not None:
             self.on_connect = on_connect
@@ -652,7 +652,7 @@ class ChiaServer:
                 self.log.error(f"Exception while closing connection {e}")
 
     def close_all(self) -> None:
-        self.connection_close_task = asyncio.create_task(self.close_all_connections())
+        self.connection_close_task = pit.create_task(self.close_all_connections())
         if self.webserver is not None:
             self.webserver.close()
 

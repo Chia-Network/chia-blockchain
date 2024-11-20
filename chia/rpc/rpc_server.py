@@ -460,7 +460,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
                 self.client_session = None
                 await asyncio.sleep(2)
 
-        self.daemon_connection_task = asyncio.create_task(inner())
+        self.daemon_connection_task = pit.create_task(inner())
 
     _routes: ClassVar[dict[str, Callable[..., Awaitable[object]]]] = {
         "/get_network_info": get_network_info,

@@ -188,8 +188,8 @@ class Farmer:
             # succeeds or until we need to shut down.
             while not self._shut_down:
                 if await self.setup_keys():
-                    self.update_pool_state_task = asyncio.create_task(self._periodically_update_pool_state_task())
-                    self.cache_clear_task = asyncio.create_task(self._periodically_clear_cache_and_refresh_task())
+                    self.update_pool_state_task = pit.create_task(self._periodically_update_pool_state_task())
+                    self.cache_clear_task = pit.create_task(self._periodically_clear_cache_and_refresh_task())
                     log.debug("start_task: initialized")
                     self.started = True
                     return
@@ -312,7 +312,7 @@ class Farmer:
 
         if peer.connection_type is NodeType.HARVESTER:
             self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
-            self.harvester_handshake_task = asyncio.create_task(handshake_task())
+            self.harvester_handshake_task = pit.create_task(handshake_task())
 
     def set_server(self, server: ChiaServer) -> None:
         self.server = server

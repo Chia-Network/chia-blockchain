@@ -61,7 +61,7 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
     queue_task: Optional[asyncio.Task[None]] = field(init=False, default=None)
 
     def start(self) -> None:
-        self.queue_task = asyncio.create_task(self.respond())  # This starts the dns respond loop.
+        self.queue_task = pit.create_task(self.respond())  # This starts the dns respond loop.
 
     async def stop(self) -> None:
         if self.queue_task is not None:
@@ -180,7 +180,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                 if dns_request is None:  # Invalid Request, so we disconnect and don't send anything back.
                     self.transport.close()
                     return
-                self.futures.append(asyncio.create_task(self.handle_and_respond(dns_request)))
+                self.futures.append(pit.create_task(self.handle_and_respond(dns_request)))
 
         self.buffer = bytearray(2 if self.expected_length == 0 else self.expected_length)  # Reset the buffer if empty.
 
@@ -341,7 +341,7 @@ class DNSServer:
 
         # Set up the crawl store and the peer update task.
         self.crawl_store = await CrawlStore.create(await aiosqlite.connect(self.db_path, timeout=120))
-        self.reliable_task = asyncio.create_task(self.periodically_get_reliable_peers())
+        self.reliable_task = pit.create_task(self.periodically_get_reliable_peers())
 
         # One protocol instance will be created for each udp transport, so that we can accept ipv4 and ipv6
         self.udp_transport_ipv6, self.udp_protocol_ipv6 = await loop.create_datagram_endpoint(
