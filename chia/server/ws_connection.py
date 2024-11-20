@@ -634,8 +634,8 @@ class WSChiaConnection:
                 message_type = ProtocolMessageTypes(message.type)
                 last_time = self.log_rate_limit_last_time[message_type]
                 now = time.monotonic()
-                self.log_rate_limit_last_time[message_type] = now
                 if now - last_time >= 30:
+                    self.log_rate_limit_last_time[message_type] = now
                     details = ", ".join(
                         [
                             f"{message_type.name}",
