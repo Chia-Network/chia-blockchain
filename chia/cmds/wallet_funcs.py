@@ -638,11 +638,11 @@ async def print_trade_record(record: TradeRecord, wallet_client: WalletRpcClient
         print(f"Included Fees: {fees / units['chia']} XCH, {fees} mojos")
         print("Timelock information:")
         if record.valid_times.min_time is not None:
-            print("  - Not valid until " f"{format_timestamp_with_timezone(record.valid_times.min_time)}")
+            print(f"  - Not valid until {format_timestamp_with_timezone(record.valid_times.min_time)}")
         if record.valid_times.min_height is not None:
             print(f"  - Not valid until height {record.valid_times.min_height}")
         if record.valid_times.max_time is not None:
-            print("  - Expires at " f"{format_timestamp_with_timezone(record.valid_times.max_time)} " "(+/- 10 min)")
+            print(f"  - Expires at {format_timestamp_with_timezone(record.valid_times.max_time)} (+/- 10 min)")
         if record.valid_times.max_height is not None:
             print(f"  - Expires at height {record.valid_times.max_height} (wait ~10 blocks after to be reorg safe)")
     print("---------------")
