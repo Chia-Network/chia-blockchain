@@ -127,9 +127,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
         sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
 
-        taproot_puzzle = Program.to([1, [60, "bah"]])  # CREATE_COIN_ANNOUNCEMENT "bah"
-
-        bls_with_taproot_member = BLSWithTaprootMember(sk.public_key(), taproot_puzzle)
+        bls_with_taproot_member = BLSWithTaprootMember(sk.public_key(), delegated_puzzle)
         bls_puzzle = PuzzleWithRestrictions(0, [], bls_with_taproot_member)
         memo = PuzzleHint(
             bls_puzzle.puzzle.puzzle_hash(0),

@@ -96,9 +96,9 @@ class BLSWithTaprootMember(Puzzle):
         synthetic_sk = calculate_synthetic_secret_key(original_secret_key, self.hidden_puzzle.get_tree_hash())
         return AugSchemeMPL.sign(synthetic_sk, message)
 
-    def solve(self, use_hidden_puzzle: bool = False, hidden_puzzle_solution: Program = Program.to(0)) -> Program:
+    def solve(self, use_hidden_puzzle: bool = False) -> Program:
         if use_hidden_puzzle:
-            return Program.to([self.public_key, self.hidden_puzzle, hidden_puzzle_solution])
+            return Program.to([self.public_key, self.hidden_puzzle])
         return Program.to([0])
 
 
