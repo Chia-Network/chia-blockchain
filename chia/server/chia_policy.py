@@ -254,8 +254,8 @@ if sys.platform == "win32":
 
         async def _chia_accept_loop(self, listener: socket.socket) -> tuple[socket.socket, tuple[object, ...]]:
             while True:
-                # TODO: switch to Event code.
-                while not self.allow_connections:
+                # TODO: switch to event drive code
+                while not self.allow_connections:  # noqa: ASYNC110
                     await asyncio.sleep(0.01)
 
                 try:
