@@ -38,6 +38,7 @@ from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.network import WebServer, resolve
+from chia.util.pit import pit
 from chia.util.ws_message import (
     WsRpcMessage,
     create_payload,
@@ -248,8 +249,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     def state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(self._state_changed(change, change_data))  # noqa: RUF006
+        pit.create_task(self._state_changed(change, change_data))
 
     @property
     def listen_port(self) -> uint16:

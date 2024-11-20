@@ -49,6 +49,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.logging import TimedDuplicateFilter
+from chia.util.pit import pit
 from chia.util.profiler import profile_task
 from chia.wallet.derive_keys import (
     find_authentication_sk,
@@ -198,11 +199,9 @@ class Farmer:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(profile_task(self._root_path, "farmer", self.log))  # noqa: RUF006
+                pit.create_task(profile_task(self._root_path, "farmer", self.log))
 
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(start_task())  # noqa: RUF006
+        pit.create_task(start_task())
         try:
             yield
         finally:

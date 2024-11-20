@@ -72,6 +72,7 @@ from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
+from chia.util.pit import pit
 
 if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode
@@ -459,8 +460,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, None)
 
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(eventually_clear())  # noqa: RUF006
+        pit.create_task(eventually_clear())
 
         return msg
 
@@ -528,8 +528,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, foliage_hash)
 
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(eventually_clear())  # noqa: RUF006
+        pit.create_task(eventually_clear())
 
         return msg
 

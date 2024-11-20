@@ -24,6 +24,7 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
+from chia.util.pit import pit
 
 SERVICE_NAME = "seeder"
 log = logging.getLogger(__name__)
@@ -81,8 +82,7 @@ class UDPDNSServerProtocol(asyncio.DatagramProtocol):
         dns_request: Optional[DNSRecord] = parse_dns_request(data)
         if dns_request is None:  # Invalid Request, we can just drop it and move on.
             return
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(self.handler(dns_request, addr))  # noqa: RUF006
+        pit.create_task(self.handler(dns_request, addr))
 
     async def respond(self) -> None:
         log.info("UDP DNS responder started.")
@@ -195,8 +195,7 @@ class TCPDNSServerProtocol(asyncio.BufferedProtocol):
                     f"Received incomplete TCP DNS request of length {self.expected_length} from {self.peer_info}, "
                     f"closing connection after dns replies are sent."
                 )
-            # TODO: stop dropping tasks on the floor
-            asyncio.create_task(self.wait_for_futures())  # noqa: RUF006
+            pit.create_task(self.wait_for_futures())
             return True  # Keep connection open, until the futures are done.
         log.info(f"Received early EOF from {self.peer_info}, closing connection.")
         return False

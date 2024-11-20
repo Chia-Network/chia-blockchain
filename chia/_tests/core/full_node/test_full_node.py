@@ -67,6 +67,7 @@ from chia.util.errors import ConsensusError, Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
+from chia.util.pit import pit
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
@@ -812,8 +813,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-2].reward_chain_block.get_unfinished().get_hash(),
         )
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))  # noqa: RUF006
+        pit.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 0))
 
         # Does not ignore equal weight
@@ -824,8 +824,7 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-1].reward_chain_block.get_unfinished().get_hash(),
         )
-        # TODO: stop dropping tasks on the floor
-        asyncio.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))  # noqa: RUF006
+        pit.create_task(suppress_value_error(full_node_1.new_peak(new_peak, dummy_peer)))
         await time_out_assert(10, time_out_messages(incoming_queue, "request_block", 1))
 
     @pytest.mark.anyio

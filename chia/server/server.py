@@ -38,6 +38,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import WebServer, is_in_network, is_localhost, is_trusted_peer
+from chia.util.pit import pit
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 from chia.util.streamable import Streamable
 
@@ -502,8 +503,7 @@ class ChiaServer:
                 self.log.info(f"Connected with {connection_type_str} {target_node}")
             else:
                 self.log.debug(f"Successful feeler connection with {connection_type_str} {target_node}")
-                # TODO: stop dropping tasks on the floor
-                asyncio.create_task(connection.close())  # noqa: RUF006
+                pit.create_task(connection.close())
             return True
         except client_exceptions.ClientConnectorError as e:
             if is_feeler:
