@@ -7,13 +7,10 @@ select = [
 	"I",  # Isort
 	"FA",  # Flake8: future-annotations
 	"UP",  # Pyupgrade
-	"RUF", # Ruff specific
-	# Flake8 core
-	"F",
-	# Flake8 async
-	"ASYNC",
-    # flake8-implicit-str-concat
-    "ISC",
+	"RUF",  # Ruff specific
+	"F",  # Flake8 core
+	"ASYNC",  # Flake8 async
+	"ISC",  # flake8-implicit-str-concat
 	"E",
 	"W",
 ]
