@@ -224,6 +224,64 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
+        # test invalid taproot spend
+        bls_with_taproot_member = BLSWithTaprootMember(sk.public_key(), Program.to([1, [51, Program.to(1).get_tree_hash(), 1]]))
+        bls_puzzle = PuzzleWithRestrictions(0, [], bls_with_taproot_member)
+        memo = PuzzleHint(
+            bls_puzzle.puzzle.puzzle_hash(0),
+            bls_puzzle.puzzle.memo(0),
+        )
+
+        assert bls_puzzle.memo() == Program.to(
+            (
+                bls_puzzle.spec_namespace,
+                [
+                    bls_puzzle.nonce,
+                    [],
+                    0,
+                    memo.to_program(),
+                ],
+            )
+        )
+
+        # Farm and find coin
+        await sim.farm_block(bls_puzzle.puzzle_hash())
+        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.puzzle_hash()], include_spent_coins=False))[
+            0
+        ].coin
+        block_height = sim.block_height
+
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    bls_puzzle.puzzle_reveal(),
+                    bls_puzzle.solve(
+                        [],
+                        [],
+                        bls_with_taproot_member.solve(True),
+                        DelegatedPuzzleAndSolution(
+                            delegated_puzzle,
+                            Program.to(
+                                [
+                                    announcement.to_program(),
+                                    announcement.corresponding_assertion().to_program(),
+                                ]
+                            ),
+                        ),
+                    ),
+                )
+            ],
+            G2Element(),  # no signature required in our test hidden_puzzle
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "BLSMember spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
