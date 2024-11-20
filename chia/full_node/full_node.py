@@ -654,10 +654,8 @@ class FullNode:
                             raise
                         finally:
                             self.log.info(f"Added blocks {height}-{end_height}")
-        except (asyncio.CancelledError, Exception):
+        finally:
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
-            raise
-        self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return True
 
     async def short_sync_backtrack(
