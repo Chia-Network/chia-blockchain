@@ -390,6 +390,7 @@ class Blockchain:
         # in case we fail and need to restore the blockchain state, remember the
         # peak height
         previous_peak_height = self._peak_height
+        prev_fork_peak = (fork_info.peak_height, fork_info.peak_hash)
 
         try:
             # Always add the block to the database
@@ -426,7 +427,8 @@ class Blockchain:
                 self.remove_block_record(header_hash)
             except KeyError:
                 pass
-            fork_info.rollback(header_hash, -1 if previous_peak_height is None else previous_peak_height)
+            # restore fork_info to the state before adding the block
+            fork_info.rollback(prev_fork_peak[1], prev_fork_peak[0])
             self.block_store.rollback_cache_block(header_hash)
             self._peak_height = previous_peak_height
             log.error(
