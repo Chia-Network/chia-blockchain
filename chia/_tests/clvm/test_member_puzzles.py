@@ -225,7 +225,9 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # test invalid taproot spend
-        bls_with_taproot_member = BLSWithTaprootMember(sk.public_key(), Program.to([1, [51, Program.to(1).get_tree_hash(), 1]]))
+        illegal_taproot_puzzle = Program.to([1, [51, Program.to(1).get_tree_hash(), 1]])
+        assert illegal_taproot_puzzle.run([]) == Program.to([[51, Program.to(1).get_tree_hash(), 1]])
+        bls_with_taproot_member = BLSWithTaprootMember(sk.public_key(), illegal_taproot_puzzle)
         bls_puzzle = PuzzleWithRestrictions(0, [], bls_with_taproot_member)
         memo = PuzzleHint(
             bls_puzzle.puzzle.puzzle_hash(0),
