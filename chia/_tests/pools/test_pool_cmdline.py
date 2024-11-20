@@ -1023,7 +1023,7 @@ async def test_plotnft_cli_get_login_link(
 
 @pytest.mark.anyio
 async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: ConsensusMode) -> None:
-    from chia.cmds.plotnft_funcs import create, wallet_id_lookup_and_check
+    from chia.cmds.plotnft_funcs import create
 
     test_rpc_client = TestWalletRpcClient()
 
@@ -1048,11 +1048,6 @@ async def test_plotnft_cli_misc(mocker: MockerFixture, consensus_mode: Consensus
             fee=uint64(0),
             prompt=False,
         )
-
-    # Test fall-through raise in wallet_id_lookup_and_check
-    mocker.patch.object(test_rpc_client, "get_wallets", side_effect=ValueError("This is a test"))
-    with pytest.raises(CliRpcConnectionError, match="ValueError: This is a test"):
-        await wallet_id_lookup_and_check(cast(WalletRpcClient, test_rpc_client), 1)
 
     # Test fall-through raise in create
     mocker.patch.object(

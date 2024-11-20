@@ -276,10 +276,9 @@ async def submit_tx_with_confirmation(
 
 async def wallet_id_lookup_and_check(wallet_client: WalletRpcClient, wallet_id: Optional[int]) -> int:
     selected_wallet_id: int
-    try:
-        pool_wallets = await wallet_client.get_wallets(wallet_type=WalletType.POOLING_WALLET)
-    except ValueError as e:
-        raise CliRpcConnectionError(f"Error: {type(e).__name__}: {e}")
+
+    # absent network errors, this should not fail with an error
+    pool_wallets = await wallet_client.get_wallets(wallet_type=WalletType.POOLING_WALLET)
 
     if wallet_id is None:
         if len(pool_wallets) == 0:
