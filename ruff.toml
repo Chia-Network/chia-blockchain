@@ -7,11 +7,10 @@ select = [
 	"I",  # Isort
 	"FA",  # Flake8: future-annotations
 	"UP",  # Pyupgrade
-	"RUF", # Ruff specific
-	# Flake8 core
-	"F",
-	# Flake8 async
-	"ASYNC",
+	"RUF",  # Ruff specific
+	"F",  # Flake8 core
+	"ASYNC",  # Flake8 async
+	"ISC",  # flake8-implicit-str-concat
 	"E",
 	"W",
 ]
@@ -53,6 +52,9 @@ ignore = [
     # Should probably fix these after dealing with shielding for anyio
     "ASYNC109", # async-function-with-timeout
 
+    # flake8-implicit-str-concat
+    "ISC003", # explicit-string-concatenation
+
     # Ruff Specific
 
     # This code is problematic because using instantiated types as defaults is so common across the codebase.
@@ -63,6 +65,10 @@ ignore = [
     "RUF029",
 ]
 
+
+[lint.flake8-implicit-str-concat]
+# Found 3279 errors.
+# allow-multiline = false
 
 [lint.isort]
 required-imports = ["from __future__ import annotations"]

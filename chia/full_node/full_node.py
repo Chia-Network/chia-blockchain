@@ -2826,7 +2826,7 @@ class FullNode:
 
                 transaction_id = internal_mempool_item.spend_bundle.name()
 
-                self.log.debug(f"Broadcasting removed transaction {transaction_id} to " f"wallet peers {peer_ids}")
+                self.log.debug(f"Broadcasting removed transaction {transaction_id} to wallet peers {peer_ids}")
 
                 for peer_id in peer_ids:
                     peer = self.server.all_connections.get(peer_id)
