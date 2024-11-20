@@ -44,7 +44,10 @@ from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import (
     SECPR1PuzzleAssertMember,
     SingletonMember,
 )
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_synthetic_public_key
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    calculate_synthetic_public_key,
+    puzzle_for_synthetic_public_key,
+)
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH, SINGLETON_TOP_LAYER_MOD
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -127,7 +130,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
         sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
 
-        bls_with_taproot_member = BLSWithTaprootMember(sk.public_key(), delegated_puzzle)
+        bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=delegated_puzzle)
         bls_puzzle = PuzzleWithRestrictions(0, [], bls_with_taproot_member)
         memo = PuzzleHint(
             bls_puzzle.puzzle.puzzle_hash(0),
@@ -227,7 +230,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         # test invalid taproot spend
         illegal_taproot_puzzle = Program.to([1, [51, Program.to(1).get_tree_hash(), 1]])
         assert illegal_taproot_puzzle.run([]) == Program.to([[51, Program.to(1).get_tree_hash(), 1]])
-        bls_with_taproot_member = BLSWithTaprootMember(sk.public_key(), illegal_taproot_puzzle)
+        bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=illegal_taproot_puzzle)
         bls_puzzle = PuzzleWithRestrictions(0, [], bls_with_taproot_member)
         memo = PuzzleHint(
             bls_puzzle.puzzle.puzzle_hash(0),
@@ -283,6 +286,11 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
             )
         )
         assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+        synthetic_public_key = calculate_synthetic_public_key(
+            bls_with_taproot_member.public_key, bls_with_taproot_member.hidden_puzzle.get_tree_hash()
+        )
+        bls_with_taproot_member_synthetic = BLSWithTaprootMember(synthetic_key=synthetic_public_key)
+        assert bls_with_taproot_member.puzzle(0) == bls_with_taproot_member_synthetic.puzzle(0)
 
 
 @pytest.mark.anyio
