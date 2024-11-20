@@ -21,7 +21,7 @@ async def generate_datastore(num_nodes: int) -> None:
         if os.path.exists(db_path):
             os.remove(db_path)
 
-        start_time = time.time()
+        start_time = time.monotonic()
         async with DataStore.managed(database=db_path) as data_store:
             store_id = bytes32(b"0" * 32)
             await data_store.create_tree(store_id, status=Status.COMMITTED)
@@ -80,7 +80,7 @@ async def generate_datastore(num_nodes: int) -> None:
             print(f"Total time for {num_nodes} operations: {insert_time + delete_time + autoinsert_time}")
             root = await data_store.get_tree_root(store_id=store_id)
             print(f"Root hash: {root.node_hash}")
-            finish_time = time.time()
+            finish_time = time.monotonic()
             print(f"Total runtime: {finish_time - start_time}")
 
 
