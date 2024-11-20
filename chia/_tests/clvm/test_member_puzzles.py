@@ -187,7 +187,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         )
         result = await client.push_tx(
             cost_logger.add_cost(
-                "BLSMember spendbundle",
+                "BLSTaprootMember spendbundle",
                 sb,
             )
         )
@@ -221,7 +221,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         )
         result = await client.push_tx(
             cost_logger.add_cost(
-                "BLSMember spendbundle",
+                "BLSTaprootMember spendbundle",
                 sb,
             )
         )
@@ -281,7 +281,7 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
         )
         result = await client.push_tx(
             cost_logger.add_cost(
-                "BLSMember spendbundle",
+                "BLSTaprootMember spendbundle",
                 sb,
             )
         )

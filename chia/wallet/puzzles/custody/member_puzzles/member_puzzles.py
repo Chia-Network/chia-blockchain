@@ -85,7 +85,7 @@ class BLSWithTaprootMember(Puzzle):
 
     def __post_init__(self) -> None:
         if self.synthetic_key is None and (self.public_key is None or self.hidden_puzzle is None):
-            raise ValueError("Must specify either the complete announcement message or both of its components")
+            raise ValueError("Must specify either the synthetic key or public key and hidden puzzle")
 
     def memo(self, nonce: int) -> Program:
         return Program.to(0)
