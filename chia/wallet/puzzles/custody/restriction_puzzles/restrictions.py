@@ -30,6 +30,11 @@ FORCE_COIN_ANNOUNCEMENT_WRAPPER = load_clvm_maybe_recompile(
     package_or_requirement="chia.wallet.puzzles.custody.restriction_puzzles.wrappers",
 )
 FORCE_COIN_ANNOUNCEMENT_WRAPPER_HASH = FORCE_COIN_ANNOUNCEMENT_WRAPPER.get_tree_hash()
+FORCE_COIN_MESSAGE_WRAPPER = load_clvm_maybe_recompile(
+    "force_coin_message.clsp",
+    package_or_requirement="chia.wallet.puzzles.custody.restriction_puzzles.wrappers",
+)
+FORCE_COIN_MESSAGE_WRAPPER_HASH = FORCE_COIN_MESSAGE_WRAPPER.get_tree_hash()
 FORCE_1_OF_2_W_RESTRICTED_VARIABLE = load_clvm_maybe_recompile(
     "force_1_of_2_w_restricted_variable.clsp",
     package_or_requirement="chia.wallet.puzzles.custody.restriction_puzzles.wrappers",
@@ -68,6 +73,22 @@ class ForceCoinAnnouncement:
 
     def puzzle_hash(self, nonce: int) -> bytes32:
         return FORCE_COIN_ANNOUNCEMENT_WRAPPER_HASH
+
+
+@dataclass(frozen=True)
+class ForceCoinMessage:
+    @property
+    def member_not_dpuz(self) -> bool:
+        return False
+
+    def memo(self, nonce: int) -> Program:
+        return Program.to(None)
+
+    def puzzle(self, nonce: int) -> Program:
+        return FORCE_COIN_MESSAGE_WRAPPER
+
+    def puzzle_hash(self, nonce: int) -> bytes32:
+        return FORCE_COIN_MESSAGE_WRAPPER_HASH
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,28 @@
+; This is a restriction on delegated puzzles intended to force a message that asserts the recipient's coin ID
+;
+; The idea behind enforcing this is that it makes the current coin spend non-replayable since it will be implictly
+; asserting that a specific coin ID is spent in tandem.
+(mod
+  (
+    Conditions
+  )
+
+  (include condition_codes.clib)
+  (include utility_macros.clib)
+
+  (defun check_conditions (conditions)
+    ; If we run out of conditions without finding an assertion, this will raise with "path into atom"
+    (if (and
+          (= (f (f conditions)) SEND_MESSAGE)
+          ; This message filter will make sure that the last three bits of the bitmask are set.
+          ; The reason we do this is to make sure that there will be a RECIPIENT whose coin ID must be spent
+          ; in order for this spend to happen.
+          (logand (f (r (f conditions))) 0x07)  ; 0x07 == 00 000 111
+        )
+        conditions
+        (c (f conditions) (check_conditions (r conditions)))
+    )
+  )
+
+  (check_conditions Conditions)
+)

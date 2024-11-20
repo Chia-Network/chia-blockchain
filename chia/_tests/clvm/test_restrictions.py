@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import pytest
 from chia_rs import G2Element
 from chia_rs.sized_bytes import bytes32
+from chia_rs.sized_ints import uint8
 
 from chia._tests.clvm.test_custody_architecture import ACSMember
 from chia._tests.util.spend_sim import CostLogger, sim_and_client
@@ -13,7 +14,14 @@ from chia.types.coin_spend import make_spend
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.errors import Err
 from chia.util.ints import uint64
-from chia.wallet.conditions import CreateCoin, CreateCoinAnnouncement, Remark, parse_conditions_non_consensus
+from chia.wallet.conditions import (
+    CreateCoin,
+    CreateCoinAnnouncement,
+    ReceiveMessage,
+    Remark,
+    SendMessage,
+    parse_conditions_non_consensus,
+)
 from chia.wallet.puzzles.custody.custody_architecture import (
     DelegatedPuzzleAndSolution,
     MemberOrDPuz,
@@ -26,6 +34,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
 from chia.wallet.puzzles.custody.restriction_puzzles.restrictions import (
     Force1of2wRestrictedVariable,
     ForceCoinAnnouncement,
+    ForceCoinMessage,
     Timelock,
 )
 from chia.wallet.puzzles.custody.restriction_utilities import ValidatorStackRestriction
@@ -158,6 +167,67 @@ async def test_timelock_wrapper(cost_logger: CostLogger) -> None:
         assert Remark(Program.to(["foo"])) in conditions
         assert Remark(Program.to(["bar"])) in conditions
         assert Remark(Program.to(["bat"])) in conditions
+
+        # memo format assertion for coverage sake
+        assert restriction.memo(0) == Program.to([None])
+
+
+@pytest.mark.anyio
+async def test_force_coin_message_wrapper(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        restriction = ValidatorStackRestriction([ForceCoinMessage()])
+        pwr = PuzzleWithRestrictions(0, [restriction], ACSMember())
+
+        # Farm and find coin
+        await sim.farm_block(pwr.puzzle_hash())
+        coin = (await client.get_coin_records_by_puzzle_hashes([pwr.puzzle_hash()], include_spent_coins=False))[0].coin
+
+        # Attempt to just use any old dpuz
+        any_old_dpuz = DelegatedPuzzleAndSolution(puzzle=Program.to((1, [[1, "foo"]])), solution=Program.to(None))
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(any_old_dpuz, [Program.to(None)])
+        no_message_attempt = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    pwr.puzzle_reveal(),
+                    pwr.solve(
+                        [], [Program.to([any_old_dpuz.puzzle.get_tree_hash()])], Program.to([[1, "bar"]]), any_old_dpuz
+                    ),
+                )
+            ],
+            G2Element(),
+        )
+        result = await client.push_tx(no_message_attempt)
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+
+        # Now actually put a coin announcement in the dpuz
+        send_message = SendMessage(mode=uint8(63), msg=b"bar", args=Program.to(coin.name()))
+        receive_message = ReceiveMessage(mode=uint8(63), msg=b"bar", args=Program.to(coin.name()))
+        message_dpuz = DelegatedPuzzleAndSolution(
+            puzzle=Program.to((1, [receive_message.to_program(), send_message.to_program(), [1, "foo"]])),
+            solution=Program.to(None),
+        )
+        wrapped_dpuz = restriction.modify_delegated_puzzle_and_solution(message_dpuz, [Program.to(None)])
+        sb = cost_logger.add_cost(
+            "Minimal puzzle with restrictions w/ coin message forcing wrapper",
+            WalletSpendBundle(
+                [
+                    make_spend(
+                        coin,
+                        pwr.puzzle_reveal(),
+                        pwr.solve(
+                            [],
+                            [Program.to([message_dpuz.puzzle.get_tree_hash()])],
+                            Program.to([[1, "bar"]]),
+                            wrapped_dpuz,
+                        ),
+                    )
+                ],
+                G2Element(),
+            ),
+        )
+        result = await client.push_tx(sb)
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
 
         # memo format assertion for coverage sake
         assert restriction.memo(0) == Program.to([None])
