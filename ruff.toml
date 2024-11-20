@@ -48,7 +48,8 @@ ignore = [
     "PLW0603", # global-statement
 
     # flake8-implicit-str-concat
-    "ISC003",
+    # consider in combination with allow-multiline = false below
+    "ISC003", # explicit-string-concatenation
 
     # Ruff Specific
 
@@ -62,6 +63,7 @@ ignore = [
 
 
 [lint.flake8-implicit-str-concat]
+# consider in combination with ISC003 above
 # Found 3279 errors.
 # allow-multiline = false
 
