@@ -225,7 +225,6 @@ async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
             )
         )
         assert result == (MempoolInclusionStatus.SUCCESS, None)
-        breakpoint()
 
 
 @pytest.mark.anyio
