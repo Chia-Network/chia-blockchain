@@ -269,7 +269,7 @@ class DataStore:
 
         log.info(f"Initiating migration to version {version}. Found {len(all_roots)} stores to migrate")
 
-        async with self.db_wrapper.writer() as writer:
+        async with self.db_wrapper.writer(foreign_key_enforcement_enabled=False) as writer:
             await writer.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS new_root(
