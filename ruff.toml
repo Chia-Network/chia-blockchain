@@ -48,7 +48,6 @@ ignore = [
     "PLW0603", # global-statement
 
     # flake8-implicit-str-concat
-    "ISC002",
     "ISC003",
 
     # Ruff Specific
