@@ -20,14 +20,14 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message, NodeType
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64
-from chia.util.pit import pit
+from chia.util.task_referencer import create_referenced_task
 
 T = TypeVar("T")
 
 
 async def begin_task(coro: Coroutine[Any, Any, T]) -> Task[T]:
     """Awaitable function that adds a coroutine to the event loop and sets it running."""
-    task = pit.create_task(coro)
+    task = create_referenced_task(coro)
     await sleep(0)
 
     return task

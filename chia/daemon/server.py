@@ -44,10 +44,10 @@ from chia.util.keychain import Keychain, KeyData, passphrase_requirements, suppo
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import WebServer
-from chia.util.pit import pit
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
 from chia.wallet.derive_keys import (
     master_pk_to_wallet_pk_unhardened,
@@ -213,7 +213,7 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
-        self.state_changed_task = pit.create_task(self._process_state_changed_queue())
+        self.state_changed_task = create_referenced_task(self._process_state_changed_queue())
         self.webserver = await WebServer.create(
             hostname=self.self_hostname,
             port=self.daemon_port,
@@ -249,7 +249,9 @@ class WebSocketServer:
         cancel_task_safe(self.ping_job, self.log)
         cancel_task_safe(self.state_changed_task, self.log)
         service_names = list(self.services.keys())
-        stop_service_jobs = [pit.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names]
+        stop_service_jobs = [
+            create_referenced_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
+        ]
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
         self.services.clear()
@@ -1055,7 +1057,7 @@ class WebSocketServer:
                 break
 
         if next_plot_id is not None:
-            pit.create_task(self._start_plotting(next_plot_id, loop, queue))
+            create_referenced_task(self._start_plotting(next_plot_id, loop, queue))
 
     def _post_process_plotting_job(self, job: dict[str, Any]):
         id: str = job["id"]
@@ -1191,7 +1193,7 @@ class WebSocketServer:
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
                 # TODO: stop dropping tasks on the floor
-                pit.create_task(self._start_plotting(id, loop, queue))
+                create_referenced_task(self._start_plotting(id, loop, queue))
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
@@ -1353,7 +1355,7 @@ class WebSocketServer:
             }
         else:
             if self.ping_job is None:
-                self.ping_job = pit.create_task(self.ping_task())
+                self.ping_job = create_referenced_task(self.ping_task())
         self.log.info(f"registered for service {service}")
         log.info(f"{response}")
         return response

@@ -21,7 +21,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.batches import to_batches
 from chia.util.ints import uint32, uint64
-from chia.util.pit import pit
+from chia.util.task_referencer import create_referenced_task
 
 NUM_ITERS = 200
 NUM_PEERS = 5
@@ -190,7 +190,7 @@ async def run_mempool_benchmark() -> None:
             start = monotonic()
             for peer in range(NUM_PEERS):
                 total_bundles += len(large_spend_bundles[peer])
-                tasks.append(pit.create_task(add_spend_bundles(large_spend_bundles[peer])))
+                tasks.append(create_referenced_task(add_spend_bundles(large_spend_bundles[peer])))
             await asyncio.gather(*tasks)
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
@@ -209,7 +209,7 @@ async def run_mempool_benchmark() -> None:
             start = monotonic()
             for peer in range(NUM_PEERS):
                 total_bundles += len(spend_bundles[peer])
-                tasks.append(pit.create_task(add_spend_bundles(spend_bundles[peer])))
+                tasks.append(create_referenced_task(add_spend_bundles(spend_bundles[peer])))
             await asyncio.gather(*tasks)
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")
@@ -222,7 +222,7 @@ async def run_mempool_benchmark() -> None:
             start = monotonic()
             for peer in range(NUM_PEERS):
                 total_bundles += len(replacement_spend_bundles[peer])
-                tasks.append(pit.create_task(add_spend_bundles(replacement_spend_bundles[peer])))
+                tasks.append(create_referenced_task(add_spend_bundles(replacement_spend_bundles[peer])))
             await asyncio.gather(*tasks)
             stop = monotonic()
         print(f"  time: {stop - start:0.4f}s")

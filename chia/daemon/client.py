@@ -12,7 +12,7 @@ import aiohttp
 
 from chia.util.ints import uint32
 from chia.util.json_util import dict_to_json_str
-from chia.util.pit import pit
+from chia.util.task_referencer import create_referenced_task
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
@@ -68,7 +68,7 @@ class DaemonProxy:
             finally:
                 await self.close()
 
-        pit.create_task(listener_task())
+        create_referenced_task(listener_task())
         await asyncio.sleep(1)
 
     async def listener(self) -> None:
@@ -92,7 +92,7 @@ class DaemonProxy:
         string = dict_to_json_str(request)
         if self.websocket is None or self.websocket.closed:
             raise Exception("Websocket is not connected")
-        pit.create_task(self.websocket.send_str(string))
+        create_referenced_task(self.websocket.send_str(string))
         try:
             await asyncio.wait_for(self._request_dict[request_id].wait(), timeout=30)
             self._request_dict.pop(request_id)

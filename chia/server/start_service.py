@@ -26,8 +26,8 @@ from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import resolve
-from chia.util.pit import pit
 from chia.util.setproctitle import setproctitle
+from chia.util.task_referencer import create_referenced_task
 
 from ..protocols.shared_protocol import default_capabilities
 from ..util.chia_version import chia_short_version
@@ -220,7 +220,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                     except ValueError:
                         pass
 
-                    self._connect_peers_task = pit.create_task(self._connect_peers_task_handler())
+                    self._connect_peers_task = create_referenced_task(self._connect_peers_task_handler())
 
                     self._log.info(
                         f"Started {self._service_name} service on network_id: {self._network_id} "

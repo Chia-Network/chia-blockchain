@@ -72,7 +72,7 @@ from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphoreFullError
-from chia.util.pit import pit
+from chia.util.task_referencer import create_referenced_task
 
 if TYPE_CHECKING:
     from chia.full_node.full_node import FullNode
@@ -229,7 +229,9 @@ class FullNodeAPI:
                         full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
             task_id: bytes32 = bytes32.secret()
-            fetch_task = pit.create_task(tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id))
+            fetch_task = create_referenced_task(
+                tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
+            )
             self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
             return None
         return None
@@ -458,7 +460,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, None)
 
-        pit.create_task(eventually_clear())
+        create_referenced_task(eventually_clear())
 
         return msg
 
@@ -526,7 +528,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, foliage_hash)
 
-        pit.create_task(eventually_clear())
+        create_referenced_task(eventually_clear())
 
         return msg
 
