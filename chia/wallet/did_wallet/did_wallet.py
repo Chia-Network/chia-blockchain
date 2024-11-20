@@ -316,6 +316,7 @@ class DIDWallet:
 
         for record in unconfirmed_tx:
             our_spend = False
+            # Need to check belonging with hint_dict
             for coin in record.removals:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
                     our_spend = True
@@ -325,7 +326,12 @@ class DIDWallet:
                 continue
 
             for coin in record.additions:
-                if (await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id())) and (
+                hint_dict = {
+                    coin_id: bytes32(memos[0])
+                    for coin_id, memos in record.memos
+                    if len(memos) > 0 and len(memos[0]) == 32
+                }
+                if (await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id(), hint_dict)) and (
                     coin not in record.removals
                 ):
                     addition_amount += coin.amount

@@ -888,6 +888,7 @@ class TestDIDWallet:
                         "did_found": {
                             "spendable_balance": -101,
                             "max_send_amount": -101,
+                            "pending_change": 101,
                             "pending_coin_removal_count": 1,
                         },
                     },
@@ -895,6 +896,7 @@ class TestDIDWallet:
                         "did_found": {
                             "spendable_balance": 101,
                             "max_send_amount": 101,
+                            "pending_change": -101,
                             "pending_coin_removal_count": -1,
                         },
                     },
