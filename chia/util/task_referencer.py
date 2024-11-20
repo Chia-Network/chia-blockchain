@@ -13,7 +13,7 @@ T = typing.TypeVar("T")
 
 
 @dataclasses.dataclass
-class TaskReferencer:
+class _TaskReferencer:
     """Holds strong references to tasks until they are done.  This compensates for
     asyncio holding only weak references.  This should be replaced by patterns using
     task groups such as from anyio.
@@ -49,6 +49,6 @@ class TaskReferencer:
         self.last_cull = now
 
 
-global_task_referencer = TaskReferencer()
+_global_task_referencer = _TaskReferencer()
 
-create_referenced_task = global_task_referencer.create_task
+create_referenced_task = _global_task_referencer.create_task
