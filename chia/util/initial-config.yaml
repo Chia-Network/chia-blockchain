@@ -110,6 +110,9 @@ seeder:
   # Peers used for the initial run.
   bootstrap_peers:
     - "node.chia.net"
+  # Peers to respond with regardless of what the crawler finds
+  # Can be IPs or Hostnames. Hostnames will be resolved to IPs
+  static_peers: []
   # Only consider nodes synced at least to this height.
   minimum_height: 240000
   # How many of a particular version we need to see before reporting it in the logs
