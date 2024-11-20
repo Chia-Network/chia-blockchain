@@ -33,6 +33,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.setup_services import setup_farmer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.errors import CliRpcConnectionError
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.address_type import AddressType
@@ -369,6 +370,7 @@ async def test_plotnft_cli_show_with_farmer(
 
     #  Need to run the farmer to make further tests
     root_path = wallet_environments.environments[0].node.root_path
+
     async with setup_farmer(
         b_tools=wallet_environments.full_node.bt,
         root_path=root_path,
@@ -376,11 +378,14 @@ async def test_plotnft_cli_show_with_farmer(
         consensus_constants=wallet_environments.full_node.bt.constants,
     ) as farmer:
         assert farmer.rpc_server and farmer.rpc_server.webserver
+
+        with lock_and_load_config(root_path, "config.yaml") as config:
+            config["farmer"]["rpc_port"] = farmer.rpc_server.webserver.listen_port
+            save_config(root_path, "config.yaml", config)
+
         context = {
             "root_path": root_path,
-            "farmer_rpc_port": farmer.rpc_server.webserver.listen_port,
         }
-
         await ShowPlotNFTCMD(
             rpc_info=NeedsWalletRPC(
                 context=context,
@@ -1003,9 +1008,11 @@ async def test_plotnft_cli_get_login_link(
         root_path = wallet_environments.environments[0].node.root_path
 
         assert farmer.rpc_server and farmer.rpc_server.webserver
+        with lock_and_load_config(root_path, "config.yaml") as config:
+            config["farmer"]["rpc_port"] = farmer.rpc_server.webserver.listen_port
+            save_config(root_path, "config.yaml", config)
         context = {
             "root_path": root_path,
-            "rpc_port": farmer.rpc_server.webserver.listen_port,
         }
         with pytest.raises(CliRpcConnectionError, match="Was not able to get login link"):
             await GetLoginLinkCMD(

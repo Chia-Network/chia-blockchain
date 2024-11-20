@@ -42,7 +42,6 @@ class ShowPlotNFTCMD:
             await show(
                 wallet_info=wallet_info,
                 root_path=self.rpc_info.context.get("root_path"),
-                farmer_rpc_port=self.rpc_info.context.get("farmer_rpc_port"),
                 wallet_id_passed_in=self.id,
             )
 
@@ -61,9 +60,7 @@ class GetLoginLinkCMD:
     async def run(self) -> None:
         from .plotnft_funcs import get_login_link
 
-        await get_login_link(
-            self.launcher_id, rpc_port=self.context.get("rpc_port"), root_path=self.context.get("root_path")
-        )
+        await get_login_link(self.launcher_id, root_path=self.context.get("root_path"))
 
 
 # Functions with this mark in this file are not being ported to @tx_out_cmd due to lack of observer key support
