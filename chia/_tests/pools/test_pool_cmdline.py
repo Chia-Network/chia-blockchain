@@ -963,6 +963,7 @@ async def test_plotnft_cli_change_payout(
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
     ).run()
     out, _err = capsys.readouterr()
+    assert "foo" in out
     assert f"{bytes32(32 * b'0').hex()} Not found." in out
 
     new_config: PoolWalletConfig = PoolWalletConfig(
