@@ -34,6 +34,7 @@ from chia.wallet.puzzles.custody.custody_architecture import (
 )
 from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import (
     BLSMember,
+    BLSWithTaprootMember,
     FixedPuzzleMember,
     PasskeyMember,
     PasskeyPuzzleAssertMember,
@@ -43,7 +44,10 @@ from chia.wallet.puzzles.custody.member_puzzles.member_puzzles import (
     SECPR1PuzzleAssertMember,
     SingletonMember,
 )
-from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_synthetic_public_key
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    calculate_synthetic_public_key,
+    puzzle_for_synthetic_public_key,
+)
 from chia.wallet.singleton import SINGLETON_LAUNCHER_PUZZLE, SINGLETON_LAUNCHER_PUZZLE_HASH, SINGLETON_TOP_LAYER_MOD
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
@@ -117,6 +121,178 @@ async def test_bls_member(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
         await sim.rewind(block_height)
+
+
+@pytest.mark.anyio
+async def test_bls_with_taproot_member(cost_logger: CostLogger) -> None:
+    async with sim_and_client() as (sim, client):
+        delegated_puzzle = Program.to(1)
+        delegated_puzzle_hash = delegated_puzzle.get_tree_hash()
+        sk = AugSchemeMPL.key_gen(bytes.fromhex(str(0) * 64))
+
+        bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=delegated_puzzle)
+        bls_puzzle = PuzzleWithRestrictions(0, [], bls_with_taproot_member)
+        memo = PuzzleHint(
+            bls_puzzle.puzzle.puzzle_hash(0),
+            bls_puzzle.puzzle.memo(0),
+        )
+
+        assert bls_puzzle.memo() == Program.to(
+            (
+                bls_puzzle.spec_namespace,
+                [
+                    bls_puzzle.nonce,
+                    [],
+                    0,
+                    memo.to_program(),
+                ],
+            )
+        )
+
+        # Farm and find coin
+        await sim.farm_block(bls_puzzle.puzzle_hash())
+        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.puzzle_hash()], include_spent_coins=False))[
+            0
+        ].coin
+        block_height = sim.block_height
+
+        # Create an announcements to be asserted in the delegated puzzle
+        announcement = CreateCoinAnnouncement(msg=b"foo", coin_id=coin.name())
+
+        # test non-taproot spend
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    bls_puzzle.puzzle_reveal(),
+                    bls_puzzle.solve(
+                        [],
+                        [],
+                        bls_with_taproot_member.solve(),
+                        DelegatedPuzzleAndSolution(
+                            delegated_puzzle,
+                            Program.to(
+                                [
+                                    announcement.to_program(),
+                                    announcement.corresponding_assertion().to_program(),
+                                ]
+                            ),
+                        ),
+                    ),
+                )
+            ],
+            bls_with_taproot_member.sign_with_synthetic_secret_key(
+                sk, delegated_puzzle_hash + coin.name() + DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
+            ),
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "BLSTaprootMember spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+        await sim.farm_block()
+        await sim.rewind(block_height)
+
+        # test taproot spend
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    bls_puzzle.puzzle_reveal(),
+                    bls_puzzle.solve(
+                        [],
+                        [],
+                        bls_with_taproot_member.solve(True),
+                        DelegatedPuzzleAndSolution(
+                            delegated_puzzle,
+                            Program.to(
+                                [
+                                    announcement.to_program(),
+                                    announcement.corresponding_assertion().to_program(),
+                                ]
+                            ),
+                        ),
+                    ),
+                )
+            ],
+            G2Element(),  # no signature required in our test hidden_puzzle
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "BLSTaprootMember spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        # test invalid taproot spend
+        illegal_taproot_puzzle = Program.to([1, [51, Program.to(1).get_tree_hash(), 1]])
+        assert illegal_taproot_puzzle.run([]) == Program.to([[51, Program.to(1).get_tree_hash(), 1]])
+        bls_with_taproot_member = BLSWithTaprootMember(public_key=sk.public_key(), hidden_puzzle=illegal_taproot_puzzle)
+        bls_puzzle = PuzzleWithRestrictions(0, [], bls_with_taproot_member)
+        memo = PuzzleHint(
+            bls_puzzle.puzzle.puzzle_hash(0),
+            bls_puzzle.puzzle.memo(0),
+        )
+
+        assert bls_puzzle.memo() == Program.to(
+            (
+                bls_puzzle.spec_namespace,
+                [
+                    bls_puzzle.nonce,
+                    [],
+                    0,
+                    memo.to_program(),
+                ],
+            )
+        )
+
+        # Farm and find coin
+        await sim.farm_block(bls_puzzle.puzzle_hash())
+        coin = (await client.get_coin_records_by_puzzle_hashes([bls_puzzle.puzzle_hash()], include_spent_coins=False))[
+            0
+        ].coin
+        block_height = sim.block_height
+
+        sb = WalletSpendBundle(
+            [
+                make_spend(
+                    coin,
+                    bls_puzzle.puzzle_reveal(),
+                    bls_puzzle.solve(
+                        [],
+                        [],
+                        bls_with_taproot_member.solve(True),
+                        DelegatedPuzzleAndSolution(
+                            delegated_puzzle,
+                            Program.to(
+                                [
+                                    announcement.to_program(),
+                                    announcement.corresponding_assertion().to_program(),
+                                ]
+                            ),
+                        ),
+                    ),
+                )
+            ],
+            G2Element(),  # no signature required in our test hidden_puzzle
+        )
+        result = await client.push_tx(
+            cost_logger.add_cost(
+                "BLSTaprootMember spendbundle",
+                sb,
+            )
+        )
+        assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)
+        assert bls_with_taproot_member.hidden_puzzle is not None
+        assert bls_with_taproot_member.public_key is not None
+        synthetic_public_key = calculate_synthetic_public_key(
+            bls_with_taproot_member.public_key, bls_with_taproot_member.hidden_puzzle.get_tree_hash()
+        )
+        bls_with_taproot_member_synthetic = BLSWithTaprootMember(synthetic_key=synthetic_public_key)
+        assert bls_with_taproot_member.puzzle(0) == bls_with_taproot_member_synthetic.puzzle(0)
 
 
 @pytest.mark.anyio
