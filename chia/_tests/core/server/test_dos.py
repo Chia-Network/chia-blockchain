@@ -171,8 +171,9 @@ class TestDos:
         await session.close()
         await asyncio.sleep(1)  # give some time for cleanup to work
 
+    @pytest.mark.parametrize("n", range(10))
     @pytest.mark.anyio
-    async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname):
+    async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname, n):
         nodes, _, _ = setup_two_nodes_fixture
         _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
