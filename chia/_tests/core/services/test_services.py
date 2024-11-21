@@ -129,10 +129,11 @@ async def test_services_terminate(
 
     test_plots = DEFAULT_ROOT_PATH.parent.joinpath("test-plots")
     assert test_plots.is_dir()
-    chia_root.path.parent.joinpath("test-plots").symlink_to(
-        target=test_plots,
-        target_is_directory=True,
-    )
+
+    simulator_path = chia_root.path.parent.joinpath("simulator")
+    simulator_path.mkdir()
+    plots_path = simulator_path.joinpath("plots")
+    plots_path.symlink_to(target=test_plots, target_is_directory=True)
 
     # TODO: make the wallet start up regardless so this isn't needed
     with closing_chia_root_popen(
