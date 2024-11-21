@@ -302,7 +302,7 @@ class BlockTools:
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None) -> None:
-        keychain_proxy: Optional[KeychainProxy]
+        keychain_proxy: Optional[KeychainProxy] = None
         try:
             if self.local_keychain:
                 keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)

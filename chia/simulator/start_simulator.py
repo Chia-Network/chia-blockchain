@@ -120,10 +120,9 @@ async def async_main(
         root_path=root_path,
     )
     service = await create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
-    if not test_mode:
-        async with SignalHandlers.manage() as signal_handlers:
-            await service.setup_process_global_state(signal_handlers=signal_handlers)
-            await service.run()
+    async with SignalHandlers.manage() as signal_handlers:
+        await service.setup_process_global_state(signal_handlers=signal_handlers)
+        await service.run()
 
     return StartedSimulator(service=service, exit_code=0)
 
