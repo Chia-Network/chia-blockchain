@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import logging
+import os
 import pathlib
 import sys
 from typing import Any, Optional
 
+from chia.apis import ApiProtocolRegistry
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.timelord_rpc_api import TimelordRpcApi
@@ -17,6 +18,7 @@ from chia.types.aliases import TimelordService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import get_unresolved_peer_infos, load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -24,22 +26,20 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 SERVICE_NAME = "timelord"
 
 
-log = logging.getLogger(__name__)
-
-
 def create_timelord_service(
     root_path: pathlib.Path,
     config: dict[str, Any],
-    constants: ConsensusConstants,
+    consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
 ) -> TimelordService:
     service_config = config[SERVICE_NAME]
-    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
-    updated_constants = replace_str_to_bytes(constants, **overrides)
+
+    network_id = service_config["selected_network"]
+    overrides = service_config["network_overrides"]["constants"][network_id]
+    updated_constants = replace_str_to_bytes(consensus_constants, **overrides)
 
     node = Timelord(root_path, service_config, updated_constants)
     peer_api = TimelordAPI(node)
-    network_id = service_config["selected_network"]
 
     rpc_info: Optional[RpcInfo[TimelordRpcApi]] = None
     if service_config.get("start_rpc_server", True):
@@ -48,8 +48,8 @@ def create_timelord_service(
     return Service(
         root_path=root_path,
         config=config,
-        peer_api=peer_api,
         node=node,
+        peer_api=peer_api,
         node_type=NodeType.TIMELORD,
         advertised_port=None,
         service_name=SERVICE_NAME,
@@ -57,6 +57,7 @@ def create_timelord_service(
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,
+        class_for_type=ApiProtocolRegistry,
     )
 
 
@@ -66,6 +67,7 @@ async def async_main() -> int:
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     initialize_service_logging(service_name=SERVICE_NAME, config=config)
+
     service = create_timelord_service(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
@@ -75,7 +77,10 @@ async def async_main() -> int:
 
 
 def main() -> int:
-    return async_run(async_main())
+    with maybe_manage_task_instrumentation(
+        enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
+    ):
+        return async_run(coro=async_main())
 
 
 if __name__ == "__main__":

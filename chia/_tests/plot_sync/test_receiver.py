@@ -132,7 +132,7 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
     assert receiver.current_sync().state == sync_step.state
     last_sync_time_before = receiver._last_sync.time_done
     # For the list types invoke the trigger function in batches
-    if sync_step.payload_type == PlotSyncPlotList or sync_step.payload_type == PlotSyncPathList:
+    if sync_step.payload_type in {PlotSyncPlotList, PlotSyncPathList}:
         step_data, _ = sync_step.args
         assert len(step_data) == 10
         # Invoke batches of: 1, 2, 3, 4 items and validate the data against plot store before and after
@@ -223,7 +223,7 @@ def test_default_values(seeded_random: random.Random) -> None:
 
 @pytest.mark.anyio
 async def test_reset(seeded_random: random.Random) -> None:
-    receiver, sync_steps = plot_sync_setup(seeded_random=seeded_random)
+    receiver, _sync_steps = plot_sync_setup(seeded_random=seeded_random)
     connection_before = receiver.connection()
     # Assign some dummy values
     receiver._current_sync.state = State.done
@@ -289,7 +289,7 @@ async def test_to_dict(counts_only: bool, seeded_random: random.Random) -> None:
     for state in State:
         await run_sync_step(receiver, sync_steps[state])
 
-        if state != State.idle and state != State.removed and state != State.done:
+        if state not in {State.idle, State.removed, State.done}:
             expected_plot_files_processed += len(sync_steps[state].args[0])
 
         sync_data = receiver.to_dict()["syncing"]

@@ -263,7 +263,7 @@ def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Abort
     Raise a click.Abort if the user does not respond with 'y' or 'yes'
     """
     response = input(input_message).lower()
-    if response not in ["y", "yes"]:
+    if response not in {"y", "yes"}:
         print(abort_message)
         raise click.Abort()
 
@@ -325,7 +325,7 @@ def timelock_args(enable: Optional[bool] = None) -> Callable[[Callable[..., None
                     min_time=uint64.construct_optional(kwargs["valid_at"]),
                     max_time=uint64.construct_optional(kwargs["expires_at"]),
                 ),
-                **{k: v for k, v in kwargs.items() if k not in ("valid_at", "expires_at")},
+                **{k: v for k, v in kwargs.items() if k not in {"valid_at", "expires_at"}},
             )
 
         return click.option(
@@ -358,7 +358,6 @@ class TransactionBundle(Streamable):
 def tx_out_cmd(
     enable_timelock_args: Optional[bool] = None,
 ) -> Callable[[Callable[..., list[TransactionRecord]]], Callable[..., None]]:
-
     def _tx_out_cmd(func: Callable[..., list[TransactionRecord]]) -> Callable[..., None]:
         @timelock_args(enable=enable_timelock_args)
         def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
@@ -476,16 +475,6 @@ def format_minutes(minutes: int) -> str:
         return format_unit_string("minute", minutes)
 
     return "Unknown"
-
-
-def prompt_yes_no(prompt: str) -> bool:
-    while True:
-        response = str(input(prompt + " (y/n): ")).lower().strip()
-        ch = response[:1]
-        if ch == "y":
-            return True
-        elif ch == "n":
-            return False
 
 
 def validate_directory_writable(path: Path) -> None:

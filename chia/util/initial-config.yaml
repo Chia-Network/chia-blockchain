@@ -86,6 +86,7 @@ daemon_ssl:
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overridden.
 logging: &logging
   log_stdout: False # If True, outputs to stdout instead of a file
+  log_backcompat: False
   log_filename: "log/debug.log"
   log_level: "WARNING" # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
@@ -160,6 +161,7 @@ harvester:
   # Plots are searched for in the following directories
   plot_directories: []
   recursive_plot_scan: False # If True the harvester scans plots recursively in the provided directories.
+  recursive_follow_links: False # If True the harvester follows symlinks when scanning for plots recursively
 
   ssl:
     private_crt: "config/ssl/harvester/private_harvester.crt"
@@ -480,6 +482,8 @@ introducer:
     public_key: "config/ssl/full_node/public_full_node.key"
 
 wallet:
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
   rpc_port: 9256
 
   # when enabled, the wallet will print a pstats profile to the

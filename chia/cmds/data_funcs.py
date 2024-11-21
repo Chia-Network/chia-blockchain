@@ -32,7 +32,7 @@ async def wallet_log_in_cmd(
     fingerprint: int,
     root_path: Optional[Path] = None,
 ) -> None:
-    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path) as (client, _):
+    async with get_client(rpc_port=rpc_port, fingerprint=fingerprint, root_path=root_path):
         pass
 
 

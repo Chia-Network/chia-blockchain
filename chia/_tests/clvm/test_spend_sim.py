@@ -150,7 +150,7 @@ async def test_all_endpoints():
             ],
             G2Element(),
         )
-        result, error = await sim_client.push_tx(bundle)
+        _result, error = await sim_client.push_tx(bundle)
         assert not error
         # get_all_mempool_tx_ids
         mempool_items = await sim_client.get_all_mempool_tx_ids()

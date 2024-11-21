@@ -6,7 +6,6 @@ import base64
 import contextlib
 import os
 import shutil
-import sys
 import threading
 from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
@@ -53,18 +52,6 @@ def generate_salt() -> bytes:
 
 def symmetric_key_from_passphrase(passphrase: str, salt: bytes) -> bytes:
     return pbkdf2_hmac("sha256", passphrase.encode(), salt, HASH_ITERS)
-
-
-def get_symmetric_key(salt: bytes) -> bytes:
-    from chia.cmds.passphrase_funcs import obtain_current_passphrase
-
-    try:
-        passphrase = obtain_current_passphrase(use_passphrase_cache=True)
-    except Exception as e:
-        print(f"Unable to unlock the keyring: {e}")
-        sys.exit(1)
-
-    return symmetric_key_from_passphrase(passphrase, salt)
 
 
 def encrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
@@ -419,7 +406,7 @@ class FileKeyring(FileSystemEventHandler):
             return False
 
     def load_keyring(self, passphrase: Optional[str] = None) -> None:
-        from chia.cmds.passphrase_funcs import obtain_current_passphrase
+        from chia.util.keyring_wrapper import obtain_current_passphrase
 
         with self.load_keyring_lock:
             self.needs_load_keyring = False
@@ -438,8 +425,7 @@ class FileKeyring(FileSystemEventHandler):
         )
 
     def write_keyring(self, fresh_salt: bool = False) -> None:
-        from chia.cmds.passphrase_funcs import obtain_current_passphrase
-        from chia.util.keyring_wrapper import KeyringWrapper
+        from chia.util.keyring_wrapper import KeyringWrapper, obtain_current_passphrase
 
         # Merge in other properties like "passphrase_hint"
         if "passphrase_hint" in self.file_content_properties_for_next_write:

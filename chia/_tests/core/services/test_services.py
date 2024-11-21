@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import signal
 import sys
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, cast
 
 import aiohttp.client_exceptions
 import pytest
@@ -34,13 +36,15 @@ else:
 
 
 class CreateServiceProtocol(Protocol):
+    @contextlib.asynccontextmanager
     async def __call__(
         self,
         self_hostname: str,
         port: uint16,
         root_path: Path,
         net_config: dict[str, Any],
-    ) -> RpcClient: ...
+    ) -> AsyncIterator[RpcClient]:
+        yield cast(RpcClient, None)  # pragma: no cover
 
 
 async def wait_for_daemon_connection(root_path: Path, config: dict[str, Any], timeout: float = 15) -> DaemonProxy:
@@ -82,34 +86,45 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
 @pytest.mark.parametrize(
     argnames=["create_service", "module_path", "service_config_name"],
     argvalues=[
-        [DataLayerRpcClient.create, "chia.server.start_data_layer", "data_layer"],
-        [FarmerRpcClient.create, "chia.server.start_farmer", "farmer"],
-        [FullNodeRpcClient.create, "chia.server.start_full_node", "full_node"],
-        [HarvesterRpcClient.create, "chia.server.start_harvester", "harvester"],
-        [WalletRpcClient.create, "chia.server.start_wallet", "wallet"],
-        # TODO: review and somehow test the other services too
-        # [, "chia.server.start_introducer", "introducer"],
-        # [, "chia.seeder.start_crawler", ""],
-        # [, "chia.server.start_timelord", "timelord"],
-        # [, "chia.timelord.timelord_launcher", ],
-        # [, "chia.simulator.start_simulator", ],
-        # [, "chia.data_layer.data_layer_server", "data_layer"],
+        [DataLayerRpcClient.create_as_context, "chia.server.start_data_layer", "data_layer"],
+        [FarmerRpcClient.create_as_context, "chia.server.start_farmer", "farmer"],
+        [FullNodeRpcClient.create_as_context, "chia.server.start_full_node", "full_node"],
+        [HarvesterRpcClient.create_as_context, "chia.server.start_harvester", "harvester"],
+        [WalletRpcClient.create_as_context, "chia.server.start_wallet", "wallet"],
+        [None, "chia.server.start_introducer", "introducer"],
+        # TODO: fails...  make it not do that
+        # [None, "chia.seeder.start_crawler", "crawler"],
+        [None, "chia.server.start_timelord", "timelord"],
+        pytest.param(
+            None,
+            "chia.timelord.timelord_launcher",
+            "timelord_launcher",
+            marks=pytest.mark.skipif(
+                sys.platform in {"win32", "cygwin"},
+                reason="windows is not supported by the timelord launcher",
+            ),
+        ),
+        [None, "chia.simulator.start_simulator", "simulator"],
+        # TODO: fails...  make it not do that
+        # [None, "chia.data_layer.data_layer_server", "data_layer"],
     ],
 )
 @pytest.mark.anyio
 async def test_services_terminate(
     signal_number: signal.Signals,
     chia_root: ChiaRoot,
-    create_service: CreateServiceProtocol,
+    create_service: Optional[CreateServiceProtocol],
     module_path: str,
     service_config_name: str,
 ) -> None:
     with lock_and_load_config(root_path=chia_root.path, filename="config.yaml") as config:
         config["daemon_port"] = find_available_listen_port(name="daemon")
         service_config = config[service_config_name]
-        if "port" in service_config:
-            port = find_available_listen_port(name="service")
-            service_config["port"] = port
+        api_port_group = service_config
+        if service_config_name == "timelord":
+            api_port_group = api_port_group["vdf_server"]
+        if "port" in api_port_group:
+            api_port_group["port"] = 0
         rpc_port = find_available_listen_port(name="rpc")
         service_config["rpc_port"] = rpc_port
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
@@ -125,17 +140,26 @@ async def test_services_terminate(
         daemon_client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
         await daemon_client.close()
 
-        with closing_chia_root_popen(
-            chia_root=chia_root,
-            args=[sys.executable, "-m", module_path],
-        ) as process:
-            client = await create_service(
-                self_hostname=config["self_hostname"],
-                port=uint16(rpc_port),
-                root_path=chia_root.path,
-                net_config=config,
+        async with contextlib.AsyncExitStack() as exit_stack:
+            process = exit_stack.enter_context(
+                closing_chia_root_popen(
+                    chia_root=chia_root,
+                    args=[sys.executable, "-m", module_path],
+                )
             )
-            try:
+
+            if create_service is None:
+                await asyncio.sleep(5)
+            else:
+                client = await exit_stack.enter_async_context(
+                    create_service(
+                        self_hostname=config["self_hostname"],
+                        port=uint16(rpc_port),
+                        root_path=chia_root.path,
+                        net_config=config,
+                    )
+                )
+
                 start = time.monotonic()
                 while time.monotonic() - start < 50:
                     return_code = process.poll()
@@ -156,11 +180,8 @@ async def test_services_terminate(
                 else:
                     raise Exception("unable to connect")
 
-                return_code = process.poll()
-                assert return_code is None
+            return_code = process.poll()
+            assert return_code is None
 
-                process.send_signal(signal_number)
-                process.communicate(timeout=adjusted_timeout(timeout=30))
-            finally:
-                client.close()
-                await client.await_closed()
+            process.send_signal(signal_number)
+            process.communicate(timeout=adjusted_timeout(timeout=30))

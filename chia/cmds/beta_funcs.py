@@ -5,7 +5,9 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from chia.cmds.cmds_util import format_bytes, prompt_yes_no, validate_directory_writable
+import click
+
+from chia.cmds.cmds_util import format_bytes, validate_directory_writable
 from chia.util.beta_metrics import metrics_log_interval_max, metrics_log_interval_min
 from chia.util.chia_logging import get_beta_logging_config
 from chia.util.errors import InvalidPathError
@@ -25,11 +27,12 @@ def prompt_beta_warning() -> bool:
     # The `/ 5` is just a rough estimation for `gzip` being used by the log rotation in beta mode. It was like
     # 7-10x compressed in example tests with 2MB files.
     min_space = format_bytes(int(logging_config["log_maxfilesrotation"] * logging_config["log_maxbytesrotation"] / 5))
-    return prompt_yes_no(
+    message = (
         f"\nWARNING: Enabling the beta test mode increases disk writes and may lead to {min_space} of "
         "extra logfiles getting stored on your disk. This should only be done if you are part of the beta test "
         "program.\n\nDo you really want to enable the beta test mode?"
     )
+    return click.confirm(message, default=None)
 
 
 def prompt_for_beta_path(default_path: Path) -> Path:
@@ -37,11 +40,12 @@ def prompt_for_beta_path(default_path: Path) -> Path:
     for _ in range(3):
         user_input = input(
             "\nEnter a directory where the beta test logs can be stored or press enter to use the default "
-            f"[{str(default_path)}]:"
+            f"[{default_path!s}]:"
         )
         test_path = Path(user_input) if user_input else default_path
-        if not test_path.is_dir() and prompt_yes_no(
-            f"\nDirectory {str(test_path)!r} doesn't exist.\n\nDo you want to create it?"
+        if not test_path.is_dir() and click.confirm(
+            f"\nDirectory {str(test_path)!r} doesn't exist.\n\nDo you want to create it?",
+            default=None,
         ):
             test_path.mkdir(parents=True)
 
@@ -65,7 +69,7 @@ def prompt_for_metrics_log_interval(default_interval: int) -> int:
     for _ in range(3):
         user_input = input(
             "\nEnter a number of seconds as interval in which analytics getting logged, press enter to use the default "
-            f"[{str(default_interval)}]:"
+            f"[{default_interval!s}]:"
         )
         test_interval = int(user_input) if user_input else default_interval
 

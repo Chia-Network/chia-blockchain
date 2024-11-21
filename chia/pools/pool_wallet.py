@@ -137,7 +137,7 @@ class PoolWallet:
     @classmethod
     def _verify_self_pooled(cls, state: PoolState) -> Optional[str]:
         err = ""
-        if state.pool_url not in [None, ""]:
+        if state.pool_url not in {None, ""}:
             err += " Unneeded pool_url for self-pooling"
 
         if state.relative_lock_height != 0:
@@ -159,7 +159,7 @@ class PoolWallet:
                 f"is greater than recommended maximum ({cls.MAXIMUM_RELATIVE_LOCK_HEIGHT})"
             )
 
-        if state.pool_url in [None, ""]:
+        if state.pool_url in {None, ""}:
             err += " Empty pool url in pooling state"
         return err
 
@@ -177,10 +177,7 @@ class PoolWallet:
 
         if state.state == PoolSingletonState.SELF_POOLING.value:
             return cls._verify_self_pooled(state)
-        elif (
-            state.state == PoolSingletonState.FARMING_TO_POOL.value
-            or state.state == PoolSingletonState.LEAVING_POOL.value
-        ):
+        elif state.state in {PoolSingletonState.FARMING_TO_POOL.value, PoolSingletonState.LEAVING_POOL.value}:
             return cls._verify_pooling_state(state)
         else:
             return "Internal Error"
@@ -414,12 +411,12 @@ class PoolWallet:
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE:
             raise ValueError("Not enough balance in main wallet to create a managed plotting pool.")
         if balance < PoolWallet.MINIMUM_INITIAL_BALANCE + fee:
-            raise ValueError("Not enough balance in main wallet to create a managed plotting pool with fee {fee}.")
+            raise ValueError(f"Not enough balance in main wallet to create a managed plotting pool with fee {fee}.")
 
         # Verify Parameters - raise if invalid
         PoolWallet._verify_initial_target_state(initial_target_state)
 
-        singleton_puzzle_hash, launcher_coin_id = await PoolWallet.generate_launcher_spend(
+        _singleton_puzzle_hash, launcher_coin_id = await PoolWallet.generate_launcher_spend(
             standard_wallet,
             uint64(1),
             fee,
@@ -514,19 +511,19 @@ class PoolWallet:
         assert new_inner_puzzle != inner_puzzle
         if is_pool_member_inner_puzzle(inner_puzzle):
             (
-                inner_f,
-                target_puzzle_hash,
-                p2_singleton_hash,
-                pubkey_as_program,
-                pool_reward_prefix,
-                escape_puzzle_hash,
+                _inner_f,
+                _target_puzzle_hash,
+                _p2_singleton_hash,
+                _pubkey_as_program,
+                _pool_reward_prefix,
+                _escape_puzzle_hash,
             ) = uncurry_pool_member_inner_puzzle(inner_puzzle)
         elif is_pool_waitingroom_inner_puzzle(inner_puzzle):
             (
-                target_puzzle_hash,  # payout_puzzle_hash
-                relative_lock_height,
-                pubkey_as_program,
-                p2_singleton_hash,
+                _target_puzzle_hash,  # payout_puzzle_hash
+                _relative_lock_height,
+                _pubkey_as_program,
+                _p2_singleton_hash,
             ) = uncurry_pool_waitingroom_inner_puzzle(inner_puzzle)
         else:
             raise RuntimeError("Invalid state")
@@ -663,7 +660,7 @@ class PoolWallet:
             msg = f"Asked to change to current state. Target = {target_state}"
             self.log.info(msg)
             raise ValueError(msg)
-        elif current_state.current.state in [SELF_POOLING.value, LEAVING_POOL.value]:
+        elif current_state.current.state in {SELF_POOLING.value, LEAVING_POOL.value}:
             total_fee = fee
         elif current_state.current.state == FARMING_TO_POOL.value:
             total_fee = uint64(fee * 2)
@@ -846,16 +843,16 @@ class PoolWallet:
             raise ValueError(f"Internal error. Pool wallet {self.wallet_id} state: {pool_wallet_info.current}")
 
         if (
-            self.target_state.state in [FARMING_TO_POOL.value, SELF_POOLING.value]
+            self.target_state.state in {FARMING_TO_POOL.value, SELF_POOLING.value}
             and pool_wallet_info.current.state == LEAVING_POOL.value
         ):
             leave_height = tip_height + pool_wallet_info.current.relative_lock_height
 
             # Add some buffer (+2) to reduce chances of a reorg
             if peak_height > leave_height + 2:
-                unconfirmed: list[TransactionRecord] = (
-                    await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
-                )
+                unconfirmed: list[
+                    TransactionRecord
+                ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
                 next_tip: Optional[Coin] = get_most_recent_singleton_coin_from_coin_spend(tip_spend)
                 assert next_tip is not None
 

@@ -195,7 +195,7 @@ def conditions_for_solution(
 ) -> list[ConditionWithArgs]:
     # get the standard script for a puzzle hash and feed in the solution
     try:
-        cost, r = puzzle_reveal.run_with_cost(max_cost, solution)
+        _cost, r = puzzle_reveal.run_with_cost(max_cost, solution)
         return parse_sexp_to_conditions(r)
     except Program.EvalError as e:
         raise ConsensusError(Err.SEXP_ERROR, [str(e)]) from e

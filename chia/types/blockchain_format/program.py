@@ -42,7 +42,7 @@ class Program(SExp):
         # the first argument is the buffer we want to parse. This effectively
         # leverages the rust parser and LazyNode, making it a lot faster to
         # parse serialized programs into a python compatible structure
-        cost, ret = run_chia_program(
+        _cost, ret = run_chia_program(
             b"\x01",
             blob,
             50,
@@ -66,7 +66,7 @@ class Program(SExp):
 
     def __bytes__(self) -> bytes:
         f = io.BytesIO()
-        self.stream(f)  # noqa
+        self.stream(f)
         return f.getvalue()
 
     def __str__(self) -> str:
@@ -135,7 +135,7 @@ class Program(SExp):
         return self._run(max_cost, flags, args)
 
     def run(self, args: Any, max_cost=INFINITE_COST, flags=DEFAULT_FLAGS) -> Program:
-        cost, r = self._run(max_cost, flags, args)
+        _cost, r = self._run(max_cost, flags, args)
         return r
 
     def run_with_flags(self, max_cost: int, flags: int, args: Any) -> tuple[int, Program]:

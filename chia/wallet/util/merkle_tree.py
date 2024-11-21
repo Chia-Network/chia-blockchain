@@ -76,14 +76,14 @@ class MerkleTree:
             if first_hash[0] is not None:
                 final_list = first_hash[1]
                 # TODO: handle hints
-                #       error: Item "None" of "Optional[List[bytes32]]" has no attribute "append"  [union-attr]
+                #       error: Item "None" of "Optional[list[bytes32]]" has no attribute "append"  [union-attr]
                 final_list.append(rest_hash[2])  # type: ignore[union-attr]
                 bit_num = first_hash[3]
                 final_path = first_hash[0]
             elif rest_hash[0] is not None:
                 final_list = rest_hash[1]
                 # TODO: handle hints
-                #       error: Item "None" of "Optional[List[bytes32]]" has no attribute "append"  [union-attr]
+                #       error: Item "None" of "Optional[list[bytes32]]" has no attribute "append"  [union-attr]
                 final_list.append(first_hash[2])  # type: ignore[union-attr]
                 bit_num = rest_hash[3]
                 # TODO: handle hints

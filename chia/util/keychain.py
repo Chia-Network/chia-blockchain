@@ -41,7 +41,7 @@ MIN_PASSPHRASE_LEN = 8
 
 
 def supports_os_passphrase_storage() -> bool:
-    return sys.platform in ["darwin", "win32", "cygwin"]
+    return sys.platform in {"darwin", "win32", "cygwin"}
 
 
 def passphrase_requirements() -> dict[str, Any]:
@@ -71,7 +71,7 @@ def generate_mnemonic() -> str:
 
 
 def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
-    if len(mnemonic_bytes) not in [16, 20, 24, 28, 32]:
+    if len(mnemonic_bytes) not in {16, 20, 24, 28, 32}:
         raise ValueError(
             f"Data length should be one of the following: [16, 20, 24, 28, 32], but it is {len(mnemonic_bytes)}."
         )
@@ -97,7 +97,7 @@ def bytes_to_mnemonic(mnemonic_bytes: bytes) -> str:
 
 def check_mnemonic_validity(mnemonic_str: str) -> bool:
     mnemonic: list[str] = mnemonic_str.split(" ")
-    return len(mnemonic) in [12, 15, 18, 21, 24]
+    return len(mnemonic) in {12, 15, 18, 21, 24}
 
 
 def mnemonic_from_short_words(mnemonic_str: str) -> str:
@@ -107,7 +107,7 @@ def mnemonic_from_short_words(mnemonic_str: str) -> str:
     up words by the first 4 characters
     """
     mnemonic: list[str] = mnemonic_str.split(" ")
-    if len(mnemonic) not in [12, 15, 18, 21, 24]:
+    if len(mnemonic) not in {12, 15, 18, 21, 24}:
         raise ValueError("Invalid mnemonic length")
 
     four_char_dict = {word[:4]: word for word in bip39_word_list().splitlines()}

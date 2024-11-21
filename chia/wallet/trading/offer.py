@@ -326,11 +326,11 @@ class Offer:
 
         def keys_to_strings(dic: dict[Optional[bytes32], Any]) -> dict[str, Any]:
             new_dic: dict[str, Any] = {}
-            for key in dic:
+            for key, val in dic.items():
                 if key is None:
-                    new_dic["xch"] = dic[key]
+                    new_dic["xch"] = val
                 else:
-                    new_dic[key.hex()] = dic[key]
+                    new_dic[key.hex()] = val
             return new_dic
 
         driver_dict: dict[str, Any] = {}
@@ -503,9 +503,9 @@ class Offer:
             coin_to_spend_dict: dict[Coin, CoinSpend] = {}
             coin_to_solution_dict: dict[Coin, Program] = {}
             for coin in offered_coins:
-                parent_spend: CoinSpend = list(
+                parent_spend: CoinSpend = next(
                     filter(lambda cs: cs.coin.name() == coin.parent_coin_info, self._bundle.coin_spends)
-                )[0]
+                )
                 coin_to_spend_dict[coin] = parent_spend
 
                 inner_solutions = []
@@ -674,7 +674,7 @@ class Offer:
 
     @classmethod
     def from_bech32(cls, offer_bech32: str) -> Offer:
-        hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
+        _hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
         if data is None:
             raise ValueError("Invalid Offer")
         decoded = convertbits(list(data), 5, 8, False)

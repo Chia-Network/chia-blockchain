@@ -344,7 +344,7 @@ class FeeStat:  # TxConfirmStats
             tx_sum += self.tx_ct_avg[i]
 
         if found_answer and tx_sum != 0:
-            tx_sum = tx_sum / 2
+            tx_sum /= 2
             for i in range(min_bucket, max_bucket):
                 if self.tx_ct_avg[i] < tx_sum:
                     tx_sum -= self.tx_ct_avg[i]
@@ -393,7 +393,7 @@ def clamp(n: int, smallest: int, largest: int) -> int:
 
 def get_bucket_index(buckets: list[float], fee_rate: float) -> int:
     if len(buckets) < 1:
-        raise RuntimeError("get_bucket_index: buckets is invalid ({buckets})")
+        raise RuntimeError(f"get_bucket_index: buckets is invalid ({buckets})")
     # Choose the bucket to the left if we do not have exactly this fee rate
     # Python's list.bisect_left returns the index to insert a new element into a sorted list
     bucket_index = bisect_left(buckets, fee_rate) - 1
@@ -406,7 +406,7 @@ def init_buckets() -> list[float]:
     buckets: list[float] = []
     while fee_rate < MAX_FEE_RATE:
         buckets.append(fee_rate)
-        fee_rate = fee_rate * STEP_SIZE
+        fee_rate *= STEP_SIZE
 
     buckets.append(INFINITE_FEE_RATE)
     return buckets

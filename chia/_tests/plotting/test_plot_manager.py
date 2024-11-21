@@ -14,6 +14,7 @@ import pytest
 from chia_rs import G1Element
 
 from chia._tests.plotting.util import get_test_plots
+from chia._tests.util.misc import boolean_datacases
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.plotting.cache import CURRENT_VERSION, CacheDataV1
 from chia.plotting.manager import Cache, PlotManager
@@ -32,6 +33,9 @@ from chia.util.ints import uint16, uint32
 from chia.util.streamable import VersionedBlob
 
 log = logging.getLogger(__name__)
+
+# These tests are not dependent on consensus rules
+pytestmark = [pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")]
 
 
 @dataclass
@@ -736,4 +740,42 @@ async def test_recursive_plot_scan(environment: Environment) -> None:
     add_plot_directory(env.root_path, str(sub_dir_0_1.path))
     add_plot_directory(env.root_path, str(sub_dir_1_0_1.path))
     expected_result.loaded = []
+    await env.refresh_tester.run(expected_result)
+
+
+@boolean_datacases(name="follow_links", false="no_follow", true="follow")
+@pytest.mark.anyio
+async def test_recursive_plot_scan_symlinks(environment: Environment, follow_links: bool) -> None:
+    env: Environment = environment
+    # Create a directory tree with some subdirectories containing plots, others not.
+    root_plot_dir = env.root_path / "root"
+    sub_dir_0: Directory = Directory(root_plot_dir / "0", env.dir_1.plots[0:2])
+    sub_dir_0_1: Directory = Directory(sub_dir_0.path / "1", env.dir_1.plots[2:3])
+
+    # Create a plot directory outside of the root plot directory
+    other_plot_dir: Directory = Directory(env.root_path / "other", env.dir_1.plots[3:7])
+
+    # Create a symlink to the other plot directory from inside the root plot directory
+    symlink_path = Path(root_plot_dir / "other")
+    symlink_path.symlink_to(env.root_path / "other")
+
+    # Adding the root without `recursive_plot_scan` and running a test should not load any plots (match an empty result)
+    expected_result = PlotRefreshResult()
+    add_plot_directory(env.root_path, str(root_plot_dir))
+    await env.refresh_tester.run(expected_result)
+
+    if follow_links:
+        expected_plot_list = sub_dir_0.plot_info_list() + sub_dir_0_1.plot_info_list() + other_plot_dir.plot_info_list()
+    else:
+        expected_plot_list = sub_dir_0.plot_info_list() + sub_dir_0_1.plot_info_list()
+
+    # Set the recursive scan flag in the config and symlink flag
+    with lock_and_load_config(env.root_path, "config.yaml") as config:
+        config["harvester"]["recursive_plot_scan"] = True
+        config["harvester"]["recursive_follow_links"] = follow_links
+        save_config(env.root_path, "config.yaml", config)
+
+    # With the flag enabled it should load all expected plots
+    expected_result.loaded = expected_plot_list  # type: ignore[assignment]
+    expected_result.processed = len(expected_plot_list)
     await env.refresh_tester.run(expected_result)

@@ -50,7 +50,7 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
         DISCRIMINANT_SIZE_BITS=uint16(32),
         SUB_SLOT_ITERS_STARTING=uint64(2**12),
     )
-    async with create_blockchain(patched_constants, db_version) as (bc1, db_wrapper):
+    async with create_blockchain(patched_constants, db_version) as (bc1, _):
         yield bc1
 
 
@@ -58,7 +58,7 @@ async def empty_blockchain(db_version: int, blockchain_constants: ConsensusConst
 async def empty_blockchain_with_original_constants(
     db_version: int, blockchain_constants: ConsensusConstants
 ) -> AsyncIterator[Blockchain]:
-    async with create_blockchain(blockchain_constants, db_version) as (bc1, db_wrapper):
+    async with create_blockchain(blockchain_constants, db_version) as (bc1, _):
         yield bc1
 
 
@@ -95,9 +95,7 @@ async def test_unfinished_block_rank(
     # shuffle them to ensure the order we add them to the store isn't relevant
     seeded_random.shuffle(unfinished)
     for new_unf in unfinished:
-        store.add_unfinished_block(
-            uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, False, uint32(0))
-        )
+        store.add_unfinished_block(uint32(2), new_unf, PreValidationResult(None, uint64(123532), None, uint32(0)))
 
     # now ask for "the" unfinished block given the proof-of-space.
     # the FullNodeStore should return the one with the lowest foliage tx block
@@ -151,7 +149,7 @@ async def test_find_best_block(
         else:
             result[bytes32(b.to_bytes(1, "big") * 32)] = UnfinishedBlockEntry(unf, None, uint32(123))
 
-    foliage_hash, block = find_best_block(result)
+    foliage_hash, _block = find_best_block(result)
     if expected is None:
         assert foliage_hash is None
     else:
@@ -221,7 +219,7 @@ async def test_basic_store(
         assert store.get_unfinished_block(unf_block.partial_hash) is None
         assert store.get_unfinished_block2(unf_block.partial_hash, None) == (None, 0, False)
         store.add_unfinished_block(
-            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, False, uint32(0))
+            uint32(height), unf_block, PreValidationResult(None, uint64(123532), None, uint32(0))
         )
         assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
         assert store.get_unfinished_block2(
@@ -277,9 +275,7 @@ async def test_basic_store(
     assert unf3.foliage.foliage_transaction_block_hash is None
     assert unf4.foliage.foliage_transaction_block_hash is None
     for val, unf_block in enumerate([unf1, unf2, unf3, unf4]):
-        store.add_unfinished_block(
-            uint32(height), unf_block, PreValidationResult(None, uint64(val), None, False, uint32(0))
-        )
+        store.add_unfinished_block(uint32(height), unf_block, PreValidationResult(None, uint64(val), None, uint32(0)))
 
     # when not specifying a foliage hash, you get the "best" one
     # best is defined as the lowest foliage hash
@@ -481,7 +477,6 @@ async def test_basic_store(
 
     fork_info = ForkInfo(-1, -1, blockchain.constants.GENESIS_CHALLENGE)
     for block in blocks_reorg:
-
         peak = blockchain.get_peak()
         assert peak is not None
 

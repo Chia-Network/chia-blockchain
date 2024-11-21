@@ -144,7 +144,7 @@ async def test_hints_in_blockchain(
         FullNodeSimulator, FullNodeSimulator, ChiaServer, ChiaServer, WalletTool, WalletTool, BlockTools
     ],
 ) -> None:
-    full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+    full_node_1, _full_node_2, _server_1, _server_2, _wallet_a, _wallet_receiver, bt = wallet_nodes
 
     blocks = bt.get_consecutive_blocks(
         5,
@@ -160,7 +160,7 @@ async def test_hints_in_blockchain(
     puzzle_hash = bytes32(32 * b"\0")
     amount = int_to_bytes(1)
     hint = bytes32(32 * b"\5")
-    coin_spent = list(blocks[-1].get_included_reward_coins())[0]
+    coin_spent = blocks[-1].get_included_reward_coins()[0]
     condition_dict = {
         ConditionOpcode.CREATE_COIN: [ConditionWithArgs(ConditionOpcode.CREATE_COIN, [puzzle_hash, amount, hint])]
     }

@@ -5,8 +5,8 @@ from typing import Any
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 
-TupleTree = Any  # Union[bytes32, Tuple["TupleTree", "TupleTree"]]
-Proof_Tree_Type = Any  # Union[bytes32, Tuple[bytes32, "Proof_Tree_Type"]]
+TupleTree = Any  # Union[bytes32, tuple["TupleTree", "TupleTree"]]
+Proof_Tree_Type = Any  # Union[bytes32, tuple[bytes32, "Proof_Tree_Type"]]
 
 
 HASH_TREE_PREFIX = bytes([2])

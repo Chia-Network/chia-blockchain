@@ -61,7 +61,7 @@ def bech32_verify_checksum(hrp: str, data: list[int]) -> bool:
 
 def bech32_create_checksum(hrp: str, data: list[int]) -> list[int]:
     values = bech32_hrp_expand(hrp) + data
-    polymod = bech32_polymod(values + [0, 0, 0, 0, 0, 0]) ^ M
+    polymod = bech32_polymod([*values, 0, 0, 0, 0, 0, 0]) ^ M
     return [(polymod >> 5 * (5 - i)) & 31 for i in range(6)]
 
 
@@ -118,7 +118,7 @@ def encode_puzzle_hash(puzzle_hash: bytes32, prefix: str) -> str:
 
 
 def decode_puzzle_hash(address: str) -> bytes32:
-    hrpgot, data = bech32_decode(address)
+    _hrpgot, data = bech32_decode(address)
     if data is None:
         raise ValueError("Invalid Address")
     decoded = convertbits(data, 5, 8, False)
