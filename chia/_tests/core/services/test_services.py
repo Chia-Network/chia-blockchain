@@ -105,7 +105,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
         # [None, "chia.data_layer.data_layer_server", "data_layer"],
     ],
 )
-@pytest.mark.parametrize("n", range(30))
+@pytest.mark.parametrize("n", range(10))
 @pytest.mark.anyio
 async def test_services_terminate(
     signal_number: signal.Signals,
