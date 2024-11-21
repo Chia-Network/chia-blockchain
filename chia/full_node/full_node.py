@@ -1206,10 +1206,11 @@ class FullNode:
                             new_peers_with_peak[idx][0],
                             new_peers_with_peak[idx][1] + bump,
                         )
-                        response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=30)
+                        # the fewer peers we have, the more willing we should be
+                        # to wait for them.
+                        timeout = int(30 + 30 / len(new_peers_with_peak))
+                        response = await peer.call_api(FullNodeAPI.request_blocks, request, timeout=timeout)
                         end = time.monotonic()
-                        if end - start > 5:
-                            self.log.info(f"sync pipeline, peer took {end - start:0.2f} to respond to request_blocks")
                         if response is None:
                             self.log.info(f"peer timed out after {end - start:.1f} s")
                             await peer.close()
