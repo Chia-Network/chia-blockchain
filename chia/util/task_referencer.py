@@ -11,6 +11,7 @@ import math
 import pathlib
 import time
 import typing
+import warnings
 
 import chia
 from chia.util.introspection import caller_file_and_line
@@ -90,7 +91,9 @@ class _TaskReferencer:
 
             if len(gc.get_referrers(task_info.task)) == 1:
                 # presently coded to repeat every time
-                logger.error(f"unexpected incomplete unreferenced task found: {task_info}")
+                message = f"unexpected incomplete unreferenced task found: {task_info}"
+                logger.error(message)
+                warnings.warn(message)
 
 
 _global_task_referencer = _TaskReferencer()
