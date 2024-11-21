@@ -68,7 +68,7 @@ class DaemonProxy:
             finally:
                 await self.close()
 
-        create_referenced_task(listener_task())
+        create_referenced_task(listener_task(), known_unreferenced=True)
         await asyncio.sleep(1)
 
     async def listener(self) -> None:
@@ -92,7 +92,7 @@ class DaemonProxy:
         string = dict_to_json_str(request)
         if self.websocket is None or self.websocket.closed:
             raise Exception("Websocket is not connected")
-        create_referenced_task(self.websocket.send_str(string))
+        create_referenced_task(self.websocket.send_str(string), known_unreferenced=True)
         try:
             await asyncio.wait_for(self._request_dict[request_id].wait(), timeout=30)
             self._request_dict.pop(request_id)

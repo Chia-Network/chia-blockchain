@@ -249,7 +249,7 @@ class RpcServer(Generic[_T_RpcApiProtocol]):
     def state_changed(self, change: str, change_data: Optional[dict[str, Any]] = None) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
-        create_referenced_task(self._state_changed(change, change_data))
+        create_referenced_task(self._state_changed(change, change_data), known_unreferenced=True)
 
     @property
     def listen_port(self) -> uint16:

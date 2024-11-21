@@ -427,10 +427,10 @@ class WalletNode:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                create_referenced_task(profile_task(self.root_path, "wallet", self.log))
+                create_referenced_task(profile_task(self.root_path, "wallet", self.log), known_unreferenced=True)
 
         if self.config.get("enable_memory_profiler", False):
-            create_referenced_task(mem_profile_task(self.root_path, "wallet", self.log))
+            create_referenced_task(mem_profile_task(self.root_path, "wallet", self.log), known_unreferenced=True)
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(fingerprint))
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -518,7 +518,7 @@ class WalletNode:
     def _pending_tx_handler(self) -> None:
         if self._wallet_state_manager is None:
             return None
-        create_referenced_task(self._resend_queue())
+        create_referenced_task(self._resend_queue(), known_unreferenced=True)
 
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:

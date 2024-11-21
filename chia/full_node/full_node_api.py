@@ -460,7 +460,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, None)
 
-        create_referenced_task(eventually_clear())
+        create_referenced_task(eventually_clear(), known_unreferenced=True)
 
         return msg
 
@@ -528,7 +528,7 @@ class FullNodeAPI:
             await asyncio.sleep(5)
             self.full_node.full_node_store.remove_requesting_unfinished_block(block_hash, foliage_hash)
 
-        create_referenced_task(eventually_clear())
+        create_referenced_task(eventually_clear(), known_unreferenced=True)
 
         return msg
 

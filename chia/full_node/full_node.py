@@ -282,7 +282,7 @@ class FullNode:
             self._init_weight_proof = create_referenced_task(self.initialize_weight_proof())
 
             if self.config.get("enable_profiler", False):
-                create_referenced_task(profile_task(self.root_path, "node", self.log))
+                create_referenced_task(profile_task(self.root_path, "node", self.log), known_unreferenced=True)
 
             self.profile_block_validation = self.config.get("profile_block_validation", False)
             if self.profile_block_validation:  # pragma: no cover
@@ -292,7 +292,7 @@ class FullNode:
                 profile_dir.mkdir(parents=True, exist_ok=True)
 
             if self.config.get("enable_memory_profiler", False):
-                create_referenced_task(mem_profile_task(self.root_path, "node", self.log))
+                create_referenced_task(mem_profile_task(self.root_path, "node", self.log), known_unreferenced=True)
 
             time_taken = time.monotonic() - start_time
             peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -339,7 +339,7 @@ class FullNode:
 
             self.initialized = True
             if self.full_node_peers is not None:
-                create_referenced_task(self.full_node_peers.start())
+                create_referenced_task(self.full_node_peers.start(), known_unreferenced=True)
             try:
                 yield
             finally:
@@ -355,7 +355,7 @@ class FullNode:
                     self.mempool_manager.shut_down()
 
                 if self.full_node_peers is not None:
-                    create_referenced_task(self.full_node_peers.close())
+                    create_referenced_task(self.full_node_peers.close(), known_unreferenced=True)
                 if self.uncompact_task is not None:
                     self.uncompact_task.cancel()
                 if self._transaction_queue_task is not None:

@@ -503,7 +503,7 @@ class ChiaServer:
                 self.log.info(f"Connected with {connection_type_str} {target_node}")
             else:
                 self.log.debug(f"Successful feeler connection with {connection_type_str} {target_node}")
-                create_referenced_task(connection.close())
+                create_referenced_task(connection.close(), known_unreferenced=True)
             return True
         except client_exceptions.ClientConnectorError as e:
             if is_feeler:
