@@ -20,7 +20,14 @@ class ChiaCliContext:
 
     @classmethod
     def from_click(cls, ctx: click.Context) -> ChiaCliContext:
-        return cast(ChiaCliContext, ctx.obj[cls.context_dict_key])
+        if ctx.obj is None:
+            return cls()
+
+        existing = cast(Optional[ChiaCliContext], ctx.obj.get(cls.context_dict_key))
+        if existing is None:
+            return cls()
+
+        return existing
 
     def to_click(self) -> dict[str, object]:
         return {self.context_dict_key: self}
