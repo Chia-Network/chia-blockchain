@@ -30,7 +30,7 @@ SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNod
 SERVICE_NAME = "full_node"
 log = logging.getLogger(__name__)
 PLOTS = 3  # 3 plots should be enough
-PLOT_SIZE = 19  # anything under k19 is a bit buggy
+PLOT_SIZE = 20  # anything under k19 is a bit buggy
 
 
 async def create_full_node_simulator_service(
