@@ -19,6 +19,7 @@ from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from chia.rpc.rpc_client import RpcClient
 from chia.simulator.socket import find_available_listen_port
 from chia.util.config import lock_and_load_config, save_config
+from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 from chia.util.timing import adjusted_timeout
 
@@ -125,6 +126,11 @@ async def test_services_terminate(
         rpc_port = find_available_listen_port(name="rpc")
         service_config["rpc_port"] = rpc_port
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
+
+    chia_root.path.parent.joinpath("test-plots").symlink_to(
+        target=DEFAULT_ROOT_PATH.parent.joinpath("test-plots"),
+        target_is_directory=True,
+    )
 
     # TODO: make the wallet start up regardless so this isn't needed
     with closing_chia_root_popen(
