@@ -956,14 +956,13 @@ async def test_plotnft_cli_change_payout(
     pw_info, _ = await wallet_rpc.pw_status(wallet_id)
 
     # This tests what happens when using None for root_path
-    mocker.patch("chia.util.default_root.DEFAULT_ROOT_PATH", root_path)
+    mocker.patch("chia.cmds.plotnft_funcs.DEFAULT_ROOT_PATH", root_path)
     await ChangePayoutInstructionsPlotNFTCMD(
         context=dict(),
         launcher_id=bytes32(32 * b"0"),
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
     ).run()
     out, _err = capsys.readouterr()
-    assert "foo" in out
     assert f"{bytes32(32 * b'0').hex()} Not found." in out
 
     new_config: PoolWalletConfig = PoolWalletConfig(
