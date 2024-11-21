@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import field
-from pathlib import Path
 from typing import Any, Optional
 
 import click
@@ -30,6 +29,7 @@ def plotnft_cmd(ctx: click.Context) -> None:
     "Show plotnft information",
 )
 class ShowPlotNFTCMD:
+    context: dict[str, Any]
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
     id: Optional[int] = option(
         "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
@@ -41,7 +41,7 @@ class ShowPlotNFTCMD:
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await show(
                 wallet_info=wallet_info,
-                root_path=self.rpc_info.context.get("root_path"),
+                root_path=self.context.get("root_path"),
                 wallet_id_passed_in=self.id,
             )
 
@@ -244,9 +244,8 @@ class ChangePayoutInstructionsPlotNFTCMD:
     address: CliAddress = option(
         "-a", "--address", help="New address for payout instructions", type=AddressParamType(), required=True
     )
-    root_path: Optional[Path] = None
 
     async def run(self) -> None:
         from .plotnft_funcs import change_payout_instructions
 
-        await change_payout_instructions(self.launcher_id, self.address, root_path=self.root_path)
+        await change_payout_instructions(self.launcher_id, self.address, root_path=self.context.get("root_path"))

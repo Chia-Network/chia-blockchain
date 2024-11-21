@@ -297,8 +297,8 @@ async def test_plotnft_cli_show(
     )
 
     await ShowPlotNFTCMD(
+        context={"root_path": root_path},  # we need this for the farmer rpc client which is used in the commend
         rpc_info=NeedsWalletRPC(
-            context={"root_path": root_path},  # we need this for the farmer rpc client which is used in the commend
             client_info=client_info,
         ),
         id=None,
@@ -308,8 +308,8 @@ async def test_plotnft_cli_show(
 
     with pytest.raises(CliRpcConnectionError, match="is not a pool wallet"):
         await ShowPlotNFTCMD(
+            context={"root_path": root_path},
             rpc_info=NeedsWalletRPC(
-                context={"root_path": root_path},
                 client_info=client_info,
             ),
             id=15,
@@ -319,8 +319,8 @@ async def test_plotnft_cli_show(
 
     # need to capture the output and verify
     await ShowPlotNFTCMD(
+        context={"root_path": root_path},
         rpc_info=NeedsWalletRPC(
-            context={"root_path": root_path},
             client_info=client_info,
         ),
         id=wallet_id,
@@ -334,8 +334,8 @@ async def test_plotnft_cli_show(
     # Passing in None when there are multiple pool wallets
     # Should show the state of all pool wallets
     await ShowPlotNFTCMD(
+        context={"root_path": root_path},
         rpc_info=NeedsWalletRPC(
-            context={"root_path": root_path},
             client_info=client_info,
         ),
         id=None,
@@ -389,12 +389,9 @@ async def test_plotnft_cli_show_with_farmer(
             config["farmer"]["rpc_port"] = farmer.rpc_server.webserver.listen_port
             save_config(root_path, "config.yaml", config)
 
-        context = {
-            "root_path": root_path,
-        }
         await ShowPlotNFTCMD(
+            context={"root_path": root_path},
             rpc_info=NeedsWalletRPC(
-                context=context,
                 client_info=client_info,
             ),
             id=None,
@@ -407,8 +404,8 @@ async def test_plotnft_cli_show_with_farmer(
         pw_info, _ = await wallet_rpc.pw_status(wallet_id)
 
         await ShowPlotNFTCMD(
+            context={"root_path": root_path},
             rpc_info=NeedsWalletRPC(
-                context=context,
                 client_info=client_info,
             ),
             id=wallet_id,
@@ -961,9 +958,9 @@ async def test_plotnft_cli_change_payout(
     # This tests what happens when using None for root_path
     mocker.patch("chia.util.default_root.DEFAULT_ROOT_PATH", root_path)
     await ChangePayoutInstructionsPlotNFTCMD(
+        context=dict(),
         launcher_id=bytes32(32 * b"0"),
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
-        root_path=None,
     ).run()
     out, _err = capsys.readouterr()
     assert f"{bytes32(32 * b'0').hex()} Not found." in out
@@ -984,9 +981,9 @@ async def test_plotnft_cli_change_payout(
     assert wanted_config.payout_instructions == zero_address
 
     await ChangePayoutInstructionsPlotNFTCMD(
+        context={"root_path": root_path},
         launcher_id=pw_info.launcher_id,
         address=CliAddress(burn_ph, burn_address, AddressType.XCH),
-        root_path=root_path,
     ).run()
     out, _err = capsys.readouterr()
     assert f"Payout Instructions for launcher id: {pw_info.launcher_id.hex()} successfully updated" in out
@@ -1034,12 +1031,9 @@ async def test_plotnft_cli_get_login_link(
         with lock_and_load_config(root_path, "config.yaml") as config:
             config["farmer"]["rpc_port"] = farmer.rpc_server.webserver.listen_port
             save_config(root_path, "config.yaml", config)
-        context = {
-            "root_path": root_path,
-        }
         with pytest.raises(CliRpcConnectionError, match="Was not able to get login link"):
             await GetLoginLinkCMD(
-                context=context,
+                context={"root_path": root_path},
                 launcher_id=bytes32(32 * b"0"),
             ).run()
 

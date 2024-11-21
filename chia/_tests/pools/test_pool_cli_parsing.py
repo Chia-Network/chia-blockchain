@@ -120,7 +120,9 @@ def test_plotnft_command_default_parsing() -> None:
     )
 
     check_click_parsing(
-        ShowPlotNFTCMD(rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), id=5),
+        ShowPlotNFTCMD(
+            context=dict(), rpc_info=NeedsWalletRPC(client_info=None, wallet_rpc_port=None, fingerprint=None), id=5
+        ),
         "--id",
         "5",
     )
