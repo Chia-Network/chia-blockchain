@@ -1056,7 +1056,7 @@ class TestDIDWallet:
                 backup_data,
             )
         env_0.wallet_aliases["did_2"] = 3
-        new_ph = await did_wallet_3.get_new_did_inner_hash()
+        new_ph = await did_wallet_3.get_did_inner_hash(new=True)
         coin = await did_wallet_2.get_coin()
         pubkey = (
             await did_wallet_3.wallet_state_manager.get_unused_derivation_record(did_wallet_3.wallet_info.id)
@@ -1143,7 +1143,7 @@ class TestDIDWallet:
             )
         env_1.wallet_aliases["did_2"] = 3
         coin = await did_wallet.get_coin()
-        new_ph = await did_wallet_4.get_new_did_inner_hash()
+        new_ph = await did_wallet_4.get_did_inner_hash(new=True)
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
         ).pubkey
