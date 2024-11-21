@@ -26,6 +26,7 @@ from chia.cmds.rpc import rpc_cmd
 from chia.cmds.show import show_cmd
 from chia.cmds.start import start_cmd
 from chia.cmds.stop import stop_cmd
+from chia.cmds.util import ChiaCliContext
 from chia.cmds.wallet import wallet_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.errors import KeychainCurrentPassphraseIsInvalid
@@ -55,7 +56,7 @@ def cli(
     from pathlib import Path
 
     ctx.ensure_object(dict)
-    ctx.obj["root_path"] = Path(root_path)
+    ctx.obj.update(ChiaCliContext(root_path=Path(root_path)).to_click())
 
     # keys_root_path and passphrase_file will be None if the passphrase options have been
     # scrubbed from the CLI options
@@ -107,7 +108,7 @@ def run_daemon_cmd(ctx: click.Context, wait_for_unlock: bool) -> None:
 
     wait_for_unlock = wait_for_unlock and Keychain.is_keyring_locked()
 
-    asyncio.run(async_run_daemon(ctx.obj["root_path"], wait_for_unlock=wait_for_unlock))
+    asyncio.run(async_run_daemon(ChiaCliContext.from_click(ctx).root_path, wait_for_unlock=wait_for_unlock))
 
 
 cli.add_command(keys_cmd)

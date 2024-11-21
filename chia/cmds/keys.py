@@ -6,15 +6,15 @@ import click
 from chia_rs import PrivateKey
 
 from chia.cmds import options
+from chia.cmds.util import ChiaCliContext
 
 
 @click.group("keys", help="Manage your keys")
 @click.pass_context
 def keys_cmd(ctx: click.Context) -> None:
     """Create, delete, view and use your key pairs"""
-    from pathlib import Path
 
-    root_path: Path = ctx.obj["root_path"]
+    root_path = ChiaCliContext.from_click(ctx).root_path
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with chia init")
 
@@ -34,7 +34,7 @@ def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
     from .keys_funcs import generate_and_add
 
     generate_and_add(label)
-    check_keys(ctx.obj["root_path"])
+    check_keys(ChiaCliContext.from_click(ctx).root_path)
 
 
 @keys_cmd.command("show", help="Displays all the keys in keychain or the key with the given fingerprint")
@@ -77,7 +77,14 @@ def show_cmd(
 ) -> None:
     from .keys_funcs import show_keys
 
-    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint, bech32m_prefix)
+    show_keys(
+        ChiaCliContext.from_click(ctx).root_path,
+        show_mnemonic_seed,
+        non_observer_derivation,
+        json,
+        fingerprint,
+        bech32m_prefix,
+    )
 
 
 @keys_cmd.command("add", help="Add a private key by mnemonic or public key as hex")
@@ -109,7 +116,7 @@ def add_cmd(ctx: click.Context, filename: str, label: Optional[str]) -> None:
         mnemonic_or_pk = Path(filename).read_text().rstrip()
 
     query_and_add_key_info(mnemonic_or_pk, label)
-    check_keys(ctx.obj["root_path"])
+    check_keys(ChiaCliContext.from_click(ctx).root_path)
 
 
 @keys_cmd.group("label", help="Manage your key labels")
@@ -155,7 +162,7 @@ def delete_cmd(ctx: click.Context, fingerprint: int) -> None:
     from .keys_funcs import delete
 
     delete(fingerprint)
-    check_keys(ctx.obj["root_path"])
+    check_keys(ChiaCliContext.from_click(ctx).root_path)
 
 
 @keys_cmd.command("delete_all", help="Delete all private keys in keychain")
@@ -343,7 +350,7 @@ def search_cmd(
             print("Could not resolve private key from fingerprint/mnemonic file")
 
     found: bool = search_derive(
-        ctx.obj["root_path"],
+        ChiaCliContext.from_click(ctx).root_path,
         fingerprint,
         search_terms,
         limit,
@@ -419,7 +426,14 @@ def wallet_address_cmd(
         return
 
     derive_wallet_address(
-        ctx.obj["root_path"], fingerprint, index, count, prefix, non_observer_derivation, show_hd_path, sk
+        ChiaCliContext.from_click(ctx).root_path,
+        fingerprint,
+        index,
+        count,
+        prefix,
+        non_observer_derivation,
+        show_hd_path,
+        sk,
     )
 
 

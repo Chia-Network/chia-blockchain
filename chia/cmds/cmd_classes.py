@@ -13,6 +13,7 @@ import click
 from typing_extensions import dataclass_transform
 
 from chia.cmds.cmds_util import get_wallet_client
+from chia.cmds.util import ChiaCliContext
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -256,7 +257,7 @@ def command_helper(cls: type[Any]) -> type[Any]:
     return new_cls
 
 
-Context = dict[str, Any]
+Context = ChiaCliContext
 
 
 @dataclass(frozen=True)
@@ -268,7 +269,7 @@ class WalletClientInfo:
 
 @command_helper
 class NeedsWalletRPC:
-    context: Context = field(default_factory=dict)
+    context: Context = field(default_factory=ChiaCliContext)
     client_info: Optional[WalletClientInfo] = None
     wallet_rpc_port: Optional[int] = option(
         "-wp",
@@ -294,7 +295,7 @@ class NeedsWalletRPC:
             yield self.client_info
         else:
             if "root_path" not in kwargs:
-                kwargs["root_path"] = self.context["root_path"]
+                kwargs["root_path"] = self.context.root_path
             async with get_wallet_client(self.wallet_rpc_port, self.fingerprint, **kwargs) as (
                 wallet_client,
                 fp,

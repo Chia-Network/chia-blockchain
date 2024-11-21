@@ -6,6 +6,7 @@ import click
 
 from chia.cmds.cmds_util import NODE_TYPES
 from chia.cmds.peer_funcs import peer_async
+from chia.cmds.util import ChiaCliContext
 
 
 @click.command("peer", help="Show, or modify peering connections", no_args_is_help=True)
@@ -42,7 +43,7 @@ def peer_cmd(
         peer_async(
             node_type,
             rpc_port,
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             connections,
             add_connection,
             remove_connection,

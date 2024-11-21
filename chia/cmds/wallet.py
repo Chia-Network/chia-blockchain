@@ -19,6 +19,7 @@ from chia.cmds.param_types import (
     CliAmount,
     cli_amount_none,
 )
+from chia.cmds.util import ChiaCliContext
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import ConditionValidTimes
@@ -666,7 +667,7 @@ def check_wallet_cmd(ctx: click.Context, db_path: str, verbose: bool) -> None:
 
     from chia.cmds.check_wallet_db import scan
 
-    asyncio.run(scan(ctx.obj["root_path"], db_path, verbose=verbose))
+    asyncio.run(scan(ChiaCliContext.from_click(ctx).root_path, db_path, verbose=verbose))
 
 
 @wallet_cmd.group("did", help="DID related actions")

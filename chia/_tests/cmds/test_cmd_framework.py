@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 import textwrap
 from collections.abc import Sequence
 from dataclasses import asdict
@@ -13,6 +14,7 @@ from chia._tests.conftest import ConsensusMode
 from chia._tests.environments.wallet import WalletTestFramework
 from chia._tests.wallet.conftest import *  # noqa
 from chia.cmds.cmd_classes import ChiaCommand, Context, NeedsWalletRPC, chia_command, option
+from chia.cmds.util import ChiaCliContext
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
@@ -143,14 +145,14 @@ def test_context_requirement() -> None:
     @click.group()
     @click.pass_context
     def cmd(ctx: click.Context) -> None:
-        ctx.obj = {"foo": "bar"}
+        ctx.obj = ChiaCliContext(root_path=pathlib.Path("foo", "bar")).to_click()
 
     @chia_command(cmd, "temp_cmd", "blah")
     class TempCMD:
         context: Context
 
         def run(self) -> None:
-            assert self.context["foo"] == "bar"
+            assert self.context.root_path == pathlib.Path("foo", "bar")
 
     runner = CliRunner()
     result = runner.invoke(
@@ -385,7 +387,7 @@ async def test_wallet_rpc_helper(wallet_environments: WalletTestFramework) -> No
 
     expected_command = TempCMD(
         rpc_info=NeedsWalletRPC(
-            context={"root_path": wallet_environments.environments[0].node.root_path},
+            context=ChiaCliContext(root_path=wallet_environments.environments[0].node.root_path),
             wallet_rpc_port=port,
             fingerprint=fingerprint,
         ),

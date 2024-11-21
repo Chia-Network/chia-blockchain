@@ -5,6 +5,7 @@ from typing import Optional
 import click
 
 from chia.cmds.show_funcs import show_async
+from chia.cmds.util import ChiaCliContext
 
 
 @click.command("show", help="Show node information", no_args_is_help=True)
@@ -62,7 +63,7 @@ def show_cmd(
     asyncio.run(
         show_async(
             rpc_port,
-            ctx.obj["root_path"],
+            ChiaCliContext.from_click(ctx).root_path,
             fee,
             state,
             block_header_hash_by_height,
