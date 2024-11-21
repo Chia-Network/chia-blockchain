@@ -15,15 +15,17 @@ import warnings
 
 import chia
 from chia.util.introspection import caller_file_and_line
+from chia.util.log_exceptions import log_exceptions
 
 T = typing.TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(frozen=True)
 class _TaskInfo:
-    task: asyncio.Task[object]
+    task: asyncio.Task[object] = dataclasses.field(hash=False)
+    task_object_id: int
     name: str
     known_unreferenced: bool
     creation_file: str
@@ -41,10 +43,12 @@ class _TaskReferencer:
     """
 
     tasks: list[_TaskInfo] = dataclasses.field(default_factory=list)
+    unreported_tasks: set[_TaskInfo] = dataclasses.field(default_factory=set)
     clock: typing.Callable[[], float] = time.monotonic
     last_cull: float = -math.inf
     cull_period: float = 30
     cull_count: int = 1000
+    reporting_task: typing.Optional[asyncio.Task[None]] = None
 
     def create_task(
         self,
@@ -52,7 +56,9 @@ class _TaskReferencer:
         name: typing.Optional[str] = None,
         known_unreferenced: bool = False,
     ) -> asyncio.Task[T]:
-        self.report_unreferenced_tasks()
+        if self.reporting_task is None:
+            self.reporting_task = asyncio.create_task(self.report_unreferenced_tasks())
+
         self.maybe_cull()
 
         file, line = caller_file_and_line(
@@ -64,6 +70,7 @@ class _TaskReferencer:
         self.tasks.append(
             _TaskInfo(
                 task=task,
+                task_object_id=id(task),
                 name=task.get_name(),
                 known_unreferenced=known_unreferenced,
                 creation_file=file,
@@ -84,16 +91,20 @@ class _TaskReferencer:
         self.tasks[:] = (task_info for task_info in self.tasks if not task_info.task.done())
         self.last_cull = now
 
-    def report_unreferenced_tasks(self) -> None:
-        for task_info in self.tasks:
-            if task_info.known_unreferenced or task_info.task.done():
-                continue
+    async def report_unreferenced_tasks(self) -> None:
+        while True:
+            with log_exceptions(log=logger, consume=True, message="unreferenced task reporting"):
+                await asyncio.sleep(1)
 
-            if len(gc.get_referrers(task_info.task)) == 1:
-                # presently coded to repeat every time
-                message = f"unexpected incomplete unreferenced task found: {task_info}"
-                logger.error(message)
-                warnings.warn(message)
+                for task_info in self.tasks:
+                    if task_info.known_unreferenced or task_info.task.done():
+                        continue
+
+                    if len(gc.get_referrers(task_info.task)) == 1:
+                        # presently coded to repeat every time
+                        message = f"unexpected incomplete unreferenced task found: {task_info}"
+                        logger.error(message)
+                        warnings.warn(message)
 
 
 _global_task_referencer = _TaskReferencer()
