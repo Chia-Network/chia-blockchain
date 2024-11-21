@@ -119,7 +119,7 @@ class _CommandParsingStage:
 
             def strip_click_context(func: SyncCmd) -> SyncCmd:
                 def _inner(ctx: click.Context, **kwargs: Any) -> None:
-                    context: dict[str, Any] = ctx.obj if ctx.obj is not None else {}
+                    context: Context = ChiaCliContext.from_click(ctx)
                     func(context=context, **kwargs)
 
                 return _inner
