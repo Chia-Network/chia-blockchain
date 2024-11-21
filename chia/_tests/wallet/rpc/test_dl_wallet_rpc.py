@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 
 import pytest
@@ -61,22 +62,26 @@ class TestWalletRpc:
         assert wallet_services[0].rpc_server is not None
         assert wallet_services[1].rpc_server is not None
 
-        client = await WalletRpcClient.create(
-            self_hostname,
-            wallet_services[0].rpc_server.listen_port,
-            wallet_services[0].root_path,
-            wallet_services[0].config,
-        )
-        await validate_get_routes(client, wallet_services[0].rpc_server.rpc_api)
-        client_2 = await WalletRpcClient.create(
-            self_hostname,
-            wallet_services[1].rpc_server.listen_port,
-            wallet_services[1].root_path,
-            wallet_services[1].config,
-        )
-        await validate_get_routes(client_2, wallet_services[1].rpc_server.rpc_api)
+        async with contextlib.AsyncExitStack() as exit_stack:
+            client = await exit_stack.enter_async_context(
+                WalletRpcClient.create_as_context(
+                    self_hostname,
+                    wallet_services[0].rpc_server.listen_port,
+                    wallet_services[0].root_path,
+                    wallet_services[0].config,
+                )
+            )
+            await validate_get_routes(client, wallet_services[0].rpc_server.rpc_api)
+            client_2 = await exit_stack.enter_async_context(
+                WalletRpcClient.create_as_context(
+                    self_hostname,
+                    wallet_services[1].rpc_server.listen_port,
+                    wallet_services[1].root_path,
+                    wallet_services[1].config,
+                )
+            )
+            await validate_get_routes(client_2, wallet_services[1].rpc_server.rpc_api)
 
-        try:
             merkle_root: bytes32 = bytes32.zeros
             txs, launcher_id = await client.create_new_dl(merkle_root, uint64(50))
 
@@ -225,13 +230,6 @@ class TestWalletRpc:
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
                 await asyncio.sleep(0.5)
             await time_out_assert(15, client.dl_get_mirrors, [], launcher_id)
-
-        finally:
-            # Checks that the RPC manages to stop the node
-            client.close()
-            client_2.close()
-            await client.await_closed()
-            await client_2.await_closed()
 
     @pytest.mark.parametrize("trusted", [True, False])
     @pytest.mark.anyio
