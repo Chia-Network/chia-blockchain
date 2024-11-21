@@ -15,10 +15,9 @@ T = typing.TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True)
 class _TaskInfo:
-    task: asyncio.Task[object] = dataclasses.field(hash=False)
-    task_object_id: int
+    task: asyncio.Task[object]
     name: str
     known_unreferenced: bool
 
@@ -26,7 +25,7 @@ class _TaskInfo:
         return self.name
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass
 class _TaskReferencer:
     """Holds strong references to tasks until they are done.  This compensates for
     asyncio holding only weak references.  This should be replaced by patterns using
@@ -53,7 +52,6 @@ class _TaskReferencer:
         self.tasks.append(
             _TaskInfo(
                 task=task,
-                task_object_id=id(task),
                 name=task.get_name(),
                 known_unreferenced=known_unreferenced,
             )
