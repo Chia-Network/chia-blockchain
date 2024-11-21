@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from typing import Optional
 
 import pytest
 from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
@@ -43,8 +44,8 @@ async def get_block_path(full_node: FullNodeAPI):
 
 
 class FakeRateLimiter:
-    def process_msg_and_check(self, msg, capa, capb):
-        return True
+    def process_msg_and_check(self, msg, capa, capb) -> Optional[str]:
+        return None
 
 
 class TestDos:

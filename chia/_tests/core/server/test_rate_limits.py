@@ -34,12 +34,12 @@ class TestRateLimits:
         r = RateLimiter(incoming=True)
         new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
         for i in range(4999):
-            assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
+            assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(4999):
             response = r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
@@ -47,12 +47,12 @@ class TestRateLimits:
         r = RateLimiter(incoming=True)
         new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
         for i in range(200):
-            assert r.process_msg_and_check(new_peak_message, rl_v2, rl_v2)
+            assert r.process_msg_and_check(new_peak_message, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(200):
             response = r.process_msg_and_check(new_peak_message, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
@@ -63,15 +63,15 @@ class TestRateLimits:
         large_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 3 * 1024 * 1024))
 
         r = RateLimiter(incoming=True)
-        assert r.process_msg_and_check(small_tx_message, rl_v2, rl_v2)
-        assert not r.process_msg_and_check(large_tx_message, rl_v2, rl_v2)
+        assert r.process_msg_and_check(small_tx_message, rl_v2, rl_v2) is None
+        assert r.process_msg_and_check(large_tx_message, rl_v2, rl_v2) is not None
 
         small_vdf_message = make_msg(ProtocolMessageTypes.respond_signage_point, bytes([1] * 5 * 1024))
         large_vdf_message = make_msg(ProtocolMessageTypes.respond_signage_point, bytes([1] * 600 * 1024))
         r = RateLimiter(incoming=True)
-        assert r.process_msg_and_check(small_vdf_message, rl_v2, rl_v2)
-        assert r.process_msg_and_check(small_vdf_message, rl_v2, rl_v2)
-        assert not r.process_msg_and_check(large_vdf_message, rl_v2, rl_v2)
+        assert r.process_msg_and_check(small_vdf_message, rl_v2, rl_v2) is None
+        assert r.process_msg_and_check(small_vdf_message, rl_v2, rl_v2) is None
+        assert r.process_msg_and_check(large_vdf_message, rl_v2, rl_v2) is not None
 
     @pytest.mark.anyio
     async def test_too_much_data(self):
@@ -79,24 +79,24 @@ class TestRateLimits:
         r = RateLimiter(incoming=True)
         tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
         for i in range(40):
-            assert r.process_msg_and_check(tx_message, rl_v2, rl_v2)
+            assert r.process_msg_and_check(tx_message, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(300):
             response = r.process_msg_and_check(tx_message, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
         r = RateLimiter(incoming=True)
         block_message = make_msg(ProtocolMessageTypes.respond_block, bytes([1] * 1024 * 1024))
         for i in range(10):
-            assert r.process_msg_and_check(block_message, rl_v2, rl_v2)
+            assert r.process_msg_and_check(block_message, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(40):
             response = r.process_msg_and_check(block_message, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
@@ -109,15 +109,15 @@ class TestRateLimits:
         message_3 = make_msg(ProtocolMessageTypes.plot_sync_start, bytes([1] * 64))
 
         for i in range(500):
-            assert r.process_msg_and_check(message_1, rl_v2, rl_v2)
+            assert r.process_msg_and_check(message_1, rl_v2, rl_v2) is None
 
         for i in range(500):
-            assert r.process_msg_and_check(message_2, rl_v2, rl_v2)
+            assert r.process_msg_and_check(message_2, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(500):
             response = r.process_msg_and_check(message_3, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
@@ -127,12 +127,12 @@ class TestRateLimits:
         message_5 = make_msg(ProtocolMessageTypes.respond_blocks, bytes([1] * 49 * 1024 * 1024))
 
         for i in range(2):
-            assert r.process_msg_and_check(message_4, rl_v2, rl_v2)
+            assert r.process_msg_and_check(message_4, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(2):
             response = r.process_msg_and_check(message_5, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
@@ -141,56 +141,56 @@ class TestRateLimits:
         r = RateLimiter(True, 5)
         tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
         for i in range(10):
-            assert r.process_msg_and_check(tx_message, rl_v2, rl_v2)
+            assert r.process_msg_and_check(tx_message, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(300):
             response = r.process_msg_and_check(tx_message, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
-        assert not r.process_msg_and_check(tx_message, rl_v2, rl_v2)
+        assert r.process_msg_and_check(tx_message, rl_v2, rl_v2) is not None
         await asyncio.sleep(6)
-        assert r.process_msg_and_check(tx_message, rl_v2, rl_v2)
+        assert r.process_msg_and_check(tx_message, rl_v2, rl_v2) is None
 
         # Counts reset also
         r = RateLimiter(True, 5)
         new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
         for i in range(4999):
-            assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
+            assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(4999):
             response = r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
         await asyncio.sleep(6)
-        assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
+        assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2) is None
 
     @pytest.mark.anyio
     async def test_percentage_limits(self):
         r = RateLimiter(True, 60, 40)
         new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
         for i in range(50):
-            assert r.process_msg_and_check(new_peak_message, rl_v2, rl_v2)
+            assert r.process_msg_and_check(new_peak_message, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(50):
             response = r.process_msg_and_check(new_peak_message, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
         r = RateLimiter(True, 60, 40)
         block_message = make_msg(ProtocolMessageTypes.respond_block, bytes([1] * 1024 * 1024))
         for i in range(5):
-            assert r.process_msg_and_check(block_message, rl_v2, rl_v2)
+            assert r.process_msg_and_check(block_message, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(5):
             response = r.process_msg_and_check(block_message, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
@@ -201,14 +201,14 @@ class TestRateLimits:
         message_3 = make_msg(ProtocolMessageTypes.plot_sync_start, bytes([1] * 32))
 
         for i in range(180):
-            assert r.process_msg_and_check(message_1, rl_v2, rl_v2)
+            assert r.process_msg_and_check(message_1, rl_v2, rl_v2) is None
         for i in range(180):
-            assert r.process_msg_and_check(message_2, rl_v2, rl_v2)
+            assert r.process_msg_and_check(message_2, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(100):
             response = r.process_msg_and_check(message_3, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
@@ -218,12 +218,12 @@ class TestRateLimits:
         message_5 = make_msg(ProtocolMessageTypes.respond_blocks, bytes([1] * 24 * 1024 * 1024))
 
         for i in range(2):
-            assert r.process_msg_and_check(message_4, rl_v2, rl_v2)
+            assert r.process_msg_and_check(message_4, rl_v2, rl_v2) is None
 
         saw_disconnect = False
         for i in range(2):
             response = r.process_msg_and_check(message_5, rl_v2, rl_v2)
-            if not response:
+            if response is not None:
                 saw_disconnect = True
         assert saw_disconnect
 
@@ -237,7 +237,7 @@ class TestRateLimits:
         passed = 0
         blocked = 0
         for i in range(non_tx_freq):
-            if r.process_msg_and_check(new_peers_message, rl_v2, rl_v2):
+            if r.process_msg_and_check(new_peers_message, rl_v2, rl_v2) is None:
                 passed += 1
             else:
                 blocked += 1
@@ -248,7 +248,7 @@ class TestRateLimits:
         # ensure that *another* message type is not blocked because of this
 
         new_signatures_message = make_msg(ProtocolMessageTypes.respond_signatures, bytes([1]))
-        assert r.process_msg_and_check(new_signatures_message, rl_v2, rl_v2)
+        assert r.process_msg_and_check(new_signatures_message, rl_v2, rl_v2) is None
 
     @pytest.mark.anyio
     async def test_too_many_incoming_messages(self):
@@ -260,7 +260,7 @@ class TestRateLimits:
         passed = 0
         blocked = 0
         for i in range(non_tx_freq):
-            if r.process_msg_and_check(new_peers_message, rl_v2, rl_v2):
+            if r.process_msg_and_check(new_peers_message, rl_v2, rl_v2) is None:
                 passed += 1
             else:
                 blocked += 1
@@ -271,7 +271,7 @@ class TestRateLimits:
         # ensure that other message types *are* blocked because of this
 
         new_signatures_message = make_msg(ProtocolMessageTypes.respond_signatures, bytes([1]))
-        assert not r.process_msg_and_check(new_signatures_message, rl_v2, rl_v2)
+        assert r.process_msg_and_check(new_signatures_message, rl_v2, rl_v2) is not None
 
     @pytest.mark.parametrize(
         "node_with_params",
