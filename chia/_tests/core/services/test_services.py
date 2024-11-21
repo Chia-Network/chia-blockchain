@@ -127,7 +127,7 @@ async def test_services_terminate(
         service_config["rpc_port"] = rpc_port
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
 
-    test_plots = DEFAULT_ROOT_PATH.joinpath("test-plots")
+    test_plots = DEFAULT_ROOT_PATH.parent.joinpath("test-plots")
     assert test_plots.is_dir()
     chia_root.path.parent.joinpath("test-plots").symlink_to(
         target=test_plots,
