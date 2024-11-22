@@ -80,8 +80,8 @@ def gh_group() -> None:
     that.  There is no need to push the local commit first.  The temporary remote
     branch will automatically be deleted in most cases.
 
-    After launching the workflow run the remote will be queried for the run and the
-    URL will be opened in the default browser.
+    After launching the workflow run GitHub will be queried for the run and the URL
+    will be opened in the default browser.
     """,
 )
 class TestCMD:
