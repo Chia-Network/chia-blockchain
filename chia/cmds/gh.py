@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import uuid
 import webbrowser
 from pathlib import Path
 from typing import Callable, ClassVar, Literal, Optional, Union, overload
@@ -116,7 +117,7 @@ class TestCMD:
             commit_sha = process.stdout.decode("utf-8").strip()
 
             username = await self.get_username()
-            temp_branch_name = f"tmp/{username}/{commit_sha}"
+            temp_branch_name = f"tmp/{username}/{commit_sha}/{uuid.uuid4()}"
 
             process = await anyio.run_process(
                 command=["git", "push", "origin", f"HEAD:{temp_branch_name}"], check=False, stdout=None, stderr=None
