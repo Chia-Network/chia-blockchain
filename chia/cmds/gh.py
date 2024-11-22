@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 import shlex
-from typing import Literal, Optional, Union
+import uuid
+import webbrowser
+from typing import ClassVar, Literal, Optional, Union
 
 import anyio
 import click
@@ -30,6 +33,7 @@ def gh_group() -> None:
     # """,
 )
 class TestCMD:
+    workflow_id: ClassVar[str] = "test.yml"
     owner: str = option("-o", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
     repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
     ref: Optional[str] = option("-f", "--ref", help="Branch or tag name (commit SHA not supported", type=str)
@@ -47,34 +51,55 @@ class TestCMD:
     )
 
     async def run(self) -> None:
+        if self.ref is not None:
+            await self.trigger_workflow(self.ref)
+        else:
+            task_uuid = uuid.uuid4()
+            temp_branch_name = f"tmp/altendky/{task_uuid}"
+
+            await anyio.run_process(
+                command=["git", "push", "origin", f"HEAD:{temp_branch_name}"], check=False, stdout=None, stderr=None
+            )
+
+            try:
+                await self.trigger_workflow(temp_branch_name)
+                while True:
+                    await anyio.sleep(1)
+
+                    try:
+                        run_url = await self.find_run(temp_branch_name)
+                        print(f"run found at: {run_url}")
+                    except Exception as e:
+                        print(e)
+                        continue
+
+                    break
+            finally:
+                print(f"deleting temporary branch: {temp_branch_name}")
+                process = await anyio.run_process(
+                    command=["git", "push", "origin", "-d", temp_branch_name], check=False, stdout=None, stderr=None
+                )
+                if process.returncode != 0:
+                    raise click.ClickException("Failed to dispatch workflow")
+                print(f"temporary branch deleted: {temp_branch_name}")
+
+            print(f"run url: {run_url}")
+            webbrowser.open(run_url)
+
+    async def trigger_workflow(self, ref: str) -> None:
         def input_arg(name: str, value: object, cond: bool = True) -> list[str]:
             dumped = yaml.safe_dump(value).partition("\n")[0]
-            return ["-f", f"inputs[{name}]={dumped}"] if cond else []
+            return [f"-f=inputs[{name}]={dumped}"] if cond else []
 
-        workflow_id = "test.yml"
-
-        if self.ref is None:
-            process = await anyio.run_process(
-                command=["git", "rev-parse", "--abbrev-ref", "HEAD"], check=False, stderr=None
-            )
-            if process.returncode != 0:
-                raise click.ClickException("Failed to get current branch")
-            ref = process.stdout.decode(encoding="utf-8").strip()
-        else:
-            ref = self.ref
-
+        # https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#create-a-workflow-dispatch-event
         command = [
             "gh",
             "api",
-            "--method",
-            "POST",
-            "-H",
-            "Accept: application/vnd.github+json",
-            "-H",
-            "X-GitHub-Api-Version: 2022-11-28",
-            f"/repos/{self.owner}/{self.repository}/actions/workflows/{workflow_id}/dispatches",
-            "-f",
-            f"ref={ref}",
+            "--method=POST",
+            "-H=Accept: application/vnd.github+json",
+            "-H=X-GitHub-Api-Version: 2022-11-28",
+            f"/repos/{self.owner}/{self.repository}/actions/workflows/{self.workflow_id}/dispatches",
+            f"-f=ref={ref}",
             *input_arg("per", self.per),
             *input_arg("only", self.only, self.only is not None),
             *input_arg("duplicates", self.duplicates),
@@ -84,8 +109,32 @@ class TestCMD:
             *input_arg("run-windows", self.run_windows),
             *input_arg("full-python-matrix", self.full_python_matrix),
         ]
-
         print(f"running command: {shlex.join(command)}")
         process = await anyio.run_process(command=command, check=False, stdout=None, stderr=None)
         if process.returncode != 0:
             raise click.ClickException("Failed to dispatch workflow")
+        print(f"workflow triggered on branch: {ref}")
+
+    async def find_run(self, ref: str) -> str:
+        # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#list-workflow-runs-for-a-workflow
+        command = [
+            "gh",
+            "api",
+            "--method=GET",
+            "-H=Accept: application/vnd.github+json",
+            "-H=X-GitHub-Api-Version: 2022-11-28",
+            f"-f=branch={ref}",
+            f"/repos/{self.owner}/{self.repository}/actions/workflows/{self.workflow_id}/runs",
+        ]
+        print(f"running command: {shlex.join(command)}")
+        process = await anyio.run_process(command=command, check=False, stderr=None)
+        if process.returncode != 0:
+            raise click.ClickException("Failed to query workflow runs")
+
+        response = json.loads(process.stdout)
+        [run] = response["workflow_runs"]
+
+        url = run["html_url"]
+
+        assert isinstance(url, str), f"expected url to be a string, got: {url!r}"
+        return url
