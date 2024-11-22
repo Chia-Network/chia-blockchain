@@ -4,7 +4,8 @@ import json
 import shlex
 import uuid
 import webbrowser
-from typing import ClassVar, Literal, Optional, Union
+from pathlib import Path
+from typing import Callable, ClassVar, Literal, Optional, Union
 
 import anyio
 import click
@@ -15,6 +16,9 @@ from chia.cmds.cmd_classes import chia_command, option
 
 class UnexpectedFormError(Exception):
     pass
+
+
+Per = Union[Literal["directory"], Literal["file"]]
 
 
 def report(*args: str) -> None:
@@ -30,7 +34,7 @@ def gh_group() -> None:
     gh_group,
     name="test",
     # TODO: welp, yeah, help
-    help="",
+    help="launch a test run in ci from the local commit",
     # short_help="helpy help",
     # help="""docstring help
     # and
@@ -44,11 +48,16 @@ class TestCMD:
     workflow_id: ClassVar[str] = "test.yml"
     owner: str = option("-o", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
     repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
-    ref: Optional[str] = option("-f", "--ref", help="Branch or tag name (commit SHA not supported", type=str)
-    per: Union[Literal["directory"], Literal["file"]] = option(
-        "-p", "--per", help="Per", type=click.Choice(["directory", "file"]), default="directory"
+    ref: Optional[str] = option(
+        "-f",
+        "--ref",
+        help="Branch or tag name (commit SHA not supported), if not specified will push HEAD to a temporary branch",
+        type=str,
     )
-    only: Optional[str] = option("-o", "--only", help="Only run this item", type=str)
+    per: Per = option("-p", "--per", help="Per", type=click.Choice(["directory", "file"]), default="directory")
+    only: Optional[Path] = option(
+        "-o", "--only", help="Only run this item, a file or directory depending on --per", type=Path
+    )
     duplicates: int = option("-d", "--duplicates", help="Number of duplicates", type=int, default=1)
     run_linux: bool = option("--run-linux/--skip-linux", help="Run on Linux", default=True)
     run_macos_intel: bool = option("--run-macos-intel/--skip-macos-intel", help="Run on macOS Intel", default=True)
@@ -59,6 +68,8 @@ class TestCMD:
     )
 
     async def run(self) -> None:
+        await self.check_only()
+
         if self.ref is not None:
             await self.trigger_workflow(self.ref)
         else:
@@ -97,6 +108,22 @@ class TestCMD:
 
             report(f"run url: {run_url}")
             webbrowser.open(run_url)
+
+    async def check_only(self) -> None:
+        if self.only is not None:
+            import chia._tests
+
+            test_path = Path(chia._tests.__file__).parent
+            effective_path = test_path.joinpath(self.only)
+            checks: dict[Per, Callable[[], bool]] = {"directory": effective_path.is_dir, "file": effective_path.is_file}
+            check = checks[self.per]
+            if not check():
+                if effective_path.exists():
+                    explanation = "wrong type"
+                else:
+                    explanation = "does not exist"
+                message = f"expected requested --only to be a {self.per}, {explanation} at: {effective_path.as_posix()}"
+                raise click.ClickException(message)
 
     async def trigger_workflow(self, ref: str) -> None:
         def input_arg(name: str, value: object, cond: bool = True) -> list[str]:
