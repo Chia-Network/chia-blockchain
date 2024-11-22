@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import urllib
 import uuid
 import webbrowser
 from pathlib import Path
@@ -114,8 +115,20 @@ class TestCMD:
     async def run(self) -> None:
         await self.check_only()
 
+        username = await self.get_username()
+
         if self.ref is not None:
             await self.trigger_workflow(self.ref)
+            query = "+".join(
+                [
+                    "event=workflow_dispatch",
+                    f"branch={self.ref}",
+                    f"actor={username}",
+                ]
+            )
+            run_url = f"https://github.com/Chia-Network/chia-blockchain/actions/workflows/test.yml?query={urllib.parse.quote(query)}"
+            report(f"waiting a few seconds to load: {run_url}")
+            await anyio.sleep(10)
         else:
             process = await anyio.run_process(command=["git", "rev-parse", "HEAD"], check=True, stderr=None)
             if process.returncode != 0:
@@ -123,7 +136,6 @@ class TestCMD:
 
             commit_sha = process.stdout.decode("utf-8").strip()
 
-            username = await self.get_username()
             temp_branch_name = f"tmp/{username}/{commit_sha}/{uuid.uuid4()}"
 
             process = await anyio.run_process(
@@ -157,8 +169,8 @@ class TestCMD:
                     raise click.ClickException("Failed to dispatch workflow")
                 report(f"temporary branch deleted: {temp_branch_name}")
 
-            report(f"run url: {run_url}")
-            webbrowser.open(run_url)
+        report(f"run url: {run_url}")
+        webbrowser.open(run_url)
 
     async def check_only(self) -> None:
         if self.only is not None:
