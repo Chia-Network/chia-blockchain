@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import shlex
-import uuid
 import webbrowser
 from pathlib import Path
 from typing import Callable, ClassVar, Literal, Optional, Union, overload
@@ -110,13 +109,20 @@ class TestCMD:
         if self.ref is not None:
             await self.trigger_workflow(self.ref)
         else:
-            task_uuid = uuid.uuid4()
-            username = await self.get_username()
-            temp_branch_name = f"tmp/{username}/{task_uuid}"
+            process = await anyio.run_process(command=["git", "rev-parse", "HEAD"], check=True, stderr=None)
+            if process.returncode != 0:
+                raise click.ClickException("Failed to get current commit SHA")
 
-            await anyio.run_process(
+            commit_sha = process.stdout.decode("utf-8").strip()
+
+            username = await self.get_username()
+            temp_branch_name = f"tmp/{username}/{commit_sha}"
+
+            process = await anyio.run_process(
                 command=["git", "push", "origin", f"HEAD:{temp_branch_name}"], check=False, stdout=None, stderr=None
             )
+            if process.returncode != 0:
+                raise click.ClickException("Failed to push temporary branch")
 
             try:
                 await self.trigger_workflow(temp_branch_name)
