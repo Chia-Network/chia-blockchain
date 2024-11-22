@@ -297,7 +297,7 @@ def recurse_jsonify(
     elif d is None or type(d) is str:
         return d
     elif hasattr(d, "to_json_dict"):
-        ret: Union[list[Any], dict[str, Any], str, None, int] = d.to_json_dict()
+        ret: Union[list[Any], dict[str, Any], str, int, None] = d.to_json_dict()
         return ret
     raise UnsupportedType(f"failed to jsonify {d} (type: {type(d)})")
 
