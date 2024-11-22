@@ -55,7 +55,8 @@ class TestCMD:
             await self.trigger_workflow(self.ref)
         else:
             task_uuid = uuid.uuid4()
-            temp_branch_name = f"tmp/altendky/{task_uuid}"
+            username = await self.get_username()
+            temp_branch_name = f"tmp/{username}/{task_uuid}"
 
             await anyio.run_process(
                 command=["git", "push", "origin", f"HEAD:{temp_branch_name}"], check=False, stdout=None, stderr=None
@@ -138,3 +139,25 @@ class TestCMD:
 
         assert isinstance(url, str), f"expected url to be a string, got: {url!r}"
         return url
+
+    async def get_username(self) -> str:
+        # https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user
+        process = await anyio.run_process(
+            command=[
+                "gh",
+                "api",
+                "--method=GET",
+                "-H=Accept: application/vnd.github+json",
+                "-H=X-GitHub-Api-Version: 2022-11-28",
+                "/user",
+            ],
+            check=False,
+            stderr=None,
+        )
+        if process.returncode != 0:
+            raise click.ClickException("Failed to get username")
+
+        response = json.loads(process.stdout)
+        username = response["login"]
+        assert isinstance(username, str), f"expected username to be a string, got: {username!r}"
+        return username
