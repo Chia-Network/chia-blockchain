@@ -79,6 +79,7 @@ from chia.types.weight_proof import WeightProof
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
+from chia.util.condition_tools import pkm_pairs
 from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
@@ -2125,6 +2126,12 @@ class FullNode:
                         raise RuntimeError("Expected block to be added, received disconnected block.")
                     return None
                 elif added == AddBlockResult.NEW_PEAK:
+                    # Evict any related BLS cache entries as we no longer need them
+                    if bls_cache is not None and pre_validation_result.conds is not None:
+                        pairs_pks, pairs_msgs = pkm_pairs(
+                            pre_validation_result.conds, self.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                        )
+                        bls_cache.evict(pairs_pks, pairs_msgs)
                     # Only propagate blocks which extend the blockchain (becomes one of the heads)
                     assert state_change_summary is not None
                     post_process_time = time.monotonic()
