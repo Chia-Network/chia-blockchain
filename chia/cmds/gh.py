@@ -72,17 +72,17 @@ def gh_group() -> None:
 @chia_command(
     gh_group,
     name="test",
-    help="launch a test run in CI from HEAD or existing remote ref",
-    # help="""Allows easy triggering and viewing of test workflow runs in CI including
-    # configuration of parameters.  If a ref is specified then it must exist on the
-    # remote and a run will be launched for it.  If ref is not specified then the local
-    # HEAD will be pushed to a temporary remote branch and a run will be launched for
-    # that.  There is no need to push the local commit first.  The temporary remote
-    # branch will automatically be deleted in most cases.
-    #
-    # After launching the workflow run the remote will be queried for the run and the
-    # URL will be opened in the default browser.
-    # """,
+    short_help="launch a test run in CI from HEAD or existing remote ref",
+    help="""Allows easy triggering and viewing of test workflow runs in CI including
+    configuration of parameters.  If a ref is specified then it must exist on the
+    remote and a run will be launched for it.  If ref is not specified then the local
+    HEAD will be pushed to a temporary remote branch and a run will be launched for
+    that.  There is no need to push the local commit first.  The temporary remote
+    branch will automatically be deleted in most cases.
+
+    After launching the workflow run the remote will be queried for the run and the
+    URL will be opened in the default browser.
+    """,
 )
 class TestCMD:
     workflow_id: ClassVar[str] = "test.yml"
