@@ -67,7 +67,6 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.batches import to_batches
 from chia.util.db_wrapper import SQLITE_MAX_VARIABLE_NUMBER
-from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -1426,50 +1425,28 @@ class FullNodeAPI:
 
     @metadata.request()
     async def request_block_headers(self, request: wallet_protocol.RequestBlockHeaders) -> Optional[Message]:
-        """Returns header blocks by directly streaming bytes into Message
-
+        """
         This method should be used instead of RequestHeaderBlocks
         """
         reject = RejectBlockHeaders(request.start_height, request.end_height)
-
         if request.end_height < request.start_height or request.end_height - request.start_height > 128:
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
-        if self.full_node.block_store.db_wrapper.db_version == 2:
-            try:
-                blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
-                    request.start_height, request.end_height
-                )
-            except ValueError:
-                return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
-
-        else:
-            height_to_hash = self.full_node.blockchain.height_to_hash
-            header_hashes: list[bytes32] = []
-            for i in range(request.start_height, request.end_height + 1):
-                header_hash: Optional[bytes32] = height_to_hash(uint32(i))
-                if header_hash is None:
-                    return make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
-                header_hashes.append(header_hash)
-
-            blocks_bytes = await self.full_node.block_store.get_block_bytes_by_hash(header_hashes)
-        if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
+        try:
+            header_blocks_map = await self.full_node.blockchain.get_header_blocks_in_range(
+                request.start_height, request.end_height, request.return_filter
+            )
+        except ValueError:
             return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
-        return_filter = request.return_filter
-        header_blocks_bytes: list[bytes] = [header_block_from_block(memoryview(b), return_filter) for b in blocks_bytes]
-
-        # we're building the RespondHeaderBlocks manually to avoid cost of
-        # dynamic serialization
-        # ---
-        # we start building RespondBlockHeaders response (start_height, end_height)
-        # and then need to define size of list object
-        respond_header_blocks_manually_streamed: bytes = (
-            uint32(request.start_height).stream_to_bytes()
-            + uint32(request.end_height).stream_to_bytes()
-            + uint32(len(header_blocks_bytes)).stream_to_bytes()
+        if len(header_blocks_map) != (
+            request.end_height - request.start_height + 1
+        ):  # +1 because interval is inclusive
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        return make_msg(
+            ProtocolMessageTypes.respond_block_headers,
+            wallet_protocol.RespondBlockHeaders(
+                request.start_height, request.end_height, list(header_blocks_map.values())
+            ),
         )
-        # and now stream the whole list in bytes
-        respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)
-        return make_msg(ProtocolMessageTypes.respond_block_headers, respond_header_blocks_manually_streamed)
 
     @metadata.request()
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
