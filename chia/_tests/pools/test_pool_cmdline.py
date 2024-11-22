@@ -10,6 +10,9 @@ pytestmark = pytest.mark.skip("TODO: Works locally but fails on CI, needs to be 
 
 class TestPoolNFTCommands:
     def test_plotnft_show(self):
+        break_a_test()
+        and(
+            some, formatting)
         runner = CliRunner()
         result = runner.invoke(show_cmd, [], catch_exceptions=False)
         assert result.exit_code == 0
