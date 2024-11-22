@@ -4,12 +4,19 @@ import time
 from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address
 from socket import AF_INET, AF_INET6, SOCK_STREAM
-from typing import cast
+from typing import Optional, Union, cast
+from unittest.mock import AsyncMock
 
 import dns
 import pytest
+from dns.name import from_text
+from dns.rdataclass import IN
+from dns.rdatatype import AAAA as AAAA_TYPE
+from dns.rdatatype import A as A_TYPE
+from dns.rdtypes.IN.A import A
+from dns.rdtypes.IN.AAAA import AAAA
+from dns.rrset import RRset
 
-from chia._tests.util.time_out_assert import time_out_assert
 from chia.seeder.dns_server import DNSServer
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.util.ints import uint32, uint64
@@ -273,7 +280,6 @@ async def test_dns_queries(
             await make_dns_query(use_tcp, target_address, port, e_query)
 
 
-@pytest.mark.skip(reason="Flaky test with fixes in progress")
 @pytest.mark.anyio
 @pytest.mark.parametrize("use_tcp, target_address, request_type", all_test_combinations)
 async def test_db_processing(
@@ -298,11 +304,117 @@ async def test_db_processing(
     # Write these new peers to db.
     await crawl_store.load_reliable_peers_to_db()
 
-    # wait for the new db to be read.
-    await time_out_assert(30, lambda: seeder_service.reliable_peers_v4 != [])
+    # Force a DB reload and ensure it loaded the peers
+    await seeder_service.refresh_reliable_peers()
+    assert seeder_service.reliable_peers_v4 != []
 
     # now we check that the db peers are being used.
     query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
     std_query_response = await make_dns_query(use_tcp, target_address, port, query)
     assert std_query_response.rcode() == dns.rcode.NOERROR
     assert_standard_results(std_query_response.answer, request_type, num_ns)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "use_tcp, target_address, request_type",
+    [
+        [False, "127.0.0.1", dns.rdatatype.A],
+        [False, "127.0.0.1", dns.rdatatype.AAAA],
+        [True, "127.0.0.1", dns.rdatatype.A],
+        [True, "127.0.0.1", dns.rdatatype.AAAA],
+        [False, "::1", dns.rdatatype.A],
+        [False, "::1", dns.rdatatype.AAAA],
+        [True, "::1", dns.rdatatype.A],
+        [True, "::1", dns.rdatatype.AAAA],
+    ],
+)
+async def test_static_peers(
+    seeder_service: DNSServer,
+    database_peers: dict[str, PeerReliability],
+    use_tcp: bool,
+    target_address: str,
+    request_type: dns.rdatatype.RdataType,
+) -> None:
+    port = get_dns_port(seeder_service, False, target_address)
+    domain = seeder_service.domain  # default is: seeder.example.com
+
+    seeder_service.config["static_peers"] = ["1.2.3.4", "2001:0DB8::5"]
+    await seeder_service.refresh_reliable_peers()
+
+    query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
+    std_query_response = await make_dns_query(False, target_address, port, query, d_timeout=10)
+    assert std_query_response.rcode() == dns.rcode.NOERROR
+    assert len(std_query_response.answer) == 1  # only 1 kind of answer
+    answer = std_query_response.answer[0]
+    assert answer.rdtype == request_type
+    assert len(answer) == 1
+    expected = "2001:db8::5" if request_type == dns.rdatatype.AAAA else "1.2.3.4"
+    assert answer[0].to_text() == expected
+
+
+def get_mock_resolver() -> AsyncMock:
+    # Mock IPv4 response
+    mock_rrset_a = RRset(from_text("node.example.com."), IN, A_TYPE)
+    mock_rrset_a.add(A(IN, A_TYPE, "1.2.3.4"))  # type: ignore
+
+    # Mock IPv6 response
+    mock_rrset_aaaa = RRset(from_text("node.example.com."), IN, AAAA_TYPE)
+    mock_rrset_aaaa.add(AAAA(IN, AAAA_TYPE, "2001:db8::5"))  # type: ignore
+
+    # Create a mock Resolver
+    mock_resolver = AsyncMock()
+
+    # Adjust mock_resolve to accept all arguments
+    async def mock_resolve(
+        qname: Union[dns.name.Name, str],
+        rdtype: Union[dns.rdatatype.RdataType, str] = dns.rdatatype.A,
+        lifetime: Optional[float] = None,
+    ) -> RRset:
+        if rdtype == "A":
+            return mock_rrset_a
+        elif rdtype == "AAAA":
+            return mock_rrset_aaaa
+        raise Exception(f"Unexpected query type: {rdtype}")
+
+    mock_resolver.resolve.side_effect = mock_resolve
+    return mock_resolver
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "use_tcp, target_address, request_type",
+    [
+        [False, "127.0.0.1", dns.rdatatype.A],
+        [False, "127.0.0.1", dns.rdatatype.AAAA],
+        [True, "127.0.0.1", dns.rdatatype.A],
+        [True, "127.0.0.1", dns.rdatatype.AAAA],
+        [False, "::1", dns.rdatatype.A],
+        [False, "::1", dns.rdatatype.AAAA],
+        [True, "::1", dns.rdatatype.A],
+        [True, "::1", dns.rdatatype.AAAA],
+    ],
+)
+async def test_static_peers_with_hostnames(
+    seeder_service: DNSServer,
+    database_peers: dict[str, PeerReliability],
+    use_tcp: bool,
+    target_address: str,
+    request_type: dns.rdatatype.RdataType,
+) -> None:
+    port = get_dns_port(seeder_service, False, target_address)
+    domain = seeder_service.domain  # default is: seeder.example.com
+
+    seeder_service.resolver = get_mock_resolver()
+    seeder_service.config["static_peers"] = ["node.example.com"]
+    await seeder_service.refresh_reliable_peers()
+
+    query = dns.message.make_query(domain, request_type, use_edns=True)  # we need to generate a new request id.
+    std_query_response = await make_dns_query(False, target_address, port, query, d_timeout=10)
+    assert std_query_response.rcode() == dns.rcode.NOERROR
+    assert len(std_query_response.answer) == 1  # only 1 kind of answer
+    answer = std_query_response.answer[0]
+    assert answer.rdtype == request_type
+    assert len(answer) == 1
+    expected = "2001:db8::5" if request_type == dns.rdatatype.AAAA else "1.2.3.4"
+    assert answer[0].to_text() == expected

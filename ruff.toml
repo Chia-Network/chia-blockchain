@@ -7,9 +7,11 @@ select = [
 	"I",  # Isort
 	"FA",  # Flake8: future-annotations
 	"UP",  # Pyupgrade
-	"RUF", # Ruff specific
-	# Flake8 core
-	"F",
+	"RUF",  # Ruff specific
+	"F",  # Flake8 core
+	"ASYNC",  # Flake8 async
+	"ISC",  # flake8-implicit-str-concat
+    "TID",  # flake8-tidy-imports
 	"E",
 	"W",
 ]
@@ -45,6 +47,15 @@ ignore = [
     "PLW1514", # unspecified-encoding
     "PLW0603", # global-statement
 
+    # Flake8 async
+    # Should probably fix these
+    "ASYNC230", # blocking-open-call-in-async-function
+    # Should probably fix these after dealing with shielding for anyio
+    "ASYNC109", # async-function-with-timeout
+
+    # flake8-implicit-str-concat
+    "ISC003", # explicit-string-concatenation
+
     # Ruff Specific
 
     # This code is problematic because using instantiated types as defaults is so common across the codebase.
@@ -55,6 +66,17 @@ ignore = [
     "RUF029",
 ]
 
+
+[lint.flake8-implicit-str-concat]
+# Found 3279 errors.
+# allow-multiline = false
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.flake8-tidy-imports.banned-api]
+# for use with another pr
+# "asyncio.create_task".msg = "Use `from chia.util.pit import pit` and `pit.create_task()`"
 
 [lint.isort]
 required-imports = ["from __future__ import annotations"]

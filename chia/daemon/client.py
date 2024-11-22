@@ -67,6 +67,7 @@ class DaemonProxy:
             finally:
                 await self.close()
 
+        # TODO: stop dropping tasks on the floor
         asyncio.create_task(listener_task())  # noqa: RUF006
         await asyncio.sleep(1)
 
@@ -91,6 +92,7 @@ class DaemonProxy:
         string = dict_to_json_str(request)
         if self.websocket is None or self.websocket.closed:
             raise Exception("Websocket is not connected")
+        # TODO: stop dropping tasks on the floor
         asyncio.create_task(self.websocket.send_str(string))  # noqa: RUF006
         try:
             await asyncio.wait_for(self._request_dict[request_id].wait(), timeout=30)

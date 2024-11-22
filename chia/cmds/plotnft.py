@@ -36,7 +36,7 @@ class ShowPlotNFTCMD:
     )
 
     async def run(self) -> None:
-        from .plotnft_funcs import show
+        from chia.cmds.plotnft_funcs import show
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await show(
@@ -58,7 +58,7 @@ class GetLoginLinkCMD:
     )
 
     async def run(self) -> None:
-        from .plotnft_funcs import get_login_link
+        from chia.cmds.plotnft_funcs import get_login_link
 
         await get_login_link(self.launcher_id, root_path=self.context.get("root_path"))
 
@@ -93,7 +93,7 @@ class CreatePlotNFTCMD:
     dont_prompt: bool = option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
 
     async def run(self) -> None:
-        from .plotnft_funcs import create
+        from chia.cmds.plotnft_funcs import create
 
         if self.pool_url is not None and self.state == "local":
             raise CliRpcConnectionError(f"A pool url [{self.pool_url}] is not allowed with 'local' state")
@@ -135,7 +135,7 @@ class JoinPlotNFTCMD:
     )
 
     async def run(self) -> None:
-        from .plotnft_funcs import join_pool
+        from chia.cmds.plotnft_funcs import join_pool
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await join_pool(
@@ -170,7 +170,7 @@ class LeavePlotNFTCMD:
     )
 
     async def run(self) -> None:
-        from .plotnft_funcs import self_pool
+        from chia.cmds.plotnft_funcs import self_pool
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await self_pool(
@@ -193,7 +193,7 @@ class InspectPlotNFTCMD:
     )
 
     async def run(self) -> None:
-        from .plotnft_funcs import inspect_cmd
+        from chia.cmds.plotnft_funcs import inspect_cmd
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await inspect_cmd(wallet_info=wallet_info, wallet_id=self.id)
@@ -221,7 +221,7 @@ class ClaimPlotNFTCMD:
     )
 
     async def run(self) -> None:
-        from .plotnft_funcs import claim_cmd
+        from chia.cmds.plotnft_funcs import claim_cmd
 
         async with self.rpc_info.wallet_rpc() as wallet_info:
             await claim_cmd(
@@ -246,6 +246,6 @@ class ChangePayoutInstructionsPlotNFTCMD:
     )
 
     async def run(self) -> None:
-        from .plotnft_funcs import change_payout_instructions
+        from chia.cmds.plotnft_funcs import change_payout_instructions
 
         await change_payout_instructions(self.launcher_id, self.address, root_path=self.context.get("root_path"))

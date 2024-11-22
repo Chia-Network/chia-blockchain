@@ -31,7 +31,7 @@ if TYPE_CHECKING:
         # https://github.com/python/typeshed/pull/5718/files
         def __call__(self) -> asyncio.protocols.BaseProtocol: ...
 
-    _SSLContext: TypeAlias = Union[bool, None, ssl.SSLContext]
+    _SSLContext: TypeAlias = Union[bool, ssl.SSLContext, None]
 
     # https://github.com/python/cpython/blob/v3.10.8/Lib/asyncio/base_events.py#L389
     # https://github.com/python/typeshed/blob/d084079fc3d89a7b51b89095ad67762944e0ace3/stdlib/asyncio/base_events.pyi#L64
@@ -254,8 +254,8 @@ if sys.platform == "win32":
 
         async def _chia_accept_loop(self, listener: socket.socket) -> tuple[socket.socket, tuple[object, ...]]:
             while True:
-                # TODO: switch to Event code.
-                while not self.allow_connections:
+                # TODO: switch to event drive code
+                while not self.allow_connections:  # noqa: ASYNC110
                     await asyncio.sleep(0.01)
 
                 try:

@@ -626,20 +626,29 @@ class WSChiaConnection:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
-        if not self.outbound_rate_limiter.process_msg_and_check(
+        limiter_msg = self.outbound_rate_limiter.process_msg_and_check(
             message, self.local_capabilities, self.peer_capabilities
-        ):
+        )
+        if limiter_msg is not None:
             if not is_localhost(self.peer_info.host):
                 message_type = ProtocolMessageTypes(message.type)
                 last_time = self.log_rate_limit_last_time[message_type]
                 now = time.monotonic()
-                self.log_rate_limit_last_time[message_type] = now
-                if now - last_time >= 60:
-                    msg = f"Rate limiting ourselves. message type: {message_type.name}, peer: {self.peer_info.host}"
-                    self.log.debug(msg)
+                if now - last_time >= 30:
+                    self.log_rate_limit_last_time[message_type] = now
+                    details = ", ".join(
+                        [
+                            f"{message_type.name}",
+                            f"sz: {len(message.data) / 1000:0.2f} kB",
+                            f"peer: {self.peer_info.host}",
+                            f"{limiter_msg}",
+                        ]
+                    )
+                    self.log.info(f"Rate limiting ourselves. Dropping outbound message: {details}")
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
+                    # TODO: stop dropping tasks on the floor
                     asyncio.create_task(self._wait_and_retry(message))  # noqa: RUF006
 
                 return None
@@ -668,6 +677,7 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_info.port}"
             )
+            # TODO: stop dropping tasks on the floor
             asyncio.create_task(self.close())  # noqa: RUF006
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSE:
@@ -676,10 +686,12 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_info.port}"
             )
+            # TODO: stop dropping tasks on the floor
             asyncio.create_task(self.close())  # noqa: RUF006
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             if not self.closed:
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(self.close())  # noqa: RUF006
                 await asyncio.sleep(3)
                 return None
@@ -692,15 +704,15 @@ class WSChiaConnection:
                 message_type = ProtocolMessageTypes(full_message_loaded.type).name
             except Exception:
                 message_type = "Unknown"
-            if not self.inbound_rate_limiter.process_msg_and_check(
+            limiter_msg = self.inbound_rate_limiter.process_msg_and_check(
                 full_message_loaded, self.local_capabilities, self.peer_capabilities
-            ):
+            )
+            if limiter_msg is not None:
                 if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_info.host):
-                    self.log.error(
-                        f"Peer has been rate limited and will be disconnected: {self.peer_info.host}, "
-                        f"message: {message_type}"
-                    )
+                    details = ", ".join([f"{self.peer_info.host}", f"message: {message_type}", limiter_msg])
+                    self.log.error(f"Peer has been rate limited and will be disconnected: {details}")
                     # Only full node disconnects peers, to prevent abuse and crashing timelords, farmers, etc
+                    # TODO: stop dropping tasks on the floor
                     asyncio.create_task(self.close(300))  # noqa: RUF006
                     await asyncio.sleep(3)
                     return None
@@ -714,13 +726,16 @@ class WSChiaConnection:
         elif message.type == WSMsgType.ERROR:
             self.log.error(f"WebSocket Error: {message}")
             if isinstance(message.data, WebSocketError) and message.data.code == WSCloseCode.MESSAGE_TOO_BIG:
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(self.close(300))  # noqa: RUF006
             else:
+                # TODO: stop dropping tasks on the floor
                 asyncio.create_task(self.close())  # noqa: RUF006
             await asyncio.sleep(3)
 
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
+            # TODO: stop dropping tasks on the floor
             asyncio.create_task(self.close())  # noqa: RUF006
             await asyncio.sleep(3)
         return None

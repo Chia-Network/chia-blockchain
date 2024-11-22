@@ -43,12 +43,10 @@ def validate_unfinished_header_block(
     blocks: BlockRecordsProtocol,
     header_block: UnfinishedHeaderBlock,
     check_filter: bool,
-    expected_difficulty: uint64,
-    expected_sub_slot_iters: uint64,
+    expected_vs: ValidationState,
     skip_overflow_last_ss_validation: bool = False,
     skip_vdf_is_valid: bool = False,
     check_sub_epoch_summary: bool = True,
-    prev_ses_block: Optional[BlockRecord] = None,
 ) -> tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
@@ -70,7 +68,7 @@ def validate_unfinished_header_block(
 
     overflow = is_overflow_block(constants, header_block.reward_chain_block.signage_point_index)
     if skip_overflow_last_ss_validation and overflow:
-        if final_eos_is_already_included(header_block, blocks, expected_sub_slot_iters):
+        if final_eos_is_already_included(header_block, blocks, expected_vs.ssi):
             skip_overflow_last_ss_validation = False
             finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
         else:
@@ -84,8 +82,8 @@ def validate_unfinished_header_block(
     can_finish_epoch: bool = False
     if genesis_block:
         height: uint32 = uint32(0)
-        assert expected_difficulty == constants.DIFFICULTY_STARTING
-        assert expected_sub_slot_iters == constants.SUB_SLOT_ITERS_STARTING
+        assert expected_vs.difficulty == constants.DIFFICULTY_STARTING
+        assert expected_vs.ssi == constants.SUB_SLOT_ITERS_STARTING
     else:
         assert prev_b is not None
         height = uint32(prev_b.height + 1)
@@ -97,7 +95,7 @@ def validate_unfinished_header_block(
                 prev_b.prev_hash,
                 prev_b.deficit,
                 prev_b.sub_epoch_summary_included is not None,
-                prev_ses_block=prev_ses_block,
+                prev_ses_block=expected_vs.prev_ses_block,
             )
         else:
             can_finish_se = False
@@ -262,9 +260,9 @@ def validate_unfinished_header_block(
 
             if can_finish_epoch and sub_slot.challenge_chain.subepoch_summary_hash is not None:
                 # 2m. Check new difficulty and ssi
-                if sub_slot.challenge_chain.new_sub_slot_iters != expected_sub_slot_iters:
+                if sub_slot.challenge_chain.new_sub_slot_iters != expected_vs.ssi:
                     return None, ValidationError(Err.INVALID_NEW_SUB_SLOT_ITERS)
-                if sub_slot.challenge_chain.new_difficulty != expected_difficulty:
+                if sub_slot.challenge_chain.new_difficulty != expected_vs.difficulty:
                     return None, ValidationError(Err.INVALID_NEW_DIFFICULTY)
             else:
                 # 2n. Check new difficulty and ssi are None if we don't finish epoch
@@ -283,7 +281,7 @@ def validate_unfinished_header_block(
                     ),
                 )
 
-            eos_vdf_iters: uint64 = expected_sub_slot_iters
+            eos_vdf_iters: uint64 = expected_vs.ssi
             cc_start_element: ClassgroupElement = ClassgroupElement.get_default_element()
             cc_eos_vdf_challenge: bytes32 = challenge_hash
             if genesis_block:
@@ -338,7 +336,7 @@ def validate_unfinished_header_block(
                 if finished_sub_slot_n == 0:
                     cc_eos_vdf_info_iters = prev_b.sub_slot_iters
                 else:
-                    cc_eos_vdf_info_iters = expected_sub_slot_iters
+                    cc_eos_vdf_info_iters = expected_vs.ssi
             # Check that the modified data is correct
             if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf != partial_cc_vdf_info.replace(
                 number_of_iterations=cc_eos_vdf_info_iters
@@ -423,9 +421,9 @@ def validate_unfinished_header_block(
                         blocks,
                         height,
                         blocks.block_record(prev_b.prev_hash),
-                        expected_difficulty if can_finish_epoch else None,
-                        expected_sub_slot_iters if can_finish_epoch else None,
-                        prev_ses_block,
+                        expected_vs.difficulty if can_finish_epoch else None,
+                        expected_vs.ssi if can_finish_epoch else None,
+                        expected_vs.prev_ses_block,
                     )
                     expected_hash = expected_sub_epoch_summary.get_hash()
                     if expected_hash != ses_hash:
@@ -505,12 +503,12 @@ def validate_unfinished_header_block(
         constants.DIFFICULTY_CONSTANT_FACTOR,
         q_str,
         header_block.reward_chain_block.proof_of_space.size,
-        expected_difficulty,
+        expected_vs.difficulty,
         cc_sp_hash,
     )
 
     # 7. check required iters
-    if required_iters >= calculate_sp_interval_iters(constants, expected_sub_slot_iters):
+    if required_iters >= calculate_sp_interval_iters(constants, expected_vs.ssi):
         return None, ValidationError(Err.INVALID_REQUIRED_ITERS)
 
     # 8a. check signage point index 0 has no cc sp
@@ -527,13 +525,13 @@ def validate_unfinished_header_block(
 
     sp_iters: uint64 = calculate_sp_iters(
         constants,
-        expected_sub_slot_iters,
+        expected_vs.ssi,
         header_block.reward_chain_block.signage_point_index,
     )
 
     ip_iters: uint64 = calculate_ip_iters(
         constants,
-        expected_sub_slot_iters,
+        expected_vs.ssi,
         header_block.reward_chain_block.signage_point_index,
         required_iters,
     )
@@ -549,7 +547,7 @@ def validate_unfinished_header_block(
 
     # 10. Check total iters
     if genesis_block:
-        total_iters: uint128 = uint128(expected_sub_slot_iters * finished_sub_slots_since_prev)
+        total_iters: uint128 = uint128(expected_vs.ssi * finished_sub_slots_since_prev)
     else:
         assert prev_b is not None
         if new_sub_slot:
@@ -557,7 +555,7 @@ def validate_unfinished_header_block(
             # Add the rest of the slot of prev_b
             total_iters = uint128(total_iters + prev_b.sub_slot_iters - prev_b.ip_iters(constants))
             # Add other empty slots
-            total_iters = uint128(total_iters + (expected_sub_slot_iters * (finished_sub_slots_since_prev - 1)))
+            total_iters = uint128(total_iters + (expected_vs.ssi * (finished_sub_slots_since_prev - 1)))
         else:
             # Slot iters is guaranteed to be the same for header_block and prev_b
             # This takes the beginning of the slot, and adds ip_iters
@@ -572,7 +570,7 @@ def validate_unfinished_header_block(
             ),
         )
 
-    sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (expected_sub_slot_iters if overflow else 0))
+    sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (expected_vs.ssi if overflow else 0))
     if overflow and skip_overflow_last_ss_validation:
         dummy_vdf_info = VDFInfo(
             bytes32.zeros,
@@ -703,7 +701,7 @@ def validate_unfinished_header_block(
 
         # The first block to have an sp > the last tx block's infusion iters, is a tx block
         if overflow:
-            our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - expected_sub_slot_iters)
+            our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - expected_vs.ssi)
         else:
             our_sp_total_iters = uint128(total_iters - ip_iters + sp_iters)
         if (our_sp_total_iters > curr.total_iters) != (header_block.foliage.foliage_transaction_block_hash is not None):
@@ -857,11 +855,9 @@ def validate_finished_header_block(
         blocks,
         unfinished_header_block,
         check_filter,
-        expected_vs.difficulty,
-        expected_vs.ssi,
+        expected_vs,
         False,
         check_sub_epoch_summary=check_sub_epoch_summary,
-        prev_ses_block=expected_vs.prev_ses_block,
     )
 
     genesis_block = False

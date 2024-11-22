@@ -57,7 +57,7 @@ def summary_cmd(
 ) -> None:
     import asyncio
 
-    from .farm_funcs import summary
+    from chia.cmds.farm_funcs import summary
 
     asyncio.run(summary(rpc_port, wallet_rpc_port, harvester_rpc_port, farmer_rpc_port))
 
@@ -82,6 +82,6 @@ def summary_cmd(
 def challenges_cmd(farmer_rpc_port: Optional[int], limit: int) -> None:
     import asyncio
 
-    from .farm_funcs import challenges
+    from chia.cmds.farm_funcs import challenges
 
     asyncio.run(challenges(farmer_rpc_port, limit))

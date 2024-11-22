@@ -10,7 +10,6 @@ import signal
 import ssl
 import subprocess
 import sys
-import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
@@ -829,7 +828,7 @@ class WebSocketServer:
                     if word in new_data:
                         return None
             else:
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
 
     async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
         file_path = config["out_file"]
@@ -1192,6 +1191,7 @@ class WebSocketServer:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
+                # TODO: stop dropping tasks on the floor
                 loop.create_task(self._start_plotting(id, loop, queue))  # noqa: RUF006
             else:
                 log.info("Plotting will start automatically when previous plotting finish")

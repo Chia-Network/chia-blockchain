@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
