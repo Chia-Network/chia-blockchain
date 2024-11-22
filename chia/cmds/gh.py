@@ -34,7 +34,7 @@ def gh_group() -> None:
     gh_group,
     name="test",
     # TODO: welp, yeah, help
-    help="launch a test run in ci from the local commit",
+    help="launch a test run in ci from HEAD or existing remote ref",
     # short_help="helpy help",
     # help="""docstring help
     # and
