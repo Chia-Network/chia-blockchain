@@ -53,6 +53,7 @@ class TestCMD:
         "--ref",
         help="Branch or tag name (commit SHA not supported), if not specified will push HEAD to a temporary branch",
         type=str,
+        default=None,
     )
     per: Per = option("-p", "--per", help="Per", type=click.Choice(["directory", "file"]), default="directory")
     only: Optional[Path] = option(
