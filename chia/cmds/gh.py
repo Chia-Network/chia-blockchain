@@ -109,6 +109,7 @@ class TestCMD:
     full_python_matrix: bool = option(
         "--full-python-matrix/--default-python-matrix", help="Run on all Python versions", default=False
     )
+    remote: str = option("-r", "--remote", help="Name of git remote", type=str, default="origin")
 
     async def run(self) -> None:
         await self.check_only()
@@ -126,7 +127,7 @@ class TestCMD:
             temp_branch_name = f"tmp/{username}/{commit_sha}/{uuid.uuid4()}"
 
             process = await anyio.run_process(
-                command=["git", "push", "origin", f"HEAD:{temp_branch_name}"], check=False, stdout=None, stderr=None
+                command=["git", "push", self.remote, f"HEAD:{temp_branch_name}"], check=False, stdout=None, stderr=None
             )
             if process.returncode != 0:
                 raise click.ClickException("Failed to push temporary branch")
@@ -150,7 +151,7 @@ class TestCMD:
             finally:
                 report(f"deleting temporary branch: {temp_branch_name}")
                 process = await anyio.run_process(
-                    command=["git", "push", "origin", "-d", temp_branch_name], check=False, stdout=None, stderr=None
+                    command=["git", "push", self.remote, "-d", temp_branch_name], check=False, stdout=None, stderr=None
                 )
                 if process.returncode != 0:
                     raise click.ClickException("Failed to dispatch workflow")
