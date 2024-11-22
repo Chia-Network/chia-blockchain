@@ -13,6 +13,14 @@ import yaml
 from chia.cmds.cmd_classes import chia_command, option
 
 
+class UnexpectedFormError(Exception):
+    pass
+
+
+def report(*args: str) -> None:
+    print("    ====", *args)
+
+
 @click.group("gh", help="For working with GitHub")
 def gh_group() -> None:
     pass
@@ -64,27 +72,30 @@ class TestCMD:
 
             try:
                 await self.trigger_workflow(temp_branch_name)
-                while True:
+                for _ in range(10):
                     await anyio.sleep(1)
 
                     try:
+                        report("looking for run")
                         run_url = await self.find_run(temp_branch_name)
-                        print(f"run found at: {run_url}")
-                    except Exception as e:
-                        print(e)
+                        report(f"run found at: {run_url}")
+                    except UnexpectedFormError:
+                        report("run not found")
                         continue
 
                     break
+                else:
+                    raise click.ClickException("Failed to find run url")
             finally:
-                print(f"deleting temporary branch: {temp_branch_name}")
+                report(f"deleting temporary branch: {temp_branch_name}")
                 process = await anyio.run_process(
                     command=["git", "push", "origin", "-d", temp_branch_name], check=False, stdout=None, stderr=None
                 )
                 if process.returncode != 0:
                     raise click.ClickException("Failed to dispatch workflow")
-                print(f"temporary branch deleted: {temp_branch_name}")
+                report(f"temporary branch deleted: {temp_branch_name}")
 
-            print(f"run url: {run_url}")
+            report(f"run url: {run_url}")
             webbrowser.open(run_url)
 
     async def trigger_workflow(self, ref: str) -> None:
@@ -110,11 +121,11 @@ class TestCMD:
             *input_arg("run-windows", self.run_windows),
             *input_arg("full-python-matrix", self.full_python_matrix),
         ]
-        print(f"running command: {shlex.join(command)}")
+        report(f"running command: {shlex.join(command)}")
         process = await anyio.run_process(command=command, check=False, stdout=None, stderr=None)
         if process.returncode != 0:
             raise click.ClickException("Failed to dispatch workflow")
-        print(f"workflow triggered on branch: {ref}")
+        report(f"workflow triggered on branch: {ref}")
 
     async def find_run(self, ref: str) -> str:
         # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#list-workflow-runs-for-a-workflow
@@ -127,13 +138,17 @@ class TestCMD:
             f"-f=branch={ref}",
             f"/repos/{self.owner}/{self.repository}/actions/workflows/{self.workflow_id}/runs",
         ]
-        print(f"running command: {shlex.join(command)}")
+        report(f"running command: {shlex.join(command)}")
         process = await anyio.run_process(command=command, check=False, stderr=None)
         if process.returncode != 0:
             raise click.ClickException("Failed to query workflow runs")
 
         response = json.loads(process.stdout)
-        [run] = response["workflow_runs"]
+        runs = response["workflow_runs"]
+        try:
+            [run] = runs
+        except ValueError:
+            raise UnexpectedFormError(f"expected 1 run, got: {len(runs)}")
 
         url = run["html_url"]
 
