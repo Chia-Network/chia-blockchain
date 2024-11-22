@@ -48,7 +48,7 @@ class _TaskReferencer:
     ) -> asyncio.Task[T]:
         self.maybe_cull()
 
-        task = asyncio.create_task(coro=coroutine, name=name)
+        task = asyncio.create_task(coro=coroutine, name=name)  # noqa: TID251
         self.tasks.append(
             _TaskInfo(
                 task=task,
