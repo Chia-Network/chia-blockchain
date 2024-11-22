@@ -6,7 +6,7 @@ import shlex
 import uuid
 import webbrowser
 from pathlib import Path
-from typing import Callable, ClassVar, Literal, Optional, Union, overload
+from typing import Callable, ClassVar, Literal, Optional, Sequence, Union, overload
 
 import anyio
 import click
@@ -19,8 +19,11 @@ class UnexpectedFormError(Exception):
     pass
 
 
+Oses = Union[Literal["linux"], Literal["macos-arm"], Literal["macos-intel"], Literal["windows"]]
 Method = Union[Literal["GET"], Literal["POST"]]
 Per = Union[Literal["directory"], Literal["file"]]
+
+all_oses: Sequence[Oses] = ("linux", "macos-arm", "macos-intel", "windows")
 
 
 def report(*args: str) -> None:
@@ -96,10 +99,13 @@ class TestCMD:
         "-o", "--only", help="Only run this item, a file or directory depending on --per", type=Path
     )
     duplicates: int = option("-d", "--duplicates", help="Number of duplicates", type=int, default=1)
-    run_linux: bool = option("--run-linux/--skip-linux", help="Run on Linux", default=True)
-    run_macos_intel: bool = option("--run-macos-intel/--skip-macos-intel", help="Run on macOS Intel", default=True)
-    run_macos_arm: bool = option("--run-macos-arm/--skip-macos-arm", help="Run on macOS ARM", default=True)
-    run_windows: bool = option("--run-windows/--skip-windows", help="Run on Windows", default=True)
+    oses: Sequence[Oses] = option(
+        "--os",
+        help="Operating systems to run on",
+        type=click.Choice(all_oses),
+        multiple=True,
+        default=all_oses,
+    )
     full_python_matrix: bool = option(
         "--full-python-matrix/--default-python-matrix", help="Run on all Python versions", default=False
     )
@@ -190,10 +196,7 @@ class TestCMD:
                 *input_arg("per", self.per),
                 *input_arg("only", self.only, self.only is not None),
                 *input_arg("duplicates", self.duplicates),
-                *input_arg("run-linux", self.run_linux),
-                *input_arg("run-macos-intel", self.run_macos_intel),
-                *input_arg("run-macos-arm", self.run_macos_arm),
-                *input_arg("run-windows", self.run_windows),
+                *(arg for os_name in all_oses for arg in input_arg(f"run-{os_name}", os_name in self.oses)),
                 *input_arg("full-python-matrix", self.full_python_matrix),
             ],
             error="Failed to dispatch workflow",

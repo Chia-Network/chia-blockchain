@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,5 +47,5 @@ async def test_invalid_only(case: InvalidOnlyCase) -> None:
         assert not test_root.joinpath(case.only).exists()
         explanation = "does not exist"
 
-    with pytest.raises(click.ClickException, match=f"to be a {case.per}, {explanation}"):
+    with pytest.raises(click.ClickException, match=f"\bto be a {re.escape(case.per)}\b.*\b{re.escape(explanation)}\b"):
         await cmd.run()
