@@ -86,31 +86,75 @@ def gh_group() -> None:
 )
 class TestCMD:
     workflow_id: ClassVar[str] = "test.yml"
-    owner: str = option("-o", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
-    repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
+    owner: str = option(
+        "-o",
+        "--owner",
+        help="Owner of the repo",
+        type=str,
+        default="Chia-Network",
+        show_default=True,
+    )
+    repository: str = option(
+        "-r",
+        "--repository",
+        help="Repository name",
+        type=str,
+        default="chia-blockchain",
+        show_default=True,
+    )
     ref: Optional[str] = option(
         "-f",
         "--ref",
         help="Branch or tag name (commit SHA not supported), if not specified will push HEAD to a temporary branch",
         type=str,
         default=None,
+        show_default=True,
     )
-    per: Per = option("-p", "--per", help="Per", type=click.Choice(["directory", "file"]), default="directory")
+    per: Per = option(
+        "-p",
+        "--per",
+        help="Per",
+        type=click.Choice(["directory", "file"]),
+        default="directory",
+        show_default=True,
+    )
     only: Optional[Path] = option(
-        "-o", "--only", help="Only run this item, a file or directory depending on --per", type=Path
+        "-o",
+        "--only",
+        help="Only run this item, a file or directory depending on --per",
+        type=Path,
+        show_default=True,
     )
-    duplicates: int = option("-d", "--duplicates", help="Number of duplicates", type=int, default=1)
+    duplicates: int = option(
+        "-d",
+        "--duplicates",
+        help="Number of duplicates",
+        type=int,
+        default=1,
+        show_default=True,
+    )
     oses: Sequence[Oses] = option(
         "--os",
         help="Operating systems to run on",
         type=click.Choice(all_oses),
         multiple=True,
         default=all_oses,
+        show_default=True,
     )
     full_python_matrix: bool = option(
-        "--full-python-matrix/--default-python-matrix", help="Run on all Python versions", default=False
+        "--full-python-matrix/--default-python-matrix",
+        help="Run on all Python versions",
+        default=False,
+        show_default=True,
     )
-    remote: str = option("-r", "--remote", help="Name of git remote", type=str, default="origin")
+    remote: str = option(
+        "-r",
+        "--remote",
+        help="Name of git remote",
+        type=str,
+        default="origin",
+        show_default=True,
+    )
 
     async def run(self) -> None:
         await self.check_only()
