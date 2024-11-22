@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import uuid
 import webbrowser
 from pathlib import Path
-from typing import Callable, ClassVar, Literal, Optional, Union
+from typing import Callable, ClassVar, Literal, Optional, Union, overload
 
 import anyio
 import click
@@ -18,11 +19,45 @@ class UnexpectedFormError(Exception):
     pass
 
 
+Method = Union[Literal["GET"], Literal["POST"]]
 Per = Union[Literal["directory"], Literal["file"]]
 
 
 def report(*args: str) -> None:
     print("    ====", *args)
+
+
+@overload
+async def run_gh_api(method: Method, args: list[str], error: str) -> None: ...
+@overload
+async def run_gh_api(method: Method, args: list[str], error: str, capture_stdout: Literal[False]) -> None: ...
+@overload
+async def run_gh_api(method: Method, args: list[str], error: str, capture_stdout: Literal[True]) -> str: ...
+
+
+async def run_gh_api(method: Method, args: list[str], error: str, capture_stdout: bool = False) -> Optional[str]:
+    command = [
+        "gh",
+        "api",
+        f"--method={method}",
+        "-H=Accept: application/vnd.github+json",
+        "-H=X-GitHub-Api-Version: 2022-11-28",
+        *args,
+    ]
+    report(f"running command: {shlex.join(command)}")
+
+    if capture_stdout:
+        process = await anyio.run_process(command=command, check=False, stderr=None)
+    else:
+        process = await anyio.run_process(command=command, check=False, stderr=None, stdout=None)
+
+    if process.returncode != 0:
+        raise click.ClickException(error)
+
+    if capture_stdout:
+        return process.stdout.decode("utf-8")
+
+    return None
 
 
 @click.group("gh", help="For working with GitHub")
@@ -129,50 +164,48 @@ class TestCMD:
 
     async def trigger_workflow(self, ref: str) -> None:
         def input_arg(name: str, value: object, cond: bool = True) -> list[str]:
+            if not cond:
+                return []
+
+            assert value is not None
+
+            if isinstance(value, os.PathLike):
+                value = os.fspath(value)
             dumped = yaml.safe_dump(value).partition("\n")[0]
-            return [f"-f=inputs[{name}]={dumped}"] if cond else []
+            return [f"-f=inputs[{name}]={dumped}"]
 
         # https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#create-a-workflow-dispatch-event
-        command = [
-            "gh",
-            "api",
-            "--method=POST",
-            "-H=Accept: application/vnd.github+json",
-            "-H=X-GitHub-Api-Version: 2022-11-28",
-            f"/repos/{self.owner}/{self.repository}/actions/workflows/{self.workflow_id}/dispatches",
-            f"-f=ref={ref}",
-            *input_arg("per", self.per),
-            *input_arg("only", self.only, self.only is not None),
-            *input_arg("duplicates", self.duplicates),
-            *input_arg("run-linux", self.run_linux),
-            *input_arg("run-macos-intel", self.run_macos_intel),
-            *input_arg("run-macos-arm", self.run_macos_arm),
-            *input_arg("run-windows", self.run_windows),
-            *input_arg("full-python-matrix", self.full_python_matrix),
-        ]
-        report(f"running command: {shlex.join(command)}")
-        process = await anyio.run_process(command=command, check=False, stdout=None, stderr=None)
-        if process.returncode != 0:
-            raise click.ClickException("Failed to dispatch workflow")
+        await run_gh_api(
+            method="POST",
+            args=[
+                f"/repos/{self.owner}/{self.repository}/actions/workflows/{self.workflow_id}/dispatches",
+                f"-f=ref={ref}",
+                *input_arg("per", self.per),
+                *input_arg("only", self.only, self.only is not None),
+                *input_arg("duplicates", self.duplicates),
+                *input_arg("run-linux", self.run_linux),
+                *input_arg("run-macos-intel", self.run_macos_intel),
+                *input_arg("run-macos-arm", self.run_macos_arm),
+                *input_arg("run-windows", self.run_windows),
+                *input_arg("full-python-matrix", self.full_python_matrix),
+            ],
+            error="Failed to dispatch workflow",
+        )
         report(f"workflow triggered on branch: {ref}")
 
     async def find_run(self, ref: str) -> str:
         # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#list-workflow-runs-for-a-workflow
-        command = [
-            "gh",
-            "api",
-            "--method=GET",
-            "-H=Accept: application/vnd.github+json",
-            "-H=X-GitHub-Api-Version: 2022-11-28",
-            f"-f=branch={ref}",
-            f"/repos/{self.owner}/{self.repository}/actions/workflows/{self.workflow_id}/runs",
-        ]
-        report(f"running command: {shlex.join(command)}")
-        process = await anyio.run_process(command=command, check=False, stderr=None)
-        if process.returncode != 0:
-            raise click.ClickException("Failed to query workflow runs")
+        stdout = await run_gh_api(
+            method="GET",
+            args=[
+                f"-f=branch={ref}",
+                f"/repos/{self.owner}/{self.repository}/actions/workflows/{self.workflow_id}/runs",
+            ],
+            error="Failed to query workflow runs",
+            capture_stdout=True,
+        )
 
-        response = json.loads(process.stdout)
+        response = json.loads(stdout)
         runs = response["workflow_runs"]
         try:
             [run] = runs
@@ -186,22 +219,14 @@ class TestCMD:
 
     async def get_username(self) -> str:
         # https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user
-        process = await anyio.run_process(
-            command=[
-                "gh",
-                "api",
-                "--method=GET",
-                "-H=Accept: application/vnd.github+json",
-                "-H=X-GitHub-Api-Version: 2022-11-28",
-                "/user",
-            ],
-            check=False,
-            stderr=None,
+        stdout = await run_gh_api(
+            method="GET",
+            args=["/user"],
+            error="Failed to get username",
+            capture_stdout=True,
         )
-        if process.returncode != 0:
-            raise click.ClickException("Failed to get username")
 
-        response = json.loads(process.stdout)
+        response = json.loads(stdout)
         username = response["login"]
         assert isinstance(username, str), f"expected username to be a string, got: {username!r}"
         return username
