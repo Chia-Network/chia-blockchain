@@ -1586,8 +1586,6 @@ async def test_long_reorg_nodes_and_wallet(
     log.info(f"wallet node height is {node_1_peak.height}")
     # full node 2 has the reorg-chain
     await add_blocks_in_batches(reorg_blocks[:-1], full_node_2.full_node)
-    node_2_peak = full_node_1.full_node.blockchain.get_peak()
-    assert node_2_peak is not None
     await connect_and_get_peer(full_node_1.full_node.server, full_node_2.full_node.server, self_hostname)
 
     # # TODO: There appears to be an issue where the node with the lighter chain
@@ -1601,6 +1599,8 @@ async def test_long_reorg_nodes_and_wallet(
         return p1 is not None and p1 == p2
 
     await time_out_assert(600, check_nodes_in_sync)
+    node_2_peak = full_node_2.full_node.blockchain.get_peak()
+    assert node_2_peak is not None
     print(f"peak: {str(node_2_peak.header_hash)[:6]}")
     await time_out_assert(600, wallet_height_at_least, True, wallet_node, node_2_peak.height)
     # reorg1_timing = time.monotonic() - start
