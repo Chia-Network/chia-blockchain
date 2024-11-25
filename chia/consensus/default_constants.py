@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
+from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
-
-from .constants import ConsensusConstants
 
 AGG_SIG_DATA = bytes32.fromhex("ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb")
 
@@ -72,12 +71,9 @@ DEFAULT_CONSTANTS = ConsensusConstants(
     MAX_GENERATOR_SIZE=uint32(1000000),
     MAX_GENERATOR_REF_LIST_SIZE=uint32(512),  # Number of references allowed in the block generator ref list
     POOL_SUB_SLOT_ITERS=uint64(37600000000),  # iters limit * NUM_SPS
-    SOFT_FORK2_HEIGHT=uint32(0),
-    SOFT_FORK4_HEIGHT=uint32(5716000),
-    SOFT_FORK5_HEIGHT=uint32(5940000),
+    SOFT_FORK6_HEIGHT=uint32(9999999),  # temporary placeholder
     # June 2024
     HARD_FORK_HEIGHT=uint32(5496000),
-    HARD_FORK_FIX_HEIGHT=uint32(0),
     # June 2027
     PLOT_FILTER_128_HEIGHT=uint32(10542000),
     # June 2030
@@ -87,9 +83,7 @@ DEFAULT_CONSTANTS = ConsensusConstants(
 )
 
 
-def update_testnet_overrides(network_id: str, overrides: Dict[str, Any]) -> None:
+def update_testnet_overrides(network_id: str, overrides: dict[str, Any]) -> None:
     if network_id == "testnet11":
-        if "SOFT_FORK4_HEIGHT" not in overrides:
-            overrides["SOFT_FORK4_HEIGHT"] = 641500
-        if "SOFT_FORK5_HEIGHT" not in overrides:
-            overrides["SOFT_FORK5_HEIGHT"] = 1340000
+        if "SOFT_FORK6_HEIGHT" not in overrides:
+            overrides["SOFT_FORK6_HEIGHT"] = 9999999  # temporary placeholder

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import CoinState
 
@@ -30,7 +30,7 @@ class WalletRetryStore:
 
         return self
 
-    async def get_all_states_to_retry(self) -> List[Tuple[CoinState, bytes32, uint32]]:
+    async def get_all_states_to_retry(self) -> list[tuple[CoinState, bytes32, uint32]]:
         """
         Return all states that were failed to sync
         """

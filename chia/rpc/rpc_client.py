@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, AsyncIterator, Dict, List, Optional, Type, TypeVar
+from typing import Any, Optional, TypeVar
 
 import aiohttp
 
@@ -24,7 +25,7 @@ _T_RpcClient = TypeVar("_T_RpcClient", bound="RpcClient")
 # the possibility to identify these errors in new code from having to review and
 # clean up existing code.
 class ResponseFailureError(ValueError):
-    def __init__(self, response: Dict[str, Any]):
+    def __init__(self, response: dict[str, Any]):
         self.response = response
         super().__init__(f"RPC response failure: {json.dumps(response)}")
 
@@ -48,11 +49,11 @@ class RpcClient:
 
     @classmethod
     async def create(
-        cls: Type[_T_RpcClient],
+        cls: type[_T_RpcClient],
         self_hostname: str,
         port: uint16,
         root_path: Optional[Path],
-        net_config: Optional[Dict[str, Any]],
+        net_config: Optional[dict[str, Any]],
     ) -> _T_RpcClient:
         if (root_path is not None) != (net_config is not None):
             raise ValueError("Either both or neither of root_path and net_config must be provided")
@@ -77,7 +78,7 @@ class RpcClient:
         self = cls(
             hostname=self_hostname,
             port=port,
-            url=f"{scheme}://{self_hostname}:{str(port)}/",
+            url=f"{scheme}://{self_hostname}:{port!s}/",
             session=aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)),
             ssl_context=ssl_context,
         )
@@ -87,11 +88,11 @@ class RpcClient:
     @classmethod
     @asynccontextmanager
     async def create_as_context(
-        cls: Type[_T_RpcClient],
+        cls: type[_T_RpcClient],
         self_hostname: str,
         port: uint16,
         root_path: Optional[Path] = None,
-        net_config: Optional[Dict[str, Any]] = None,
+        net_config: Optional[dict[str, Any]] = None,
     ) -> AsyncIterator[_T_RpcClient]:
         self = await cls.create(
             self_hostname=self_hostname,
@@ -105,15 +106,17 @@ class RpcClient:
             self.close()
             await self.await_closed()
 
-    async def fetch(self, path, request_json) -> Dict[str, Any]:
-        async with self.session.post(self.url + path, json=request_json, ssl=self.ssl_context) as response:
+    async def fetch(self, path, request_json) -> dict[str, Any]:
+        async with self.session.post(
+            self.url + path, json=request_json, ssl=self.ssl_context if self.ssl_context is not None else True
+        ) as response:
             response.raise_for_status()
             res_json = await response.json()
             if not res_json["success"]:
                 raise ResponseFailureError(res_json)
             return res_json
 
-    async def get_connections(self, node_type: Optional[NodeType] = None) -> List[Dict]:
+    async def get_connections(self, node_type: Optional[NodeType] = None) -> list[dict]:
         request = {}
         if node_type is not None:
             request["node_type"] = node_type.value
@@ -122,17 +125,35 @@ class RpcClient:
             connection["node_id"] = hexstr_to_bytes(connection["node_id"])
         return response["connections"]
 
-    async def open_connection(self, host: str, port: int) -> Dict:
+    async def open_connection(self, host: str, port: int) -> dict:
         return await self.fetch("open_connection", {"host": host, "port": int(port)})
 
-    async def close_connection(self, node_id: bytes32) -> Dict:
+    async def close_connection(self, node_id: bytes32) -> dict:
         return await self.fetch("close_connection", {"node_id": node_id.hex()})
 
-    async def stop_node(self) -> Dict:
+    async def stop_node(self) -> dict:
         return await self.fetch("stop_node", {})
 
-    async def healthz(self) -> Dict:
+    async def healthz(self) -> dict:
         return await self.fetch("healthz", {})
+
+    async def get_network_info(self) -> dict:
+        return await self.fetch("get_network_info", {})
+
+    async def get_routes(self) -> dict:
+        return await self.fetch("get_routes", {})
+
+    async def get_version(self) -> dict:
+        return await self.fetch("get_version", {})
+
+    async def get_log_level(self) -> dict:
+        return await self.fetch("get_log_level", {})
+
+    async def set_log_level(self, level: str) -> dict:
+        return await self.fetch("set_log_level", {"level": level})
+
+    async def reset_log_level(self) -> dict:
+        return await self.fetch("reset_log_level", {})
 
     def close(self) -> None:
         self.closing_task = asyncio.create_task(self.session.close())

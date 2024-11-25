@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
@@ -105,7 +105,7 @@ class PlotKeysResolver:
             except Exception as e:
                 log.error(f"Keychain proxy failed with error: {e}")
         else:
-            sk_ent: Optional[Tuple[PrivateKey, bytes]] = None
+            sk_ent: Optional[tuple[PrivateKey, bytes]] = None
             keychain: Keychain = Keychain()
             if self.alt_fingerprint is not None:
                 sk_ent = keychain.get_private_key_by_fingerprint(self.alt_fingerprint)
@@ -151,8 +151,8 @@ async def create_plots(
     args: Params,
     keys: PlotKeys,
     use_datetime: bool = True,
-    test_private_keys: Optional[List[PrivateKey]] = None,
-) -> Tuple[Dict[bytes32, Path], Dict[bytes32, Path]]:
+    test_private_keys: Optional[list[PrivateKey]] = None,
+) -> tuple[dict[bytes32, Path], dict[bytes32, Path]]:
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
     assert (keys.pool_public_key is None) != (keys.pool_contract_puzzle_hash is None)
@@ -182,8 +182,8 @@ async def create_plots(
 
     args.final_dir.mkdir(parents=True, exist_ok=True)
 
-    created_plots: Dict[bytes32, Path] = {}
-    existing_plots: Dict[bytes32, Path] = {}
+    created_plots: dict[bytes32, Path] = {}
+    existing_plots: dict[bytes32, Path] = {}
     for i in range(num):
         # Generate a random master secret key
         if test_private_keys is not None:

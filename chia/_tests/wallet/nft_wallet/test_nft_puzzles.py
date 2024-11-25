@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import Optional, Tuple
+from typing import Optional
 
 from chia._tests.core.make_block_generator import int_to_public_key
 from chia.types.blockchain_format.program import Program
@@ -104,7 +104,7 @@ def test_nft_transfer_puzzle_hashes(seeded_random: random.Random) -> None:
     assert expected_ph == calculated_ph
 
 
-def make_a_new_solution() -> Tuple[Program, Program]:
+def make_a_new_solution() -> tuple[Program, Program]:
     destination = int_to_public_key(2)
     p2_puzzle = puzzle_for_pk(destination)
     puzhash = p2_puzzle.get_tree_hash()
@@ -116,7 +116,7 @@ def make_a_new_solution() -> Tuple[Program, Program]:
     return p2_puzzle, solution
 
 
-def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
+def make_a_new_ownership_layer_puzzle() -> tuple[Program, Program]:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
     old_did = Program.to("test_2").get_tree_hash()

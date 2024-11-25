@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple, Union
+from typing import Union
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.blockchain_interface import BlockchainInterface
+from chia.consensus.blockchain_interface import BlockRecordsProtocol
 from chia.consensus.constants import ConsensusConstants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
@@ -11,7 +11,7 @@ from chia.util.ints import uint32
 
 
 async def find_fork_point_in_chain(
-    blocks: BlockchainInterface,
+    blocks: BlockRecordsProtocol,
     block_1: Union[BlockRecord, HeaderBlock],
     block_2: Union[BlockRecord, HeaderBlock],
 ) -> int:
@@ -60,11 +60,11 @@ async def find_fork_point_in_chain(
 
 
 async def lookup_fork_chain(
-    blocks: BlockchainInterface,
-    block_1: Tuple[int, bytes32],
-    block_2: Tuple[int, bytes32],
+    blocks: BlockRecordsProtocol,
+    block_1: tuple[int, bytes32],
+    block_2: tuple[int, bytes32],
     constants: ConsensusConstants,
-) -> Tuple[Dict[uint32, bytes32], bytes32]:
+) -> tuple[dict[uint32, bytes32], bytes32]:
     """
     Tries to find height where new chain (block_2) diverged from block_1.
     The inputs are (height, header-hash)-tuples.
@@ -82,7 +82,7 @@ async def lookup_fork_chain(
     height_2 = block_2[0]
     bh_2 = block_2[1]
 
-    ret: Dict[uint32, bytes32] = {}
+    ret: dict[uint32, bytes32] = {}
 
     while height_1 > height_2:
         [bh_1] = await blocks.prev_block_hash([bh_1])

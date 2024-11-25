@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Collection
 from dataclasses import dataclass
 from time import monotonic
-from typing import Collection, Dict, List, Optional
+from typing import Optional
 
 from chia_rs import G2Element
 from clvm.casts import int_to_bytes
@@ -79,10 +80,10 @@ def fake_block_record(block_height: uint32, timestamp: uint64) -> BenchBlockReco
 
 
 async def run_mempool_benchmark() -> None:
-    coin_records: Dict[bytes32, CoinRecord] = {}
+    coin_records: dict[bytes32, CoinRecord] = {}
 
-    async def get_coin_record(coin_ids: Collection[bytes32]) -> List[CoinRecord]:
-        ret: List[CoinRecord] = []
+    async def get_coin_record(coin_ids: Collection[bytes32]) -> list[CoinRecord]:
+        ret: list[CoinRecord] = []
         for name in coin_ids:
             r = coin_records.get(name)
             if r is not None:
@@ -114,7 +115,7 @@ async def run_mempool_benchmark() -> None:
                 coin.name(): CoinRecord(coin, uint32(height // 2), uint32(0), False, uint64(timestamp // 2))
             }
             spend_bundle_id = sb.name()
-            sbc = await mempool.pre_validate_spendbundle(sb, None, spend_bundle_id)
+            sbc = await mempool.pre_validate_spendbundle(sb, spend_bundle_id)
             assert sbc is not None
             await mempool.add_spend_bundle(sb, sbc, spend_bundle_id, uint32(height))
 

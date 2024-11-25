@@ -30,6 +30,13 @@ class WalletType(IntEnum):
     DAO_CAT = 15
     CRCAT = 57
 
+    def to_json_dict(self) -> str:
+        # yes, this isn't a `dict`, but it is json and
+        # unfortunately the magic method name is misleading
+        # not sure this code is used
+        # TODO: determine if this code is used and if not, remove it
+        return self.name
+
 
 class CoinType(IntEnum):
     NORMAL = 0
@@ -44,7 +51,7 @@ class RemarkDataType(IntEnum):
     CLAWBACK = 2
 
 
-T = TypeVar("T", contravariant=True)
+T_contra = TypeVar("T_contra", contravariant=True)
 
 
 @dataclass(frozen=True)
@@ -53,7 +60,7 @@ class WalletIdentifier:
     type: WalletType
 
     @classmethod
-    def create(cls, wallet: WalletProtocol[T]) -> WalletIdentifier:
+    def create(cls, wallet: WalletProtocol[T_contra]) -> WalletIdentifier:
         return cls(wallet.id(), wallet.type())
 
 

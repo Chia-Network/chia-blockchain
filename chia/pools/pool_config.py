@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 from chia_rs import G1Element
 
@@ -22,7 +22,7 @@ pool_list:
     pool_url: localhost
     p2_singleton_puzzle_hash: 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
     target_puzzle_hash: 344587cf06a39db471d2cc027504e8688a0a67cce961253500c956c73603fd58
-"""  # noqa
+"""
 
 log = logging.getLogger(__name__)
 
@@ -38,9 +38,9 @@ class PoolWalletConfig(Streamable):
     owner_public_key: G1Element
 
 
-def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
+def load_pool_config(root_path: Path) -> list[PoolWalletConfig]:
     config = load_config(root_path, "config.yaml")
-    ret_list: List[PoolWalletConfig] = []
+    ret_list: list[PoolWalletConfig] = []
     pool_list = config["pool"].get("pool_list", [])
     if pool_list is None:
         return ret_list
@@ -63,7 +63,7 @@ def load_pool_config(root_path: Path) -> List[PoolWalletConfig]:
 
 
 def update_pool_url(root_path: Path, pool_wallet_config: PoolWalletConfig, pool_url: str) -> None:
-    def update_pool_url_for_entry(config_entry: Dict[str, Any]) -> bool:
+    def update_pool_url_for_entry(config_entry: dict[str, Any]) -> bool:
         if config_entry.get("pool_url", "") != pool_url:
             config_entry["pool_url"] = pool_url
 
@@ -82,7 +82,7 @@ def update_pool_url(root_path: Path, pool_wallet_config: PoolWalletConfig, pool_
 def update_pool_config_entry(
     root_path: Path,
     pool_wallet_config: PoolWalletConfig,
-    update_closure: Callable[[Dict[str, Any]], bool],
+    update_closure: Callable[[dict[str, Any]], bool],
     update_log_message: str,
 ) -> None:
     with lock_and_load_config(root_path, "config.yaml") as config:
@@ -91,21 +91,20 @@ def update_pool_config_entry(
             return
         updated = False
         for pool_config_dict in pool_list:
+            launcher_id = pool_wallet_config.launcher_id
             try:
-                if hexstr_to_bytes(pool_config_dict["launcher_id"]) == bytes(pool_wallet_config.launcher_id):
+                if hexstr_to_bytes(pool_config_dict["launcher_id"]) == bytes(launcher_id):
                     if update_closure(pool_config_dict):
                         updated = True
             except Exception as e:
-                log.error(f"Exception updating config: {pool_config_dict} {e}")
+                log.error(f"Exception updating pool config {pool_config_dict} for launcher_id {launcher_id}: {e}")
     if updated:
         log.info(update_log_message)
         config["pool"]["pool_list"] = pool_list
         save_config(root_path, "config.yaml", config)
-    else:
-        log.error(f"Failed to update pool config entry for launcher_id {pool_wallet_config.launcher_id}")
 
 
-async def update_pool_config(root_path: Path, pool_config_list: List[PoolWalletConfig]) -> None:
+async def update_pool_config(root_path: Path, pool_config_list: list[PoolWalletConfig]) -> None:
     with lock_and_load_config(root_path, "config.yaml") as full_config:
         full_config["pool"]["pool_list"] = [c.to_json_dict() for c in pool_config_list]
         save_config(root_path, "config.yaml", full_config)

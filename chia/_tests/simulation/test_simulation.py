@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import json
-from typing import AsyncIterator, List, Tuple
+from collections.abc import AsyncIterator
 
 import aiohttp
 import pytest
@@ -186,7 +186,7 @@ class TestSimulation:
     @pytest.mark.anyio
     async def test_simulator_auto_farm_and_get_coins(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        two_wallet_nodes: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
     ) -> None:
         num_blocks = 2
@@ -194,7 +194,7 @@ class TestSimulation:
         full_node_api = full_nodes[0]
         server_1 = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
-        wallet_node_2, server_3 = wallets[1]
+        wallet_node_2, _server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
         wallet_node.config["trusted_peers"] = {}
@@ -212,11 +212,10 @@ class TestSimulation:
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
-        async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+        async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
             await wallet.generate_signed_transaction(
                 uint64(10),
                 await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                DEFAULT_TX_CONFIG,
                 action_scope,
                 uint64(0),
             )
@@ -314,7 +313,7 @@ class TestSimulation:
             peak = full_node_api.full_node.blockchain.get_peak()
             assert isinstance(peak, BlockRecord)
             start_time = peak.timestamp
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32.zeros))
             peak = full_node_api.full_node.blockchain.get_peak()
             assert isinstance(peak, BlockRecord)
             end_time = peak.timestamp
@@ -389,11 +388,10 @@ class TestSimulation:
 
         # repeating just to try to expose any flakiness
         for coin in coins:
-            async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
+            async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
                 await wallet.generate_signed_transaction(
                     amount=uint64(tx_amount),
                     puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                    tx_config=DEFAULT_TX_CONFIG,
                     action_scope=action_scope,
                     coins={coin},
                 )
@@ -436,12 +434,13 @@ class TestSimulation:
         # repeating just to try to expose any flakiness
         for repeat in range(repeats):
             coins = [next(coins_iter) for _ in range(tx_per_repeat)]
-            async with wallet.wallet_state_manager.new_action_scope(push=True, merge_spends=False) as action_scope:
+            async with wallet.wallet_state_manager.new_action_scope(
+                DEFAULT_TX_CONFIG, push=True, merge_spends=False
+            ) as action_scope:
                 for coin in coins:
                     await wallet.generate_signed_transaction(
                         amount=uint64(tx_amount),
                         puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                        tx_config=DEFAULT_TX_CONFIG,
                         action_scope=action_scope,
                         coins={coin},
                     )
@@ -486,7 +485,7 @@ class TestSimulation:
     async def test_create_coins_with_invalid_amounts_raises(
         self,
         self_hostname: str,
-        amounts: List[uint64],
+        amounts: list[uint64],
         simulator_and_wallet: OldSimulatorsAndWallets,
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = simulator_and_wallet

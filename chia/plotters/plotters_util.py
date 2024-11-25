@@ -7,9 +7,10 @@ import os
 import signal
 import subprocess
 import sys
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, Optional, TextIO
+from typing import Optional, TextIO
 
 from chia.util.chia_version import chia_short_version
 from chia.util.config import lock_and_load_config
@@ -59,7 +60,7 @@ async def run_plotter(root_path, plotter, args, progress_dict):
         process.terminate()
 
     # For Windows, we'll install a SIGINT handler to catch Ctrl-C (KeyboardInterrupt isn't raised)
-    if sys.platform in ["win32", "cygwin"]:
+    if sys.platform in {"win32", "cygwin"}:
         signal.signal(signal.SIGINT, sigint_handler)
         installed_sigint_handler = True
 

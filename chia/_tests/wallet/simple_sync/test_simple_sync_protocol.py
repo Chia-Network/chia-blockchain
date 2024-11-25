@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List
 
 import pytest
 from clvm.casts import int_to_bytes
@@ -31,7 +30,7 @@ log = getLogger(__name__)
 zero_ph = bytes32(32 * b"\0")
 
 
-async def get_all_messages_in_queue(queue: asyncio.Queue[Message]) -> List[Message]:
+async def get_all_messages_in_queue(queue: asyncio.Queue[Message]) -> list[Message]:
     all_messages = []
     await asyncio.sleep(2)
     while not queue.empty():
@@ -171,8 +170,8 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, action_scope, uint64(0))
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await wallet.generate_signed_transaction(uint64(10), puzzle_hash, action_scope, uint64(0))
     [tx_record] = action_scope.side_effects.transactions
     assert tx_record.spend_bundle is not None
     assert len(tx_record.spend_bundle.removals()) == 1
@@ -186,18 +185,16 @@ async def test_subscribe_for_ph(simulator_and_wallet: OldSimulatorsAndWallets, s
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
-        await wallet.generate_signed_transaction(
-            uint64(10), SINGLETON_LAUNCHER_HASH, DEFAULT_TX_CONFIG, action_scope, uint64(0)
-        )
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, action_scope, uint64(0))
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
     # Send a transaction to make sure the wallet is still running
-    async with wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
-        await wallet.generate_signed_transaction(uint64(10), junk_ph, DEFAULT_TX_CONFIG, action_scope, uint64(0))
+    async with wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await wallet.generate_signed_transaction(uint64(10), junk_ph, action_scope, uint64(0))
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
@@ -255,10 +252,8 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
 
     coins = set()
     coins.add(coin_to_spend)
-    async with standard_wallet.wallet_state_manager.new_action_scope(push=True) as action_scope:
-        await standard_wallet.generate_signed_transaction(
-            uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, action_scope, uint64(0), coins=coins
-        )
+    async with standard_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
+        await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, action_scope, uint64(0), coins=coins)
 
     await full_node_api.process_transaction_records(records=action_scope.side_effects.transactions)
 
@@ -277,10 +272,8 @@ async def test_subscribe_for_coin_id(simulator_and_wallet: OldSimulatorsAndWalle
     # Test getting notification for coin that is about to be created
     await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
 
-    async with standard_wallet.wallet_state_manager.new_action_scope(push=False) as action_scope:
-        await standard_wallet.generate_signed_transaction(
-            uint64(10), puzzle_hash, DEFAULT_TX_CONFIG, action_scope, uint64(0)
-        )
+    async with standard_wallet.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
+        await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, action_scope, uint64(0))
 
     [tx_record] = action_scope.side_effects.transactions
 
@@ -366,7 +359,7 @@ async def test_subscribe_for_ph_reorg(simulator_and_wallet: OldSimulatorsAndWall
 
     all_messages = await get_all_messages_in_queue(incoming_queue)
 
-    coin_update_messages: List[CoinStateUpdate] = []
+    coin_update_messages: list[CoinStateUpdate] = []
     for message in all_messages:
         if message.type == ProtocolMessageTypes.coin_state_update.value:
             coin_state_update = CoinStateUpdate.from_bytes(message.data)
@@ -444,7 +437,7 @@ async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAn
 
     all_messages = await get_all_messages_in_queue(incoming_queue)
 
-    coin_update_messages: List[CoinStateUpdate] = []
+    coin_update_messages: list[CoinStateUpdate] = []
     for message in all_messages:
         if message.type == ProtocolMessageTypes.coin_state_update.value:
             coin_state_update = CoinStateUpdate.from_bytes(message.data)
@@ -627,7 +620,7 @@ async def test_subscribe_for_hint_long_sync(
     all_messages = await get_all_messages_in_queue(incoming_queue)
     all_messages_1 = await get_all_messages_in_queue(incoming_queue_1)
 
-    def check_messages_for_hint(messages: List[Message]) -> None:
+    def check_messages_for_hint(messages: list[Message]) -> None:
         notified_state = None
 
         for message in messages:
@@ -650,7 +643,7 @@ async def test_ph_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWallets
     _, server_2 = wallets[0]
     fn_server = full_node_api.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
-    con = list(fn_server.all_connections.values())[0]
+    con = next(iter(fn_server.all_connections.values()))
     phs = []
     phs.append(bytes32(32 * b"\0"))
     phs.append(bytes32(32 * b"\1"))
@@ -691,7 +684,7 @@ async def test_coin_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWalle
     _, server_2 = wallets[0]
     fn_server = full_node_api.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
-    con = list(fn_server.all_connections.values())[0]
+    con = next(iter(fn_server.all_connections.values()))
     coins = []
     coins.append(bytes32(32 * b"\0"))
     coins.append(bytes32(32 * b"\1"))

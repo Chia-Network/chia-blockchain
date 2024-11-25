@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 from chia_rs import AugSchemeMPL
 from clvm.casts import int_to_bytes
 
-from chia.clvm.spend_sim import SimClient, SpendSim, sim_and_client
+from chia._tests.util.spend_sim import SimClient, SpendSim, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -23,6 +22,7 @@ from chia.wallet.dao_wallet.dao_info import DAORules
 from chia.wallet.dao_wallet.dao_utils import curry_singleton, get_p2_singleton_puzhash, get_treasury_puzzle
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.singleton import create_singleton_puzzle_hash
+from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 CAT_MOD_HASH: bytes32 = CAT_MOD.get_tree_hash()
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clsp")
@@ -537,12 +537,16 @@ def test_validator() -> None:
 
     # Setup the spend_p2_singleton (proposal inner puz)
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(
-        treasury_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
+        treasury_struct,
+        CAT_MOD_HASH,
+        conditions,
+        [],
+        p2_singleton_puzhash,  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
     parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Optional[Any]] = []
+    cat_parent_amt_list: list[Optional[Any]] = []
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()])
 
     output_conds = spend_p2_singleton.run(spend_p2_singleton_solution)
@@ -591,8 +595,6 @@ def test_validator() -> None:
     )
     conds = proposal_validator.run(solution)
     assert len(conds.as_python()) == 3
-
-    return
 
 
 def test_spend_p2_singleton() -> None:
@@ -721,7 +723,7 @@ def test_merge_p2_singleton() -> None:
     ]
     amounts = [uint64(1000), uint64(2000), uint64(3000)]
     parent_puzhash_amounts = []
-    merge_coin_ids: List[bytes32] = []
+    merge_coin_ids: list[bytes32] = []
     for pid, amt in zip(parent_ids, amounts):
         parent_puzhash_amounts.append([pid, my_puzhash, amt])
         merge_coin_ids.append(Coin(pid, my_puzhash, amt).name())
@@ -746,8 +748,6 @@ def test_merge_p2_singleton() -> None:
         assert aca in agg_ccas
         assert cca in agg_acas
         assert merge_conds[ConditionOpcode.ASSERT_MY_COIN_ID][0].vars[0] == coin_id
-
-    return
 
 
 def test_treasury() -> None:
@@ -820,12 +820,16 @@ def test_treasury() -> None:
 
     # Setup the spend_p2_singleton (proposal inner puz)
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(
-        treasury_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
+        treasury_struct,
+        CAT_MOD_HASH,
+        conditions,
+        [],
+        p2_singleton_puzhash,  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
     parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Optional[Any]] = []
+    cat_parent_amt_list: list[Optional[Any]] = []
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner.get_tree_hash()])
 
     proposal: Program = proposal_curry_one.curry(
@@ -1067,12 +1071,16 @@ def test_proposal_lifecycle() -> None:
 
     # Setup the spend_p2_singleton (proposal inner puz)
     spend_p2_singleton = SPEND_P2_SINGLETON_MOD.curry(
-        treasury_singleton_struct, CAT_MOD_HASH, conditions, [], p2_singleton_puzhash  # tailhash conds
+        treasury_singleton_struct,
+        CAT_MOD_HASH,
+        conditions,
+        [],
+        p2_singleton_puzhash,  # tailhash conds
     )
     spend_p2_singleton_puzhash = spend_p2_singleton.get_tree_hash()
 
     parent_amt_list = [[parent_id, locked_amount]]
-    cat_parent_amt_list: List[Optional[Any]] = []
+    cat_parent_amt_list: list[Optional[Any]] = []
     spend_p2_singleton_solution = Program.to([parent_amt_list, cat_parent_amt_list, treasury_inner_puzhash])
 
     # Setup Proposal
@@ -1242,14 +1250,14 @@ def test_proposal_lifecycle() -> None:
 async def do_spend(
     sim: SpendSim,
     sim_client: SimClient,
-    coins: List[Coin],
-    puzzles: List[Program],
-    solutions: List[Program],
-) -> Tuple[MempoolInclusionStatus, Optional[Err]]:
+    coins: list[Coin],
+    puzzles: list[Program],
+    solutions: list[Program],
+) -> tuple[MempoolInclusionStatus, Optional[Err]]:
     spends = []
     for coin, puzzle, solution in zip(coins, puzzles, solutions):
         spends.append(make_spend(coin, puzzle, solution))
-    spend_bundle = SpendBundle(spends, AugSchemeMPL.aggregate([]))
+    spend_bundle = WalletSpendBundle(spends, AugSchemeMPL.aggregate([]))
     result = await sim_client.push_tx(spend_bundle)
     await sim.farm_block()
     return result

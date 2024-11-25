@@ -104,7 +104,14 @@ class CliAmount:
             return self.amount
         if not isinstance(self.amount, Decimal):
             raise ValueError("Amount must be a Decimal if mojos flag is not set.")
-        return uint64(self.amount * mojo_per_unit)
+        converted_amount = self.amount * mojo_per_unit
+        uint64_amount = uint64(converted_amount)
+        if uint64_amount != converted_amount:
+            raise ValueError(
+                "Too much decimal precision specified."
+                "Please use the units of the balance numbers from `chia wallet show`"
+            )
+        return uint64_amount
 
 
 class AmountParamType(click.ParamType):
@@ -163,8 +170,8 @@ class AddressParamType(click.ParamType):
         if not isinstance(value, str):
             self.fail("Invalid Type, address must be string.", param, ctx)
         try:
-            hrp, b32data = bech32_decode(value)
-            if hrp in ["xch", "txch"]:  # I hate having to load the config here
+            hrp, _b32data = bech32_decode(value)
+            if hrp in {"xch", "txch"}:  # I hate having to load the config here
                 addr_type: AddressType = AddressType.XCH
                 expected_prefix = ctx.obj.get("expected_prefix") if ctx else None  # attempt to get cached prefix
                 if expected_prefix is None:

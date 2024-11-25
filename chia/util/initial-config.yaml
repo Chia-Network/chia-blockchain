@@ -37,7 +37,6 @@ network_overrides: &network_overrides
       SUB_SLOT_ITERS_STARTING: 67108864
       # Forks activated from the beginning on this network
       HARD_FORK_HEIGHT: 0
-      SOFT_FORK4_HEIGHT: 641500
       SOFT_FORK5_HEIGHT: 1340000
       PLOT_FILTER_128_HEIGHT: 6029568
       PLOT_FILTER_64_HEIGHT: 11075328
@@ -87,6 +86,7 @@ daemon_ssl:
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overridden.
 logging: &logging
   log_stdout: False # If True, outputs to stdout instead of a file
+  log_backcompat: False
   log_filename: "log/debug.log"
   log_level: "WARNING" # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
@@ -110,6 +110,9 @@ seeder:
   # Peers used for the initial run.
   bootstrap_peers:
     - "node.chia.net"
+  # Peers to respond with regardless of what the crawler finds
+  # Can be IPs or Hostnames. Hostnames will be resolved to IPs
+  static_peers: []
   # Only consider nodes synced at least to this height.
   minimum_height: 240000
   # How many of a particular version we need to see before reporting it in the logs
@@ -161,6 +164,7 @@ harvester:
   # Plots are searched for in the following directories
   plot_directories: []
   recursive_plot_scan: False # If True the harvester scans plots recursively in the provided directories.
+  recursive_follow_links: False # If True the harvester follows symlinks when scanning for plots recursively
 
   ssl:
     private_crt: "config/ssl/harvester/private_harvester.crt"
@@ -203,7 +207,7 @@ farmer:
     - host: *self_hostname
       port: 8444
 
-  pool_public_keys: []
+  pool_public_keys: !!set {}
 
   # Replace this with a real receive address
   # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
@@ -426,7 +430,6 @@ full_node:
     - "dns-introducer.chia.net"
     - "chia.ctrlaltdel.ch"
     - "seeder.dexie.space"
-    - "chia-seeder.h9.com"
     - "chia.hoffmang.com"
     - "seeder.xchpool.org"
   introducer_peer:
@@ -482,6 +485,8 @@ introducer:
     public_key: "config/ssl/full_node/public_full_node.key"
 
 wallet:
+  # If True, starts an RPC server at the following port
+  start_rpc_server: True
   rpc_port: 9256
 
   # when enabled, the wallet will print a pstats profile to the
@@ -565,6 +570,9 @@ wallet:
   # if an unknown CAT belonging to us is seen, a wallet will be automatically created
   # the user accepts the risk/responsibility of verifying the authenticity and origin of unknown CATs
   automatically_add_unknown_cats: False
+
+  # if an unknown DID is sent to us, a wallet will be automatically created
+  did_auto_add_limit: 10
 
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
@@ -674,5 +682,4 @@ simulator:
 
   # Fork Settings
   HARD_FORK_HEIGHT: 0
-  SOFT_FORK4_HEIGHT: 0
   SOFT_FORK5_HEIGHT: 0

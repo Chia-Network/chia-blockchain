@@ -19,7 +19,7 @@ from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 def test_cat_outer_puzzle() -> None:
     ACS = Program.to(1)
-    tail = bytes32([0] * 32)
+    tail = bytes32.zeros
     cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, ACS)
     double_cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, cat_puzzle)
     uncurried_cat_puzzle = uncurry_puzzle(double_cat_puzzle)

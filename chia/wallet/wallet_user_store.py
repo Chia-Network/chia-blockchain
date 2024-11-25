@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint32
@@ -86,7 +86,7 @@ class WalletUserStore:
 
         return None if row is None else await self.get_wallet_by_id(row[0])
 
-    async def get_all_wallet_info_entries(self, wallet_type: Optional[WalletType] = None) -> List[WalletInfo]:
+    async def get_all_wallet_info_entries(self, wallet_type: Optional[WalletType] = None) -> list[WalletInfo]:
         """
         Return a set containing all wallets, optionally with a specific WalletType
         """
