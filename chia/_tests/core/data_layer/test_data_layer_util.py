@@ -171,14 +171,14 @@ def test_leaf_hash(seeded_random: Random) -> None:
 
     data: list[tuple[bytes, bytes, bytes32]] = []
     for cycle in range(20000):
-        if cycle in (0, 1):
+        if cycle in {0, 1}:
             length = 0
         else:
             length = seeded_random.randrange(100)
 
         key = get_random_bytes(length=length, r=seeded_random)
 
-        if cycle in (1, 2):
+        if cycle in {1, 2}:
             length = 0
         else:
             length = seeded_random.randrange(100)

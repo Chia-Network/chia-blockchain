@@ -288,7 +288,7 @@ class DAOCATWallet:
             lockup_innerpuz_list = []
             if running_sum + coin.amount <= amount:
                 vote_amount = coin.amount
-                running_sum = running_sum + coin.amount
+                running_sum += coin.amount
                 primaries = [
                     Payment(
                         new_innerpuzzle.get_tree_hash(),
@@ -303,7 +303,7 @@ class DAOCATWallet:
                 )
             else:
                 vote_amount = uint64(amount - running_sum)
-                running_sum = running_sum + coin.amount
+                running_sum += coin.amount
                 primaries = [
                     Payment(
                         new_innerpuzzle.get_tree_hash(),

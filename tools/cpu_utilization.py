@@ -76,11 +76,11 @@ def main(pid: int, output: str, threads: bool) -> None:
             if row == 0:
                 continue
             time_delta = ts - timestamps[row - 1]
-            out.write(f"{ts-start_time:10f} ")
+            out.write(f"{ts - start_time:10f} ")
             for _, c in cols:
                 if row in c and (row - 1) in c:
-                    out.write(f"   {(c[row].user_time - c[row - 1].user_time)*100/time_delta:6.2f}% ")
-                    out.write(f"   {(c[row].system_time - c[row - 1].system_time)*100/time_delta:6.2f}% ")
+                    out.write(f"   {(c[row].user_time - c[row - 1].user_time) * 100 / time_delta:6.2f}% ")
+                    out.write(f"   {(c[row].system_time - c[row - 1].system_time) * 100 / time_delta:6.2f}% ")
                 else:
                     out.write("     0.00%      0.00% ")
             row += 1
@@ -89,7 +89,7 @@ def main(pid: int, output: str, threads: bool) -> None:
     with open("plot-cpu.gnuplot", "w+") as out:
         out.write(
             f"""
-set term png small size 1500, {120*len(cols)}
+set term png small size 1500, {120 * len(cols)}
 set output "cpu.png"
 set yrange [0:100]
 unset xtics
@@ -106,8 +106,8 @@ set multiplot layout {len(cols)},1
             if idx == len(cols) - 1:
                 out.write('set xlabel "time (s)"\n')
             out.write(
-                f'plot "{output}" using 1:(${idx*2+2}+${idx*2+3}) title "User" with filledcurves y=0, '
-                f'"{output}" using 1:{idx*2+3} title "System" with filledcurves y=0\n'
+                f'plot "{output}" using 1:(${idx * 2 + 2}+${idx * 2 + 3}) title "User" with filledcurves y=0, '
+                f'"{output}" using 1:{idx * 2 + 3} title "System" with filledcurves y=0\n'
             )
 
     print('running "gnuplot plot-cpu.gnuplot"')

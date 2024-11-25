@@ -131,6 +131,7 @@ class ChiaServer:
     ssl_client_context: ssl.SSLContext
     node_id: bytes32
     exempt_peer_networks: list[Union[IPv4Network, IPv6Network]]
+    class_for_type: dict[NodeType, type[ApiProtocol]]
     all_connections: dict[bytes32, WSChiaConnection] = field(default_factory=dict)
     on_connect: Optional[ConnectionCallback] = None
     shut_down_event: asyncio.Event = field(default_factory=asyncio.Event)
@@ -158,6 +159,7 @@ class ChiaServer:
         config: dict[str, Any],
         private_ca_crt_key: tuple[Path, Path],
         chia_ca_crt_key: tuple[Path, Path],
+        class_for_type: dict[NodeType, type[ApiProtocol]],
         name: str = __name__,
     ) -> ChiaServer:
         log = logging.getLogger(name)
@@ -233,6 +235,7 @@ class ChiaServer:
             node_id=calculate_node_id(node_id_cert_path),
             exempt_peer_networks=[ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])],
             introducer_peers=IntroducerPeers() if local_type is NodeType.INTRODUCER else None,
+            class_for_type=class_for_type,
         )
 
     def set_received_message_callback(self, callback: ConnectionCallback) -> None:
@@ -251,7 +254,7 @@ class ChiaServer:
                 if connection.closed:
                     to_remove.append(connection)
                 elif (
-                    self._local_type == NodeType.FULL_NODE or self._local_type == NodeType.WALLET
+                    self._local_type in {NodeType.FULL_NODE, NodeType.WALLET}
                 ) and connection.connection_type == NodeType.FULL_NODE:
                     if is_crawler is not None:
                         if time.time() - connection.creation_time > 5:
@@ -333,6 +336,7 @@ class ChiaServer:
                 inbound_rate_limit_percent=self._inbound_rate_limit_percent,
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
+                class_for_type=self.class_for_type,
             )
             await connection.perform_handshake(self._network_id, self.get_port(), self._local_type)
             assert connection.connection_type is not None, "handshake failed to set connection type, still None"
@@ -483,6 +487,7 @@ class ChiaServer:
                 inbound_rate_limit_percent=self._inbound_rate_limit_percent,
                 outbound_rate_limit_percent=self._outbound_rate_limit_percent,
                 local_capabilities_for_handshake=self._local_capabilities_for_handshake,
+                class_for_type=self.class_for_type,
                 session=session,
             )
             await connection.perform_handshake(self._network_id, server_port, self._local_type)
@@ -493,29 +498,43 @@ class ChiaServer:
             connection_type_str = ""
             if connection.connection_type is not None:
                 connection_type_str = connection.connection_type.name.lower()
-            self.log.info(f"Connected with {connection_type_str} {target_node}")
-            if is_feeler:
-                asyncio.create_task(connection.close())
+            if not is_feeler:
+                self.log.info(f"Connected with {connection_type_str} {target_node}")
+            else:
+                self.log.debug(f"Successful feeler connection with {connection_type_str} {target_node}")
+                # TODO: stop dropping tasks on the floor
+                asyncio.create_task(connection.close())  # noqa: RUF006
             return True
         except client_exceptions.ClientConnectorError as e:
-            self.log.info(f"{e}")
+            if is_feeler:
+                self.log.debug(f"Feeler connection error. {e}")
+            else:
+                self.log.info(f"{e}")
         except ProtocolError as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, e.code)
             if e.code == Err.INVALID_HANDSHAKE:
-                self.log.warning(f"Invalid handshake with peer {target_node}. Maybe the peer is running old software.")
+                self.log.warning(
+                    f"Invalid handshake with peer {target_node}{' during feeler connection' if is_feeler else ''}"
+                    f". Maybe the peer is running old software."
+                )
             elif e.code == Err.INCOMPATIBLE_NETWORK_ID:
-                self.log.warning("Incompatible network ID. Maybe the peer is on another network")
+                self.log.warning(
+                    f"Incompatible network ID{' during feeler connection' if is_feeler else ''}"
+                    f". Maybe the peer is on another network"
+                )
             elif e.code == Err.SELF_CONNECTION:
                 pass
             else:
                 error_stack = traceback.format_exc()
-                self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+                self.log.error(
+                    f"{'Feeler connection ' if is_feeler else ''}Exception {e}, exception Stack: {error_stack}"
+                )
         except Exception as e:
             if connection is not None:
                 await connection.close(self.invalid_protocol_ban_seconds, WSCloseCode.PROTOCOL_ERROR, Err.UNKNOWN)
             error_stack = traceback.format_exc()
-            self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+            self.log.error(f"{'Feeler connection ' if is_feeler else ''}Exception {e}, exception Stack: {error_stack}")
         finally:
             if session is not None:
                 await session.close()
@@ -536,8 +555,9 @@ class ChiaServer:
             ban_until: float = time.time() + ban_time
             self.log.warning(f"Banning {connection.peer_info.host} for {ban_time} seconds")
             if connection.peer_info.host in self.banned_peers:
-                if ban_until > self.banned_peers[connection.peer_info.host]:
-                    self.banned_peers[connection.peer_info.host] = ban_until
+                self.banned_peers[connection.peer_info.host] = max(
+                    ban_until, self.banned_peers[connection.peer_info.host]
+                )
             else:
                 self.banned_peers[connection.peer_info.host] = ban_until
 

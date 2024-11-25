@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   mypy:
-    name: ${{ matrix.os.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python.major_dot_minor }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.python.major_dot_minor }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: 20
     strategy:
@@ -52,8 +52,10 @@ jobs:
               intel: windows-latest
         arch:
           - name: ARM64
+            emoji: 💪
             matrix: arm
           - name: Intel
+            emoji: 🌀
             matrix: intel
         python:
           - major_dot_minor: "3.9"
@@ -118,10 +120,8 @@ jobs:
         python:
           - major_dot_minor: "3.10"
         check:
-          - name: black
-            command: black --check --diff .
-          - name: flake8
-            command: flake8 benchmarks build_scripts chia tools *.py
+          - name: ruff
+            command: ruff format --check --diff .
           - name: generated protocol tests
             command: |
               python3 -m chia._tests.util.build_network_protocol_files

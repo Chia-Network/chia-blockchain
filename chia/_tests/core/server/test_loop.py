@@ -162,7 +162,8 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
     flood_file.touch()
 
     logger.info(" ==== launching serve.py")
-    with subprocess.Popen(
+    # TODO: is there some reason not to use an async process here?
+    with subprocess.Popen(  # noqa: ASYNC220
         [sys.executable, "-m", "chia._tests.core.server.serve", os.fspath(serve_file)],
     ):
         logger.info(" ====           serve.py running")
@@ -170,7 +171,8 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
         await asyncio.sleep(adjusted_timeout(5))
 
         logger.info(" ==== launching flood.py")
-        with subprocess.Popen(
+        # TODO: is there some reason not to use an async process here?
+        with subprocess.Popen(  # noqa: ASYNC220
             [sys.executable, "-m", "chia._tests.core.server.flood", os.fspath(flood_file)],
         ):
             logger.info(" ====           flood.py running")
@@ -190,7 +192,7 @@ async def test_loop(tmp_path: pathlib.Path) -> None:
         try:
             logger.info(" ==== attempting a single new connection")
             with anyio.fail_after(delay=adjusted_timeout(1)):
-                reader, writer = await asyncio.open_connection(IP, PORT)
+                _reader, writer = await asyncio.open_connection(IP, PORT)
             logger.info(" ==== connection succeeded")
             post_connection_succeeded = True
         except (TimeoutError, ConnectionRefusedError) as e:

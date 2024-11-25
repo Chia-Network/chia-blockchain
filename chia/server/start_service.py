@@ -12,6 +12,7 @@ from types import FrameType
 from typing import Any, Callable, Generic, Optional, TypeVar, cast
 
 from chia.daemon.server import service_launch_lock_path
+from chia.protocols.shared_protocol import default_capabilities
 from chia.rpc.rpc_server import RpcApiProtocol, RpcServer, RpcServiceProtocol, start_rpc_server
 from chia.server.api_protocol import ApiProtocol
 from chia.server.chia_policy import set_chia_policy
@@ -22,14 +23,12 @@ from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from chia.server.upnp import UPnP
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, UnresolvedPeerInfo
+from chia.util.chia_version import chia_short_version
 from chia.util.ints import uint16
 from chia.util.lock import Lockfile, LockfileError
 from chia.util.log_exceptions import log_exceptions
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
-
-from ..protocols.shared_protocol import default_capabilities
-from ..util.chia_version import chia_short_version
 
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
@@ -61,6 +60,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         network_id: str,
         *,
         config: dict[str, Any],
+        class_for_type: dict[NodeType, type[ApiProtocol]],
         upnp_ports: Optional[list[int]] = None,
         connect_peers: Optional[set[UnresolvedPeerInfo]] = None,
         on_connect_callback: Optional[Callable[[WSChiaConnection], Awaitable[None]]] = None,
@@ -122,6 +122,7 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
             self.service_config,
             (private_ca_crt, private_ca_key),
             (chia_ca_crt, chia_ca_key),
+            class_for_type=class_for_type,
             name=f"{service_name}_server",
         )
         f = getattr(node, "set_server", None)
@@ -234,7 +235,8 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
                             self.stop_requested.set,
                             self.root_path,
                             self.config,
-                            self._connect_to_daemon,
+                            service_config=self.service_config,
+                            connect_to_daemon=self._connect_to_daemon,
                             max_request_body_size=self.max_request_body_size,
                         )
                 yield
@@ -290,7 +292,6 @@ class Service(Generic[_T_RpcServiceProtocol, _T_ApiProtocol, _T_RpcApiProtocol])
         # we only handle signals in the main process. In the ProcessPoolExecutor
         # processes, we have to ignore them. We'll shut them down gracefully
         # from the main process
-        global main_pid
         ignore = os.getpid() != main_pid
 
         # TODO: if we remove this conditional behavior, consider moving logging to common signal handling

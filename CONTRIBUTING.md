@@ -57,15 +57,12 @@ to configure how the tests are run. For example, for more logging: change the lo
 ```bash
 sh install.sh -d
 . ./activate
-black . && isort benchmarks build_scripts chia tests tools *.py && mypy && flake8 benchmarks build_scripts chia tests tools *.py && pylint benchmarks build_scripts chia tests tools *.py
-py.test tests -v --durations 0
+ruff format && ruff check --fix && mypy
+pytest tests -v --durations 0
 ```
 
-The [black library](https://black.readthedocs.io/en/stable/) is used as an automatic style formatter to make things easier.
-The [flake8 library](https://readthedocs.org/projects/flake8/) helps ensure consistent style.
 The [Mypy library](https://mypy.readthedocs.io/en/stable/) is very useful for ensuring objects are of the correct type, so try to always add the type of the return value, and the type of local variables.
-The [isort library](https://isort.readthedocs.io) is used to sort, group and validate imports in all python files.
-The [Ruff library](https://docs.astral.sh) is used to further lint all of the python files
+The [Ruff library](https://docs.astral.sh) is used to format, sort, group, validate imports, ensure consistent style, and further lint all of the python files
 
 If you want verbose logging for tests, edit the `tests/pytest.ini` file.
 
@@ -78,28 +75,6 @@ to reduce the time you spend on failed CI jobs.
 To install pre-commit on your system see https://pre-commit.com/#installation. After installation, you can either use it manually
 with `pre-commit run` or let it trigger the hooks automatically before each commit by installing the
 provided configuration with `pre-commit install`.
-
-## Configure VS code
-
-1. Install python extension
-2. Set the environment to `./venv/bin/python`
-3. Install mypy plugin
-4. Preferences > Settings > Python > Linting > flake8 enabled
-5. Preferences > Settings > Python > Linting > mypy enabled
-6. Preferences > Settings > Formatting > Python > Provider > black
-7. Preferences > Settings > mypy > Targets: set to `./chia`
-
-## Configure Pycharm
-
-Pycharm is an amazing and beautiful python IDE that some of us use to work on this project.
-If you combine it with python black and formatting on save, you will get a very efficient
-workflow. It's also especially efficient for git branching, cherry-picking, committing and pushing.
-
-1. Run blackd in a terminal
-2. Install BlackConnect plugin
-3. Set to run python black on save
-4. Set line length to 120
-5. Install the linters in the root directory
 
 ## Testnets and review environments
 

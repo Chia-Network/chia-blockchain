@@ -86,7 +86,7 @@ async def main(db_path: Path) -> None:
             timing += one_call
             assert gen is not None
 
-        print(f"get_block_generator(): {timing/REPETITIONS:0.3f}s")
+        print(f"get_block_generator(): {timing / REPETITIONS:0.3f}s")
 
         blockchain.shut_down()
 

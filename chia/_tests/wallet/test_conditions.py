@@ -206,7 +206,7 @@ def test_announcement_inversions(
         tuple[type[CreateCoinAnnouncement], type[AssertCoinAnnouncement]],
         tuple[type[CreatePuzzleAnnouncement], type[AssertPuzzleAnnouncement]],
         tuple[type[CreateAnnouncement], type[AssertAnnouncement]],
-    ]
+    ],
 ) -> None:
     create_driver, assert_driver = drivers
     # mypy is not smart enough to understand that this `if` narrows down the potential types it could be
@@ -381,7 +381,7 @@ def test_invalid_condition(
     ],
     prg: bytes,
 ) -> None:
-    if (cond == Remark or cond == UnknownCondition) and prg != b"\x80":
+    if (cond in {Remark, UnknownCondition}) and prg != b"\x80":
         pytest.skip("condition takes arbitrary arguments")
 
     with pytest.raises((ValueError, EvalError, KeyError)):

@@ -8,7 +8,7 @@ name: test
 on:
   workflow_call:
     inputs:
-      emoji:
+      os-emoji:
         required: true
         type: string
       matrix:
@@ -35,6 +35,9 @@ on:
       arch:
         required: true
         type: string
+      arch-emoji:
+        required: true
+        type: string
       collect-junit:
         required: false
         type: boolean
@@ -50,7 +53,7 @@ defaults:
 
 jobs:
   test:
-    name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.arch.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
@@ -58,13 +61,14 @@ jobs:
       matrix:
         configuration: ${{ fromJson(inputs.configuration) }}
         os:
-          - emoji: ${{ inputs.emoji }}
+          - emoji: ${{ inputs.os_emoji }}
             matrix: ${{ inputs.matrix }}
             name: ${{ inputs.name }}
             file_name: ${{ inputs.file_name }}
             runs-on: ${{ inputs.runs-on }}
         arch:
           - matrix: ${{ inputs.arch }}
+            emoji: ${{ inputs.arch-emoji }}
         python:
           - name: "3.9"
             file_name: "3.9"

@@ -147,9 +147,9 @@ async def test_p2dohp_wallet_signer_protocol(wallet_environments: WalletTestFram
         solution,
     )
 
-    derivation_record: Optional[DerivationRecord] = (
-        await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
-    )
+    derivation_record: Optional[
+        DerivationRecord
+    ] = await wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
     assert derivation_record is not None
     pubkey: G1Element = derivation_record.pubkey
     atom = puzzle.uncurry()[1].at("f").atom
@@ -752,7 +752,7 @@ def test_transactions_in() -> None:
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
     class TempCMD(TransactionsIn):
         def run(self) -> None:
             assert self.transaction_bundle == TransactionBundle([STD_TX])
@@ -771,7 +771,7 @@ def test_transactions_out() -> None:
     def cmd() -> None:
         pass
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
     class TempCMD(TransactionsOut):
         def run(self) -> None:
             self.handle_transaction_output([STD_TX])
@@ -824,7 +824,7 @@ def test_signer_protocol_in(monkeypatch: pytest.MonkeyPatch) -> None:
 
     coin = Coin(bytes32.zeros, bytes32.zeros, uint64(13))
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
     class TempCMD(SPIn):
         def run(self) -> None:
             assert self.read_sp_input(Coin) == [coin, coin]
@@ -881,7 +881,7 @@ def test_signer_protocol_out(monkeypatch: pytest.MonkeyPatch) -> None:
     coin = Coin(bytes32.zeros, bytes32.zeros, uint64(0))
     coin_bytes = byte_serialize_clvm_streamable(coin)
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
     class TempCMD(SPOut):
         def run(self) -> None:
             self.handle_clvm_output([coin, coin])
@@ -930,7 +930,7 @@ def test_qr_code_display() -> None:
 
     bytes_to_encode = b"foo bar qat qux bam bat"
 
-    @chia_command(cmd, "temp_cmd", "blah")
+    @chia_command(cmd, "temp_cmd", "blah", help="n/a")
     class TempCMD(QrCodeDisplay):
         def run(self) -> None:
             self.display_qr_codes([bytes_to_encode, bytes_to_encode])

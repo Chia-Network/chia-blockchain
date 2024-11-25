@@ -2054,7 +2054,7 @@ async def test_clear_pending_roots(
     layer: InterfaceLayer,
     bt: BlockTools,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     async with init_data_layer_service(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer_service:
@@ -2125,17 +2125,13 @@ async def test_clear_pending_roots(
                 # https://github.com/python/cpython/issues/92841
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 cleared_root = await client.clear_pending_roots(store_id=store_id)
-            finally:
-                client.close()
-                await client.await_closed()
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
 
@@ -2147,7 +2143,7 @@ async def test_clear_pending_roots(
 async def test_issue_15955_deadlock(
     self_hostname: str, one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    wallet_rpc_api, full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
 
@@ -2366,7 +2362,7 @@ async def test_wallet_log_in_changes_active_fingerprint(
     one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices,
     layer: InterfaceLayer,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     primary_fingerprint = cast(int, (await wallet_rpc_api.get_logged_in_fingerprint(request={}))["fingerprint"])
@@ -2392,17 +2388,13 @@ async def test_wallet_log_in_changes_active_fingerprint(
         if layer == InterfaceLayer.direct:
             await data_rpc_api.wallet_log_in({"fingerprint": secondary_fingerprint})
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 await client.wallet_log_in(fingerprint=secondary_fingerprint)
-            finally:
-                client.close()
-                await client.await_closed()
         elif layer == InterfaceLayer.funcs:
             await wallet_log_in_cmd(rpc_port=rpc_port, fingerprint=secondary_fingerprint, root_path=bt.root_path)
         elif layer == InterfaceLayer.cli:
@@ -3087,7 +3079,7 @@ async def test_pagination_cmds(
             )
         elif layer == InterfaceLayer.cli:
             for command in ("get_keys", "get_keys_values", "get_kv_diff"):
-                if command == "get_keys" or command == "get_keys_values":
+                if command in {"get_keys", "get_keys_values"}:
                     args: list[str] = [
                         sys.executable,
                         "-m",
@@ -3146,13 +3138,12 @@ async def test_pagination_cmds(
                     # https://github.com/python/cpython/issues/92841
                     assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 keys = await client.get_keys(
                     store_id=store_id,
                     root_hash=None,
@@ -3172,9 +3163,6 @@ async def test_pagination_cmds(
                     page=0,
                     max_page_size=max_page_size,
                 )
-            finally:
-                client.close()
-                await client.await_closed()
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
         if max_page_size is None or max_page_size == 100:
@@ -3330,13 +3318,12 @@ async def test_unsubmitted_batch_update(
                     assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
                 assert res == {"success": True}
             elif layer == InterfaceLayer.client:
-                client = await DataLayerRpcClient.create(
+                async with DataLayerRpcClient.create_as_context(
                     self_hostname=self_hostname,
                     port=rpc_port,
                     root_path=bt.root_path,
                     net_config=bt.config,
-                )
-                try:
+                ) as client:
                     res = await client.update_data_store(
                         store_id=store_id,
                         changelist=changelist,
@@ -3344,9 +3331,6 @@ async def test_unsubmitted_batch_update(
                         submit_on_chain=False,
                     )
                     assert res == {"success": True}
-                finally:
-                    client.close()
-                    await client.await_closed()
             else:  # pragma: no cover
                 assert False, "unhandled parametrization"
 
@@ -3473,18 +3457,14 @@ async def test_unsubmitted_batch_update(
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
             update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 res = await client.submit_pending_root(store_id=store_id, fee=None)
                 update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
-            finally:
-                client.close()
-                await client.await_closed()
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
 
@@ -3789,7 +3769,7 @@ async def test_auto_subscribe_to_local_stores(
     monkeypatch: Any,
     auto_subscribe_to_local_stores: bool,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     manage_data_interval = 5
@@ -3838,7 +3818,7 @@ async def test_local_store_exception(
     monkeypatch: Any,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
+    _wallet_rpc_api, _full_node_api, wallet_rpc_port, _ph, bt = await init_wallet_and_node(
         self_hostname, one_wallet_and_one_simulator_services
     )
     manage_data_interval = 5

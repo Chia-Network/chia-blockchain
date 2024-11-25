@@ -144,11 +144,9 @@ async def make_db(db_file: Path, blocks: list[FullBlock]) -> None:
             if block.height != 0 and len(block.finished_sub_slots) > 0:
                 if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
                     sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
-            results = PreValidationResult(None, uint64(1), None, False, uint32(0))
+            results = PreValidationResult(None, uint64(1), None, uint32(0))
             fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
-            result, err, _ = await bc.add_block(
-                block, results, None, sub_slot_iters=sub_slot_iters, fork_info=fork_info
-            )
+            _, err, _ = await bc.add_block(block, results, sub_slot_iters=sub_slot_iters, fork_info=fork_info)
             assert err is None
 
 

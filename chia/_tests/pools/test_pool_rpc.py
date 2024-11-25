@@ -35,6 +35,7 @@ from chia.util.config import load_config
 from chia.util.ints import uint32, uint64
 from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
@@ -140,7 +141,7 @@ async def setup(
     self_hostname: str,
 ) -> AsyncIterator[Setup]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
-    [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator_services
+    [full_node_service], [wallet_service], _bt = one_wallet_and_one_simulator_services
     full_node_api: FullNodeSimulator = full_node_service._api
     wallet_node = wallet_service._node
     our_ph_record = await wallet_node.wallet_state_manager.get_unused_derivation_record(uint32(1), hardened=True)
@@ -189,7 +190,7 @@ class TestPoolWalletRpc:
         fee: uint64,
         self_hostname: str,
     ) -> None:
-        client, wallet_node, full_node_api, total_block_rewards, _ = one_wallet_node_and_rpc
+        client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         our_ph = await wallet.get_new_puzzlehash()
@@ -241,7 +242,7 @@ class TestPoolWalletRpc:
         fee: uint64,
         self_hostname: str,
     ) -> None:
-        client, wallet_node, full_node_api, total_block_rewards, _ = one_wallet_node_and_rpc
+        client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         our_ph = await wallet.get_new_puzzlehash()
@@ -295,7 +296,7 @@ class TestPoolWalletRpc:
         fee: uint64,
         self_hostname: str,
     ) -> None:
-        client, wallet_node, full_node_api, total_block_rewards, _ = one_wallet_node_and_rpc
+        client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
 
         wallet = wallet_node.wallet_state_manager.main_wallet
 
@@ -404,7 +405,7 @@ class TestPoolWalletRpc:
     async def test_absorb_self(
         self, one_wallet_node_and_rpc: OneWalletNodeAndRpc, fee: uint64, self_hostname: str
     ) -> None:
-        client, wallet_node, full_node_api, total_block_rewards, _ = one_wallet_node_and_rpc
+        client, wallet_node, full_node_api, _total_block_rewards, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
 
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -444,6 +445,16 @@ class TestPoolWalletRpc:
             await full_node_api.farm_blocks_to_puzzlehash(count=2, farm_to=our_ph, guarantee_transaction_blocks=True)
             await full_node_api.wait_for_wallet_synced(wallet_node=wallet_node, timeout=20)
             await full_node_api.check_transactions_confirmed(wallet_node.wallet_state_manager, absorb_txs)
+            assert (
+                len(
+                    [
+                        tx
+                        for tx in await wallet_node.wallet_state_manager.tx_store.get_all_transactions()
+                        if TransactionType(tx.type) is TransactionType.INCOMING_TX and tx.amount == 1_750_000_000_000
+                    ]
+                )
+                == 2
+            )
             new_status: PoolWalletInfo = (await client.pw_status(2))[0]
             assert status.current == new_status.current
             assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
@@ -680,7 +691,7 @@ class TestPoolWalletRpc:
         if fee != 0:
             pytest.skip("need to fix this test for non-zero fees")
 
-        full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
+        full_node_api, wallet_node, our_ph, _total_block_rewards, client = setup
         pool_ph = bytes32.zeros
 
         assert wallet_node._wallet_state_manager is not None
@@ -761,7 +772,7 @@ class TestPoolWalletRpc:
     @pytest.mark.anyio
     async def test_leave_pool(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """This tests self-pooling -> pooling -> escaping -> self pooling"""
-        full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
+        full_node_api, wallet_node, our_ph, _total_block_rewards, client = setup
         pool_ph = bytes32.zeros
 
         assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
@@ -860,7 +871,7 @@ class TestPoolWalletRpc:
     @pytest.mark.anyio
     async def test_change_pools(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """This tests Pool A -> escaping -> Pool B"""
-        full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
+        full_node_api, wallet_node, our_ph, _total_block_rewards, client = setup
         pool_a_ph = bytes32.zeros
         pool_b_ph = bytes32.zeros
 
@@ -928,7 +939,7 @@ class TestPoolWalletRpc:
     @pytest.mark.anyio
     async def test_change_pools_reorg(self, setup: Setup, fee: uint64, self_hostname: str) -> None:
         """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
-        full_node_api, wallet_node, our_ph, total_block_rewards, client = setup
+        full_node_api, wallet_node, our_ph, _total_block_rewards, client = setup
         pool_a_ph = bytes32.zeros
         pool_b_ph = bytes32.zeros
         WAIT_SECS = 30

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from typing import Any, Callable, Optional, Union
 
@@ -221,7 +222,7 @@ async def test_dao_creation(self_hostname: str, two_wallet_nodes: OldSimulatorsA
     coins = await dao_cat_wallet_0.advanced_select_coins(1, fake_proposal_id)
     assert len(coins) > 0
     # check that we have selected the coin from dao_cat_wallet
-    assert list(coins)[0].coin.amount == dao_cat_amt
+    assert coins[0].coin.amount == dao_cat_amt
 
     # send some cats from wallet_0 to wallet_1 so we can test voting
     async with cat_wallet_0.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=True) as action_scope:
@@ -1626,7 +1627,7 @@ async def test_dao_rpc_api(self_hostname: str, two_wallet_nodes: Any, trusted: A
 async def test_dao_rpc_client(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    [full_node_service], wallet_services, _bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
     wallet_node_0 = wallet_services[0]._node
@@ -1661,22 +1662,26 @@ async def test_dao_rpc_client(
     assert wallet_services[0].rpc_server is not None
     assert wallet_services[1].rpc_server is not None
 
-    client_0 = await WalletRpcClient.create(
-        self_hostname,
-        wallet_services[0].rpc_server.listen_port,
-        wallet_services[0].root_path,
-        wallet_services[0].config,
-    )
-    await validate_get_routes(client_0, wallet_services[0].rpc_server.rpc_api)
-    client_1 = await WalletRpcClient.create(
-        self_hostname,
-        wallet_services[1].rpc_server.listen_port,
-        wallet_services[1].root_path,
-        wallet_services[1].config,
-    )
-    await validate_get_routes(client_1, wallet_services[1].rpc_server.rpc_api)
+    async with contextlib.AsyncExitStack() as exit_stack:
+        client_0 = await exit_stack.enter_async_context(
+            WalletRpcClient.create_as_context(
+                self_hostname,
+                wallet_services[0].rpc_server.listen_port,
+                wallet_services[0].root_path,
+                wallet_services[0].config,
+            )
+        )
+        await validate_get_routes(client_0, wallet_services[0].rpc_server.rpc_api)
+        client_1 = await exit_stack.enter_async_context(
+            WalletRpcClient.create_as_context(
+                self_hostname,
+                wallet_services[1].rpc_server.listen_port,
+                wallet_services[1].root_path,
+                wallet_services[1].config,
+            )
+        )
+        await validate_get_routes(client_1, wallet_services[1].rpc_server.rpc_api)
 
-    try:
         cat_amt = uint64(150000)
         amount_of_cats = uint64(cat_amt * 2)
         dao_rules = DAORules(
@@ -2000,12 +2005,6 @@ async def test_dao_rpc_client(
         filter_amount_resp = await client_0.dao_adjust_filter_level(wallet_id=dao_id_0, filter_level=30)
         assert filter_amount_resp["dao_info"]["filter_below_vote_amount"] == 30
 
-    finally:
-        client_0.close()
-        client_1.close()
-        await client_0.await_closed()
-        await client_1.await_closed()
-
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
@@ -2016,7 +2015,7 @@ async def test_dao_rpc_client(
 async def test_dao_complex_spends(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    [full_node_service], wallet_services, _bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
     wallet_node_0 = wallet_services[0]._node
@@ -2051,22 +2050,26 @@ async def test_dao_complex_spends(
     assert wallet_services[0].rpc_server is not None
     assert wallet_services[1].rpc_server is not None
 
-    client_0 = await WalletRpcClient.create(
-        self_hostname,
-        wallet_services[0].rpc_server.listen_port,
-        wallet_services[0].root_path,
-        wallet_services[0].config,
-    )
-    await validate_get_routes(client_0, wallet_services[0].rpc_server.rpc_api)
-    client_1 = await WalletRpcClient.create(
-        self_hostname,
-        wallet_services[1].rpc_server.listen_port,
-        wallet_services[1].root_path,
-        wallet_services[1].config,
-    )
-    await validate_get_routes(client_1, wallet_services[1].rpc_server.rpc_api)
+    async with contextlib.AsyncExitStack() as exit_stack:
+        client_0 = await exit_stack.enter_async_context(
+            WalletRpcClient.create_as_context(
+                self_hostname,
+                wallet_services[0].rpc_server.listen_port,
+                wallet_services[0].root_path,
+                wallet_services[0].config,
+            )
+        )
+        await validate_get_routes(client_0, wallet_services[0].rpc_server.rpc_api)
+        client_1 = await exit_stack.enter_async_context(
+            WalletRpcClient.create_as_context(
+                self_hostname,
+                wallet_services[1].rpc_server.listen_port,
+                wallet_services[1].root_path,
+                wallet_services[1].config,
+            )
+        )
+        await validate_get_routes(client_1, wallet_services[1].rpc_server.rpc_api)
 
-    try:
         cat_amt = uint64(300000)
         dao_rules = DAORules(
             proposal_timelock=uint64(2),
@@ -2380,12 +2383,6 @@ async def test_dao_complex_spends(
             1,
         )
 
-    finally:
-        client_0.close()
-        client_1.close()
-        await client_0.await_closed()
-        await client_1.await_closed()
-
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")
 @pytest.mark.parametrize(
@@ -2617,7 +2614,7 @@ async def test_dao_concurrency(self_hostname: str, three_wallet_nodes: OldSimula
 async def test_dao_cat_exits(
     two_wallet_nodes_services: SimulatorsAndWalletsServices, trusted: bool, self_hostname: str
 ) -> None:
-    [full_node_service], wallet_services, bt = two_wallet_nodes_services
+    [full_node_service], wallet_services, _bt = two_wallet_nodes_services
     full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
     wallet_node_0 = wallet_services[0]._node
@@ -2651,22 +2648,26 @@ async def test_dao_cat_exits(
     assert wallet_services[0].rpc_server is not None
     assert wallet_services[1].rpc_server is not None
 
-    client_0 = await WalletRpcClient.create(
-        self_hostname,
-        wallet_services[0].rpc_server.listen_port,
-        wallet_services[0].root_path,
-        wallet_services[0].config,
-    )
-    await validate_get_routes(client_0, wallet_services[0].rpc_server.rpc_api)
-    client_1 = await WalletRpcClient.create(
-        self_hostname,
-        wallet_services[1].rpc_server.listen_port,
-        wallet_services[1].root_path,
-        wallet_services[1].config,
-    )
-    await validate_get_routes(client_1, wallet_services[1].rpc_server.rpc_api)
+    async with contextlib.AsyncExitStack() as exit_stack:
+        client_0 = await exit_stack.enter_async_context(
+            WalletRpcClient.create_as_context(
+                self_hostname,
+                wallet_services[0].rpc_server.listen_port,
+                wallet_services[0].root_path,
+                wallet_services[0].config,
+            )
+        )
+        await validate_get_routes(client_0, wallet_services[0].rpc_server.rpc_api)
+        client_1 = await exit_stack.enter_async_context(
+            WalletRpcClient.create_as_context(
+                self_hostname,
+                wallet_services[1].rpc_server.listen_port,
+                wallet_services[1].root_path,
+                wallet_services[1].config,
+            )
+        )
+        await validate_get_routes(client_1, wallet_services[1].rpc_server.rpc_api)
 
-    try:
         cat_amt = uint64(150000)
         dao_rules = DAORules(
             proposal_timelock=uint64(8),
@@ -2785,12 +2786,6 @@ async def test_dao_cat_exits(
 
         await time_out_assert(20, dao_cat_wallet_0.get_confirmed_balance, 0)
         await time_out_assert(20, cat_wallet_0.get_confirmed_balance, cat_amt)
-
-    finally:
-        client_0.close()
-        client_1.close()
-        await client_0.await_closed()
-        await client_1.await_closed()
 
 
 @pytest.mark.limit_consensus_modes(reason="does not depend on consensus rules")

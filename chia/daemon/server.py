@@ -10,7 +10,6 @@ import signal
 import ssl
 import subprocess
 import sys
-import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
@@ -819,7 +818,7 @@ class WebSocketServer:
             if config["state"] is not PlotState.RUNNING:
                 return None
 
-            if new_data not in (None, ""):
+            if new_data not in {None, ""}:
                 config["log"] = new_data if config["log"] is None else config["log"] + new_data
                 config["log_new"] = new_data
                 self.state_changed(service_plotter, self.prepare_plot_state_message(PlotEvent.LOG_CHANGED, id))
@@ -829,7 +828,7 @@ class WebSocketServer:
                     if word in new_data:
                         return None
             else:
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
 
     async def _track_plotting_progress(self, config, loop: asyncio.AbstractEventLoop):
         file_path = config["out_file"]
@@ -888,7 +887,7 @@ class WebSocketServer:
 
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> list[str]:
         plot_type = request["plot_type"]
-        if plot_type not in ["ramplot", "diskplot", "cudaplot"]:
+        if plot_type not in {"ramplot", "diskplot", "cudaplot"}:
             raise ValueError(f"Unknown plot_type: {plot_type}")
 
         command_args: list[str] = []
@@ -1020,7 +1019,7 @@ class WebSocketServer:
             # plotter command must be either
             # 'chia plotters bladebit ramplot' or 'chia plotters bladebit diskplot'
             plot_type = request["plot_type"]
-            assert plot_type == "diskplot" or plot_type == "ramplot" or plot_type == "cudaplot"
+            assert plot_type in {"diskplot", "ramplot", "cudaplot"}
             command_args.append(plot_type)
 
         command_args.extend(self._common_plotting_command_args(request, ignoreCount))
@@ -1099,7 +1098,7 @@ class WebSocketServer:
 
             self.log.debug(f"command_args before launch_plotter are {command_args}")
             self.log.debug(f"self.root_path before launch_plotter is {self.root_path}")
-            process, pid_path = launch_plotter(self.root_path, service_name, command_args, id)
+            process, _pid_path = launch_plotter(self.root_path, service_name, command_args, id)
 
             current_process = process
 
@@ -1192,7 +1191,8 @@ class WebSocketServer:
                 log.info(f"Plotting will start in {config['delay']} seconds")
                 # TODO: loop gets passed down a lot, review for potential removal
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._start_plotting(id, loop, queue))
+                # TODO: stop dropping tasks on the floor
+                loop.create_task(self._start_plotting(id, loop, queue))  # noqa: RUF006
             else:
                 log.info("Plotting will start automatically when previous plotting finish")
 
@@ -1280,7 +1280,7 @@ class WebSocketServer:
                 exe_command = service_command
                 if testing is True:
                     exe_command = f"{service_command} --testing=true"
-                process, pid_path = launch_service(self.root_path, exe_command)
+                process, _pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = [process]
                 success = True
             except (subprocess.SubprocessError, OSError):
@@ -1547,17 +1547,6 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
-    sys.stdout.flush()
-    json_msg = dict_to_json_str(
-        {
-            "message": "cert_path",
-            "success": True,
-            "cert": f"{crt_path}",
-            "key": f"{key_path}",
-            "ca_crt": f"{ca_crt_path}",
-        }
-    )
-    sys.stdout.write("\n" + json_msg + "\n")
     sys.stdout.flush()
     try:
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):

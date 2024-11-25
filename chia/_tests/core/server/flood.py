@@ -28,7 +28,7 @@ async def tcp_echo_client(task_counter: str, logger: logging.Logger) -> None:
             writer = None
             try:
                 logger.info(f"Opening connection: {label}")
-                reader, writer = await asyncio.open_connection(IP, PORT)
+                _reader, writer = await asyncio.open_connection(IP, PORT)
                 total_open_connections += 1
                 logger.info(f"Opened connection: {label} (total: {total_open_connections})")
                 assert writer is not None
@@ -56,7 +56,8 @@ async def main() -> None:
     out_path = shutdown_path.with_suffix(".out")
 
     async def dun() -> None:
-        while shutdown_path.exists():
+        # TODO: switch to event driven code
+        while shutdown_path.exists():  # noqa: ASYNC110
             await asyncio.sleep(0.25)
 
         task.cancel()

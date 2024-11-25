@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from chia_rs import AugSchemeMPL, G1Element, G2Element
+from chia_rs import AugSchemeMPL, G1Element
 
+from chia._tests.clvm.coin_store import CoinStore, CoinTimestamp
+from chia._tests.core.make_block_generator import int_to_public_key
 from chia._tests.util.key_tool import KeyTool
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.program import Program
@@ -22,13 +24,10 @@ from chia.wallet.puzzles import (
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
 
-from ..core.make_block_generator import int_to_public_key
-from .coin_store import CoinStore, CoinTimestamp
-
 T1 = CoinTimestamp(1, uint32(10000000))
 T2 = CoinTimestamp(5, uint32(10003000))
 
-MAX_BLOCK_COST_CLVM = int(1e18)
+MAX_BLOCK_COST_CLVM = 10**18
 
 
 def secret_exponent_for_index(index: int) -> int:
@@ -60,8 +59,7 @@ def do_test_spend(
     This method will farm a coin paid to the hash of `puzzle_reveal`, then try to spend it
     with `solution`, and verify that the created coins correspond to `payments`.
 
-    The `key_lookup` is used to create a signed version of the `SpendBundle`, although at
-    this time, signatures are not verified.
+    The `key_lookup` is used to create a signed version of the `SpendBundle`
     """
 
     coin_db = CoinStore(DEFAULT_CONSTANTS)
@@ -74,7 +72,9 @@ def do_test_spend(
     # spend it
     coin_spend = make_spend(coin, puzzle_reveal, solution)
 
-    spend_bundle = SpendBundle([coin_spend], G2Element())
+    # sign the solution
+    signature = key_lookup.signature_for_solution(coin_spend, DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA)
+    spend_bundle = SpendBundle([coin_spend], signature)
     coin_db.update_coin_store_for_spend_bundle(spend_bundle, spend_time, MAX_BLOCK_COST_CLVM)
 
     # ensure all outputs are there
@@ -85,12 +85,7 @@ def do_test_spend(
         else:
             assert 0
 
-    # make sure we can actually sign the solution
-    signatures: list[G2Element] = []
-    for coin_spend in spend_bundle.coin_spends:
-        signature = key_lookup.signature_for_solution(coin_spend, bytes([2] * 32))
-        signatures.append(signature)
-    return SpendBundle(spend_bundle.coin_spends, AugSchemeMPL.aggregate(signatures))
+    return spend_bundle
 
 
 def default_payments_and_conditions(
@@ -206,7 +201,7 @@ def test_p2_delegated_puzzle_or_hidden_puzzle_with_hidden_puzzle():
 
 def do_test_spend_p2_delegated_puzzle_or_hidden_puzzle_with_delegated_puzzle(hidden_pub_key_index):
     key_lookup = KeyTool()
-    payments, conditions = default_payments_and_conditions(1, key_lookup)
+    _payments, conditions = default_payments_and_conditions(1, key_lookup)
 
     hidden_puzzle = p2_conditions.puzzle_for_conditions(conditions)
     hidden_public_key = public_key_for_index(hidden_pub_key_index, key_lookup)

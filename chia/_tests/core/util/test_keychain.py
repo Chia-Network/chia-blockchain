@@ -180,7 +180,8 @@ class TestKeychain:
 
         # All added keys should still be valid with their label
         assert all(
-            key_data in [key_data_0, key_data_1, key_data_2] for key_data in keychain.get_keys(include_secrets=True)
+            key_data in (key_data_0, key_data_1, key_data_2)  # noqa: PLR6201
+            for key_data in keychain.get_keys(include_secrets=True)
         )
 
     def test_bip39_eip2333_test_vector(self, empty_temp_file_keyring: TempKeyring):
@@ -427,7 +428,7 @@ async def test_set_label(get_temp_keyring: Keychain) -> None:
     keychain.set_label(fingerprint=key_data_1.fingerprint, label=key_data_1.label)
     assert key_data_0 == keychain.get_key(fingerprint=key_data_0.fingerprint, include_secrets=True)
     # All added keys should still be valid with their label
-    assert all(key_data in [key_data_0, key_data_1] for key_data in keychain.get_keys(include_secrets=True))
+    assert all(key_data in (key_data_0, key_data_1) for key_data in keychain.get_keys(include_secrets=True))  # noqa: PLR6201
 
 
 @pytest.mark.parametrize(

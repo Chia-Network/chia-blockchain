@@ -866,7 +866,7 @@ class DataLayer:
         mirrors: list[Mirror] = await self.wallet_rpc.dl_get_mirrors(store_id)
         urls: list[str] = []
         for mirror in mirrors:
-            urls = urls + [url.decode("utf8") for url in mirror.urls]
+            urls += [url.decode("utf8") for url in mirror.urls]
         urls = [url.rstrip("/") for url in urls]
         await self.data_store.update_subscriptions_from_wallet(store_id, urls)
 
@@ -1096,8 +1096,7 @@ class DataLayer:
             }
 
             solver: dict[str, Any] = {
-                "0x"
-                + our_offer_store.store_id.hex(): {
+                "0x" + our_offer_store.store_id.hex(): {
                     "new_root": "0x" + our_store_proofs[our_offer_store.store_id].proofs[0].root().hex(),
                     "dependencies": [
                         {
@@ -1182,8 +1181,7 @@ class DataLayer:
             solver: dict[str, Any] = {
                 "proofs_of_inclusion": proofs_of_inclusion,
                 **{
-                    "0x"
-                    + our_offer_store.store_id.hex(): {
+                    "0x" + our_offer_store.store_id.hex(): {
                         "new_root": "0x" + root.hex(),
                         "dependencies": [
                             {

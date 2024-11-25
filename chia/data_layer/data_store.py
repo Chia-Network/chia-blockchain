@@ -1212,7 +1212,7 @@ class DataStore:
 
             if was_empty:
                 if side is not None:
-                    raise Exception("Tree was empty so side must be unspecified, got: {side!r}")
+                    raise Exception(f"Tree was empty so side must be unspecified, got: {side!r}")
 
                 new_root = await self._insert_root(
                     store_id=store_id,
@@ -1665,7 +1665,7 @@ class DataStore:
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
             await self.rollback_to_generation(store_id, old_root.generation)
             await self.insert_root_with_ancestor_table(store_id=store_id, node_hash=root.node_hash, status=status)
-            if status in (Status.PENDING, Status.PENDING_BATCH):
+            if status in {Status.PENDING, Status.PENDING_BATCH}:
                 new_root = await self.get_pending_root(store_id=store_id)
                 assert new_root is not None
             elif status == Status.COMMITTED:

@@ -7,12 +7,14 @@ import pytest
 from chia_rs import G1Element
 from clvm_tools import binutils
 
+from chia._tests.core.make_block_generator import make_block_generator
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -21,8 +23,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.util.ints import uint32, uint64
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
-
-from .make_block_generator import make_block_generator
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 SMALL_BLOCK_GENERATOR = make_block_generator(1)
@@ -276,7 +276,7 @@ async def test_standard_tx(benchmark_runner: BenchmarkRunner) -> None:
     with benchmark_runner.assert_runtime(seconds=0.1):
         total_cost = 0
         for i in range(0, 1000):
-            cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
+            cost, _result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
             total_cost += cost
 
 

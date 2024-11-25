@@ -9,7 +9,6 @@ from typing import Any, Optional, Union
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.cmds.passphrase_funcs import obtain_current_passphrase
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.types.signing_mode import SigningMode
 from chia.util.bech32m import bech32_encode, convertbits, encode_puzzle_hash
@@ -25,7 +24,7 @@ from chia.util.keychain import (
     generate_mnemonic,
     mnemonic_to_seed,
 )
-from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.keyring_wrapper import KeyringWrapper, obtain_current_passphrase
 from chia.wallet.derive_keys import (
     master_pk_to_wallet_pk_unhardened,
     master_sk_to_farmer_sk,
@@ -806,7 +805,7 @@ def prompt_for_fingerprint() -> Optional[int]:
     while True:
         print("Choose key:")
         for i, fp in enumerate(fingerprints):
-            print(f"{i+1}) {fp}")
+            print(f"{i + 1}) {fp}")
         val = None
         while val is None:
             val = input("Enter a number to pick or q to quit: ")
@@ -851,7 +850,7 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
 
 
 def resolve_derivation_master_key(
-    fingerprint_or_filename: Optional[Union[int, str, Path]]
+    fingerprint_or_filename: Optional[Union[int, str, Path]],
 ) -> tuple[Optional[int], Optional[PrivateKey]]:
     """
     Given a key fingerprint of file containing a mnemonic seed, return the private key.

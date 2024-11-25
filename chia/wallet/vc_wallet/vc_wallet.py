@@ -301,7 +301,7 @@ class VCWallet:
             primaries=primaries,
             conditions=extra_conditions,
         )
-        did_announcement, coin_spend, vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
+        did_announcement, coin_spend, _vc = vc_record.vc.do_spend(inner_puzzle, innersol, new_proof_hash)
         spend_bundle = WalletSpendBundle([coin_spend], G2Element())
         if did_announcement is not None:
             # Need to spend DID

@@ -36,6 +36,9 @@ from chia._tests import ether
 from chia._tests.core.data_layer.util import ChiaRoot
 from chia._tests.util.time_out_assert import DataTypeProtocol, caller_file_and_line
 from chia.full_node.mempool import Mempool
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.api_protocol import ApiMetadata, ApiProtocol
+from chia.server.outbound_message import Message
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
@@ -562,7 +565,7 @@ class TestId:
             temp_node = temp_node.parent
 
         # TODO: can we avoid parsing the id's etc from the node name?
-        test_name, delimiter, rest = node.name.partition("[")
+        _test_name, delimiter, rest = node.name.partition("[")
         ids: tuple[str, ...]
         if delimiter == "":
             ids = ()
@@ -630,3 +633,43 @@ class ComparableEnum(Enum):
             return NotImplemented
 
         return self.value.__ge__(other.value)
+
+
+def is_attribute_local(o: object, name: str) -> bool:
+    return name in getattr(o, "__dict__", ()) or name in getattr(o, "__slots__", ())
+
+
+@contextlib.contextmanager
+def patch_request_handler(
+    api: Union[ApiProtocol, type[ApiProtocol]],
+    handler: Callable[..., Awaitable[Optional[Message]]],
+    request_type: Optional[ProtocolMessageTypes] = None,
+) -> Iterator[None]:
+    if request_type is None:
+        request_type = ProtocolMessageTypes[handler.__name__]
+
+    metadata = ApiMetadata.copy(api.metadata)
+    original_request = metadata.message_type_to_request.pop(request_type)
+    decorator = metadata.request(
+        peer_required=original_request.peer_required,
+        bytes_required=original_request.bytes_required,
+        execute_task=original_request.execute_task,
+        reply_types=original_request.reply_types,
+        request_type=original_request.request_type,
+    )
+    decorator(handler)
+
+    was_local = is_attribute_local(api, "metadata")
+    original = api.metadata
+    # when an instance is passed, this is intentionally assigning to an instance
+    # counter to the class variable hint
+    api.metadata = metadata  # type: ignore[misc]
+    try:
+        yield
+    finally:
+        if was_local:
+            # when an instance is passed, this is intentionally assigning to an instance
+            # counter to the class variable hint
+            api.metadata = original  # type: ignore[misc]
+        else:
+            del api.metadata

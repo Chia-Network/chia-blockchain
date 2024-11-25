@@ -463,11 +463,11 @@ class BlockTools:
 
             if len(created):
                 assert len(existed) == 0
-                plot_id_new, path_new = list(created.items())[0]
+                plot_id_new, path_new = next(iter(created.items()))
 
             if len(existed):
                 assert len(created) == 0
-                plot_id_new, path_new = list(existed.items())[0]
+                plot_id_new, path_new = next(iter(existed.items()))
                 new_plot = False
             assert plot_id_new is not None
             assert path_new is not None
@@ -962,7 +962,7 @@ class BlockTools:
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
-                self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height+1}")
+                self.log.info(f"Sub epoch summary: {sub_epoch_summary} for block {latest_block.height + 1}")
             else:  # the previous block is not the last block of the sub-epoch or epoch
                 pending_ses = False
                 ses_hash = None
@@ -1045,7 +1045,7 @@ class BlockTools:
             sub_slots_finished += 1
             self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
-                f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
+                f"{(len(block_list) - initial_block_list_len) / sub_slots_finished}"
                 f"Sub Epoch Summary Included: {sub_epoch_summary is not None} "
             )
             blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
@@ -1908,7 +1908,7 @@ def conditions_cost(conds: Program) -> uint64:
         elif condition == ConditionOpcode.SOFTFORK.value:
             arg = cond.rest().first().as_int()
             condition_cost += arg * 10000
-        elif condition in [
+        elif condition in {
             ConditionOpcode.AGG_SIG_UNSAFE,
             ConditionOpcode.AGG_SIG_ME,
             ConditionOpcode.AGG_SIG_PARENT,
@@ -1917,7 +1917,7 @@ def conditions_cost(conds: Program) -> uint64:
             ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT,
             ConditionOpcode.AGG_SIG_PARENT_AMOUNT,
             ConditionOpcode.AGG_SIG_PARENT_PUZZLE,
-        ]:
+        }:
             condition_cost += ConditionCost.AGG_SIG.value
     return uint64(condition_cost)
 

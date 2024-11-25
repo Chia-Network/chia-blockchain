@@ -32,8 +32,9 @@ assert len(DEFAULT_SEED) == 32
 
 class WalletTool:
     next_address = 0
-    pubkey_num_lookup: dict[bytes, uint32] = {}
-    puzzle_pk_cache: dict[bytes32, PrivateKey] = {}
+    # TODO: make this a dataclass to make these instance attributes instead of mutable class attributes
+    pubkey_num_lookup: dict[bytes, uint32] = {}  # noqa: RUF012
+    puzzle_pk_cache: dict[bytes32, PrivateKey] = {}  # noqa: RUF012
 
     def __init__(self, constants: ConsensusConstants, sk: Optional[PrivateKey] = None):
         self.constants = constants
@@ -92,9 +93,9 @@ class WalletTool:
                     formatted: list[Any] = []
                     formatted.extend(cvp.vars)
                     formatted[2] = cvp.vars[2:]
-                    ret.append([cvp.opcode.value] + formatted)
+                    ret.append([cvp.opcode.value, *formatted])
                 else:
-                    ret.append([cvp.opcode.value] + cvp.vars)
+                    ret.append([cvp.opcode.value, *cvp.vars])
         return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(
@@ -214,7 +215,7 @@ class WalletTool:
         amount: uint64,
         new_puzzle_hash: bytes32,
         coin: Coin,
-        condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]] = None,
+        condition_dic: Optional[dict[ConditionOpcode, list[ConditionWithArgs]]] = None,
         fee: int = 0,
         additional_outputs: Optional[list[tuple[bytes32, int]]] = None,
         memo: Optional[bytes32] = None,
@@ -232,7 +233,7 @@ class WalletTool:
         amount: uint64,
         new_puzzle_hash: bytes32,
         coins: list[Coin],
-        condition_dic: dict[ConditionOpcode, list[ConditionWithArgs]] = None,
+        condition_dic: Optional[dict[ConditionOpcode, list[ConditionWithArgs]]] = None,
         fee: int = 0,
         additional_outputs: Optional[list[tuple[bytes32, int]]] = None,
     ) -> SpendBundle:

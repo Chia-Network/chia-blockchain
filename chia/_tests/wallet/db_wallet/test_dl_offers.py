@@ -136,7 +136,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         ]
     }
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(offer_maker.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(
@@ -263,7 +263,7 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
 
     addition = bytes32([101] * 32)
     ROWS.append(addition)
-    root, proofs = build_merkle_tree(ROWS)
+    root, _proofs = build_merkle_tree(ROWS)
 
     async with trade_manager.wallet_state_manager.new_action_scope(DEFAULT_TX_CONFIG, push=False) as action_scope:
         success, offer, error = await trade_manager.create_offer_for_ids(
@@ -414,7 +414,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
-    [maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
+    [_maker_offer], signing_response = await wallet_node_maker.wallet_state_manager.sign_offers(
         [Offer.from_bytes(offer_maker.offer)]
     )
     async with trade_manager_taker.wallet_state_manager.new_action_scope(

@@ -880,8 +880,8 @@ def _map_sub_epoch_summaries(
         if idx < len(sub_epoch_data) - 1:
             delta = 0
             if idx > 0:
-                delta = sub_epoch_data[idx].num_blocks_overflow
-            log.debug(f"sub epoch {idx} start weight is {total_weight+curr_difficulty} ")
+                delta = data.num_blocks_overflow
+            log.debug(f"sub epoch {idx} start weight is {total_weight + curr_difficulty} ")
             sub_epoch_weight_list.append(uint128(total_weight + curr_difficulty))
             total_weight = uint128(
                 total_weight
@@ -1001,9 +1001,7 @@ def _validate_segment(
             if required_iters is None:
                 return False, uint64(0), uint64(0), uint64(0), []
             assert sub_slot_data.signage_point_index is not None
-            ip_iters = ip_iters + calculate_ip_iters(
-                constants, curr_ssi, sub_slot_data.signage_point_index, required_iters
-            )
+            ip_iters += calculate_ip_iters(constants, curr_ssi, sub_slot_data.signage_point_index, required_iters)
             vdf_list = _get_challenge_block_vdfs(constants, idx, segment.sub_slots, curr_ssi)
             to_validate.extend(vdf_list)
         elif sampled and after_challenge:
@@ -1012,8 +1010,8 @@ def _validate_segment(
                 log.error(f"failed to validate sub slot data {idx} vdfs")
                 return False, uint64(0), uint64(0), uint64(0), []
             to_validate.extend(vdf_list)
-        slot_iters = slot_iters + curr_ssi
-        slots = slots + uint64(1)
+        slot_iters += curr_ssi
+        slots += uint64(1)
     return True, ip_iters, slot_iters, slots, to_validate
 
 
@@ -1254,9 +1252,9 @@ def validate_recent_blocks(
                 adjusted = True
             deficit = get_deficit(constants, deficit, prev_block_record, overflow, len(block.finished_sub_slots))
             if sub_slots > 2 and transaction_blocks > 11 and (tip_height - block.height < last_blocks_to_validate):
-                vs = ValidationState(ssi, diff, None)
+                expected_vs = ValidationState(ssi, diff, None)
                 caluclated_required_iters, error = validate_finished_header_block(
-                    constants, sub_blocks, block, False, vs, ses_blocks > 2
+                    constants, sub_blocks, block, False, expected_vs, ses_blocks > 2
                 )
                 if error is not None:
                     log.error(f"block {block.header_hash} failed validation {error}")
@@ -1268,7 +1266,7 @@ def validate_recent_blocks(
                 if ret is None:
                     return False, []
                 required_iters = ret
-            validated_block_count = validated_block_count + 1
+            validated_block_count += 1
 
         curr_block_ses = None if not ses else summaries[ses_idx - 1]
         block_record = header_block_to_sub_block_record(

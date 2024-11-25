@@ -343,7 +343,7 @@ class WalletNode:
             self.log.info("Resetting wallet sync data...")
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table'"))
             names = {x[0] for x in rows}
-            names = names - set(known_tables)
+            names -= set(known_tables)
             tables_to_drop = []
             for name in names:
                 for ignore_name in ignore_tables:
@@ -426,10 +426,12 @@ class WalletNode:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
+                # TODO: stop dropping tasks on the floor
+                asyncio.create_task(profile_task(self.root_path, "wallet", self.log))  # noqa: RUF006
 
         if self.config.get("enable_memory_profiler", False):
-            asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))
+            # TODO: stop dropping tasks on the floor
+            asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))  # noqa: RUF006
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(fingerprint))
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -517,7 +519,8 @@ class WalletNode:
     def _pending_tx_handler(self) -> None:
         if self._wallet_state_manager is None:
             return None
-        asyncio.create_task(self._resend_queue())
+        # TODO: stop dropping tasks on the floor
+        asyncio.create_task(self._resend_queue())  # noqa: RUF006
 
     async def _resend_queue(self) -> None:
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
@@ -718,7 +721,8 @@ class WalletNode:
                 default_port,
                 self.log,
             )
-            asyncio.create_task(self.wallet_peers.start())
+            # TODO: stop dropping tasks on the floor
+            asyncio.create_task(self.wallet_peers.start())  # noqa: RUF006
 
     async def on_disconnect(self, peer: WSChiaConnection) -> None:
         if self.is_trusted(peer):

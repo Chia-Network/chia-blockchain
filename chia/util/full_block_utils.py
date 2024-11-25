@@ -56,7 +56,7 @@ def skip_uint8(buf: memoryview) -> memoryview:
 
 
 def skip_bool(buf: memoryview) -> memoryview:
-    assert buf[0] in [0, 1]
+    assert buf[0] in {0, 1}
     return buf[1:]
 
 
@@ -297,7 +297,7 @@ def header_block_from_block(
             transactions_info_optional = bytes([0])
         else:
             transactions_info_optional = bytes([1])
-            transactions_info, advance = TransactionsInfo.parse_rust(buf2[1:])
+            transactions_info, _advance = TransactionsInfo.parse_rust(buf2[1:])
         byte_array_tx: list[bytearray] = []
         if is_transaction_block and transactions_info:
             addition_coins = tx_addition_coins + list(transactions_info.reward_claims_incorporated)

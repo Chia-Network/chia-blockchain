@@ -198,9 +198,11 @@ class Farmer:
             if sys.getprofile() is not None:
                 self.log.warning("not enabling profiler, getprofile() is already set")
             else:
-                asyncio.create_task(profile_task(self._root_path, "farmer", self.log))
+                # TODO: stop dropping tasks on the floor
+                asyncio.create_task(profile_task(self._root_path, "farmer", self.log))  # noqa: RUF006
 
-        asyncio.create_task(start_task())
+        # TODO: stop dropping tasks on the floor
+        asyncio.create_task(start_task())  # noqa: RUF006
         try:
             yield
         finally:
@@ -286,7 +288,8 @@ class Farmer:
         async def handshake_task() -> None:
             # Wait until the task in `Farmer._start` is done so that we have keys available for the handshake. Bail out
             # early if we need to shut down or if the harvester is not longer connected.
-            while not self.started and not self._shut_down and peer in self.server.get_connections():
+            # TODO: switch to event driven code
+            while not self.started and not self._shut_down and peer in self.server.get_connections():  # noqa: ASYNC110
                 await asyncio.sleep(1)
 
             if self._shut_down:
