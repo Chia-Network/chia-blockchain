@@ -67,7 +67,7 @@ pyyaml = "6.0.2"  # Used for config file format
 setproctitle = "1.3.3"  # Gives the chia processes readable names
 setuptools = "75.5.0"
 sortedcontainers = "2.4.0"  # For maintaining sorted mempools
-typing-extensions = "4.11.0"  # typing backports like Protocol and TypedDict
+typing-extensions = "4.12.2"  # typing backports like Protocol and TypedDict
 watchdog = "4.0.1"  # Filesystem event watching - watches keyring.yaml
 zstd = [
 	{version="1.5.5.1", python = "<3.12"},
