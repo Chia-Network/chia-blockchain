@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 import contextlib
 import functools
 import json
@@ -15,7 +14,6 @@ from pathlib import Path
 from typing import (
     Any,
     AsyncIterator,
-    Awaitable,
     Callable,
     ClassVar,
     Collection,
@@ -291,51 +289,6 @@ Y = TypeVar("Y")
 Z = TypeVar("Z")
 
 
-async def worker(
-    handler: Callable[[T], Awaitable[U]],
-    arg_stream: anyio.streams.memory.MemoryObjectReceiveStream[T],
-    result_stream: anyio.streams.memory.MemoryObjectSendStream[U],
-) -> None:
-    async with arg_stream, result_stream:
-        async for arg in arg_stream:
-            try:
-                result = await handler(arg)
-            except Exception as e:
-                report(f"worker failed on {arg!r}: {e}")
-                continue
-            await result_stream.send(result)
-
-
-async def collect(
-    args: Collection[T], handler: Callable[[T], Awaitable[U]], capacity: int, max_stagger: float = 1
-) -> AsyncIterator[U]:
-    arg_send_stream, arg_receive_stream = anyio.create_memory_object_stream[T](max_buffer_size=len(args))
-    result_send_stream, result_receive_stream = anyio.create_memory_object_stream[U]()
-
-    needed_capacity = min(capacity, len(args))
-    single_batch = needed_capacity >= len(args)
-
-    async with anyio.create_task_group() as task_group:
-        for i in range(needed_capacity):
-            if not single_batch and i != 0:
-                await anyio.sleep(max_stagger / needed_capacity)
-            task_group.start_soon(worker, handler, arg_receive_stream.clone(), result_send_stream.clone())
-
-        # TODO: this seems awkward
-        arg_receive_stream.close()
-        result_send_stream.close()
-
-        async with arg_send_stream:
-            for arg in args:
-                await arg_send_stream.send(arg)
-
-        async with result_receive_stream:
-            async for result in result_receive_stream:
-                yield result
-
-        task_group.cancel_scope.cancel()
-
-
 class PoolHandler(Protocol[T_contra, U]):
     async def __call__(self, job: T_contra) -> list[U]: ...
 
@@ -385,169 +338,6 @@ class RunInfo:
     name: str
     attempts: int
     url: str
-
-
-@chia_command(
-    gh_group,
-    name="rerun",
-    # TODO: helpy helper
-    short_help="",
-    help="""""",
-)
-class RerunCMD:
-    owner: str = option("-o", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
-    repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
-    pr: int = option("--pr", help="Pull request number", type=int, required=True)
-    max_attempts: int = option("--max-attempts", help="Maximum number of attempts", type=int, default=3)
-
-    async def run(self) -> None:
-        head_sha = await self.get_pull_request_head_sha()
-        run_ids = await self.get_run_ids_for_sha(sha=head_sha)
-        print(len(run_ids), run_ids)
-
-        all_runs = collections.defaultdict(list)
-        async for run in collect(args=run_ids, handler=self.get_run, capacity=10):
-            all_runs[run.workflow_id].append(run)
-
-        runs = [max(runs, key=lambda run: run.run_number) for runs in all_runs.values()]
-        to_rerun: list[RunInfo] = []
-        for run in runs:
-            if run.conclusion in {"failure", "cancelled"}:
-                if run.attempts < self.max_attempts:
-                    # print("    ++++ would retrigger", run)
-                    to_rerun.append(run)
-                else:
-                    print("    ---- giving up on", run.url)
-
-        async for _ in collect(args=to_rerun, handler=self.rerun_job, capacity=10):
-            pass
-
-    async def get_run(self, run_id: int) -> RunInfo:
-        # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#get-a-workflow-run
-        stdout = await run_gh_api(
-            method="GET",
-            args=[
-                f"/repos/{self.owner}/{self.repository}/actions/runs/{run_id}",
-            ],
-            error="Failed to get run",
-            capture_stdout=True,
-        )
-        response = json.loads(stdout)
-
-        return RunInfo(
-            id=response["id"],
-            name=response["name"],
-            status=response["status"],
-            conclusion=response["conclusion"],
-            workflow_id=response["workflow_id"],
-            run_number=response["run_number"],
-            attempts=response["run_attempt"],
-            url=response["html_url"],
-        )
-
-    async def get_check_runs(self, suite_id: int) -> dict[str, Any]:
-        # https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-in-a-check-suite
-        stdout = await run_gh_api(
-            method="GET",
-            args=[
-                f"/repos/{self.owner}/{self.repository}/check-suites/{suite_id}/check-runs",
-            ],
-            error="Failed to get check runs",
-            capture_stdout=True,
-        )
-        result = json.loads(stdout)
-        assert isinstance(result, dict)
-        return result
-
-    # TODO: but is this only the latest? mm...
-    async def get_run_ids_for_sha(self, sha: str) -> list[int]:
-        # https://docs.github.com/en/rest/checks/suites?apiVersion=2022-11-28#list-check-suites-for-a-git-reference
-        stdout = await run_gh_api(
-            method="GET",
-            args=[
-                "--paginate",
-                # "-f=per_page=100",
-                f"/repos/{self.owner}/{self.repository}/commits/{sha}/check-suites",
-            ],
-            error="Failed to get check suites",
-            capture_stdout=True,
-        )
-        response = json.loads(stdout)
-        check_suite_ids = {
-            check_suite["id"]
-            for check_suite in response["check_suites"]
-            if check_suite["app"]["slug"] == "github-actions"
-        }
-        print(response["total_count"], len(check_suite_ids), check_suite_ids)
-        # assert len(check_suite_ids) == response["total_count"]
-
-        run_ids = []
-        # for suite_id in check_suite_ids:
-        async for response in collect(args=check_suite_ids, handler=self.get_check_runs, capacity=10):
-            for check_run in response["check_runs"]:
-                if check_run["app"]["slug"] != "github-actions":
-                    continue
-
-                match = re.match(r"^.*/runs/(.*)/job/.*$", check_run["html_url"])
-                assert match is not None
-                value = int(match[1])
-                run_ids.append(value)
-                break
-            else:
-                report(f"no run found for suite: {response['id']}")
-
-        return sorted(run_ids)
-
-    # # TODO: but is this only the latest? mm...
-    # async def get_run_ids_for_sha(self, sha: str) -> set[int]:
-    #     # https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-for-a-git-reference
-    #     stdout = await run_gh_api(
-    #         method="GET",
-    #         args=[
-    #             f"/repos/{self.owner}/{self.repository}/commits/{sha}/check-runs",
-    #         ],
-    #         error="Failed to get check runs",
-    #         capture_stdout=True,
-    #     )
-    #     response = json.loads(stdout)
-    #     run_ids = {
-    #         # https://github.com/Chia-Network/chia-blockchain/actions/runs/11977927817/job/33400686549
-    #         int(re.match(r"^.*/runs/(.*)/job/.*$", check_run["html_url"])[1])
-    #         for check_run in response["check_runs"]
-    #         if check_run["app"]["slug"] == "github-actions"
-    #     }
-    #
-    #     return run_ids
-    #
-    async def get_pull_request_head_sha(self) -> str:
-        # https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request
-        stdout = await run_gh_api(
-            method="GET",
-            args=[
-                f"/repos/{self.owner}/{self.repository}/pulls/{self.pr}",
-            ],
-            error="Failed to get pull request",
-            capture_stdout=True,
-        )
-        response = json.loads(stdout)
-        result = response["head"]["sha"]
-        assert isinstance(result, str)
-        return result
-
-    async def rerun_job(self, run: RunInfo) -> None:
-        # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#re-run-failed-jobs-from-a-workflow-run
-        await run_gh_api(
-            method="POST",
-            args=[
-                f"/repos/{self.owner}/{self.repository}/actions/runs/{run.id}/rerun-failed-jobs",
-            ],
-            error="Failed to rerun failed jobs",
-        )
-        print("    ++++ rerun triggered for", run.url)
-
-
-# arg_stream: anyio.streams.memory.MemoryObjectReceiveStream[T],
-# result_stream: anyio.streams.memory.MemoryObjectSendStream[U],
 
 
 async def stage_pr_numbers_to_head_sha(
