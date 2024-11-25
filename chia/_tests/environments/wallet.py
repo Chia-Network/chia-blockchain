@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import operator
+import unittest
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -15,7 +17,6 @@ from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32
-from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import CLAWBACK_INCOMING_TRANSACTION_TYPES
 from chia.wallet.util.tx_config import DEFAULT_TX_CONFIG, TXConfig
@@ -260,6 +261,22 @@ class WalletEnvironment:
         return pending_txs
 
 
+class NewPuzzleHashError(Exception):
+    pass
+
+
+def catch_puzzle_hash_errors(func: Any) -> Any:
+    @contextlib.asynccontextmanager
+    async def catching_puzhash_errors(self: WalletStateManager, *args: Any, **kwargs: Any) -> Any:
+        try:
+            async with func(self, *args, **kwargs) as action_scope:
+                yield action_scope
+        except NewPuzzleHashError:
+            pass
+
+    return catching_puzhash_errors
+
+
 @dataclass
 class WalletTestFramework:
     full_node: FullNodeSimulator
@@ -267,6 +284,15 @@ class WalletTestFramework:
     trusted_full_node: bool
     environments: list[WalletEnvironment]
     tx_config: TXConfig = DEFAULT_TX_CONFIG
+
+    @staticmethod
+    @contextlib.contextmanager
+    def new_puzzle_hashes_allowed() -> Iterator[None]:
+        with unittest.mock.patch(
+            "chia.wallet.wallet_state_manager.WalletStateManager.new_action_scope",
+            catch_puzzle_hash_errors(WalletStateManager.new_action_scope),
+        ):
+            yield
 
     async def process_pending_states(
         self, state_transitions: list[WalletStateTransition], invalid_transactions: list[bytes32] = []
@@ -284,13 +310,11 @@ class WalletTestFramework:
         """
         # Take note of the number of puzzle hashes if we're supposed to be reusing
         if self.tx_config.reuse_puzhash:
-            puzzle_hash_indexes: list[dict[uint32, Optional[DerivationRecord]]] = []
+            puzzle_hash_indexes: list[dict[uint32, int]] = []
             for env in self.environments:
-                ph_indexes: dict[uint32, Optional[DerivationRecord]] = {}
+                ph_indexes: dict[uint32, int] = {}
                 for wallet_id in env.wallet_state_manager.wallets:
-                    ph_indexes[
-                        wallet_id
-                    ] = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
+                    ph_indexes[wallet_id] = await env.wallet_state_manager.puzzle_store.get_unused_count(wallet_id)
                 puzzle_hash_indexes.append(ph_indexes)
 
         pending_txs: list[list[TransactionRecord]] = []
@@ -359,5 +383,5 @@ class WalletTestFramework:
             for env, ph_indexes_before in zip(self.environments, puzzle_hash_indexes):
                 for wallet_id, ph_index in zip(env.wallet_state_manager.wallets, ph_indexes_before):
                     assert ph_indexes_before[wallet_id] == (
-                        await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(wallet_id)
+                        await env.wallet_state_manager.puzzle_store.get_unused_count(wallet_id)
                     )
