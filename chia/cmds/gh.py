@@ -357,12 +357,12 @@ class RerunCMD:
             all_runs[run.workflow_id].append(run)
 
         runs = [max(runs, key=lambda run: run.run_number) for runs in all_runs.values()]
-        to_rerun: list[int] = []
+        to_rerun: list[RunInfo] = []
         for run in runs:
             if run.conclusion in {"failure", "cancelled"}:
                 if run.attempts < self.max_attempts:
                     # print("    ++++ would retrigger", run)
-                    to_rerun.append(run.id)
+                    to_rerun.append(run)
                 else:
                     print("    ---- giving up on", run.url)
 
@@ -481,12 +481,13 @@ class RerunCMD:
         assert isinstance(result, str)
         return result
 
-    async def rerun_job(self, run_id: int) -> None:
+    async def rerun_job(self, run: RunInfo) -> None:
         # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#re-run-failed-jobs-from-a-workflow-run
         await run_gh_api(
             method="POST",
             args=[
-                f"/repos/{self.owner}/{self.repository}/actions/runs/{run_id}/rerun-failed-jobs",
+                f"/repos/{self.owner}/{self.repository}/actions/runs/{run.id}/rerun-failed-jobs",
             ],
             error="Failed to rerun failed jobs",
         )
+        print("    ++++ rerun triggered for", run.url)
