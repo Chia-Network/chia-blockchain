@@ -352,12 +352,6 @@ async def stage_pr_numbers_to_head_sha(
         capacity=10,
     )
 
-    # return
-    # async with jobs, results:
-    #     async for pr in jobs:
-    #         head_sha = await get_pull_request_head_sha(owner=cmd.owner, repository=cmd.repository, pr=pr)
-    #         await results.send(head_sha)
-
 
 async def stage_head_sha_to_check_suite_ids(
     cmd: RerunCMD,
@@ -370,13 +364,6 @@ async def stage_head_sha_to_check_suite_ids(
         handler=functools.partial(get_check_suite_ids_for_sha, owner=cmd.owner, repository=cmd.repository),
         capacity=10,
     )
-    # async with jobs, results:
-    #     async for head_sha in jobs:
-    #         check_suite_ids = await get_check_suite_ids_for_sha(
-    #             owner=cmd.owner, repository=cmd.repository, sha=head_sha
-    #         )
-    #         for check_suite_id in check_suite_ids:
-    #             await results.send(check_suite_id)
 
 
 async def stage_check_suite_ids_to_run_ids(
@@ -390,13 +377,6 @@ async def stage_check_suite_ids_to_run_ids(
         handler=functools.partial(get_run_ids_for_check_suite_id, owner=cmd.owner, repository=cmd.repository),
         capacity=10,
     )
-    # async with jobs, results:
-    #     async for check_suite_id in jobs:
-    #         run_ids = await get_run_ids_for_check_suite_id(
-    #             owner=cmd.owner, repository=cmd.repository, check_suite_id=check_suite_id
-    #         )
-    #         for run_id in run_ids:
-    #             await results.send(run_id)
 
 
 async def stage_run_ids_to_run_info(
@@ -410,10 +390,6 @@ async def stage_run_ids_to_run_info(
         handler=functools.partial(get_run_info, owner=cmd.owner, repository=cmd.repository),
         capacity=10,
     )
-    # async with jobs, results:
-    #     async for run_id in jobs:
-    #         run_info = await get_run_info(owner=cmd.owner, repository=cmd.repository, run_id=run_id)
-    #         await results.send(run_info)
 
 
 async def stage_run_info_to_rerun(
@@ -433,16 +409,6 @@ async def stage_run_info_to_rerun(
         ),
         capacity=10,
     )
-    # async with jobs, results:
-    #     async for run in jobs:
-    #         if run.conclusion in {"failure", "cancelled"}:
-    #             if run.attempts < cmd.max_attempts:
-    #                 if cmd.dry_run:
-    #                     print("    ++++ would retrigger", run.url)
-    #                 else:
-    #                     await rerun_job(owner=cmd.owner, repository=cmd.repository, run=run)
-    #             else:
-    #                 print("    ---- giving up on", run.url)
 
 
 async def get_pull_request_head_sha(owner: str, repository: str, job: int) -> list[bytes]:
