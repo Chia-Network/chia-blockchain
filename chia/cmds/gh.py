@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import collections
+import contextlib
+import functools
 import json
 import os
 import re
@@ -17,8 +19,11 @@ from typing import (
     Callable,
     ClassVar,
     Collection,
+    Generic,
     Literal,
+    Never,
     Optional,
+    Protocol,
     Sequence,
     TypeVar,
     Union,
@@ -42,6 +47,10 @@ Method = Union[Literal["GET"], Literal["POST"]]
 Per = Union[Literal["directory"], Literal["file"]]
 
 all_oses: Sequence[Oses] = ("linux", "macos-arm", "macos-intel", "windows")
+
+
+T_co = TypeVar("T_co", covariant=True)
+T_contra = TypeVar("T_contra", contravariant=True)
 
 
 def report(*args: str) -> None:
@@ -275,6 +284,11 @@ class TestCMD:
 
 T = TypeVar("T")
 U = TypeVar("U")
+V = TypeVar("V")
+W = TypeVar("W")
+X = TypeVar("X")
+Y = TypeVar("Y")
+Z = TypeVar("Z")
 
 
 async def worker(
@@ -320,6 +334,45 @@ async def collect(
                 yield result
 
         task_group.cancel_scope.cancel()
+
+
+class PoolHandler(Protocol[T_contra, U]):
+    async def __call__(self, job: T_contra) -> list[U]: ...
+
+
+async def pool_worker(
+    handler: PoolHandler[T, U],
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[T],
+    results: anyio.streams.memory.MemoryObjectSendStream[U],
+) -> None:
+    unwrapped_handler = handler
+    while isinstance(unwrapped_handler, functools.partial):
+        unwrapped_handler = unwrapped_handler.func
+
+    # TODO: oof
+    handler_name = getattr(unwrapped_handler, "__name__")
+
+    async with jobs, results:
+        async for job in jobs:
+            try:
+                local_results = await handler(job=job)
+            except Exception as e:
+                report(f"worker failed: {e}\n    {handler_name}()\n    {job!r}")
+                continue
+            for result in local_results:
+                await results.send(result)
+
+
+async def pool(
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[T],
+    results: anyio.streams.memory.MemoryObjectSendStream[U],
+    handler: PoolHandler[T, U],
+    capacity: int,
+) -> None:
+    async with anyio.create_task_group() as task_group:
+        async with jobs, results:
+            for i in range(capacity):
+                task_group.start_soon(pool_worker, handler, jobs.clone(), results.clone())
 
 
 @dataclass
@@ -491,3 +544,307 @@ class RerunCMD:
             error="Failed to rerun failed jobs",
         )
         print("    ++++ rerun triggered for", run.url)
+
+
+# arg_stream: anyio.streams.memory.MemoryObjectReceiveStream[T],
+# result_stream: anyio.streams.memory.MemoryObjectSendStream[U],
+
+
+async def stage_pr_numbers_to_head_sha(
+    cmd: RerunCMD2,
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[int],
+    results: anyio.streams.memory.MemoryObjectSendStream[bytes],
+) -> None:
+    await pool(
+        jobs=jobs,
+        results=results,
+        handler=functools.partial(get_pull_request_head_sha, owner=cmd.owner, repository=cmd.repository),
+        capacity=10,
+    )
+
+    # return
+    # async with jobs, results:
+    #     async for pr in jobs:
+    #         head_sha = await get_pull_request_head_sha(owner=cmd.owner, repository=cmd.repository, pr=pr)
+    #         await results.send(head_sha)
+
+
+async def stage_head_sha_to_check_suite_ids(
+    cmd: RerunCMD2,
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[bytes],
+    results: anyio.streams.memory.MemoryObjectSendStream[int],
+) -> None:
+    await pool(
+        jobs=jobs,
+        results=results,
+        handler=functools.partial(get_check_suite_ids_for_sha, owner=cmd.owner, repository=cmd.repository),
+        capacity=10,
+    )
+    # async with jobs, results:
+    #     async for head_sha in jobs:
+    #         check_suite_ids = await get_check_suite_ids_for_sha(
+    #             owner=cmd.owner, repository=cmd.repository, sha=head_sha
+    #         )
+    #         for check_suite_id in check_suite_ids:
+    #             await results.send(check_suite_id)
+
+
+async def stage_check_suite_ids_to_run_ids(
+    cmd: RerunCMD2,
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[int],
+    results: anyio.streams.memory.MemoryObjectSendStream[int],
+) -> None:
+    await pool(
+        jobs=jobs,
+        results=results,
+        handler=functools.partial(get_run_ids_for_check_suite_id, owner=cmd.owner, repository=cmd.repository),
+        capacity=10,
+    )
+    # async with jobs, results:
+    #     async for check_suite_id in jobs:
+    #         run_ids = await get_run_ids_for_check_suite_id(
+    #             owner=cmd.owner, repository=cmd.repository, check_suite_id=check_suite_id
+    #         )
+    #         for run_id in run_ids:
+    #             await results.send(run_id)
+
+
+async def stage_run_ids_to_run_info(
+    cmd: RerunCMD2,
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[int],
+    results: anyio.streams.memory.MemoryObjectSendStream[RunInfo],
+) -> None:
+    await pool(
+        jobs=jobs,
+        results=results,
+        handler=functools.partial(get_run_info, owner=cmd.owner, repository=cmd.repository),
+        capacity=10,
+    )
+    # async with jobs, results:
+    #     async for run_id in jobs:
+    #         run_info = await get_run_info(owner=cmd.owner, repository=cmd.repository, run_id=run_id)
+    #         await results.send(run_info)
+
+
+async def stage_run_info_to_rerun(
+    cmd: RerunCMD2,
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[RunInfo],
+    results: anyio.streams.memory.MemoryObjectSendStream[None],
+) -> None:
+    await pool(
+        jobs=jobs,
+        results=results,
+        handler=functools.partial(
+            maybe_rerun_job,
+            owner=cmd.owner,
+            repository=cmd.repository,
+            max_attempts=cmd.max_attempts,
+            dry_run=cmd.dry_run,
+        ),
+        capacity=10,
+    )
+    # async with jobs, results:
+    #     async for run in jobs:
+    #         if run.conclusion in {"failure", "cancelled"}:
+    #             if run.attempts < cmd.max_attempts:
+    #                 if cmd.dry_run:
+    #                     print("    ++++ would retrigger", run.url)
+    #                 else:
+    #                     await rerun_job(owner=cmd.owner, repository=cmd.repository, run=run)
+    #             else:
+    #                 print("    ---- giving up on", run.url)
+
+
+async def get_pull_request_head_sha(owner: str, repository: str, job: int) -> list[bytes]:
+    pr = job
+    # https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request
+    stdout = await run_gh_api(
+        method="GET",
+        args=[
+            f"/repos/{owner}/{repository}/pulls/{pr}",
+        ],
+        error="Failed to get pull request",
+        capture_stdout=True,
+    )
+    response = json.loads(stdout)
+    result = bytes.fromhex(response["head"]["sha"])
+    return [result]
+
+
+async def get_check_suite_ids_for_sha(owner: str, repository: str, job: bytes) -> list[int]:
+    sha = job
+    # https://docs.github.com/en/rest/checks/suites?apiVersion=2022-11-28#list-check-suites-for-a-git-reference
+    stdout = await run_gh_api(
+        method="GET",
+        args=[
+            "--paginate",
+            # "-f=per_page=100",
+            f"/repos/{owner}/{repository}/commits/{sha.hex()}/check-suites",
+        ],
+        error="Failed to get check suites",
+        capture_stdout=True,
+    )
+    response = json.loads(stdout)
+    check_suite_ids = {
+        check_suite["id"] for check_suite in response["check_suites"] if check_suite["app"]["slug"] == "github-actions"
+    }
+    print(response["total_count"], len(check_suite_ids), check_suite_ids)
+    # assert len(check_suite_ids) == response["total_count"]
+    return list(check_suite_ids)
+
+
+async def get_run_ids_for_check_suite_id(owner: str, repository: str, job: int) -> list[int]:
+    check_suite_id = job
+    run_ids = []
+    response = await get_check_runs(owner=owner, repository=repository, suite_id=check_suite_id)
+    for check_run in response["check_runs"]:
+        if check_run["app"]["slug"] != "github-actions":
+            continue
+
+        match = re.match(r"^.*/runs/(.*)/job/.*$", check_run["html_url"])
+        assert match is not None
+        value = int(match[1])
+        run_ids.append(value)
+        break
+    else:
+        report(f"no run found for suite: {response['id']}")
+
+    return run_ids
+
+
+async def get_check_runs(owner: str, repository: str, suite_id: int) -> dict[str, Any]:
+    # https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-in-a-check-suite
+    stdout = await run_gh_api(
+        method="GET",
+        args=[
+            f"/repos/{owner}/{repository}/check-suites/{suite_id}/check-runs",
+        ],
+        error="Failed to get check runs",
+        capture_stdout=True,
+    )
+    result = json.loads(stdout)
+    assert isinstance(result, dict)
+    return result
+
+
+async def get_run_info(owner: str, repository: str, job: int) -> list[RunInfo]:
+    run_id = job
+    # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#get-a-workflow-run
+    stdout = await run_gh_api(
+        method="GET",
+        args=[
+            f"/repos/{owner}/{repository}/actions/runs/{run_id}",
+        ],
+        error="Failed to get run",
+        capture_stdout=True,
+    )
+    response = json.loads(stdout)
+
+    return [
+        RunInfo(
+            id=response["id"],
+            name=response["name"],
+            status=response["status"],
+            conclusion=response["conclusion"],
+            workflow_id=response["workflow_id"],
+            run_number=response["run_number"],
+            attempts=response["run_attempt"],
+            url=response["html_url"],
+        )
+    ]
+
+
+async def maybe_rerun_job(owner: str, repository: str, max_attempts: int, dry_run: bool, job: RunInfo) -> list[Never]:
+    run = job
+    if run.conclusion in {"failure", "cancelled"}:
+        if run.attempts >= max_attempts:
+            print("    ---- giving up on", run.url)
+        else:
+            if dry_run:
+                print("    ++++ would retrigger", run.url)
+            else:
+                # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#re-run-failed-jobs-from-a-workflow-run
+                await run_gh_api(
+                    method="POST",
+                    args=[
+                        f"/repos/{owner}/{repository}/actions/runs/{run.id}/rerun-failed-jobs",
+                    ],
+                    error="Failed to rerun failed jobs",
+                )
+                print("    ++++ rerun triggered for", run.url)
+
+    return []
+
+
+class Stage(Protocol[T_contra, T_co]):
+    async def __call__(
+        self,
+        # TODO: yeah, no
+        cmd: RerunCMD2,
+        jobs: anyio.streams.memory.MemoryObjectReceiveStream[T_contra],
+        results: anyio.streams.memory.MemoryObjectSendStream[T_co],
+    ) -> None: ...
+
+
+@dataclass
+class Pipeline(Generic[T, U, V, W, X, Y]):
+    stages: tuple[Stage[T, U], Stage[U, V], Stage[V, W], Stage[W, X], Stage[X, Y]]
+
+    @contextlib.asynccontextmanager
+    async def setup(
+        self,
+        cmd: RerunCMD2,
+        jobs: Collection[T],
+    ) -> AsyncIterator[anyio.streams.memory.MemoryObjectReceiveStream[Y]]:
+        assert len(self.stages) > 0
+
+        results: anyio.streams.memory.MemoryObjectReceiveStream[Y]
+
+        # TODO: yep yuck, no more Any
+        send_stream, receive_stream = anyio.create_memory_object_stream[Any](max_buffer_size=len(jobs))
+        async with send_stream:
+            for job in jobs:
+                send_stream.send_nowait(job)
+
+        async with contextlib.AsyncExitStack() as exit_stack:
+            task_group = await exit_stack.enter_async_context(anyio.create_task_group())
+
+            for stage in self.stages:
+                # TODO: yep yuck, no more Any
+                send_stream, new_receive_stream = anyio.create_memory_object_stream[Any]()
+                task_group.start_soon(stage, cmd, receive_stream, send_stream)
+                receive_stream = new_receive_stream
+
+            results = receive_stream
+            yield results
+
+
+@chia_command(
+    gh_group,
+    name="rerun2",
+    # TODO: helpy helper
+    short_help="",
+    help="""""",
+)
+class RerunCMD2:
+    owner: str = option("-o", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
+    repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
+    pr: int = option("--pr", help="Pull request number", type=int, required=True)
+    max_attempts: int = option("--max-attempts", help="Maximum number of attempts", type=int, default=3)
+    dry_run: bool = option("--dry-run/--wet_run", help="Dry run")
+
+    async def run(self) -> None:
+        s0: Stage[int, bytes] = stage_pr_numbers_to_head_sha
+        s1: Stage[bytes, int] = stage_head_sha_to_check_suite_ids
+        s2: Stage[int, int] = stage_check_suite_ids_to_run_ids
+        s3: Stage[int, RunInfo] = stage_run_ids_to_run_info
+        s4: Stage[RunInfo, None] = stage_run_info_to_rerun
+
+        pipeline = Pipeline[int, bytes, int, int, RunInfo, None](
+            stages=(s0, s1, s2, s3, s4),
+        )
+
+        async with pipeline.setup(cmd=self, jobs=[self.pr]) as results:
+            async with results:
+                async for result in results:
+                    print(f" >---< {result!r}")
