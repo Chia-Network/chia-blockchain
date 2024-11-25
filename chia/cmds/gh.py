@@ -341,7 +341,7 @@ class RunInfo:
 
 
 async def stage_pr_numbers_to_head_sha(
-    cmd: RerunCMD2,
+    cmd: RerunCMD,
     jobs: anyio.streams.memory.MemoryObjectReceiveStream[int],
     results: anyio.streams.memory.MemoryObjectSendStream[bytes],
 ) -> None:
@@ -360,7 +360,7 @@ async def stage_pr_numbers_to_head_sha(
 
 
 async def stage_head_sha_to_check_suite_ids(
-    cmd: RerunCMD2,
+    cmd: RerunCMD,
     jobs: anyio.streams.memory.MemoryObjectReceiveStream[bytes],
     results: anyio.streams.memory.MemoryObjectSendStream[int],
 ) -> None:
@@ -380,7 +380,7 @@ async def stage_head_sha_to_check_suite_ids(
 
 
 async def stage_check_suite_ids_to_run_ids(
-    cmd: RerunCMD2,
+    cmd: RerunCMD,
     jobs: anyio.streams.memory.MemoryObjectReceiveStream[int],
     results: anyio.streams.memory.MemoryObjectSendStream[int],
 ) -> None:
@@ -400,7 +400,7 @@ async def stage_check_suite_ids_to_run_ids(
 
 
 async def stage_run_ids_to_run_info(
-    cmd: RerunCMD2,
+    cmd: RerunCMD,
     jobs: anyio.streams.memory.MemoryObjectReceiveStream[int],
     results: anyio.streams.memory.MemoryObjectSendStream[RunInfo],
 ) -> None:
@@ -417,7 +417,7 @@ async def stage_run_ids_to_run_info(
 
 
 async def stage_run_info_to_rerun(
-    cmd: RerunCMD2,
+    cmd: RerunCMD,
     jobs: anyio.streams.memory.MemoryObjectReceiveStream[RunInfo],
     results: anyio.streams.memory.MemoryObjectSendStream[None],
 ) -> None:
@@ -570,7 +570,7 @@ class Stage(Protocol[T_contra, T_co]):
     async def __call__(
         self,
         # TODO: yeah, no
-        cmd: RerunCMD2,
+        cmd: RerunCMD,
         jobs: anyio.streams.memory.MemoryObjectReceiveStream[T_contra],
         results: anyio.streams.memory.MemoryObjectSendStream[T_co],
     ) -> None: ...
@@ -583,7 +583,7 @@ class Pipeline(Generic[T, U, V, W, X, Y]):
     @contextlib.asynccontextmanager
     async def setup(
         self,
-        cmd: RerunCMD2,
+        cmd: RerunCMD,
         jobs: Collection[T],
     ) -> AsyncIterator[anyio.streams.memory.MemoryObjectReceiveStream[Y]]:
         assert len(self.stages) > 0
@@ -611,12 +611,12 @@ class Pipeline(Generic[T, U, V, W, X, Y]):
 
 @chia_command(
     gh_group,
-    name="rerun2",
+    name="rerun",
     # TODO: helpy helper
     short_help="",
     help="""""",
 )
-class RerunCMD2:
+class RerunCMD:
     owner: str = option("-o", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
     repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
     pr: int = option("--pr", help="Pull request number", type=int, required=True)
