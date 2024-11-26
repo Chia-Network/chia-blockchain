@@ -407,14 +407,14 @@ class RerunCMD:
     dry_run: bool = option("--dry-run/--wet_run", help="Dry run")
 
     async def run(self) -> None:
-        s0: Stage[int, bytes] = PoolStage(handler=self.get_pull_request_head_sha, capacity=10)
-        s1: Stage[bytes, int] = PoolStage(handler=self.get_check_suite_ids_for_sha, capacity=10)
-        s2: Stage[int, int] = PoolStage(handler=self.get_run_ids_for_check_suite_id, capacity=10)
-        s3: Stage[int, RunInfo] = PoolStage(handler=self.get_run_info, capacity=10)
-        s4: Stage[RunInfo, None] = PoolStage(handler=self.maybe_rerun_job, capacity=10)
-
         pipeline = Pipeline[int, bytes, int, int, RunInfo, None](
-            stages=(s0, s1, s2, s3, s4),
+            stages=(
+                PoolStage(handler=self.get_pull_request_head_sha, capacity=10),
+                PoolStage(handler=self.get_check_suite_ids_for_sha, capacity=10),
+                PoolStage(handler=self.get_run_ids_for_check_suite_id, capacity=10),
+                PoolStage(handler=self.get_run_info, capacity=10),
+                PoolStage(handler=self.maybe_rerun_job, capacity=10),
+            ),
         )
 
         async with pipeline.setup(jobs=[self.pr]) as results:
