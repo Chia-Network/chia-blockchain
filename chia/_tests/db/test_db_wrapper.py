@@ -353,7 +353,7 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
         concurrent_task_count = 200
             
         tasks = []
-        values: list[int] = []
+        values = []
         for index in range(concurrent_task_count):
             task = asyncio.create_task(sum_counter(db_wrapper, values))
             tasks.append(task)
