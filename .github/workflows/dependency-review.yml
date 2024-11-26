@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: "Dependency Review"
-        uses: actions/dependency-review-action@v4.3.3
+        uses: actions/dependency-review-action@v4
         with:
           allow-dependencies-licenses: pkg:pypi/pyinstaller
           deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-1.0-or-later, AGPL-3.0-or-later, GPL-1.0-only, GPL-1.0-or-later, GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later
