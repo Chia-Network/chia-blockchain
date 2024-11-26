@@ -1406,21 +1406,25 @@ test = ["flufl.flake8", "importlib-resources (>=1.3)", "jaraco.test (>=5.4)", "p
 
 [[package]]
 name = "importlib-resources"
-version = "6.4.0"
+version = "6.4.5"
 description = "Read resources from Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "importlib_resources-6.4.0-py3-none-any.whl", hash = "sha256:50d10f043df931902d4194ea07ec57960f66a80449ff867bfe782b4c486ba78c"},
-    {file = "importlib_resources-6.4.0.tar.gz", hash = "sha256:cdb2b453b8046ca4e3798eb1d84f3cce1446a0e8e7b5ef4efb600f19fc398145"},
+    {file = "importlib_resources-6.4.5-py3-none-any.whl", hash = "sha256:ac29d5f956f01d5e4bb63102a5a19957f1b9175e45649977264a1416783bb717"},
+    {file = "importlib_resources-6.4.5.tar.gz", hash = "sha256:980862a1d16c9e147a59603677fa2aa5fd82b87f223b6cb870695bcfce830065"},
 ]
 
 [package.dependencies]
 zipp = {version = ">=3.1.0", markers = "python_version < \"3.10\""}
 
 [package.extras]
-docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (<7.2.5)", "sphinx (>=3.5)", "sphinx-lint"]
-testing = ["jaraco.test (>=5.4)", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)", "zipp (>=3.17)"]
+check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1)"]
+cover = ["pytest-cov"]
+doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+enabler = ["pytest-enabler (>=2.2)"]
+test = ["jaraco.test (>=5.4)", "pytest (>=6,!=8.1.*)", "zipp (>=3.17)"]
+type = ["pytest-mypy"]
 
 [[package]]
 name = "iniconfig"
@@ -3228,4 +3232,4 @@ upnp = ["miniupnpc"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.13"
-content-hash = "8be3aabb9439dc3dafd901ba511e8351678562566e760301b8c845711b253bbc"
+content-hash = "1182fe0e323bfa90442e480a61da515ec6b7b41d8df938447221ca709cb78eaa"
