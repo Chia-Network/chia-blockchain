@@ -92,7 +92,7 @@ pytest-monitor = { version = "1.6.6", platform = "linux", optional = true }
 pytest-xdist = { version = "3.6.1", optional = true }
 types-aiofiles = { version = "24.1.0.20240626", optional = true }
 types-cryptography = { version = "3.3.23.2", optional = true }
-types-pyyaml = { version = "6.0.12.20240311", optional = true }
+types-pyyaml = { version = "6.0.12.20240917", optional = true }
 types-setuptools = { version = "75.5.0.20241122", optional = true }
 lxml = { version = "5.2.2", optional = true }
 miniupnpc = { version = "2.2.2", source = "chia", optional = true }
