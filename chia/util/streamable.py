@@ -510,6 +510,19 @@ def streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
 
     cls._streamable_fields = create_fields(cls)
 
+    def m(name: str, source: str, globs: dict[str, object]):
+        locs = {}
+        eval(compile(source, "<string>", "exec"), globs, locs)
+        return locs[name]
+
+    stream_lines: list[str] = ["def stream(self, f: BinaryIO) -> None:", "    pass"]
+    globs = {}
+    for index, field in enumerate(cls._streamable_fields):
+        stream_lines.append(f"    stream_function_{index}(self.{field.name}, f)")
+        globs[f"stream_function_{index}"] = field.stream_function
+
+    cls.stream = m("stream", "\n".join(stream_lines), globs=globs)
+
     return cls
 
 
@@ -583,8 +596,8 @@ class Streamable:
         return obj
 
     def stream(self, f: BinaryIO) -> None:
-        for field in self._streamable_fields:
-            field.stream_function(getattr(self, field.name), f)
+        # handled by ZOA in @streamable
+        pass
 
     def get_hash(self) -> bytes32:
         return std_hash(bytes(self), skip_bytes_conversion=True)
