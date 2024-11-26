@@ -281,17 +281,18 @@ class TestCMD:
 
 T = TypeVar("T")
 U = TypeVar("U")
+U_co = TypeVar("U_co", covariant=True)
 V = TypeVar("V")
 
 
-class PoolHandler(Protocol[T_contra, U]):
-    async def __call__(self, job: T_contra) -> list[U]: ...
+class PoolHandler(Protocol[T_contra, U_co]):
+    async def __call__(self, job: T_contra) -> list[U_co]: ...
 
 
 async def pool_worker(
-    handler: PoolHandler[T, U],
-    jobs: anyio.streams.memory.MemoryObjectReceiveStream[T],
-    results: anyio.streams.memory.MemoryObjectSendStream[U],
+    handler: PoolHandler[T_contra, U_co],
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[T_contra],
+    results: anyio.streams.memory.MemoryObjectSendStream[U_co],
 ) -> None:
     unwrapped_handler = handler
     while isinstance(unwrapped_handler, functools.partial):
@@ -312,9 +313,9 @@ async def pool_worker(
 
 
 async def pool(
-    jobs: anyio.streams.memory.MemoryObjectReceiveStream[T],
-    results: anyio.streams.memory.MemoryObjectSendStream[U],
-    handler: PoolHandler[T, U],
+    jobs: anyio.streams.memory.MemoryObjectReceiveStream[T_contra],
+    results: anyio.streams.memory.MemoryObjectSendStream[U_co],
+    handler: PoolHandler[T_contra, U_co],
     capacity: int,
 ) -> None:
     async with anyio.create_task_group() as task_group:
@@ -382,14 +383,14 @@ class Pipeline(Generic[T, U]):
 
 
 @dataclass
-class PoolStage(Generic[T_contra, U]):
-    handler: PoolHandler[T_contra, U]
+class PoolStage(Generic[T_contra, U_co]):
+    handler: PoolHandler[T_contra, U_co]
     capacity: int = 10
 
     async def __call__(
         self,
         jobs: anyio.streams.memory.MemoryObjectReceiveStream[T_contra],
-        results: anyio.streams.memory.MemoryObjectSendStream[U],
+        results: anyio.streams.memory.MemoryObjectSendStream[U_co],
     ) -> None:
         await pool(jobs, results, self.handler, self.capacity)
 
