@@ -405,23 +405,40 @@ class PoolStage(Generic[T_contra, U_co]):
 class RerunCMD:
     owner: str = option("-o", "--owner", help="Owner of the repo", type=str, default="Chia-Network")
     repository: str = option("-r", "--repository", help="Repository name", type=str, default="chia-blockchain")
-    pr: int = option("--pr", help="Pull request number", type=int, required=True)
+    author: str = option("--author", help="Author to search for PRs from", type=str, required=True)
     max_attempts: int = option("--max-attempts", help="Maximum number of attempts", type=int, default=3)
     dry_run: bool = option("--dry-run/--wet_run", help="Dry run")
 
     async def run(self) -> None:
         pipeline = (
-            Pipeline.create(PoolStage(handler=self.get_pull_request_head_sha))
+            Pipeline.create(PoolStage(handler=self.get_authors_pull_requests))
+            .add(PoolStage(handler=self.get_pull_request_head_sha))
             .add(PoolStage(handler=self.get_check_suite_ids_for_sha))
             .add(PoolStage(handler=self.get_run_ids_for_check_suite_id))
             .add(PoolStage(handler=self.get_run_info))
             .add(PoolStage(handler=self.maybe_rerun_job))
         )
 
-        async with pipeline.setup(jobs=[self.pr]) as results:
+        async with pipeline.setup(jobs=[self.author]) as results:
             async with results:
                 async for result in results:
                     print(f" >---< {result!r}")
+
+    async def get_authors_pull_requests(self, job: str) -> list[int]:
+        author = job
+        # https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#get-a-pull-request
+        stdout = await run_gh_api(
+            method="GET",
+            args=[
+                "/search/issues",
+                f"-f=q=state:open author:{author} repo:{self.owner}/{self.repository} type:pr draft:no",
+            ],
+            error="Failed to get pull requests for author",
+            capture_stdout=True,
+        )
+        response = json.loads(stdout)
+        results = [item["number"] for item in response["items"]]
+        return results
 
     async def get_pull_request_head_sha(self, job: int) -> list[bytes]:
         pr = job
@@ -521,7 +538,7 @@ class RerunCMD:
 
     async def maybe_rerun_job(self, job: RunInfo) -> list[None]:
         run = job
-        if run.conclusion in {"failure", "cancelled"}:
+        if run.conclusion in {"failure", "cancelled"} and "check pr labels" not in run.name.lower():
             if run.attempts >= self.max_attempts:
                 print("    ---- giving up on", run.url)
             else:
