@@ -347,7 +347,26 @@ async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetR
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
 
-    assert values == [1] * concurrent_task_count
+        assert values == [1] * concurrent_task_count
+
+        async with db_wrapper.writer_maybe_transaction() as connection:
+            await connection.execute("UPDATE counter SET value = 2")
+        
+        concurrent_task_count = 200
+            
+        async with contextlib.AsyncExitStack() as exit_stack:
+            if acquire_outside:
+                await exit_stack.enter_async_context(get_reader_method(db_wrapper)())
+            
+            tasks = []
+            values: list[int] = []
+            for index in range(concurrent_task_count):
+                task = asyncio.create_task(sum_counter(db_wrapper, values))
+                tasks.append(task)
+            
+        await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
+
+        assert values == [2] * concurrent_task_count
 
 
 @pytest.mark.anyio
