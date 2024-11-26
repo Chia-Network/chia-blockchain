@@ -282,10 +282,6 @@ class TestCMD:
 T = TypeVar("T")
 U = TypeVar("U")
 V = TypeVar("V")
-W = TypeVar("W")
-X = TypeVar("X")
-Y = TypeVar("Y")
-Z = TypeVar("Z")
 
 
 class PoolHandler(Protocol[T_contra, U]):
