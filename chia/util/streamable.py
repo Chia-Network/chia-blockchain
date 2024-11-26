@@ -510,20 +510,75 @@ def streamable(cls: type[_T_Streamable]) -> type[_T_Streamable]:
 
     cls._streamable_fields = create_fields(cls)
 
-    def m(name: str, source: str, globs: dict[str, object]):
-        locs = {}
-        eval(compile(source, "<string>", "exec"), globs, locs)
-        return locs[name]
-
-    stream_lines: list[str] = ["def stream(self, f: BinaryIO) -> None:", "    pass"]
-    globs = {}
-    for index, field in enumerate(cls._streamable_fields):
-        stream_lines.append(f"    stream_function_{index}(self.{field.name}, f)")
-        globs[f"stream_function_{index}"] = field.stream_function
-
-    cls.stream = m("stream", "\n".join(stream_lines), globs=globs)
+    cls.stream = generate_stream_method(cls._streamable_fields)
+    cls.parse = generate_parse_method(cls._streamable_fields)
+    cls.__post_init__ = generate_post_init_method(cls._streamable_fields)
 
     return cls
+
+
+def make_method(signature: str, body: str, globals_: dict[str, object]) -> Callable:  # type: ignore[type-arg]
+    locals_: dict[str, object] = {}
+    if len(body.strip()) == 0:
+        body = "pass"
+
+    source = "\n    ".join([signature, *body.splitlines()])
+
+    eval(compile(source, "<string>", "exec"), globals_, locals_)
+    [result] = locals_.values()
+    return result  # type: ignore[return-value]
+
+
+def generate_stream_method(streamable_fields: StreamableFields) -> Callable:  # type: ignore[type-arg]
+    globals_: dict[str, object] = {o.__name__: o for o in [BinaryIO]}
+    signature = "def stream(self, f: BinaryIO) -> None:"
+    body: list[str] = []
+    for index, field in enumerate(streamable_fields):
+        body.append(f"stream_function_{index}(self.{field.name}, f)")
+        globals_[f"stream_function_{index}"] = field.stream_function
+
+    return make_method(signature=signature, body="\n".join(body), globals_=globals_)
+
+
+def generate_parse_method(streamable_fields: StreamableFields) -> Callable:  # type: ignore[type-arg]
+    globals_: dict[str, object] = {o.__name__: o for o in [BinaryIO, _T_Streamable]}  # type: ignore[attr-defined]
+    signature = "@classmethod\ndef parse(cls: type[_T_Streamable], f: BinaryIO) -> _T_Streamable:"
+    body: list[str] = [
+        # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
+        "obj: _T_Streamable = object.__new__(cls)",
+    ]
+    for index, field in enumerate(streamable_fields):
+        body.append(f"object.__setattr__(obj, {field.name!r}, parse_function_{index}(f))")
+        globals_[f"parse_function_{index}"] = field.parse_function
+
+    body.append("return obj")
+
+    return make_method(signature=signature, body="\n".join(body), globals_=globals_)
+
+
+def generate_post_init_method(streamable_fields: StreamableFields) -> Callable:  # type: ignore[type-arg]
+    globals_: dict[str, object] = {o.__name__: o for o in [ParameterMissingError]}
+    signature = "def __post_init__(self) -> None:"
+    body: list[str] = []
+    if len(streamable_fields) > 0:
+        body.append("try:")
+        for index, field in enumerate(streamable_fields):
+            body.append(f"    object.__setattr__(self, {field.name!r}, post_init_function_{index}(self.{field.name}))")
+            globals_[f"post_init_function_{index}"] = field.post_init_function
+
+        field_names = {field.name for field in streamable_fields}
+        body.extend(
+            [
+                "except TypeError as e:",
+                f"    field_names = {field_names!r}",
+                "    missing_fields = field_names - self.__dict__.keys()",
+                "    if len(missing_fields) > 0:",
+                "        raise ParameterMissingError(type(self), missing_fields) from e",
+                "    raise",
+            ]
+        )
+
+    return make_method(signature=signature, body="\n".join(body), globals_=globals_)
 
 
 class Streamable:
@@ -577,27 +632,17 @@ class Streamable:
         return cls._streamable_fields
 
     def __post_init__(self) -> None:
-        data = self.__dict__
-        try:
-            for field in self._streamable_fields:
-                object.__setattr__(self, field.name, field.post_init_function(data[field.name]))
-        except TypeError as e:
-            missing_fields = [field.name for field in self._streamable_fields if field.name not in data]
-            if len(missing_fields) > 0:
-                raise ParameterMissingError(type(self), missing_fields) from e
-            raise
+        # handled by ZOA in @streamable
+        ...
 
     @classmethod
-    def parse(cls: type[_T_Streamable], f: BinaryIO) -> _T_Streamable:
-        # Create the object without calling __init__() to avoid unnecessary post-init checks in strictdataclass
-        obj: _T_Streamable = object.__new__(cls)
-        for field in cls._streamable_fields:
-            object.__setattr__(obj, field.name, field.parse_function(f))
-        return obj
+    def parse(cls: type[_T_Streamable], f: BinaryIO) -> _T_Streamable:  # type: ignore[empty-body]
+        # handled by ZOA in @streamable
+        ...
 
     def stream(self, f: BinaryIO) -> None:
         # handled by ZOA in @streamable
-        pass
+        ...
 
     def get_hash(self) -> bytes32:
         return std_hash(bytes(self), skip_bytes_conversion=True)
