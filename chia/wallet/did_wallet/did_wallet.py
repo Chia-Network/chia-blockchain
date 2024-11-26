@@ -142,7 +142,7 @@ class DIDWallet:
         try:
             await self.generate_new_decentralised_id(amount, action_scope, fee, extra_conditions)
         except Exception:
-            await wallet_state_manager.user_store.delete_wallet(self.id())
+            await wallet_state_manager.delete_wallet(self.id())
             raise
 
         await self.wallet_state_manager.add_new_wallet(self)
@@ -208,7 +208,6 @@ class DIDWallet:
         :param name: Wallet name
         :return: DID wallet
         """
-
         self = DIDWallet()
         self.wallet_state_manager = wallet_state_manager
         if name is None:
@@ -317,6 +316,7 @@ class DIDWallet:
 
         for record in unconfirmed_tx:
             our_spend = False
+            # Need to check belonging with hint_dict
             for coin in record.removals:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
                     our_spend = True
@@ -326,7 +326,12 @@ class DIDWallet:
                 continue
 
             for coin in record.additions:
-                if (await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id())) and (
+                hint_dict = {
+                    coin_id: bytes32(memos[0])
+                    for coin_id, memos in record.memos
+                    if len(memos) > 0 and len(memos[0]) == 32
+                }
+                if (await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id(), hint_dict)) and (
                     coin not in record.removals
                 ):
                     addition_amount += coin.amount
@@ -576,7 +581,7 @@ class DIDWallet:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coin = await self.get_coin()
-        new_inner_puzzle = await self.get_new_did_innerpuz()
+        new_inner_puzzle = await self.get_did_innerpuz(new=not action_scope.config.tx_config.reuse_puzhash)
         uncurried = did_wallet_puzzles.uncurry_innerpuz(new_inner_puzzle)
         assert uncurried is not None
         p2_puzzle = uncurried[0]
@@ -1097,6 +1102,12 @@ class DIDWallet:
         )
         await self.save_info(new_did_info)
 
+    async def get_p2_inner_hash(self, new: bool) -> bytes32:
+        return await self.standard_wallet.get_puzzle_hash(new=new)
+
+    async def get_p2_inner_puzzle(self, new: bool) -> Program:
+        return await self.standard_wallet.get_puzzle(new=new)
+
     async def get_new_p2_inner_hash(self) -> bytes32:
         puzzle = await self.get_new_p2_inner_puzzle()
         return puzzle.get_tree_hash()
@@ -1104,7 +1115,7 @@ class DIDWallet:
     async def get_new_p2_inner_puzzle(self) -> Program:
         return await self.standard_wallet.get_new_puzzle()
 
-    async def get_new_did_innerpuz(self, origin_id: Optional[bytes32] = None) -> Program:
+    async def get_did_innerpuz(self, new: bool, origin_id: Optional[bytes32] = None) -> Program:
         if self.did_info.origin_coin is not None:
             launcher_id = self.did_info.origin_coin.name()
         elif origin_id is not None:
@@ -1112,15 +1123,15 @@ class DIDWallet:
         else:
             raise ValueError("must have origin coin")
         return did_wallet_puzzles.create_innerpuz(
-            p2_puzzle_or_hash=await self.get_new_p2_inner_puzzle(),
+            p2_puzzle_or_hash=await self.get_p2_inner_puzzle(new=new),
             recovery_list=self.did_info.backup_ids,
             num_of_backup_ids_needed=self.did_info.num_of_backup_ids_needed,
             launcher_id=launcher_id,
             metadata=did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
 
-    async def get_new_did_inner_hash(self) -> bytes32:
-        innerpuz = await self.get_new_did_innerpuz()
+    async def get_did_inner_hash(self, new: bool) -> bytes32:
+        innerpuz = await self.get_did_innerpuz(new=new)
         return innerpuz.get_tree_hash()
 
     async def get_innerpuz_for_new_innerhash(self, pubkey: G1Element):
@@ -1215,7 +1226,9 @@ class DIDWallet:
         genesis_launcher_puz = SINGLETON_LAUNCHER_PUZZLE
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
-        did_inner: Program = await self.get_new_did_innerpuz(launcher_coin.name())
+        did_inner: Program = await self.get_did_innerpuz(
+            new=not action_scope.config.tx_config.reuse_puzhash, origin_id=launcher_coin.name()
+        )
         did_inner_hash = did_inner.get_tree_hash()
         did_full_puz = create_singleton_puzzle(did_inner, launcher_coin.name())
         did_puzzle_hash = did_full_puz.get_tree_hash()

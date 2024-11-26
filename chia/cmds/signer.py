@@ -211,6 +211,7 @@ class SPOut(QrCodeDisplay, _SPTranslation):
 @chia_command(
     signer_cmd,
     "gather_signing_info",
+    "gather signer information",
     "Gather the information from a transaction that a signer needs in order to create a signature",
 )
 class GatherSigningInfoCMD:
@@ -232,7 +233,7 @@ class GatherSigningInfoCMD:
             self.sp_out.handle_clvm_output([signing_instructions])
 
 
-@chia_command(signer_cmd, "apply_signatures", "Apply a signer's signatures to a transaction bundle")
+@chia_command(signer_cmd, "apply_signatures", "apply signatures", "Apply a signer's signatures to a transaction bundle")
 class ApplySignaturesCMD:
     txs_out: TransactionsOut
     sp_in: SPIn
@@ -270,7 +271,12 @@ class ApplySignaturesCMD:
             self.txs_out.handle_transaction_output(new_transactions)
 
 
-@chia_command(signer_cmd, "execute_signing_instructions", "Given some signing instructions, return signing responses")
+@chia_command(
+    signer_cmd,
+    "execute_signing_instructions",
+    "execute signing instructions",
+    "Given some signing instructions, return signing responses",
+)
 class ExecuteSigningInstructionsCMD:
     sp_out: SPOut
     sp_in: SPIn
@@ -292,7 +298,12 @@ class ExecuteSigningInstructionsCMD:
             )
 
 
-@chia_command(wallet_cmd, "push_transactions", "Push a transaction bundle to the wallet to send to the network")
+@chia_command(
+    wallet_cmd,
+    "push_transactions",
+    "push transaction bundle",
+    "Push a transaction bundle to the wallet to send to the network",
+)
 class PushTransactionsCMD:
     txs_in: TransactionsIn
     rpc_info: NeedsWalletRPC
