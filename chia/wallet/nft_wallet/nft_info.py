@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -40,19 +40,19 @@ class NFTInfo(Streamable):
 
     royalty_puzzle_hash: Optional[bytes32]
     """Puzzle hash where royalty will be sent to"""
-    data_uris: List[str]
+    data_uris: list[str]
     """ A list of content URIs"""
 
     data_hash: bytes
     """Hash of the content"""
 
-    metadata_uris: List[str]
+    metadata_uris: list[str]
     """A list of metadata URIs"""
 
     metadata_hash: bytes
     """Hash of the metadata"""
 
-    license_uris: List[str]
+    license_uris: list[str]
     """A list of license URIs"""
 
     license_hash: bytes

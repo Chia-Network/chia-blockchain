@@ -5,7 +5,7 @@ import logging
 import random
 import sqlite3
 from pathlib import Path
-from typing import List, Optional, cast
+from typing import Optional, cast
 
 import pytest
 
@@ -58,9 +58,7 @@ async def test_block_store(tmp_dir: Path, db_version: int, bt: BlockTools, use_c
         time_per_block=10,
     )
     wt: WalletTool = bt.get_pool_wallet_tool()
-    tx = wt.generate_signed_transaction(
-        uint64(10), wt.get_new_puzzlehash(), list(blocks[-1].get_included_reward_coins())[0]
-    )
+    tx = wt.generate_signed_transaction(uint64(10), wt.get_new_puzzlehash(), blocks[-1].get_included_reward_coins()[0])
     blocks = bt.get_consecutive_blocks(
         10,
         block_list_input=blocks,
@@ -153,7 +151,7 @@ async def test_deadlock(tmp_dir: Path, db_version: int, bt: BlockTools, use_cach
         for block in blocks:
             await _validate_and_add_block(bc, block)
             block_records.append(bc.block_record(block.header_hash))
-        tasks: List[asyncio.Task[object]] = []
+        tasks: list[asyncio.Task[object]] = []
 
         for i in range(10000):
             rand_i = random.randint(0, 9)

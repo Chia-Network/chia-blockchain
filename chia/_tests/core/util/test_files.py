@@ -336,7 +336,7 @@ class TestWriteFile:
         Write a file to a location and use the default permissions.
         """
 
-        if sys.platform in ["win32", "cygwin"]:
+        if sys.platform in {"win32", "cygwin"}:
             pytest.skip("Setting UNIX file permissions doesn't apply to Windows")
 
         dest_path: Path = tmp_path / "test_write_file/test_write_file.txt"
@@ -355,7 +355,7 @@ class TestWriteFile:
         Write a file to a location and use custom permissions.
         """
 
-        if sys.platform in ["win32", "cygwin"]:
+        if sys.platform in {"win32", "cygwin"}:
             pytest.skip("Setting UNIX file permissions doesn't apply to Windows")
 
         dest_path: Path = tmp_path / "test_write_file/test_write_file.txt"

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
 import traceback
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import click
 from aiohttp import ClientConnectorCertificateError, ClientConnectorError
@@ -33,7 +35,7 @@ from chia.wallet.conditions import ConditionValidTimes
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.tx_config import CoinSelectionConfig, CoinSelectionConfigLoader, TXConfig, TXConfigLoader
 
-NODE_TYPES: Dict[str, Type[RpcClient]] = {
+NODE_TYPES: dict[str, type[RpcClient]] = {
     "base": RpcClient,
     "farmer": FarmerRpcClient,
     "wallet": WalletRpcClient,
@@ -43,7 +45,7 @@ NODE_TYPES: Dict[str, Type[RpcClient]] = {
     "simulator": SimulatorFullNodeRpcClient,
 }
 
-node_config_section_names: Dict[Type[RpcClient], str] = {
+node_config_section_names: dict[type[RpcClient], str] = {
     RpcClient: "base",
     FarmerRpcClient: "farmer",
     WalletRpcClient: "wallet",
@@ -92,12 +94,12 @@ async def validate_client_connection(
 
 @asynccontextmanager
 async def get_any_service_client(
-    client_type: Type[_T_RpcClient],
+    client_type: type[_T_RpcClient],
     rpc_port: Optional[int] = None,
     root_path: Optional[Path] = None,
     consume_errors: bool = True,
     use_ssl: bool = True,
-) -> AsyncIterator[Tuple[_T_RpcClient, Dict[str, Any]]]:
+) -> AsyncIterator[tuple[_T_RpcClient, dict[str, Any]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
@@ -116,42 +118,44 @@ async def get_any_service_client(
     self_hostname = config["self_hostname"]
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
-    # select node client type based on string
-    if use_ssl:
-        node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path=root_path, net_config=config)
-    else:
-        node_client = await client_type.create(self_hostname, uint16(rpc_port), root_path=None, net_config=None)
 
-    try:
-        # check if we can connect to node
-        await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
-        yield node_client, config
-    except ResponseFailureError as e:
-        if not consume_errors:
-            raise
+    async with contextlib.AsyncExitStack() as exit_stack:
+        # select node client type based on string
+        if use_ssl:
+            node_client = await exit_stack.enter_async_context(
+                client_type.create_as_context(self_hostname, uint16(rpc_port), root_path=root_path, net_config=config)
+            )
+        else:
+            node_client = await exit_stack.enter_async_context(
+                client_type.create_as_context(self_hostname, uint16(rpc_port), root_path=None, net_config=None)
+            )
 
-        response = dict(e.response)
-        tb = response.pop("traceback", None)
+        try:
+            # check if we can connect to node
+            await validate_client_connection(node_client, node_type, rpc_port, consume_errors)
+            yield node_client, config
+        except ResponseFailureError as e:
+            if not consume_errors:
+                raise
 
-        print(f"{ResponseFailureError(response=response)}")
+            response = dict(e.response)
+            tb = response.pop("traceback", None)
 
-        if tb is not None:
-            print(f"Traceback:\n{tb}")
-    except Exception as e:  # this is only here to make the errors more user-friendly.
-        if not consume_errors or isinstance(e, (CliRpcConnectionError, click.Abort)):
-            # CliRpcConnectionError will be handled by click.
-            raise
-        print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
+            print(f"{ResponseFailureError(response=response)}")
 
-    finally:
-        node_client.close()  # this can run even if already closed, will just do nothing.
-        await node_client.await_closed()
+            if tb is not None:
+                print(f"Traceback:\n{tb}")
+        except Exception as e:  # this is only here to make the errors more user-friendly.
+            if not consume_errors or isinstance(e, (CliRpcConnectionError, click.Abort)):
+                # CliRpcConnectionError will be handled by click.
+                raise
+            print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
 
 
 async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprint: Optional[int]) -> int:
     selected_fingerprint: int
     keychain_proxy: Optional[KeychainProxy] = None
-    all_keys: List[KeyData] = []
+    all_keys: list[KeyData] = []
 
     try:
         if fingerprint is not None:
@@ -177,9 +181,10 @@ async def get_wallet(root_path: Path, wallet_client: WalletRpcClient, fingerprin
                 current_sync_status: str = ""
                 indent = "   "
                 if logged_in_key is not None:
-                    if await wallet_client.get_synced():
+                    sync_response = await wallet_client.get_sync_status()
+                    if sync_response.synced:
                         current_sync_status = "Synced"
-                    elif await wallet_client.get_sync_status():
+                    elif sync_response.syncing:
                         current_sync_status = "Syncing"
                     else:
                         current_sync_status = "Not Synced"
@@ -247,7 +252,7 @@ async def get_wallet_client(
     fingerprint: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
     consume_errors: bool = True,
-) -> AsyncIterator[Tuple[WalletRpcClient, int, Dict[str, Any]]]:
+) -> AsyncIterator[tuple[WalletRpcClient, int, dict[str, Any]]]:
     async with get_any_service_client(WalletRpcClient, wallet_rpc_port, root_path, consume_errors) as (
         wallet_client,
         config,
@@ -261,7 +266,7 @@ def cli_confirm(input_message: str, abort_message: str = "Did not confirm. Abort
     Raise a click.Abort if the user does not respond with 'y' or 'yes'
     """
     response = input(input_message).lower()
-    if response not in ["y", "yes"]:
+    if response not in {"y", "yes"}:
         print(abort_message)
         raise click.Abort()
 
@@ -323,7 +328,7 @@ def timelock_args(enable: Optional[bool] = None) -> Callable[[Callable[..., None
                     min_time=uint64.construct_optional(kwargs["valid_at"]),
                     max_time=uint64.construct_optional(kwargs["expires_at"]),
                 ),
-                **{k: v for k, v in kwargs.items() if k not in ("valid_at", "expires_at")},
+                **{k: v for k, v in kwargs.items() if k not in {"valid_at", "expires_at"}},
             )
 
         return click.option(
@@ -350,17 +355,16 @@ def timelock_args(enable: Optional[bool] = None) -> Callable[[Callable[..., None
 @streamable
 @dataclasses.dataclass(frozen=True)
 class TransactionBundle(Streamable):
-    txs: List[TransactionRecord]
+    txs: list[TransactionRecord]
 
 
 def tx_out_cmd(
     enable_timelock_args: Optional[bool] = None,
-) -> Callable[[Callable[..., List[TransactionRecord]]], Callable[..., None]]:
-
-    def _tx_out_cmd(func: Callable[..., List[TransactionRecord]]) -> Callable[..., None]:
+) -> Callable[[Callable[..., list[TransactionRecord]]], Callable[..., None]]:
+    def _tx_out_cmd(func: Callable[..., list[TransactionRecord]]) -> Callable[..., None]:
         @timelock_args(enable=enable_timelock_args)
         def original_cmd(transaction_file: Optional[str] = None, **kwargs: Any) -> None:
-            txs: List[TransactionRecord] = func(**kwargs)
+            txs: list[TransactionRecord] = func(**kwargs)
             if transaction_file is not None:
                 print(f"Writing transactions to file {transaction_file}:")
                 with open(Path(transaction_file), "wb") as file:
@@ -385,8 +389,8 @@ def tx_out_cmd(
 class CMDCoinSelectionConfigLoader:
     min_coin_amount: CliAmount = cli_amount_none
     max_coin_amount: CliAmount = cli_amount_none
-    excluded_coin_amounts: Optional[List[CliAmount]] = None
-    excluded_coin_ids: Optional[List[bytes32]] = None
+    excluded_coin_amounts: Optional[list[CliAmount]] = None
+    excluded_coin_ids: Optional[list[bytes32]] = None
 
     def to_coin_selection_config(self, mojo_per_unit: int) -> CoinSelectionConfig:
         return CoinSelectionConfigLoader(
@@ -405,7 +409,7 @@ class CMDCoinSelectionConfigLoader:
 class CMDTXConfigLoader(CMDCoinSelectionConfigLoader):
     reuse_puzhash: Optional[bool] = None
 
-    def to_tx_config(self, mojo_per_unit: int, config: Dict[str, Any], fingerprint: int) -> TXConfig:
+    def to_tx_config(self, mojo_per_unit: int, config: dict[str, Any], fingerprint: int) -> TXConfig:
         cs_config = self.to_coin_selection_config(mojo_per_unit)
         return TXConfigLoader(
             cs_config.min_coin_amount,
@@ -474,16 +478,6 @@ def format_minutes(minutes: int) -> str:
         return format_unit_string("minute", minutes)
 
     return "Unknown"
-
-
-def prompt_yes_no(prompt: str) -> bool:
-    while True:
-        response = str(input(prompt + " (y/n): ")).lower().strip()
-        ch = response[:1]
-        if ch == "y":
-            return True
-        elif ch == "n":
-            return False
 
 
 def validate_directory_writable(path: Path) -> None:

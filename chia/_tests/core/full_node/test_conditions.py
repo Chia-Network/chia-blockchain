@@ -6,14 +6,16 @@ or that they're failing for the right reason when they're invalid.
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element
 from clvm.casts import int_to_bytes
 from clvm_tools.binutils import assemble
 
+from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.conftest import ConsensusMode
+from chia._tests.core.full_node.ram_db import create_ram_blockchain
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.keyring import TempKeyring
 from chia.types.blockchain_format.program import Program
@@ -27,9 +29,6 @@ from chia.util.condition_tools import agg_sig_additional_data
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 from chia.wallet.conditions import AssertCoinAnnouncement, AssertPuzzleAnnouncement
-
-from ...blockchain.blockchain_test_utils import _validate_and_add_block
-from .ram_db import create_ram_blockchain
 
 
 def cleanup_keyring(keyring: TempKeyring) -> None:
@@ -46,7 +45,7 @@ EASY_PUZZLE = SerializedProgram.from_bytes(b"\x01")
 EASY_PUZZLE_HASH = EASY_PUZZLE.get_tree_hash()
 
 
-async def initial_blocks(bt: BlockTools, block_count: int = 4) -> List[FullBlock]:
+async def initial_blocks(bt: BlockTools, block_count: int = 4) -> list[FullBlock]:
     blocks = bt.get_consecutive_blocks(
         block_count,
         guarantee_transaction_block=True,
@@ -60,17 +59,17 @@ async def initial_blocks(bt: BlockTools, block_count: int = 4) -> List[FullBlock
 
 async def check_spend_bundle_validity(
     bt: BlockTools,
-    blocks: List[FullBlock],
+    blocks: list[FullBlock],
     spend_bundle: SpendBundle,
     expected_err: Optional[Err] = None,
-) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
+) -> tuple[list[CoinRecord], list[CoinRecord], FullBlock]:
     """
     This test helper create an extra block after the given blocks that contains the given
     `SpendBundle`, and then invokes `add_block` to ensure that it's accepted (if `expected_err=None`)
     or fails with the correct error code.
     """
 
-    async with create_ram_blockchain(bt.constants) as (db_wrapper, blockchain):
+    async with create_ram_blockchain(bt.constants) as (_, blockchain):
         for block in blocks:
             await _validate_and_add_block(blockchain, block)
 
@@ -103,7 +102,7 @@ async def check_conditions(
     spend_reward_index: int = -2,
     *,
     aggsig: G2Element = G2Element(),
-) -> Tuple[List[CoinRecord], List[CoinRecord], FullBlock]:
+) -> tuple[list[CoinRecord], list[CoinRecord], FullBlock]:
     blocks = await initial_blocks(bt)
     coin = blocks[spend_reward_index].get_included_reward_coins()[0]
 
@@ -142,7 +141,7 @@ class TestConditions:
         self, opcode: int, expected_cost: int, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         conditions = Program.to(assemble(f"(({opcode} 1337))"))
-        additions, removals, new_block = await check_conditions(bt, conditions)
+        _additions, _removals, new_block = await check_conditions(bt, conditions)
 
         # once the hard fork activates, blocks no longer pay the cost of the ROM
         # generator (which includes hashing all puzzles).
@@ -165,7 +164,7 @@ class TestConditions:
         self, condition: str, expected_cost: int, bt: BlockTools, consensus_mode: ConsensusMode
     ) -> None:
         conditions = Program.to(assemble(condition))
-        additions, removals, new_block = await check_conditions(bt, conditions)
+        _additions, _removals, new_block = await check_conditions(bt, conditions)
 
         if consensus_mode < ConsensusMode.HARD_FORK_2_0:
             block_base_cost = 737056
@@ -503,7 +502,6 @@ class TestConditions:
         bt: BlockTools,
         consensus_mode: ConsensusMode,
     ) -> None:
-
         c = bt.constants
 
         additional_data = agg_sig_additional_data(c.AGG_SIG_ME_ADDITIONAL_DATA)

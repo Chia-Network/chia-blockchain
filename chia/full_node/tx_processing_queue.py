@@ -4,7 +4,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from queue import SimpleQueue
-from typing import Dict, List, Optional
+from typing import Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.transaction_queue_entry import TransactionQueueEntry
@@ -25,8 +25,8 @@ class TransactionQueue:
 
     _list_cursor: int  # this is which index
     _queue_length: asyncio.Semaphore
-    _index_to_peer_map: List[bytes32]
-    _queue_dict: Dict[bytes32, SimpleQueue[TransactionQueueEntry]]
+    _index_to_peer_map: list[bytes32]
+    _queue_dict: dict[bytes32, SimpleQueue[TransactionQueueEntry]]
     _high_priority_queue: SimpleQueue[TransactionQueueEntry]
     peer_size_limit: int
     log: logging.Logger

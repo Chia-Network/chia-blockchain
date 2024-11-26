@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from chia_rs import G1Element
 from clvm.casts import int_to_bytes
@@ -115,7 +115,7 @@ def launcher_id_to_p2_puzzle_hash(launcher_id: bytes32, seconds_delay: uint64, d
     return create_p2_singleton_puzzle_hash(SINGLETON_MOD_HASH, launcher_id, seconds_delay, delayed_puzzle_hash)
 
 
-def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> Tuple[uint64, bytes32]:
+def get_delayed_puz_info_from_launcher_spend(coinsol: CoinSpend) -> tuple[uint64, bytes32]:
     extra_data = Program.from_bytes(bytes(coinsol.solution)).rest().rest().first()
     # Extra data is (pool_state delayed_puz_info)
     # Delayed puz info is (seconds delayed_puzzle_hash)
@@ -143,11 +143,11 @@ def get_template_singleton_inner_puzzle(inner_puzzle: Program) -> Program:
     r = inner_puzzle.uncurry()
     if r is None:
         return False
-    uncurried_inner_puzzle, args = r
+    uncurried_inner_puzzle, _args = r
     return uncurried_inner_puzzle
 
 
-def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program) -> Tuple[uint64, bytes32]:
+def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program) -> tuple[uint64, bytes32]:
     r = puzzle.uncurry()
     if r is None:
         return False
@@ -161,17 +161,17 @@ def get_seconds_and_delayed_puzhash_from_p2_singleton_puzzle(puzzle: Program) ->
 # Verify that a puzzle is a Pool Wallet Singleton
 def is_pool_singleton_inner_puzzle(inner_puzzle: Program) -> bool:
     inner_f = get_template_singleton_inner_puzzle(inner_puzzle)
-    return inner_f in [POOL_WAITING_ROOM_MOD, POOL_MEMBER_MOD]
+    return inner_f in (POOL_WAITING_ROOM_MOD, POOL_MEMBER_MOD)  # noqa: PLR6201
 
 
 def is_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> bool:
     inner_f = get_template_singleton_inner_puzzle(inner_puzzle)
-    return inner_f in [POOL_WAITING_ROOM_MOD]
+    return inner_f == POOL_WAITING_ROOM_MOD
 
 
 def is_pool_member_inner_puzzle(inner_puzzle: Program) -> bool:
     inner_f = get_template_singleton_inner_puzzle(inner_puzzle)
-    return inner_f in [POOL_MEMBER_MOD]
+    return inner_f == POOL_MEMBER_MOD
 
 
 # This spend will use the escape-type spend path for whichever state you are currently in
@@ -185,7 +185,7 @@ def create_travel_spend(
     genesis_challenge: bytes32,
     delay_time: uint64,
     delay_ph: bytes32,
-) -> Tuple[CoinSpend, Program]:
+) -> tuple[CoinSpend, Program]:
     inner_puzzle: Program = pool_state_to_inner_puzzle(
         current,
         launcher_coin.name(),
@@ -251,7 +251,7 @@ def create_absorb_spend(
     genesis_challenge: bytes32,
     delay_time: uint64,
     delay_ph: bytes32,
-) -> List[CoinSpend]:
+) -> list[CoinSpend]:
     inner_puzzle: Program = pool_state_to_inner_puzzle(
         current_state, launcher_coin.name(), genesis_challenge, delay_time, delay_ph
     )
@@ -309,7 +309,7 @@ def create_absorb_spend(
 
 
 def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optional[Coin]:
-    additions: List[Coin] = compute_additions(coin_sol)
+    additions: list[Coin] = compute_additions(coin_sol)
     for coin in additions:
         if coin.amount % 2 == 1:
             return coin
@@ -335,7 +335,7 @@ def get_pubkey_from_member_inner_puzzle(inner_puzzle: Program) -> G1Element:
 
 def uncurry_pool_member_inner_puzzle(
     inner_puzzle: Program,
-) -> Tuple[Program, Program, Program, Program, Program, Program]:
+) -> tuple[Program, Program, Program, Program, Program, Program]:
     """
     Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
@@ -352,7 +352,7 @@ def uncurry_pool_member_inner_puzzle(
     return inner_f, target_puzzle_hash, p2_singleton_hash, owner_pubkey, pool_reward_prefix, escape_puzzlehash
 
 
-def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Tuple[Program, Program, Program, Program]:
+def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> tuple[Program, Program, Program, Program]:
     """
     Take a puzzle and return `None` if it's not a "pool member" inner puzzle, or
     a triple of `mod_hash, relative_lock_height, pubkey` if it is.
@@ -362,9 +362,9 @@ def uncurry_pool_waitingroom_inner_puzzle(inner_puzzle: Program) -> Tuple[Progra
     r = inner_puzzle.uncurry()
     if r is None:
         raise ValueError("Failed to unpack inner puzzle")
-    inner_f, args = r
+    _inner_f, args = r
     v = args.as_iter()
-    target_puzzle_hash, p2_singleton_hash, owner_pubkey, genesis_challenge, relative_lock_height = tuple(v)
+    target_puzzle_hash, p2_singleton_hash, owner_pubkey, _genesis_challenge, relative_lock_height = tuple(v)
     return target_puzzle_hash, relative_lock_height, owner_pubkey, p2_singleton_hash
 
 
@@ -410,7 +410,7 @@ def solution_to_pool_state(full_spend: CoinSpend) -> Optional[PoolState]:
 
     # Spend which is not absorb, and is not the launcher
     num_args = len(inner_solution.as_python())
-    assert num_args in (2, 3)
+    assert num_args in {2, 3}
 
     if num_args == 2:
         # pool member
@@ -445,7 +445,7 @@ def pool_state_to_inner_puzzle(
         delay_time,
         delay_ph,
     )
-    if pool_state.state in [LEAVING_POOL.value, SELF_POOLING.value]:
+    if pool_state.state in {LEAVING_POOL.value, SELF_POOLING.value}:
         return escaping_inner_puzzle
     else:
         return create_pooling_inner_puzzle(

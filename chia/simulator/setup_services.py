@@ -5,11 +5,11 @@ import gc
 import logging
 import signal
 import sqlite3
-import time
+from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from types import FrameType
-from typing import Any, AsyncGenerator, AsyncIterator, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants, replace_str_to_bytes
@@ -53,7 +53,7 @@ log = logging.getLogger(__name__)
 
 
 @contextmanager
-def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[Dict[str, Any]]:
+def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[dict[str, Any]]:
     init(None, root_path)
     init(certs_path, root_path)
     path = config_path_for_filename(root_path=root_path, filename="config.yaml")
@@ -63,7 +63,7 @@ def create_lock_and_load_config(certs_path: Path, root_path: Path) -> Iterator[D
         yield config
 
 
-def get_capability_overrides(node_type: NodeType, disabled_capabilities: List[Capability]) -> List[Tuple[uint16, str]]:
+def get_capability_overrides(node_type: NodeType, disabled_capabilities: list[Capability]) -> list[tuple[uint16, str]]:
     return [
         (
             capability
@@ -102,7 +102,7 @@ async def setup_full_node(
     sanitize_weight_proof_only: bool = False,
     connect_to_daemon: bool = False,
     db_version: int = 1,
-    disable_capabilities: Optional[List[Capability]] = None,
+    disable_capabilities: Optional[list[Capability]] = None,
     *,
     reuse_db: bool = False,
 ) -> AsyncGenerator[Union[FullNodeService, SimulatorFullNodeService], None]:
@@ -309,7 +309,7 @@ async def setup_wallet_node(
                         break
                     except PermissionError as e:
                         print(f"db_path.unlink(): {e}")
-                        time.sleep(0.1)
+                        await asyncio.sleep(0.1)
                         # filesystem operations are async on windows
                         # [WinError 32] The process cannot access the file because it is
                         # being used by another process
@@ -482,7 +482,7 @@ async def setup_timelord(
     full_node_port: int,
     sanitizer: bool,
     consensus_constants: ConsensusConstants,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     root_path: Path,
     vdf_port: uint16 = uint16(0),
 ) -> AsyncGenerator[TimelordService, None]:

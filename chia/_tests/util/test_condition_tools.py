@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import pytest
 from chia_rs import G1Element
 from clvm.casts import int_to_bytes
@@ -29,8 +27,8 @@ TEST_COIN = Coin(H1, H2, uint64(123))
 
 def mk_agg_sig_conditions(
     opcode: ConditionOpcode,
-    agg_sig_data: List[Tuple[G1Element, bytes]],
-    agg_sig_unsafe_data: List[Tuple[G1Element, bytes]] = [],
+    agg_sig_data: list[tuple[G1Element, bytes]],
+    agg_sig_unsafe_data: list[tuple[G1Element, bytes]] = [],
 ) -> SpendBundleConditions:
     spend = SpendConditions(
         coin_id=TEST_COIN.name(),
@@ -53,7 +51,7 @@ def mk_agg_sig_conditions(
         agg_sig_puzzle_amount=agg_sig_data if opcode == ConditionOpcode.AGG_SIG_PUZZLE_AMOUNT else [],
         flags=0,
     )
-    return SpendBundleConditions([spend], 0, 0, 0, None, None, agg_sig_unsafe_data, 0, 0, 0)
+    return SpendBundleConditions([spend], 0, 0, 0, None, None, agg_sig_unsafe_data, 0, 0, 0, False)
 
 
 @pytest.mark.parametrize(
@@ -100,7 +98,7 @@ def test_pkm_pairs_vs_for_conditions_dict(opcode: ConditionOpcode) -> None:
 
 class TestPkmPairs:
     def test_empty_list(self) -> None:
-        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0)
+        conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, False)
         pks, msgs = pkm_pairs(conds, b"foobar")
         assert pks == []
         assert msgs == []

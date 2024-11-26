@@ -42,6 +42,6 @@ def netspace_cmd(rpc_port: Optional[int], delta_block_height: str, start: str) -
     """
     import asyncio
 
-    from .netspace_funcs import netstorge_async
+    from chia.cmds.netspace_funcs import netstorge_async
 
     asyncio.run(netstorge_async(rpc_port, delta_block_height, start))

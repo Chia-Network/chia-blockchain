@@ -48,7 +48,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
     Exit 1
 }
 
-$supportedPythonVersions = "3.12", "3.11", "3.10", "3.9", "3.8"
+$supportedPythonVersions = "3.12", "3.11", "3.10", "3.9"
 if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION
@@ -102,7 +102,11 @@ foreach ($extra in $extras)
     $extras_cli += $extra
 }
 
-./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
+if (-not (Get-Item -ErrorAction SilentlyContinue ".penv/Scripts/poetry.exe").Exists)
+{
+    ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
+}
+
 .penv/Scripts/poetry env use $(py -"$pythonVersion" -c 'import sys; print(sys.executable)')
 .penv/Scripts/poetry install @extras_cli
 

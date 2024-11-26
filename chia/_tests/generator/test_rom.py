@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 from clvm.CLVMObject import CLVMStorage
 from clvm_tools import binutils
 from clvm_tools.clvmc import compile_clvm_text
 
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -17,8 +15,8 @@ from chia.types.spend_bundle_conditions import SpendConditions
 from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm, load_serialized_clvm_maybe_recompile
 
-MAX_COST = int(1e15)
-COST_PER_BYTE = int(12000)
+MAX_COST = 10**15
+COST_PER_BYTE = 12000
 
 
 DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clsp", package_or_requirement="chia.consensus.puzzles")
@@ -78,13 +76,13 @@ EXPECTED_OUTPUT = (
 )
 
 
-def run_generator(self: BlockGenerator) -> Tuple[int, Program]:
+def run_generator(self: BlockGenerator) -> tuple[int, Program]:
     """This mode is meant for accepting possibly soft-forked transactions into the mempool"""
     args = Program.to([self.generator_refs])
     return GENERATOR_MOD.run_with_cost(MAX_COST, [self.program, args])
 
 
-def as_atom_list(prg: CLVMStorage) -> List[bytes]:
+def as_atom_list(prg: CLVMStorage) -> list[bytes]:
     """
     Pretend `prg` is a list of atoms. Return the corresponding
     python list of atoms.
@@ -167,7 +165,7 @@ class TestROM:
         # the ROM supports extra data after a coin. This test checks that it actually gets passed through
 
         gen = block_generator()
-        cost, r = run_generator(gen)
+        _cost, r = run_generator(gen)
         coin_spends = r.first()
         for coin_spend in coin_spends.as_iter():
             extra_data = coin_spend.rest().rest().rest().rest()
@@ -177,6 +175,6 @@ class TestROM:
         # the ROM supports extra data after the coin spend list. This test checks that it actually gets passed through
 
         gen = block_generator()
-        cost, r = run_generator(gen)
+        _cost, r = run_generator(gen)
         extra_block_data = r.rest()
         assert as_atom_list(extra_block_data) == b"extra data for block".split()

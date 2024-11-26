@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 from random import Random
-from typing import List, Tuple
 
 import pytest
 
@@ -32,7 +31,7 @@ pytestmark = pytest.mark.data_layer
 
 def create_valid_proof_of_inclusion(layer_count: int, other_hash_side: Side) -> ProofOfInclusion:
     node_hash = bytes32(b"a" * 32)
-    layers: List[ProofOfInclusionLayer] = []
+    layers: list[ProofOfInclusionLayer] = []
 
     existing_hash = node_hash
 
@@ -106,7 +105,7 @@ class RoundTripCase:
     RoundTripCase(
         id="Root",
         instance=Root(
-            store_id=bytes32(b"\x00" * 32),
+            store_id=bytes32.zeros,
             node_hash=bytes32(b"\x01" * 32),
             generation=3,
             status=Status.PENDING,
@@ -121,7 +120,7 @@ class RoundTripCase:
         instance=ClearPendingRootsResponse(
             success=True,
             root=Root(
-                store_id=bytes32(b"\x00" * 32),
+                store_id=bytes32.zeros,
                 node_hash=bytes32(b"\x01" * 32),
                 generation=3,
                 status=Status.PENDING,
@@ -143,7 +142,7 @@ def test_internal_hash(seeded_random: Random) -> None:
     def definition(left_hash: bytes32, right_hash: bytes32) -> bytes32:
         return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)
 
-    data: List[Tuple[bytes32, bytes32, bytes32]] = []
+    data: list[tuple[bytes32, bytes32, bytes32]] = []
     for _ in range(5000):
         left_hash = bytes32.random(r=seeded_random)
         right_hash = bytes32.random(r=seeded_random)
@@ -159,22 +158,31 @@ def test_internal_hash(seeded_random: Random) -> None:
             assert definition(left_hash=left_hash, right_hash=right_hash) == reference
 
 
+def get_random_bytes(length: int, r: Random) -> bytes:
+    if length == 0:
+        return b""
+
+    return r.getrandbits(length * 8).to_bytes(length, "big")
+
+
 def test_leaf_hash(seeded_random: Random) -> None:
     def definition(key: bytes, value: bytes) -> bytes32:
         return SerializedProgram.to((key, value)).get_tree_hash()
 
-    data: List[Tuple[bytes, bytes, bytes32]] = []
+    data: list[tuple[bytes, bytes, bytes32]] = []
     for cycle in range(20000):
-        if cycle in (0, 1):
+        if cycle in {0, 1}:
             length = 0
         else:
             length = seeded_random.randrange(100)
-        key = seeded_random.getrandbits(length * 8).to_bytes(length, "big")
-        if cycle in (1, 2):
+
+        key = get_random_bytes(length=length, r=seeded_random)
+
+        if cycle in {1, 2}:
             length = 0
         else:
             length = seeded_random.randrange(100)
-        value = seeded_random.getrandbits(length * 8).to_bytes(length, "big")
+        value = get_random_bytes(length=length, r=seeded_random)
         reference = definition(key=key, value=value)
         data.append((key, value, reference))
 
@@ -191,13 +199,13 @@ def test_key_hash(seeded_random: Random) -> None:
     def definition(key: bytes) -> bytes32:
         return SerializedProgram.to(key).get_tree_hash()
 
-    data: List[Tuple[bytes, bytes32]] = []
+    data: list[tuple[bytes, bytes32]] = []
     for cycle in range(30000):
         if cycle == 0:
             length = 0
         else:
             length = seeded_random.randrange(100)
-        key = seeded_random.getrandbits(length * 8).to_bytes(length, "big")
+        key = get_random_bytes(length=length, r=seeded_random)
         reference = definition(key=key)
         data.append((key, reference))
 

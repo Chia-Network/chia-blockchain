@@ -6,7 +6,8 @@ import dataclasses
 import itertools
 import logging
 import traceback
-from typing import AsyncIterator, Dict, Generic, Iterator, Optional, Protocol, TypeVar, final
+from collections.abc import AsyncIterator, Iterator
+from typing import Generic, Optional, Protocol, TypeVar, final
 
 import anyio
 
@@ -128,7 +129,7 @@ class AsyncPool:
     log: logging.Logger
     worker_async_callable: WorkerCallable
     _target_worker_count: int
-    _workers: Dict[asyncio.Task[object], int] = dataclasses.field(init=False, default_factory=dict)
+    _workers: dict[asyncio.Task[object], int] = dataclasses.field(init=False, default_factory=dict)
     _worker_id_counter: Iterator[int] = dataclasses.field(init=False, default_factory=itertools.count)
     _started: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     _single_use_used: bool = False

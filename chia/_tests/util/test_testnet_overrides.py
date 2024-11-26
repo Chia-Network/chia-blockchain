@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from chia.consensus.default_constants import update_testnet_overrides
 
 
 def test_testnet11() -> None:
-    overrides: Dict[str, Any] = {}
+    overrides: dict[str, Any] = {}
     update_testnet_overrides("testnet11", overrides)
     assert overrides == {
-        "SOFT_FORK5_HEIGHT": 1340000,
+        "SOFT_FORK6_HEIGHT": 9999999,
     }
 
 
 def test_mainnet() -> None:
-    overrides: Dict[str, Any] = {}
+    overrides: dict[str, Any] = {}
     update_testnet_overrides("mainnet", overrides)
     assert overrides == {}

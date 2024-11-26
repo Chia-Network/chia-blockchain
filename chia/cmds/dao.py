@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 import click
 
@@ -57,7 +58,7 @@ def dao_add_cmd(
     filter_amount: uint64,
     name: Optional[str],
 ) -> None:
-    from .dao_funcs import add_dao_wallet
+    from chia.cmds.dao_funcs import add_dao_wallet
 
     asyncio.run(add_dao_wallet(wallet_rpc_port, fingerprint, name, treasury_id, filter_amount))
 
@@ -169,8 +170,8 @@ def dao_create_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import create_dao_wallet
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import create_dao_wallet
 
     if self_destruct == proposal_timelock:
         raise ValueError("Self Destruct and Proposal Timelock cannot be the same value")
@@ -225,7 +226,7 @@ def dao_get_id_cmd(
     fingerprint: int,
     wallet_id: int,
 ) -> None:
-    from .dao_funcs import get_treasury_id
+    from chia.cmds.dao_funcs import get_treasury_id
 
     asyncio.run(get_treasury_id(wallet_rpc_port, fingerprint, wallet_id))
 
@@ -271,8 +272,8 @@ def dao_add_funds_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import add_funds_to_treasury
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import add_funds_to_treasury
 
     return asyncio.run(
         add_funds_to_treasury(
@@ -310,7 +311,7 @@ def dao_get_balance_cmd(
     fingerprint: int,
     wallet_id: int,
 ) -> None:
-    from .dao_funcs import get_treasury_balance
+    from chia.cmds.dao_funcs import get_treasury_balance
 
     asyncio.run(get_treasury_balance(wallet_rpc_port, fingerprint, wallet_id))
 
@@ -330,7 +331,7 @@ def dao_rules_cmd(
     fingerprint: int,
     wallet_id: int,
 ) -> None:
-    from .dao_funcs import get_rules
+    from chia.cmds.dao_funcs import get_rules
 
     asyncio.run(get_rules(wallet_rpc_port, fingerprint, wallet_id))
 
@@ -361,7 +362,7 @@ def dao_list_proposals_cmd(
     wallet_id: int,
     include_closed: Optional[bool],
 ) -> None:
-    from .dao_funcs import list_proposals
+    from chia.cmds.dao_funcs import list_proposals
 
     if not include_closed:
         include_closed = False
@@ -392,7 +393,7 @@ def dao_show_proposal_cmd(
     wallet_id: int,
     proposal_id: str,
 ) -> None:
-    from .dao_funcs import show_proposal
+    from chia.cmds.dao_funcs import show_proposal
 
     asyncio.run(show_proposal(wallet_rpc_port, fingerprint, wallet_id, proposal_id))
 
@@ -449,8 +450,8 @@ def dao_vote_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import vote_on_proposal
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import vote_on_proposal
 
     is_yes_vote = False if vote_no else True
 
@@ -521,8 +522,8 @@ def dao_close_proposal_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import close_proposal
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import close_proposal
 
     return asyncio.run(
         close_proposal(
@@ -582,8 +583,8 @@ def dao_lockup_coins_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import lockup_coins
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import lockup_coins
 
     return asyncio.run(
         lockup_coins(
@@ -630,8 +631,8 @@ def dao_release_coins_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import release_coins
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import release_coins
 
     return asyncio.run(
         release_coins(
@@ -677,8 +678,8 @@ def dao_exit_lockup_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import exit_lockup
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import exit_lockup
 
     return asyncio.run(
         exit_lockup(
@@ -778,8 +779,8 @@ def dao_create_spend_proposal_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import create_spend_proposal
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import create_spend_proposal
 
     return asyncio.run(
         create_spend_proposal(
@@ -887,8 +888,8 @@ def dao_create_update_proposal_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import create_update_proposal
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import create_update_proposal
 
     return asyncio.run(
         create_update_proposal(
@@ -967,8 +968,8 @@ def dao_create_mint_proposal_cmd(
     reuse: Optional[bool],
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
-    from .dao_funcs import create_mint_proposal
+) -> list[TransactionRecord]:
+    from chia.cmds.dao_funcs import create_mint_proposal
 
     return asyncio.run(
         create_mint_proposal(

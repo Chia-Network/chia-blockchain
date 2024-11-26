@@ -1,3 +1,5 @@
+# Package: utils
+
 from __future__ import annotations
 
 import asyncio
@@ -5,9 +7,10 @@ import cProfile
 import logging
 import pathlib
 import tracemalloc
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncIterator, Optional
+from typing import Optional
 
 from chia.util.path import path_from_root
 
@@ -132,7 +135,7 @@ if __name__ == "__main__":
             output_file += f"-{last}"
 
         print(f"generating call tree for slot(s) [{first}, {last}]")
-        check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot"] + files)
+        check_call(["gprof2dot", "-f", "pstats", "-o", output_file + ".dot", *files])
         with open(output_file + ".png", "w+") as f:
             check_call(["dot", "-T", "png", output_file + ".dot"], stdout=f)
         print(f"output written to: {output_file}.png")
@@ -140,7 +143,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 2:
         # this analyzes the CPU usage at all slots saved to the profiler directory
         analyze_cpu_usage(profile_dir)
-    elif len(sys.argv) in [3, 4]:
+    elif len(sys.argv) in {3, 4}:
         # the additional arguments are interpreted as either one slot, or a
         # slot range (first and last) to analyze
         first = int(sys.argv[2])
@@ -174,7 +177,7 @@ async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.L
             await asyncio.sleep(60)
             snapshot = tracemalloc.take_snapshot()
             snapshot.dump(str(profile_dir / f"heap-{counter:05d}.profile"))
-            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0]/1000000:0.3f} MB profile {counter:05d}")
+            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0] / 1000000:0.3f} MB profile {counter:05d}")
             counter += 1
     finally:
         tracemalloc.stop()

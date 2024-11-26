@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from chia_rs import G1Element
 
@@ -27,7 +27,7 @@ class WalletPuzzleStore:
     db_wrapper: DBWrapper2
     wallet_identifier_cache: LRUCache
     # maps wallet_id -> last_derivation_index
-    last_wallet_derivation_index: Dict[uint32, uint32]
+    last_wallet_derivation_index: dict[uint32, uint32]
     last_derivation_index: Optional[uint32]
 
     @classmethod
@@ -68,7 +68,7 @@ class WalletPuzzleStore:
         self.last_wallet_derivation_index = {}
         return self
 
-    async def add_derivation_paths(self, records: List[DerivationRecord]) -> None:
+    async def add_derivation_paths(self, records: list[DerivationRecord]) -> None:
         """
         Insert many derivation paths into the database.
         """
@@ -267,7 +267,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_all_puzzle_hashes(self, wallet_id: Optional[int] = None) -> Set[bytes32]:
+    async def get_all_puzzle_hashes(self, wallet_id: Optional[int] = None) -> set[bytes32]:
         """
         Return a set containing all puzzle_hashes we generated.
         """
@@ -343,6 +343,22 @@ class WalletPuzzleStore:
 
         return None
 
+    async def get_unused_derivation_path_for_wallet(self, wallet_id: uint32) -> Optional[uint32]:
+        """
+        Returns the first unused derivation path by derivation_index.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn,
+                "SELECT MIN(derivation_index) FROM derivation_paths WHERE wallet_id=? AND used=0 AND hardened=0;",
+                (wallet_id,),
+            )
+
+        if row is not None and row[0] is not None:
+            return uint32(row[0])
+
+        return None
+
     async def delete_wallet(self, wallet_id: uint32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # First fetch all puzzle hashes since we need them to drop them from the cache
@@ -363,3 +379,18 @@ class WalletPuzzleStore:
         except KeyError:
             pass
         self.last_derivation_index = None
+
+    async def get_unused_count(self, wallet_id: uint32) -> int:
+        """
+        Returns a count of unused derivation indexes
+        """
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn,
+                "SELECT COUNT(*) FROM derivation_paths WHERE wallet_id=? AND used=1",
+                (wallet_id,),
+            )
+            row_count = 0 if row is None else row[0]
+
+        return row_count

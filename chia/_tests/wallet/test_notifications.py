@@ -36,7 +36,7 @@ async def test_notification_store_backwards_compat() -> None:
                 cursor = await conn.execute(
                     "INSERT OR REPLACE INTO notifications (coin_id, msg, amount) VALUES(?, ?, ?)",
                     (
-                        bytes32([0] * 32),
+                        bytes32.zeros,
                         bytes([0] * 10),
                         bytes([0]),
                     ),
@@ -121,7 +121,7 @@ async def test_notifications(
             wallet_node_2.config["enable_notifications"] = True
             AMOUNT = uint64(1)
             FEE = uint64(0)
-        elif case in ("allow", "allow_larger"):
+        elif case in {"allow", "allow_larger"}:
             wallet_node_2.config["required_notification_amount"] = 750000000000
             if case == "allow_larger":
                 AMOUNT = uint64(1000000000000)

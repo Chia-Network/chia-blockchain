@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
@@ -17,9 +16,6 @@ from chia.wallet.signer_protocol import (
     UnsignedTransaction,
 )
 from chia.wallet.util.clvm_streamable import TranslationLayer, TranslationLayerMapping, clvm_streamable
-
-# Pylint doesn't understand that these classes are in fact dataclasses
-# pylint: disable=invalid-field-call
 
 
 @clvm_streamable
@@ -41,7 +37,7 @@ class BSTLSigningTarget(Streamable):
 @clvm_streamable
 @dataclass(frozen=True)
 class BSTLSumHint(Streamable):
-    fingerprints: List[bytes] = field(metadata=dict(key="f"))
+    fingerprints: list[bytes] = field(metadata=dict(key="f"))
     synthetic_offset: bytes = field(metadata=dict(key="o"))
     final_pubkey: bytes = field(metadata=dict(key="p"))
 
@@ -58,7 +54,7 @@ class BSTLSumHint(Streamable):
 @dataclass(frozen=True)
 class BSTLPathHint(Streamable):
     root_fingerprint: bytes = field(metadata=dict(key="f"))
-    path: List[uint64] = field(metadata=dict(key="p"))
+    path: list[uint64] = field(metadata=dict(key="p"))
 
     @staticmethod
     def from_wallet_api(_from: PathHint) -> BSTLPathHint:
@@ -72,9 +68,9 @@ class BSTLPathHint(Streamable):
 @clvm_streamable
 @dataclass(frozen=True)
 class BSTLSigningInstructions(Streamable):
-    sum_hints: List[BSTLSumHint] = field(metadata=dict(key="s"))
-    path_hints: List[BSTLPathHint] = field(metadata=dict(key="p"))
-    targets: List[BSTLSigningTarget] = field(metadata=dict(key="t"))
+    sum_hints: list[BSTLSumHint] = field(metadata=dict(key="s"))
+    path_hints: list[BSTLPathHint] = field(metadata=dict(key="p"))
+    targets: list[BSTLSigningTarget] = field(metadata=dict(key="t"))
 
     @staticmethod
     def from_wallet_api(_from: SigningInstructions) -> BSTLSigningInstructions:
@@ -98,9 +94,9 @@ class BSTLSigningInstructions(Streamable):
 @clvm_streamable
 @dataclass(frozen=True)
 class BSTLUnsignedTransaction(Streamable):
-    sum_hints: List[BSTLSumHint] = field(metadata=dict(key="s"))
-    path_hints: List[BSTLPathHint] = field(metadata=dict(key="p"))
-    targets: List[BSTLSigningTarget] = field(metadata=dict(key="t"))
+    sum_hints: list[BSTLSumHint] = field(metadata=dict(key="s"))
+    path_hints: list[BSTLPathHint] = field(metadata=dict(key="p"))
+    targets: list[BSTLSigningTarget] = field(metadata=dict(key="t"))
 
     @staticmethod
     def from_wallet_api(_from: UnsignedTransaction) -> BSTLUnsignedTransaction:
