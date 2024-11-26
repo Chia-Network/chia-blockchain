@@ -513,6 +513,7 @@ class MessageParticipant(Streamable):
         # This loop probably looks a little strange
         # It's trying to account for the fact that the arguments may be any 1 or 2 of these arguments in this order
         # Not sure of a more elgant way to do it
+        original_mode = mode
         for arg in args:
             if mode & 0b100:
                 parent_id_committed = bytes32(arg.as_atom())
@@ -527,7 +528,7 @@ class MessageParticipant(Streamable):
                 break
 
         return cls(
-            mode_integer=uint8(mode),
+            mode_integer=uint8(original_mode),
             parent_id_committed=parent_id_committed,
             puzzle_hash_committed=puzzle_hash_committed,
             amount_committed=amount_committed,
@@ -593,7 +594,7 @@ class SendMessage(Condition):
             return self.mode_integer
 
         # The non-None-ness of these are asserted in __post_init__
-        return uint8((self.sender.mode << 3) & self.receiver.mode)  # type: ignore[union-attr]
+        return uint8((self.sender.mode << 3) | self.receiver.mode)  # type: ignore[union-attr]
 
     def to_program(self) -> Program:
         condition: Program = Program.to([self._opcode, self.mode, self.msg, *self.args])

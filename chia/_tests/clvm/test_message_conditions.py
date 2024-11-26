@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 from chia_rs import Coin, G2Element
 from chia_rs.sized_bytes import bytes32
@@ -28,29 +30,23 @@ async def test_basic_message_send_receive(mode: int, cost_logger: CostLogger) ->
         await sim.farm_block(ACS_PH)
         [sender_coin, receiver_coin] = await client.get_coin_records_by_puzzle_hash(ACS_PH)
 
+        # Try only a sent message
+        send_condition = SendMessage(
+            b"foo",
+            mode_integer=uint8(mode),
+            receiver=MessageParticipant(
+                parent_id_committed=receiver_coin.coin.parent_coin_info if mode & 0b000100 else None,
+                puzzle_hash_committed=receiver_coin.coin.puzzle_hash if mode & 0b000010 else None,
+                amount_committed=receiver_coin.coin.amount if mode & 0b000001 else None,
+                coin_id_committed=receiver_coin.coin.name() if mode & 0b000111 == 0b000111 else None,
+            ),
+        )
         only_sender = WalletSpendBundle(
             [
                 make_spend(
                     sender_coin.coin,
                     ACS,
-                    Program.to(
-                        [
-                            SendMessage(
-                                b"foo",
-                                mode_integer=uint8(mode),
-                                receiver=MessageParticipant(
-                                    parent_id_committed=receiver_coin.coin.parent_coin_info
-                                    if mode & 0b000100
-                                    else None,
-                                    puzzle_hash_committed=receiver_coin.coin.puzzle_hash if mode & 0b000010 else None,
-                                    amount_committed=receiver_coin.coin.amount if mode & 0b000001 else None,
-                                    coin_id_committed=receiver_coin.coin.name()
-                                    if mode & 0b000111 == 0b000111
-                                    else None,
-                                ),
-                            ).to_program()
-                        ]
-                    ),
+                    Program.to([send_condition.to_program()]),
                 ),
             ],
             G2Element(),
@@ -58,25 +54,23 @@ async def test_basic_message_send_receive(mode: int, cost_logger: CostLogger) ->
         result = await client.push_tx(only_sender)
         assert result == (MempoolInclusionStatus.FAILED, Err.MESSAGE_NOT_SENT_OR_RECEIVED)
 
+        # Try only a received message
+        receive_condition = ReceiveMessage(
+            b"foo",
+            mode_integer=uint8(mode),
+            sender=MessageParticipant(
+                parent_id_committed=sender_coin.coin.parent_coin_info if mode & 0b100000 else None,
+                puzzle_hash_committed=sender_coin.coin.puzzle_hash if mode & 0b010000 else None,
+                amount_committed=sender_coin.coin.amount if mode & 0b001000 else None,
+                coin_id_committed=sender_coin.coin.name() if mode & 0b111000 == 0b111000 else None,
+            ),
+        )
         only_receiver = WalletSpendBundle(
             [
                 make_spend(
                     receiver_coin.coin,
                     ACS,
-                    Program.to(
-                        [
-                            ReceiveMessage(
-                                b"foo",
-                                mode_integer=uint8(mode),
-                                sender=MessageParticipant(
-                                    parent_id_committed=sender_coin.coin.parent_coin_info if mode & 0b100000 else None,
-                                    puzzle_hash_committed=sender_coin.coin.puzzle_hash if mode & 0b010000 else None,
-                                    amount_committed=sender_coin.coin.amount if mode & 0b001000 else None,
-                                    coin_id_committed=sender_coin.coin.name() if mode & 0b111000 == 0b111000 else None,
-                                ),
-                            ).to_program()
-                        ]
-                    ),
+                    Program.to([receive_condition.to_program()]),
                 ),
             ],
             G2Element(),
@@ -84,8 +78,25 @@ async def test_basic_message_send_receive(mode: int, cost_logger: CostLogger) ->
         result = await client.push_tx(only_receiver)
         assert result == (MempoolInclusionStatus.FAILED, Err.MESSAGE_NOT_SENT_OR_RECEIVED)
 
+        # Make sure they succeed together
         result = await client.push_tx(WalletSpendBundle.aggregate([only_sender, only_receiver]))
         assert result == (MempoolInclusionStatus.SUCCESS, None)
+
+        # Quickly test back and forth parsing
+        assert SendMessage.from_program(send_condition.to_program()).to_program() == send_condition.to_program()
+        assert (
+            ReceiveMessage.from_program(receive_condition.to_program()).to_program() == receive_condition.to_program()
+        )
+
+        # Quickly test mode calculation
+        assert (
+            dataclasses.replace(send_condition, sender=receive_condition.sender, mode_integer=None).mode
+            == send_condition.mode
+        )
+        assert (
+            dataclasses.replace(receive_condition, receiver=send_condition.receiver, mode_integer=None).mode
+            == receive_condition.mode
+        )
 
 
 def test_message_error_conditions() -> None:
