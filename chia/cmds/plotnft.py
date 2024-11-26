@@ -27,6 +27,7 @@ def plotnft_cmd(ctx: click.Context) -> None:
     plotnft_cmd,
     "show",
     "Show plotnft information",
+    help="Show plotnft information",
 )
 class ShowPlotNFTCMD:
     context: dict[str, Any]
@@ -49,7 +50,8 @@ class ShowPlotNFTCMD:
 @chia_command(
     plotnft_cmd,
     "get_login_link",
-    "Create a login link for a pool. The farmer must be running. To get the launcher id, use plotnft show.",
+    short_help="Create a login link for a pool",
+    help="Create a login link for a pool. The farmer must be running. Use 'plotnft show' to get the launcher id.",
 )
 class GetLoginLinkCMD:
     context: dict[str, Any] = field(default_factory=dict)
@@ -69,7 +71,8 @@ class GetLoginLinkCMD:
 @chia_command(
     plotnft_cmd,
     "create",
-    "Create a plot NFT",
+    short_help="Create a plot NFT",
+    help="Create a plot NFT.",
 )
 class CreatePlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
@@ -115,7 +118,8 @@ class CreatePlotNFTCMD:
 @chia_command(
     plotnft_cmd,
     "join",
-    "Join a plot NFT to a Pool",
+    short_help="Join a plot NFT to a Pool",
+    help="Join a plot NFT to a Pool.",
 )
 class JoinPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
@@ -151,7 +155,8 @@ class JoinPlotNFTCMD:
 @chia_command(
     plotnft_cmd,
     "leave",
-    "Leave a pool and return to self-farming",
+    short_help="Leave a pool and return to self-farming",
+    help="Leave a pool and return to self-farming.",
 )
 class LeavePlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
@@ -184,7 +189,8 @@ class LeavePlotNFTCMD:
 @chia_command(
     plotnft_cmd,
     "inspect",
-    "Get Detailed plotnft information as JSON",
+    short_help="Get Detailed plotnft information as JSON",
+    help="Get Detailed plotnft information as JSON",
 )
 class InspectPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
@@ -203,7 +209,8 @@ class InspectPlotNFTCMD:
 @chia_command(
     plotnft_cmd,
     "claim",
-    "Claim rewards from a plot NFT",
+    short_help="Claim rewards from a plot NFT",
+    help="Claim rewards from a plot NFT",
 )
 class ClaimPlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
@@ -234,7 +241,8 @@ class ClaimPlotNFTCMD:
 @chia_command(
     plotnft_cmd,
     "change_payout_instructions",
-    "Change the payout instructions for a pool. To get the launcher id, use plotnft show",
+    short_help="Change the payout instructions for a pool.",
+    help="Change the payout instructions for a pool. Use 'plotnft show' to get the launcher id.",
 )
 class ChangePayoutInstructionsPlotNFTCMD:
     context: dict[str, Any] = field(default_factory=dict)
