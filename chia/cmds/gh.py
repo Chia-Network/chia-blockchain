@@ -348,17 +348,23 @@ class Stage(Protocol[T_contra, T_co]):
 
 
 @dataclass
-class Pipeline(Generic[T, U, V, W, X, Y]):
-    stages: tuple[Stage[T, U], Stage[U, V], Stage[V, W], Stage[W, X], Stage[X, Y]]
+class Pipeline(Generic[T, U]):
+    stages: list[Stage]  # type: ignore[type-arg]
+
+    @classmethod
+    def create(cls, stage: Stage[U, V]) -> Pipeline[U, V]:
+        return cls(stages=[stage])  # type: ignore[return-value]
+
+    def add(self: Pipeline[T, U], stage: Stage[U, V]) -> Pipeline[T, V]:
+        self.stages.append(stage)
+        return self  # type: ignore[return-value]
 
     @contextlib.asynccontextmanager
     async def setup(
         self,
         jobs: Collection[T],
-    ) -> AsyncIterator[anyio.streams.memory.MemoryObjectReceiveStream[Y]]:
-        assert len(self.stages) > 0
-
-        results: anyio.streams.memory.MemoryObjectReceiveStream[Y]
+    ) -> AsyncIterator[anyio.streams.memory.MemoryObjectReceiveStream[U]]:
+        results: anyio.streams.memory.MemoryObjectReceiveStream[U]
 
         # TODO: yep yuck, no more Any
         send_stream, receive_stream = anyio.create_memory_object_stream[Any](max_buffer_size=len(jobs))
@@ -382,7 +388,7 @@ class Pipeline(Generic[T, U, V, W, X, Y]):
 @dataclass
 class PoolStage(Generic[T_contra, U]):
     handler: PoolHandler[T_contra, U]
-    capacity: int
+    capacity: int = 10
 
     async def __call__(
         self,
@@ -407,14 +413,12 @@ class RerunCMD:
     dry_run: bool = option("--dry-run/--wet_run", help="Dry run")
 
     async def run(self) -> None:
-        pipeline = Pipeline[int, bytes, int, int, RunInfo, None](
-            stages=(
-                PoolStage(handler=self.get_pull_request_head_sha, capacity=10),
-                PoolStage(handler=self.get_check_suite_ids_for_sha, capacity=10),
-                PoolStage(handler=self.get_run_ids_for_check_suite_id, capacity=10),
-                PoolStage(handler=self.get_run_info, capacity=10),
-                PoolStage(handler=self.maybe_rerun_job, capacity=10),
-            ),
+        pipeline = (
+            Pipeline.create(PoolStage(handler=self.get_pull_request_head_sha))
+            .add(PoolStage(handler=self.get_check_suite_ids_for_sha))
+            .add(PoolStage(handler=self.get_run_ids_for_check_suite_id))
+            .add(PoolStage(handler=self.get_run_info))
+            .add(PoolStage(handler=self.maybe_rerun_job))
         )
 
         async with pipeline.setup(jobs=[self.pr]) as results:
