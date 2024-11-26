@@ -47,5 +47,5 @@ async def test_invalid_only(case: InvalidOnlyCase) -> None:
         assert not test_root.joinpath(case.only).exists()
         explanation = "does not exist"
 
-    with pytest.raises(click.ClickException, match=f"\bto be a {re.escape(case.per)}\b.*\b{re.escape(explanation)}\b"):
+    with pytest.raises(click.ClickException, match=rf"\bto be a {re.escape(case.per)}\b.*\b{re.escape(explanation)}\b"):
         await cmd.run()
