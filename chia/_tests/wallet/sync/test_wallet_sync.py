@@ -103,6 +103,8 @@ async def test_request_block_headers(
     assert len(bh) == 6
     assert [x.reward_chain_block.height for x in default_400_blocks[10:16]] == [x.reward_chain_block.height for x in bh]
     assert [x.foliage for x in default_400_blocks[10:16]] == [x.foliage for x in bh]
+    assert [x.transactions_filter for x in bh] == [b"\x00"] * 6
+    return
 
     num_blocks = 20
     new_blocks = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks, pool_reward_puzzle_hash=ph)

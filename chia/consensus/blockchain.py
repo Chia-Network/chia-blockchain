@@ -838,6 +838,11 @@ class Blockchain:
             if self.height_to_hash(block.height) != block.header_hash:
                 raise ValueError(f"Block at {block.header_hash} is no longer in the blockchain (it's in a fork)")
             if tx_filter is False:
+                print("tx_filter is False")
+                print("block.height: ", block.height)
+                print("block.is_transaction_block(): ", block.is_transaction_block())
+                print("block.transactions_generator: ", block.transactions_generator)
+                print("block.get_included_reward_coins(): ", len(block.get_included_reward_coins()))
                 header = get_block_header(block, [], [])
             elif block.transactions_generator is None:
                 # There is no point in getting additions and removals for
