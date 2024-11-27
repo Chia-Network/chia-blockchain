@@ -145,8 +145,9 @@ class WalletTransactionStore:
             await conn.execute_insert(
                 "INSERT OR REPLACE INTO tx_times VALUES (?, ?)", (record.name, bytes(record.valid_times))
             )
-            if record.confirmed is False and record not in self.unconfirmed_txs:
-                self.unconfirmed_txs.append(get_light_transaction_record(record))
+            ltx = get_light_transaction_record(record)
+            if record.confirmed is False and ltx not in self.unconfirmed_txs:
+                self.unconfirmed_txs.append(ltx)
 
     async def delete_transaction_record(self, tx_id: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
