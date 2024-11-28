@@ -518,7 +518,13 @@ class DataStore:
     ) -> TreeIndex:
         if node_hash not in terminal_nodes and node_hash not in internal_nodes:
             async with self.db_wrapper.reader() as reader:
-                cursor = await reader.execute("SELECT root_hash, idx FROM nodes WHERE hash = ? AND store_id = ?", (node_hash,store_id,))
+                cursor = await reader.execute(
+                    "SELECT root_hash, idx FROM nodes WHERE hash = ? AND store_id = ?",
+                    (
+                        node_hash,
+                        store_id,
+                    ),
+                )
 
                 row = await cursor.fetchone()
                 if row is None:
@@ -558,8 +564,12 @@ class DataStore:
                 ),
             )
             left_hash, right_hash = internal_nodes[node_hash]
-            left_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, left_hash, merkle_blob, store_id)
-            right_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, right_hash, merkle_blob, store_id)
+            left_index = await self.build_blob_from_nodes(
+                internal_nodes, terminal_nodes, left_hash, merkle_blob, store_id
+            )
+            right_index = await self.build_blob_from_nodes(
+                internal_nodes, terminal_nodes, right_hash, merkle_blob, store_id
+            )
             for child_index in (left_index, right_index):
                 merkle_blob.update_entry(index=child_index, parent=index)
             merkle_blob.update_entry(index=index, left=left_index, right=right_index)
