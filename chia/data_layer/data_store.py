@@ -318,13 +318,13 @@ class DataStore:
                         log.error(f"Cannot recover data from {filename}: {e}")
                         break
 
-    async def get_merkle_blob(self, root_hash: Optional[bytes32]) -> MerkleBlob:
+    async def get_merkle_blob(self, root_hash: Optional[bytes32], read_only: bool = False) -> MerkleBlob:
         if root_hash is None:
             return MerkleBlob(blob=bytearray())
 
         existing_blob = self.recent_merkle_blobs.get(root_hash)
         if existing_blob is not None:
-            return copy.deepcopy(existing_blob)
+            return existing_blob if read_only else copy.deepcopy(existing_blob)
 
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
@@ -533,7 +533,7 @@ class DataStore:
                 root_hash = row["root_hash"]
                 index = row["idx"]
 
-            other_merkle_blob = await self.get_merkle_blob(root_hash)
+            other_merkle_blob = await self.get_merkle_blob(root_hash, read_only=True)
             nodes = other_merkle_blob.get_nodes_with_indexes(index=index)
             index_to_hash = {index: bytes32(node.hash) for index, node in nodes}
             for _, node in nodes:
