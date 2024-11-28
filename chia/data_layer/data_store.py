@@ -232,7 +232,7 @@ class DataStore:
 
         merkle_blob = MerkleBlob(blob=bytearray())
         if root_hash is not None:
-            await self.build_blob_from_nodes(internal_nodes, terminal_nodes, root_hash, merkle_blob)
+            await self.build_blob_from_nodes(internal_nodes, terminal_nodes, root_hash, merkle_blob, store_id)
 
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED)
         await self.add_node_hashes(store_id)
@@ -514,10 +514,11 @@ class DataStore:
         terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
         node_hash: bytes32,
         merkle_blob: MerkleBlob,
+        store_id: bytes32,
     ) -> TreeIndex:
         if node_hash not in terminal_nodes and node_hash not in internal_nodes:
             async with self.db_wrapper.reader() as reader:
-                cursor = await reader.execute("SELECT root_hash, idx FROM nodes WHERE hash = ?", (node_hash,))
+                cursor = await reader.execute("SELECT root_hash, idx FROM nodes WHERE hash = ? AND store_id = ?", (node_hash,store_id,))
 
                 row = await cursor.fetchone()
                 if row is None:
@@ -557,8 +558,8 @@ class DataStore:
                 ),
             )
             left_hash, right_hash = internal_nodes[node_hash]
-            left_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, left_hash, merkle_blob)
-            right_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, right_hash, merkle_blob)
+            left_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, left_hash, merkle_blob, store_id)
+            right_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, right_hash, merkle_blob, store_id)
             for child_index in (left_index, right_index):
                 merkle_blob.update_entry(index=child_index, parent=index)
             merkle_blob.update_entry(index=index, left=left_index, right=right_index)
