@@ -614,6 +614,8 @@ class CoinStore:
                 raise ValueError(
                     f"Invalid operation to set spent, total updates {rows_updated} expected {len(coin_names)}"
                 )
+        # Blow cache so we don't get coins with stale spent_index
+        self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
 
     # Lookup the most recent unspent lineage that matches a puzzle hash
     async def get_unspent_lineage_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[UnspentLineageInfo]:
