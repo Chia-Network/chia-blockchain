@@ -232,7 +232,7 @@ class DataStore:
 
         merkle_blob = MerkleBlob(blob=bytearray())
         if root_hash is not None:
-            await self.build_blob_from_nodes(internal_nodes, terminal_nodes, root_hash, merkle_blob)
+            await self.build_blob_from_nodes(internal_nodes, terminal_nodes, root_hash, merkle_blob, store_id)
 
         await self.insert_root_from_merkle_blob(merkle_blob, store_id, Status.COMMITTED)
         await self.add_node_hashes(store_id)
@@ -318,13 +318,13 @@ class DataStore:
                         log.error(f"Cannot recover data from {filename}: {e}")
                         break
 
-    async def get_merkle_blob(self, root_hash: Optional[bytes32]) -> MerkleBlob:
+    async def get_merkle_blob(self, root_hash: Optional[bytes32], read_only: bool = False) -> MerkleBlob:
         if root_hash is None:
             return MerkleBlob(blob=bytearray())
 
         existing_blob = self.recent_merkle_blobs.get(root_hash)
         if existing_blob is not None:
-            return copy.deepcopy(existing_blob)
+            return existing_blob if read_only else copy.deepcopy(existing_blob)
 
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
@@ -514,10 +514,17 @@ class DataStore:
         terminal_nodes: dict[bytes32, tuple[KVId, KVId]],
         node_hash: bytes32,
         merkle_blob: MerkleBlob,
+        store_id: bytes32,
     ) -> TreeIndex:
         if node_hash not in terminal_nodes and node_hash not in internal_nodes:
             async with self.db_wrapper.reader() as reader:
-                cursor = await reader.execute("SELECT root_hash, idx FROM nodes WHERE hash = ?", (node_hash,))
+                cursor = await reader.execute(
+                    "SELECT root_hash, idx FROM nodes WHERE hash = ? AND store_id = ?",
+                    (
+                        node_hash,
+                        store_id,
+                    ),
+                )
 
                 row = await cursor.fetchone()
                 if row is None:
@@ -526,7 +533,7 @@ class DataStore:
                 root_hash = row["root_hash"]
                 index = row["idx"]
 
-            other_merkle_blob = await self.get_merkle_blob(root_hash)
+            other_merkle_blob = await self.get_merkle_blob(root_hash, read_only=True)
             nodes = other_merkle_blob.get_nodes_with_indexes(index=index)
             index_to_hash = {index: bytes32(node.hash) for index, node in nodes}
             for _, node in nodes:
@@ -557,8 +564,12 @@ class DataStore:
                 ),
             )
             left_hash, right_hash = internal_nodes[node_hash]
-            left_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, left_hash, merkle_blob)
-            right_index = await self.build_blob_from_nodes(internal_nodes, terminal_nodes, right_hash, merkle_blob)
+            left_index = await self.build_blob_from_nodes(
+                internal_nodes, terminal_nodes, left_hash, merkle_blob, store_id
+            )
+            right_index = await self.build_blob_from_nodes(
+                internal_nodes, terminal_nodes, right_hash, merkle_blob, store_id
+            )
             for child_index in (left_index, right_index):
                 merkle_blob.update_entry(index=child_index, parent=index)
             merkle_blob.update_entry(index=index, left=left_index, right=right_index)
