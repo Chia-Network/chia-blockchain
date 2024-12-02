@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -36,7 +36,7 @@ def get_inner_puzzle_from_singleton(puzzle: Union[Program, SerializedProgram]) -
     inner_f, args = r
     if not is_singleton(inner_f):
         return None
-    SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
+    _SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
     return Program(INNER_PUZZLE)
 
 
@@ -52,7 +52,7 @@ def get_singleton_id_from_puzzle(puzzle: Union[Program, SerializedProgram]) -> O
     inner_f, args = r
     if not is_singleton(inner_f):
         return None
-    SINGLETON_STRUCT, INNER_PUZZLE = list(args.as_iter())
+    SINGLETON_STRUCT, _INNER_PUZZLE = list(args.as_iter())
     return bytes32(Program(SINGLETON_STRUCT).rest().first().as_atom())
 
 
@@ -94,7 +94,7 @@ def create_singleton_puzzle(innerpuz: Union[Program, SerializedProgram], launche
 
 
 def get_most_recent_singleton_coin_from_coin_spend(coin_sol: CoinSpend) -> Optional[Coin]:
-    additions: List[Coin] = compute_additions(coin_sol)
+    additions: list[Coin] = compute_additions(coin_sol)
     for coin in additions:
         if coin.amount % 2 == 1:
             return coin

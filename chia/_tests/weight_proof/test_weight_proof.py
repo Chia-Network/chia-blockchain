@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import pytest
 
@@ -22,21 +22,25 @@ from chia.util.ints import uint8, uint32, uint64
 
 
 async def load_blocks_dont_validate(
-    blocks: List[FullBlock], constants: ConsensusConstants
-) -> Tuple[
-    Dict[bytes32, HeaderBlock], Dict[uint32, bytes32], Dict[bytes32, BlockRecord], Dict[uint32, SubEpochSummary]
+    blocks: list[FullBlock], constants: ConsensusConstants
+) -> tuple[
+    dict[bytes32, HeaderBlock], dict[uint32, bytes32], dict[bytes32, BlockRecord], dict[uint32, SubEpochSummary]
 ]:
-    header_cache: Dict[bytes32, HeaderBlock] = {}
-    height_to_hash: Dict[uint32, bytes32] = {}
-    sub_blocks: Dict[bytes32, BlockRecord] = {}
-    sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
+    header_cache: dict[bytes32, HeaderBlock] = {}
+    height_to_hash: dict[uint32, bytes32] = {}
+    sub_blocks: dict[bytes32, BlockRecord] = {}
+    sub_epoch_summaries: dict[uint32, SubEpochSummary] = {}
     prev_block = None
     difficulty = constants.DIFFICULTY_STARTING
+    sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
     block: FullBlock
     for block in blocks:
-        if block.height > 0:
+        if block.height > 0 and len(block.finished_sub_slots) > 0:
             assert prev_block is not None
-            difficulty = uint64(block.reward_chain_block.weight - prev_block.weight)
+            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                difficulty = block.finished_sub_slots[0].challenge_chain.new_difficulty
+            if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
 
         if block.reward_chain_block.challenge_chain_sp_vdf is None:
             assert block.reward_chain_block.signage_point_index == 0
@@ -66,7 +70,7 @@ async def load_blocks_dont_validate(
             BlockchainMock(sub_blocks, height_to_hash=height_to_hash),
             required_iters,
             block,
-            None,
+            sub_slot_iters,
         )
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.height] = block.header_hash
@@ -78,15 +82,15 @@ async def load_blocks_dont_validate(
 
 
 async def _test_map_summaries(
-    blocks: List[FullBlock],
-    header_cache: Dict[bytes32, HeaderBlock],
-    height_to_hash: Dict[uint32, bytes32],
-    sub_blocks: Dict[bytes32, BlockRecord],
-    summaries: Dict[uint32, SubEpochSummary],
+    blocks: list[FullBlock],
+    header_cache: dict[bytes32, HeaderBlock],
+    height_to_hash: dict[uint32, bytes32],
+    sub_blocks: dict[bytes32, BlockRecord],
+    summaries: dict[uint32, SubEpochSummary],
     constants: ConsensusConstants,
 ) -> None:
     curr = sub_blocks[blocks[-1].header_hash]
-    orig_summaries: Dict[int, SubEpochSummary] = {}
+    orig_summaries: dict[int, SubEpochSummary] = {}
     while curr.height > 0:
         if curr.sub_epoch_summary_included is not None:
             orig_summaries[curr.height] = curr.sub_epoch_summary_included
@@ -110,7 +114,7 @@ async def _test_map_summaries(
 class TestWeightProof:
     @pytest.mark.anyio
     async def test_weight_proof_map_summaries_1(
-        self, default_400_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_400_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             default_400_blocks, blockchain_constants
@@ -121,7 +125,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_map_summaries_2(
-        self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
             default_1000_blocks, blockchain_constants
@@ -132,7 +136,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_summaries_1000_blocks(
-        self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -154,7 +158,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_bad_peak_hash(
-        self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -169,7 +173,7 @@ class TestWeightProof:
     @pytest.mark.anyio
     @pytest.mark.skip(reason="broken")
     async def test_weight_proof_from_genesis(
-        self, default_400_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_400_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_400_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -184,7 +188,7 @@ class TestWeightProof:
         assert wp is not None
 
     @pytest.mark.anyio
-    async def test_weight_proof_edge_cases(self, bt: BlockTools, default_400_blocks: List[FullBlock]) -> None:
+    async def test_weight_proof_edge_cases(self, bt: BlockTools, default_400_blocks: list[FullBlock]) -> None:
         blocks = default_400_blocks
 
         blocks = bt.get_consecutive_blocks(
@@ -271,7 +275,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof1000(
-        self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -290,7 +294,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof1000_pre_genesis_empty_slots(
-        self, pre_genesis_empty_slots_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, pre_genesis_empty_slots_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = pre_genesis_empty_slots_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -310,7 +314,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof10000__blocks_compact(
-        self, default_10000_blocks_compact: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_10000_blocks_compact: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_10000_blocks_compact
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -329,7 +333,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof1000_partial_blocks_compact(
-        self, bt: BlockTools, default_10000_blocks_compact: List[FullBlock]
+        self, bt: BlockTools, default_10000_blocks_compact: list[FullBlock]
     ) -> None:
         blocks = bt.get_consecutive_blocks(
             100,
@@ -351,7 +355,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof10000(
-        self, default_10000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_10000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -371,7 +375,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_check_num_of_samples(
-        self, default_10000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_10000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -392,7 +396,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_extend_no_ses(
-        self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -420,7 +424,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_extend_new_ses(
-        self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(
@@ -464,7 +468,7 @@ class TestWeightProof:
 
     @pytest.mark.anyio
     async def test_weight_proof_extend_multiple_ses(
-        self, default_1000_blocks: List[FullBlock], blockchain_constants: ConsensusConstants
+        self, default_1000_blocks: list[FullBlock], blockchain_constants: ConsensusConstants
     ) -> None:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(

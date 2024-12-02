@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 from chia_rs import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
@@ -13,9 +12,9 @@ from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_fo
 
 @dataclass
 class KeyTool:
-    dict: Dict[G1Element, int] = field(default_factory=dict)
+    dict: dict[G1Element, int] = field(default_factory=dict)
 
-    def add_secret_exponents(self, secret_exponents: List[int]) -> None:
+    def add_secret_exponents(self, secret_exponents: list[int]) -> None:
         for _ in secret_exponents:
             self.dict[int_to_public_key(_)] = _ % GROUP_ORDER
 

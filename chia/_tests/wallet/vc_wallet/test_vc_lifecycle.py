@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import itertools
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import pytest
 from chia_rs import G2Element
 
-from chia.clvm.spend_sim import CostLogger, sim_and_client
+from chia._tests.util.spend_sim import CostLogger, sim_and_client
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -47,7 +47,7 @@ ACS_PH: bytes32 = ACS.get_tree_hash()
 ACS_2_PH: bytes32 = ACS_2.get_tree_hash()
 MOCK_SINGLETON_MOD: Program = Program.to([2, 5, 11])
 MOCK_SINGLETON_MOD_HASH: bytes32 = MOCK_SINGLETON_MOD.get_tree_hash()
-MOCK_LAUNCHER_ID: bytes32 = bytes32([0] * 32)
+MOCK_LAUNCHER_ID: bytes32 = bytes32.zeros
 MOCK_LAUNCHER_HASH: bytes32 = bytes32([1] * 32)
 MOCK_SINGLETON: Program = MOCK_SINGLETON_MOD.curry(
     (MOCK_SINGLETON_MOD_HASH, (MOCK_LAUNCHER_ID, MOCK_LAUNCHER_HASH)),
@@ -105,7 +105,7 @@ async def test_covenant_layer(cost_logger: CostLogger) -> None:
         ].coin
 
         # With the honest coin, attempt to spend the non-eve case too soon
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             WalletSpendBundle(
                 [
                     make_spend(
@@ -193,7 +193,7 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         # (mod (METADATA TP solution) (a (q . (c (c (q . 1) (c 2 (c 5 ()))) 11)) (a TP (list METADATA () solution))))
         # (a (q 4 (c (q . 1) (c 2 (c 5 ()))) 11) (a 5 (c 2 (c () (c 11 ())))))
         MOCK_OWNERSHIP_LAYER: Program = Program.fromhex(
-            "ff02ffff01ff04ffff04ffff0101ffff04ff02ffff04ff05ff80808080ff0b80ffff02ff05ffff04ff02ffff04ff80ffff04ff0bff808080808080"  # noqa: E501
+            "ff02ffff01ff04ffff04ffff0101ffff04ff02ffff04ff05ff80808080ff0b80ffff02ff05ffff04ff02ffff04ff80ffff04ff0bff808080808080"
         )
         # Create it with mock singleton info
         transfer_program: Program = create_did_tp(MOCK_SINGLETON_MOD_HASH, MOCK_LAUNCHER_HASH)
@@ -210,10 +210,10 @@ async def test_did_tp(cost_logger: CostLogger) -> None:
         my_coin_id: bytes32 = eml_coin.name()
         new_metadata: Program = Program.to("SUCCESS")
         new_tp_hash = Program.to("NEW TP").get_tree_hash()
-        bad_data: bytes32 = bytes32([0] * 32)
+        bad_data: bytes32 = bytes32.zeros
 
         # Try to update metadata and tp without any announcement
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             WalletSpendBundle(
                 [
                     make_spend(
@@ -327,7 +327,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         )[0].coin
 
         # Reveal the wrong puzzle
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             WalletSpendBundle(
                 [
                     make_spend(
@@ -354,7 +354,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
                         p2_either_puzzle,
                         solve_viral_backdoor(
                             hidden_puzzle,
-                            Program.to(bytes32([0] * 32)),
+                            Program.to(bytes32.zeros),
                             hidden=True,
                         ),
                     )
@@ -365,7 +365,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
         assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
 
         # Spend the inner puzzle
-        brick_hash: bytes32 = bytes32([0] * 32)
+        brick_hash: bytes32 = bytes32.zeros
         wrapped_brick_hash: bytes32 = create_viral_backdoor(
             hidden_puzzle_hash,
             brick_hash,
@@ -399,7 +399,7 @@ async def test_viral_backdoor(cost_logger: CostLogger) -> None:
 @pytest.mark.parametrize("num_proofs", range(1, 6))
 async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
     async with sim_and_client() as (sim, client):
-        flags: List[str] = [str(i) for i in range(0, num_proofs)]
+        flags: list[str] = [str(i) for i in range(0, num_proofs)]
         proofs_checker: ProofsChecker = ProofsChecker(flags)
 
         # (mod (PROOFS_CHECKER proofs) (if (a PROOFS_CHECKER (list proofs)) () (x)))
@@ -415,7 +415,7 @@ async def test_proofs_checker(cost_logger: CostLogger, num_proofs: int) -> None:
 
         block_height: uint32 = sim.block_height
         for i, proof_list in enumerate(itertools.permutations(flags, num_proofs)):
-            result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+            result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
                 cost_logger.add_cost(
                     f"Proofs Checker only - num_proofs: {num_proofs} - permutation: {i}",
                     WalletSpendBundle(
@@ -504,9 +504,9 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             [vc_fund_coin],
             launcher_id,
             ACS_PH,
-            [bytes32([0] * 32)],
+            [bytes32.zeros],
         )
-        result: Tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
+        result: tuple[MempoolInclusionStatus, Optional[Err]] = await client.push_tx(
             cost_logger.add_cost(
                 "Launch VC",
                 WalletSpendBundle(
@@ -612,7 +612,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
             else:
                 proofs = ["test", "test2"]
             proofs_checker: ProofsChecker = ProofsChecker(proofs)
-            AUTHORIZED_PROVIDERS: List[bytes32] = [launcher_id]
+            AUTHORIZED_PROVIDERS: list[bytes32] = [launcher_id]
             dpuz_1, launch_crcat_spend_1, cr_1 = CRCAT.launch(
                 cr_coin_1,
                 Payment(ACS_PH, uint64(cr_coin_1.amount), []),
@@ -716,7 +716,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             62,
                             (
                                 cr_1.expected_announcement()
-                                if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
+                                if error not in {"use_malicious_cats", "attempt_honest_cat_piggyback"}
                                 else malicious_cr_1.expected_announcement()
                             ),
                         ],
@@ -724,7 +724,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                             62,
                             (
                                 cr_2.expected_announcement()
-                                if error not in ["use_malicious_cats", "attempt_honest_cat_piggyback"]
+                                if error not in {"use_malicious_cats", "attempt_honest_cat_piggyback"}
                                 else malicious_cr_2.expected_announcement()
                             ),
                         ],
@@ -755,7 +755,7 @@ async def test_vc_lifecycle(test_syncing: bool, cost_logger: CostLogger) -> None
                 else:
                     vc = new_vc
                 await sim.farm_block()
-            elif error in ["forget_vc", "use_malicious_cats", "attempt_honest_cat_piggyback"]:
+            elif error in {"forget_vc", "use_malicious_cats", "attempt_honest_cat_piggyback"}:
                 assert result == (MempoolInclusionStatus.FAILED, Err.ASSERT_ANNOUNCE_CONSUMED_FAILED)
             elif error == "make_banned_announcement":
                 assert result == (MempoolInclusionStatus.FAILED, Err.GENERATOR_RUNTIME_ERROR)

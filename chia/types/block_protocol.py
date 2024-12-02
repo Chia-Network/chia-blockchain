@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from typing_extensions import Protocol
 
@@ -17,4 +17,4 @@ class BlockInfo(Protocol):
     def transactions_generator(self) -> Optional[SerializedProgram]: ...
 
     @property
-    def transactions_generator_ref_list(self) -> List[uint32]: ...
+    def transactions_generator_ref_list(self) -> list[uint32]: ...

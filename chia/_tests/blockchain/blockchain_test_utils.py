@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
-from chia_rs import BLSCache
+from chia_rs import SpendBundleConditions
 
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import AddBlockResult, Blockchain
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.difficulty_adjustment import get_next_sub_slot_iters_and_difficulty
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.types.full_block import FullBlock
+from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64
 
@@ -48,7 +51,6 @@ async def _validate_and_add_block(
     expected_error: Optional[Err] = None,
     skip_prevalidation: bool = False,
     fork_info: Optional[ForkInfo] = None,
-    use_bls_cache: bool = False,
 ) -> None:
     # Tries to validate and add the block, and checks that there are no errors in the process and that the
     # block is added to the peak.
@@ -57,17 +59,36 @@ async def _validate_and_add_block(
     # add_block must return Err.INVALID_BLOCK.
     # If expected_result == INVALID_BLOCK but expected_error is None, we will allow for errors to happen
 
+    prev_b = None
+    prev_ses_block = None
+    if block.height > 0:
+        prev_b = await blockchain.get_block_record_from_db(block.prev_header_hash)
+        if prev_b is not None:  # some negative tests require this
+            curr = prev_b
+            while curr.height > 0 and curr.sub_epoch_summary_included is None:
+                curr = blockchain.block_record(curr.prev_hash)
+            prev_ses_block = curr
+    new_slot = len(block.finished_sub_slots) > 0
+    ssi, diff = get_next_sub_slot_iters_and_difficulty(blockchain.constants, new_slot, prev_b, blockchain)
     await check_block_store_invariant(blockchain)
+
     if skip_prevalidation:
-        results = PreValidationResult(None, uint64(1), None, False, uint32(0))
+        if block.transactions_generator is None:
+            conds = None
+        else:
+            # fake the signature validation. Just say True here.
+            conds = SpendBundleConditions([], 0, 0, 0, None, None, [], 0, 0, 0, True)
+        results = PreValidationResult(None, uint64(1), conds, uint32(0))
     else:
-        # validate_signatures must be False in order to trigger add_block() to
-        # validate the signature.
-        pre_validation_results: List[PreValidationResult] = await blockchain.pre_validate_blocks_multiprocessing(
-            [block], {}, validate_signatures=False
+        future = await pre_validate_block(
+            blockchain.constants,
+            AugmentedBlockchain(blockchain),
+            block,
+            blockchain.pool,
+            None,
+            ValidationState(ssi, diff, prev_ses_block),
         )
-        assert pre_validation_results is not None
-        results = pre_validation_results[0]
+        results = await future
     if results.error is not None:
         if expected_result == AddBlockResult.INVALID_BLOCK and expected_error is None:
             # We expected an error but didn't specify which one
@@ -81,17 +102,14 @@ async def _validate_and_add_block(
             raise AssertionError(f"Expected {expected_error} but got {Err(results.error)}")
         await check_block_store_invariant(blockchain)
         return None
-
-    if use_bls_cache:
-        bls_cache = BLSCache(100)
-    else:
-        bls_cache = None
+    if fork_info is None:
+        fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
 
     (
         result,
         err,
         _,
-    ) = await blockchain.add_block(block, results, bls_cache, fork_info=fork_info)
+    ) = await blockchain.add_block(block, results, ssi, fork_info=fork_info)
     await check_block_store_invariant(blockchain)
 
     if expected_error is None and expected_result != AddBlockResult.INVALID_BLOCK:
@@ -119,7 +137,7 @@ async def _validate_and_add_block(
 async def _validate_and_add_block_multi_error(
     blockchain: Blockchain,
     block: FullBlock,
-    expected_errors: List[Err],
+    expected_errors: list[Err],
     skip_prevalidation: bool = False,
     fork_info: Optional[ForkInfo] = None,
 ) -> None:
@@ -137,7 +155,7 @@ async def _validate_and_add_block_multi_error(
 async def _validate_and_add_block_multi_result(
     blockchain: Blockchain,
     block: FullBlock,
-    expected_result: List[AddBlockResult],
+    expected_result: list[AddBlockResult],
     skip_prevalidation: bool = False,
     fork_info: Optional[ForkInfo] = None,
 ) -> None:
@@ -151,7 +169,7 @@ async def _validate_and_add_block_multi_result(
     except Exception as e:
         assert isinstance(e, AssertionError)
         assert "Block was not added" in e.args[0]
-        expected_list: List[str] = [f"Block was not added: {res}" for res in expected_result]
+        expected_list: list[str] = [f"Block was not added: {res}" for res in expected_result]
         if e.args[0] not in expected_list:
             raise AssertionError(f"{e.args[0].split('Block was not added: ')[1]} not in {expected_result}")
 

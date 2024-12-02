@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import random
 import unittest
-from typing import List, Tuple
 
 import pytest
 from chia_rs import G2Element
@@ -36,9 +35,9 @@ def rand_hash(rng: random.Random) -> bytes32:
     return bytes32(ret)
 
 
-def create_spends(num: int) -> Tuple[List[CoinSpend], List[Coin]]:
-    spends: List[CoinSpend] = []
-    create_coin: List[Coin] = []
+def create_spends(num: int) -> tuple[list[CoinSpend], list[Coin]]:
+    spends: list[CoinSpend] = []
+    create_coin: list[Coin] = []
     rng = random.Random()
 
     puzzle = Program.to(1)

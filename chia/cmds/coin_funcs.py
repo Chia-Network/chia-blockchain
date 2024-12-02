@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 import sys
-from typing import List, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Optional
 
 from chia.cmds.cmds_util import CMDCoinSelectionConfigLoader, CMDTXConfigLoader, cli_confirm, get_wallet_client
 from chia.cmds.param_types import CliAmount
@@ -40,7 +41,7 @@ async def async_list(
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
             return
-        if not await wallet_client.get_synced():
+        if not (await wallet_client.get_sync_status()).synced:
             print("Wallet not synced. Please wait.")
             return
         conf_coins, unconfirmed_removals, unconfirmed_additions = await wallet_client.get_spendable_coins(
@@ -84,7 +85,7 @@ async def async_list(
 
 
 def print_coins(
-    target_string: str, coins: List[Tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
+    target_string: str, coins: list[tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
 ) -> None:
     if len(coins) == 0:
         print("\tNo Coins.")
@@ -120,13 +121,16 @@ async def async_combine(
     max_coin_amount: CliAmount,
     min_coin_amount: CliAmount,
     excluded_amounts: Sequence[CliAmount],
+    coins_to_exclude: Sequence[bytes32],
+    reuse_puzhash: bool,
     number_of_coins: int,
     target_coin_amount: Optional[CliAmount],
     target_coin_ids: Sequence[bytes32],
     largest_first: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+    override: bool,
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         try:
             wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
@@ -134,7 +138,7 @@ async def async_combine(
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
             return []
-        if not await wallet_client.get_synced():
+        if not (await wallet_client.get_sync_status()).synced:
             print("Wallet not synced. Please wait.")
             return []
 
@@ -142,7 +146,8 @@ async def async_combine(
             max_coin_amount=max_coin_amount,
             min_coin_amount=min_coin_amount,
             excluded_coin_amounts=list(excluded_amounts),
-            # TODO: [add TXConfig args] add excluded_coin_ids
+            excluded_coin_ids=list(coins_to_exclude),
+            reuse_puzhash=reuse_puzhash,
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
         final_target_coin_amount = (
@@ -163,6 +168,14 @@ async def async_combine(
             tx_config,
             timelock_info=condition_valid_times,
         )
+
+        if (
+            not override
+            and wallet_id == 1
+            and fee >= sum(coin.amount for tx in resp.transactions for coin in tx.removals)
+        ):
+            print("Fee is >= the amount of coins selected. To continue, please use --override flag.")
+            return []
 
         print(f"Transactions would combine up to {number_of_coins} coins.")
         if push:
@@ -185,13 +198,17 @@ async def async_split(
     fingerprint: Optional[int],
     wallet_id: int,
     fee: uint64,
-    number_of_coins: int,
-    amount_per_coin: CliAmount,
+    number_of_coins: Optional[int],
+    amount_per_coin: Optional[CliAmount],
     target_coin_id: bytes32,
-    # TODO: [add TXConfig args]
+    max_coin_amount: CliAmount,
+    min_coin_amount: CliAmount,
+    excluded_amounts: Sequence[CliAmount],
+    coins_to_exclude: Sequence[bytes32],
+    reuse_puzhash: bool,
     push: bool,
     condition_valid_times: ConditionValidTimes,
-) -> List[TransactionRecord]:
+) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         try:
             wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
@@ -199,17 +216,40 @@ async def async_split(
         except LookupError:
             print(f"Wallet id: {wallet_id} not found.")
             return []
-        if not await wallet_client.get_synced():
+        if not (await wallet_client.get_sync_status()).synced:
             print("Wallet not synced. Please wait.")
             return []
+
+        if number_of_coins is None and amount_per_coin is None:
+            print("Must use either -a or -n. For more information run --help.")
+            return []
+
+        if number_of_coins is None:
+            coins = await wallet_client.get_coin_records_by_names([target_coin_id])
+            if len(coins) == 0:
+                print("Could not find target coin.")
+                return []
+            assert amount_per_coin is not None
+            number_of_coins = int(coins[0].coin.amount // amount_per_coin.convert_amount(mojo_per_unit))
+        elif amount_per_coin is None:
+            coins = await wallet_client.get_coin_records_by_names([target_coin_id])
+            if len(coins) == 0:
+                print("Could not find target coin.")
+                return []
+            assert number_of_coins is not None
+            amount_per_coin = CliAmount(True, uint64(coins[0].coin.amount // number_of_coins))
 
         final_amount_per_coin = amount_per_coin.convert_amount(mojo_per_unit)
 
         tx_config = CMDTXConfigLoader(
-            # TODO: [add TXConfig args]
+            max_coin_amount=max_coin_amount,
+            min_coin_amount=min_coin_amount,
+            excluded_coin_amounts=list(excluded_amounts),
+            excluded_coin_ids=list(coins_to_exclude),
+            reuse_puzhash=reuse_puzhash,
         ).to_tx_config(mojo_per_unit, config, fingerprint)
 
-        transactions: List[TransactionRecord] = (
+        transactions: list[TransactionRecord] = (
             await wallet_client.split_coins(
                 SplitCoins(
                     wallet_id=uint32(wallet_id),

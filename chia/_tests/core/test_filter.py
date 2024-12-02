@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 from chiabip158 import PyBIP158
 
 
 @pytest.mark.anyio
 async def test_basic_filter_test(simulator_and_wallet):
-    full_nodes, wallets, bt = simulator_and_wallet
-    wallet_node, server_2 = wallets[0]
+    _full_nodes, wallets, bt = simulator_and_wallet
+    wallet_node, _server_2 = wallets[0]
     wallet = wallet_node.wallet_state_manager.main_wallet
 
     num_blocks = 2
@@ -21,7 +19,7 @@ async def test_basic_filter_test(simulator_and_wallet):
         pool_reward_puzzle_hash=ph,
     )
     for i in range(1, num_blocks):
-        byte_array_tx: List[bytes] = []
+        byte_array_tx: list[bytes] = []
         block = blocks[i]
         coins = block.get_included_reward_coins()
         coin_0 = bytearray(coins[0].puzzle_hash)

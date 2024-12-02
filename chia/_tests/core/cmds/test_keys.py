@@ -4,13 +4,14 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pytest
 from click.testing import CliRunner, Result
 
 from chia.cmds.chia import cli
 from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, sign_cmd, verify_cmd
+from chia.cmds.keys_funcs import get_private_key_with_fingerprint_or_prompt
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.keychain import Keychain, KeyData, generate_mnemonic
@@ -104,7 +105,7 @@ class TestKeysCommands:
         assert len(address_matches) > 1
         address = address_matches[0]
 
-        config: Dict = load_config(tmp_path, "config.yaml")
+        config: dict = load_config(tmp_path, "config.yaml")
         assert config["farmer"]["xch_target_address"] == address
         assert config["pool"]["xch_target_address"] == address
 
@@ -152,7 +153,7 @@ class TestKeysCommands:
         assert len(address_matches) > 1
         address = address_matches[0]
 
-        existing_config: Dict = load_config(tmp_path, "config.yaml")
+        existing_config: dict = load_config(tmp_path, "config.yaml")
         assert existing_config["farmer"]["xch_target_address"] == address
         assert existing_config["pool"]["xch_target_address"] == address
 
@@ -176,7 +177,7 @@ class TestKeysCommands:
         assert len(keychain.get_all_private_keys()) == 2
 
         # Verify that the config's xch_target_address entries have not changed
-        config: Dict = load_config(tmp_path, "config.yaml")
+        config: dict = load_config(tmp_path, "config.yaml")
         assert config["farmer"]["xch_target_address"] == existing_config["farmer"]["xch_target_address"]
         assert config["pool"]["xch_target_address"] == existing_config["pool"]["xch_target_address"]
 
@@ -199,7 +200,7 @@ class TestKeysCommands:
         ],
     )
     def test_generate_and_add_label_parameter(
-        self, cmd_params: List[str], label: Optional[str], input_str: Optional[str], tmp_path, empty_keyring
+        self, cmd_params: list[str], label: Optional[str], input_str: Optional[str], tmp_path, empty_keyring
     ):
         keychain = empty_keyring
         keys_root_path = keychain.keyring_wrapper.keys_root_path
@@ -1321,7 +1322,7 @@ class TestKeysCommands:
         assert result.exit_code == 0
         assert (
             result.output.find(
-                "Wallet address 9 (m/12381/8444/2/9): " "xch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs829wkl"
+                "Wallet address 9 (m/12381/8444/2/9): xch1p33y7kv48u7l68m490mr8levl6nkyxm3x8tfcnnec555egxzd3gs829wkl"
             )
             != -1
         )
@@ -1347,7 +1348,7 @@ class TestKeysCommands:
             ],
         )
         assert result.exit_code == 0
-        assert result.output.find("Need a private key for non observer derivation of wallet addresses") != -1
+        assert result.output.find("Could not resolve private key for non-observer derivation") != -1
 
     def test_derive_wallet_testnet_address(self, tmp_path, keyring_with_one_public_one_private_key):
         """
@@ -1685,9 +1686,7 @@ class TestKeysCommands:
             ],
         )
 
-        assert isinstance(result.exception, ValueError) and result.exception.args == (
-            "Cannot perform non-observer derivation on an observer-only key",
-        )
+        assert result.output.find("Could not resolve private key for non-observer derivation") != -1
 
         result: Result = runner.invoke(
             cli,
@@ -1714,3 +1713,22 @@ class TestKeysCommands:
         assert isinstance(result.exception, ValueError) and result.exception.args == (
             "Hardened path specified for observer key",
         )
+
+    @pytest.mark.anyio
+    async def test_get_private_key_with_fingerprint_or_prompt(
+        self, monkeypatch, keyring_with_one_public_one_private_key
+    ) -> None:
+        [sk1_plus_ent] = keyring_with_one_public_one_private_key.get_all_private_keys()
+        sk1, _ = sk1_plus_ent
+        [pk1, pk2] = keyring_with_one_public_one_private_key.get_all_public_keys()
+        assert pk1.get_fingerprint() == TEST_FINGERPRINT
+        assert pk2.get_fingerprint() == TEST_PK_FINGERPRINT
+
+        assert get_private_key_with_fingerprint_or_prompt(TEST_FINGERPRINT) == (TEST_FINGERPRINT, sk1)
+        assert get_private_key_with_fingerprint_or_prompt(TEST_PK_FINGERPRINT) == (TEST_PK_FINGERPRINT, None)
+
+        monkeypatch.setattr("builtins.input", lambda _: "1")
+        assert get_private_key_with_fingerprint_or_prompt(None) == (TEST_FINGERPRINT, sk1)
+
+        monkeypatch.setattr("builtins.input", lambda _: "2")
+        assert get_private_key_with_fingerprint_or_prompt(None) == (TEST_PK_FINGERPRINT, None)

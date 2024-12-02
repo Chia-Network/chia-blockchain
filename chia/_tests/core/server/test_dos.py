@@ -1,10 +1,9 @@
-# flake8: noqa: F811, F401
 from __future__ import annotations
 
 import asyncio
 import logging
 import time
-from typing import List, Tuple
+from typing import Optional
 
 import pytest
 from aiohttp import ClientSession, ClientTimeout, WSCloseCode, WSMessage, WSMsgType, WSServerHandshakeError
@@ -45,15 +44,15 @@ async def get_block_path(full_node: FullNodeAPI):
 
 
 class FakeRateLimiter:
-    def process_msg_and_check(self, msg, capa, capb):
-        return True
+    def process_msg_and_check(self, msg, capa, capb) -> Optional[str]:
+        return None
 
 
 class TestDos:
     @pytest.mark.anyio
     async def test_banned_host_can_not_connect(
         self,
-        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -77,7 +76,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_large_message_disconnect_and_ban(
         self,
-        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -112,7 +111,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_bad_handshake_and_ban(
         self,
-        setup_two_nodes_fixture: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        setup_two_nodes_fixture: tuple[list[FullNodeSimulator], list[tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -176,7 +175,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
-        full_node_1, full_node_2 = nodes
+        _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -184,8 +183,8 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
+        ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
 
         ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
         ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
@@ -231,7 +230,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_spam_message_non_tx(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
-        full_node_1, full_node_2 = nodes
+        _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -239,8 +238,8 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
+        ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
 
         ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
         ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)
@@ -280,7 +279,7 @@ class TestDos:
     @pytest.mark.anyio
     async def test_spam_message_too_large(self, setup_two_nodes_fixture, self_hostname):
         nodes, _, _ = setup_two_nodes_fixture
-        full_node_1, full_node_2 = nodes
+        _full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -288,8 +287,8 @@ class TestDos:
 
         assert len(server_1.all_connections) == 1
 
-        ws_con: WSChiaConnection = list(server_1.all_connections.values())[0]
-        ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+        ws_con: WSChiaConnection = next(iter(server_1.all_connections.values()))
+        ws_con_2: WSChiaConnection = next(iter(server_2.all_connections.values()))
 
         ws_con.peer_info = PeerInfo("1.2.3.4", ws_con.peer_info.port)
         ws_con_2.peer_info = PeerInfo("1.2.3.4", ws_con_2.peer_info.port)

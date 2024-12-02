@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import random
 from pathlib import Path
-from typing import List, Tuple
 
 import pytest
 
 from chia._tests.util.temp_file import TempFile
 from chia.cmds.db_upgrade_func import convert_v1_to_v2
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
@@ -32,7 +32,7 @@ def rand_bytes(num) -> bytes:
 async def test_blocks(default_1000_blocks, with_hints: bool):
     blocks = default_1000_blocks
 
-    hints: List[Tuple[bytes32, bytes]] = []
+    hints: list[tuple[bytes32, bytes]] = []
     for i in range(351):
         hints.append((bytes32(rand_bytes(32)), rand_bytes(20)))
 
@@ -68,11 +68,15 @@ async def test_blocks(default_1000_blocks, with_hints: bool):
                     await hint_store1.add_hints([(h[0], h[1])])
 
             bc = await Blockchain.create(coin_store1, block_store1, test_constants, Path("."), reserved_cores=0)
-
+            sub_slot_iters = test_constants.SUB_SLOT_ITERS_STARTING
             for block in blocks:
+                if block.height != 0 and len(block.finished_sub_slots) > 0:
+                    if block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters is not None:
+                        sub_slot_iters = block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters
                 # await _validate_and_add_block(bc, block)
-                results = PreValidationResult(None, uint64(1), None, False, uint32(0))
-                result, err, _ = await bc.add_block(block, results, None)
+                results = PreValidationResult(None, uint64(1), None, uint32(0))
+                fork_info = ForkInfo(block.height - 1, block.height - 1, block.prev_header_hash)
+                _, err, _ = await bc.add_block(block, results, sub_slot_iters=sub_slot_iters, fork_info=fork_info)
                 assert err is None
 
         # now, convert v1 in_file to v2 out_file

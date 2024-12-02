@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from logging import Logger
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 
@@ -15,7 +14,7 @@ from chia.util.default_root import SIMULATOR_ROOT_PATH
 
 @pytest.mark.anyio
 async def test_enable_private_networks(
-    two_nodes: Tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
+    two_nodes: tuple[FullNodeAPI, FullNodeAPI, ChiaServer, ChiaServer, BlockTools],
 ) -> None:
     chia_server = two_nodes[2]
 

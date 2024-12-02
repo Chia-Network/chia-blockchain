@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List
 
 import pytest
 from clvm.casts import int_to_bytes
@@ -31,7 +30,7 @@ log = getLogger(__name__)
 zero_ph = bytes32(32 * b"\0")
 
 
-async def get_all_messages_in_queue(queue: asyncio.Queue[Message]) -> List[Message]:
+async def get_all_messages_in_queue(queue: asyncio.Queue[Message]) -> list[Message]:
     all_messages = []
     await asyncio.sleep(2)
     while not queue.empty():
@@ -360,7 +359,7 @@ async def test_subscribe_for_ph_reorg(simulator_and_wallet: OldSimulatorsAndWall
 
     all_messages = await get_all_messages_in_queue(incoming_queue)
 
-    coin_update_messages: List[CoinStateUpdate] = []
+    coin_update_messages: list[CoinStateUpdate] = []
     for message in all_messages:
         if message.type == ProtocolMessageTypes.coin_state_update.value:
             coin_state_update = CoinStateUpdate.from_bytes(message.data)
@@ -438,7 +437,7 @@ async def test_subscribe_for_coin_id_reorg(simulator_and_wallet: OldSimulatorsAn
 
     all_messages = await get_all_messages_in_queue(incoming_queue)
 
-    coin_update_messages: List[CoinStateUpdate] = []
+    coin_update_messages: list[CoinStateUpdate] = []
     for message in all_messages:
         if message.type == ProtocolMessageTypes.coin_state_update.value:
             coin_state_update = CoinStateUpdate.from_bytes(message.data)
@@ -621,7 +620,7 @@ async def test_subscribe_for_hint_long_sync(
     all_messages = await get_all_messages_in_queue(incoming_queue)
     all_messages_1 = await get_all_messages_in_queue(incoming_queue_1)
 
-    def check_messages_for_hint(messages: List[Message]) -> None:
+    def check_messages_for_hint(messages: list[Message]) -> None:
         notified_state = None
 
         for message in messages:
@@ -644,7 +643,7 @@ async def test_ph_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWallets
     _, server_2 = wallets[0]
     fn_server = full_node_api.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
-    con = list(fn_server.all_connections.values())[0]
+    con = next(iter(fn_server.all_connections.values()))
     phs = []
     phs.append(bytes32(32 * b"\0"))
     phs.append(bytes32(32 * b"\1"))
@@ -685,7 +684,7 @@ async def test_coin_subscribe_limits(simulator_and_wallet: OldSimulatorsAndWalle
     _, server_2 = wallets[0]
     fn_server = full_node_api.full_node.server
     await server_2.start_client(PeerInfo(self_hostname, fn_server.get_port()), None)
-    con = list(fn_server.all_connections.values())[0]
+    con = next(iter(fn_server.all_connections.values()))
     coins = []
     coins.append(bytes32(32 * b"\0"))
     coins.append(bytes32(32 * b"\1"))

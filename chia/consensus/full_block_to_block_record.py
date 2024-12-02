@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain_interface import BlockRecordsProtocol
@@ -24,7 +24,7 @@ def block_to_block_record(
     blocks: BlockRecordsProtocol,
     required_iters: uint64,
     block: Union[FullBlock, HeaderBlock],
-    sub_slot_iters: Optional[uint64] = None,
+    sub_slot_iters: uint64,
     prev_ses_block: Optional[BlockRecord] = None,
 ) -> BlockRecord:
     prev_b = blocks.try_block_record(block.prev_header_hash)
@@ -111,13 +111,13 @@ def header_block_to_sub_block_record(
         icc_output = None
 
     if len(block.finished_sub_slots) > 0:
-        finished_challenge_slot_hashes: Optional[List[bytes32]] = [
+        finished_challenge_slot_hashes: Optional[list[bytes32]] = [
             sub_slot.challenge_chain.get_hash() for sub_slot in block.finished_sub_slots
         ]
-        finished_reward_slot_hashes: Optional[List[bytes32]] = [
+        finished_reward_slot_hashes: Optional[list[bytes32]] = [
             sub_slot.reward_chain.get_hash() for sub_slot in block.finished_sub_slots
         ]
-        finished_infused_challenge_slot_hashes: Optional[List[bytes32]] = [
+        finished_infused_challenge_slot_hashes: Optional[list[bytes32]] = [
             sub_slot.infused_challenge_chain.get_hash()
             for sub_slot in block.finished_sub_slots
             if sub_slot.infused_challenge_chain is not None

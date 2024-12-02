@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import pytest
 
 from chia.types.full_block import FullBlock
@@ -21,41 +19,41 @@ from chia.types.full_block import FullBlock
 
 
 @pytest.mark.build_test_chains
-def test_trigger_default_400(default_400_blocks: List[FullBlock]) -> None:
+def test_trigger_default_400(default_400_blocks: list[FullBlock]) -> None:
     pass
 
 
 @pytest.mark.build_test_chains
-def test_trigger_default_1000(default_1000_blocks: List[FullBlock]) -> None:
+def test_trigger_default_1000(default_1000_blocks: list[FullBlock]) -> None:
     pass
 
 
 @pytest.mark.build_test_chains
-def test_trigger_pre_genesis_empty_1000(pre_genesis_empty_slots_1000_blocks: List[FullBlock]) -> None:
+def test_trigger_pre_genesis_empty_1000(pre_genesis_empty_slots_1000_blocks: list[FullBlock]) -> None:
     pass
 
 
 @pytest.mark.build_test_chains
-def test_trigger_default_1500(default_1500_blocks: List[FullBlock]) -> None:
+def test_trigger_default_1500(default_1500_blocks: list[FullBlock]) -> None:
     pass
 
 
 @pytest.mark.build_test_chains
 def test_trigger_default_10000(
-    default_10000_blocks: List[FullBlock],
-    test_long_reorg_blocks: List[FullBlock],
-    test_long_reorg_blocks_light: List[FullBlock],
-    test_long_reorg_1500_blocks: List[FullBlock],
-    test_long_reorg_1500_blocks_light: List[FullBlock],
+    default_10000_blocks: list[FullBlock],
+    test_long_reorg_blocks: list[FullBlock],
+    test_long_reorg_blocks_light: list[FullBlock],
+    test_long_reorg_1500_blocks: list[FullBlock],
+    test_long_reorg_1500_blocks_light: list[FullBlock],
 ) -> None:
     pass
 
 
 @pytest.mark.build_test_chains
-def test_trigger_default_2000_compact(default_2000_blocks_compact: List[FullBlock]) -> None:
+def test_trigger_default_2000_compact(default_2000_blocks_compact: list[FullBlock]) -> None:
     pass
 
 
 @pytest.mark.build_test_chains
-def test_trigger_default_10000_compact(default_10000_blocks_compact: List[FullBlock]) -> None:
+def test_trigger_default_10000_compact(default_10000_blocks_compact: list[FullBlock]) -> None:
     pass

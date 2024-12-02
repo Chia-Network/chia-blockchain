@@ -3,18 +3,21 @@ from __future__ import annotations
 import asyncio
 import itertools
 import time
-from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
+from collections.abc import Collection
+from typing import Any, Optional, Union
 
 import anyio
 
+from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import BlockchainMutexPriority
-from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType
+from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
@@ -22,6 +25,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
+from chia.types.validation_state import ValidationState
+from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.timing import adjusted_timeout, backoff_times
@@ -42,7 +47,7 @@ default = _Default()
 timeout_per_block = 5
 
 
-async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet, timeout: Optional[float] = 5):
+async def wait_for_coins_in_wallet(coins: set[Coin], wallet: Wallet, timeout: Optional[float] = 5):
     """Wait until all of the specified coins are simultaneously reported as spendable
     by the wallet.
 
@@ -64,7 +69,7 @@ async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet, timeout: Op
 
 
 class FullNodeSimulator(FullNodeAPI):
-    def __init__(self, full_node: FullNode, block_tools: BlockTools, config: Dict) -> None:
+    def __init__(self, full_node: FullNode, block_tools: BlockTools, config: dict) -> None:
         super().__init__(full_node)
         self.bt = block_tools
         self.full_node = full_node
@@ -74,10 +79,10 @@ class FullNodeSimulator(FullNodeAPI):
         self.use_current_time: bool = self.config.get("simulator", {}).get("use_current_time", False)
         self.auto_farm: bool = self.config.get("simulator", {}).get("auto_farm", False)
 
-    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> list[dict[str, Any]]:
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
-    async def get_all_full_blocks(self) -> List[FullBlock]:
+    async def get_all_full_blocks(self) -> list[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
         if peak is None:
             return []
@@ -119,7 +124,7 @@ class FullNodeSimulator(FullNodeAPI):
                 await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
             return self.auto_farm
 
-    async def get_all_coins(self, request: GetAllCoinsProtocol) -> List[CoinRecord]:
+    async def get_all_coins(self, request: GetAllCoinsProtocol) -> list[CoinRecord]:
         return await self.full_node.coin_store.get_all_coins(request.include_spent_coins)
 
     async def revert_block_height(self, new_height: uint32) -> None:
@@ -148,33 +153,44 @@ class FullNodeSimulator(FullNodeAPI):
         # reload mempool
         await self.full_node.mempool_manager.new_peak(block_record, None)
 
-    async def get_all_puzzle_hashes(self) -> Dict[bytes32, Tuple[uint128, int]]:
+    async def get_all_puzzle_hashes(self) -> dict[bytes32, tuple[uint128, int]]:
         # puzzle_hash, (total_amount, num_transactions)
-        ph_total_amount: Dict[bytes32, Tuple[uint128, int]] = {}
-        all_non_spent_coins: List[CoinRecord] = await self.get_all_coins(GetAllCoinsProtocol(False))
+        ph_total_amount: dict[bytes32, tuple[uint128, int]] = {}
+        all_non_spent_coins: list[CoinRecord] = await self.get_all_coins(GetAllCoinsProtocol(False))
         for cr in all_non_spent_coins:
             if cr.coin.puzzle_hash not in ph_total_amount:
                 ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount), 1)
             else:
-                dict_value: Tuple[uint128, int] = ph_total_amount[cr.coin.puzzle_hash]
+                dict_value: tuple[uint128, int] = ph_total_amount[cr.coin.puzzle_hash]
                 ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount + dict_value[0]), dict_value[1] + 1)
         return ph_total_amount
 
     async def farm_new_transaction_block(
         self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
     ) -> FullBlock:
+        ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+        diff = self.full_node.constants.DIFFICULTY_STARTING
         async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[PreValidationResult] = (
-                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                        [genesis], {}, validate_signatures=True
-                    )
+                future = await pre_validate_block(
+                    self.full_node.blockchain.constants,
+                    AugmentedBlockchain(self.full_node.blockchain),
+                    genesis,
+                    self.full_node.blockchain.pool,
+                    None,
+                    ValidationState(ssi, diff, None),
                 )
-                assert pre_validation_results is not None
-                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0], self.full_node._bls_cache)
+                pre_validation_result: PreValidationResult = await future
+                fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
+                await self.full_node.blockchain.add_block(
+                    genesis,
+                    pre_validation_result,
+                    self.full_node.constants.SUB_SLOT_ITERS_STARTING,
+                    fork_info,
+                )
 
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
@@ -213,19 +229,24 @@ class FullNodeSimulator(FullNodeAPI):
         return more[-1]
 
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
+        ssi = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+        diff = self.full_node.constants.DIFFICULTY_STARTING
         async with self.full_node.blockchain.priority_mutex.acquire(priority=BlockchainMutexPriority.high):
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
             if len(current_blocks) == 0:
                 genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-                pre_validation_results: List[PreValidationResult] = (
-                    await self.full_node.blockchain.pre_validate_blocks_multiprocessing(
-                        [genesis], {}, validate_signatures=True
-                    )
+                future = await pre_validate_block(
+                    self.full_node.blockchain.constants,
+                    AugmentedBlockchain(self.full_node.blockchain),
+                    genesis,
+                    self.full_node.blockchain.pool,
+                    None,
+                    ValidationState(ssi, diff, None),
                 )
-                assert pre_validation_results is not None
-                await self.full_node.blockchain.add_block(genesis, pre_validation_results[0], self.full_node._bls_cache)
-
+                pre_validation_result: PreValidationResult = await future
+                fork_info = ForkInfo(-1, -1, self.full_node.constants.GENESIS_CHALLENGE)
+                await self.full_node.blockchain.add_block(genesis, pre_validation_result, ssi, fork_info)
             peak = self.full_node.blockchain.get_peak()
             assert peak is not None
             curr: BlockRecord = peak
@@ -279,16 +300,14 @@ class FullNodeSimulator(FullNodeAPI):
             guarantee_transaction_block=True,
             seed=seed,
         )
-
-        for block in more_blocks:
-            await self.full_node.add_block(block)
+        await add_blocks_in_batches(more_blocks, self.full_node, current_blocks[old_index].header_hash)
 
     async def farm_blocks_to_puzzlehash(
         self,
         count: int,
-        farm_to: bytes32 = bytes32([0] * 32),
+        farm_to: bytes32 = bytes32.zeros,
         guarantee_transaction_blocks: bool = False,
-        timeout: Union[None, _Default, float] = default,
+        timeout: Union[_Default, float, None] = default,
         _wait_for_synced: bool = True,
     ) -> int:
         """Process the requested number of blocks including farming to the passed puzzle
@@ -332,7 +351,7 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         count: int,
         wallet: Wallet,
-        timeout: Union[None, _Default, float] = default,
+        timeout: Union[_Default, float, None] = default,
         _wait_for_synced: bool = True,
     ) -> int:
         """Farm the requested number of blocks to the passed wallet. This will
@@ -404,7 +423,7 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         amount: int,
         wallet: Wallet,
-        timeout: Union[None, _Default, float] = default,
+        timeout: Union[_Default, float, None] = default,
     ) -> int:
         """Farm at least the requested amount of mojos to the passed wallet. Extra
         mojos will be received based on the block rewards at the present block height.
@@ -445,7 +464,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def wait_transaction_records_entered_mempool(
         self,
         records: Collection[TransactionRecord],
-        timeout: Union[None, float] = 5,
+        timeout: Union[float, None] = 5,
     ) -> None:
         """Wait until the transaction records have entered the mempool.  Transaction
         records with no spend bundle are ignored.
@@ -454,7 +473,7 @@ class FullNodeSimulator(FullNodeAPI):
             records: The transaction records to wait for.
         """
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            ids_to_check: Set[bytes32] = set()
+            ids_to_check: set[bytes32] = set()
             for record in records:
                 if record.spend_bundle is None:
                     continue
@@ -477,7 +496,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def wait_bundle_ids_in_mempool(
         self,
         bundle_ids: Collection[bytes32],
-        timeout: Union[None, float] = 5,
+        timeout: Union[float, None] = 5,
     ) -> None:
         """Wait until the ids of specific spend bundles have entered the mempool.
 
@@ -485,7 +504,7 @@ class FullNodeSimulator(FullNodeAPI):
             records: The bundle ids to wait for.
         """
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            ids_to_check: Set[bytes32] = set(bundle_ids)
+            ids_to_check: set[bytes32] = set(bundle_ids)
 
             for backoff in backoff_times():
                 found = set()
@@ -504,7 +523,7 @@ class FullNodeSimulator(FullNodeAPI):
         self,
         record_ids: Collection[bytes32],
         wallet_node: WalletNode,
-        timeout: Union[None, float] = 10,
+        timeout: Union[float, None] = 10,
     ) -> None:
         """Wait until the transaction records have been marked that they have made it into the mempool.  Transaction
         records with no spend bundle are ignored.
@@ -513,7 +532,7 @@ class FullNodeSimulator(FullNodeAPI):
             records: The transaction records to wait for.
         """
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            ids_to_check: Set[bytes32] = set(record_ids)
+            ids_to_check: set[bytes32] = set(record_ids)
 
             for backoff in backoff_times():
                 found = set()
@@ -531,7 +550,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def process_transaction_records(
         self,
         records: Collection[TransactionRecord],
-        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
+        timeout: Union[float, None] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified transaction records and wait until they have been
         included in a block.
@@ -542,7 +561,7 @@ class FullNodeSimulator(FullNodeAPI):
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             await self.wait_for_self_synced(timeout=None)
 
-            coins_to_wait_for: Set[Coin] = set()
+            coins_to_wait_for: set[Coin] = set()
             for record in records:
                 if record.spend_bundle is None:
                     continue
@@ -556,7 +575,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def process_spend_bundles(
         self,
         bundles: Collection[SpendBundle],
-        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
+        timeout: Union[float, None] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified spend bundles and wait until they have been included
         in a block.
@@ -566,13 +585,13 @@ class FullNodeSimulator(FullNodeAPI):
         """
 
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
-            coins_to_wait_for: Set[Coin] = {addition for bundle in bundles for addition in bundle.additions()}
+            coins_to_wait_for: set[Coin] = {addition for bundle in bundles for addition in bundle.additions()}
             return await self.process_coin_spends(coins=coins_to_wait_for, timeout=None)
 
     async def process_coin_spends(
         self,
         coins: Collection[Coin],
-        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
+        timeout: Union[float, None] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified coin names and wait until they have been created in a
         block.
@@ -588,7 +607,7 @@ class FullNodeSimulator(FullNodeAPI):
             while True:
                 await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
 
-                found: Set[Coin] = set()
+                found: set[Coin] = set()
                 for coin in coin_set:
                     # TODO: is this the proper check?
                     if await coin_store.get_coin_record(coin.name()) is not None:
@@ -624,15 +643,13 @@ class FullNodeSimulator(FullNodeAPI):
     async def check_transactions_confirmed(
         self,
         wallet_state_manager: WalletStateManager,
-        transactions: List[TransactionRecord],
+        transactions: list[TransactionRecord],
         timeout: Optional[float] = 5,
     ) -> None:
-        transactions_left: Set[bytes32] = {tx.name for tx in transactions}
+        transactions_left: set[bytes32] = {tx.name for tx in transactions}
         with anyio.fail_after(delay=adjusted_timeout(timeout)):
             for backoff in backoff_times():
-                transactions_left = transactions_left & {
-                    tx.name for tx in await wallet_state_manager.tx_store.get_all_unconfirmed()
-                }
+                transactions_left &= {tx.name for tx in await wallet_state_manager.tx_store.get_all_unconfirmed()}
                 if len(transactions_left) == 0:
                     break
 
@@ -641,11 +658,11 @@ class FullNodeSimulator(FullNodeAPI):
 
     async def create_coins_with_amounts(
         self,
-        amounts: List[uint64],
+        amounts: list[uint64],
         wallet: Wallet,
         per_transaction_record_group: int = 50,
-        timeout: Union[None, float] = 15,
-    ) -> Set[Coin]:
+        timeout: Union[float, None] = 15,
+    ) -> set[Coin]:
         """Create coins with the requested amount.  This is useful when you need a
         bunch of coins for a test and don't need to farm that many.
 
@@ -669,8 +686,8 @@ class FullNodeSimulator(FullNodeAPI):
             if len(amounts) == 0:
                 return set()
 
-            outputs: List[Payment] = []
-            amounts_seen: Set[uint64] = set()
+            outputs: list[Payment] = []
+            amounts_seen: set[uint64] = set()
             for amount in amounts:
                 # We need unique puzzle hash amount combos so we'll only generate a new puzzle hash when we've already
                 # seen that amount sent to that puzzle hash
@@ -678,7 +695,7 @@ class FullNodeSimulator(FullNodeAPI):
                 outputs.append(Payment(puzzle_hash, amount))
                 amounts_seen.add(amount)
 
-            transaction_records: List[TransactionRecord] = []
+            transaction_records: list[TransactionRecord] = []
             outputs_iterator = iter(outputs)
             while True:
                 # The outputs iterator must be second in the zip() call otherwise we lose
@@ -714,14 +731,14 @@ class FullNodeSimulator(FullNodeAPI):
         spendbundle = self.full_node.mempool_manager.get_spendbundle(bundle_hash=tx_id)
         return spendbundle is not None
 
-    def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
+    def txs_in_mempool(self, txs: list[TransactionRecord]) -> bool:
         return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs if tx.spend_bundle is not None)
 
     async def self_is_synced(self) -> bool:
         return await self.full_node.synced()
 
     async def wallet_is_synced(self, wallet_node: WalletNode, peak_height: Optional[uint32] = None) -> bool:
-        if not self.self_is_synced():
+        if not await self.self_is_synced():
             # Depending on races, may not be covered every time
             return False  # pragma: no cover
         if not await wallet_node.wallet_state_manager.synced():
@@ -745,7 +762,7 @@ class FullNodeSimulator(FullNodeAPI):
                     break
                 await asyncio.sleep(backoff_time)
 
-    async def wallets_are_synced(self, wallet_nodes: List[WalletNode], peak_height: Optional[uint32] = None) -> bool:
+    async def wallets_are_synced(self, wallet_nodes: list[WalletNode], peak_height: Optional[uint32] = None) -> bool:
         return all(
             [
                 await self.wallet_is_synced(wallet_node=wallet_node, peak_height=peak_height)
@@ -755,7 +772,7 @@ class FullNodeSimulator(FullNodeAPI):
 
     async def wait_for_wallets_synced(
         self,
-        wallet_nodes: List[WalletNode],
+        wallet_nodes: list[WalletNode],
         timeout: Optional[float] = 5,
         peak_height: Optional[uint32] = None,
     ) -> None:
