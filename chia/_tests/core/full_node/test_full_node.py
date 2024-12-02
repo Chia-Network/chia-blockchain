@@ -10,7 +10,14 @@ from collections.abc import Coroutine
 from typing import Awaitable, Optional
 
 import pytest
-from chia_rs import AugSchemeMPL, G2Element, PrivateKey, SpendBundleConditions
+from chia_rs import (
+    AugSchemeMPL,
+    G2Element,
+    PrivateKey,
+    SpendBundleConditions,
+    additions_and_removals,
+    get_flags_for_height_and_constants,
+)
 from clvm.casts import int_to_bytes
 from packaging.version import Version
 
@@ -26,6 +33,7 @@ from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_cu
 from chia.consensus.block_body_validation import ForkInfo
 from chia.consensus.multiprocess_validation import PreValidationResult, pre_validate_block
 from chia.consensus.pot_iterations import is_overflow_block
+from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node import WalletUpdate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.signage_point import SignagePoint
@@ -40,7 +48,13 @@ from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message, NodeType
 from chia.server.server import ChiaServer
 from chia.simulator.add_blocks_in_batches import add_blocks_in_batches
-from chia.simulator.block_tools import BlockTools, create_block_tools_async, get_signage_point, make_unfinished_block
+from chia.simulator.block_tools import (
+    BlockTools,
+    create_block_tools_async,
+    get_signage_point,
+    make_unfinished_block,
+    test_constants,
+)
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.keyring import TempKeyring
 from chia.simulator.setup_services import setup_full_node
@@ -53,6 +67,7 @@ from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfi
 from chia.types.blockchain_format.serialized_program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.vdf import CompressibleVDFField, VDFProof
+from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import make_spend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -2268,6 +2283,68 @@ async def test_wallet_sync_task_failure(
     assert not full_node.wallet_sync_task.done()
 
 
+def print_coin_records(records: dict[bytes32, CoinRecord]) -> None:  # pragma: no cover
+    print("found unexpected coins in database")
+    for rec in records.values():
+        print(f"{rec}")
+
+
+async def validate_coin_set(coin_store: CoinStore, blocks: list[FullBlock]) -> None:
+    prev_height = blocks[0].height - 1
+    prev_hash = blocks[0].prev_header_hash
+    for block in blocks:
+        assert block.height == prev_height + 1
+        assert block.prev_header_hash == prev_hash
+        prev_height = int(block.height)
+        prev_hash = block.header_hash
+        rewards = block.get_included_reward_coins()
+        records = {rec.coin.name(): rec for rec in await coin_store.get_coins_added_at_height(block.height)}
+        if block.transactions_generator is None:
+            if len(records) > 0:  # pragma: no cover
+                print(f"height: {block.height} rewards: {rewards} TX: No")
+                print_coin_records(records)
+            assert records == {}
+            continue
+
+        if len(block.transactions_generator_ref_list) > 0:  # pragma: no cover
+            # TODO: Support block references
+            assert False
+
+        # validate reward coins
+        for reward in rewards:
+            rec = records.pop(reward.name())
+            assert rec is not None
+            assert rec.confirmed_block_index == block.height
+            assert rec.coin == reward
+            assert rec.coinbase
+
+        flags = get_flags_for_height_and_constants(block.height, test_constants)
+        additions, removals = additions_and_removals(bytes(block.transactions_generator), [], flags, test_constants)
+        for add, hint in additions:
+            rec = records.pop(add.name())
+            assert rec is not None
+            assert rec.confirmed_block_index == block.height
+            assert rec.coin == add
+            assert not rec.coinbase
+
+        if len(records) > 0:  # pragma: no cover
+            print(f"height: {block.height} rewards: {rewards} TX: Yes")
+            print_coin_records(records)
+        assert records == {}
+
+        records = {rec.coin.name(): rec for rec in await coin_store.get_coins_removed_at_height(block.height)}
+        for rem in removals:
+            rec = records.pop(rem.name())
+            assert rec is not None
+            assert rec.spent_block_index == block.height
+            assert rec.coin == rem
+
+        if len(records) > 0:  # pragma: no cover
+            print(f"height: {block.height} rewards: {rewards} TX: Yes")
+            print_coin_records(records)
+        assert records == {}
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize("light_blocks", [True, False])
 async def test_long_reorg(
@@ -2299,6 +2376,8 @@ async def test_long_reorg(
     assert reorg_blocks[fork_point] == default_10000_blocks[fork_point]
     assert reorg_blocks[fork_point + 1] != default_10000_blocks[fork_point + 1]
 
+    await validate_coin_set(node.full_node._coin_store, blocks)
+
     # one aspect of this test is to make sure we can reorg blocks that are
     # not in the cache. We need to explicitly prune the cache to get that
     # effect.
@@ -2310,6 +2389,8 @@ async def test_long_reorg(
     assert peak.weight > chain_1_weight
     chain_2_weight = peak.weight
     chain_2_peak = peak.header_hash
+
+    await validate_coin_set(node.full_node._coin_store, reorg_blocks)
 
     # if the reorg chain has lighter blocks, once we've re-orged onto it, we
     # have a greater block height. If the reorg chain has heavier blocks, we
@@ -2332,6 +2413,8 @@ async def test_long_reorg(
     peak = node.full_node.blockchain.get_peak()
     assert peak.header_hash != chain_2_peak
     assert peak.weight > chain_2_weight
+
+    await validate_coin_set(node.full_node._coin_store, blocks)
 
 
 @pytest.mark.anyio
@@ -2405,6 +2488,9 @@ async def test_long_reorg_nodes(
     assert p1.header_hash == reorg_blocks[-1].header_hash
     assert p2.header_hash == reorg_blocks[-1].header_hash
 
+    await validate_coin_set(full_node_1.full_node._coin_store, reorg_blocks)
+    await validate_coin_set(full_node_2.full_node._coin_store, reorg_blocks)
+
     blocks = default_10000_blocks[:reorg_height]
 
     # this is a pre-requisite for a reorg to happen
@@ -2439,6 +2525,10 @@ async def test_long_reorg_nodes(
 
     print(f"reorg1 timing: {reorg1_timing:0.2f}s")
     print(f"reorg2 timing: {reorg2_timing:0.2f}s")
+
+    await validate_coin_set(full_node_1.full_node._coin_store, blocks)
+    await validate_coin_set(full_node_2.full_node._coin_store, blocks)
+    await validate_coin_set(full_node_3.full_node._coin_store, blocks)
 
 
 @pytest.mark.anyio

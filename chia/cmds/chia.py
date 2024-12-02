@@ -32,7 +32,10 @@ from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import Keychain, set_keys_root_path
 from chia.util.ssl_check import check_ssl
 
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+CONTEXT_SETTINGS = {
+    "help_option_names": ["-h", "--help"],
+    "show_default": True,
+}
 
 
 @click.group(

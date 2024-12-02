@@ -61,7 +61,7 @@ jobs:
       matrix:
         configuration: ${{ fromJson(inputs.configuration) }}
         os:
-          - emoji: ${{ inputs.os_emoji }}
+          - emoji: ${{ inputs.os-emoji }}
             matrix: ${{ inputs.matrix }}
             name: ${{ inputs.name }}
             file_name: ${{ inputs.file_name }}
