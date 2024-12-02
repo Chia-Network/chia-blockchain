@@ -81,7 +81,6 @@ class WalletBlockchain:
             await self._basic_store.set_object("SYNCED_WEIGHT_PROOF", weight_proof)
             latest_timestamp = self._latest_timestamp
             for record in records:
-                log.info(f"almog1 add {record.height}")
                 self._height_to_hash[record.height] = record.header_hash
                 self.add_block_record(record)
                 if record.is_transaction_block:
@@ -128,7 +127,6 @@ class WalletBlockchain:
                 latest_timestamp = block_record.timestamp
             else:
                 latest_timestamp = None
-            log.info(f"almog2 add {block_record.height}")
             self._height_to_hash[block_record.height] = block_record.header_hash
             await self.set_peak_block(block, latest_timestamp)
             return AddBlockResult.NEW_PEAK, None
@@ -141,7 +139,6 @@ class WalletBlockchain:
             curr_record: BlockRecord = block_record
             latest_timestamp = self._latest_timestamp
             while curr_record.height > fork_height:
-                log.info(f"almog3 add {block_record.height}")
                 self._height_to_hash[curr_record.height] = curr_record.header_hash
                 if curr_record.timestamp is not None and curr_record.timestamp > latest_timestamp:
                     latest_timestamp = curr_record.timestamp
@@ -159,9 +156,7 @@ class WalletBlockchain:
         if self._peak is None:
             return
         for h in range(max(0, height + 1), self._peak.height + 1):
-            log.info(f"wtf remove block {h}")
             del self._height_to_hash[uint32(h)]
-
         await self._basic_store.remove_object("PEAK_BLOCK")
 
     async def set_peak_block(self, block: HeaderBlock, timestamp: Optional[uint64] = None) -> None:
@@ -208,8 +203,6 @@ class WalletBlockchain:
         return self._peak.height
 
     def height_to_hash(self, height: uint32) -> bytes32:
-        if height not in self._height_to_hash:
-            print("fuck")
         return self._height_to_hash[height]
 
     def try_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
