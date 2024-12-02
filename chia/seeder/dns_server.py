@@ -22,7 +22,7 @@ from chia.seeder.crawl_store import CrawlStore
 from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import resolve_root_path
 from chia.util.path import path_from_root
 
 SERVICE_NAME = "seeder"
@@ -577,12 +577,13 @@ def create_dns_server_service(config: dict[str, Any], root_path: Path) -> DNSSer
 
 def main() -> None:  # pragma: no cover
     freeze_support()
-    root_path = DEFAULT_ROOT_PATH
+    root_path = resolve_root_path(override=None)
+
     # TODO: refactor to avoid the double load
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config = load_config(root_path, "config.yaml")
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
-    initialize_service_logging(service_name=SERVICE_NAME, config=config)
+    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
     dns_server = create_dns_server_service(config, root_path)
     asyncio.run(run_dns_server(dns_server))
