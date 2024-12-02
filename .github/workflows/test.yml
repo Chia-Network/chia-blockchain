@@ -89,20 +89,10 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python chia/_tests/build-job-matrix.py --per directory --verbose ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} > matrix.json
+          python chia/_tests/build-job-matrix.py --per directory --only pools/ --duplicates 10 --verbose ${{ inputs.only && format('--only {0}', inputs.only) || '' }} ${{ inputs.duplicates > 1 && format('--duplicates {0}', inputs.duplicates) || '' }} ${{ inputs.build-job-matrix-arguments }} > matrix.json
           cat matrix.json
           echo configuration=$(cat matrix.json) >> "$GITHUB_OUTPUT"
-          echo matrix_mode=${{
-            ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' )
-            && 'limited'
-            || (
-              ( github.event_name == 'schedule' || inputs.full-python-matrix )
-              || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.ref, 'refs/heads/release/') )
-              || ( github.repository_owner == 'Chia-Network' && github.repository == 'Chia-Network/chia-blockchain' && startsWith(github.base_ref, 'release/') )
-            )
-            && 'all'
-            || 'main'
-          }} >> "$GITHUB_OUTPUT"
+          echo matrix_mode=all >> "$GITHUB_OUTPUT"
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}

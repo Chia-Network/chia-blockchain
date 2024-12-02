@@ -499,7 +499,7 @@ def pytest_addoption(parser: pytest.Parser):
 
 
 def pytest_configure(config):
-    for logger_name in ["aiosqlite", "filelock", "watchdog"]:
+    for logger_name in ["aiosqlite", "filelock", "watchdog", "fsevents"]:
         logger = logging.getLogger(logger_name)
         logger.setLevel(max(logger.getEffectiveLevel(), logging.INFO))
 
