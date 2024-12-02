@@ -3,6 +3,8 @@ name: identify version
 on:
   workflow_call:
     outputs:
+      chia-dev-version:
+        value: ${{ jobs.version.outputs.chia-dev-version }}
       chia-installer-version:
         value: ${{ jobs.version.outputs.chia-installer-version }}
       tag-type:
@@ -29,6 +31,7 @@ jobs:
       - name: Check tag type
         id: tag-type
         shell: bash
+        # TODO: .github/workflows/reflow-version.yml:34:167: property "tag_type" is not defined in object type {} [expression]
         run: |
           REG_B="^[0-9]+\.[0-9]+\.[0-9]+-b[0-9]+$"
           REG_RC="^[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+$"

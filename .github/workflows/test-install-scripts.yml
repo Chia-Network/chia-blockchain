@@ -139,6 +139,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        python:
+          - major-dot-minor: "3.10"
         os:
           - name: Linux
             matrix: linux
@@ -259,7 +261,7 @@ jobs:
 
       - uses: ./.github/actions/install
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python.major-dot-minor }}
           development: true
           do-system-installs: true
 

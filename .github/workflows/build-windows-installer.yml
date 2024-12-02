@@ -46,8 +46,6 @@ jobs:
     needs:
       - version
     timeout-minutes: 65
-    outputs:
-      chia-installer-version: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
     strategy:
       fail-fast: false
       matrix:
@@ -351,7 +349,6 @@ jobs:
           Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
 
       - name: List all files
-        if:
         run: |
           Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
 
