@@ -391,12 +391,9 @@ class FullNode:
                             self.log.info(f"Awaiting long sync task {one_sync_task.get_name()}")
                             await one_sync_task
                 for segment_task in self._segment_task_list:
-                    if segment_task.done():
-                        self.log.info(f"segment task {segment_task.get_name()} done")
-                    else:
-                        with contextlib.suppress(asyncio.CancelledError):
-                            self.log.info(f"Awaitin segment task {segment_task.get_name()}")
-                            await segment_task
+                    with contextlib.suppress(asyncio.CancelledError):
+                        self.log.info(f"Awaitin segment task {segment_task.get_name()}")
+                        await segment_task
 
     @property
     def block_store(self) -> BlockStore:
