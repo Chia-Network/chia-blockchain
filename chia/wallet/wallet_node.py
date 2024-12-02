@@ -1115,10 +1115,14 @@ class WalletNode:
             # When logging out of wallet
             self.log.debug("state manager is None (shutdown)")
             return
-        trusted: bool = self.is_trusted(peer)
+
         peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
+        if peak_hb is not None and peak_hb.header_hash == new_peak.header_hash:
+            self.log.debug("skip known peak.")
+            return
+
         if peak_hb is not None and new_peak.weight < peak_hb.weight:
-            # Discards old blocks, but accepts blocks that are equal in weight to peak
+            # Discards old blocks,  accept only heavier peaks blocks that are equal in weight to peak
             self.log.debug("skip block with lower weight.")
             return
 
@@ -1143,6 +1147,7 @@ class WalletNode:
             # dont disconnect from peer, this might be a reorg
             return
 
+        trusted: bool = self.is_trusted(peer)
         latest_timestamp = await self.get_timestamp_for_height_from_peer(new_peak_hb.height, peer)
         if latest_timestamp is None or not self.is_timestamp_in_sync(latest_timestamp):
             if trusted:
@@ -1153,7 +1158,9 @@ class WalletNode:
             return
 
         if self.is_trusted(peer):
-            await self.new_peak_from_trusted(new_peak_hb, latest_timestamp, peer)
+            await self.new_peak_from_trusted(
+                new_peak_hb, latest_timestamp, peer, new_peak.fork_point_with_previous_peak
+            )
         else:
             if not await self.new_peak_from_untrusted(new_peak_hb, peer):
                 return
@@ -1170,15 +1177,16 @@ class WalletNode:
             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
 
     async def new_peak_from_trusted(
-        self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection
+        self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection, fork_point: uint32
     ) -> None:
         async with self.wallet_state_manager.set_sync_mode(new_peak_hb.height) as current_height:
             await self.wallet_state_manager.blockchain.set_peak_block(new_peak_hb, latest_timestamp)
-            # Sync to trusted node if we haven't done so yet. As long as we have synced once (and not
-            # disconnected), we assume that the full node will continue to give us state updates, so we do
-            # not need to resync.
             if peer.peer_node_id not in self.synced_peers:
                 await self.long_sync(new_peak_hb.height, peer, uint32(max(0, current_height - 256)), rollback=True)
+            elif fork_point < current_height - 1:
+                await self.long_sync(
+                    new_peak_hb.height, peer, uint32(min(fork_point, current_height - 256)), rollback=True
+                )
 
     async def new_peak_from_untrusted(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection) -> bool:
         far_behind: bool = (
