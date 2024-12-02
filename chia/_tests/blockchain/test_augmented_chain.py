@@ -138,7 +138,7 @@ async def test_augmented_chain(default_10000_blocks: list[FullBlock]) -> None:
         assert not await abc.get_block_record_from_db(blocks[i].header_hash)
         peak_height = abc.get_peak_height()
         assert peak_height is not None
-        assert uint32(i) <= peak_height
+        assert uint32(i) > peak_height
 
     assert abc.height_to_hash(uint32(5)) is None
     null.heights = {uint32(5): blocks[5].header_hash}
