@@ -34,6 +34,7 @@ class AugmentedBlockchain:
         self._underlying = underlying
         self._extra_blocks = {}
         self._height_to_hash = {}
+        self._peak_height = None
 
     def _get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         eb = self._extra_blocks.get(header_hash)
