@@ -266,7 +266,9 @@ class GenesisByIdOrSingleton(LimitationsProgram):
             origin = coins.copy().pop()
             origin_id = origin.name()
 
-        cat_inner: Program = await wallet.get_new_inner_puzzle()
+        cat_inner: Program = await wallet.standard_wallet.get_puzzle(
+            new=not action_scope.config.tx_config.reuse_puzhash
+        )
         # GENESIS_ID
         # TREASURY_SINGLETON_STRUCT  ; (SINGLETON_MOD_HASH, (LAUNCHER_ID, LAUNCHER_PUZZLE_HASH))
         launcher_puzhash = create_cat_launcher_for_singleton_id(tail_info["treasury_id"]).get_tree_hash()
