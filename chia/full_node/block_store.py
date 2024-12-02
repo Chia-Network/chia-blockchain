@@ -422,7 +422,7 @@ class BlockStore:
     async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT block_record " "FROM full_blocks " "WHERE header_hash=?",
+                "SELECT block_record FROM full_blocks WHERE header_hash=?",
                 (header_hash,),
             ) as cursor:
                 row = await cursor.fetchone()
@@ -445,7 +445,7 @@ class BlockStore:
         ret: dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash,block_record " "FROM full_blocks " "WHERE height >= ? AND height <= ?",
+                "SELECT header_hash,block_record FROM full_blocks WHERE height >= ? AND height <= ?",
                 (start, stop),
             ) as cursor:
                 for row in await cursor.fetchall():
@@ -504,7 +504,7 @@ class BlockStore:
         ret: dict[bytes32, BlockRecord] = {}
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
-                "SELECT header_hash, block_record " "FROM full_blocks " "WHERE height >= ?",
+                "SELECT header_hash, block_record FROM full_blocks WHERE height >= ?",
                 (peak[1] - blocks_n,),
             ) as cursor:
                 for row in await cursor.fetchall():

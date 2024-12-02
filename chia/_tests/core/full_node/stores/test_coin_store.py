@@ -10,6 +10,7 @@ from clvm.casts import int_to_bytes
 
 from chia._tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from chia._tests.util.db_connection import DBConnection
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia._tests.util.misc import Marks, datacases
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain import AddBlockResult, Blockchain
@@ -17,7 +18,6 @@ from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.protocols.wallet_protocol import CoinState
 from chia.simulator.block_tools import BlockTools, test_constants
 from chia.simulator.wallet_tools import WalletTool

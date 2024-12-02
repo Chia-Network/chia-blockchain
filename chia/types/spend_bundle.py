@@ -5,9 +5,8 @@ from typing import TypeVar
 import chia_rs
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+from chia.types.coin_spend import compute_additions_with_cost
 from chia.util.errors import Err, ValidationError
-
-from .coin_spend import compute_additions_with_cost
 
 SpendBundle = chia_rs.SpendBundle
 T_SpendBundle = TypeVar("T_SpendBundle", bound="SpendBundle")
