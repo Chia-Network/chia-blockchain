@@ -36,6 +36,7 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.header_block import HeaderBlock
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
+from chia.types.validation_state import ValidationState
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.cpu import available_logical_cores
 from chia.util.errors import Err
@@ -389,6 +390,7 @@ class Blockchain:
         # in case we fail and need to restore the blockchain state, remember the
         # peak height
         previous_peak_height = self._peak_height
+        prev_fork_peak = (fork_info.peak_height, fork_info.peak_hash)
 
         try:
             # Always add the block to the database
@@ -425,7 +427,8 @@ class Blockchain:
                 self.remove_block_record(header_hash)
             except KeyError:
                 pass
-            fork_info.rollback(header_hash, -1 if previous_peak_height is None else previous_peak_height)
+            # restore fork_info to the state before adding the block
+            fork_info.rollback(prev_fork_peak[1], prev_fork_peak[0])
             self.block_store.rollback_cache_block(header_hash)
             self._peak_height = previous_peak_height
             log.error(
@@ -677,13 +680,13 @@ class Blockchain:
         sub_slot_iters, difficulty = get_next_sub_slot_iters_and_difficulty(
             self.constants, len(unfinished_header_block.finished_sub_slots) > 0, prev_b, self
         )
+        expected_vs = ValidationState(sub_slot_iters, difficulty, None)
         required_iters, error = validate_unfinished_header_block(
             self.constants,
             self,
             unfinished_header_block,
             False,
-            difficulty,
-            sub_slot_iters,
+            expected_vs,
             skip_overflow_ss_validation,
         )
         if error is not None:

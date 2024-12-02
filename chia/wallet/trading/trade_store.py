@@ -204,7 +204,7 @@ class TradeStore:
             )
             await cursor.close()
             cursor = await conn.execute(
-                "INSERT OR REPLACE INTO trade_record_times " "(trade_id, valid_times) " "VALUES(?, ?)",
+                "INSERT OR REPLACE INTO trade_record_times (trade_id, valid_times) VALUES(?, ?)",
                 (
                     record.trade_id,
                     bytes(record.valid_times),

@@ -818,7 +818,7 @@ class PoolWallet:
                     confirmed=False,
                     sent=uint32(0),
                     spend_bundle=claim_spend,
-                    additions=claim_spend.additions(),
+                    additions=[add for add in claim_spend.additions() if add.amount == last_solution.coin.amount],
                     removals=claim_spend.removals(),
                     wallet_id=uint32(self.wallet_id),
                     sent_to=[],

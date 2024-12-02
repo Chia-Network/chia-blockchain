@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import unittest
 from collections.abc import AsyncIterator, Awaitable
 from contextlib import AsyncExitStack
 from dataclasses import replace
@@ -14,7 +16,7 @@ from chia_rs import (
     run_block_generator2,
 )
 
-from chia._tests.environments.wallet import WalletEnvironment, WalletState, WalletTestFramework
+from chia._tests.environments.wallet import NewPuzzleHashError, WalletEnvironment, WalletState, WalletTestFramework
 from chia._tests.util.setup_nodes import setup_simulators_and_wallets_service
 from chia._tests.wallet.wallet_block_tools import WalletBlockTools
 from chia.consensus.constants import ConsensusConstants
@@ -144,6 +146,28 @@ def tx_config(request: Any) -> TXConfig:
     return replace(DEFAULT_TX_CONFIG, reuse_puzhash=request.param)
 
 
+def new_action_scope_wrapper(func: Any) -> Any:
+    @contextlib.asynccontextmanager
+    async def wrapped_new_action_scope(self: WalletStateManager, *args: Any, **kwargs: Any) -> Any:
+        # Take note of the number of puzzle hashes if we're supposed to be reusing
+        ph_indexes: dict[uint32, int] = {}
+        for wallet_id in self.wallets:
+            ph_indexes[wallet_id] = await self.puzzle_store.get_unused_count(wallet_id)
+
+        async with func(self, *args, **kwargs) as action_scope:
+            yield action_scope
+
+        # Finally, check that the number of puzzle hashes did or did not increase by the specified amount
+        if action_scope.config.tx_config.reuse_puzhash:
+            for wallet_id, ph_index in zip(self.wallets, ph_indexes):
+                if not ph_indexes[wallet_id] == (await self.puzzle_store.get_unused_count(wallet_id)):
+                    raise NewPuzzleHashError(
+                        f"wallet ID {wallet_id} generated new puzzle hashes while reuse_puzhash was False"
+                    )
+
+    return wrapped_new_action_scope
+
+
 # This fixture automatically creates 4 parametrized tests trusted/untrusted x reuse/new derivations
 # These parameterizations can be skipped by manually specifying "trusted" or "reuse puzhash" to the fixture
 @pytest.fixture(scope="function")
@@ -174,77 +198,81 @@ async def wallet_environments(
 
         full_node[0]._api.full_node.config = {**full_node[0]._api.full_node.config, **config_overrides}
 
-        wallet_rpc_clients: list[WalletRpcClient] = []
-        async with AsyncExitStack() as astack:
-            for service in wallet_services:
-                service._node.config = {
-                    **service._node.config,
-                    "trusted_peers": (
-                        {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
-                        if trusted_full_node
-                        else {}
-                    ),
-                    **config_overrides,
-                }
-                service._node.wallet_state_manager.config = service._node.config
-                # Shorten the 10 seconds default value
-                service._node.coin_state_retry_seconds = 2
-                await service._node.server.start_client(
-                    PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
-                )
-                wallet_rpc_clients.append(
-                    await astack.enter_async_context(
-                        WalletRpcClient.create_as_context(
-                            bt.config["self_hostname"],
-                            # Semantics guarantee us a non-None value here
-                            service.rpc_server.listen_port,  # type: ignore[union-attr]
-                            service.root_path,
-                            service.config,
+        new_action_scope_wrapped = new_action_scope_wrapper(WalletStateManager.new_action_scope)
+        with unittest.mock.patch(
+            "chia.wallet.wallet_state_manager.WalletStateManager.new_action_scope", new=new_action_scope_wrapped
+        ):
+            wallet_rpc_clients: list[WalletRpcClient] = []
+            async with AsyncExitStack() as astack:
+                for service in wallet_services:
+                    service._node.config = {
+                        **service._node.config,
+                        "trusted_peers": (
+                            {full_node[0]._api.server.node_id.hex(): full_node[0]._api.server.node_id.hex()}
+                            if trusted_full_node
+                            else {}
+                        ),
+                        **config_overrides,
+                    }
+                    service._node.wallet_state_manager.config = service._node.config
+                    # Shorten the 10 seconds default value
+                    service._node.coin_state_retry_seconds = 2
+                    await service._node.server.start_client(
+                        PeerInfo(bt.config["self_hostname"], full_node[0]._api.full_node.server.get_port()), None
+                    )
+                    wallet_rpc_clients.append(
+                        await astack.enter_async_context(
+                            WalletRpcClient.create_as_context(
+                                bt.config["self_hostname"],
+                                # Semantics guarantee us a non-None value here
+                                service.rpc_server.listen_port,  # type: ignore[union-attr]
+                                service.root_path,
+                                service.config,
+                            )
                         )
                     )
-                )
 
-            wallet_states: list[WalletState] = []
-            for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
-                if blocks_needed > 0:
-                    await full_node[0]._api.farm_blocks_to_wallet(
-                        count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
+                wallet_states: list[WalletState] = []
+                for service, blocks_needed in zip(wallet_services, request.param["blocks_needed"]):
+                    if blocks_needed > 0:
+                        await full_node[0]._api.farm_blocks_to_wallet(
+                            count=blocks_needed, wallet=service._node.wallet_state_manager.main_wallet
+                        )
+                        await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
+                    wallet_states.append(
+                        WalletState(
+                            Balance(
+                                confirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
+                                unconfirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
+                                spendable_balance=uint128(2_000_000_000_000 * blocks_needed),
+                                pending_change=uint64(0),
+                                max_send_amount=uint128(2_000_000_000_000 * blocks_needed),
+                                unspent_coin_count=uint32(2 * blocks_needed),
+                                pending_coin_removal_count=uint32(0),
+                            ),
+                        )
                     )
-                    await full_node[0]._api.wait_for_wallet_synced(wallet_node=service._node, timeout=20)
-                wallet_states.append(
-                    WalletState(
-                        Balance(
-                            confirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
-                            unconfirmed_wallet_balance=uint128(2_000_000_000_000 * blocks_needed),
-                            spendable_balance=uint128(2_000_000_000_000 * blocks_needed),
-                            pending_change=uint64(0),
-                            max_send_amount=uint128(2_000_000_000_000 * blocks_needed),
-                            unspent_coin_count=uint32(2 * blocks_needed),
-                            pending_coin_removal_count=uint32(0),
-                        ),
-                    )
-                )
 
-            assert full_node[0].rpc_server is not None
-            client_node = await astack.enter_async_context(
-                FullNodeRpcClient.create_as_context(
-                    bt.config["self_hostname"],
-                    full_node[0].rpc_server.listen_port,
-                    full_node[0].root_path,
-                    full_node[0].config,
-                )
-            )
-            yield WalletTestFramework(
-                full_node[0]._api,
-                client_node,
-                trusted_full_node,
-                [
-                    WalletEnvironment(
-                        service=service,
-                        rpc_client=rpc_client,
-                        wallet_states={uint32(1): wallet_state},
+                assert full_node[0].rpc_server is not None
+                client_node = await astack.enter_async_context(
+                    FullNodeRpcClient.create_as_context(
+                        bt.config["self_hostname"],
+                        full_node[0].rpc_server.listen_port,
+                        full_node[0].root_path,
+                        full_node[0].config,
                     )
-                    for service, rpc_client, wallet_state in zip(wallet_services, wallet_rpc_clients, wallet_states)
-                ],
-                tx_config,
-            )
+                )
+                yield WalletTestFramework(
+                    full_node[0]._api,
+                    client_node,
+                    trusted_full_node,
+                    [
+                        WalletEnvironment(
+                            service=service,
+                            rpc_client=rpc_client,
+                            wallet_states={uint32(1): wallet_state},
+                        )
+                        for service, rpc_client, wallet_state in zip(wallet_services, wallet_rpc_clients, wallet_states)
+                    ],
+                    tx_config,
+                )
