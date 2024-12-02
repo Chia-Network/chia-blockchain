@@ -458,10 +458,10 @@ class CRCATWallet(CATWallet):
                 for payment in payments:
                     if change_puzhash == payment.puzzle_hash and change == payment.amount:
                         # We cannot create two coins has same id, create a new puzhash for the change
-                        change_puzhash = await self.get_new_inner_hash()
+                        change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
                         break
             else:
-                change_puzhash = await self.get_new_inner_hash()
+                change_puzhash = await self.standard_wallet.get_puzzle_hash(new=True)
             primaries.append(Payment(change_puzhash, uint64(change), [change_puzhash]))
 
         # Find the VC Wallet
