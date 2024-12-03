@@ -17,7 +17,7 @@ config-variables: null
 paths:
   #  .github/workflows/**/*.yml:
   #    ignore: []
-  "**/*.y*ml":
+  ".github/workflows/*.y*ml":
     ignore: ["string should not be empty"]
   ".github/workflows/test-single.yml":
     ignore: [
