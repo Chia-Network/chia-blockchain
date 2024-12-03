@@ -1,0 +1,3 @@
+# presently dependabot uses 1.8.3 so let's stick with that for now
+poetry==1.8.3
+poetry-dynamic-versioning[plugin]
