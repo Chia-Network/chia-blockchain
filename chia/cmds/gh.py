@@ -111,6 +111,7 @@ class TestCMD:
         "--full-python-matrix/--default-python-matrix", help="Run on all Python versions", default=False
     )
     remote: str = option("-r", "--remote", help="Name of git remote", type=str, default="origin")
+    open_browser: bool = option("--open-browser/--no-open-browser", help="Open browser", default=True)
 
     async def run(self) -> None:
         await self.check_only()
@@ -170,7 +171,8 @@ class TestCMD:
                 report(f"temporary branch deleted: {temp_branch_name}")
 
         report(f"run url: {run_url}")
-        webbrowser.open(run_url)
+        if self.open_browser:
+            webbrowser.open(run_url)
 
     async def check_only(self) -> None:
         if self.only is not None:
