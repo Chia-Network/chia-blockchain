@@ -68,7 +68,6 @@ jobs:
           VALIDATE_BASH: true
           VALIDATE_CSS: true
           VALIDATE_DOCKER: true
-          VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_GO: true
           VALIDATE_HTML: true
           VALIDATE_JAVASCRIPT_ES: true

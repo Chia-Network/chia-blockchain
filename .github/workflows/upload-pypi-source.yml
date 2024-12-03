@@ -129,6 +129,10 @@ jobs:
           - name: poetry
             command: |
               .penv/bin/poetry check
+          - name: actionlint
+            command: |
+              bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+              ./actionlint -color
 
     steps:
       - uses: chia-network/actions/clean-workspace@main
