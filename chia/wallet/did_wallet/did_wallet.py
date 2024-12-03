@@ -553,18 +553,6 @@ class DIDWallet:
         )
         return create_singleton_puzzle_hash(innerpuz_hash, origin_coin_name)
 
-    async def get_puzzle(self, new: bool) -> Program:
-        if new:
-            derivation_record = await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)
-        else:
-            derivation_record = await self.wallet_state_manager.get_current_derivation_record_for_wallet(
-                self.wallet_info.id
-            )
-            if derivation_record is None:
-                derivation_record = await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)
-
-        return self.puzzle_for_pk(derivation_record.pubkey)
-
     def get_my_DID(self) -> str:
         assert self.did_info.origin_coin is not None
         core = self.did_info.origin_coin.name()
