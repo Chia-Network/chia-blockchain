@@ -2150,17 +2150,13 @@ async def test_clear_pending_roots(
                 # https://github.com/python/cpython/issues/92841
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 cleared_root = await client.clear_pending_roots(store_id=store_id)
-            finally:
-                client.close()
-                await client.await_closed()
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
 
@@ -2417,17 +2413,13 @@ async def test_wallet_log_in_changes_active_fingerprint(
         if layer == InterfaceLayer.direct:
             await data_rpc_api.wallet_log_in({"fingerprint": secondary_fingerprint})
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 await client.wallet_log_in(fingerprint=secondary_fingerprint)
-            finally:
-                client.close()
-                await client.await_closed()
         elif layer == InterfaceLayer.funcs:
             await wallet_log_in_cmd(rpc_port=rpc_port, fingerprint=secondary_fingerprint, root_path=bt.root_path)
         elif layer == InterfaceLayer.cli:
@@ -3176,13 +3168,12 @@ async def test_pagination_cmds(
                     # https://github.com/python/cpython/issues/92841
                     assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 keys = await client.get_keys(
                     store_id=store_id,
                     root_hash=None,
@@ -3202,9 +3193,6 @@ async def test_pagination_cmds(
                     page=0,
                     max_page_size=max_page_size,
                 )
-            finally:
-                client.close()
-                await client.await_closed()
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
         if max_page_size is None or max_page_size == 100:
@@ -3360,13 +3348,12 @@ async def test_unsubmitted_batch_update(
                     assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
                 assert res == {"success": True}
             elif layer == InterfaceLayer.client:
-                client = await DataLayerRpcClient.create(
+                async with DataLayerRpcClient.create_as_context(
                     self_hostname=self_hostname,
                     port=rpc_port,
                     root_path=bt.root_path,
                     net_config=bt.config,
-                )
-                try:
+                ) as client:
                     res = await client.update_data_store(
                         store_id=store_id,
                         changelist=changelist,
@@ -3374,9 +3361,6 @@ async def test_unsubmitted_batch_update(
                         submit_on_chain=False,
                     )
                     assert res == {"success": True}
-                finally:
-                    client.close()
-                    await client.await_closed()
             else:  # pragma: no cover
                 assert False, "unhandled parametrization"
 
@@ -3503,18 +3487,14 @@ async def test_unsubmitted_batch_update(
                 assert stderr == b"" or b"_ProactorBasePipeTransport.__del__" in stderr
             update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
         elif layer == InterfaceLayer.client:
-            client = await DataLayerRpcClient.create(
+            async with DataLayerRpcClient.create_as_context(
                 self_hostname=self_hostname,
                 port=rpc_port,
                 root_path=bt.root_path,
                 net_config=bt.config,
-            )
-            try:
+            ) as client:
                 res = await client.submit_pending_root(store_id=store_id, fee=None)
                 update_tx_rec1 = bytes32.from_hexstr(res["tx_id"])
-            finally:
-                client.close()
-                await client.await_closed()
         else:  # pragma: no cover
             assert False, "unhandled parametrization"
 

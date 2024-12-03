@@ -519,7 +519,7 @@ class WalletStateManager:
         derivation_paths: list[DerivationRecord] = []
         target_wallet = self.wallets[wallet_id]
         last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
-        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path_for_wallet(wallet_id)
         if unused is None:
             # This handles the case where the database has entries but they have all been used
             unused = await self.puzzle_store.get_last_derivation_path()
@@ -1268,7 +1268,7 @@ class WalletStateManager:
                     and launch_id == wallet.did_info.origin_coin.name()
                     and not wallet.did_info.sent_recovery_transaction
                 ):
-                    await self.user_store.delete_wallet(wallet.id())
+                    await self.delete_wallet(wallet.id())
                     removed_wallet_ids.append(wallet.id())
             for remove_id in removed_wallet_ids:
                 self.wallets.pop(remove_id)
@@ -1543,7 +1543,7 @@ class WalletStateManager:
                             break
                     if is_empty and nft_wallet.did_id is not None and not has_did:
                         self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
-                        await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
+                        await self.delete_wallet(nft_wallet.wallet_info.id)
                         self.wallets.pop(nft_wallet.wallet_info.id)
             if nft_wallet.nft_wallet_info.did_id == new_did_id and new_derivation_record is not None:
                 self.log.info(
@@ -2485,7 +2485,7 @@ class WalletStateManager:
                 if remove:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
-            await self.user_store.delete_wallet(wallet_id)
+            await self.delete_wallet(wallet_id)
             self.state_changed("wallet_removed", wallet_id)
 
         return remove_ids
@@ -2817,3 +2817,7 @@ class WalletStateManager:
             extra_spends=extra_spends,
         ) as action_scope:
             yield action_scope
+
+    async def delete_wallet(self, wallet_id: uint32) -> None:
+        await self.user_store.delete_wallet(wallet_id)
+        await self.puzzle_store.delete_wallet(wallet_id)

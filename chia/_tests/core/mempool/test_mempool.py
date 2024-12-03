@@ -23,6 +23,7 @@ from chia._tests.core.mempool.test_mempool_manager import (
     spend_bundle_from_conditions,
 )
 from chia._tests.core.node_height import node_height_at_least
+from chia._tests.util.get_name_puzzle_conditions import get_name_puzzle_conditions
 from chia._tests.util.misc import BenchmarkRunner, invariant_check_mempool
 from chia._tests.util.time_out_assert import time_out_assert
 from chia.consensus.condition_costs import ConditionCost
@@ -31,7 +32,7 @@ from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import EmptyMempoolInfo, MempoolInfo
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.full_node.mempool import Mempool
-from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.mempool_manager import MEMPOOL_MIN_FEE_INCREASE
 from chia.full_node.pending_tx_cache import ConflictTxCache, PendingTxCache
 from chia.protocols import full_node_protocol, wallet_protocol

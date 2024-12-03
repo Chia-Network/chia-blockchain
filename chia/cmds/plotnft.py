@@ -28,7 +28,7 @@ def plotnft_cmd() -> None:
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
 
-    from .plotnft_funcs import show
+    from chia.cmds.plotnft_funcs import show
 
     asyncio.run(show(wallet_rpc_port, fingerprint, id))
 
@@ -38,7 +38,7 @@ def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 def get_login_link_cmd(launcher_id: bytes32) -> None:
     import asyncio
 
-    from .plotnft_funcs import get_login_link
+    from chia.cmds.plotnft_funcs import get_login_link
 
     asyncio.run(get_login_link(launcher_id))
 
@@ -71,7 +71,7 @@ def create_cmd(
 ) -> None:
     import asyncio
 
-    from .plotnft_funcs import create
+    from chia.cmds.plotnft_funcs import create
 
     if pool_url is not None and state.lower() == "local":
         print(f"  pool_url argument [{pool_url}] is not allowed when creating in 'local' state")
@@ -104,7 +104,7 @@ def join_cmd(
 ) -> None:
     import asyncio
 
-    from .plotnft_funcs import join_pool
+    from chia.cmds.plotnft_funcs import join_pool
 
     asyncio.run(
         join_pool(
@@ -134,7 +134,7 @@ def join_cmd(
 def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: uint64, dont_prompt: bool) -> None:
     import asyncio
 
-    from .plotnft_funcs import self_pool
+    from chia.cmds.plotnft_funcs import self_pool
 
     asyncio.run(
         self_pool(
@@ -160,7 +160,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
 def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
 
-    from .plotnft_funcs import inspect_cmd
+    from chia.cmds.plotnft_funcs import inspect_cmd
 
     asyncio.run(inspect_cmd(wallet_rpc_port, fingerprint, id))
 
@@ -180,7 +180,7 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: uint64) -> None:
     import asyncio
 
-    from .plotnft_funcs import claim_cmd
+    from chia.cmds.plotnft_funcs import claim_cmd
 
     asyncio.run(
         claim_cmd(
@@ -201,6 +201,6 @@ def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: uint64
 def change_payout_instructions_cmd(launcher_id: str, address: CliAddress) -> None:
     import asyncio
 
-    from .plotnft_funcs import change_payout_instructions
+    from chia.cmds.plotnft_funcs import change_payout_instructions
 
     asyncio.run(change_payout_instructions(launcher_id, address))

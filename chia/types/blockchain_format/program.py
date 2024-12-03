@@ -11,10 +11,9 @@ from clvm.serialize import sexp_from_stream, sexp_to_stream
 from clvm.SExp import SExp
 
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.tree_hash import sha256_treehash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.hash import std_hash
-
-from .tree_hash import sha256_treehash
 
 INFINITE_COST = 11000000000
 

@@ -4,6 +4,7 @@ import dataclasses
 import logging
 import time
 from collections import Counter
+from typing import Optional
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
@@ -43,9 +44,11 @@ class RateLimiter:
 
     def process_msg_and_check(
         self, message: Message, our_capabilities: list[Capability], peer_capabilities: list[Capability]
-    ) -> bool:
+    ) -> Optional[str]:
         """
-        Returns True if message can be processed successfully, false if a rate limit is passed.
+        Returns a string indicating which limit was hit if a rate limit is
+        exceeded, and the message should be blocked. Returns None if the limit was not
+        hit and the message is good to be sent or received.
         """
 
         current_minute = int(time.time() // self.reset_seconds)
@@ -59,7 +62,7 @@ class RateLimiter:
             message_type = ProtocolMessageTypes(message.type)
         except Exception as e:
             log.warning(f"Invalid message: {message.type}, {e}")
-            return True
+            return None
 
         new_message_counts: int = self.message_counts[message_type] + 1
         new_cumulative_size: int = self.message_cumulative_sizes[message_type] + len(message.data)
@@ -81,25 +84,51 @@ class RateLimiter:
                 new_non_tx_count = self.non_tx_message_counts + 1
                 new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
                 if new_non_tx_count > non_tx_freq * proportion_of_limit:
-                    return False
+                    return " ".join(
+                        [
+                            f"non-tx count: {new_non_tx_count}",
+                            f"> {non_tx_freq * proportion_of_limit}",
+                            f"(scale factor: {proportion_of_limit})",
+                        ]
+                    )
                 if new_non_tx_size > non_tx_max_total_size * proportion_of_limit:
-                    return False
+                    return " ".join(
+                        [
+                            f"non-tx size: {new_non_tx_size}",
+                            f"> {non_tx_max_total_size * proportion_of_limit}",
+                            f"(scale factor: {proportion_of_limit})",
+                        ]
+                    )
             else:
-                log.warning(f"Message type {message_type} not found in rate limits")
+                log.warning(
+                    f"Message type {message_type} not found in rate limits (scale factor: {proportion_of_limit})",
+                )
 
             if limits.max_total_size is None:
                 limits = dataclasses.replace(limits, max_total_size=limits.frequency * limits.max_size)
             assert limits.max_total_size is not None
 
             if new_message_counts > limits.frequency * proportion_of_limit:
-                return False
+                return " ".join(
+                    [
+                        f"message count: {new_message_counts}"
+                        f"> {limits.frequency * proportion_of_limit}"
+                        f"(scale factor: {proportion_of_limit})"
+                    ]
+                )
             if len(message.data) > limits.max_size:
-                return False
+                return f"message size: {len(message.data)} > {limits.max_size}"
             if new_cumulative_size > limits.max_total_size * proportion_of_limit:
-                return False
+                return " ".join(
+                    [
+                        f"cumulative size: {new_cumulative_size}",
+                        f"> {limits.max_total_size * proportion_of_limit}",
+                        f"(scale factor: {proportion_of_limit})",
+                    ]
+                )
 
             ret = True
-            return True
+            return None
         finally:
             if self.incoming or ret:
                 # now that we determined that it's OK to send the message, commit the
