@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Union, cast
+from typing import Any, Optional, cast
 
 from chia_rs import Coin, G2Element
 
@@ -20,7 +20,17 @@ from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
-from chia.rpc.wallet_request_types import GetSyncStatusResponse, SendTransactionMultiResponse
+from chia.rpc.wallet_request_types import (
+    GetSyncStatusResponse,
+    GetTransaction,
+    GetTransactionResponse,
+    GetWallets,
+    GetWalletsResponse,
+    SendTransactionMultiResponse,
+    UserFriendlyMemos,
+    UserFriendlyTransactionRecord,
+    WalletInfoResponse,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -87,11 +97,11 @@ class TestWalletRpcClient(TestRpcClient):
         self.add_to_log("get_sync_status", ())
         return GetSyncStatusResponse(synced=True, syncing=False)
 
-    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Union[str, int]]]:
-        self.add_to_log("get_wallets", (wallet_type,))
+    async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
+        self.add_to_log("get_wallets", (request,))
         # we cant start with zero because ints cant have a leading zero
-        if wallet_type is not None:
-            w_type = wallet_type
+        if request.type is not None:
+            w_type = WalletType(request.type)
         elif str(self.fingerprint).startswith(str(WalletType.STANDARD_WALLET.value + 1)):
             w_type = WalletType.STANDARD_WALLET
         elif str(self.fingerprint).startswith(str(WalletType.CAT.value + 1)):
@@ -104,28 +114,32 @@ class TestWalletRpcClient(TestRpcClient):
             w_type = WalletType.POOLING_WALLET
         else:
             raise ValueError(f"Invalid fingerprint: {self.fingerprint}")
-        return [{"id": 1, "type": w_type}]
+        return GetWalletsResponse([WalletInfoResponse(id=uint32(1), name="", type=uint8(w_type.value), data="")])
 
-    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
-        self.add_to_log("get_transaction", (transaction_id,))
-        return TransactionRecord(
-            confirmed_at_height=uint32(1),
-            created_at_time=uint64(1234),
-            to_puzzle_hash=bytes32([1] * 32),
-            amount=uint64(12345678),
-            fee_amount=uint64(1234567),
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=WalletSpendBundle([], G2Element()),
-            additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
-            removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
-            wallet_id=uint32(1),
-            sent_to=[("aaaaa", uint8(1), None)],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=bytes32([2] * 32),
-            memos=[(bytes32([3] * 32), [bytes([4] * 32)])],
-            valid_times=ConditionValidTimes(),
+    async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+        self.add_to_log("get_transaction", (request,))
+        return GetTransactionResponse(
+            UserFriendlyTransactionRecord(
+                confirmed_at_height=uint32(1),
+                created_at_time=uint64(1234),
+                to_puzzle_hash=bytes32([1] * 32),
+                amount=uint64(12345678),
+                fee_amount=uint64(1234567),
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=WalletSpendBundle([], G2Element()),
+                additions=[Coin(bytes32([1] * 32), bytes32([2] * 32), uint64(12345678))],
+                removals=[Coin(bytes32([2] * 32), bytes32([4] * 32), uint64(12345678))],
+                wallet_id=uint32(1),
+                sent_to=[("aaaaa", uint8(1), None)],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=bytes32([2] * 32),
+                memos=UserFriendlyMemos([(bytes32([3] * 32), [bytes([4] * 32)])]),
+                valid_times=ConditionValidTimes(),
+                to_address="",
+            ),
+            bytes32([2] * 32),
         )
 
     async def get_cat_name(self, wallet_id: int) -> str:
@@ -235,14 +249,6 @@ class TestWalletRpcClient(TestRpcClient):
         ]
         unconfirmed_additions = [Coin(bytes32([7] * 32), bytes32([8] * 32), uint64(1234580000))]
         return confirmed_records, unconfirmed_removals, unconfirmed_additions
-
-    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-        self.add_to_log("get_next_address", (wallet_id, new_address))
-        addr = encode_puzzle_hash(bytes32([self.wallet_index] * 32), "xch")
-        self.wallet_index += 1
-        if self.wallet_index > 254:
-            self.wallet_index = 1
-        return addr
 
     async def send_transaction_multi(
         self,

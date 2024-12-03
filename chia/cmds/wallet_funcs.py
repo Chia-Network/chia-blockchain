@@ -21,7 +21,18 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
-from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse
+from chia.rpc.wallet_request_types import (
+    CATSpendResponse,
+    GetNextAddress,
+    GetNotifications,
+    GetTransaction,
+    GetTransactions,
+    GetWalletBalance,
+    GetWallets,
+    PuzzleDecoratorData,
+    SendTransaction,
+    SendTransactionResponse,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
@@ -114,10 +125,10 @@ def get_mojo_per_unit(wallet_type: WalletType) -> int:
 
 
 async def get_wallet_type(wallet_id: int, wallet_client: WalletRpcClient) -> WalletType:
-    summaries_response = await wallet_client.get_wallets()
-    for summary in summaries_response:
-        summary_id: int = summary["id"]
-        summary_type: int = summary["type"]
+    summaries_response = await wallet_client.get_wallets(GetWallets())
+    for summary in summaries_response.wallets:
+        summary_id: int = summary.id
+        summary_type: int = summary.type
         if wallet_id == summary_id:
             return WalletType(summary_type)
 
@@ -151,7 +162,9 @@ async def get_transaction(
     async with get_wallet_client(wallet_rpc_port, fingerprint) as (wallet_client, fingerprint, config):
         transaction_id = bytes32.from_hexstr(tx_id)
         address_prefix = selected_network_address_prefix(config)
-        tx: TransactionRecord = await wallet_client.get_transaction(transaction_id=transaction_id)
+        tx: TransactionRecord = (
+            await wallet_client.get_transaction(GetTransaction(transaction_id=transaction_id))
+        ).transaction
 
         try:
             wallet_type = await get_wallet_type(wallet_id=tx.wallet_id, wallet_client=wallet_client)
@@ -198,9 +211,18 @@ async def get_transactions(
                 [TransactionType.INCOMING_CLAWBACK_RECEIVE, TransactionType.INCOMING_CLAWBACK_SEND]
             )
         )
-        txs: list[TransactionRecord] = await wallet_client.get_transactions(
-            wallet_id, start=offset, end=(offset + limit), sort_key=sort_key, reverse=reverse, type_filter=type_filter
-        )
+        txs = (
+            await wallet_client.get_transactions(
+                GetTransactions(
+                    uint32(wallet_id),
+                    start=uint16(offset),
+                    end=uint16(offset + limit),
+                    sort_key=sort_key.name,
+                    reverse=reverse,
+                    type_filter=type_filter,
+                )
+            )
+        ).transactions
 
         address_prefix = selected_network_address_prefix(config)
         if len(txs) == 0:
@@ -308,23 +330,25 @@ async def send(
         if typ == WalletType.STANDARD_WALLET:
             print("Submitting transaction...")
             res: Union[CATSpendResponse, SendTransactionResponse] = await wallet_client.send_transaction(
-                wallet_id,
-                final_amount,
-                address.original_address,
-                CMDTXConfigLoader(
+                SendTransaction(
+                    wallet_id=uint32(wallet_id),
+                    amount=final_amount,
+                    address=address.original_address,
+                    fee=fee,
+                    memos=memos,
+                    puzzle_decorator=(
+                        [PuzzleDecoratorData(PuzzleDecoratorType.CLAWBACK, {"clawback_timelock": clawback_time_lock})]
+                        if clawback_time_lock > 0
+                        else None
+                    ),
+                    push=push,
+                ),
+                tx_config=CMDTXConfigLoader(
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
                     excluded_coin_ids=list(excluded_coin_ids),
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(mojo_per_unit, config, fingerprint),
-                fee,
-                memos,
-                puzzle_decorator_override=(
-                    [{"decorator": PuzzleDecoratorType.CLAWBACK.name, "clawback_timelock": clawback_time_lock}]
-                    if clawback_time_lock > 0
-                    else None
-                ),
-                push=push,
                 timelock_info=condition_valid_times,
             )
         elif typ in {WalletType.CAT, WalletType.CRCAT}:
@@ -353,7 +377,7 @@ async def send(
             start = time.time()
             while time.time() - start < 10:
                 await asyncio.sleep(0.1)
-                tx = await wallet_client.get_transaction(tx_id)
+                tx = (await wallet_client.get_transaction(GetTransaction(tx_id))).transaction
                 if len(tx.sent_to) > 0:
                     print(transaction_submitted_msg(tx))
                     print(transaction_status_msg(fingerprint, tx_id))
@@ -368,7 +392,7 @@ async def send(
 
 async def get_address(wallet_rpc_port: Optional[int], fp: Optional[int], wallet_id: int, new_address: bool) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, _, _):
-        res = await wallet_client.get_next_address(wallet_id, new_address)
+        res = (await wallet_client.get_next_address(GetNextAddress(uint32(wallet_id), new_address))).address
         print(res)
 
 
@@ -858,7 +882,7 @@ async def print_balances(
     wallet_rpc_port: Optional[int], fp: Optional[int], wallet_type: Optional[WalletType] = None
 ) -> None:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
-        summaries_response = await wallet_client.get_wallets(wallet_type)
+        summaries_response = await wallet_client.get_wallets(GetWallets(uint16.construct_optional(wallet_type)))
         address_prefix = selected_network_address_prefix(config)
 
         sync_response = await wallet_client.get_sync_status()
@@ -872,36 +896,37 @@ async def print_balances(
             print("Sync status: Not synced")
 
         if not sync_response.syncing and sync_response.synced:
-            if len(summaries_response) == 0:
+            if len(summaries_response.wallets) == 0:
                 type_hint = " " if wallet_type is None else f" from type {wallet_type.name} "
                 print(f"\nNo wallets{type_hint}available for fingerprint: {fingerprint}")
             else:
                 print(f"Balances, fingerprint: {fingerprint}")
-            for summary in summaries_response:
+            for summary in summaries_response.wallets:
                 indent: str = "   "
                 # asset_id currently contains both the asset ID and TAIL program bytes concatenated together.
                 # A future RPC update may split them apart, but for now we'll show the first 32 bytes (64 chars)
-                asset_id = summary["data"][:64]
-                wallet_id = summary["id"]
-                balances = await wallet_client.get_wallet_balance(wallet_id)
-                typ = WalletType(int(summary["type"]))
+                asset_id = summary.data[:64]
+                wallet_id = summary.id
+                balances = (await wallet_client.get_wallet_balance(GetWalletBalance(uint32(wallet_id)))).wallet_balance
+                typ = WalletType(int(summary.type))
                 address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-                total_balance: str = print_balance(balances["confirmed_wallet_balance"], scale, address_prefix)
+                total_balance: str = print_balance(balances.confirmed_wallet_balance, scale, address_prefix)
                 unconfirmed_wallet_balance: str = print_balance(
-                    balances["unconfirmed_wallet_balance"], scale, address_prefix
+                    balances.unconfirmed_wallet_balance, scale, address_prefix
                 )
-                spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+                spendable_balance: str = print_balance(balances.spendable_balance, scale, address_prefix)
                 my_did: Optional[str] = None
                 ljust = 23
                 if typ == WalletType.CRCAT:
                     ljust = 36
                 print()
-                print(f"{summary['name']}:")
+                print(f"{summary.name}:")
                 print(f"{indent}{'-Total Balance:'.ljust(ljust)} {total_balance}")
                 if typ == WalletType.CRCAT:
+                    assert balances.pending_approval_balance is not None
                     print(
                         f"{indent}{'-Balance Pending VC Approval:'.ljust(ljust)} "
-                        f"{print_balance(balances['pending_approval_balance'], scale, address_prefix)}"
+                        f"{print_balance(balances.pending_approval_balance, scale, address_prefix)}"
                     )
                 print(f"{indent}{'-Pending Total Balance:'.ljust(ljust)} {unconfirmed_wallet_balance}")
                 print(f"{indent}{'-Spendable:'.ljust(ljust)} {spendable_balance}")
@@ -920,7 +945,7 @@ async def print_balances(
                     treasury_id = get_id_response["treasury_id"][2:]
                     print(f"{indent}{'-Treasury ID:'.ljust(ljust)} {treasury_id}")
                 elif typ == WalletType.DAO_CAT:
-                    cat_asset_id = summary["data"][32:96]
+                    cat_asset_id = summary.data[32:96]
                     print(f"{indent}{'-Asset ID:'.ljust(ljust)} {cat_asset_id}")
                 elif len(asset_id) > 0:
                     print(f"{indent}{'-Asset ID:'.ljust(ljust)} {asset_id}")

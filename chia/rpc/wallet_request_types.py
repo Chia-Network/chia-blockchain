@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Optional, TypeVar
+from typing import Any, BinaryIO, Optional, TypeVar
 
 from chia_rs import G1Element, G2Element, PrivateKey
+from chia_rs.sized_ints import uint8
 from typing_extensions import dataclass_transform
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
-from chia.wallet.conditions import Condition, ConditionValidTimes
+from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.notification_store import Notification
 from chia.wallet.signer_protocol import (
     SignedTransaction,
@@ -23,9 +24,14 @@ from chia.wallet.signer_protocol import (
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
+from chia.wallet.util.puzzle_decorator_type import PuzzleDecoratorType
+from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import TXConfig
 from chia.wallet.vc_wallet.vc_store import VCRecord
+from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_node import Balance
 from chia.wallet.wallet_spend_bundle import WalletSpendBundle
 
 _T_OfferEndpointResponse = TypeVar("_T_OfferEndpointResponse", bound="_OfferEndpointResponse")
@@ -41,6 +47,63 @@ def kw_only_dataclass(cls: type[Any]) -> type[Any]:
 
 def default_raise() -> Any:  # pragma: no cover
     raise RuntimeError("This should be impossible to hit and is just for < 3.10 compatibility")
+
+
+class UserFriendlyMemos:
+    unfriendly_memos: list[tuple[bytes32, list[bytes]]]
+
+    def __init__(self, unfriendly_memos: list[tuple[bytes32, list[bytes]]]) -> None:
+        self.unfriendly_memos = unfriendly_memos
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, UserFriendlyMemos) and other.unfriendly_memos == self.unfriendly_memos:
+            return True
+        else:
+            return False
+
+    def __bytes__(self) -> bytes:
+        raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
+
+    @classmethod
+    def parse(cls, f: BinaryIO) -> UserFriendlyMemos:
+        raise NotImplementedError("Should not be deserializing this object from a stream, it's only for RPC")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "0x" + coin_id.hex(): "0x" + memo.hex()
+            for coin_id, memos in self.unfriendly_memos
+            for memo in memos
+            if memo is not None
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> UserFriendlyMemos:
+        return UserFriendlyMemos(
+            [(bytes32.from_hexstr(coin_id), [hexstr_to_bytes(memo)]) for coin_id, memo in json_dict.items()]
+        )
+
+
+_T_UserFriendlyTransactionRecord = TypeVar("_T_UserFriendlyTransactionRecord", bound="UserFriendlyTransactionRecord")
+
+
+@streamable
+@dataclass(frozen=True)
+class UserFriendlyTransactionRecord(TransactionRecord):
+    to_address: str
+    memos: UserFriendlyMemos  # type: ignore[assignment]
+
+    def get_memos(self) -> dict[bytes32, list[bytes]]:
+        return {coin_id: ms for coin_id, ms in self.memos.unfriendly_memos}
+
+    def to_transaction_record(self) -> TransactionRecord:
+        return TransactionRecord.from_json_dict_convenience(self.to_json_dict())
+
+    @classmethod
+    def from_transaction_record(
+        cls: type[_T_UserFriendlyTransactionRecord], tx: TransactionRecord, config: dict[str, Any]
+    ) -> _T_UserFriendlyTransactionRecord:
+        dict_convenience = tx.to_json_dict_convenience(config)
+        return cls.from_json_dict(dict_convenience)
 
 
 @streamable
@@ -193,6 +256,199 @@ class GetTimestampForHeight(Streamable):
 @dataclass(frozen=True)
 class GetTimestampForHeightResponse(Streamable):
     timestamp: uint64
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWallets(Streamable):
+    type: Optional[uint16] = None
+    include_data: bool = True
+
+
+# utility for GetWalletsResponse
+@streamable
+@dataclass(frozen=True)
+class WalletInfoResponse(WalletInfo):
+    authorized_providers: list[bytes32] = field(default_factory=list)
+    flags_needed: list[str] = field(default_factory=list)
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletsResponse(Streamable):
+    wallets: list[WalletInfoResponse]
+    fingerprint: Optional[uint32] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalance(Streamable):
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalances(Streamable):
+    wallet_ids: Optional[list[uint32]] = None
+
+
+# utility for GetWalletBalanceResponse(s)
+@streamable
+@kw_only_dataclass
+class BalanceResponse(Balance):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    wallet_type: uint8 = field(default_factory=default_raise)
+    fingerprint: Optional[uint32] = None
+    asset_id: Optional[bytes32] = None
+    pending_approval_balance: Optional[uint64] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalanceResponse(Streamable):
+    wallet_balance: BalanceResponse
+
+
+@streamable
+@dataclass(frozen=True)
+class GetWalletBalancesResponse(Streamable):
+    wallet_balances: list[BalanceResponse]
+
+    @property
+    def wallet_balances_dict(self) -> dict[uint32, BalanceResponse]:
+        return {response.wallet_id: response for response in self.wallet_balances}
+
+    # special dict format that streamable can't handle natively
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "wallet_balances": {
+                str(wallet_id): response.to_json_dict() for wallet_id, response in self.wallet_balances_dict.items()
+            }
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> GetWalletBalancesResponse:
+        return super().from_json_dict(
+            {"wallet_balances": [balance_response for balance_response in json_dict["wallet_balances"].values()]}
+        )
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransaction(Streamable):
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionResponse(Streamable):
+    transaction: UserFriendlyTransactionRecord
+    transaction_id: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactions(Streamable):
+    wallet_id: uint32
+    start: Optional[uint16] = None
+    end: Optional[uint16] = None
+    sort_key: Optional[str] = None
+    reverse: bool = False
+    to_address: Optional[str] = None
+    type_filter: Optional[TransactionTypeFilter] = None
+    confirmed: Optional[bool] = None
+
+    def __post_init__(self) -> None:
+        if self.sort_key is not None and self.sort_key not in SortKey.__members__:
+            raise ValueError(f"There is no known sort {self.sort_key}")
+
+
+# utility for GetTransactionsResponse
+class TransactionRecordMetadata:
+    content: dict[str, Any]
+    coin_id: bytes32
+    spent: bool
+
+    def __init__(self, content: dict[str, Any], coin_id: bytes32, spent: bool) -> None:
+        self.content = content
+        self.coin_id = coin_id
+        self.spent = spent
+
+    def __eq__(self, other: Any) -> bool:
+        if (
+            isinstance(other, TransactionRecordMetadata)
+            and other.content == self.content
+            and other.coin_id == self.coin_id
+            and other.spent == self.spent
+        ):
+            return True
+        else:
+            return False
+
+    def __bytes__(self) -> bytes:
+        raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
+
+    @classmethod
+    def parse(cls, f: BinaryIO) -> TransactionRecordMetadata:
+        raise NotImplementedError("Should not be deserializing this object from a stream, it's only for RPC")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            **self.content,
+            "coin_id": "0x" + self.coin_id.hex(),
+            "spent": self.spent,
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> TransactionRecordMetadata:
+        return TransactionRecordMetadata(
+            coin_id=bytes32.from_hexstr(json_dict["coin_id"]),
+            spent=json_dict["spent"],
+            content={k: v for k, v in json_dict.items() if k not in {"coin_id", "spent"}},
+        )
+
+
+# utility for GetTransactionsResponse
+@streamable
+@dataclass(frozen=True)
+class UserFriendlyTransactionRecordWithMetadata(UserFriendlyTransactionRecord):
+    metadata: Optional[TransactionRecordMetadata] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionsResponse(Streamable):
+    transactions: list[UserFriendlyTransactionRecordWithMetadata]
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionCount(Streamable):
+    wallet_id: uint32
+    type_filter: Optional[TransactionTypeFilter] = None
+    confirmed: Optional[bool] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class GetTransactionCountResponse(Streamable):
+    count: uint16
+    wallet_id: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNextAddress(Streamable):
+    wallet_id: uint32
+    new_address: bool = True
+
+
+@streamable
+@dataclass(frozen=True)
+class GetNextAddressResponse(Streamable):
+    wallet_id: uint32
+    address: str
 
 
 @streamable
@@ -449,7 +705,7 @@ class TransactionEndpointRequest(Streamable):
         return {
             **tx_config.to_json_dict(),
             **timelock_info.to_json_dict(),
-            "extra_conditions": [condition.to_json_dict() for condition in extra_conditions],
+            "extra_conditions": conditions_to_json_dicts(extra_conditions),
             **self.to_json_dict(_avoid_ban=True),
         }
 
@@ -553,13 +809,65 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
 
 
-# TODO: The section below needs corresponding request types
-# TODO: The section below should be added to the API (currently only for client)
+# utility for SendTransaction
+class PuzzleDecoratorData:
+    decorator_name: PuzzleDecoratorType
+    decorator_information: dict[str, Any]
+
+    def __init__(self, decorator_name: PuzzleDecoratorType, decorator_information: dict[str, Any]) -> None:
+        self.decorator_name = decorator_name
+        self.decorator_information = decorator_information
+
+    def __eq__(self, other: Any) -> bool:
+        if (
+            isinstance(other, PuzzleDecoratorData)
+            and other.decorator_name == self.decorator_name
+            and other.decorator_information == self.decorator_information
+        ):
+            return True
+        else:
+            return False
+
+    def __bytes__(self) -> bytes:
+        raise NotImplementedError("Should not be serializing this object as bytes, it's only for RPC")
+
+    @classmethod
+    def parse(cls, f: BinaryIO) -> TransactionRecordMetadata:
+        raise NotImplementedError("Should not be deserializing this object from a stream, it's only for RPC")
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            **self.decorator_information,
+            "decorator": self.decorator_name.name,
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: dict[str, Any]) -> PuzzleDecoratorData:
+        return PuzzleDecoratorData(
+            decorator_name=PuzzleDecoratorType.__members__[json_dict["decorator"]],
+            decorator_information={k: v for k, v in json_dict.items() if k != "decorator"},
+        )
+
+
+@streamable
+@kw_only_dataclass
+class SendTransaction(TransactionEndpointRequest):
+    wallet_id: uint32 = field(default_factory=default_raise)
+    amount: uint64 = field(default_factory=default_raise)
+    address: str = field(default_factory=default_raise)
+    memos: Optional[list[str]] = None
+    puzzle_decorator: Optional[list[PuzzleDecoratorData]] = None
+
+
 @streamable
 @dataclass(frozen=True)
 class SendTransactionResponse(TransactionEndpointResponse):
     transaction: TransactionRecord
     transaction_id: bytes32
+
+
+# TODO: The section below needs corresponding request types
+# TODO: The section below should be added to the API (currently only for client)
 
 
 @streamable

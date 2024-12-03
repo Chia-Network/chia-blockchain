@@ -48,6 +48,8 @@ from chia.rpc.wallet_request_types import (
     GetCATListResponse,
     GetHeightInfoResponse,
     GetLoggedInFingerprintResponse,
+    GetNextAddress,
+    GetNextAddressResponse,
     GetNotifications,
     GetNotificationsResponse,
     GetOffersCountResponse,
@@ -57,8 +59,20 @@ from chia.rpc.wallet_request_types import (
     GetSyncStatusResponse,
     GetTimestampForHeight,
     GetTimestampForHeightResponse,
+    GetTransaction,
+    GetTransactionCount,
+    GetTransactionCountResponse,
     GetTransactionMemo,
     GetTransactionMemoResponse,
+    GetTransactionResponse,
+    GetTransactions,
+    GetTransactionsResponse,
+    GetWalletBalance,
+    GetWalletBalanceResponse,
+    GetWalletBalances,
+    GetWalletBalancesResponse,
+    GetWallets,
+    GetWalletsResponse,
     LogIn,
     LogInResponse,
     NFTAddURIResponse,
@@ -77,6 +91,7 @@ from chia.rpc.wallet_request_types import (
     PushTransactions,
     PushTransactionsResponse,
     PushTX,
+    SendTransaction,
     SendTransactionMultiResponse,
     SendTransactionResponse,
     SetWalletResyncOnStartup,
@@ -102,11 +117,8 @@ from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.clvm_streamable import json_deserialize_with_clvm_streamable
-from chia.wallet.util.query_filter import TransactionTypeFilter
 from chia.wallet.util.tx_config import CoinSelectionConfig, TXConfig
-from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.vc_wallet.vc_store import VCRecord
 from chia.wallet.wallet_coin_store import GetCoinRecords
 
@@ -194,112 +206,42 @@ class WalletRpcClient(RpcClient):
         return AutoClaimSettings.from_json_dict(await self.fetch("get_auto_claim", {}))
 
     # Wallet Management APIs
-    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> list[dict[str, Any]]:
-        if wallet_type is None:
-            request = {}
-        else:
-            request = {"type": wallet_type}
-        response = await self.fetch("get_wallets", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(list[dict[str, Any]], response["wallets"])
+    async def get_wallets(self, request: GetWallets) -> GetWalletsResponse:
+        return GetWalletsResponse.from_json_dict(await self.fetch("get_wallets", request.to_json_dict()))
 
     # Wallet APIs
-    async def get_wallet_balance(self, wallet_id: int) -> dict[str, Any]:
-        request = {"wallet_id": wallet_id}
-        response = await self.fetch("get_wallet_balance", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(dict[str, Any], response["wallet_balance"])
+    async def get_wallet_balance(self, request: GetWalletBalance) -> GetWalletBalanceResponse:
+        return GetWalletBalanceResponse.from_json_dict(await self.fetch("get_wallet_balance", request.to_json_dict()))
 
-    async def get_wallet_balances(self, wallet_ids: Optional[list[int]] = None) -> dict[str, dict[str, Any]]:
-        request = {"wallet_ids": wallet_ids}
-        response = await self.fetch("get_wallet_balances", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(dict[str, dict[str, Any]], response["wallet_balances"])
+    async def get_wallet_balances(self, request: GetWalletBalances) -> GetWalletBalancesResponse:
+        return GetWalletBalancesResponse.from_json_dict(await self.fetch("get_wallet_balances", request.to_json_dict()))
 
-    async def get_transaction(self, transaction_id: bytes32) -> TransactionRecord:
-        request = {"transaction_id": transaction_id.hex()}
-        response = await self.fetch("get_transaction", request)
-        return TransactionRecord.from_json_dict_convenience(response["transaction"])
+    async def get_transaction(self, request: GetTransaction) -> GetTransactionResponse:
+        return GetTransactionResponse.from_json_dict(await self.fetch("get_transaction", request.to_json_dict()))
 
-    async def get_transactions(
-        self,
-        wallet_id: int,
-        start: Optional[int] = None,
-        end: Optional[int] = None,
-        sort_key: Optional[SortKey] = None,
-        reverse: bool = False,
-        to_address: Optional[str] = None,
-        type_filter: Optional[TransactionTypeFilter] = None,
-        confirmed: Optional[bool] = None,
-    ) -> list[TransactionRecord]:
-        request: dict[str, Any] = {"wallet_id": wallet_id}
+    async def get_transactions(self, request: GetTransactions) -> GetTransactionsResponse:
+        return GetTransactionsResponse.from_json_dict(await self.fetch("get_transactions", request.to_json_dict()))
 
-        if start is not None:
-            request["start"] = start
-        if end is not None:
-            request["end"] = end
-        if sort_key is not None:
-            request["sort_key"] = sort_key.name
-        request["reverse"] = reverse
+    async def get_transaction_count(self, request: GetTransactionCount) -> GetTransactionCountResponse:
+        return GetTransactionCountResponse.from_json_dict(
+            await self.fetch("get_transaction_count", request.to_json_dict())
+        )
 
-        if to_address is not None:
-            request["to_address"] = to_address
-
-        if type_filter is not None:
-            request["type_filter"] = type_filter.to_json_dict()
-
-        if confirmed is not None:
-            request["confirmed"] = confirmed
-
-        res = await self.fetch("get_transactions", request)
-        return [TransactionRecord.from_json_dict_convenience(tx) for tx in res["transactions"]]
-
-    async def get_transaction_count(
-        self, wallet_id: int, confirmed: Optional[bool] = None, type_filter: Optional[TransactionTypeFilter] = None
-    ) -> int:
-        request: dict[str, Any] = {"wallet_id": wallet_id}
-        if type_filter is not None:
-            request["type_filter"] = type_filter.to_json_dict()
-        if confirmed is not None:
-            request["confirmed"] = confirmed
-        res = await self.fetch("get_transaction_count", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(int, res["count"])
-
-    async def get_next_address(self, wallet_id: int, new_address: bool) -> str:
-        request = {"wallet_id": wallet_id, "new_address": new_address}
-        response = await self.fetch("get_next_address", request)
-        # TODO: casting due to lack of type checked deserialization
-        return cast(str, response["address"])
+    async def get_next_address(self, request: GetNextAddress) -> GetNextAddressResponse:
+        return GetNextAddressResponse.from_json_dict(await self.fetch("get_next_address", request.to_json_dict()))
 
     async def send_transaction(
         self,
-        wallet_id: int,
-        amount: uint64,
-        address: str,
+        request: SendTransaction,
         tx_config: TXConfig,
-        fee: uint64 = uint64(0),
-        memos: Optional[list[str]] = None,
-        puzzle_decorator_override: Optional[list[dict[str, Union[str, int, bool]]]] = None,
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> SendTransactionResponse:
-        request = {
-            "wallet_id": wallet_id,
-            "amount": amount,
-            "address": address,
-            "fee": fee,
-            "puzzle_decorator": puzzle_decorator_override,
-            "extra_conditions": conditions_to_json_dicts(extra_conditions),
-            "push": push,
-            **tx_config.to_json_dict(),
-            **timelock_info.to_json_dict(),
-        }
-        if memos is not None:
-            request["memos"] = memos
-        response = await self.fetch("send_transaction", request)
-        return json_deserialize_with_clvm_streamable(response, SendTransactionResponse)
+        return SendTransactionResponse.from_json_dict(
+            await self.fetch(
+                "send_transaction", request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)
+            )
+        )
 
     async def send_transaction_multi(
         self,

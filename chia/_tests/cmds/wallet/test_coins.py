@@ -6,7 +6,7 @@ from typing import Optional
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT, FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
-from chia.rpc.wallet_request_types import CombineCoins, CombineCoinsResponse, SplitCoins, SplitCoinsResponse
+from chia.rpc.wallet_request_types import CombineCoins, CombineCoinsResponse, GetWallets, SplitCoins, SplitCoinsResponse
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -37,7 +37,7 @@ def test_coins_get_info(capsys: object, get_test_cli_clients: tuple[TestRpcClien
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "get_wallets": [(None,)],
+        "get_wallets": [(GetWallets(type=None, include_data=True),)],
         "get_sync_status": [()],
         "get_spendable_coins": [
             (
@@ -119,7 +119,7 @@ def test_coins_combine(capsys: object, get_test_cli_clients: tuple[TestRpcClient
         push=False,
     )
     expected_calls: logType = {
-        "get_wallets": [(None,)] * 2,
+        "get_wallets": [(GetWallets(type=None, include_data=True),)] * 2,
         "get_sync_status": [()] * 2,
         "combine_coins": [
             (
@@ -198,7 +198,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "get_wallets": [(None,)],
+        "get_wallets": [(GetWallets(type=None, include_data=True),)],
         "get_sync_status": [()],
         "split_coins": [
             (
@@ -234,7 +234,7 @@ def test_coins_split(capsys: object, get_test_cli_clients: tuple[TestRpcClients,
     assert_list = []
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls = {
-        "get_wallets": [(None,)],
+        "get_wallets": [(GetWallets(type=None, include_data=True),)],
         "get_sync_status": [()],
         "split_coins": [
             (
