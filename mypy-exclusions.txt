@@ -77,7 +77,6 @@ chia._tests.core.util.test_keyring_wrapper
 chia._tests.core.util.test_lru_cache
 chia._tests.core.util.test_significant_bits
 chia._tests.plotting.test_plot_manager
-chia._tests.pools.test_pool_cmdline
 chia._tests.pools.test_pool_config
 chia._tests.pools.test_pool_puzzles_lifecycle
 chia._tests.pools.test_wallet_pool_store
