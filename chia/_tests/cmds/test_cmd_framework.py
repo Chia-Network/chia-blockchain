@@ -99,6 +99,7 @@ def test_option_loading() -> None:
     @chia_command(cmd, "temp_cmd", "blah", help="n/a")
     class TempCMD:
         some_option: int = option("-o", "--some-option", required=True, type=int)
+        choices: list[str] = option("--choice", multiple=True, type=str)
 
         def run(self) -> None:
             print(self.some_option)
