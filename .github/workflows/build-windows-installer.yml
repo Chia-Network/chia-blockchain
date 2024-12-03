@@ -39,6 +39,8 @@ permissions:
 jobs:
   version:
     uses: ./.github/workflows/reflow-version.yml
+    with:
+      release_type: ${{ inputs.release_type }}
 
   build:
     name: Build EXE
@@ -46,8 +48,6 @@ jobs:
     needs:
       - version
     timeout-minutes: 65
-    outputs:
-      chia-installer-version: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
     strategy:
       fail-fast: false
       matrix:
@@ -121,14 +121,18 @@ jobs:
         if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
         shell: bash
         run: |
-          echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV"
-          echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV"
-          echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV"
-          echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
-          echo "SM_CODE_SIGNING_CERT_SHA1_HASH=${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}" >> "$GITHUB_ENV"
-          echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH
-          echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH
-          echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
+          {
+            echo "SM_HOST=${{ secrets.SM_HOST }}"
+            echo "SM_API_KEY=${{ secrets.SM_API_KEY }}"
+            echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12"
+            echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}"
+            echo "SM_CODE_SIGNING_CERT_SHA1_HASH=${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}"
+          } >> "$GITHUB_ENV"
+          {
+            echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit"
+            echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools"
+            echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools"
+          } >> "$GITHUB_PATH"
 
       - name: Setup SSM KSP on windows latest
         if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
@@ -183,7 +187,7 @@ jobs:
           mkdir "$GITHUB_WORKSPACE\\bladebit"
           cd "$GITHUB_WORKSPACE\\bladebit"
           gh release download -R Chia-Network/bladebit "$LATEST_VERSION" -p 'bladebit*windows-x86-64.zip'
-          ls *.zip | xargs -I{} bash -c 'unzip {} && rm {}'
+          find . -maxdepth 1 -name '*.zip' -print0 | xargs -0 -I{} bash -c 'unzip {} && rm {}'
           cd "$OLDPWD"
 
       - uses: ./.github/actions/install
@@ -213,12 +217,14 @@ jobs:
 
       - if: steps.cache-gui.outputs.cache-hit != 'true'
         name: Build GUI
+        shell: pwsh
         continue-on-error: false
         run: |
           cd .\build_scripts
           .\build_windows-1-gui.ps1
 
       - name: Build Windows installer
+        shell: pwsh
         env:
           HAS_SIGNING_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
         run: |
@@ -234,6 +240,7 @@ jobs:
           path: chia-blockchain-gui\release-builds\windows-installer\
 
       - name: Remove Windows exe and installer to exclude from cache
+        shell: pwsh
         run: |
           Remove-Item .\chia-blockchain-gui\packages\gui\dist -Recurse -Force
           Remove-Item .\chia-blockchain-gui\packages\gui\daemon -Recurse -Force
@@ -335,6 +342,7 @@ jobs:
           path: packages
 
       - name: Install package
+        shell: pwsh
         run: |
           dir ./packages/
           $env:INSTALLER_PATH = (Get-ChildItem packages/ChiaSetup-*.exe)
@@ -347,14 +355,16 @@ jobs:
           dir ./installed/
 
       - name: List installed files
+        shell: pwsh
         run: |
           Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
 
       - name: List all files
-        if:
+        shell: pwsh
         run: |
           Get-ChildItem -Recurse $env:INSTALL_PATH | Select FullName
 
       - name: Run chia dev installers test
+        shell: pwsh
         run: |
           & ($env:INSTALL_PATH + "/resources/app.asar.unpacked/daemon/chia.exe") dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
