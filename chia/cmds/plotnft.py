@@ -23,7 +23,9 @@ def plotnft_cmd() -> None:
     type=int,
     default=None,
 )
-@click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=False)
+@click.option(
+    "-i", "--id", help="ID of the pool wallet to use", type=int, default=None, show_default=True, required=False
+)
 @options.create_fingerprint()
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
@@ -88,7 +90,9 @@ def create_cmd(
 # NOTE: tx_endpoint
 @plotnft_cmd.command("join", help="Join a plot NFT to a Pool")
 @click.option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
-@click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option(
+    "-i", "--id", help="ID of the pool wallet to use", type=int, default=None, show_default=True, required=True
+)
 @options.create_fingerprint()
 @click.option("-u", "--pool_url", help="HTTPS host:port of the pool to join", type=str, required=True)
 @options.create_fee("Set the fees per transaction, in XCH. Fee is used TWICE: once to leave pool, once to join.")
@@ -121,7 +125,9 @@ def join_cmd(
 # NOTE: tx_endpoint
 @plotnft_cmd.command("leave", help="Leave a pool and return to self-farming")
 @click.option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
-@click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option(
+    "-i", "--id", help="ID of the pool wallet to use", type=int, default=None, show_default=True, required=True
+)
 @options.create_fingerprint()
 @options.create_fee("Set the fees per transaction, in XCH. Fee is charged TWICE.")
 @click.option(
@@ -148,7 +154,9 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
 
 
 @plotnft_cmd.command("inspect", help="Get Detailed plotnft information as JSON")
-@click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option(
+    "-i", "--id", help="ID of the pool wallet to use", type=int, default=None, show_default=True, required=True
+)
 @options.create_fingerprint()
 @click.option(
     "-wp",
@@ -167,7 +175,9 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 
 # NOTE: tx_endpoint
 @plotnft_cmd.command("claim", help="Claim rewards from a plot NFT")
-@click.option("-i", "--id", help="ID of the wallet to use", type=int, default=None, show_default=True, required=True)
+@click.option(
+    "-i", "--id", help="ID of the pool wallet to use", type=int, default=None, show_default=True, required=True
+)
 @options.create_fingerprint()
 @options.create_fee()
 @click.option(
