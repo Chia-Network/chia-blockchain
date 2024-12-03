@@ -6,8 +6,8 @@ import dataclasses
 import logging
 import random
 import time
-from collections.abc import Coroutine
-from typing import Awaitable, Optional
+from collections.abc import Awaitable, Coroutine
+from typing import Optional
 
 import pytest
 from chia_rs import (

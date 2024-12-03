@@ -4,10 +4,10 @@ import asyncio
 import logging
 import random
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from typing import Awaitable, Optional
+from typing import Optional
 
 import pytest
 from chia_rs import AugSchemeMPL, G2Element, MerkleSet
