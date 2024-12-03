@@ -14,7 +14,7 @@ from chia.server.start_service import Service, async_run
 from chia.types.aliases import IntroducerService
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import resolve_root_path
 from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288
@@ -53,14 +53,14 @@ def create_introducer_service(
     )
 
 
-async def async_main() -> int:
+async def async_main(root_path: pathlib.Path) -> int:
     # TODO: refactor to avoid the double load
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config = load_config(root_path, "config.yaml")
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
-    initialize_service_logging(service_name=SERVICE_NAME, config=config)
+    initialize_service_logging(service_name=SERVICE_NAME, config=config, root_path=root_path)
 
-    service = create_introducer_service(DEFAULT_ROOT_PATH, config)
+    service = create_introducer_service(root_path, config)
     async with SignalHandlers.manage() as signal_handlers:
         await service.setup_process_global_state(signal_handlers=signal_handlers)
         await service.run()
@@ -69,10 +69,12 @@ async def async_main() -> int:
 
 
 def main() -> int:
+    root_path = resolve_root_path(override=None)
+
     with maybe_manage_task_instrumentation(
         enable=os.environ.get(f"CHIA_INSTRUMENT_{SERVICE_NAME.upper()}") is not None
     ):
-        return async_run(coro=async_main())
+        return async_run(coro=async_main(root_path=root_path))
 
 
 if __name__ == "__main__":
