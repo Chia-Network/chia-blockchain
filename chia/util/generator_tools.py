@@ -14,11 +14,11 @@ from chia.util.ints import uint64
 
 
 def get_block_header(
-    block: FullBlock, tx_addition_coins: Collection[Coin], removals_names: Collection[bytes32]
+    block: FullBlock, tx_addition_coins: Collection[Coin], removals_names: Collection[bytes32], tx_filter: bool
 ) -> HeaderBlock:
     # Create filter
     byte_array_tx: list[bytearray] = []
-    if block.is_transaction_block():
+    if tx_filter and block.is_transaction_block():
         for coin in tx_addition_coins:
             byte_array_tx.append(bytearray(coin.puzzle_hash))
         for coin in block.get_included_reward_coins():
