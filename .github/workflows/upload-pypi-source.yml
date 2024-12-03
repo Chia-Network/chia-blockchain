@@ -132,7 +132,7 @@ jobs:
           - name: actionlint
             command: |
               bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-              ./actionlint -color
+              ./actionlint -color -shellcheck shellcheck
 
     steps:
       - uses: chia-network/actions/clean-workspace@main
