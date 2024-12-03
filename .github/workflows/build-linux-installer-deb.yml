@@ -333,7 +333,12 @@ jobs:
         if: matrix.mode.name == 'GUI'
         run: |
           [ $(stat -c %a:%G:%U /opt/chia/chrome-sandbox) == "4755:root:root" ]
-
+          
+      - name: Test generation of a k25 plot
+        run:  |
+          chia plots create -k 25 -t ./tmp -d ./plot --override-k
+          chia plots check -n 1
+          
       - name: Remove package
         run: |
           apt-get remove --yes ${{ matrix.mode.package }}
