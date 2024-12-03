@@ -553,6 +553,19 @@ class NFTTransferBulkResponse(TransactionEndpointResponse):
     spend_bundle: WalletSpendBundle
 
 
+@streamable
+@dataclass(frozen=True)
+class VCMint(TransactionEndpointRequest):
+    did_id: str = field(default_factory=default_raise)
+    target_address: Optional[str] = None
+
+
+@streamable
+@dataclass(frozen=True)
+class VCMintResponse(TransactionEndpointResponse):
+    vc_record: VCRecord
+
+
 # TODO: The section below needs corresponding request types
 # TODO: The section below should be added to the API (currently only for client)
 @streamable
@@ -747,12 +760,6 @@ class DAOSendToLockupResponse(TransactionEndpointResponse):
 class DAOExitLockupResponse(TransactionEndpointResponse):
     tx_id: bytes32
     tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class VCMintResponse(TransactionEndpointResponse):
-    vc_record: VCRecord
 
 
 @streamable

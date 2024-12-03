@@ -10,6 +10,7 @@ from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
+from chia.rpc.wallet_request_types import VCMint
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
@@ -162,10 +163,13 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     # Mint a VC
     vc_record = (
         await client_0.vc_mint(
-            did_id,
+            VCMint(
+                did_id=encode_puzzle_hash(did_id, "did"),
+                target_address=encode_puzzle_hash(await wallet_0.get_new_puzzlehash(), "txch"),
+                fee=uint64(1_750_000_000_000),
+                push=True,
+            ),
             wallet_environments.tx_config,
-            target_address=await wallet_0.get_new_puzzlehash(),
-            fee=uint64(1_750_000_000_000),
         )
     ).vc_record
 
@@ -670,7 +674,13 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
 
     vc_record = (
         await client_0.vc_mint(
-            did_id, wallet_environments.tx_config, target_address=await wallet_0.get_new_puzzlehash(), fee=uint64(200)
+            VCMint(
+                did_id=encode_puzzle_hash(did_id, "did"),
+                target_address=encode_puzzle_hash(await wallet_0.get_new_puzzlehash(), "txch"),
+                fee=uint64(200),
+                push=True,
+            ),
+            wallet_environments.tx_config,
         )
     ).vc_record
     await wallet_environments.process_pending_states(

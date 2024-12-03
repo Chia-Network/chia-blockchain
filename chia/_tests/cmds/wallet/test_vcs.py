@@ -7,7 +7,7 @@ from chia_rs import Coin
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
-from chia.rpc.wallet_request_types import VCMintResponse, VCRevokeResponse, VCSpendResponse
+from chia.rpc.wallet_request_types import VCMint, VCMintResponse, VCRevokeResponse, VCSpendResponse
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64
@@ -29,14 +29,13 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     class VcsMintRpcClient(TestWalletRpcClient):
         async def vc_mint(
             self,
-            did_id: bytes32,
+            request: VCMint,
             tx_config: TXConfig,
-            target_address: Optional[bytes32] = None,
-            fee: uint64 = uint64(0),
-            push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> VCMintResponse:
-            self.add_to_log("vc_mint", (did_id, tx_config, target_address, fee, push, timelock_info))
+            self.add_to_log(
+                "vc_mint", (did_id, tx_config, request.target_address, request.fee, request.push, timelock_info)
+            )
 
             return VCMintResponse(
                 [STD_UTX],
@@ -81,7 +80,7 @@ def test_vcs_mint(capsys: object, get_test_cli_clients: tuple[TestRpcClients, Pa
     ]
     run_cli_command_and_assert(capsys, root_dir, command_args, assert_list)
     expected_calls: logType = {
-        "vc_mint": [(did_bytes, DEFAULT_TX_CONFIG, target_bytes, 500000000000, True, test_condition_valid_times)]
+        "vc_mint": [(did_id, DEFAULT_TX_CONFIG, target_addr, 500000000000, True, test_condition_valid_times)]
     }
     test_rpc_clients.wallet_rpc_client.check_log(expected_calls)
 

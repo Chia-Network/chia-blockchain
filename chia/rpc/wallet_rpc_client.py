@@ -85,6 +85,7 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactions,
     SubmitTransactionsResponse,
     TakeOfferResponse,
+    VCMint,
     VCMintResponse,
     VCRevokeResponse,
     VCSpendResponse,
@@ -95,7 +96,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.conditions import Condition, ConditionValidTimes, conditions_to_json_dicts
 from chia.wallet.puzzles.clawback.metadata import AutoClaimSettings
@@ -1662,27 +1662,16 @@ class WalletRpcClient(RpcClient):
 
     async def vc_mint(
         self,
-        did_id: bytes32,
+        request: VCMint,
         tx_config: TXConfig,
-        target_address: Optional[bytes32] = None,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> VCMintResponse:
-        response = await self.fetch(
-            "vc_mint",
-            {
-                "did_id": encode_puzzle_hash(did_id, "rpc"),
-                "target_address": encode_puzzle_hash(target_address, "rpc") if target_address is not None else None,
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return VCMintResponse.from_json_dict(
+            await self.fetch(
+                "vc_mint", {**request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)}
+            )
         )
-        return json_deserialize_with_clvm_streamable(response, VCMintResponse)
 
     async def vc_get(self, vc_id: bytes32) -> Optional[VCRecord]:
         response = await self.fetch("vc_get", {"vc_id": vc_id.hex()})

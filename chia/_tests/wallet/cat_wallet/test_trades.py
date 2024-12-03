@@ -14,9 +14,11 @@ from chia._tests.wallet.vc_wallet.test_vc_wallet import mint_cr_cat
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
+from chia.rpc.wallet_request_types import VCMint
 from chia.types.blockchain_format.program import INFINITE_COST, Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -237,12 +239,22 @@ async def test_cat_trades(
         # Mint some VCs that can spend the CR-CATs
         vc_record_maker = (
             await client_maker.vc_mint(
-                did_id_maker, wallet_environments.tx_config, target_address=await wallet_maker.get_new_puzzlehash()
+                VCMint(
+                    did_id=encode_puzzle_hash(did_id_maker, "did"),
+                    target_address=encode_puzzle_hash(await wallet_maker.get_new_puzzlehash(), "txch"),
+                    push=True,
+                ),
+                wallet_environments.tx_config,
             )
         ).vc_record
         vc_record_taker = (
             await client_taker.vc_mint(
-                did_id_taker, wallet_environments.tx_config, target_address=await wallet_taker.get_new_puzzlehash()
+                VCMint(
+                    did_id=encode_puzzle_hash(did_id_taker, "did"),
+                    target_address=encode_puzzle_hash(await wallet_taker.get_new_puzzlehash(), "txch"),
+                    push=True,
+                ),
+                wallet_environments.tx_config,
             )
         ).vc_record
         await wallet_environments.process_pending_states(

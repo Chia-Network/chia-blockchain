@@ -56,6 +56,8 @@ from chia.rpc.wallet_request_types import (
     SplitCoinsResponse,
     SubmitTransactions,
     SubmitTransactionsResponse,
+    VCMint,
+    VCMintResponse,
 )
 from chia.server.outbound_message import NodeType
 from chia.server.ws_connection import WSChiaConnection
@@ -4523,12 +4525,13 @@ class WalletRpcApi:
     # Verified Credential
     ##########################################################################################
     @tx_endpoint(push=True)
+    @marshal
     async def vc_mint(
         self,
-        request: dict[str, Any],
+        request: VCMint,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> VCMintResponse:
         """
         Mint a verified credential using the assigned DID
         :param request: We require 'did_id' that will be minting the VC and options for a new 'target_address' as well
@@ -4536,29 +4539,16 @@ class WalletRpcApi:
         :return: a 'vc_record' containing all the information of the soon-to-be-confirmed vc as well as any relevant
         'transactions'
         """
-
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCMint(Streamable):
-            did_id: str
-            target_address: Optional[str] = None
-            fee: uint64 = uint64(0)
-
-        parsed_request = VCMint.from_json_dict(request)
-
-        did_id = decode_puzzle_hash(parsed_request.did_id)
+        did_id = decode_puzzle_hash(request.did_id)
         puzhash: Optional[bytes32] = None
-        if parsed_request.target_address is not None:
-            puzhash = decode_puzzle_hash(parsed_request.target_address)
+        if request.target_address is not None:
+            puzhash = decode_puzzle_hash(request.target_address)
 
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
         vc_record = await vc_wallet.launch_new_vc(
-            did_id, action_scope, puzhash, parsed_request.fee, extra_conditions=extra_conditions
+            did_id, action_scope, puzhash, request.fee, extra_conditions=extra_conditions
         )
-        return {
-            "vc_record": vc_record.to_json_dict(),
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        return VCMintResponse([], [], vc_record)
 
     async def vc_get(self, request: dict[str, Any]) -> EndpointResult:
         """

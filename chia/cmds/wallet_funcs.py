@@ -21,7 +21,7 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
-from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse
+from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse, VCMint
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
@@ -1582,11 +1582,13 @@ async def mint_vc(
 ) -> list[TransactionRecord]:
     async with get_wallet_client(wallet_rpc_port, fp) as (wallet_client, fingerprint, config):
         res = await wallet_client.vc_mint(
-            did.validate_address_type_get_ph(AddressType.DID),
+            VCMint(
+                did_id=did.validate_address_type(AddressType.DID),
+                target_address=target_address.validate_address_type(AddressType.XCH) if target_address else None,
+                fee=fee,
+                push=push,
+            ),
             CMDTXConfigLoader().to_tx_config(units["chia"], config, fingerprint),
-            target_address.validate_address_type_get_ph(AddressType.XCH) if target_address else None,
-            fee,
-            push=push,
             timelock_info=condition_valid_times,
         )
 
