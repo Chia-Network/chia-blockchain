@@ -19,7 +19,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli, override_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import resolve_root_path
 from chia.util.ints import uint16
 
 SimulatorFullNodeService = Service[FullNode, FullNodeSimulator, SimulatorFullNodeRpcApi]
@@ -77,8 +77,12 @@ class StartedSimulator:
 async def async_main(
     test_mode: bool = False,
     automated_testing: bool = False,
-    root_path: Path = DEFAULT_ROOT_PATH,
+    root_path: Optional[Path] = None,
 ) -> StartedSimulator:
+    root_path = resolve_root_path(override=root_path)
+    # helping mypy out for now
+    assert root_path is not None
+
     # Same as full node, but the root_path is defined above
     config = load_config(root_path, "config.yaml")
     service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
@@ -130,7 +134,9 @@ async def async_main(
 
 def main() -> int:
     freeze_support()
-    return async_run(async_main()).exit_code
+    root_path = resolve_root_path(override=None)
+
+    return async_run(async_main(root_path=root_path)).exit_code
 
 
 if __name__ == "__main__":

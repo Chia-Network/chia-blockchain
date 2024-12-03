@@ -1542,7 +1542,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     chia_init(root_path, should_check_keys=(not wait_for_unlock))
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
-    initialize_service_logging("daemon", config)
+    initialize_service_logging("daemon", config, root_path=root_path)
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
@@ -1589,11 +1589,13 @@ def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
 
 
 def main() -> int:
-    from chia.util.default_root import DEFAULT_ROOT_PATH
+    from chia.util.default_root import resolve_root_path
     from chia.util.keychain import Keychain
 
+    root_path = resolve_root_path(override=None)
+
     wait_for_unlock = "--wait-for-unlock" in sys.argv[1:] and Keychain.is_keyring_locked()
-    return run_daemon(DEFAULT_ROOT_PATH, wait_for_unlock)
+    return run_daemon(root_path, wait_for_unlock)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from typing import Any, Optional
 from chia.server.signal_handlers import SignalHandlers
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.default_root import resolve_root_path
 from chia.util.network import resolve
 from chia.util.setproctitle import setproctitle
 
@@ -176,7 +176,8 @@ def main():
     if os.name == "nt":
         log.info("Timelord launcher not supported on Windows.")
         return 1
-    root_path = DEFAULT_ROOT_PATH
+    root_path = resolve_root_path(override=None)
+
     setproctitle("chia_timelord_launcher")
     net_config = load_config(root_path, "config.yaml")
     config = net_config["timelord_launcher"]
