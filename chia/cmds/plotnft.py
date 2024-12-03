@@ -93,7 +93,7 @@ class CreatePlotNFTCMD:
         show_default=True,
         required=True,
     )
-    dont_prompt: bool = option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
+    dont_prompt: bool = option("-y", "--yes", help="No prompts", is_flag=True)
 
     async def run(self) -> None:
         from chia.cmds.plotnft_funcs import create
@@ -133,7 +133,7 @@ class JoinPlotNFTCMD:
         show_default=True,
         required=True,
     )
-    dont_prompt: bool = option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
+    dont_prompt: bool = option("-y", "--yes", help="No prompts", is_flag=True)
     id: Optional[int] = option(
         "-i", "--id", help="ID of the wallet to use", default=None, show_default=True, required=False
     )
@@ -160,7 +160,7 @@ class JoinPlotNFTCMD:
 )
 class LeavePlotNFTCMD:
     rpc_info: NeedsWalletRPC  # provides wallet-rpc-port and fingerprint options
-    dont_prompt: bool = option("-y", "--yes", "dont_prompt", help="No prompts", is_flag=True)
+    dont_prompt: bool = option("-y", "--yes", help="No prompts", is_flag=True)
     fee: uint64 = option(
         "-m",
         "--fee",
