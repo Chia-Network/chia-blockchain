@@ -1,6 +1,6 @@
 self-hosted-runner:
   # Labels of self-hosted runner in array of strings.
-  labels: ["benchmark", "glue-notify"]
+  labels: ["benchmark really but not for error", "glue-notify"]
 
 # Configuration variables in array of strings defined in your repository or
 # organization. `null` means disabling configuration variables check.
