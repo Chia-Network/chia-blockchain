@@ -6,7 +6,12 @@ from pathlib import Path
 import pytest
 
 from chia._tests.conftest import ConsensusMode
-from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
+from chia._tests.environments.wallet import (
+    NewPuzzleHashError,
+    WalletEnvironment,
+    WalletStateTransition,
+    WalletTestFramework,
+)
 from chia._tests.util.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.wallet_request_types import GetTransactionMemo, PushTX
@@ -1730,3 +1735,92 @@ async def test_cat_melt_balance(wallet_environments: WalletTestFramework) -> Non
                 )
             ]
         )
+
+
+@pytest.mark.parametrize(
+    "wallet_environments",
+    [
+        {
+            "num_environments": 1,
+            "blocks_needed": [1],
+            "trusted": True,  # Parameter doesn't matter for this test
+            "reuse_puzhash": True,  # Important to test this is ignored in the duplicate change scenario
+        }
+    ],
+    indirect=True,
+)
+@pytest.mark.limit_consensus_modes([ConsensusMode.PLAIN], reason="irrelevant")
+@pytest.mark.anyio
+async def test_cat_puzzle_hashes(wallet_environments: WalletTestFramework) -> None:
+    env = wallet_environments.environments[0]
+    wallet = env.xch_wallet
+
+    env.wallet_aliases = {
+        "xch": 1,
+        "cat": 2,
+    }
+
+    async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+        cat_wallet = await CATWallet.create_new_cat_wallet(
+            env.node.wallet_state_manager,
+            wallet,
+            {"identifier": "genesis_by_id"},
+            uint64(100),
+            action_scope,
+        )
+
+    await wallet_environments.process_pending_states(
+        [
+            WalletStateTransition(
+                pre_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {"init": True, "set_remainder": True},
+                },
+                post_block_balance_updates={
+                    "xch": {"set_remainder": True},
+                    "cat": {
+                        "confirmed_wallet_balance": 100,
+                        "unconfirmed_wallet_balance": 0,
+                        "spendable_balance": 100,
+                        "max_send_amount": 100,
+                        "pending_change": -100,
+                        "pending_coin_removal_count": -1,
+                        "unspent_coin_count": 1,
+                    },
+                },
+            ),
+        ]
+    )
+
+    # Test that we attempt a new puzzle hash here even though everything says we shouldn't
+    with pytest.raises(NewPuzzleHashError):
+        async with env.wallet_state_manager.new_action_scope(wallet_environments.tx_config, push=True) as action_scope:
+            await cat_wallet.generate_signed_transaction(
+                [uint64(50)], [await cat_wallet.standard_wallet.get_puzzle_hash(new=False)], action_scope
+            )
+
+    # Test new puzzle hash getting
+    current_derivation_index = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+        uint32(env.wallet_aliases["cat"])
+    )
+    assert current_derivation_index is not None
+    await cat_wallet.get_cat_puzzle_hash(new=True)
+    next_derivation_index = await env.wallet_state_manager.puzzle_store.get_current_derivation_record_for_wallet(
+        uint32(env.wallet_aliases["cat"])
+    )
+    assert next_derivation_index is not None
+    assert current_derivation_index.index < next_derivation_index.index
+
+    # Test a weird edge case where a new puzzle hash needs to get generated
+    # First, we reset the used status of all puzzle hashes by re-adding them
+    for puzhash in await env.wallet_state_manager.puzzle_store.get_all_puzzle_hashes():
+        dr = await env.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzhash)
+        assert dr is not None
+        await env.wallet_state_manager.puzzle_store.add_derivation_paths([dr])
+
+    # Then we make sure that even though we asked for a used puzzle hash, it still gives us an unused one
+    unused_count = await env.wallet_state_manager.puzzle_store.get_unused_count(uint32(env.wallet_aliases["cat"]))
+    await cat_wallet.get_cat_puzzle_hash(new=False)
+    assert unused_count < await env.wallet_state_manager.puzzle_store.get_unused_count(
+        uint32(env.wallet_aliases["cat"])
+    )
