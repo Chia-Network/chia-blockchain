@@ -127,7 +127,7 @@ def prepare_chia_blockchain_log(path: Path) -> None:
 
 def prepare_logs(prepare_path: Path, prepare_callback: Callable[[Path], None]) -> list[Path]:
     result = [path for path in prepare_path.iterdir()] if prepare_path.exists() else []
-    if len(result):
+    if len(result) > 0:
         print(f"\nPreparing {prepare_path.name!r} logs:")
         for log in result:
             if log.name.startswith("."):

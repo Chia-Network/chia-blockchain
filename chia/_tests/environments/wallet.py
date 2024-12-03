@@ -4,8 +4,9 @@ import contextlib
 import json
 import operator
 import unittest
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Union, cast
 
 from chia._tests.environments.common import ServiceEnvironment
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
