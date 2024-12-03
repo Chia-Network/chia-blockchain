@@ -39,6 +39,8 @@ permissions:
 jobs:
   version:
     uses: ./.github/workflows/reflow-version.yml
+    with:
+      release_type: ${{ inputs.release_type }}
 
   build:
     name: Build amd64 RPM
@@ -123,8 +125,8 @@ jobs:
           mkdir "$GITHUB_WORKSPACE"/bladebit
           cd "$GITHUB_WORKSPACE"/bladebit
           gh release download -R Chia-Network/bladebit "$LATEST_VERSION" -p 'bladebit*-centos-x86-64.tar.gz'
-          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
-          ls bladebit* | xargs -I{} chmod +x {}
+          find . -maxdepth 1 -name '*.tar.gz' -print0 | xargs -0 -I{} bash -c 'tar -xzf {} && rm {}'
+          find . -maxdepth 1 -name 'bladebit*' -print0 | xargs -0 -I{} chmod +x {}
           cd "$OLDPWD"
 
       - uses: ./.github/actions/install

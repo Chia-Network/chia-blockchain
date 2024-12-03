@@ -240,6 +240,8 @@ jobs:
           diff --unified source_tests installed_tests; DIFF_EXIT_CODE=$?
           echo '::endgroup::'
 
+          exit $DIFF_EXIT_CODE
+
       - name: Move chia/ so we test the installed code
         run: |
           mv chia/ notchia/
