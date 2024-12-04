@@ -484,7 +484,7 @@ class DataStore:
 
             return int(row[0])
 
-    async def get_existing_hashes(self, node_hashes: List[bytes32], store_id: bytes32) -> set[bytes32]:
+    async def get_existing_hashes(self, node_hashes: list[bytes32], store_id: bytes32) -> set[bytes32]:
         result: set[bytes32] = set()
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
 
