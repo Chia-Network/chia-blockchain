@@ -489,7 +489,7 @@ class DataStore:
         batch_size = min(500, SQLITE_MAX_VARIABLE_NUMBER - 10)
 
         for i in range(0, len(node_hashes), batch_size):
-            chunk = node_hashes[i:i + batch_size]
+            chunk = node_hashes[i : i + batch_size]
             placeholders = ",".join(["?"] * len(chunk))
             query = f"SELECT hash FROM nodes WHERE store_id = ? AND hash IN ({placeholders})"
             async with self.db_wrapper.reader() as reader:
