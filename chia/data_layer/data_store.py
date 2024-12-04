@@ -492,10 +492,11 @@ class DataStore:
             chunk = node_hashes[i : i + batch_size]
             placeholders = ",".join(["?"] * len(chunk))
             query = f"SELECT hash FROM nodes WHERE store_id = ? AND hash IN ({placeholders}) LIMIT {len(chunk)}"
+
             async with self.db_wrapper.reader() as reader:
                 async with reader.execute(query, (store_id, *chunk)) as cursor:
-	                rows = await cursor.fetchall()
-                        result.update(row["hash"] for row in rows)
+		    rows = await cursor.fetchall()
+		    result.update(row["hash"] for row in rows)
 
         return result
 
