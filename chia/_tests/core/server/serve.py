@@ -80,7 +80,8 @@ async def async_main(
             thread_end_event = threading.Event()
 
             async def dun() -> None:
-                while shutdown_path.exists():
+                # TODO: switch to event driven code
+                while shutdown_path.exists():  # noqa: ASYNC110
                     await asyncio.sleep(0.25)
 
                 thread_end_event.set()
@@ -97,7 +98,8 @@ async def async_main(
 
         try:
             try:
-                while not thread_end_event.is_set():
+                # TODO: switch to event driven code
+                while not thread_end_event.is_set():  # noqa: ASYNC110
                     await asyncio.sleep(0.1)
             finally:
                 # the test checks explicitly for this

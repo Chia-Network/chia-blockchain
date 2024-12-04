@@ -30,8 +30,8 @@ def keys_cmd(ctx: click.Context) -> None:
 )
 @click.pass_context
 def generate_cmd(ctx: click.Context, label: Optional[str]) -> None:
-    from .init_funcs import check_keys
-    from .keys_funcs import generate_and_add
+    from chia.cmds.init_funcs import check_keys
+    from chia.cmds.keys_funcs import generate_and_add
 
     generate_and_add(label)
     check_keys(ctx.obj["root_path"])
@@ -75,7 +75,7 @@ def show_cmd(
     fingerprint: Optional[int],
     bech32m_prefix: Optional[str],
 ) -> None:
-    from .keys_funcs import show_keys
+    from chia.cmds.keys_funcs import show_keys
 
     show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint, bech32m_prefix)
 
@@ -99,8 +99,8 @@ def show_cmd(
 )
 @click.pass_context
 def add_cmd(ctx: click.Context, filename: str, label: Optional[str]) -> None:
-    from .init_funcs import check_keys
-    from .keys_funcs import query_and_add_key_info
+    from chia.cmds.init_funcs import check_keys
+    from chia.cmds.keys_funcs import query_and_add_key_info
 
     mnemonic_or_pk = None
     if filename:
@@ -119,7 +119,7 @@ def label_cmd() -> None:
 
 @label_cmd.command("show", help="Show the labels of all available keys")
 def show_label_cmd() -> None:
-    from .keys_funcs import show_all_key_labels
+    from chia.cmds.keys_funcs import show_all_key_labels
 
     show_all_key_labels()
 
@@ -134,7 +134,7 @@ def show_label_cmd() -> None:
     required=True,
 )
 def set_label_cmd(fingerprint: int, label: str) -> None:
-    from .keys_funcs import set_key_label
+    from chia.cmds.keys_funcs import set_key_label
 
     set_key_label(fingerprint, label)
 
@@ -142,7 +142,7 @@ def set_label_cmd(fingerprint: int, label: str) -> None:
 @label_cmd.command("delete", help="Delete the label of a key")
 @options.create_fingerprint(required=True)
 def delete_label_cmd(fingerprint: int) -> None:
-    from .keys_funcs import delete_key_label
+    from chia.cmds.keys_funcs import delete_key_label
 
     delete_key_label(fingerprint)
 
@@ -151,8 +151,8 @@ def delete_label_cmd(fingerprint: int) -> None:
 @options.create_fingerprint(required=True)
 @click.pass_context
 def delete_cmd(ctx: click.Context, fingerprint: int) -> None:
-    from .init_funcs import check_keys
-    from .keys_funcs import delete
+    from chia.cmds.init_funcs import check_keys
+    from chia.cmds.keys_funcs import delete
 
     delete(fingerprint)
     check_keys(ctx.obj["root_path"])
@@ -167,7 +167,7 @@ def delete_all_cmd() -> None:
 
 @keys_cmd.command("generate_and_print", help="Generates but does NOT add to keychain")
 def generate_and_print_cmd() -> None:
-    from .keys_funcs import generate_and_print
+    from chia.cmds.keys_funcs import generate_and_print
 
     generate_and_print()
 
@@ -203,7 +203,7 @@ def generate_and_print_cmd() -> None:
 def sign_cmd(
     message: str, fingerprint: Optional[int], filename: Optional[str], hd_path: str, as_bytes: bool, json: bool
 ) -> None:
-    from .keys_funcs import resolve_derivation_master_key, sign
+    from chia.cmds.keys_funcs import resolve_derivation_master_key, sign
 
     _, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
@@ -253,7 +253,7 @@ def parse_signature_json(json_str: str) -> tuple[str, str, str, str]:
     type=str,
 )
 def verify_cmd(message: str, public_key: str, signature: str, as_bytes: bool, json: str) -> None:
-    from .keys_funcs import as_bytes_from_signing_mode, verify
+    from chia.cmds.keys_funcs import as_bytes_from_signing_mode, verify
 
     if json is not None:
         parsed_message, parsed_pubkey, parsed_sig, parsed_signing_mode_str = parse_signature_json(json)
@@ -330,7 +330,7 @@ def search_cmd(
 ) -> None:
     import sys
 
-    from .keys_funcs import resolve_derivation_master_key, search_derive
+    from chia.cmds.keys_funcs import resolve_derivation_master_key, search_derive
 
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
@@ -365,7 +365,7 @@ class ResolutionError(Exception):
 def _resolve_fingerprint_and_sk(
     filename: Optional[str], fingerprint: Optional[int], non_observer_derivation: bool
 ) -> tuple[Optional[int], Optional[PrivateKey]]:
-    from .keys_funcs import resolve_derivation_master_key
+    from chia.cmds.keys_funcs import resolve_derivation_master_key
 
     reolved_fp, resolved_sk = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
@@ -408,7 +408,7 @@ def _resolve_fingerprint_and_sk(
 def wallet_address_cmd(
     ctx: click.Context, index: int, count: int, prefix: Optional[str], non_observer_derivation: bool, show_hd_path: bool
 ) -> None:
-    from .keys_funcs import derive_wallet_address
+    from chia.cmds.keys_funcs import derive_wallet_address
 
     fingerprint: Optional[int] = ctx.obj.get("fingerprint", None)
     filename: Optional[str] = ctx.obj.get("filename", None)
@@ -483,7 +483,7 @@ def child_key_cmd(
     show_hd_path: bool,
     bech32m_prefix: Optional[str],
 ) -> None:
-    from .keys_funcs import derive_child_key
+    from chia.cmds.keys_funcs import derive_child_key
 
     if key_type is None and derive_from_hd_path is None:
         ctx.fail("--type or --derive-from-hd-path is required")

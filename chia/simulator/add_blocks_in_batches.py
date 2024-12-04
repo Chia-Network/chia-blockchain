@@ -11,6 +11,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.validation_state import ValidationState
 from chia.util.augmented_chain import AugmentedBlockchain
 from chia.util.batches import to_batches
+from chia.util.ints import uint32
 
 
 async def add_blocks_in_batches(
@@ -55,8 +56,4 @@ async def add_blocks_in_batches(
                 peak_fb, state_change_summary, None
             )
             await full_node.peak_post_processing_2(peak_fb, None, state_change_summary, ppp_result)
-    # this is commented out because we already call post_processing_peak2 which already sends
-    # the peak to the wallet this causes finish_sync to resend a peak the wallet already received
-    # that will cause the wallet to reorg the peak (even though its redundant) which causes it to
-    # go out of sync momentarily. When this redundant behavior is fixed, this line can be uncommented.
-    # await full_node._finish_sync()
+    await full_node._finish_sync(uint32(max(0, fork_height)))

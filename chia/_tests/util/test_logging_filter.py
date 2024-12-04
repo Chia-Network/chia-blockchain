@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import time
-from re import split
 from time import sleep
 
 import pytest
@@ -27,7 +26,7 @@ def test_logging_filter(caplog: pytest.LogCaptureFixture) -> None:
             sleep(min(0.0, now - last_time))
             last_time = now
 
-    assert len(split("\n", caplog.text)) <= ((num_logs * sleep_secs) / log_interval_secs) + 1
+    assert len(caplog.text.split("\n")) <= ((num_logs * sleep_secs) / log_interval_secs) + 1
 
 
 def test_dont_filter_non_matches(caplog: pytest.LogCaptureFixture) -> None:
@@ -40,4 +39,4 @@ def test_dont_filter_non_matches(caplog: pytest.LogCaptureFixture) -> None:
         with caplog.at_level(logging.WARNING):
             log.warning(f"Don't Filter this log message {n}")
 
-    assert len(split("\n", caplog.text)) == num_log_statements
+    assert len(caplog.text.split("\n")) == num_log_statements

@@ -39,6 +39,8 @@ permissions:
 jobs:
   version:
     uses: ./.github/workflows/reflow-version.yml
+    with:
+      release_type: ${{ inputs.release_type }}
 
   build:
     name: Build ${{ matrix.os.name }} DMG
@@ -119,10 +121,10 @@ jobs:
         run: |
           LATEST_MADMAX=$(gh api repos/Chia-Network/chia-plotter-madmax/releases/latest --jq 'select(.prerelease == false) | .tag_name')
           mkdir "$GITHUB_WORKSPACE"/madmax
-          gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
-          mv chia_plot-$LATEST_MADMAX-macos-${{ matrix.os.name }} "$GITHUB_WORKSPACE"/madmax/chia_plot
-          gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p 'chia_plot_k34-'$LATEST_MADMAX'-macos-${{ matrix.os.name }}'
-          mv chia_plot_k34-$LATEST_MADMAX-macos-${{ matrix.os.name }} "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
+          gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p "chia_plot-$LATEST_MADMAX-macos-${{ matrix.os.name }}"
+          mv "chia_plot-$LATEST_MADMAX-macos-${{ matrix.os.name }}" "$GITHUB_WORKSPACE"/madmax/chia_plot
+          gh release download -R Chia-Network/chia-plotter-madmax "$LATEST_MADMAX" -p "chia_plot_k34-$LATEST_MADMAX-macos-${{ matrix.os.name }}"
+          mv "chia_plot_k34-$LATEST_MADMAX-macos-${{ matrix.os.name }}" "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
           chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot
           chmod +x "$GITHUB_WORKSPACE"/madmax/chia_plot_k34
 
@@ -162,8 +164,8 @@ jobs:
                 LATEST_VERSION=v2.0.1
               fi
           gh release download -R Chia-Network/bladebit "$LATEST_VERSION" -p 'bladebit*-${{ matrix.os.bladebit-suffix }}'
-          ls *.tar.gz | xargs -I{} bash -c 'tar -xzf {} && rm {}'
-          ls bladebit* | xargs -I{} chmod +x {}
+          find . -maxdepth 1 -name '*.tar.gz' -print0 | xargs -0 -I{} bash -c 'tar -xzf {} && rm {}'
+          find . -maxdepth 1 -name 'bladebit*' -print0 | xargs -0 -I{} chmod +x {}
           cd "$OLDPWD"
 
       - uses: ./.github/actions/install
@@ -313,10 +315,6 @@ jobs:
             artifact-name: intel
         exclude:
           - os:
-              matrix: 12
-            arch:
-              matrix: arm
-          - os:
               matrix: 13
             arch:
               matrix: arm
@@ -353,6 +351,8 @@ jobs:
 
       - name: Run chia dev installers test
         run: |
+          # TODO: maybe fix this and remove the disable
+          # shellcheck disable=SC2211
           "/Volumes/Chia "*"/Chia.app/Contents/Resources/app.asar.unpacked/daemon/chia" dev installers test --expected-chia-version "${{ needs.version.outputs.chia-installer-version }}"
 
       - name: Detach .dmg

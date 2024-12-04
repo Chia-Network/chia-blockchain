@@ -28,6 +28,7 @@ def coins_cmd(ctx: click.Context) -> None:
     coins_cmd,
     "list",
     "List all coins",
+    help="List all coins",
 )
 class ListCMD:
     rpc_info: NeedsWalletRPC
@@ -64,6 +65,7 @@ class ListCMD:
     coins_cmd,
     "combine",
     "Combine dust coins",
+    help="Combine dust coins",
 )
 class CombineCMD(TransactionEndpoint):
     id: int = option(
@@ -130,6 +132,7 @@ class CombineCMD(TransactionEndpoint):
     coins_cmd,
     "split",
     "Split up larger coins",
+    help="Split up larger coins",
 )
 class SplitCMD(TransactionEndpoint):
     id: int = option(

@@ -58,7 +58,7 @@ class TimelordAPI:
                     new_peak.reward_chain_block.height == self.timelord.last_state.last_height + 1
                     and self.check_orphaned_unfinished_block(new_peak) is True
                 ):
-                    log.info("there is an unfinished block that this peak would orphan - " "skip peak")
+                    log.info("there is an unfinished block that this peak would orphan - skip peak")
                     self.timelord.state_changed("skipping_peak", {"height": new_peak.reward_chain_block.height})
                     return
 

@@ -56,7 +56,8 @@ async def main() -> None:
     out_path = shutdown_path.with_suffix(".out")
 
     async def dun() -> None:
-        while shutdown_path.exists():
+        # TODO: switch to event driven code
+        while shutdown_path.exists():  # noqa: ASYNC110
             await asyncio.sleep(0.25)
 
         task.cancel()

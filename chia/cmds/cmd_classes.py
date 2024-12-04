@@ -211,6 +211,7 @@ def _generate_command_parser(cls: type[ChiaCommand]) -> _CommandParsingStage:
             option_decorators.append(
                 click.option(
                     *option_args["param_decls"],
+                    field_name,
                     type=type_arg,
                     **{k: v for k, v in option_args.items() if k not in {"param_decls", "type"}},
                 )
@@ -232,7 +233,9 @@ def _convert_class_to_function(cls: type[ChiaCommand]) -> SyncCmd:
 
 
 @dataclass_transform(frozen_default=True)
-def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[type[ChiaCommand]], type[ChiaCommand]]:
+def chia_command(
+    cmd: click.Group, name: str, short_help: str, help: str
+) -> Callable[[type[ChiaCommand]], type[ChiaCommand]]:
     def _chia_command(cls: type[ChiaCommand]) -> type[ChiaCommand]:
         # The type ignores here are largely due to the fact that the class information is not preserved after being
         # passed through the dataclass wrapper.  Not sure what to do about this right now.
@@ -247,7 +250,7 @@ def chia_command(cmd: click.Group, name: str, help: str) -> Callable[[type[ChiaC
                 kw_only=True,
             )(cls)
 
-        cmd.command(name, short_help=help)(_convert_class_to_function(wrapped_cls))
+        cmd.command(name, short_help=short_help, help=help)(_convert_class_to_function(wrapped_cls))
         return wrapped_cls
 
     return _chia_command
