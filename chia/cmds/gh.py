@@ -31,6 +31,17 @@ def report(*args: str) -> None:
     print("    ====", *args)
 
 
+async def get_gh_token() -> str:
+    command = ["gh", "auth", "token"]
+    report(f"running command: {shlex.join(command)}")
+    process = await anyio.run_process(command=command, check=False, stderr=None)
+
+    if process.returncode != 0:
+        raise click.ClickException("failed to get gh cli personal access token")
+
+    return process.stdout.decode("utf-8").strip()
+
+
 @overload
 async def run_gh_api(method: Method, args: list[str], error: str) -> None: ...
 @overload
@@ -62,6 +73,18 @@ async def run_gh_api(method: Method, args: list[str], error: str, capture_stdout
         return process.stdout.decode("utf-8")
 
     return None
+
+
+def input_arg(name: str, value: object, cond: bool = True) -> list[str]:
+    if not cond:
+        return []
+
+    assert value is not None
+
+    if isinstance(value, os.PathLike):
+        value = os.fspath(value)
+    dumped = yaml.safe_dump(value).partition("\n")[0]
+    return [f"-f=inputs[{name}]={dumped}"]
 
 
 @click.group("gh", help="For working with GitHub")
@@ -152,8 +175,9 @@ class TestCMD:
 
                     try:
                         report("looking for run")
-                        run_url = await self.find_run(temp_branch_name)
-                        report(f"run found at: {run_url}")
+                        html_url, api_url = await self.find_run(temp_branch_name)
+                        report(f"run found at: {html_url}")
+                        report(f"run found at: {api_url}")
                     except UnexpectedFormError:
                         report("run not found")
                         continue
@@ -170,7 +194,8 @@ class TestCMD:
                     raise click.ClickException("Failed to dispatch workflow")
                 report(f"temporary branch deleted: {temp_branch_name}")
 
-        report(f"run url: {run_url}")
+        report(f"run html url: {html_url}")
+        report(f"run api url: {api_url}")
         if self.open_browser:
             webbrowser.open(run_url)
 
@@ -191,17 +216,6 @@ class TestCMD:
                 raise click.ClickException(message)
 
     async def trigger_workflow(self, ref: str) -> None:
-        def input_arg(name: str, value: object, cond: bool = True) -> list[str]:
-            if not cond:
-                return []
-
-            assert value is not None
-
-            if isinstance(value, os.PathLike):
-                value = os.fspath(value)
-            dumped = yaml.safe_dump(value).partition("\n")[0]
-            return [f"-f=inputs[{name}]={dumped}"]
-
         # https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#create-a-workflow-dispatch-event
         await run_gh_api(
             method="POST",
@@ -218,7 +232,7 @@ class TestCMD:
         )
         report(f"workflow triggered on branch: {ref}")
 
-    async def find_run(self, ref: str) -> str:
+    async def find_run(self, ref: str) -> tuple[str, str]:
         # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#list-workflow-runs-for-a-workflow
         stdout = await run_gh_api(
             method="GET",
@@ -237,10 +251,13 @@ class TestCMD:
         except ValueError:
             raise UnexpectedFormError(f"expected 1 run, got: {len(runs)}")
 
-        url = run["html_url"]
+        html_url = run["html_url"]
+        assert isinstance(html_url, str), f"expected html url to be a string, got: {html_url!r}"
 
-        assert isinstance(url, str), f"expected url to be a string, got: {url!r}"
-        return url
+        api_url = run["url"]
+        assert isinstance(api_url, str), f"expected url to be a string, got: {api_url!r}"
+
+        return html_url, api_url
 
     async def get_username(self) -> str:
         # https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user

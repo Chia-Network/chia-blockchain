@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import aiohttp
+import anyio
 import click
 import pytest
 
@@ -13,7 +14,7 @@ from _pytest.capture import CaptureFixture
 
 import chia._tests
 from chia._tests.util.misc import Marks, datacases
-from chia.cmds.gh import Per, TestCMD
+from chia.cmds.gh import Per, TestCMD, get_gh_token
 
 test_root = Path(chia._tests.__file__).parent
 
@@ -77,7 +78,7 @@ async def test_successfully_dispatches(
 
     assert len(stderr.strip()) == 0
     for line in stdout.splitlines():
-        match = re.search(r"(?<=\brun url: )(?P<url>.*)", line)
+        match = re.search(r"(?<=\brun api url: )(?P<url>.*)", line)
         if match is None:
             continue
         url = match.group("url")
@@ -85,6 +86,45 @@ async def test_successfully_dispatches(
     else:
         pytest.fail(f"Failed to find run url in: {stdout}")
 
-    async with aiohttp.ClientSession(raise_for_status=True) as client:
-        async with client.get(url):
-            pass
+    token = await get_gh_token()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    async with aiohttp.ClientSession(raise_for_status=True, headers=headers) as client:
+        while True:
+            async with client.get(url) as response:
+                d = await response.json()
+                jobs_url = d["jobs_url"]
+                conclusion = d["conclusion"]
+
+                print("conclusion:", conclusion)
+                if conclusion is None:
+                    await anyio.sleep(5)
+                    continue
+
+                break
+
+        async with client.get(jobs_url) as response:
+            d = await response.json()
+            jobs = d["jobs"]
+
+        by_name = {job["name"]: job for job in jobs}
+
+        assert by_name["Configure matrix"]["conclusion"] == "success"
+        assert by_name["macos-intel"]["conclusion"] == "skipped"
+        assert by_name["windows"]["conclusion"] == "skipped"
+
+        versions = ["3.9", "3.10", "3.11", "3.12"]
+        runs_by_name: dict[str, list[str]] = {name: [] for name in ["ubuntu", "macos-arm"]}
+        for name in by_name:
+            platform, _, rest = name.partition(" / ")
+
+            jobs = runs_by_name.get(platform)
+            if jobs is None:
+                continue
+
+            jobs.append(rest)
+
+        expected = len(versions) * cmd.duplicates
+        print("expected:", expected)
+        print("runs_by_name:", runs_by_name)
+        assert len({expected, *(len(runs) for runs in runs_by_name.values())}) == 1
