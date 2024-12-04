@@ -21,7 +21,14 @@ from chia.cmds.cmds_util import (
 from chia.cmds.param_types import CliAddress, CliAmount
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
-from chia.rpc.wallet_request_types import CATSpendResponse, GetNotifications, SendTransactionResponse, VCMint, VCSpend
+from chia.rpc.wallet_request_types import (
+    CATSpendResponse,
+    GetNotifications,
+    SendTransactionResponse,
+    VCMint,
+    VCRevoke,
+    VCSpend,
+)
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
@@ -1724,12 +1731,14 @@ async def revoke_vc(
             parent_id = parent_coin_id
         txs = (
             await wallet_client.vc_revoke(
-                parent_id,
-                fee=fee,
+                VCRevoke(
+                    vc_parent_id=parent_id,
+                    fee=fee,
+                    push=push,
+                ),
                 tx_config=CMDTXConfigLoader(
                     reuse_puzhash=reuse_puzhash,
                 ).to_tx_config(units["chia"], config, fingerprint),
-                push=push,
                 timelock_info=condition_valid_times,
             )
         ).transactions

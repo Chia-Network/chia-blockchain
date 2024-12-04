@@ -10,7 +10,7 @@ from typing_extensions import Literal
 
 from chia._tests.environments.wallet import WalletEnvironment, WalletStateTransition, WalletTestFramework
 from chia._tests.util.time_out_assert import time_out_assert_not_none
-from chia.rpc.wallet_request_types import VCMint, VCSpend
+from chia.rpc.wallet_request_types import VCMint, VCRevoke, VCSpend
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.blockchain_format.coin import coin_as_list
@@ -597,7 +597,10 @@ async def test_vc_lifecycle(wallet_environments: WalletTestFramework) -> None:
     assert vc_record_updated is not None
 
     # Revoke VC
-    await client_0.vc_revoke(vc_record_updated.vc.coin.parent_coin_info, wallet_environments.tx_config, uint64(1))
+    await client_0.vc_revoke(
+        VCRevoke(vc_parent_id=vc_record_updated.vc.coin.parent_coin_info, fee=uint64(1), push=True),
+        wallet_environments.tx_config,
+    )
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(
@@ -737,7 +740,9 @@ async def test_self_revoke(wallet_environments: WalletTestFramework) -> None:
     )
 
     # Make sure revoking still works
-    await client_0.vc_revoke(new_vc_record.vc.coin.parent_coin_info, wallet_environments.tx_config, uint64(0))
+    await client_0.vc_revoke(
+        VCRevoke(vc_parent_id=new_vc_record.vc.coin.parent_coin_info, push=True), wallet_environments.tx_config
+    )
     await wallet_environments.process_pending_states(
         [
             WalletStateTransition(

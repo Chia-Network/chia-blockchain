@@ -7,7 +7,7 @@ from chia_rs import Coin
 
 from chia._tests.cmds.cmd_test_utils import TestRpcClients, TestWalletRpcClient, logType, run_cli_command_and_assert
 from chia._tests.cmds.wallet.test_consts import FINGERPRINT_ARG, STD_TX, STD_UTX, get_bytes32
-from chia.rpc.wallet_request_types import VCMint, VCMintResponse, VCRevokeResponse, VCSpend, VCSpendResponse
+from chia.rpc.wallet_request_types import VCMint, VCMintResponse, VCRevoke, VCRevokeResponse, VCSpend, VCSpendResponse
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint32, uint64
@@ -254,13 +254,11 @@ def test_vcs_revoke(capsys: object, get_test_cli_clients: tuple[TestRpcClients, 
 
         async def vc_revoke(
             self,
-            vc_parent_id: bytes32,
+            request: VCRevoke,
             tx_config: TXConfig,
-            fee: uint64 = uint64(0),
-            push: bool = True,
             timelock_info: ConditionValidTimes = ConditionValidTimes(),
         ) -> VCRevokeResponse:
-            self.add_to_log("vc_revoke", (vc_parent_id, tx_config, fee, push, timelock_info))
+            self.add_to_log("vc_revoke", (request.vc_parent_id, tx_config, request.fee, request.push, timelock_info))
             return VCRevokeResponse([STD_UTX], [STD_TX])
 
     inst_rpc_client = VcsRevokeRpcClient()

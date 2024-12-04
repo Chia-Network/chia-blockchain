@@ -581,6 +581,18 @@ class VCSpendResponse(TransactionEndpointResponse):
     pass
 
 
+@streamable
+@dataclass(frozen=True)
+class VCRevoke(TransactionEndpointRequest):
+    vc_parent_id: bytes32 = field(default_factory=default_raise)
+
+
+@streamable
+@dataclass(frozen=True)
+class VCRevokeResponse(TransactionEndpointResponse):
+    pass
+
+
 # TODO: The section below needs corresponding request types
 # TODO: The section below should be added to the API (currently only for client)
 @streamable
@@ -775,9 +787,3 @@ class DAOSendToLockupResponse(TransactionEndpointResponse):
 class DAOExitLockupResponse(TransactionEndpointResponse):
     tx_id: bytes32
     tx: TransactionRecord
-
-
-@streamable
-@dataclass(frozen=True)
-class VCRevokeResponse(TransactionEndpointResponse):
-    pass

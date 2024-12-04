@@ -87,6 +87,7 @@ from chia.rpc.wallet_request_types import (
     TakeOfferResponse,
     VCMint,
     VCMintResponse,
+    VCRevoke,
     VCRevokeResponse,
     VCSpend,
     VCSpendResponse,
@@ -1704,25 +1705,16 @@ class WalletRpcClient(RpcClient):
 
     async def vc_revoke(
         self,
-        vc_parent_id: bytes32,
+        request: VCRevoke,
         tx_config: TXConfig,
-        fee: uint64 = uint64(0),
         extra_conditions: tuple[Condition, ...] = tuple(),
         timelock_info: ConditionValidTimes = ConditionValidTimes(),
-        push: bool = True,
     ) -> VCRevokeResponse:
-        response = await self.fetch(
-            "vc_revoke",
-            {
-                "vc_parent_id": vc_parent_id.hex(),
-                "fee": fee,
-                "extra_conditions": conditions_to_json_dicts(extra_conditions),
-                "push": push,
-                **tx_config.to_json_dict(),
-                **timelock_info.to_json_dict(),
-            },
+        return VCRevokeResponse.from_json_dict(
+            await self.fetch(
+                "vc_revoke", {**request.json_serialize_for_transport(tx_config, extra_conditions, timelock_info)}
+            )
         )
-        return json_deserialize_with_clvm_streamable(response, VCRevokeResponse)
 
     async def crcat_approve_pending(
         self,

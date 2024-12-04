@@ -58,6 +58,8 @@ from chia.rpc.wallet_request_types import (
     SubmitTransactionsResponse,
     VCMint,
     VCMintResponse,
+    VCRevoke,
+    VCRevokeResponse,
     VCSpend,
     VCSpendResponse,
 )
@@ -4663,38 +4665,30 @@ class WalletRpcApi:
         return {"proofs": vc_proofs.key_value_pairs}
 
     @tx_endpoint(push=True)
+    @marshal
     async def vc_revoke(
         self,
-        request: dict[str, Any],
+        request: VCRevoke,
         action_scope: WalletActionScope,
         extra_conditions: tuple[Condition, ...] = tuple(),
-    ) -> EndpointResult:
+    ) -> VCRevokeResponse:
         """
         Revoke an on chain VC provided the correct DID is available
         :param request: required 'vc_parent_id' for the VC coin. Standard transaction params 'fee' & 'reuse_puzhash'.
         :return: a list of all relevant 'transactions' (TransactionRecord) that this spend generates (VC TX + fee TX)
         """
 
-        @streamable
-        @dataclasses.dataclass(frozen=True)
-        class VCRevoke(Streamable):
-            vc_parent_id: bytes32
-            fee: uint64 = uint64(0)
-
-        parsed_request = VCRevoke.from_json_dict(request)
         vc_wallet: VCWallet = await self.service.wallet_state_manager.get_or_create_vc_wallet()
 
         await vc_wallet.revoke_vc(
-            parsed_request.vc_parent_id,
+            request.vc_parent_id,
             self.service.get_full_node_peer(),
             action_scope,
-            parsed_request.fee,
+            request.fee,
             extra_conditions=extra_conditions,
         )
 
-        return {
-            "transactions": None,  # tx_endpoint wrapper will take care of this
-        }
+        return VCRevokeResponse([], [])  # tx_endpoint takes care of filling this out
 
     @tx_endpoint(push=True)
     async def crcat_approve_pending(
