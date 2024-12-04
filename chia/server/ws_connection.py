@@ -166,8 +166,16 @@ class WSChiaConnection:
             log=log,
             close_callback=close_callback,
             request_nonce=request_nonce,
-            outbound_rate_limiter=RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent),
-            inbound_rate_limiter=RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent),
+            outbound_rate_limiter=RateLimiter(
+                incoming=False,
+                percentage_of_limit=outbound_rate_limit_percent,
+                reset_seconds=60 * outbound_rate_limit_percent // 100,
+            ),
+            inbound_rate_limiter=RateLimiter(
+                incoming=True,
+                percentage_of_limit=inbound_rate_limit_percent,
+                reset_seconds=60 * inbound_rate_limit_percent // 100,
+            ),
             is_outbound=is_outbound,
             received_message_callback=received_message_callback,
             class_for_type=class_for_type,
