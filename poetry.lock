@@ -948,12 +948,13 @@ files = [
 
 [[package]]
 name = "clvm-tools"
-version = "0.4.9"
+version = "0.4.10"
 description = "CLVM compiler."
 optional = false
 python-versions = "*"
 files = [
-    {file = "clvm_tools-0.4.9-py3-none-any.whl", hash = "sha256:a38419106da781bc0130f5911bc57748be6ddddba3d7809bb58ab930e84adb7d"},
+    {file = "clvm_tools-0.4.10-py3-none-any.whl", hash = "sha256:8c8d9289494a67867108f91d4fcfa56a93580a6927f9d69e2d91fec259030d79"},
+    {file = "clvm_tools-0.4.10.tar.gz", hash = "sha256:7a35a127b84b34e6103320c5dd82d34214c50bbdcaec7160702f27372c1467f4"},
 ]
 
 [package.dependencies]
