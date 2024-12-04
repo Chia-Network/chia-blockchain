@@ -272,16 +272,16 @@ class FileKeyring(FileSystemEventHandler):
     def setup_keyring_file_watcher(self) -> None:
         # recursive=True necessary for macOS support
         if not self.keyring_observer.is_alive():
-            self.keyring_observer.schedule(  # type: ignore[no-untyped-call]
+            self.keyring_observer.schedule(
                 self,
-                self.keyring_path.parent,
+                str(self.keyring_path.parent),
                 recursive=True,
             )
-            self.keyring_observer.start()  # type: ignore[no-untyped-call]
+            self.keyring_observer.start()
 
     def cleanup_keyring_file_watcher(self) -> None:
         if self.keyring_observer.is_alive():
-            self.keyring_observer.stop()  # type: ignore[no-untyped-call]
+            self.keyring_observer.stop()
             self.keyring_observer.join()
 
     def on_modified(self, event: Union[FileSystemEvent, DirModifiedEvent]) -> None:
